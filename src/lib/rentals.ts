@@ -226,7 +226,10 @@ export function rentalFitCompleteness(
   const offered = offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
   const offers = (kind: RentableItemKind) => offered === null || offered.has(kind);
   // One shoe size answers for both boots and fins, whichever column holds it.
-  const shoeSize = fit.finSize ?? fit.bootSize ?? null;
+  // `recorded`, not `??`: an in-memory fit can carry `""` where a stored row
+  // would carry null, and `?? ` would take the empty string as an answer and
+  // never look at the other column.
+  const shoeSize = recorded(fit.finSize) ? fit.finSize : fit.bootSize;
   const required: { kind: SizedRentalKind; rented: boolean; value: string | null }[] = [
     { kind: "bcd", rented: fit.rentsBcd && offers("bcd"), value: fit.bcdSize },
     { kind: "wetsuit", rented: fit.rentsWetsuit && offers("wetsuit"), value: fit.wetsuitSize },

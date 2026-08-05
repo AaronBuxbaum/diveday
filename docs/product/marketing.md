@@ -91,8 +91,16 @@ chosen battlegrounds — and re-read it before changing the spine.
   2026-07-25:** DiveDay now has a second person contributing (legal and outreach, also a diver), so
   `/about` may honestly speak in plural/team voice for what both share (being divers, the mission)
   — but Aaron remains the sole owner (matches H-04) and the sole developer, so anything that is
-  specifically his — the "Who builds it" credential block, the founder-direct support line — stays
-  singular and scoped to him, not generalized to "we." The second person is deliberately **not
+  specifically his — the founder-biography section, the retired founder-direct support line — stays
+  singular and scoped to him, not generalized to "we." (The "Who builds it" credential block that
+  used to carry the CV was **removed from `/about` 2026-08-05** on the product owner's call — it did
+  not tell the story well. The confirmed facts above stay confirmed and may be used again; the block
+  itself is gone, not merely reworded, so do not restore it as a row in the facts list.) The
+  hero must not imply DiveDay is one person with nothing behind it either: it is accountable and
+  personal, but the parts a shop's season depends on — payments in the shop's own Stripe account,
+  the export ZIP, the weekly backup to storage the shop owns, roll call working offline — do not
+  rest on any individual, and that is the honest reassurance rather than an invented headcount.
+  The second person is deliberately **not
   named and has no stated title**; a session may not name her, assign her a title, or state her
   certification date, tenure, or any fact about her beyond "a second person, a diver, working on
   legal and outreach" without new confirmation. **Confirmed by the product owner 2026-07-27:** the
@@ -237,6 +245,14 @@ sent the visitor:
 | --- | --- | --- |
 | `demo_entered` | `src/app/actions/demo.ts` | A skeptic chose to look — the low-commitment half |
 | `trial_started` | `src/app/onboard/actions.ts` | A shop of their own now exists — the committed half |
+
+Both fire **after the outcome they name**, deferred with `after()` — a rate-limited demo attempt or a
+refused sign-up is not an entry, and counting one would inflate the numerator of every ratio read off
+the pair. Both also email the founder as they fire, so neither half needs a dashboard to be noticed:
+`new_account_alert` for a trial, `demo_started_alert` for a demo try, both to `alertRecipient()`
+(overridable with `OPS_ALERT_EMAIL`). The demo alert is anonymous by construction — the shop slug,
+the role, and the tag below, and nothing about the visitor, who never identified themselves. See
+[ADR 20260805-demo-try-alerts](../architecture/decisions/20260805-demo-try-alerts.md).
 
 The tag vocabulary is a closed registry in `src/lib/funnel.ts`, because the failure it prevents is
 silent: a misspelled tag doesn't error, it opens a second bucket that reads like a real page with

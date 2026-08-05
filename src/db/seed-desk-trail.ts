@@ -69,7 +69,7 @@ const ACTIVITY_PLANS: { daysAgo: number; hour: number; line: (actor: string) => 
   {
     daysAgo: 2,
     hour: 14,
-    line: (actor) => `${actor} moved the site to Christ of the Abyss for the swell`,
+    line: (actor) => `${actor} moved the second dive to French Reef for the swell`,
   },
   { daysAgo: 1, hour: 15, line: (actor) => `${actor} checked the tank count against the roster` },
   {

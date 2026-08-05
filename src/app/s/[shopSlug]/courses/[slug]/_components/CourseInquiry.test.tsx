@@ -119,7 +119,14 @@ describe("CourseInquiry — experience is required (task 8)", () => {
 
 describe("CourseInquiry — server-recorded submission", () => {
   it("records the inquiry and shows the confirmation on success (happy path)", async () => {
-    const submitInquiry = vi.fn(async (): Promise<CourseInquiryFormState> => ({ success: true }));
+    const submitInquiry = vi.fn(
+      async (
+        _prev: CourseInquiryFormState,
+        _formData: FormData,
+      ): Promise<CourseInquiryFormState> => ({
+        success: true,
+      }),
+    );
     renderInquiry(submitInquiry);
 
     fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
@@ -197,7 +204,14 @@ describe("CourseInquiry — proposing a date", () => {
   // The row stores a bare calendar day; the formatted string is for reading,
   // never for the column.
   it("posts the raw YYYY-MM-DD, not the formatted date", async () => {
-    const submitInquiry = vi.fn(async (): Promise<CourseInquiryFormState> => ({ success: true }));
+    const submitInquiry = vi.fn(
+      async (
+        _prev: CourseInquiryFormState,
+        _formData: FormData,
+      ): Promise<CourseInquiryFormState> => ({
+        success: true,
+      }),
+    );
     renderInquiry(submitInquiry);
 
     fireEvent.change(screen.getByLabelText(/A date you have in mind/), {
@@ -209,14 +223,21 @@ describe("CourseInquiry — proposing a date", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
-    const formData = submitInquiry.mock.calls[0]?.[1] as unknown as FormData;
+    const formData = submitInquiry.mock.calls[0]?.[1];
     expect(formData.get("preferredDate")).toBe("2026-08-12");
   });
 
   // A date is a *request*, not a booking: it must not become a required field,
   // and the rest of the composer must work without it.
   it("stays optional — an inquiry with no date still sends", async () => {
-    const submitInquiry = vi.fn(async (): Promise<CourseInquiryFormState> => ({ success: true }));
+    const submitInquiry = vi.fn(
+      async (
+        _prev: CourseInquiryFormState,
+        _formData: FormData,
+      ): Promise<CourseInquiryFormState> => ({
+        success: true,
+      }),
+    );
     renderInquiry(submitInquiry);
 
     fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
@@ -225,7 +246,7 @@ describe("CourseInquiry — proposing a date", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
-    const formData = submitInquiry.mock.calls[0]?.[1] as unknown as FormData;
+    const formData = submitInquiry.mock.calls[0]?.[1];
     expect(formData.get("preferredDate")).toBeNull();
   });
 });

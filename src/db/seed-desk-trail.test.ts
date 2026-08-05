@@ -14,8 +14,12 @@ import { upcomingTripsWithCounts } from "./trips";
  */
 async function reefTrip() {
   const { db, shop } = await seededShopContext({ history: true });
-  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const trip = trips.find((row) => row.title === "Two-Tank Reef — Christ of the Abyss");
+  // Today's boat — the first trip `seedTrips` inserts, and the departure the
+  // desk trail is written against. Scanned from *now* rather than the epoch on
+  // purpose: the history back-fill reuses these titles on trips that already
+  // sailed, so a scan from the epoch finds a past one first.
+  const trips = await upcomingTripsWithCounts(db, shop.id);
+  const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("seeded reef trip missing");
   return { db, shop, trip };
 }

@@ -329,6 +329,16 @@ describe("rentalFitCompleteness", () => {
     expect(rentalFitCompleteness({ ...suitAndFins, finSize: "9" })).toEqual({ state: "complete" });
     // Imports carry a boot size of their own and no fin size — same answer.
     expect(rentalFitCompleteness({ ...suitAndFins, bootSize: "9" })).toEqual({ state: "complete" });
+    // A blank fin size is not an answer, so the boot column still gets asked.
+    expect(rentalFitCompleteness({ ...suitAndFins, finSize: "", bootSize: "9" })).toEqual({
+      state: "complete",
+    });
+    // Neither column holds one: both pieces are loose ends, because both are
+    // separate lines on the packing list.
+    expect(rentalFitCompleteness(suitAndFins)).toEqual({
+      state: "incomplete",
+      missing: ["boots", "mask_fins"],
+    });
   });
 
   it("reads a blank or whitespace size as no size at all", () => {

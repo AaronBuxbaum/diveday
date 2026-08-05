@@ -14,6 +14,7 @@ import {
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
+  updateTrip,
 } from "./trips";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
@@ -501,6 +502,99 @@ describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
     expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
       sites: [{ id: real.id, name: "Test Real Site" }],
       undecidedDives: 0,
+    });
+  });
+});
+
+describe("trips.dive_site_id — the denormalized pointer the forecast and calendar feed read", () => {
+  /**
+   * It used to be strictly *dive one's* site, so a departure planned second
+   * tank first stored null and offered no forecast point, no calendar
+   * `LOCATION`, and no directions — for a trip that plainly visits a site.
+   * Never a gate: readiness unions the pointer with every `trip_dives` site, so
+   * widening it can only add a site the trip already visits.
+   */
+  it("points at the first dive that has a site, not strictly dive one", async () => {
+    const { db, shop } = await seededShopContext();
+    const elbow = await createDiveSite(db, { shopId: shop.id, name: "Test Second Tank Only" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second tank planned first",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{}, { diveSiteId: elbow.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBe(elbow.id);
+  });
+
+  it("still prefers dive one when dive one has a site", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await createDiveSite(db, { shopId: shop.id, name: "Test Tank One" });
+    const second = await createDiveSite(db, { shopId: shop.id, name: "Test Tank Two" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Both tanks sited",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: first.id }, { diveSiteId: second.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBe(first.id);
+  });
+
+  it("stays null when no tank has a site at all", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Nothing chosen",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{}, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBeNull();
+  });
+
+  it("follows an edit that moves the site from tank one to tank two", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank One" });
+    const second = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank Two" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Plan changes",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: first.id }, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    const outcome = await updateTrip(db, shop.id, trip.id, {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: 2,
+      // What the trip editor sends: the form's dive-one site, which is now blank.
+      diveSiteId: null,
+      dives: [{ diveSiteId: null }, { diveSiteId: second.id }],
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("update refused");
+    expect(outcome.trip.diveSiteId).toBe(second.id);
+
+    // And the surfaces still read the dives, which is the answer that matters.
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: second.id, name: "Test Edit Tank Two" }],
+      undecidedDives: 1,
     });
   });
 });
