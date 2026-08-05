@@ -460,7 +460,8 @@
       "eyebrow": "Catalog",
       "title": "Courses",
       "description": "Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don't offer.",
-      "certificationPaths": "Certification paths",
+      "agencyTabsLabel": "Filter courses by agency",
+      "allAgencies": "All",
       "hidden": "Hidden",
       "orHigher": "{level} or higher",
       "openToUncertified": "Open to uncertified divers",
@@ -469,6 +470,7 @@
       "show": "Show",
       "hideShowSrLabel": "{action} {title}",
       "previewSrLabel": "Preview {title}",
+      "scheduleSrLabel": "Schedule a session of {title}",
       "pagination": {
         "total": "{count, plural, one {# course} other {# courses}}"
       }

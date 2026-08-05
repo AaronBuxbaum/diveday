@@ -460,7 +460,8 @@
       "eyebrow": "Catálogo",
       "title": "Cursos",
       "description": "La copia de tu centro del catálogo PADI y SSI. Abre un curso para editar su página y precio, u oculta los que no ofreces.",
-      "certificationPaths": "Rutas de certificación",
+      "agencyTabsLabel": "Filtrar cursos por agencia",
+      "allAgencies": "Todas",
       "hidden": "Oculto",
       "orHigher": "{level} o superior",
       "openToUncertified": "Abierto a buceadores sin certificar",
@@ -469,6 +470,7 @@
       "show": "Mostrar",
       "hideShowSrLabel": "{action} {title}",
       "previewSrLabel": "Vista previa de {title}",
+      "scheduleSrLabel": "Programar una sesión de {title}",
       "pagination": {
         "total": "{count, plural, one {# curso} other {# cursos}}"
       }

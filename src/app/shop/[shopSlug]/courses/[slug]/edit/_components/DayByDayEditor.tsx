@@ -25,12 +25,10 @@ export interface DayByDayEditorCopy {
   timeNoteTitle: string;
   timeNotePlaceholder: string;
   whatHappens: string;
-  itemLabel: string;
-  removeItemLabel: string;
-  itemPlaceholder: string;
-  remove: string;
-  itemsMax: string;
-  addItem: string;
+  /** "One item per line." — the same line the Included/Not included boxes carry. */
+  whatHappensHint: string;
+  itemsPlaceholder: string;
+  itemsOverMax: string;
   daysMax: string;
   addDay: string;
 }
@@ -70,27 +68,18 @@ export function DayByDayEditor({
     setDays((current) => current.filter((_, i) => i !== index));
   }
 
-  function updateItem(dayIndex: number, itemIndex: number, value: string) {
+  /**
+   * One item per line, the same shape the Included / Not included boxes use.
+   *
+   * Split without trimming or dropping blanks: the textarea's value is rebuilt
+   * from this array on every keystroke, so filtering here would delete the
+   * newline a staffer just pressed before they could type the next item.
+   * `sanitizeScheduleDays` (src/lib/courses.ts) does the trimming and blank-line
+   * dropping server-side, where it cannot fight the cursor.
+   */
+  function updateItems(dayIndex: number, value: string) {
     setDays((current) =>
-      current.map((day, i) =>
-        i === dayIndex
-          ? { ...day, items: day.items.map((item, j) => (j === itemIndex ? value : item)) }
-          : day,
-      ),
-    );
-  }
-
-  function addItem(dayIndex: number) {
-    setDays((current) =>
-      current.map((day, i) => (i === dayIndex ? { ...day, items: [...day.items, ""] } : day)),
-    );
-  }
-
-  function removeItem(dayIndex: number, itemIndex: number) {
-    setDays((current) =>
-      current.map((day, i) =>
-        i === dayIndex ? { ...day, items: day.items.filter((_, j) => j !== itemIndex) } : day,
-      ),
+      current.map((day, i) => (i === dayIndex ? { ...day, items: value.split("\n") } : day)),
     );
   }
 
