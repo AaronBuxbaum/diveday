@@ -271,10 +271,91 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
  * `user_accounts.email` index. Sign-in for every role goes through the `isDemo`
  * bypass token (src/lib/credentials.ts), so no real password is minted or stored.
  *
- * The random slug suffix makes collisions on the global `shops.slug` index
- * astronomically unlikely under concurrent minting; a `23505` here means "the
- * visitor hit that lottery" and the action can simply be retried.
+ * Demo names carry no random suffix any more (src/lib/demo-identity.ts): the
+ * visitor sees a slug and a sign-in address a real shop could have. That trades
+ * an astronomically-unlikely collision for a merely-rare one, so
+ * `insertDemoShop` below retries on the unique violation instead of assuming it
+ * away.
  */
+
+/** Postgres `unique_violation` — the only insert failure here that a retry fixes. */
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    // node-postgres and PGlite both surface the SQLSTATE on `code`; the driver
+    // wraps it, so check the cause too rather than only the outermost error.
+    ((error as { code?: unknown }).code === PG_UNIQUE_VIOLATION ||
+      isUniqueViolation((error as { cause?: unknown }).cause))
+  );
+}
+
+/**
+ * How many names to try before giving up. Each attempt draws from
+ * {@link DEMO_NAME_COMBINATIONS} against a live population bounded by
+ * `enforceMintedDemoCap`, so the chance of even one collision is small and of
+ * five in a row is negligible — five is "something is actually wrong", not
+ * "unlucky", and failing there beats spinning.
+ */
+const DEMO_IDENTITY_ATTEMPTS = 5;
+
+/**
+ * Insert the shop row under a freshly-minted identity, regenerating the *whole*
+ * identity on a name collision — never patching the slug alone, since every
+ * staff email is derived from it and would otherwise disagree with the shop.
+ */
+async function insertDemoShop(db: DbExecutor) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
+    const identity = generateDemoShopIdentity();
+    try {
+      const [shop] = await db
+        .insert(shops)
+        .values({
+          name: identity.name,
+          slug: identity.slug,
+          timezone: DEMO_SHOP_TIMEZONE,
+          rentalItems: [
+            "bcd",
+            "regulator",
+            "wetsuit",
+            "mask_fins",
+            "weights",
+            "dive_computer",
+            "gopro",
+            "nitrox",
+          ],
+          rentalPricing: {
+            setCents: 4500,
+            perItemCents: {
+              bcd: 1500,
+              regulator: 1500,
+              wetsuit: 1200,
+              mask_fins: 800,
+              weights: 500,
+              dive_computer: 1000,
+              gopro: 2000,
+            },
+            nitroxCents: 1200,
+          },
+          isDemo: true,
+        })
+        .returning();
+      if (!shop) throw new Error("createDemoShop: failed to insert shop");
+      return { shop, identity };
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw new Error(
+    `createDemoShop: no free demo shop name after ${DEMO_IDENTITY_ATTEMPTS} attempts`,
+    { cause: lastError },
+  );
+}
+
 export async function createDemoShop(
   db: DbExecutor,
 ): Promise<{ slug: string; ownerEmail: string }> {
@@ -285,41 +366,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const identity = generateDemoShopIdentity();
-
-  const [shop] = await db
-    .insert(shops)
-    .values({
-      name: identity.name,
-      slug: identity.slug,
-      timezone: DEMO_SHOP_TIMEZONE,
-      rentalItems: [
-        "bcd",
-        "regulator",
-        "wetsuit",
-        "mask_fins",
-        "weights",
-        "dive_computer",
-        "gopro",
-        "nitrox",
-      ],
-      rentalPricing: {
-        setCents: 4500,
-        perItemCents: {
-          bcd: 1500,
-          regulator: 1500,
-          wetsuit: 1200,
-          mask_fins: 800,
-          weights: 500,
-          dive_computer: 1000,
-          gopro: 2000,
-        },
-        nitroxCents: 1200,
-      },
-      isDemo: true,
-    })
-    .returning();
-  if (!shop) throw new Error("createDemoShop: failed to insert shop");
+  const { shop, identity } = await insertDemoShop(db);
 
   await db.insert(waiverTemplates).values({
     shopId: shop.id,
