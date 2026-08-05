@@ -54,15 +54,24 @@ chosen battlegrounds — and re-read it before changing the spine.
   `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
   capability, and never promise a turnaround time. A new service claim needs product-owner sign-off
-  the same way the price does. **Also authorized (2026-07-27):** a general founder-direct contact
-  line, routed to the `aaron@dive.day` inbox — the same promise the "You can reach the founder"
-  section on `/about` already made in prose, now with a real `mailto:` CTA. It appears on `/about`,
-  the marketing footer, `/pricing`, the homepage's closing contact band (added 2026-08-03 under the
-  owner's buyer-conversion directive — the landing page previously offered a hesitant buyer no
-  visible human path at all), and the signed-in shop settings page, always framed as a person
-  who wants to hear from you, never a support ticket queue. `/onboard` states the same promise as a
-  founding-shop reassurance without its own `mailto:` — the sign-up form is not the place to offer
-  an exit from the form.
+  the same way the price does. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  [human-decisions.md](human-decisions.md#decision-register), H-12/H-26).** From 2026-07-27 through
+  that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
+  the same promise the "You can reach the founder" section on `/about` made in prose. It is
+  rescinded outright, not reworded down again: a solo-founder company cannot durably hold a
+  personal-response standard at any real scale, and the promise read as small-time rather than the
+  positioning DiveDay wants. **What replaces it:** a plain `support@dive.day` inbox, reaching the
+  same small team without naming an individual or promising a response time — phrase it as "write in
+  and a real person reads it," never "the founder personally answers" or any response-time
+  guarantee. It appears on `/about` (the "How it's run" section — the hero and founder-biography
+  sections stay, since who built DiveDay and why is a claim like any other, not a response-time
+  promise), the marketing footer, `/pricing`, the homepage's closing contact band, the sign-up
+  reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
+  `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
+  trial FAQ, the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
+  soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
+  people as `aaron@dive.day` always did; see
+  [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,

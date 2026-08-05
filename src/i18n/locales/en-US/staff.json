@@ -1677,7 +1677,19 @@
       "savedSummary": "Saved {date} · {pending} waiting to send · {rejected} need a look",
       "refreshingLabel": "Refreshing…",
       "refreshNowLabel": "Refresh now",
-      "openOfflineRollCall": "Open offline roll call"
+      "openOfflineRollCall": "Open offline roll call",
+      "pushHeading": "Wake this phone",
+      "pushBody": "Get a ping when this trip's manifest changes, even with the screen off. A ping is a heads-up, not a guarantee — check the saved copy is fresh before you leave the dock.",
+      "pushEnable": "Notify this device",
+      "pushEnabling": "Turning on…",
+      "pushDisable": "Stop notifying this device",
+      "pushOn": "This device gets a heads-up when the manifest changes near departure.",
+      "pushUnsupported": "This browser can't send notifications to a sleeping phone. The manifest still refreshes whenever this page is open.",
+      "pushHomeScreenHint": "On iPhone and iPad, add DiveDay to your Home Screen first — Safari only allows this for installed apps.",
+      "pushDenied": "Notifications are blocked for DiveDay in this browser's settings. Allow them there, then try again.",
+      "pushError": "Couldn't turn that on just now. Try again, or refresh before you head out.",
+      "pushNotificationTitle": "Manifest updated",
+      "pushNotificationBody": "Open the manifest to save the current list to this phone."
     },
     "rollCall": {
       "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
@@ -1997,8 +2009,15 @@
         "importCta": "Import contacts",
         "exportCta": "Data export"
       },
-      "founder": {
-        "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time. It reaches Aaron directly, not a ticket queue, and reaching out is always welcome.",
+      "trial": {
+        "heading": "Your trial",
+        "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",
+        "expiredDescription": "Your trial ended {endDate}. Everything you've set up keeps working.",
+        "upgradeBody": "Ready to move to a paid plan? Email us and we'll get you set up.",
+        "emailCta": "Email {email}"
+      },
+      "support": {
+        "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time.",
         "emailCta": "Email {email}"
       },
       "groups": {

@@ -3,7 +3,7 @@ import { LogoMark } from "@/components/Logo";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
  * Reads the negotiated locale (`headers()`-backed, per-request) — stays a
@@ -55,11 +55,11 @@ function MarketingFooterView({ locale }: { locale: DiverLocale }) {
             {t("nav.signIn")}
           </Link>
           <a
-            href={`mailto:${FOUNDER_EMAIL}`}
+            href={`mailto:${SUPPORT_EMAIL}`}
             className="hover:text-foreground hover:underline"
             title={t("nav.sayHello")}
           >
-            {FOUNDER_EMAIL}
+            {SUPPORT_EMAIL}
           </a>
         </div>
       </div>

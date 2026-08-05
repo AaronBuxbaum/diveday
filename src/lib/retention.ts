@@ -37,7 +37,8 @@ export type RetainedTable =
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
-  | "booking_payment_events";
+  | "booking_payment_events"
+  | "push_subscriptions";
 
 /**
  * The one place a human changes how long each trail is kept, in days.
@@ -93,6 +94,21 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * in the same table as every other trail.
    */
   booking_payment_events: 2555,
+  /**
+   * 30 days. The shortest window here, and deliberately so: a
+   * `push_subscriptions` row is a *device credential* (endpoint plus the two
+   * keys a push is encrypted to), not a record anyone needs later. It is useful
+   * only while its trip is near departure, so a row a month past its creation
+   * has no remaining purpose and is pure blast radius if the database is ever
+   * disclosed.
+   *
+   * The common cases are already handled elsewhere and this is the backstop for
+   * what they miss: the trip's ON DELETE CASCADE clears rows when a departure is
+   * deleted, a 404/410 from the push service prunes retired endpoints on sight,
+   * and `removeStaffMember` revokes a leaver's devices. None of those fire for a
+   * device that simply stopped being used.
+   */
+  push_subscriptions: 30,
 };
 
 /**

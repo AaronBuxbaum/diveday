@@ -746,7 +746,12 @@ new domain concept, define it here in the same PR.
   bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
   and is never reaped. Onboarding a **trial** at `/onboard` creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
-  20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed).
+  20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
+  **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
+  owner in Settings as days left / trial ended. Expiry is **soft** — the shop keeps working exactly
+  as before past the window; there is no paid/trial entitlement flag in the schema to gate on.
+  Moving to a paid plan is by writing to `onboarding@dive.day`, not a self-serve checkout
+  (product-owner decision, 2026-08-05, [human-decisions.md](human-decisions.md#decision-register)).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   revenue collected, bookings, **fill rate**, and **waiver completion** for the trips that departed
   in a chosen month, plus a per-trip breakdown. Anchored to trip-departure month in the shop

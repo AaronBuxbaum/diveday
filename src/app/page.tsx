@@ -22,7 +22,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -395,14 +395,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-3 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
           </div>
           <a
-            href={`mailto:${FOUNDER_EMAIL}`}
+            href={`mailto:${SUPPORT_EMAIL}`}
             className={buttonClass({
               variant: "secondary",
               size: "cta",
               className: "shrink-0 self-start border-border-strong lg:self-auto",
             })}
           >
-            {t("marketing.home.contactCta", { email: FOUNDER_EMAIL })}
+            {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
           </a>
         </div>
       </section>

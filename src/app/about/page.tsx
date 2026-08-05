@@ -13,7 +13,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -167,10 +167,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href={`mailto:${FOUNDER_EMAIL}`}
+                href={`mailto:${SUPPORT_EMAIL}`}
                 className={buttonClass({ className: "cursor-pointer" })}
               >
-                {t("marketing.about.emailCta", { email: FOUNDER_EMAIL })}
+                {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
               </a>
               <Link
                 href="/pricing"
@@ -291,7 +291,9 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
                   {t("marketing.about.whoAnswersLabel")}
                 </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.whoAnswersValue")}</dd>
+                <dd className="mt-2 leading-7">
+                  {t("marketing.about.whoAnswersValue", { email: SUPPORT_EMAIL })}
+                </dd>
               </div>
             </dl>
           </div>

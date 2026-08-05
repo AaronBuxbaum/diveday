@@ -2,6 +2,7 @@ import { trackEvent } from "@/lib/analytics";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { publishManifestEvent } from "./manifest-events";
 import { recordTripActivity } from "./operations";
 import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
 
@@ -206,6 +207,14 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     actorPersonId: input.actorPersonId,
     action: activityAction(input.entry, outcome.personName),
   });
+
+  // A diver just appeared on the roster. This is the archetypal change that
+  // lands *while a captain is walking to the boat* — a walk-in seated at the
+  // counter — so it is exactly what the manifest's refresh triggers exist for
+  // (ADR 20260804-manifest-web-push). Best-effort and never thrown, like every
+  // other call to it, and deliberately after the booking and its side effects
+  // rather than inside them.
+  await publishManifestEvent(db, input.shopId, input.tripId);
 
   return {
     ok: true,

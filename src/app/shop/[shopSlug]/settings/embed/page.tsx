@@ -10,7 +10,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { SnippetField } from "./SnippetField";
@@ -74,7 +74,7 @@ export default async function EmbedSettingsPage() {
           actions={backToSettings}
         />
         <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-          {t("settings.embed.notConfigured", { email: FOUNDER_EMAIL })}
+          {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
         </p>
       </main>
     );

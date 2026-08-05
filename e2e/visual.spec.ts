@@ -1117,15 +1117,21 @@ for (const scheme of ["light", "dark"] as const) {
        * other baseline. A freshly onboarded shop is the real "empty queue"
        * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
        *
-       * **Two captures in one test, deliberately.** `nav-more-menu` is the same
-       * page with the header's "More" panel open, and both images contain the
-       * shop's slug — the first-run checklist renders the public schedule URL.
-       * A second test would have to onboard a *second* shop, because
-       * `/api/test/reset` reseeds the demo shop and purges minted demo shops but
-       * does not delete one created through `/onboard`, so the slug would have
-       * to differ — and a different slug is different pixels in both baselines.
-       * Splitting here would move a baseline to buy isolation, which is the
-       * wrong trade; the two captures are one page anyway.
+       * **Three captures in one test, deliberately.** `nav-more-menu` is the
+       * same page with the header's "More" panel open, and `settings-trial` is
+       * this shop's Settings page — the trial-status card only ever renders
+       * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
+       * shop the other settings capture uses) can never show it. All three
+       * images contain the shop's slug — the first-run checklist renders the
+       * public schedule URL. A second test would have to onboard a *second*
+       * shop, because `/api/test/reset` reseeds the demo shop and purges
+       * minted demo shops but does not delete one created through `/onboard`,
+       * so the slug would have to differ — and a different slug is different
+       * pixels in every baseline. Splitting here would move a baseline to buy
+       * isolation, which is the wrong trade; the three captures are one
+       * onboarded session anyway. The trial card itself is clock-anchored and
+       * deterministic: this shop's `created_at` is the harness's one frozen
+       * instant, so "21 days left" and the end date never drift between runs.
        */
       test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
         page,
@@ -1173,6 +1179,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page.getByRole("list", { name: "Run the shop" }).waitFor();
         await capture(page, "nav-more-menu", scheme);
+
+        // Same session, straight to Settings: the one place a trial shop's
+        // owner sees the trial-status card (days left, upgrade-by-email CTA).
+        await page.goto(`/shop/${unique}/settings`);
+        await page.getByRole("heading", { name: "Your trial" }).waitFor();
+        await capture(page, "settings-trial", scheme);
       });
 
       /**
@@ -1466,6 +1478,12 @@ for (const scheme of ["light", "dark"] as const) {
         // mount; wait for that to settle (the offline-roll-call link only
         // renders once saved) so the capture isn't racing that async write.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        // The Web Push opt-in (ADR 20260804-manifest-web-push) sits in the same
+        // card and decides what to render *after* mount — it reads
+        // navigator/window for platform support, so the server render is empty.
+        // Waiting for it keeps the capture from racing that resolution and
+        // banking a baseline with the section half-present.
+        await page.getByRole("heading", { name: "Wake this phone" }).waitFor();
         await capture(page, "manifest", scheme);
       });
 
@@ -2171,7 +2189,23 @@ test.describe("capture harness", () => {
         // the other half of what this proves: `withRendererBound` must absorb
         // the rejection Playwright raises when it tears the context down,
         // rather than leaking it into whichever test runs next.
-        page.evaluate(() => new Promise<number>(() => {})),
+        //
+        // The resolver is rooted on `globalThis` so V8 cannot collect the
+        // promise. A `new Promise(() => {})` whose resolvers are referenced
+        // nowhere is unreachable the moment it is created, and when Chromium
+        // collects it Playwright rejects the evaluate with "Resulting promise
+        // was garbage collected" — which `withRendererBound` then rethrows,
+        // correctly, since a pass that *throws* is a broken page and must not
+        // be swallowed. That made this test a race between GC and the 1s
+        // budget, red whenever GC won. Rooting the resolver keeps it genuinely
+        // pending, which is what the test means by "never settles"; nothing
+        // ever calls it.
+        page.evaluate(
+          () =>
+            new Promise<number>((resolve) => {
+              (globalThis as { __neverSettles?: (value: number) => void }).__neverSettles = resolve;
+            }),
+        ),
         -1,
       );
     } finally {

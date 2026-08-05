@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import "./globals.css";
 
 /**
@@ -49,10 +49,10 @@ export default function GlobalError({
             Try again
           </button>
           <a
-            href={`mailto:${FOUNDER_EMAIL}`}
+            href={`mailto:${SUPPORT_EMAIL}`}
             className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
           >
-            Email {FOUNDER_EMAIL}
+            Email {SUPPORT_EMAIL}
           </a>
         </div>
       </body>

@@ -14,6 +14,7 @@ import {
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
+import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { RollCallNote } from "@/components/RollCallNote";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
@@ -38,6 +39,12 @@ import {
   recordRollCall,
   updateLatestRollCallNote,
 } from "@/db/manifests";
+import {
+  deletePushSubscription,
+  isDeviceSubscribed,
+  isDeviceSubscribedAnywhere,
+  savePushSubscription,
+} from "@/db/push-subscriptions";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
@@ -63,6 +70,7 @@ import {
   rollCallLabel,
   splitBuddyTeamIds,
 } from "@/lib/manifests";
+import { isAllowedPushEndpoint, webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
 
@@ -125,6 +133,19 @@ const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
   note: z.string().trim().max(300).optional(),
+});
+
+/**
+ * The endpoint is a URL the *browser* supplies that this server later POSTs to,
+ * so it is validated against the known push services rather than merely parsed
+ * — see `isAllowedPushEndpoint`. The key material is base64url and bounded;
+ * both are opaque to us beyond that.
+ */
+const pushEndpointSchema = z.string().refine(isAllowedPushEndpoint);
+const pushSubscriptionSchema = z.object({
+  endpoint: pushEndpointSchema,
+  p256dh: z.string().min(1).max(256),
+  auth: z.string().min(1).max(256),
 });
 
 const noteSchema = z.object({
@@ -276,6 +297,65 @@ export default async function TripManifestPage({
     ? manifest.summary.notBoarded
     : manifest.summary.notBackAboard;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
+
+  // Web Push opt-in for this device (ADR 20260804-manifest-web-push). Both
+  // actions re-derive the shop from the session rather than trusting anything
+  // the client sent, so one shop's staff can never register or drop a
+  // subscription against another's trip; `savePushSubscription` additionally
+  // refuses a trip that isn't theirs.
+  async function subscribePushAction(input: {
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+  }): Promise<{ ok: boolean }> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushSubscriptionSchema.safeParse(input);
+    if (!parsed.success) return { ok: false };
+    const outcome = await savePushSubscription(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      personId: staff.user.personId,
+      endpoint: parsed.data.endpoint,
+      p256dh: parsed.data.p256dh,
+      auth: parsed.data.auth,
+    });
+    return { ok: outcome.ok };
+  }
+
+  async function unsubscribePushAction(
+    endpoint: string,
+  ): Promise<{ ok: boolean; hasOtherTrips: boolean }> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushEndpointSchema.safeParse(endpoint);
+    if (!parsed.success) return { ok: false, hasOtherTrips: false };
+    const outcome = await deletePushSubscription(
+      await getDb(),
+      staff.user.shopId,
+      tripId,
+      parsed.data,
+    );
+    return { ok: true, hasOtherTrips: outcome.hasOtherTrips };
+  }
+
+  // Read by the control on mount. The browser's own subscription object is
+  // origin-wide, so only the server can say whether *this* trip is on.
+  async function isPushSubscribedAction(endpoint: string): Promise<boolean> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushEndpointSchema.safeParse(endpoint);
+    if (!parsed.success) return false;
+    return isDeviceSubscribed(await getDb(), staff.user.shopId, tripId, parsed.data);
+  }
+
+  async function isPushSubscribedAnywhereAction(endpoint: string): Promise<boolean> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushEndpointSchema.safeParse(endpoint);
+    if (!parsed.success) return false;
+    return isDeviceSubscribedAnywhere(await getDb(), staff.user.shopId, parsed.data);
+  }
 
   async function rollCallAction(
     _prev: RollCallResult,
@@ -612,6 +692,29 @@ export default async function TripManifestPage({
             refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
             openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
           } satisfies OfflineManifestManagerCopy
+        }
+        pushOptIn={
+          <PushOptIn
+            publicKey={webPushPublicKey()}
+            subscribeAction={subscribePushAction}
+            unsubscribeAction={unsubscribePushAction}
+            isSubscribedAction={isPushSubscribedAction}
+            isSubscribedAnyAction={isPushSubscribedAnywhereAction}
+            copy={
+              {
+                heading: t("trips.offlineManifestManager.pushHeading"),
+                body: t("trips.offlineManifestManager.pushBody"),
+                enable: t("trips.offlineManifestManager.pushEnable"),
+                enabling: t("trips.offlineManifestManager.pushEnabling"),
+                disable: t("trips.offlineManifestManager.pushDisable"),
+                on: t("trips.offlineManifestManager.pushOn"),
+                unsupported: t("trips.offlineManifestManager.pushUnsupported"),
+                homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
+                denied: t("trips.offlineManifestManager.pushDenied"),
+                error: t("trips.offlineManifestManager.pushError"),
+              } satisfies PushOptInCopy
+            }
+          />
         }
       />
 
