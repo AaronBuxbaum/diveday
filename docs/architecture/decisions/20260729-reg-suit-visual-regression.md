@@ -70,3 +70,17 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   published S3 snapshot as the baseline and only reports a diff when the pixels actually changed. If that previous
   snapshot was never published, the S3 fetch just comes back empty and the run degrades to the old all-new behavior
   for that one push, rather than a hard failure.
+- **A snapshot main fails to publish is now loud on the run that caused it** (added 2026-08-06). The
+  degradation above is the *consumer* side and is unchanged: a run that finds no baseline still
+  reports everything as new rather than failing hard. The producer side had no signal at all. Because
+  the publish steps are correctly gated on every visual shard succeeding — a partial capture set would
+  become the next commit's baseline and report the missing surfaces as new forever after — one flaky
+  screenshot on a push to main means that commit publishes nothing, and every branch cut from it is
+  blind. Nothing said so: the shard's own red reads as one flaky capture, `visual-report` stayed green
+  because the publish steps were *skipped* rather than failed, and a push has no pull request for the
+  sticky summary comment to land on, so the warning went to a job summary nobody opens. It was
+  discovered twice on 2026-08-06, days apart, each time from an unrelated branch's red `reg` status
+  and a backwards investigation. `visual-report` now fails on a push whose shards did not all succeed,
+  with an error naming the consequence and the fix (re-run the failed shard; a green re-run publishes
+  the snapshot). Pull requests are deliberately exempt — a PR's missed snapshot is never anyone else's
+  baseline, and its `reg` status and sticky comment already say what happened.

@@ -429,6 +429,32 @@ jobs:
           # is missing (every fork PR), so it can still look for a report and
           # explain the miss rather than crash.
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+      # A snapshot missed on **main** is everyone's problem, and until now it was
+      # nobody's alarm. The publish steps above are correctly gated on every
+      # shard succeeding — a partial set would become the next commit's baseline
+      # and report the missing surfaces as new forever after — so a single flaky
+      # capture means this commit publishes nothing. Main's snapshot is what
+      # every branch cut from it resolves its baseline against, so that silence
+      # blinds visual regression repo-wide until somebody re-runs the shard.
+      #
+      # Nothing said so. The shard's own red is the only signal, and it reads as
+      # one flaky screenshot rather than as a safety net going down; this job
+      # stayed green because the publish steps were *skipped*, not failed, and
+      # the summary step is `continue-on-error`. On a pull request that is fine —
+      # the sticky comment and the `reg` status both say it plainly — but a push
+      # has no pull request to comment on, so the warning goes to a job summary
+      # nobody opens. It cost two full investigations on 2026-08-06, days apart,
+      # each starting from an unrelated branch's red `reg` and working backwards.
+      #
+      # So: say it, on the run that caused it, in the words of its consequence.
+      # Deliberately last, after the summary step's `!cancelled()` has had its
+      # turn, and deliberately push-only — a pull request's missed snapshot is
+      # never anyone else's baseline.
+      - name: Refuse to miss main's baseline silently
+        if: ${{ github.event_name == 'push' && needs.visual.result != 'success' }}
+        run: |
+          echo "::error title=No visual baseline published for ${GITHUB_SHA}::A visual capture shard failed, so this commit published no S3 snapshot. Every branch cut from it will resolve 0 baselines and report every surface as new — visual regression is blind repo-wide until this is fixed. Re-run the failed shard on this run (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not merge a partial capture set to work around it: that would make the missing surfaces read as new permanently."
+          exit 1
 
   db-surface-changes:
     name: Detect database-surface changes
