@@ -252,7 +252,22 @@ than a new 403 — a demoted staffer is that same case discovered one row read l
 (`OfflineManifestAutoSave`, the worker's `refreshSavedManifests`) branch only on `response.ok`.
 
 The sibling staff API routes — `/api/offline-manifests/sync`, `/api/search`,
-`/api/trips/[id]/manifest-events` — still carry the JWT-roles gate and were out of scope here.
+`/api/trips/[id]/manifest-events` — were followed up in the same series and now carry the same
+live-roles gate, each sequenced against its own tenant answer rather than copying this one's. Search
+answers an unresolvable tenant with an empty result set rather than a status, so its check sits below
+that branch; the other two read no shop row at all, so theirs go first, which additionally stops a
+revoked caller telling a real trip id from an invented one. The sync route's gate also runs ahead of
+body parsing, so an unauthorized caller's batch is never read, and the manifest-events stream is
+checked at subscribe time only — bounded by its own `STREAM_TTL_MS` retirement, after which
+`EventSource` reconnects into a fresh `GET` that runs the whole gate again.
+
+Still open, and the reason these fixes were needed one route at a time: `recordRollCall`
+(`src/db/manifests.ts`) authorizes with its own `person_roles` join that checks neither
+`people.deleted_at` nor `user_accounts.status`, so the *writer* still accepts a deleted person or a
+disabled account holding a stale role row. Every route above it now refuses them, but a future call
+site would inherit the hole. And `src/lib/auth.config.ts` sets no `session.maxAge`, so NextAuth's
+30-day default is what every one of these gates exists to bound — shortening it would shrink the
+class rather than patching its members.
 
 **Amendment (2026-08-06): the purge refuses a slug it cannot trust, and the service worker stops
 crossing tenants.** A security review of the identity endpoint above found the two ways this design
