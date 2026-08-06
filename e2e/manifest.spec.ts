@@ -56,10 +56,13 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await openTripTab(page, "Manifest");
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  // "Blocked divers", not "Readiness needs attention": the shop has one
-  // readiness vocabulary now (src/i18n/readiness-labels.ts), and this panel
-  // names the same state its diver rows do.
-  await expect(page.getByRole("heading", { name: "Blocked divers" })).toBeVisible();
+  // Blocked divers are said once, in the checkpoint panel, as a sentence
+  // about what blocked *means here* — the standalone "Blocked divers" banner
+  // that used to restate the panel's own count is gone. The count itself is
+  // asserted below, on the panel's count row.
+  await expect(
+    page.getByText(/blocked\. They remain on this manifest and cannot board/),
+  ).toBeVisible();
   // Her own row heading, not a bare text match: every unteamed diver's name
   // also appears on the buddy-team builder's checkbox below (ADR
   // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
@@ -110,14 +113,16 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
-  // The mobile-only summary tiles (collapsed behind "More stats", sm:hidden)
-  // and the desktop-only ones (hidden below sm) both carry this label — at
-  // the default desktop test viewport the mobile copy is DOM-first but
-  // never visible, so an unfiltered .first() picks it and the assertion
-  // below would report "hidden" forever. Filter to the one actually shown.
-  await expect(
-    page.getByText("Not boarded", { exact: true }).and(page.locator(":visible")).first(),
-  ).toBeVisible();
+  // The head count now lives once, in the checkpoint panel's count row —
+  // the six summary tiles (three responsive layouts of the same numbers,
+  // one of them collapsed behind "More stats") are gone. Scoped to the
+  // panel and asserted on the *number* as well as the word: an unscoped
+  // text match would also find each row's own `print:inline-flex` status
+  // pill, which is in the DOM but never visible on screen.
+  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  const notBoardedCount = progressPanel.locator("dl > div").filter({ hasText: "Not boarded" });
+  await expect(notBoardedCount).toBeVisible();
+  await expect(notBoardedCount).toContainText("1");
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);

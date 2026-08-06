@@ -4,10 +4,18 @@ import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 
 /**
  * The sticky progress panel: which checkpoint is live, how much of it is
- * recorded, and the one line that says whether it is closed.
+ * recorded, the counts behind that fraction, and the one line that says
+ * whether it is closed.
+ *
+ * This is the page's **only** count surface. It used to share the job with a
+ * six-tile grid above the checkpoint nav (three responsive layouts of the same
+ * numbers) and a standalone "Blocked divers" banner below it, which put three
+ * restatements of one head count between the captain and the first diver row.
+ * The tiles are gone and the blocked banner is the quiet sentence below.
  */
 export function SummaryPanel({
   checkpoint,
+  isDeparture,
   rollCallComplete,
   completeness,
   summary,
@@ -15,6 +23,14 @@ export function SummaryPanel({
   t,
 }: {
   checkpoint: RollCallCheckpoint;
+  /**
+   * "Not boarded" is the dock's word for *never left*; after a dive the same
+   * number means "not back aboard" (DOM-H3, `isNotBackAboard` in
+   * src/lib/manifests.ts). The page resolves which checkpoint this is — the
+   * count row and the blocked sentence both follow it, so no surface can put a
+   * dock word beside a diver who is unaccounted for in the water.
+   */
+  isDeparture: boolean;
   rollCallComplete: boolean;
   completeness: TripManifest["completeness"];
   summary: TripManifest["summary"];
@@ -29,6 +45,21 @@ export function SummaryPanel({
   // off the completeness verdict itself rather than recomputed, so this page
   // and the rule that closes the checkpoint can never disagree.
   const crewCounts = completeness.crewCounts;
+  // The head count, in words and figures. Every entry is a label plus a
+  // number — never a colour-coded chip a captain has to decode in sunlight
+  // (phone/sunlight invariant), and `tabular-nums` so the figures hold their
+  // columns as they tick.
+  const counts: Array<{ label: string; value: number }> = [
+    { label: t("trips.manifest.summaryBoarded"), value: summary.boarded },
+    {
+      label: isDeparture
+        ? t("trips.manifest.summaryNotBoarded")
+        : t("trips.manifest.summaryNotBackAboard"),
+      value: isDeparture ? summary.notBoarded : summary.notBackAboard,
+    },
+    { label: t("trips.manifest.summaryAwaiting"), value: summary.awaiting },
+    { label: t("trips.manifest.summaryBlocked"), value: summary.blocked },
+  ];
   return (
     <section
       aria-labelledby="roll-call-progress-heading"
@@ -75,6 +106,18 @@ export function SummaryPanel({
           }}
         />
       </div>
+      {/* The counts the six tiles used to carry, folded in under the bar they
+          explain. A definition list, not a grid of cards: four label/number
+          pairs read in one pass and cost the roll-call list no vertical space
+          on a phone. */}
+      <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {counts.map((count) => (
+          <div key={count.label} className="flex items-baseline gap-1.5">
+            <dt className="text-muted">{count.label}</dt>
+            <dd className="font-bold tabular-nums">{count.value}</dd>
+          </div>
+        ))}
+      </dl>
       {/* The one line that says whether this checkpoint is closed. It used to
           go quiet at `awaiting === 0` — every diver counted, nothing said
           about the crew. Now it names what is still open. */}
@@ -101,6 +144,19 @@ export function SummaryPanel({
                     ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
                     : t("trips.manifest.allAccountedFor")}
       </p>
+      {/* What being blocked means at *this* checkpoint. This was a warning-
+          toned banner of its own under the panel, with a "Blocked divers"
+          heading restating the count the panel already showed. The count is
+          in the row above; what the banner actually added was this sentence,
+          so that is all that is left of it. It says the state in words, not
+          only in tone. */}
+      {summary.blocked > 0 ? (
+        <p className="mt-1 text-sm font-semibold text-warning">
+          {isDeparture
+            ? t("trips.manifest.blockedDeparture", { count: summary.blocked })
+            : t("trips.manifest.blockedAfterDive", { count: summary.blocked })}
+        </p>
+      ) : null}
       {/* Buddy teams that came back split — someone aboard, someone not
           (ADR 20260804-buddy-teams). Its own line, never folded into the
           completeness reason above: it informs the deck and blocks

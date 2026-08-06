@@ -1,5 +1,6 @@
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
@@ -20,6 +21,7 @@ export function BuddyTeamsPanel({
   crewOptions,
   unteamedDivers,
   buddyErrorText,
+  buddyErrorForm,
   formBuddyTeamAction,
   addBuddyTeamMemberAction,
   removeBuddyTeamMemberAction,
@@ -31,25 +33,39 @@ export function BuddyTeamsPanel({
   crewOptions: BuddyMemberOption[];
   unteamedDivers: ReadonlyArray<{ fullName: string }>;
   buddyErrorText: string | null;
+  /**
+   * Which form the refusal answers, so it renders beside that form rather
+   * than floating above the whole panel (docs/design/forms-and-controls.md).
+   * The page resolves it from `?buddyError=`; "builder" is the one refusal a
+   * staffer earns from the new-team fieldset ("a buddy team needs at least
+   * two people"), every other code answers one of the per-team forms and has
+   * no single home, so it stays at the top of the panel's forms.
+   */
+  buddyErrorForm: "builder" | "panel" | null;
   formBuddyTeamAction: (formData: FormData) => Promise<void>;
   addBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
   removeBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
   dissolveBuddyTeamAction: (formData: FormData) => Promise<void>;
   t: StaffTranslator;
 }) {
+  // The builder only renders when there are two people left to tick. A
+  // "too few" refusal with no builder on screen has nowhere to sit, so it
+  // falls back to the panel-level status rather than disappearing.
+  const showBuilder = diverOptions.length + crewOptions.length >= 2;
+  const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
+  const panelError = builderError ? null : buddyErrorText;
   return (
     <section aria-labelledby="buddy-teams-heading" className="mt-9 print:hidden">
       <h2 id="buddy-teams-heading" className="text-lg font-semibold">
         {t("trips.manifest.buddyHeading")}
       </h2>
       <p className="mt-1 max-w-prose text-sm text-muted">{t("trips.manifest.buddyDescription")}</p>
-      {buddyErrorText ? (
-        <p className="mt-2 text-sm font-semibold text-danger" role="status">
-          {buddyErrorText}
-        </p>
-      ) : null}
+      <FormStatus className="mt-2">{panelError}</FormStatus>
       {buddyTeamsList.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyNoTeams")}</p>
+        <EmptyState className="mt-3">
+          <h3 className="font-medium">{t("trips.manifest.buddyNoTeams")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("trips.manifest.buddyNoTeamsHint")}</p>
+        </EmptyState>
       ) : (
         <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
           {buddyTeamsList.map((team, index) => {
@@ -181,7 +197,7 @@ export function BuddyTeamsPanel({
        * old two-select form could only ever express the one case the model
        * no longer restricts us to.
        */}
-      {diverOptions.length + crewOptions.length >= 2 ? (
+      {showBuilder ? (
         <form action={formBuddyTeamAction} className="mt-4">
           <fieldset className="rounded-lg border border-border bg-surface p-4">
             <legend className="px-1 text-sm font-semibold">
@@ -218,10 +234,14 @@ export function BuddyTeamsPanel({
                 </div>
               </>
             ) : null}
-            <div className="mt-4">
+            {/* The action row is where this form's own answer lands — a
+                single tick is a worded refusal beside the button that earned
+                it, not a floating line at the top of the panel. */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <button type="submit" className={buttonClass({ size: "boat" })}>
                 {t("trips.manifest.buddyFormSubmit")}
               </button>
+              <FormStatus>{builderError}</FormStatus>
             </div>
           </fieldset>
         </form>

@@ -39,7 +39,6 @@ import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall } from "./_components/DiverRollCall";
 import { SummaryPanel } from "./_components/SummaryPanel";
-import { SummaryTiles } from "./_components/SummaryTiles";
 import {
   addBuddyTeamMemberAction,
   crewRollCallAction,
@@ -120,17 +119,6 @@ export default async function TripManifestPage({
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.
   const isDeparture = checkpoint === "departure";
-  // "Not boarded" is the dock's word for *never left*; after a dive the same
-  // control means *did not return to the boat* (DOM-H3, `isNotBackAboard` in
-  // src/lib/manifests.ts). One checkpoint-dependent word set for the tile, the
-  // pill, and the button, so no surface can put a settled green check beside a
-  // diver who is unaccounted for in the water.
-  const notBoardedTileLabel = isDeparture
-    ? t("trips.manifest.summaryNotBoarded")
-    : t("trips.manifest.summaryNotBackAboard");
-  const notBoardedTileValue = isDeparture
-    ? manifest.summary.notBoarded
-    : manifest.summary.notBackAboard;
 
   // Every mutation on this page lives in `./actions.ts` at module scope, bound
   // here to the departure and checkpoint it is about. That context used to be
@@ -186,6 +174,12 @@ export default async function TripManifestPage({
           : buddyError
             ? t("trips.manifest.buddyErrorGeneric")
             : null;
+  // A refusal renders beside the form that produced it
+  // (docs/design/forms-and-controls.md). `few` is the one code only the
+  // new-team builder can earn, so it lands in that fieldset's action row;
+  // every other code can come from any of the per-team add/remove/dissolve
+  // forms and has no single home, so it stays at the top of the panel.
+  const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -227,8 +221,9 @@ export default async function TripManifestPage({
               below, both of which name the current one; saying it a third time
               up here was the page explaining itself before it showed itself.
               The "Live manifest · save an offline copy below" badge went with
-              it — the offline card is the next thing on screen and says so
-              under its own heading. */}
+              it — the offline card is a backstop at the foot of the page now,
+              under its own heading, and pointing at it from up here would put
+              a piece of housekeeping between a captain and the head count. */}
           <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
             {t("trips.manifest.description")}
           </p>
@@ -263,6 +258,131 @@ export default async function TripManifestPage({
           </ShopNotice>
         </div>
       ) : null}
+      <nav
+        className="mt-7 flex flex-wrap items-center gap-2 overflow-x-auto pb-2 print:hidden"
+        aria-label={t("trips.manifest.checkpointNavAriaLabel")}
+      >
+        {checkpoints.map((value) => (
+          <Link
+            key={value}
+            href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
+            scroll={false}
+            className={buttonClass({
+              variant: value === checkpoint ? "primary" : "secondary",
+              size: "boat",
+              className: "shrink-0",
+            })}
+          >
+            {rollCallCheckpointText(t, value)}
+          </Link>
+        ))}
+        <WaterLockerToggle
+          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+        />
+      </nav>
+
+      {/* The one count surface on this page: the checkpoint's progress, the
+          four numbers behind it, and — when someone is blocked — the sentence
+          that used to be a banner of its own below. */}
+      <SummaryPanel
+        checkpoint={checkpoint}
+        isDeparture={isDeparture}
+        rollCallComplete={rollCallComplete}
+        completeness={completeness}
+        summary={manifest.summary}
+        separatedTeams={separatedTeams}
+        t={t}
+      />
+
+      {/* The page's job, as high as it can go: the divers, immediately under
+          the panel that counts them. It used to be the *last* section, below
+          the offline card, the tiles, the blocked banner, the crew and the
+          whole buddy-team builder — so a captain on a phone scrolled past six
+          screens of context to reach the first name at roll call. */}
+      <DiverRollCall
+        divers={manifest.divers}
+        checkpoint={checkpoint}
+        isDeparture={isDeparture}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        locale={locale}
+        timezone={shop.timezone}
+        rollCallAction={boundRollCallAction}
+        saveRollCallNoteAction={boundSaveRollCallNoteAction}
+        rollCallButtonCopy={rollCallButtonCopy}
+        buddyTeamLabel={buddyTeamLabel}
+        t={t}
+      />
+
+      {/* Crew close the checkpoint (DOM-H1) — they come straight after the
+          divers, not before them: the divers are the head count's heart, and
+          a two-person crew list ahead of nine divers read as the page's
+          subject. */}
+      <CrewRollCall
+        crew={manifest.crew}
+        checkpoint={checkpoint}
+        isDeparture={isDeparture}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        locale={locale}
+        timezone={shop.timezone}
+        crewRollCallAction={boundCrewRollCallAction}
+        crewRollCallButtonCopy={crewRollCallButtonCopy}
+        buddyTeamLabel={buddyTeamLabel}
+        t={t}
+      />
+
+      <MissingDiversGrid
+        divers={manifest.divers
+          .filter((diver) => !diver.rollCall)
+          .map((diver) => ({
+            bookingId: diver.bookingId,
+            fullName: diver.fullName,
+            rentsKit: diver.rentalFit.state === "rents",
+          }))}
+        copy={
+          {
+            heading: t("trips.manifest.missingDiversHeading", {
+              count: manifest.divers.filter((diver) => !diver.rollCall).length,
+            }),
+            awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+            tapHint: t("trips.manifest.missingDiversTapHint"),
+            rentsKitLabel: t("trips.manifest.rentsKitLabel"),
+            ownKitLabel: t("trips.manifest.ownKitLabel"),
+          } satisfies MissingDiversGridCopy
+        }
+      />
+
+      {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
+          people happens before the boat leaves, while the lists above are
+          worked at the rail. Below the lists, still expanded — the teams
+          themselves ride on each member's row where roll call can see them. */}
+      <BuddyTeamsPanel
+        buddyTeamsList={buddyTeamsList}
+        diverOptions={diverOptions}
+        crewOptions={crewOptions}
+        unteamedDivers={unteamedDivers}
+        buddyErrorText={buddyErrorText}
+        buddyErrorForm={buddyErrorForm}
+        formBuddyTeamAction={formBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
+        addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, shopSlug, tripId, checkpoint)}
+        removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(
+          null,
+          shopSlug,
+          tripId,
+          checkpoint,
+        )}
+        dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
+        t={t}
+      />
+
+      {/* The offline copy and the push opt-in, at the foot of the page: a
+          backstop, not the way in. The shop-wide auto-prime already saves the
+          near-term board on any /shop page visit (ADR
+          20260726-shopwide-offline-manifest-priming), and once a boat is truly
+          out of signal this live page does not load at all — /offline-manifest
+          is what a captain opens. Sitting first, it cost the head count the
+          top of every screen. */}
       <OfflineManifestManager
         locale={locale}
         payload={serializeManifests(
@@ -324,126 +444,6 @@ export default async function TripManifestPage({
               } satisfies PushOptInCopy
             }
           />
-        }
-      />
-
-      <SummaryTiles
-        summary={manifest.summary}
-        notBoardedTileLabel={notBoardedTileLabel}
-        notBoardedTileValue={notBoardedTileValue}
-        t={t}
-      />
-
-      <nav
-        className="mt-7 flex flex-wrap items-center gap-2 overflow-x-auto pb-2 print:hidden"
-        aria-label={t("trips.manifest.checkpointNavAriaLabel")}
-      >
-        {checkpoints.map((value) => (
-          <Link
-            key={value}
-            href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
-            scroll={false}
-            className={buttonClass({
-              variant: value === checkpoint ? "primary" : "secondary",
-              size: "boat",
-              className: "shrink-0",
-            })}
-          >
-            {rollCallCheckpointText(t, value)}
-          </Link>
-        ))}
-        <WaterLockerToggle
-          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-        />
-      </nav>
-
-      <SummaryPanel
-        checkpoint={checkpoint}
-        rollCallComplete={rollCallComplete}
-        completeness={completeness}
-        summary={manifest.summary}
-        separatedTeams={separatedTeams}
-        t={t}
-      />
-
-      {manifest.summary.blocked > 0 ? (
-        <section className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
-          <h2 className="font-semibold text-warning">
-            {t("trips.manifest.readinessNeedsAttention")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            {isDeparture
-              ? t("trips.manifest.blockedDeparture", { count: manifest.summary.blocked })
-              : t("trips.manifest.blockedAfterDive", { count: manifest.summary.blocked })}
-          </p>
-        </section>
-      ) : null}
-
-      <CrewRollCall
-        crew={manifest.crew}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        locale={locale}
-        timezone={shop.timezone}
-        crewRollCallAction={boundCrewRollCallAction}
-        crewRollCallButtonCopy={crewRollCallButtonCopy}
-        buddyTeamLabel={buddyTeamLabel}
-        t={t}
-      />
-
-      <BuddyTeamsPanel
-        buddyTeamsList={buddyTeamsList}
-        diverOptions={diverOptions}
-        crewOptions={crewOptions}
-        unteamedDivers={unteamedDivers}
-        buddyErrorText={buddyErrorText}
-        formBuddyTeamAction={formBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
-        addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, shopSlug, tripId, checkpoint)}
-        removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(
-          null,
-          shopSlug,
-          tripId,
-          checkpoint,
-        )}
-        dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
-        t={t}
-      />
-
-      <DiverRollCall
-        divers={manifest.divers}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        locale={locale}
-        timezone={shop.timezone}
-        rollCallAction={boundRollCallAction}
-        saveRollCallNoteAction={boundSaveRollCallNoteAction}
-        rollCallButtonCopy={rollCallButtonCopy}
-        buddyTeamLabel={buddyTeamLabel}
-        t={t}
-      />
-
-      <MissingDiversGrid
-        divers={manifest.divers
-          .filter((diver) => !diver.rollCall)
-          .map((diver) => ({
-            bookingId: diver.bookingId,
-            fullName: diver.fullName,
-            rentsKit: diver.rentalFit.state === "rents",
-          }))}
-        copy={
-          {
-            heading: t("trips.manifest.missingDiversHeading", {
-              count: manifest.divers.filter((diver) => !diver.rollCall).length,
-            }),
-            awaitingBoarding: t("trips.manifest.awaitingBoarding"),
-            tapHint: t("trips.manifest.missingDiversTapHint"),
-            rentsKitLabel: t("trips.manifest.rentsKitLabel"),
-            ownKitLabel: t("trips.manifest.ownKitLabel"),
-          } satisfies MissingDiversGridCopy
         }
       />
 
