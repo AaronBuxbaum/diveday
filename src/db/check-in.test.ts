@@ -1,12 +1,59 @@
-import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { and, eq, inArray } from "drizzle-orm";
+import { describe, expect, it, vi } from "vitest";
+import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, listWalkInTrips } from "./check-in";
 import { recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
-import { bookings } from "./schema";
+import { activityEvents, bookings, people, personRoles, userAccounts } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
+
+// >>> MUTANT HARNESS
+// TEMPORARY mutation harness — removed before the change is reported.
+// Restates `loadActiveStaffRoles` (src/db/authz.ts) inline and weakens it one
+// check at a time, so a mutant runs against this test file and nothing outside
+// this file's scope is broken even for the length of a run. Pick one with
+// DIVEDAY_MUTANT=<variant>.
+const mutant = vi.hoisted(() => ({ variant: process.env.DIVEDAY_MUTANT ?? "none" }));
+vi.mock("./authz", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./authz")>();
+  return {
+    ...original,
+    // biome-ignore lint/suspicious/noExplicitAny: temporary harness
+    loadActiveStaffRoles: async (db: any, shopId: string, personId: string) => {
+      const v = mutant.variant;
+      if (v === "none") return original.loadActiveStaffRoles(db, shopId, personId);
+      const skipDeleted = v === "no-deleted-check" || v === "no-both";
+      const skipAccount = v === "no-account-check" || v === "no-both";
+      const [person] = await db
+        .select({ id: people.id, deletedAt: people.deletedAt })
+        .from(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+        .limit(1);
+      if (!person) return null;
+      if (!skipDeleted && person.deletedAt) return null;
+      if (!skipAccount) {
+        const [account] = await db
+          .select({ status: userAccounts.status })
+          .from(userAccounts)
+          .where(eq(userAccounts.personId, personId))
+          .limit(1);
+        if (account?.status !== "active") return null;
+      }
+      // Dropping the writer's own `isStaff(roles)` filter is the same thing as
+      // admitting every live account holder whatever their roles say.
+      if (v === "no-role-filter") return ["owner"];
+      const roleRows = await db
+        .select({ role: personRoles.role })
+        .from(personRoles)
+        .where(eq(personRoles.personId, personId));
+      return roleRows.map((r: { role: string }) => r.role);
+    },
+  };
+});
+// <<< MUTANT HARNESS
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
@@ -148,5 +195,134 @@ describe("counter check-in", () => {
     expect(results).toBeDefined();
     expect(results.length).toBeGreaterThan(0);
     expect(results.find((r) => r.booking.tripId === reef.id)).toBeDefined();
+  });
+});
+
+/**
+ * Security review of the live-roles work, following 40d0a09's fix to the three
+ * roll-call writers in `src/db/manifests.ts`. This writer authorized its
+ * recorder with the same hand-rolled `person_roles` join — `people.id` /
+ * `people.shopId` / `person_roles.role`, here against a local copy of
+ * `STAFF_ROLES` — and checked neither `people.deleted_at` nor
+ * `user_accounts.status`. So the two cases `loadActiveStaffRoles` exists for
+ * both got through:
+ *
+ * - a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
+ *   leaves every role row exactly where it is;
+ * - a **disabled** account, because `setStaffAccountStatus` revokes sign-in and
+ *   leaves `person_roles` entirely intact — a suspended employee keeps every
+ *   role row they had.
+ *
+ * Both moved a real booking to `checked_in` and signed the `activity_events`
+ * trail with their name. Each test below therefore asserts the refusal *and*
+ * that the booking never moved and the trail stayed empty: a refusal that still
+ * wrote the row would be no fix at all, because the trail is what a shop reads
+ * back to reconstruct who did what at the counter.
+ *
+ * The refusal stays the writer's existing `staff_not_found` — `checkInAction`
+ * already redirects any refusal to `?notice=<reason>`, so the vocabulary is a
+ * notice key that is already worded.
+ */
+describe("the counter check-in recorder must be live staff (defence in depth)", () => {
+  /** A booking readiness has already cleared, so only the staff gate is left. */
+  async function readyContext() {
+    const base = await context();
+    const issued = await issueWaiverRequest(base.db, {
+      shopId: base.shop.id,
+      bookingId: base.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(base.db, issued.token, {
+      signerName: base.personName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    return base;
+  }
+
+  async function trailFor(db: Awaited<ReturnType<typeof context>>["db"], bookingId: string) {
+    return db.select().from(activityEvents).where(eq(activityEvents.bookingId, bookingId));
+  }
+
+  async function statusOf(db: Awaited<ReturnType<typeof context>>["db"], bookingId: string) {
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    return row?.status;
+  }
+
+  it("refuses a deleted person, and checks nobody in", async () => {
+    const { db, shop, staff, booking } = await readyContext();
+    // `deleteDiver`'s soft delete, which touches nothing but this column — the
+    // staff roles that authorized them are all still sitting there.
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, staff.id));
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await statusOf(db, booking.id)).toBe("booked");
+    expect(await trailFor(db, booking.id)).toEqual([]);
+  });
+
+  it("refuses a disabled account still holding a stale role row, and checks nobody in", async () => {
+    const { db, shop, staff, booking } = await readyContext();
+    // Access revoked, roster row intact — what `setStaffAccountStatus` leaves
+    // behind. Sign-in already refuses this account; until now the writer did not.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, staff.id));
+    // The stale role row is the whole point of the case, so prove it is there.
+    expect(
+      await db.select().from(personRoles).where(eq(personRoles.personId, staff.id)),
+    ).not.toEqual([]);
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await statusOf(db, booking.id)).toBe("booked");
+    expect(await trailFor(db, booking.id)).toEqual([]);
+  });
+
+  it("still lets live staff check in, and still refuses one demoted to diver", async () => {
+    const { db, shop, staff, booking } = await readyContext();
+    // The control for both refusals above: same shop, same booking, same call —
+    // only the recorder's standing differs.
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
+    expect(await statusOf(db, booking.id)).toBe("checked_in");
+    expect(await trailFor(db, booking.id)).toMatchObject([{ actorPersonId: staff.id }]);
+
+    // Demotion is the case the hand-rolled join did catch, and the rewrite must
+    // keep catching it: every staff role gone, a `diver` row left. The gate runs
+    // before the already-checked-in short-circuit, so the answer is the refusal
+    // rather than the cheerful `duplicate` a second tap would otherwise get.
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values({ personId: staff.id, role: "diver" });
+
+    await expect(
+      checkInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+    // Still just the one entry the live staff member wrote.
+    expect(await trailFor(db, booking.id)).toHaveLength(1);
   });
 });
