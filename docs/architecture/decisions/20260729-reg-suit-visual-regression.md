@@ -70,7 +70,7 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   published S3 snapshot as the baseline and only reports a diff when the pixels actually changed. If that previous
   snapshot was never published, the S3 fetch just comes back empty and the run degrades to the old all-new behavior
   for that one push, rather than a hard failure.
-- **A snapshot main fails to publish is now loud on the run that caused it** (added 2026-08-06). The
+- **Main failing to publish a snapshot is now loud on the run that caused it** (added 2026-08-06). The
   degradation above is the *consumer* side and is unchanged: a run that finds no baseline still
   reports everything as new rather than failing hard. The producer side had no signal at all. Because
   the publish steps are correctly gated on every visual shard succeeding — a partial capture set would

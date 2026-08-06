@@ -450,10 +450,26 @@ jobs:
       # Deliberately last, after the summary step's `!cancelled()` has had its
       # turn, and deliberately push-only — a pull request's missed snapshot is
       # never anyone else's baseline.
+      # The `github.ref` half is redundant today — `push:` is declared
+      # `branches: [main]` at the top of this file, so a push event cannot fire
+      # for anything else — and it is spelled out anyway because a step that
+      # only behaves correctly by reference to a trigger four hundred lines away
+      # reads as a bug to anyone who meets it here first (it was flagged as one
+      # in review). It also means widening that trigger later cannot quietly
+      # turn this into a red check on every feature branch.
+      #
+      # `!= 'success'` rather than `== 'failure'`, deliberately: `skipped`
+      # counts too. `visual` needs `build`, so a broken build skips the captures
+      # entirely and publishes exactly as little as a flaky shard does. The
+      # message therefore says the captures did not complete rather than naming
+      # a shard — the cause differs, the consequence and the fix do not. A
+      # *cancelled* run cannot reach here at all: this job's own `!cancelled()`
+      # has already skipped it, and pushes to main are never auto-cancelled
+      # (`cancel-in-progress` is false for them, for this same reason).
       - name: Refuse to miss main's baseline silently
-        if: ${{ github.event_name == 'push' && needs.visual.result != 'success' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.visual.result != 'success' }}
         run: |
-          echo "::error title=No visual baseline published for ${GITHUB_SHA}::A visual capture shard failed, so this commit published no S3 snapshot. Every branch cut from it will resolve 0 baselines and report every surface as new — visual regression is blind repo-wide until this is fixed. Re-run the failed shard on this run (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not merge a partial capture set to work around it: that would make the missing surfaces read as new permanently."
+          echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
 
   db-surface-changes:
