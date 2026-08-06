@@ -6,18 +6,14 @@ import { EmptyState } from "@/components/EmptyState";
 import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { WaiverSendControl } from "@/components/today/WaiverSendControl";
+import { BlockedDiverRow } from "@/components/today/BlockedDiverRow";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
-import {
-  readinessBlockerText,
-  readinessStatusText,
-  readinessStatusTone,
-} from "@/i18n/readiness-labels";
+import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
@@ -324,70 +320,39 @@ export default async function CheckInPage({
                       ) : null}
                     </div>
                   </div>
+                  {/* The one blocked-diver presentation, shared with the
+                      by-departure view (src/components/today/BlockedDiverRow.tsx).
+                      It shows *every* blocker: this card used to stop at three
+                      and count the rest, on the one surface where the diver is
+                      standing in front of the staffer asking what else is
+                      needed. */}
                   {!ready ? (
-                    <>
-                      {/* Danger, matching the roster and the manifest — and the
-                          Blocked badge these reasons sit under. A blocked diver
-                          is always danger (glossary / `readinessStatusTone`);
-                          the counter reading the same fact in warning was the
-                          one place the shop's readiness vocabulary changed
-                          colour between surfaces. */}
-                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-danger">
-                        {row.readiness.blockers.slice(0, 3).map((blocker) => (
-                          <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
-                        ))}
-                        {row.readiness.blockers.length > 3 ? (
-                          <li>
-                            {t("checkIn.blockersMore", {
-                              count: row.readiness.blockers.length - 3,
-                            })}
-                          </li>
-                        ) : null}
-                      </ul>
-                      {fix ? (
-                        <div className="mt-3">
-                          {fix.sendsWaiver ? (
-                            // The control's default alignment is `sm:text-right`
-                            // (the Today queue's right-hand column). Here it is
-                            // the same bottom-of-card fix action as the `Link`
-                            // below it, so it has to start on the same left edge
-                            // — otherwise one diver's fix button sits left and
-                            // the next one's floats right in the same list.
-                            <WaiverSendControl
-                              shopSlug={shopSlug}
-                              surface="check_in"
-                              bookingIds={[fix.bookingId]}
-                              label={fix.label}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                              wrapperClassName=""
-                              copy={waiverSendCopy(t)}
-                            />
-                          ) : (
-                            <Link
-                              href={fix.href}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {fix.label}
-                            </Link>
-                          )}
-                        </div>
-                      ) : null}
-                      {/* A diver at the counter with a signed paper release in
-                          hand: record it here rather than sending them (and the
-                          staffer) off to the trip's guest list for the one
-                          control that clears this blocker. Offered on the same
-                          condition the roster uses — a waiver still to come —
-                          and kept under the primary "send the link" action,
-                          because attesting to paper is the fallback. */}
-                      {fix?.sendsWaiver ? (
-                        <PaperWaiverControl
-                          action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
-                          bookingId={row.bookingId}
-                          t={t}
-                          className="mt-2"
-                        />
-                      ) : null}
-                    </>
+                    <BlockedDiverRow
+                      layout="below"
+                      shopSlug={shopSlug}
+                      surface="check_in"
+                      waiverCopy={waiverSendCopy(t)}
+                      blockers={row.readiness.blockers}
+                      fix={fix}
+                      t={t}
+                      extra={
+                        // A diver at the counter with a signed paper release in
+                        // hand: record it here rather than sending them (and the
+                        // staffer) off to the trip's guest list for the one
+                        // control that clears this blocker. Offered on the same
+                        // condition the roster uses — a waiver still to come —
+                        // and kept under the primary "send the link" action,
+                        // because attesting to paper is the fallback.
+                        fix?.sendsWaiver ? (
+                          <PaperWaiverControl
+                            action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
+                            bookingId={row.bookingId}
+                            t={t}
+                            className="mt-2"
+                          />
+                        ) : null
+                      }
+                    />
                   ) : null}
                 </article>
               );

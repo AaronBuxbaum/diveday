@@ -39,7 +39,13 @@ import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
+import {
+  getTimeOfDayGreeting,
+  lastBoatIsIn,
+  leadWithCrewed,
+  roleLensFor,
+  summarizeDay,
+} from "@/lib/today";
 import { BlockerGroups } from "./_components/BlockerGroups";
 import { isQueueView, type QueueView, QueueViewSwitch } from "./_components/QueueViewSwitch";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
@@ -424,6 +430,35 @@ async function TodayBody({
           dragStaffLabel: t("shared.today.departureBoard.dragStaffLabel"),
         }}
       />
+
+      {/* The evening handoff. The registry calls the close-out "Today's evening
+          mirror" (src/lib/staff-destinations.ts), but nothing on Today ever
+          said so — it was reachable only from the nav's More drawer, which is
+          where a daily ritual goes to be forgotten. Once every boat is back at
+          the dock, this card says the day is closable and hands over.
+
+          One calm card, never a banner (design/principles.md #8): the queue
+          below it is still the page's work, so the link is `secondary` weight
+          and the card carries no second control. Closing is a ritual, never a
+          gate (ADR 20260804-day-closeout) — nothing here nags, and the card is
+          simply absent on a day with no departures. */}
+      {lastBoatIsIn(departures, now) ? (
+        <section
+          aria-labelledby="close-out-handoff-heading"
+          className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+        >
+          <h2 id="close-out-handoff-heading" className="font-semibold">
+            {t("shopHome.closeOut.heading")}
+          </h2>
+          <p className="mt-1 text-muted">{t("shopHome.closeOut.body")}</p>
+          <Link
+            href={`/shop/${shopSlug}/close-out`}
+            className={buttonClass({ variant: "secondary", className: "mt-4" })}
+          >
+            {t("shopHome.closeOut.action")}
+          </Link>
+        </section>
+      ) : null}
 
       {/* On a brand-new shop (no departures, nothing coming up, checklist
           showing) this card would render its heading and nothing else — the

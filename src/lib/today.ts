@@ -614,3 +614,21 @@ export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetin
   if (hour >= 17 && hour < 22) return "evening";
   return "night";
 }
+
+/**
+ * Has the day's diving finished — every departure today back at the dock?
+ *
+ * This is the trigger for Today's evening handoff to the close-out, and it is
+ * deliberately **not** a new detector: it reads the departures `getTodayWork`
+ * already returned (today's own, in the shop's calendar day) against the same
+ * `now` the page renders with. No clock band, either — a shop whose last boat
+ * is in at 14:00 is done at 14:00, and one still counting heads at 19:00 is
+ * not; a wall-clock hour would be right about neither.
+ *
+ * A day with no departures at all is `false`: nothing sailed, so there is no
+ * "last boat in" moment to mark. The close-out is still one nav click away —
+ * this is a handoff, not the only door.
+ */
+export function lastBoatIsIn(departures: readonly { endsAt: Date }[], now: Date): boolean {
+  return departures.length > 0 && departures.every((departure) => departure.endsAt <= now);
+}
