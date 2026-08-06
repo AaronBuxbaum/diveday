@@ -53,9 +53,9 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-geo-places": "^3.1103.0",
-    "@aws-sdk/client-sesv2": "^3.1103.0",
-    "@aws-sdk/client-sns": "^3.1103.0",
+    "@aws-sdk/client-geo-places": "^3.1104.0",
+    "@aws-sdk/client-sesv2": "^3.1104.0",
+    "@aws-sdk/client-sns": "^3.1104.0",
     "@electric-sql/pglite": "^0.5.4",
     "@sentry/nextjs": "^10.69.0",
     "@vercel/analytics": "^2.0.1",
@@ -76,7 +76,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@biomejs/biome": "^2.5.7",
-    "@playwright/mcp": "^0.0.78",
+    "@playwright/mcp": "^0.0.79",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
@@ -103,9 +103,9 @@
     "reg-publish-s3-plugin": "^0.14.4",
     "reg-suit": "^0.14.5",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.8",
+    "tsx": "^4.23.9",
     "typescript": "^7.0.2",
-    "vercel": "^58.5.1",
+    "vercel": "^58.7.1",
     "vitest": "^4.1.10"
   }
 }
