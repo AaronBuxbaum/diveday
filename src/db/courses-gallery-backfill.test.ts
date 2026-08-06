@@ -19,6 +19,16 @@ import { describe, expect, it, onTestFinished } from "vitest";
  * something else, which is the one failure a backfill test has to rule out —
  * the real statement runs against a real Postgres (PGlite) exactly once, on a
  * database that already looks like production did the moment before.
+ *
+ * `20260806105408_drop-course-legacy-gallery` has since dropped the two old
+ * columns, and that does **not** retire this file. Its subject was never the
+ * live schema: it is one frozen migration's decisions about rows that were
+ * already wrong, and every shop that upgraded through it still holds the data
+ * those decisions produced — so this is the only place that says what a
+ * drifted row became, and the only thing that would catch a fresh install
+ * diverging from an upgraded one. It stands where that migration stands, with
+ * the old shape in place, which is why it builds its own table instead of
+ * booting the app schema.
  */
 const MIGRATION = "20260806051740_course-gallery-photos";
 
@@ -140,14 +150,19 @@ describe("courses.gallery_photos backfill (DATA-L4)", () => {
     expect(rows.get("Divemaster")).toEqual([]);
   });
 
-  it("expands without contracting — the old columns survive this release", async () => {
-    // Not an oversight. Migrations run inside the production build while the
-    // previous release is still serving course pages off `image_urls` /
-    // `image_alts`, so dropping them here would take the live site down
-    // mid-deploy; `scripts/check-migrations.mjs` refuses it, and the contract
-    // release is a separate deploy
-    // (docs/engineering/deploy-and-migrations-runbook.md).
+  it("carries every caption forward before anything is dropped", async () => {
+    // The expand migration reads the two old columns and writes nothing but
+    // `gallery_photos`, so a shop's captions are already safe in the new shape
+    // at the instant it finishes — which is what makes it legitimate for
+    // `20260806105408_drop-course-legacy-gallery` to remove the originals
+    // afterwards. Assert the direction, not the calendar: this file stands
+    // where the expand migration stands, and from there the old columns are
+    // still present and still the only source the backfill has.
     const client = await preMigrationDb();
+    await client.exec(`
+      INSERT INTO "courses" ("title", "image_urls", "image_alts") VALUES
+        ('Wreck', '["/a.jpg"]', '["Penetration line"]');
+    `);
     for (const statement of migrationStatements()) await client.exec(statement);
 
     const columns = await client.query<{ column_name: string }>(
@@ -157,5 +172,10 @@ describe("courses.gallery_photos backfill (DATA-L4)", () => {
     expect(names).toContain("gallery_photos");
     expect(names).toContain("image_urls");
     expect(names).toContain("image_alts");
+
+    const rows = await client.query<{ gallery_photos: Photo[] }>(
+      `SELECT "gallery_photos" FROM "courses" WHERE "title" = 'Wreck'`,
+    );
+    expect(rows.rows[0]?.gallery_photos).toEqual([{ url: "/a.jpg", alt: "Penetration line" }]);
   });
 });
