@@ -7,6 +7,36 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Surface consolidation — fewer, obvious places to go (delivered 2026-08-06)
+
+Eleven PRs (#397–#413) against one finding: staff surfaces answering the same question at two URLs.
+The fix followed doctrine already on file — a route needs its own question, mutation, and moment
+([20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)); a re-render of another
+surface's evidence is a view
+([20260803-not-ready-is-a-view](../architecture/decisions/20260803-not-ready-is-a-view.md)); a
+removed surface keeps its destination as a permanent 308.
+
+**Routes.** Dive-site catalog → `?view=catalog` of the library
+([20260806-dive-site-catalog-is-a-view](../architecture/decisions/20260806-dive-site-catalog-is-a-view.md)).
+Trip creation → the board's add panel, "More options" disclosing the full former `/trips/new` form;
+that route 308s ([20260806-one-trip-create-form](../architecture/decisions/20260806-one-trip-create-form.md)).
+Export + Backups → one data-out surface, `/settings/backup` a 308 into `#backups`
+([20260806-one-data-out-surface](../architecture/decisions/20260806-one-data-out-surface.md)).
+Staffing → the shift roster; its twin crew-gap detector became one count and a hand-off to Today
+([20260806-staffing-is-the-shift-roster](../architecture/decisions/20260806-staffing-is-the-shift-roster.md)).
+Reports → a report again; its three queues moved to Orders and Settings' Data group (amendments to
+the three ADRs that had named Reports their home).
+
+**Shared components.** One seat-a-diver UI family driven by `SEAT_SURFACES`; one `SiteFields`; a
+settings layout + sub-nav derived from one `settings-destinations.ts` registry; one `KindChip` and
+`BlockedDiverRow` across the day-of-ops family; close-out's "Tomorrow" and Today's evening
+close-the-day card as mutual handoffs. Each IA change carried an independent design review; both
+security-sensitive changes carried independent security reviews (merge-safe, LOW hardenings applied).
+
+Deliberately left alone: the waivers tabs (the model pattern), the orders triad, the trip tab split,
+the manifest's self-containment, check-in/walk-in/divers as routes, the `/s` namespace, and
+marketing-page copy overlap (thematic, constrained by the claims policy — not mechanical).
+
 ## The 2026-08-02 review's data, i18n and telemetry residue (delivered 2026-08-06)
 
 The buildable tail of the same review. Three of its items turned out to already be closed and were
