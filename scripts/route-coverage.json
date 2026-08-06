@@ -22,7 +22,12 @@
   },
   "/offline-manifest": {
     "e2e": ["a11y.spec.ts", "manifest.spec.ts"],
-    "visual": ["offline-manifest-empty", "offline-manifest-list"]
+    "visual": [
+      "offline-manifest-discarded",
+      "offline-manifest-empty",
+      "offline-manifest-list",
+      "offline-manifest-removed-other-shop"
+    ]
   },
   "/onboard": {
     "e2e": [
