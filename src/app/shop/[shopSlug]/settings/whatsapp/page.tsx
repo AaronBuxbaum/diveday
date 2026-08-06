@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -108,14 +107,6 @@ export default async function WhatsAppSettingsPage({
         eyebrow={t("whatsapp.eyebrow")}
         title={t("whatsapp.title")}
         description={t("whatsapp.description")}
-        actions={
-          <Link
-            href={`/shop/${session.user.shopSlug}/settings`}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {t("settings.main.backToSettings")}
-          </Link>
-        }
       />
 
       {/* Top of the page, before anything else: a shop should learn this is not

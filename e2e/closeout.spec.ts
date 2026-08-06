@@ -19,6 +19,19 @@ test.describe("end-of-day close-out", () => {
     await expect(page.getByRole("heading", { name: "Today's leftovers" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tomorrow, at a glance" })).toBeVisible();
 
+    // Tomorrow is a *handoff*, not a second queue: it counts what is waiting
+    // and links to Today, the only surface that can act on those rows. It must
+    // never grow per-row controls again — the same row was actionable on Today
+    // and inert here, which taught staff the work waits until morning.
+    const tomorrow = page.locator("section", {
+      has: page.getByRole("heading", { name: "Tomorrow, at a glance" }),
+    });
+    await expect(
+      tomorrow
+        .getByRole("link", { name: "Open Today" })
+        .or(tomorrow.getByText("Tomorrow starts clear.")),
+    ).toBeVisible();
+
     // The seed always has a boat sailing today, so the departures list is
     // never empty on the demo shop.
     await expect(page.getByText("No departures today.")).toHaveCount(0);

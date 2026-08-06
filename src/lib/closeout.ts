@@ -152,8 +152,23 @@ export type CloseoutDeparture = {
 /** The one-line answer to "how did today end?", as a code. */
 export type CloseoutShape = "no_departures" | "all_clear" | "outstanding";
 
-/** How many of tomorrow's rows the parting glance shows before "and N more". */
-export const TOMORROW_GLANCE_LIMIT = 5;
+/**
+ * What tomorrow's queue opens with, as counts — never as rows.
+ *
+ * The close-out used to re-render tomorrow's `TodayAction`s here, and that was
+ * the mistake ADR 20260803-not-ready-is-a-view names one level up: the *same*
+ * row is actionable on Today (send the waiver, invite the waitlist, copy the
+ * payment link) and was a dumb list here, so the evening surface quietly taught
+ * staff that those jobs cannot be touched until morning. A count and one link
+ * to Today is the honest shape: the parting glance says how much is waiting and
+ * hands the work to the surface that owns it.
+ */
+export type TomorrowGlance = {
+  /** Every queue row dated tomorrow — the number the parting glance states. */
+  total: number;
+  /** The same rows counted by kind, in queue order (loudest first). */
+  byKind: { kind: TodayActionKind; count: number }[];
+};
 
 export type DayCloseoutState = {
   /** The shop-local date being closed, as "YYYY-MM-DD". */
@@ -168,10 +183,8 @@ export type DayCloseoutState = {
    * counts already stand in the departures list above.
    */
   leftovers: TodayAction[];
-  /** Tomorrow's first `TOMORROW_GLANCE_LIMIT` queue rows, in queue order. */
-  tomorrow: TodayAction[];
-  /** How many rows tomorrow holds beyond the glance. */
-  tomorrowMore: number;
+  /** How much tomorrow's queue opens with, by kind. Counts, never rows. */
+  tomorrow: TomorrowGlance;
   /**
    * The departures that must be acknowledged by name before closing — the
    * after-dive gaps and the boats not home. Empty means the close button
@@ -281,9 +294,24 @@ export function assembleDayCloseout(input: {
     shape,
     departures,
     leftovers,
-    tomorrow: tomorrowAll.slice(0, TOMORROW_GLANCE_LIMIT),
-    tomorrowMore: Math.max(0, tomorrowAll.length - TOMORROW_GLANCE_LIMIT),
+    tomorrow: countByKind(tomorrowAll),
     mustAcknowledge,
+  };
+}
+
+/**
+ * Tally already-sorted queue rows by kind. Insertion order is queue order, so
+ * the loudest kind is named first and the glance reads in the same priority the
+ * morning queue will.
+ */
+function countByKind(actions: readonly TodayAction[]): TomorrowGlance {
+  const counts = new Map<TodayActionKind, number>();
+  for (const action of actions) {
+    counts.set(action.kind, (counts.get(action.kind) ?? 0) + 1);
+  }
+  return {
+    total: actions.length,
+    byKind: [...counts].map(([kind, count]) => ({ kind, count })),
   };
 }
 
