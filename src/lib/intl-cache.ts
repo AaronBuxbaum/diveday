@@ -28,9 +28,21 @@ type AnyFormatter =
   | Intl.DateTimeFormat
   | Intl.NumberFormat
   | Intl.RelativeTimeFormat
-  | Intl.ListFormat;
+  | Intl.ListFormat
+  | Intl.PluralRules
+  | Intl.Collator
+  | Intl.DisplayNames;
 
 const formatterCache = new Map<string, AnyFormatter>();
+
+/** Shared memo for every helper below; the key must carry everything that changes the output. */
+function cached<T extends AnyFormatter>(key: string, create: () => T): T {
+  const hit = formatterCache.get(key);
+  if (hit) return hit as T;
+  const made = create();
+  formatterCache.set(key, made);
+  return made;
+}
 
 export function cachedFormatter<T extends AnyFormatter>(
   tag: string,
@@ -38,12 +50,7 @@ export function cachedFormatter<T extends AnyFormatter>(
   locale: string | undefined,
   options?: object,
 ): T {
-  const key = `${tag}|${locale}|${JSON.stringify(options)}`;
-  const cached = formatterCache.get(key);
-  if (cached) return cached as T;
-  const formatter = new Ctor(locale, options);
-  formatterCache.set(key, formatter);
-  return formatter;
+  return cached(`${tag}|${locale}|${JSON.stringify(options)}`, () => new Ctor(locale, options));
 }
 
 /**
@@ -57,4 +64,40 @@ export function cachedListFormat(
   options?: Intl.ListFormatOptions,
 ): Intl.ListFormat {
   return cachedFormatter("list", Intl.ListFormat, locale, options);
+}
+
+/**
+ * Plural category selection ("1 diver" vs "2 divers").
+ *
+ * The hottest construction in the app by a wide margin: `src/i18n/fill.ts`
+ * calls this for **every** interpolated message with a plural form, on every
+ * render, in both bundles. It built a fresh `Intl.PluralRules` each time —
+ * which is the same compile-a-locale-ruleset cost as any other `Intl`
+ * constructor, paid per word rather than per page.
+ */
+export function cachedPluralRules(locale: string | undefined): Intl.PluralRules {
+  return cachedFormatter("plural", Intl.PluralRules, locale);
+}
+
+/** Locale-correct string ordering — for sorting a list of labels, never for identity. */
+export function cachedCollator(
+  locale: string | undefined,
+  options?: Intl.CollatorOptions,
+): Intl.Collator {
+  return cachedFormatter("collator", Intl.Collator, locale, options);
+}
+
+/**
+ * Human names for currency/region/language codes. Its own helper because the
+ * constructor's shape does not fit `cachedFormatter`: `options` is required,
+ * and `locales` is the array form.
+ */
+export function cachedDisplayNames(
+  locale: string,
+  options: Intl.DisplayNamesOptions,
+): Intl.DisplayNames {
+  return cached(
+    `display|${locale}|${JSON.stringify(options)}`,
+    () => new Intl.DisplayNames([locale], options),
+  );
 }

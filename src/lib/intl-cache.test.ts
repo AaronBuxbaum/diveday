@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cachedFormatter, cachedListFormat } from "./intl-cache";
+import {
+  cachedCollator,
+  cachedDisplayNames,
+  cachedFormatter,
+  cachedListFormat,
+  cachedPluralRules,
+} from "./intl-cache";
 
 describe("cachedFormatter", () => {
   it("hands back the same instance for the same locale and options", () => {
@@ -74,5 +80,55 @@ describe("cachedListFormat", () => {
     expect(or).not.toBe(and);
     const sites = ["Blue Heron", "Molasses Reef"];
     expect(and.format(sites)).not.toBe(or.format(sites));
+  });
+});
+
+describe("cachedPluralRules", () => {
+  it("reuses one instance and still selects the right category", () => {
+    const first = cachedPluralRules("en-US");
+    expect(cachedPluralRules("en-US")).toBe(first);
+    expect(first.select(1)).toBe("one");
+    expect(first.select(2)).toBe("other");
+  });
+
+  it("keeps locales apart — plural rules are not universal", () => {
+    // The reason the locale must be in the key: Polish has a "few" category
+    // that English does not, so a shared instance would silently answer for
+    // the wrong language.
+    const english = cachedPluralRules("en-US");
+    const polish = cachedPluralRules("pl-PL");
+    expect(polish).not.toBe(english);
+    expect(polish.select(3)).toBe("few");
+    expect(english.select(3)).toBe("other");
+  });
+});
+
+describe("cachedCollator", () => {
+  it("reuses one instance per locale and options", () => {
+    const first = cachedCollator("es-ES");
+    expect(cachedCollator("es-ES")).toBe(first);
+    expect(cachedCollator("es-ES", { sensitivity: "base" })).not.toBe(first);
+  });
+
+  it("still orders correctly on the cached path", () => {
+    const collator = cachedCollator("en-US");
+    expect(["Cozumel", "Bonaire", "Aruba"].sort(collator.compare)).toEqual([
+      "Aruba",
+      "Bonaire",
+      "Cozumel",
+    ]);
+  });
+});
+
+describe("cachedDisplayNames", () => {
+  it("reuses one instance per locale and options", () => {
+    const first = cachedDisplayNames("en-US", { type: "currency" });
+    expect(cachedDisplayNames("en-US", { type: "currency" })).toBe(first);
+    expect(cachedDisplayNames("en-US", { type: "region" })).not.toBe(first);
+  });
+
+  it("resolves a currency name, and a different locale gives a different one", () => {
+    expect(cachedDisplayNames("en-US", { type: "currency" }).of("USD")).toBe("US Dollar");
+    expect(cachedDisplayNames("es-ES", { type: "currency" }).of("USD")).not.toBe("US Dollar");
   });
 });

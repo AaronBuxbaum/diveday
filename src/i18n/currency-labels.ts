@@ -1,3 +1,4 @@
+import { cachedCollator, cachedDisplayNames } from "@/lib/intl-cache";
 import { currencySymbol, SHOP_CURRENCIES, type ShopCurrency } from "@/lib/money";
 
 /**
@@ -12,7 +13,7 @@ import { currencySymbol, SHOP_CURRENCIES, type ShopCurrency } from "@/lib/money"
  */
 export function currencyLabel(currency: string, locale = "en-US"): string {
   const code = currency.toUpperCase();
-  const name = new Intl.DisplayNames([locale], { type: "currency" }).of(code);
+  const name = cachedDisplayNames(locale, { type: "currency" }).of(code);
   // `of()` returns the code back when the runtime has no name for it; showing
   // "USD — USD ($)" would be silly, so collapse to the code and symbol.
   if (!name || name === code) return `${code} (${currencySymbol(currency, locale)})`;
@@ -26,7 +27,7 @@ export function currencyLabel(currency: string, locale = "en-US"): string {
  * is not a useful ordering once there are twenty of them.
  */
 export function currencyOptions(locale = "en-US"): Array<{ value: ShopCurrency; label: string }> {
-  const collator = new Intl.Collator(locale);
+  const collator = cachedCollator(locale);
   return SHOP_CURRENCIES.map((value) => ({ value, label: currencyLabel(value, locale) })).sort(
     (a, b) => collator.compare(a.label, b.label),
   );
