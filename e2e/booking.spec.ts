@@ -36,6 +36,15 @@ test.describe("staff", () => {
       .filter({ hasText: title })
       .getByRole("link")
       .click();
+    // Wait for the navigation itself before asserting anything about content.
+    // Without this the assertions can run while the browser is still on the
+    // schedule, and the schedule renders this departure *twice* — once in the
+    // trip list, once in the month calendar (the same duplication the locator
+    // above is scoped around). The title heading is satisfied by the card, so
+    // the first failure surfaces one line later as a strict-mode violation on
+    // two identical "6 spots left" badges. Locally the navigation always wins
+    // the race and it passes; under two-worker CI contention it does not.
+    await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
     await expect(page.getByText("$120.00")).toBeVisible();
