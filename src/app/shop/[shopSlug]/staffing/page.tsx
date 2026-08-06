@@ -161,7 +161,10 @@ export default async function StaffingPage({
           has not earned. */}
       {view.crewGaps.needCrew > 0 ? (
         <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-sm font-medium text-warning">
+          {/* 16px, not 14: this is the page's one operational message, and the
+              dock test (design principle 2) sets the floor for the text a
+              manager reads on a phone between boats. */}
+          <p className="text-base font-medium text-warning">
             {t("staffing.crewGaps.needCrew", { count: view.crewGaps.needCrew })}
           </p>
           <Link
@@ -299,7 +302,12 @@ export default async function StaffingPage({
         )}
       </section>
 
-      {canManage ? (
+      {/* A shift needs somebody to give it to. With nobody on the roster the
+          person select has no options, so the form is a dead control — and its
+          "Add shift" primary would sit a screen below the empty state's own
+          primary ("Invite your crew"), two first-choice buttons for one
+          decision. The empty state is the whole answer until there is a team. */}
+      {canManage && staff.length > 0 ? (
         <section
           className="mt-8 rounded-2xl border border-border bg-surface p-5"
           aria-labelledby="add-shift-heading"
