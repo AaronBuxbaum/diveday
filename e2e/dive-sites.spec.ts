@@ -134,6 +134,12 @@ test.describe("staff", () => {
       .getByRole("button", { name: "Search" });
 
     await page.goto("/shop/blue-mantis/dive-sites");
+    // Wait for a real card before counting. `locator.count()` is a one-shot
+    // query — alone among Playwright's locator methods it does *not* retry —
+    // so on an `instant = true` route it happily counts the `loading.tsx`
+    // skeleton's zero `<li>`s and moves on. Every later assertion here is
+    // auto-waiting; this one line is what makes the first one so too.
+    await expect(cards.first()).toBeVisible();
     const seededCount = await cards.count();
     expect(seededCount).toBeGreaterThan(1);
 
