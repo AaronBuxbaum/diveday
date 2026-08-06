@@ -237,6 +237,100 @@ export type OfflineManifestIdentityResponse = {
   shop: { slug: string };
 };
 
+/**
+ * The tenant slug out of a response body that has **not** been validated —
+ * `/identity`'s whole answer, and the `shop` that rides along on `/upcoming`.
+ *
+ * `response.json()` hands back `any`, so `as OfflineManifestIdentityResponse`
+ * is a promise rather than a check: a body of `{}` casts cleanly and yields
+ * `undefined` for `shop.slug`. That matters more here than almost anywhere
+ * else in the product, because the only thing any caller does with this string
+ * is decide which of the device's saved rosters belong to somebody else, and
+ * `purgeOfflineManifestsExceptShop("")` matches no record — which is to say it
+ * matches every one of them (security review, 2026-08-06). One parser, shared
+ * by the offline shell, the shop layout's auto-save and the service worker, so
+ * there is one place that can be wrong instead of three.
+ *
+ * `null` rather than a fallback slug: "could not tell" and "the shop is X"
+ * must never be the same value.
+ */
+export function offlineManifestShopSlug(body: unknown): string | null {
+  // Destructured off the route's own declared type rather than an inline
+  // `{ shop?: ... }` shape, so renaming the key on the route is a `tsc`
+  // failure here (including `tsc --noEmit -p src/worker`) instead of a parser
+  // that quietly answers null forever. `/upcoming`'s `shop` carries the name
+  // and timezone too; only the slug is ever read through this.
+  const { shop } = (body ?? {}) as Partial<OfflineManifestIdentityResponse>;
+  const slug: unknown = shop?.slug;
+  return typeof slug === "string" && slug.length > 0 ? slug : null;
+}
+
+/**
+ * The board out of an unvalidated `/upcoming` body: an array, or nothing.
+ * `body.payloads.map(...)` throws outright on a body that carries no
+ * `payloads`, and a cast is what let one through. What is *inside* each
+ * payload is left to `saveOfflineManifest`, which already refuses one with no
+ * trip in it, and to callers that already swallow a per-trip failure.
+ */
+export function offlineManifestPayloads(body: unknown): OfflineManifestPayload[] {
+  const { payloads } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
+  return Array.isArray(payloads) ? payloads : [];
+}
+
+/**
+ * `navigator.onLine` says a radio is on, not that anything answers. On a
+ * marina connection the tenant lookup can hang indefinitely, and everything
+ * downstream of it — the cross-shop purge, and the reconcile of a captain's
+ * queued roll call — would hang with it. Give up and let the next trigger
+ * (reconnect, the next visit, the next push) try again.
+ */
+const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
+
+/**
+ * Server-verified "which shop is this browser signed in as" — never a
+ * client-supplied value, never a slug read off a snapshot this device already
+ * holds. Asks `GET /api/offline-manifests/identity`, which answers
+ * `{ shop: { slug } }` and nothing else (no roster, no names, not even a count
+ * of them — review 20260802, action item 12).
+ *
+ * `null` whenever the answer cannot be established: offline, signed out, a
+ * request that failed or timed out, a 200 whose body is the wrong shape. Every
+ * caller treats null as "do nothing", because guessing the tenant is the one
+ * mistake worth more than the work it would unblock — it either deletes the
+ * copy a captain is standing on the dock reading, or submits one shop's roll
+ * call under another shop's session.
+ *
+ * It lives in this framework-free module, rather than beside its first caller
+ * in `OfflineManifestView`, because its second caller is the **service
+ * worker** (`flushPendingRollCall`), which is bundled by
+ * `scripts/build-service-worker.mjs` out of a separate tsconfig project and
+ * cannot reach a `"use client"` React component. Two hand-kept copies of a
+ * cross-tenant check is two chances for one of them to accept `undefined` as a
+ * shop.
+ *
+ * An explicit `AbortController` rather than `AbortSignal.timeout`, matching
+ * `fetchExportPhotos`: the static helper is absent under jsdom, so using it
+ * would make this return null in every component test and silently disable the
+ * reconcile it guards.
+ */
+export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
+  try {
+    const response = await fetch("/api/offline-manifests/identity", {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return offlineManifestShopSlug(await response.json());
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function serializeManifests(
   manifests: readonly TripManifest[],
   shop: OfflineManifestPayload["shop"],

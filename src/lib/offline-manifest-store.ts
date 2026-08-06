@@ -263,10 +263,12 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * shop — so a device shared across shops (a freelance captain, a resold or
  * reassigned boat tablet) could otherwise accumulate another shop's roster
  * indefinitely. Call this with the server-verified shop slug from
- * GET /api/offline-manifests/upcoming (never a client-supplied value) any
- * time that endpoint is reached, so the moment a different shop's staff
- * authenticates on this device, the previous shop's cached manifests stop
- * being readable — see ADR 20260726-shopwide-offline-manifest-priming.
+ * GET /api/offline-manifests/upcoming or GET /api/offline-manifests/identity
+ * (never a client-supplied value, and never one read off a snapshot this
+ * device already holds) any time either endpoint is reached, so the moment a
+ * different shop's staff authenticates on this device, the previous shop's
+ * cached manifests stop being readable — see ADR
+ * 20260726-shopwide-offline-manifest-priming.
  *
  * Never deletes a record still holding an unsynced (`pending`) roll-call
  * event: that event cannot be reconciled under a *different* shop's session
@@ -289,6 +291,28 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * lock for exactly this read-then-write race; this one hadn't.
  */
 export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+  // **The guard is here, at the chokepoint, and not at the call sites.**
+  //
+  // This is the most destructive function in the feature: it deletes every
+  // record whose shop does not match, so `""`, `undefined` or `null` makes
+  // *every* record a mismatch and wipes the device — the current shop's copies
+  // included, on a boat, with no page open to say so. A caller-side check only
+  // ever protects the callers that remember to write one, and the two that
+  // exist already disagreed about it: `OfflineManifestView` validated the slug
+  // was a non-empty string, while `OfflineManifestAutoSave` reached this
+  // through `(await response.json()) as OfflineManifestUpcomingResponse` — a
+  // cast, not a parse, which happily yields `undefined` for `body.shop.slug`
+  // and does not throw on the way past (security review, 2026-08-06). Put the
+  // refusal in the one function every path must go through and every present
+  // and future caller — a new surface, the service worker, a test — inherits
+  // it, with no version of "forgot to guard" that still reaches the delete
+  // loop below.
+  //
+  // The parameter stays typed `string`, so a caller that *knows* it may be
+  // holding `undefined` is still a `pnpm typecheck` failure rather than a
+  // silent no-op; this is the runtime half, for the values a cast lets past
+  // the compiler.
+  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return;
   const saved = await listOfflineManifests();
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
   await Promise.all(

@@ -344,6 +344,33 @@ describe("purgeOfflineManifestsExceptShop", () => {
     expect(remaining).toHaveLength(2);
   });
 
+  // Security review, 2026-08-06. This is the delete pass, and a slug that
+  // matches *no* saved record is a slug that matches every one of them — so
+  // `""`/`undefined`/`null` wiped the device, the signed-in shop's own copies
+  // included, on a boat, with no page open to say so. The guard lives here
+  // rather than at the two call sites because a caller-side check only ever
+  // protects the callers that remember to write one, and the two that existed
+  // already disagreed: the offline shell validated the slug, while the shop
+  // layout's auto-save reached this through a cast of an unparsed
+  // `response.json()`.
+  it.each([
+    ["an empty string", ""],
+    ["undefined", undefined],
+    ["null", null],
+  ])("refuses %s and deletes nothing, this device's own shop included", async (_label, slug) => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(otherShopPayload);
+
+    // The cast is the whole point: this is exactly what a caller reading an
+    // unvalidated body hands over, and `pnpm typecheck` cannot see it.
+    await purgeOfflineManifestsExceptShop(slug as unknown as string);
+
+    const remaining = await listOfflineManifests();
+    expect(remaining.map((envelope) => envelope.snapshot.shop.slug).sort()).toEqual(
+      [payload.shop.slug, otherShopPayload.shop.slug].sort(),
+    );
+  });
+
   it("preserves another shop's record if it still holds an unsynced roll-call event", async () => {
     // That event can't reconcile under this (different) shop's session — the
     // server would look it up against the wrong tenant — so deleting it here

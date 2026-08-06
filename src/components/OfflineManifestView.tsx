@@ -36,6 +36,7 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
+  fetchOfflineManifestShopSlug,
   isOfflineManifestExpired,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
@@ -52,49 +53,6 @@ import {
  */
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
-}
-
-const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
-
-/**
- * Server-verified "who is this browser signed in as" — never a client-supplied
- * value, never a slug read off a snapshot this device already holds. Null
- * whenever the answer cannot be established (offline, signed out, a request
- * that failed): every caller treats null as "do nothing", because guessing the
- * tenant is the one mistake worth more than the work it would unblock.
- *
- * It asks `/api/offline-manifests/identity`, which answers with `{ shop: { slug
- * } }` and nothing else. It used to ask `/upcoming` — the same question, but
- * answered with the shop's entire 48-hour board: every diver's name, emergency
- * contact and readiness blocker, pulled onto a shared boat tablet to learn one
- * string, and never read (review 20260802, action item 12). `OfflineManifestAutoSave`
- * still calls `/upcoming`, because it is there for the board.
- */
-async function fetchCurrentShopSlug(): Promise<string | null> {
-  if (!navigator.onLine) return null;
-  // `navigator.onLine` says a radio is on, not that anything answers. On a
-  // marina connection the request can hang indefinitely, and everything
-  // downstream of this — the purge, and the reconcile of a captain's queued
-  // roll call — would hang with it. Give up and let the next trigger (reconnect,
-  // or the next visit) try again. An explicit controller rather than
-  // `AbortSignal.timeout`, matching `fetchExportPhotos`: the static helper is
-  // absent under jsdom, so using it would have made this function return null
-  // in every component test and silently disable the reconcile it guards.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
-  try {
-    const response = await fetch("/api/offline-manifests/identity", {
-      credentials: "same-origin",
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    const slug = ((await response.json()) as { shop?: { slug?: unknown } }).shop?.slug;
-    return typeof slug === "string" && slug.length > 0 ? slug : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 /**
@@ -210,12 +168,17 @@ export function OfflineManifestView() {
    * connection each of these can sit for the full ten-second timeout, and two
    * of them can disagree, which would have the purge and the reconcile pass
    * acting on two different answers to "which shop is this".
+   *
+   * The lookup itself now lives in `src/lib/offline-manifests.ts`
+   * (`fetchOfflineManifestShopSlug`), shared with the service worker's own
+   * flush pass — it asks the same tenant question for the same reason and must
+   * not answer it differently (security review, 2026-08-06).
    */
   const tenantLookupRef = useRef<Promise<string | null> | null>(null);
 
   const resolveTenant = useCallback(async (): Promise<string | null> => {
     if (tenantSlugRef.current) return tenantSlugRef.current;
-    tenantLookupRef.current ??= fetchCurrentShopSlug().finally(() => {
+    tenantLookupRef.current ??= fetchOfflineManifestShopSlug().finally(() => {
       tenantLookupRef.current = null;
     });
     const slug = await tenantLookupRef.current;
