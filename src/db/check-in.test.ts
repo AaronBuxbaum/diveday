@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -9,51 +9,6 @@ import { listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, personRoles, userAccounts } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
-
-// >>> MUTANT HARNESS
-// TEMPORARY mutation harness — removed before the change is reported.
-// Restates `loadActiveStaffRoles` (src/db/authz.ts) inline and weakens it one
-// check at a time, so a mutant runs against this test file and nothing outside
-// this file's scope is broken even for the length of a run. Pick one with
-// DIVEDAY_MUTANT=<variant>.
-const mutant = vi.hoisted(() => ({ variant: process.env.DIVEDAY_MUTANT ?? "none" }));
-vi.mock("./authz", async (importOriginal) => {
-  const original = await importOriginal<typeof import("./authz")>();
-  return {
-    ...original,
-    // biome-ignore lint/suspicious/noExplicitAny: temporary harness
-    loadActiveStaffRoles: async (db: any, shopId: string, personId: string) => {
-      const v = mutant.variant;
-      if (v === "none") return original.loadActiveStaffRoles(db, shopId, personId);
-      const skipDeleted = v === "no-deleted-check" || v === "no-both";
-      const skipAccount = v === "no-account-check" || v === "no-both";
-      const [person] = await db
-        .select({ id: people.id, deletedAt: people.deletedAt })
-        .from(people)
-        .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-        .limit(1);
-      if (!person) return null;
-      if (!skipDeleted && person.deletedAt) return null;
-      if (!skipAccount) {
-        const [account] = await db
-          .select({ status: userAccounts.status })
-          .from(userAccounts)
-          .where(eq(userAccounts.personId, personId))
-          .limit(1);
-        if (account?.status !== "active") return null;
-      }
-      // Dropping the writer's own `isStaff(roles)` filter is the same thing as
-      // admitting every live account holder whatever their roles say.
-      if (v === "no-role-filter") return ["owner"];
-      const roleRows = await db
-        .select({ role: personRoles.role })
-        .from(personRoles)
-        .where(eq(personRoles.personId, personId));
-      return roleRows.map((r: { role: string }) => r.role);
-    },
-  };
-});
-// <<< MUTANT HARNESS
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 

@@ -99,13 +99,19 @@ function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
  * `people.id` / `people.shopId` / `person_roles.role` and stopping there. That
  * catches the case it was written for — a diver, or somebody demoted out of
  * every staff role — and misses the two `loadActiveStaffRoles` exists for: a
- * **deleted** person (`removeStaffMember` soft-deletes and leaves
- * `person_roles` alone) and a **disabled** account whose stale role row is
- * still there. Both wrote real `roll_call_events` rows attributed to somebody
- * the shop had already removed. `/api/offline-manifests/sync` refuses both at
- * the door, so nothing shipped was exploitable — but a writer in `src/db` is
- * inherited by every future call site, and roll call is the record of who came
- * back from a dive.
+ * **deleted** person and a **disabled** account whose stale role row is still
+ * there. Neither comes from `removeStaffMember`, which deletes every staff role
+ * row and disables the account and never soft-deletes the `people` row — a
+ * fully removed staff member was already refused. They come from two ordinary
+ * shipped operations that touch roles not at all: `deleteDiver`
+ * (`src/db/divers.ts`) sets `people.deleted_at` and nothing else, and
+ * `setStaffAccountStatus` (`src/db/staff-accounts.ts`) revokes sign-in and
+ * leaves `person_roles` entirely intact. Suspending an employee's login is the
+ * everyday case, and it left them writing roll call. Both wrote real
+ * `roll_call_events` rows attributed to somebody who could no longer sign in.
+ * `/api/offline-manifests/sync` refuses both at the door, so nothing shipped was
+ * exploitable — but a writer in `src/db` is inherited by every future call site,
+ * and roll call is the record of who came back from a dive.
  *
  * So the join is gone and `src/db/authz.ts` is the one place the rule lives:
  * `loadActiveStaffRoles` takes a `DbExecutor`, so it composes inside these
