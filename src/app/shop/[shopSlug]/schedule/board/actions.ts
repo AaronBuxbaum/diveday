@@ -37,18 +37,11 @@ import { parseWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
  * holds a half-finished draft, so a staff member who closes the tab mid-thought
  * has changed exactly what they already saved and nothing more.
  *
- * "Add a departure" is now the *only* way a trip is created: `/trips/new` was a
- * second form answering the same question, and this one had already grown a
- * price, a course, and a site past the "when is it and how many seats" line its
- * own comment used to draw here. Rather than shrink the board back, the whole
- * form moved in behind a "More options" disclosure — the quick path stays four
- * fields and a button, and the rare answers (description, multi-day, deposit,
- * cancellation window, repeating dates, per-dive plans) are one click away.
- * See ADR 20260806-one-trip-create-form.
- *
- * Everything about a departure that already *exists* — crew, conditions, the
- * roster, requirements — still lives on the trip's own page. Creating is one
- * place; editing is the other.
+ * "Add a departure" is the *only* way a trip is created — the whole former
+ * `/trips/new` form lives here behind a "More options" disclosure (ADR
+ * 20260806-one-trip-create-form). Everything about a departure that already
+ * exists — crew, conditions, the roster, requirements — stays on the trip's own
+ * page. Creating is one place; editing is the other.
  * -------------------------------------------------------------------------- */
 
 const boardPath = (shopSlug: string) => `/shop/${shopSlug}/schedule/board`;
@@ -193,12 +186,15 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     redirect(`${back}?builder=end-before-start`);
   }
 
-  /**
-   * One departure's meeting days, converted day by day through the shop's own
-   * zone. Day-by-day rather than a single offset because a multi-day trip can
-   * straddle a DST change, and what a shop promises is the wall-clock time —
-   * "back at the dock at 12:30" on both days.
-   */
+  // Day by day rather than one offset: a multi-day trip can straddle a DST
+  // change, and what a shop promises is the wall-clock time — "back at the
+  // dock at 12:30" on both days.
+  //
+  // Null only ever means "`dayCount` is out of range" — `tripMeetingDays` never
+  // reads the day it is handed (src/lib/trip-days.ts, pinned by its own test),
+  // and `dayCount` is one parsed value for the whole submission. So this cannot
+  // fail for a later occurrence having succeeded for the first. Every caller
+  // still refuses on null rather than trusting that: a series must be whole.
   const meetingDaysFrom = (day: { start: WallTime; end: WallTime }) => {
     const days = tripMeetingDays(day, dayCount);
     if (!days) return null;
@@ -217,8 +213,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   if (!lastDay) return await invalid();
 
   // The per-dive cards only exist while the panel is expanded, so an all-blank
-  // read means the staff member never opened them — and then the single
-  // dive-site select from the quick row is the whole answer.
+  // read means they were never on screen — fall back to the quick row's single
+  // dive-site select rather than writing four empty dives over it.
   const diveDrafts = tripDiveDraftsFromForm(formData, plannedDives);
   const plannedDiveCards = diveDrafts.some(
     (draft) => draft.title || draft.diveSiteId || draft.description,
@@ -262,19 +258,25 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       { frequency: "weekly", intervalWeeks: repeatIntervalWeeks, occurrenceCount: repeatCount },
     );
     if (!occurrenceWalls) return await invalid();
+    // Built up front so a refusal refuses the *whole* series: a fallback here
+    // would put a half-shaped one on the board, some dates carrying their
+    // meeting days and one silently not.
+    const occurrences = [];
+    for (const occurrence of occurrenceWalls) {
+      const days = meetingDaysFrom(occurrence);
+      const last = days?.at(-1);
+      if (!days || !last) return await invalid();
+      occurrences.push({
+        startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
+        endsAt: last.endsAt,
+        scheduleDays: days,
+      });
+    }
     const series = await createTripSeries(db, {
       ...common,
       frequency: "weekly",
       intervalWeeks: repeatIntervalWeeks,
-      occurrences: occurrenceWalls.map((occurrence) => {
-        const days = meetingDaysFrom(occurrence);
-        const last = days?.at(-1);
-        return {
-          startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
-          endsAt: last ? last.endsAt : wallTimeToUtc(occurrence.end, shop.timezone),
-          scheduleDays: days ?? undefined,
-        };
-      }),
+      occurrences,
     });
     if (!series) return await invalid();
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
@@ -294,19 +296,13 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
 }
 
 /**
- * Where a staff member lands once the departure is on the board.
+ * Where a staff member lands once the departure is on the board: back on the
+ * board, with the departure named in the notice.
  *
- * Normally: right back on the board they were building, with the new departure
- * named in the notice — a shop putting up Thursday and Friday should not be
- * bounced somewhere else between the two.
- *
- * The exception is the moment a shop becomes bookable at all. The first
- * departure ever is also the moment the first-run checklist leaves the shop
- * home and the share card takes its place (`FirstBookableCard`), and that card
- * is the one thing worth interrupting the board for. "First" is exact and
- * matches the home page's own test: the shop's total equals what was just
- * created. Demo shops sit out — their board is seeded, so no trip there is
- * ever a first.
+ * The exception is a shop's first departure ever, which hands over to Today's
+ * `FirstBookableCard`. "First" must stay *exactly* the home page's own test
+ * (`src/app/shop/[shopSlug]/page.tsx`) — total equals what was just created,
+ * demo shops excluded — or one of the two renders a card the other denies.
  */
 async function landAfterAdd(
   db: AppDb,

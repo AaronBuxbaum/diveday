@@ -240,17 +240,8 @@ function focusOnMount(el: HTMLElement | null) {
 
 /**
  * The one form that creates a departure, pre-dated to whichever day header it
- * was opened from.
- *
- * Two depths, one form. Collapsed it answers the question the board is for —
- * what is it, when, how many seats, what does it cost, whose course, which site
- * — and that is the path a shop takes all week. "More options" reveals the rest
- * of what a trip can be (a description, consecutive meeting days, a deposit and
- * a free-cancellation window, per-dive plans, a repeating cadence): the answers
- * a shop gives a few times a season, which until now lived on a second page at
- * `/trips/new` that staff had to know to leave for. Both depths post the same
- * fields to the same action; the quick ones simply aren't in the payload.
- * ADR 20260806-one-trip-create-form.
+ * was opened from. Two depths, one form, one action: "More options" discloses
+ * the rest of what a trip can be (ADR 20260806-one-trip-create-form).
  *
  * Hoisted to module scope (rather than defined inside `ScheduleBuilder`)
  * so its identity is stable across renders — a component defined in a parent's
@@ -289,6 +280,32 @@ function AddPanel({
   const [courseId, setCourseId] = useState(initialCourse?.id ?? "");
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
 
+  /**
+   * The two facts both depths ask for, held here so the disclosure can never
+   * eat them: collapsed they are the "Dives" box and the "Dive site" select,
+   * expanded they are the dive plan's own count and dive one's site. State in
+   * the panel, not in either control, is what lets a staff member type 3 dives,
+   * open More options, and still be scheduling three dives.
+   */
+  const [plannedDives, setPlannedDives] = useState(2);
+  const [diveSiteId, setDiveSiteId] = useState("");
+  /**
+   * The dive plan is mounted from the first expansion onward and only hidden
+   * afterwards — never unmounted, because React drops an unmounted subtree's
+   * state and those are typed dive briefings. Seeded once, from whatever the
+   * quick row held at that moment; later toggles must not re-seed it or they
+   * would overwrite the cards with the quick row again.
+   */
+  const [diveSeed, setDiveSeed] = useState<{ count: number; siteId: string } | null>(
+    startExpanded ? { count: 2, siteId: "" } : null,
+  );
+  const toggleExpanded = () => {
+    setExpanded((current) => {
+      if (!current && diveSeed === null) setDiveSeed({ count: plannedDives, siteId: diveSiteId });
+      return !current;
+    });
+  };
+
   return (
     <FieldGrid
       as="form"
@@ -311,17 +328,29 @@ function AddPanel({
           ref={focusOnMount}
         />
       </Field>
-      {expanded ? (
-        <Field label={copy.descriptionLabel} hint={copy.optional}>
-          <textarea
-            name="description"
-            rows={2}
-            maxLength={500}
-            placeholder={copy.descriptionPlaceholder}
-            className={controlClass}
-          />
-        </Field>
-      ) : null}
+      {/* Every expanded-only block below is `hidden`, never unmounted, and
+          `disabled` while hidden — React drops an unmounted subtree's state,
+          and a disabled control submits nothing, so the collapsed payload is
+          exactly the quick one. Expanding and collapsing is a change of view,
+          never a loss of work. */}
+      <Field
+        label={copy.descriptionLabel}
+        hint={copy.optional}
+        // `hidden` on the field itself, never a wrapper `<div>`: `FieldGrid`
+        // aligns a row's captions and controls by making each `Field` a direct
+        // grid item, and a wrapper steals that place and drops the row out of
+        // alignment (docs/design/forms-and-controls.md).
+        className={expanded ? undefined : "hidden"}
+      >
+        <textarea
+          name="description"
+          rows={2}
+          maxLength={500}
+          disabled={!expanded}
+          placeholder={copy.descriptionPlaceholder}
+          className={controlClass}
+        />
+      </Field>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
           <input name="date" type="date" required defaultValue={dateIso} className={controlClass} />
@@ -345,6 +374,26 @@ function AddPanel({
           />
         </Field>
       </FieldGrid>
+      {/* Under the date row, where the rest of "when" already lives — not in
+          the Seats/Dives cell. Expanding must only ever *add* a field below;
+          a cell whose label changes out from under the cursor reads as the
+          form rewriting itself. */}
+      <Field
+        label={copy.daysLabel}
+        description={copy.daysDescription}
+        className={expanded ? undefined : "hidden"}
+      >
+        <input
+          name="dayCount"
+          type="number"
+          required={expanded}
+          disabled={!expanded}
+          min={more.minDays}
+          max={more.maxDays}
+          defaultValue={more.minDays}
+          className={`${controlClass} tabular-nums sm:w-40`}
+        />
+      </Field>
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.seats}>
           <input
@@ -357,37 +406,23 @@ function AddPanel({
             className={`${controlClass} tabular-nums`}
           />
         </Field>
-        {/* Expanded, the dive count moves into the dive-plan block below, where
-            it is the thing that decides how many cards there are — two boxes
-            named `plannedDives` on one form is the one shape this cannot take.
-            A course weekend or a liveaboard takes its place: consecutive
-            meeting days are one departure — one roster, one set of waivers,
-            one crew — and nothing but this box can make one. */}
-        {expanded ? (
-          <Field label={copy.daysLabel} description={copy.daysDescription}>
-            <input
-              name="dayCount"
-              type="number"
-              required
-              min={more.minDays}
-              max={more.maxDays}
-              defaultValue={more.minDays}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-        ) : (
-          <Field label={copy.dives}>
-            <input
-              name="plannedDives"
-              type="number"
-              required
-              min={1}
-              max={4}
-              defaultValue={2}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-        )}
+        {/* Handed off, not duplicated: expanded, the count is the dive plan's
+            own select. Two enabled boxes named `plannedDives` would let
+            whichever is last in the DOM win silently, so this one goes
+            disabled — and the panel holds the value either way. */}
+        <Field label={copy.dives} className={expanded ? "hidden" : undefined}>
+          <input
+            name="plannedDives"
+            type="number"
+            required={!expanded}
+            disabled={expanded}
+            min={1}
+            max={4}
+            value={plannedDives}
+            onChange={(event) => setPlannedDives(Number(event.target.value))}
+            className={`${controlClass} tabular-nums`}
+          />
+        </Field>
       </FieldGrid>
       {/* A departure minted here is on the public schedule the moment it is on
           the board, so this is where the price belongs — the board used to
@@ -409,49 +444,55 @@ function AddPanel({
           />
         </Field>
       </FieldGrid>
-      {expanded ? (
-        <fieldset className="rounded-lg border border-border bg-surface p-5">
-          <legend className="px-1 text-sm font-medium">{copy.payAtBookingLegend}</legend>
-          <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
-          <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
-            <Field
-              label={copy.depositLabel}
-              hint={copy.optional}
-              description={copy.depositDescription}
-            >
+      {/* `<fieldset disabled>` reaches every control inside it, so this whole
+          block leaves the submission in one attribute while it is hidden. */}
+      <fieldset
+        hidden={!expanded}
+        disabled={!expanded}
+        className="rounded-lg border border-border bg-surface p-5"
+      >
+        <legend className="px-1 text-sm font-medium">{copy.payAtBookingLegend}</legend>
+        <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
+        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+          <Field
+            label={copy.depositLabel}
+            hint={copy.optional}
+            description={copy.depositDescription}
+          >
+            <input
+              name="depositDollars"
+              type="number"
+              step={price.step}
+              min={0}
+              max={price.max}
+              placeholder={price.placeholder}
+              title={copy.depositTitle}
+              className={`${controlClass} tabular-nums sm:w-40`}
+            />
+          </Field>
+          <Field
+            label={copy.cancellationWindowLabel}
+            hint={copy.optional}
+            description={copy.cancellationWindowDescription}
+          >
+            <div className="flex items-center gap-2">
               <input
-                name="depositDollars"
+                name="cancellationWindowHours"
                 type="number"
-                step={price.step}
+                step={1}
                 min={0}
-                max={price.max}
-                placeholder={price.placeholder}
-                title={copy.depositTitle}
-                className={`${controlClass} tabular-nums sm:w-40`}
+                max={720}
+                placeholder="48"
+                className={`${controlClass} tabular-nums sm:w-28`}
               />
-            </Field>
-            <Field
-              label={copy.cancellationWindowLabel}
-              hint={copy.optional}
-              description={copy.cancellationWindowDescription}
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  name="cancellationWindowHours"
-                  type="number"
-                  step={1}
-                  min={0}
-                  max={720}
-                  placeholder="48"
-                  className={`${controlClass} tabular-nums sm:w-28`}
-                />
-                <span className="text-sm text-muted">{copy.hoursSuffix}</span>
-              </div>
-            </Field>
-          </FieldGrid>
-        </fieldset>
-      ) : null}
-      <FieldGrid columns={expanded ? 1 : 2} className="gap-y-4">
+              <span className="text-sm text-muted">{copy.hoursSuffix}</span>
+            </div>
+          </Field>
+        </FieldGrid>
+      </fieldset>
+      {/* Two columns in both states: `columns={expanded ? 1 : 2}` made the
+          Course select jump from half-width to full on every toggle. */}
+      <FieldGrid columns={2} className="gap-y-4">
         <Field
           label={copy.course}
           hint={copy.optional}
@@ -490,73 +531,93 @@ function AddPanel({
             )}
           </select>
         </Field>
-        {/* One site for the day, or — expanded — a card per dive, each with its
-            own site and briefing. The single select is the whole answer for a
-            board built at speed; `dive-1-siteId` supersedes it the moment the
-            cards exist. */}
-        {expanded ? null : (
-          <Field label={copy.diveSite} hint={copy.optional}>
-            <select name="diveSiteId" defaultValue="" className={controlClass}>
-              <option value="">{copy.decideLater}</option>
-              {options === null ? (
-                <option value="" disabled>
-                  {copy.optionsLoading}
+        {/* One site for the day, or — expanded — `dive-N-siteId` per dive.
+            Never both: dive one's select is seeded from this one on the first
+            expansion and writes back to it, so the two never disagree. */}
+        <Field
+          label={copy.diveSite}
+          hint={copy.optional}
+          className={expanded ? "hidden" : undefined}
+        >
+          <select
+            name="diveSiteId"
+            value={diveSiteId}
+            disabled={expanded}
+            onChange={(event) => setDiveSiteId(event.target.value)}
+            className={controlClass}
+          >
+            <option value="">{copy.decideLater}</option>
+            {options === null ? (
+              <option value="" disabled>
+                {copy.optionsLoading}
+              </option>
+            ) : (
+              options.diveSites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.title}
                 </option>
-              ) : (
-                options.diveSites.map((site) => (
-                  <option key={site.id} value={site.id}>
-                    {site.title}
-                  </option>
-                ))
-              )}
-            </select>
-          </Field>
-        )}
+              ))
+            )}
+          </select>
+        </Field>
       </FieldGrid>
-      {expanded ? (
-        <>
-          <TripDiveFields
-            diveSites={(options?.diveSites ?? []).map((site) => ({
-              id: site.id,
-              name: site.title,
-            }))}
-            copy={more.diveFields}
-          />
-          <fieldset className="rounded-lg border border-border bg-surface p-5">
-            <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
-            <p className="text-sm text-muted">{copy.repeatDescription}</p>
-            <RepeatFields
-              minOccurrences={more.minOccurrences}
-              maxOccurrences={more.maxOccurrences}
-              copy={{
-                howOftenLabel: copy.howOftenLabel,
-                doesntRepeat: copy.doesntRepeat,
-                everyWeek: copy.everyWeek,
-                every2Weeks: copy.every2Weeks,
-                every4Weeks: copy.every4Weeks,
-                numberOfTripsLabel: copy.numberOfTripsLabel,
-                numberOfTripsDescription: copy.numberOfTripsDescription,
-                numberOfTripsPlaceholder: copy.numberOfTripsPlaceholder,
-              }}
-            />
-          </fieldset>
-        </>
-      ) : null}
-      {/* The rare half of the form, behind one control that says what is in it
-          — collapsed by default because a shop puts a boat on the board far
-          more often than it invents a new kind of departure (design
-          principles #8). */}
+      {diveSeed === null ? null : (
+        <TripDiveFields
+          diveSites={(options?.diveSites ?? []).map((site) => ({
+            id: site.id,
+            name: site.title,
+          }))}
+          initialCount={diveSeed.count}
+          initialDives={[{ title: null, diveSiteId: diveSeed.siteId || null, description: null }]}
+          disabled={!expanded}
+          onCountChange={setPlannedDives}
+          onFirstDiveSiteChange={setDiveSiteId}
+          copy={more.diveFields}
+        />
+      )}
+      <fieldset
+        hidden={!expanded}
+        disabled={!expanded}
+        className="rounded-lg border border-border bg-surface p-5"
+      >
+        <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
+        <p className="text-sm text-muted">{copy.repeatDescription}</p>
+        <RepeatFields
+          minOccurrences={more.minOccurrences}
+          maxOccurrences={more.maxOccurrences}
+          disabled={!expanded}
+          copy={{
+            howOftenLabel: copy.howOftenLabel,
+            doesntRepeat: copy.doesntRepeat,
+            everyWeek: copy.everyWeek,
+            every2Weeks: copy.every2Weeks,
+            every4Weeks: copy.every4Weeks,
+            numberOfTripsLabel: copy.numberOfTripsLabel,
+            numberOfTripsDescription: copy.numberOfTripsDescription,
+            numberOfTripsPlaceholder: copy.numberOfTripsPlaceholder,
+          }}
+        />
+      </fieldset>
+      {/* The rare half, collapsed by default (design principles #8). The hint
+          names what is behind it — a bare "More options" would hide the
+          multi-day and repeat mechanisms behind a shrug. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <button
           type="button"
-          onClick={() => setExpanded((current) => !current)}
+          onClick={toggleExpanded}
           aria-expanded={expanded}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
+          className={buttonClass({ variant: "link", size: "sm" })}
         >
+          {/* The affordance a ghost button has none of: which way this goes,
+              before you press it. Decorative — `aria-expanded` is the state a
+              screen reader is told. */}
+          <span aria-hidden="true" className="inline-block">
+            {expanded ? "▾" : "▸"}
+          </span>{" "}
           {expanded ? copy.fewerOptions : copy.moreOptions}
         </button>
         {expanded ? null : (
-          <span className="text-xs text-muted">{copy.moreOptionsDescription}</span>
+          <span className="text-sm text-muted">{copy.moreOptionsDescription}</span>
         )}
       </div>
       <div className="flex items-center gap-3">
@@ -696,11 +757,8 @@ export function ScheduleBuilder({
             ref={registerToggle("add:top")}
             onClick={() => toggle("add:top")}
             aria-expanded={open === "add:top"}
-            // Primary while it is the section's one obvious action; secondary
-            // the moment it has done its job, because the panel it opened ends
-            // in "Put it on the board" and a section may only have one primary
-            // (design principles #8). Open, this button is the panel's handle,
-            // not the thing to press next.
+            // Secondary once open: the panel it reveals ends in "Put it on the
+            // board", and a section carries one primary (design principles #8).
             className={buttonClass({
               variant: open === "add:top" ? "secondary" : undefined,
               className: "rounded-xl",
@@ -711,11 +769,9 @@ export function ScheduleBuilder({
         ) : null}
       </div>
 
-      {/* Creating a departure is owner/manager/instructor work (H-14). The
-          crew still reads the board — they run the day off it — so rather than
-          silently omitting every add control, it says whose job this is. The
-          sentence moved here from `/trips/new`, which used to be where a
-          captain found out. */}
+      {/* Creating a departure is owner/manager/instructor work (H-14); crew
+          still read the board, so it says whose job this is rather than
+          silently omitting every add control. */}
       {canConfigure ? null : (
         <p className="mb-3 rounded-xl border border-border bg-surface-sunken/50 p-4 text-sm text-muted">
           {copy.viewOnlyNotice}

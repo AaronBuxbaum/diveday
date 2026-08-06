@@ -179,9 +179,8 @@ export default async function ScheduleBoardPage({
     : null;
 
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
-  // "It's on the board" is true but anonymous, and a staff member who just put
-  // up three departures in a row wants to read which one landed. The named form
-  // is used whenever the action passed the title back.
+  // The named form whenever the action passed a title back; the anonymous
+  // "It's on the board" survives for a URL that carries none.
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
   const builderNotice = builderNoticeEntry
     ? {
@@ -312,10 +311,8 @@ export default async function ScheduleBoardPage({
     },
   };
 
-  // Every door that used to open `/trips/new` now opens this panel instead, and
-  // `?add=full` is the one that meant the whole form (a course session, a
-  // repeating charter). A course always implies the panel: the link would
-  // otherwise land on a board that silently swallowed the course it named.
+  // `?course=` always implies an open panel: it would otherwise land on a board
+  // that silently swallowed the course the link named.
   const addPanelState = add === "full" ? "expanded" : add || requestedCourse ? "quick" : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
@@ -515,9 +512,8 @@ export default async function ScheduleBoardPage({
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         price={priceInput}
-        // A link may name the day it meant ("another Saturday like this one"),
-        // and only a real `YYYY-MM-DD` is honoured — anything else falls back
-        // to the soonest day already on the board.
+        // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else
+        // falls back to the soonest day already on the board.
         defaultDateIso={
           date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : (firstUpcomingDateIso ?? todayIso)
         }

@@ -577,46 +577,142 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     );
   }
 
+  /** What the form would actually post right now. */
+  const submittedKeys = (container: HTMLElement) => {
+    const form = container.querySelector("form");
+    if (!form) throw new Error("the add panel is not open");
+    return [...new FormData(form).keys()];
+  };
+
   it("keeps the rare half collapsed, and reveals the whole trip form on request", async () => {
-    renderBuilder();
+    const { container } = renderBuilder();
     await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
 
-    // Collapsed: the questions the board is for, and nothing else.
-    expect(screen.getByLabelText("What is it")).toBeInTheDocument();
-    expect(screen.getByLabelText("Seats")).toBeInTheDocument();
-    expect(screen.getByLabelText("Dives")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/^Description/)).toBeNull();
-    expect(screen.queryByLabelText("How many days")).toBeNull();
-    expect(screen.queryByLabelText(/Deposit per diver/)).toBeNull();
-    expect(screen.queryByLabelText("How often")).toBeNull();
+    // Collapsed: the questions the board is for are live, the rest inert.
+    // (Inert, not absent — the disclosure hides rather than unmounts. What is
+    // *on screen* is a stylesheet's job and the visual specs' to prove; what
+    // this asserts is the half that decides the payload.)
+    expect(screen.getByLabelText("What is it")).toBeEnabled();
+    expect(screen.getByLabelText("Seats")).toBeEnabled();
+    expect(screen.getByLabelText("Dives")).toBeEnabled();
+    expect(screen.getByLabelText(/^Description/)).toBeDisabled();
+    expect(screen.getByLabelText("How many days")).toBeDisabled();
+    expect(screen.getByLabelText(/Deposit per diver/)).toBeDisabled();
+    expect(screen.getByLabelText("How often")).toBeDisabled();
 
-    const more = screen.getByRole("button", { name: "More options" });
+    const more = screen.getByRole("button", { name: /More options/ });
     expect(more).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(more);
 
     // Expanded: everything /trips/new used to ask, on the same form.
-    expect(screen.getByLabelText(/^Description/)).toBeInTheDocument();
-    expect(screen.getByLabelText("How many days")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Deposit per diver/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Free cancellation window/)).toBeInTheDocument();
-    expect(screen.getByLabelText("How often")).toBeInTheDocument();
-    expect(screen.getByLabelText("Number of dives")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Description/)).toBeEnabled();
+    expect(screen.getByLabelText("How many days")).toBeEnabled();
+    expect(screen.getByLabelText(/Deposit per diver/)).toBeEnabled();
+    expect(screen.getByLabelText(/Free cancellation window/)).toBeEnabled();
+    expect(screen.getByLabelText("How often")).toBeEnabled();
+    expect(screen.getByLabelText("Number of dives")).toBeEnabled();
+    // …and the quick dive box has handed over rather than vanished.
+    expect(screen.getByLabelText("Dives")).toBeDisabled();
     // Still one submit — expanding deepens the form, it never forks it.
     expect(screen.getAllByRole("button", { name: "Put it on the board" })).toHaveLength(1);
+    expect(submittedKeys(container)).toContain("dayCount");
+  });
+
+  it("posts only the quick fields while collapsed, though the rest stay mounted", async () => {
+    // The disclosure hides rather than unmounts (nothing typed is ever lost),
+    // so "not on screen" has to mean "disabled" or a collapsed submission would
+    // carry a hidden `dayCount`, deposit, and cadence nobody chose.
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
+
+    const keys = submittedKeys(container);
+    expect(keys).toContain("plannedDives");
+    expect(keys).toContain("diveSiteId");
+    for (const hidden of [
+      "description",
+      "dayCount",
+      "depositDollars",
+      "cancellationWindowHours",
+      "repeatIntervalWeeks",
+      "dive-1-siteId",
+    ]) {
+      expect(keys).not.toContain(hidden);
+    }
   });
 
   it("never posts two dive counts: the quick box gives way to the dive plan's own", async () => {
-    // `plannedDives` decides how many dive cards render, so two controls
-    // sharing the name would make the last one in the DOM win silently.
+    // `plannedDives` decides how many dive cards render, so two *enabled*
+    // controls sharing the name would make the last in the DOM win silently.
+    const { container } = renderBuilder();
+    const enabled = (name: string) =>
+      container.querySelectorAll(`[name="${name}"]:not(:disabled)`).length;
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    expect(enabled("plannedDives")).toBe(1);
+    expect(enabled("diveSiteId")).toBe(1);
+
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    expect(enabled("plannedDives")).toBe(1);
+    // One site for the day, or one per dive — never both.
+    expect(enabled("diveSiteId")).toBe(0);
+    expect(enabled("dive-1-siteId")).toBe(1);
+  });
+
+  it("carries the quick dive count and site into the dive plan on first expand", async () => {
     const { container } = renderBuilder();
     await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
-    expect(container.querySelectorAll('[name="plannedDives"]')).toHaveLength(1);
+    await screen.findByRole("option", { name: "Molasses Reef" });
 
-    await userEvent.click(screen.getByRole("button", { name: "More options" }));
-    expect(container.querySelectorAll('[name="plannedDives"]')).toHaveLength(1);
-    // Same for the site: one for the day, or one per dive — never both.
-    expect(container.querySelectorAll('[name="diveSiteId"]')).toHaveLength(0);
-    expect(container.querySelectorAll('[name="dive-1-siteId"]')).toHaveLength(1);
+    await userEvent.clear(screen.getByLabelText("Dives"));
+    await userEvent.type(screen.getByLabelText("Dives"), "3");
+    const quickSite = container.querySelector('[name="diveSiteId"]');
+    if (!quickSite) throw new Error("the quick dive-site select is missing");
+    await userEvent.selectOptions(quickSite, "site-1");
+
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    // Three dives asked for, three dive cards — not the default two.
+    expect(screen.getByLabelText("Number of dives")).toHaveValue("3");
+    expect(container.querySelectorAll('[name^="dive-"][name$="-siteId"]')).toHaveLength(3);
+    // …and the site chosen in the quick row is dive one's, not thrown away.
+    expect(container.querySelector('[name="dive-1-siteId"]')).toHaveValue("site-1");
+  });
+
+  it("loses nothing across expand → collapse → expand", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await screen.findByRole("option", { name: "Molasses Reef" });
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    await userEvent.type(screen.getByLabelText(/^Description/), "Bring a light");
+    await userEvent.clear(screen.getByLabelText("How many days"));
+    await userEvent.type(screen.getByLabelText("How many days"), "3");
+    await userEvent.type(screen.getByLabelText(/Deposit per diver/), "40");
+    await userEvent.selectOptions(screen.getByLabelText("How often"), "2");
+    await userEvent.type(screen.getAllByLabelText(/^Name/)[0], "Morning reef");
+
+    await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    expect(screen.getByLabelText(/^Description/)).toHaveValue("Bring a light");
+    expect(screen.getByLabelText("How many days")).toHaveValue(3);
+    expect(screen.getByLabelText(/Deposit per diver/)).toHaveValue(40);
+    expect(screen.getByLabelText("How often")).toHaveValue("2");
+    expect(screen.getAllByLabelText(/^Name/)[0]).toHaveValue("Morning reef");
+  });
+
+  it("mirrors the dive plan's count back to the quick box on the way down", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    await userEvent.selectOptions(screen.getByLabelText("Number of dives"), "4");
+    await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
+
+    // Collapsed, the quick box is what submits — it must agree with what the
+    // staff member last chose, not with the default it was mounted at.
+    expect(screen.getByLabelText("Dives")).toHaveValue(4);
   });
 
   it("opens already pointed at the course a catalogue link named", async () => {
