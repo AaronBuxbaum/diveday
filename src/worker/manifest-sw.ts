@@ -5,7 +5,7 @@ import {
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestPayload } from "@/lib/offline-manifests";
+import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 
 /**
  * The offline manifest's service worker.
@@ -219,8 +219,16 @@ async function refreshSavedManifests(): Promise<void> {
       headers: { accept: "application/json" },
     });
     if (!response.ok) return;
-    const body = (await response.json()) as { manifests?: OfflineManifestPayload[] };
-    for (const payload of body.manifests ?? []) {
+    // `payloads`, not `manifests`. The route answers `{ shop, payloads }`;
+    // `manifests` is the key *inside* each payload, and reading it here meant
+    // this loop always ran zero times — a locked phone got the notification and
+    // a snapshot exactly as stale as before, which is the gap this function was
+    // added to close. Read through the route's own declared response type now,
+    // so the next rename is a `tsc -p src/worker` failure rather than a silent
+    // no-op at sea. The one caller that wants only `shop` asks
+    // `/api/offline-manifests/identity` instead; this one is here for the board.
+    const body = (await response.json()) as Partial<OfflineManifestUpcomingResponse>;
+    for (const payload of body.payloads ?? []) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
       await saveOfflineManifest(payload).catch(() => undefined);

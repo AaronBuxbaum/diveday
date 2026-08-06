@@ -194,6 +194,29 @@ trip ids it holds, the server telling it which are stale) is real new protocol s
 design, not a rider here; revisit if cancellations close enough to departure to matter in practice turn
 out to be common enough for this friction to be worth closing.
 
+**Amendment (2026-08-06): the tenant question got an endpoint of its own.** Everything above stands,
+with one correction to *how* the offline shell learns which shop this browser is signed in as. It was
+reading that one string out of `GET /api/offline-manifests/upcoming` — a response carrying the shop's
+entire 48-hour board: every diver's name, emergency contact and readiness blocker, pulled onto a shared
+boat tablet, used for `shop.slug`, and thrown away unread (review 20260802, action item 12). It now
+calls **`GET /api/offline-manifests/identity`**, same staff gate and same session-derived shop scope,
+which answers `{ shop: { slug } }` and nothing else — no roster, no names, not even a count of them.
+`OfflineManifestAutoSave` and the service worker's `refreshSavedManifests` still call `/upcoming`,
+because they are there for the board, and `/upcoming` still carries `shop` so neither pays a second
+round trip for a string it is being handed — which also means an already-deployed offline shell held in
+a device's `v2` cache keeps working unchanged against it.
+
+A separate path rather than an `?identityOnly=1` flag, because the two are different questions with
+different consequences: a dropped or mistyped query parameter degrades to the *roster*, silently, with
+a 200, whereas a path cannot fail open that way; a request logged against this path is legible as
+identity-only without anyone reading its query string; and the two have different costs (one
+primary-key row read against a trip window plus per-trip manifest assembly) on the surface with the
+worst network in the product. Both routes now send `Cache-Control: private, no-store`, which the
+roster route never had. On the identity route that header is load-bearing rather than hygienic: a
+cached answer on a shared boat tablet tells the *next* shop's browser it is the *previous* shop, so
+`purgeOfflineManifestsExceptShop` would delete the current captain's manifests and preserve the
+previous shop's roster — both directions of the bug this check exists to prevent, at once.
+
 ## Alternatives considered
 
 - **Register the auto-save fetch from the marketing home page (`/`) instead of the shop layout** —
@@ -205,6 +228,10 @@ out to be common enough for this friction to be worth closing.
   URL, a page that requires network) should see that, not be redirected into a manifest list that has
   nothing to do with what they were trying to open. Root is added as a second explicit pattern, not a
   wildcard.
+- **`?identityOnly=1` on the roster route instead of a second route** — rejected (2026-08-06, see the
+  amendment above): the failure mode of a missing flag is the full roster returned with a 200, which is
+  exactly the exposure the change exists to remove, and the two questions differ in cost, cacheability
+  and what a future authorization change would want to do to each.
 - **Require a `?shop=` slug on the offline shell instead of purging leftover records** — rejected: a
   shop slug is not a secret (it's in every staff-facing URL), so requiring it as a display filter would
   add friction without adding a real access boundary, and it does nothing about data already sitting in

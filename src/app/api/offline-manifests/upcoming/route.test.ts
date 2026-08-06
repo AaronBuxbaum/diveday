@@ -136,4 +136,34 @@ describe("GET /api/offline-manifests/upcoming", () => {
     const body = (await response.json()) as { shop: { slug: string } };
     expect(body.shop.slug).toBe("blue-mantis");
   });
+
+  it("answers under exactly the keys its readers destructure", async () => {
+    // The service worker read `body.manifests` — the key *inside* a payload,
+    // not the one beside it — so `refreshSavedManifests` looped zero times on
+    // every push, silently, on a locked phone with nobody to tell. Both readers
+    // now go through `OfflineManifestUpcomingResponse`, so a rename is a
+    // typecheck failure; this is the other half of that guard, from the wire.
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const body = (await (await GET()).json()) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(["payloads", "shop"]);
+    expect(Array.isArray(body.payloads)).toBe(true);
+  });
+
+  it("sets Cache-Control: private, no-store on every response, refusals included", async () => {
+    // This body is a shop's whole 48-hour board — diver names, emergency
+    // contacts, readiness blockers — fetched onto a shared boat tablet. It
+    // belongs in the encrypted IndexedDB store and in no other cache: not a
+    // shared proxy's, not the browser's disk cache, not a back/forward replay
+    // (review 20260802, action item 12).
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    expect((await GET()).headers.get("Cache-Control")).toBe("private, no-store");
+
+    vi.mocked(auth).mockResolvedValue(null);
+    expect((await GET()).headers.get("Cache-Control")).toBe("private, no-store");
+  });
 });

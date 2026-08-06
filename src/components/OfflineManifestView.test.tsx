@@ -264,8 +264,14 @@ function setOnline(online: boolean) {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: online });
 }
 
-function upcomingResponse(shopSlug: string) {
-  return new Response(JSON.stringify({ shop: { slug: shopSlug }, payloads: [] }), { status: 200 });
+/**
+ * What `GET /api/offline-manifests/identity` answers: the tenant slug, and
+ * nothing else. This shell asks a one-word question and now gets a one-word
+ * answer — it used to call `/upcoming`, which replies with the shop's entire
+ * 48-hour board (review 20260802, action item 12).
+ */
+function identityResponse(shopSlug: string) {
+  return new Response(JSON.stringify({ shop: { slug: shopSlug } }), { status: 200 });
 }
 
 beforeEach(() => {
@@ -279,7 +285,7 @@ beforeEach(() => {
   // one caller reaches this endpoint per mount.
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockImplementation(async () => upcomingResponse("blue-mantis")),
+    vi.fn().mockImplementation(async () => identityResponse("blue-mantis")),
   );
 });
 
@@ -396,7 +402,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     });
     vi.mocked(listOfflineManifests).mockResolvedValue([foreignShopEnvelope]);
     // The device is currently signed in as blue-mantis, not reef-runners.
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -418,7 +424,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   // belongs.
   it("purges another shop's leftover records when the shell loads", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -436,6 +442,91 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     );
   });
 
+  // Review 20260802, action item 12. This shell needs one string — which shop
+  // this browser is signed in as — and used to get it by asking for the shop's
+  // whole 48-hour roster: every diver's name, emergency contact and readiness
+  // blocker, pulled onto a shared boat tablet and then thrown away unread.
+  it("asks the identity endpoint for the tenant, and never pulls the roster to get it", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/offline-manifests/identity",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+    // Not "called with /upcoming fewer times" — never, on any URL. This surface
+    // has no use for a roster it did not already save.
+    for (const [url] of vi.mocked(fetch).mock.calls) {
+      expect(String(url)).not.toContain("/api/offline-manifests/upcoming");
+    }
+  });
+
+  // The 2026-08-06 deduplication, still holding after the endpoint changed
+  // shape. Two independent consumers want the tenant on every mount and every
+  // reconnect — the purge effect and the branch effect that gates reconcile —
+  // and each request can sit for the full ten-second timeout on a marina
+  // connection. Two of them can also come back disagreeing, which would have
+  // the purge and the reconcile acting on different answers to "which shop is
+  // this".
+  it("resolves the tenant once per round, however many callers need it", async () => {
+    const pendingEvent = {
+      clientEventId: "evt-1",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+      tripId: "trip-1",
+      bookingId: "booking-1",
+      checkpoint: "departure" as const,
+      status: "boarded" as const,
+      note: null,
+      occurredAt: new Date(FROZEN_MS).toISOString(),
+      syncStatus: "pending" as const,
+    };
+    const saved = envelope("trip-1", "Two-Tank Reef", { events: [pendingEvent] });
+    vi.mocked(listOfflineManifests).mockResolvedValue([saved]);
+    vi.mocked(syncOfflineManifest).mockResolvedValue({
+      ...saved,
+      events: [{ ...pendingEvent, syncStatus: "applied" }],
+    });
+
+    render(<OfflineManifestView />);
+
+    // Both consumers have run: the purge fired and the pending event synced.
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  // The whole reason the tenant is re-verified from the server on every
+  // reconnect rather than cached: a reconnect is exactly when the signed-in
+  // shop may have changed (a shared boat tablet handed to the next operator).
+  it("purges against the new shop when the identity changes on reconnect", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
+
+    render(<OfflineManifestView />);
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+
+    // A different shop's staff signs in on this tablet.
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("reef-runners"));
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    // The purge follows the *new* answer, so blue-mantis's rosters are the ones
+    // that stop being decryptable on this device.
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("reef-runners"),
+    );
+  });
+
   // Security review, 2026-08-06: `?trip=<id>` is the URL the list itself links
   // to and the one `manifest-sw.js` replays after a failed reload, so it is what
   // a captain actually bookmarks — a purge that ran only on the list branch
@@ -443,7 +534,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   it("purges on the single-trip surface too, not only on the list", async () => {
     searchParams = new URLSearchParams("trip=trip-1");
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -471,7 +562,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
 
-    releaseFetch(upcomingResponse("blue-mantis"));
+    releaseFetch(identityResponse("blue-mantis"));
     await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
   });
 
@@ -487,6 +578,39 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     await screen.findByText("Two-Tank Reef");
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("purges nothing when the identity endpoint refuses the caller", async () => {
+    // The session expired, or this browser was never signed in — the shell
+    // itself is deliberately reachable without one. A 401 is "cannot establish
+    // the tenant", never "the tenant is nobody", and purging on it would delete
+    // every roster on the device.
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ error: "authentication_required" }), { status: 401 }),
+    );
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    expect(syncOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("purges nothing when the identity response carries no slug", async () => {
+    // A 200 whose body is the wrong shape — a proxy's error page, a truncated
+    // response, a future version of the route — must read as "cannot establish
+    // the tenant" and not as `purgeOfflineManifestsExceptShop(undefined)`,
+    // which matches no saved record and would delete every one of them.
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
   });
 
   it("still lists the device's records when the purge itself fails", async () => {

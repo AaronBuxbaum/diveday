@@ -57,12 +57,18 @@ function deviceLocale(): string | undefined {
 const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
 
 /**
- * Server-verified "who is this browser signed in as", the same way
- * `OfflineManifestAutoSave` learns it — never a client-supplied value, never a
- * slug read off a snapshot this device already holds. Null whenever the answer
- * cannot be established (offline, signed out, a request that failed): every
- * caller treats null as "do nothing", because guessing the tenant is the one
- * mistake worth more than the work it would unblock.
+ * Server-verified "who is this browser signed in as" — never a client-supplied
+ * value, never a slug read off a snapshot this device already holds. Null
+ * whenever the answer cannot be established (offline, signed out, a request
+ * that failed): every caller treats null as "do nothing", because guessing the
+ * tenant is the one mistake worth more than the work it would unblock.
+ *
+ * It asks `/api/offline-manifests/identity`, which answers with `{ shop: { slug
+ * } }` and nothing else. It used to ask `/upcoming` — the same question, but
+ * answered with the shop's entire 48-hour board: every diver's name, emergency
+ * contact and readiness blocker, pulled onto a shared boat tablet to learn one
+ * string, and never read (review 20260802, action item 12). `OfflineManifestAutoSave`
+ * still calls `/upcoming`, because it is there for the board.
  */
 async function fetchCurrentShopSlug(): Promise<string | null> {
   if (!navigator.onLine) return null;
@@ -77,12 +83,13 @@ async function fetchCurrentShopSlug(): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
   try {
-    const response = await fetch("/api/offline-manifests/upcoming", {
+    const response = await fetch("/api/offline-manifests/identity", {
       credentials: "same-origin",
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    return ((await response.json()) as { shop: { slug: string } }).shop.slug;
+    const slug = ((await response.json()) as { shop?: { slug?: unknown } }).shop?.slug;
+    return typeof slug === "string" && slug.length > 0 ? slug : null;
   } catch {
     return null;
   } finally {
@@ -196,9 +203,13 @@ export function OfflineManifestView() {
   const tenantSlugRef = useRef<string | null>(null);
   /**
    * The in-flight lookup, so the purge effect and the branch effect below share
-   * one request instead of racing two on every mount and every reconnect. This
-   * endpoint returns the shop's whole 48-hour roster to answer a one-word
-   * question, so a duplicate is not free (security review, 2026-08-06).
+   * one request instead of racing two on every mount and every reconnect
+   * (security review, 2026-08-06). The endpoint is now identity-only rather
+   * than the whole 48-hour roster (review 20260802, action item 12), so a
+   * duplicate costs far less than it did — but the dedupe stays: on a marina
+   * connection each of these can sit for the full ten-second timeout, and two
+   * of them can disagree, which would have the purge and the reconcile pass
+   * acting on two different answers to "which shop is this".
    */
   const tenantLookupRef = useRef<Promise<string | null> | null>(null);
 

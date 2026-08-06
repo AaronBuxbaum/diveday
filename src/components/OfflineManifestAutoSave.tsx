@@ -6,7 +6,7 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestPayload } from "@/lib/offline-manifests";
+import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 
 // Matches the single-trip auto-save cadence (OfflineManifestManager) — see
 // ADR 20260726-shopwide-offline-manifest-priming. No UI: this mounts on every
@@ -51,14 +51,16 @@ export function OfflineManifestAutoSave() {
           credentials: "same-origin",
         });
         if (!response.ok) return;
-        const body = (await response.json()) as {
-          shop: { slug: string };
-          payloads: OfflineManifestPayload[];
-        };
+        const body = (await response.json()) as OfflineManifestUpcomingResponse;
         // Server-verified "who am I signed in as" — never a client-supplied
         // value — so a device that just switched shops (a shared boat tablet,
         // a freelance captain, a reassigned device) stops holding the
-        // previous shop's cached rosters the moment this runs. See ADR
+        // previous shop's cached rosters the moment this runs. Read from this
+        // response rather than from `/api/offline-manifests/identity`: that
+        // route exists for the offline shell, which wants the tenant and
+        // nothing else (review 20260802, action item 12), whereas this caller
+        // is already here for the board and a second request would be a second
+        // round trip for a string it is being handed. See ADR
         // 20260726-shopwide-offline-manifest-priming. Deliberately not
         // caught here: if the purge itself fails, saving this shop's trips
         // anyway would leave both shops' rosters readable side by side in

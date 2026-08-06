@@ -202,6 +202,41 @@ export type OfflineManifestEnvelope = {
   events: OfflineRollCallEvent[];
 };
 
+/**
+ * What `GET /api/offline-manifests/upcoming` answers — the shop's whole rolling
+ * window, for the two callers that are there for the board:
+ * `OfflineManifestAutoSave` and the service worker's `refreshSavedManifests`.
+ *
+ * Declared here, and shared by the route and both readers, because the readers
+ * are the far side of a `response.json()` cast and a cast believes whatever it
+ * is told. The service worker spent its whole existence reading `body.manifests`
+ * — the key *inside* a payload, not the one beside it — so its save loop ran
+ * zero times on every push, silently, on a locked phone with nobody to tell.
+ * One name, checked by `pnpm typecheck` at both ends (including
+ * `tsc -p src/worker`), is what makes that a build failure rather than a
+ * captain's snapshot quietly never updating.
+ */
+export type OfflineManifestUpcomingResponse = {
+  shop: OfflineManifestPayload["shop"];
+  payloads: OfflineManifestPayload[];
+};
+
+/**
+ * What `GET /api/offline-manifests/identity` answers: which shop this browser
+ * is signed in as, and deliberately nothing else — no roster, no names, not
+ * even a count of them (review 20260802, action item 12). The offline shell
+ * reads it to decide which of this device's saved rosters belong to somebody
+ * else and must be purged.
+ *
+ * Kept a separate type from the `shop` above rather than reusing it: that one
+ * carries the name and timezone a snapshot needs to render offline, and this
+ * one must not grow them by inheritance. The whole point of the endpoint is
+ * that it answers with one string.
+ */
+export type OfflineManifestIdentityResponse = {
+  shop: { slug: string };
+};
+
 export function serializeManifests(
   manifests: readonly TripManifest[],
   shop: OfflineManifestPayload["shop"],

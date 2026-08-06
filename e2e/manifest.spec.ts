@@ -218,6 +218,14 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // was cleared on the boat has no way to refetch either.
   await context.setOffline(true);
   await context.route("**/api/offline-manifests/upcoming*", (route) => route.abort());
+  // And the identity endpoint the offline shell itself calls (review 20260802,
+  // action item 12 — it used to reach `/upcoming` for the same one string).
+  // Nothing it returns can re-create a manifest record, so this is not part of
+  // what makes the eviction stick; it is here because a captain whose storage
+  // was cleared on the boat cannot reach *any* of this origin's endpoints, and
+  // a simulation that lets one of them answer is not the situation being
+  // tested.
+  await context.route("**/api/offline-manifests/identity*", (route) => route.abort());
   // Deleting once is not enough, and this is the third distinct way this test
   // has been raced. `setOffline` stops a save *round* from starting, but a
   // round that began just before it already holds its payload in memory and
@@ -346,6 +354,43 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
     return false;
   });
   expect(liveManifestCached).toBe(false);
+});
+
+test("the offline shell asks who it is signed in as without pulling the roster to find out", async ({
+  page,
+}) => {
+  // Review 20260802, action item 12. The shell needs exactly one string — the
+  // tenant slug, for the cross-shop purge — and used to get it by calling
+  // `/api/offline-manifests/upcoming`, which answers with the shop's whole
+  // 48-hour board: diver names, emergency contacts, readiness blockers, onto a
+  // shared boat tablet, unread. Asserted in a real browser rather than only at
+  // the component seam, because what matters is what leaves the device.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await waitForShellPrimed(page);
+
+  // Both routes refuse to be cached. The roster one is the finding's own ask;
+  // the identity one matters more, because a cached answer on a shared tablet
+  // tells the *next* shop's browser it is the *previous* shop — so the purge
+  // deletes the current captain's manifests and keeps the previous shop's.
+  for (const path of ["/api/offline-manifests/upcoming", "/api/offline-manifests/identity"]) {
+    const response = await page.request.get(new URL(path, page.url()).toString());
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toBe("private, no-store");
+  }
+
+  const offlineApiPaths: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname.startsWith("/api/offline-manifests/")) offlineApiPaths.push(pathname);
+  });
+
+  // The shell is its own route, outside the staff shop layout that mounts
+  // `OfflineManifestAutoSave` — so the only offline-manifest request this
+  // navigation can make is the shell's own tenant lookup.
+  await page.goto("/offline-manifest");
+  await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
+  await expect.poll(() => offlineApiPaths.includes("/api/offline-manifests/identity")).toBe(true);
+  expect(offlineApiPaths).not.toContain("/api/offline-manifests/upcoming");
 });
 
 test("an out-of-range checkpoint in the offline URL falls back to departure, not just its shape", async ({

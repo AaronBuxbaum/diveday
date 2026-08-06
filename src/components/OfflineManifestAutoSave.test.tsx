@@ -100,6 +100,12 @@ describe("OfflineManifestAutoSave", () => {
       "/api/offline-manifests/upcoming",
       expect.objectContaining({ credentials: "same-origin" }),
     );
+    // Exactly one request for the round. This caller wants the board *and* the
+    // tenant, and gets both from the one response — the identity route
+    // (review 20260802, action item 12) is for the offline shell, which wants
+    // the tenant alone; calling it here would be a second round trip for a
+    // string already in hand.
+    expect(fetch).toHaveBeenCalledTimes(1);
     // The server-verified shop identity drives the purge — never a
     // client-supplied value (see ADR 20260726-shopwide-offline-manifest-priming).
     expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
