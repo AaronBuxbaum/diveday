@@ -56,7 +56,7 @@
   "staffing": {
     "eyebrow": "Operaciones",
     "title": "Personal",
-    "description": "Consulta quién trabaja, qué está cualificado para enseñar o tripular cada persona, y dónde la próxima salida sigue teniendo un hueco de cobertura.",
+    "description": "Quién trabaja y cuándo, y qué está cualificado para enseñar o tripular cada persona. La tripulación de cada salida se asigna en Hoy.",
     "window": {
       "from": "Desde",
       "through": "Hasta",
@@ -94,19 +94,11 @@
       "submit": "Añadir turno",
       "saving": "Guardando…"
     },
-    "coverage": {
-      "heading": "Huecos de cobertura",
-      "detail": "Son avisos que conviene resolver antes de que el manifiesto dé una sorpresa en el muelle.",
-      "noTrips": "No hay salidas programadas en este periodo.",
-      "covered": "Cubierta",
-      "gapCount": "{count, plural, one {# hueco} other {# huecos}}",
-      "allGood": "Hay tripulación asignada y su turno cubre esta salida."
-    },
-    "gap": {
-      "no_crew": "Sin tripulación asignada",
-      "course_needs_instructor": "El curso necesita un instructor",
-      "over_ratio": "Hay más buceadores reservados de los que cubre esta tripulación según la proporción del curso",
-      "no_shift_coverage": "Ningún turno de trabajo cubre esta salida"
+    "crewGaps": {
+      "needCrew": "{count, plural, one {# salida de este periodo sigue sin tripulación suficiente.} other {# salidas de este periodo siguen sin tripulación suficiente.}}",
+      "allCrewed": "Todas las salidas de este periodo tienen su tripulación.",
+      "noDepartures": "No hay salidas programadas en este periodo.",
+      "action": "Asignar tripulación en Hoy"
     },
     "notice": {
       "shiftSaved": "Turno guardado.",

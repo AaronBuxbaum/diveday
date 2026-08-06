@@ -15,7 +15,7 @@ import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./t
 const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
 describe("staffing view", () => {
-  it("shows roles, working windows, teaching/crew capabilities, and coverage gaps", async () => {
+  it("shows roles, working windows, and teaching/crew capabilities", async () => {
     const { db, shop } = await seededShopContext();
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const staff = await listStaff(db, shop.id);
@@ -43,7 +43,9 @@ describe("staffing view", () => {
     const working = view.staff.find((entry) => entry.person.id === instructor.person.id);
     expect(working?.capabilities).toEqual(expect.arrayContaining(["teach", "crew"]));
     expect(working?.shifts).toHaveLength(1);
-    expect(view.trips[0]?.coveredByShift).toBe(true);
+    // The roster is the page; departures reach it only as the one summary
+    // count (ADR 20260806-staffing-is-the-shift-roster).
+    expect(view.crewGaps.departures).toBeGreaterThanOrEqual(1);
   });
 
   it("rejects overlapping shifts for one staff member and scopes writes to the shop", async () => {
@@ -73,7 +75,7 @@ describe("staffing view", () => {
 
   // The one "course crew gap" computation (Lens 17 task 151): an entry-level
   // PADI session with an instructor but no assistant, booked past the 8-seat
-  // solo-instructor ratio, is *still* a coverage gap — the old boolean
+  // solo-instructor ratio, still needs crew — the old boolean
   // "has an instructor?" check would have called this trip covered.
   // `createBooking` refuses to *sell* a seat past the ratio, so the 9th seat
   // here is inserted directly — standing in for a trip a data import, a
@@ -84,13 +86,10 @@ describe("staffing view", () => {
    * Stands up an instructor-crewed session on `courseTitle`, seats `withinRatio`
    * divers through the booking gate, then inserts one more seat *directly* to
    * push it over — see the note above for why the extra seat bypasses
-   * `createBooking`. Returns the trip's staffing-view entry.
+   * `createBooking`. Returns the roster's crew-gap summary for a window
+   * holding that one session and nothing else.
    */
-  async function overRatioSessionEntry(
-    courseTitle: string,
-    withinRatio: number,
-    tag: string,
-  ): Promise<{ gaps: string[] } | undefined> {
+  async function overRatioSessionCrewGaps(courseTitle: string, withinRatio: number, tag: string) {
     const { db, shop } = await seededShopContext();
     const [course] = await db
       .select()
@@ -139,31 +138,33 @@ describe("staffing view", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    return view.trips.find((row) => row.trip.id === trip.id);
+    return view.crewGaps;
   }
 
-  // Regression: coverage used to collapse both of `courseCrewGap`'s codes into
-  // `course_needs_instructor`, so an over-ratio session — which by definition
-  // already has an instructor — was listed as needing one, contradicting the
-  // Today queue and the trip page, which both name it as an over-ratio session.
-  // The two codes stay distinct here.
-  it("flags over_ratio, not course_needs_instructor, for a ratio-over-capacity trip that has an instructor", async () => {
+  // A session already carrying an instructor but booked past its ratio still
+  // needs crew. The roster no longer says *which* kind of gap it is — that
+  // vocabulary belongs to Today, the surface that can fix it — but it must not
+  // quietly drop the departure from the count either, which is what the
+  // "has an instructor?" boolean this replaced would have done.
+  it("counts a ratio-over-capacity session that already has an instructor as needing crew", async () => {
     // Open Water training dives: 8 through the gate, the 9th inserted directly.
-    const entry = await overRatioSessionEntry("Open Water Diver", 8, "ow");
-    expect(entry?.gaps).toContain("over_ratio");
-    expect(entry?.gaps).not.toContain("course_needs_instructor");
+    expect(await overRatioSessionCrewGaps("Open Water Diver", 8, "ow")).toEqual({
+      departures: 1,
+      needCrew: 1,
+    });
   });
 
-  it("flags an over-ratio intro (Discover Scuba) session at its far tighter 2:1 cap", async () => {
+  it("counts an over-ratio intro (Discover Scuba) session at its far tighter 2:1 cap", async () => {
     // The same advisory at the Instructor Manual DSD ratio (DOM-H2, HD-6): 2
     // through the gate, the 3rd inserted directly. Under the old 8/12 numbers
     // this trip read as covered.
-    const entry = await overRatioSessionEntry("Discover Scuba Diving", 2, "dsd");
-    expect(entry?.gaps).toContain("over_ratio");
-    expect(entry?.gaps).not.toContain("course_needs_instructor");
+    expect(await overRatioSessionCrewGaps("Discover Scuba Diving", 2, "dsd")).toEqual({
+      departures: 1,
+      needCrew: 1,
+    });
   });
 
-  it("flags course_needs_instructor — and no ratio gap — for a crewed course session with no instructor", async () => {
+  it("counts a crewed course session with no instructor as needing crew", async () => {
     // The other half of the same rule: zero instructors is the code that
     // actually means "find an instructor", and it must not be crowded out by
     // (or confused with) the ratio advisory. `setTripCrew` refuses to leave a
@@ -200,14 +201,12 @@ describe("staffing view", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    const entry = view.trips.find((row) => row.trip.id === trip.id);
-    expect(entry?.gaps).toContain("course_needs_instructor");
-    expect(entry?.gaps).not.toContain("over_ratio");
+    expect(view.crewGaps).toEqual({ departures: 1, needCrew: 1 });
   });
 
-  it("calls an adequately crewed course session covered, with no course gap at all", async () => {
-    // The green "Covered" badge is `gaps.length === 0`; it must only appear
-    // when `courseCrewGap` reports "none". One instructor, one seat.
+  it("leaves an adequately crewed course session out of the count", async () => {
+    // The count rises only when `courseCrewGap` reports something other than
+    // "none". One instructor, one seat.
     const { db, shop } = await seededShopContext();
     const [course] = await db
       .select()
@@ -251,15 +250,56 @@ describe("staffing view", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    expect(view.trips.find((row) => row.trip.id === trip.id)?.gaps).toEqual([]);
+    expect(view.crewGaps).toEqual({ departures: 1, needCrew: 0 });
+  });
+
+  it("counts a departure with nobody rostered, course or not, and its denominator", async () => {
+    // The zero-crew case is not a ratio rule — a fun-dive charter has no
+    // course to be over the ratio of — so it is read straight off the
+    // assignment rows. Two departures in the window, one of them crewed: the
+    // summary is 1 of 2, which is what the page renders.
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const captain = staff.find((entry) => entry.roles.includes("captain"));
+    if (!captain) throw new Error("seeded captain missing");
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
+    const bare = await createTrip(db, {
+      shopId: shop.id,
+      title: "Uncrewed reef charter",
+      startsAt,
+      endsAt,
+      capacity: 10,
+      plannedDives: 2,
+    });
+    const crewed = await createTrip(db, {
+      shopId: shop.id,
+      title: "Crewed reef charter",
+      startsAt,
+      endsAt,
+      capacity: 10,
+      plannedDives: 2,
+    });
+    if (!bare || !crewed) throw new Error("failed to create charter fixtures");
+    expect(await setTripCrew(db, shop.id, crewed.id, [captain.person.id])).toBe(true);
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - 60 * 60 * 1000),
+      new Date(endsAt.getTime() + 60 * 60 * 1000),
+    );
+    expect(view.crewGaps).toEqual({ departures: 2, needCrew: 1 });
   });
 
   /**
-   * DOM-M3. The coverage list, the trip page, the Today queue, and the booking
-   * gate all ask "is this course session staffed" and all used to answer it
-   * from shop-wide roles alone, so an instructor rostered as this trip's deck
-   * hand cleared the gap on his own. One definition now decides it
-   * (`countInWaterCrew`, src/lib/crew-roles.ts).
+   * DOM-M3. The roster's summary, the trip page, the Today queue, and the
+   * booking gate all ask "is this course session staffed" and all used to
+   * answer it from shop-wide roles alone, so an instructor rostered as this
+   * trip's deck hand cleared the gap on his own. One definition now decides it
+   * (`countInWaterCrew`, src/lib/crew-roles.ts) — and because the roster's
+   * count is composed from Today's own reader, it cannot drift from Today
+   * again.
    */
   it("does not let an instructor rostered as deck crew cover a course session", async () => {
     const { db, shop } = await seededShopContext();
@@ -281,14 +321,14 @@ describe("staffing view", () => {
     });
     if (!trip) throw new Error("failed to create course trip");
 
-    const gapsFor = async () => {
+    const needCrewFor = async () => {
       const view = await getStaffingView(
         db,
         shop.id,
         new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
         new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
       );
-      return view.trips.find((row) => row.trip.id === trip.id)?.gaps ?? [];
+      return view.crewGaps.needCrew;
     };
 
     // Written straight to the row: `setTripCrew` now refuses to leave a course
@@ -305,7 +345,7 @@ describe("staffing view", () => {
           eq(tripAssignments.personId, instructor.person.id),
         ),
       );
-    expect(await gapsFor()).toContain("course_needs_instructor");
+    expect(await needCrewFor()).toBe(1);
 
     // The same person, rostered to the job he is actually doing.
     expect(
@@ -313,11 +353,11 @@ describe("staffing view", () => {
         { personId: instructor.person.id, tripRole: "instructor" },
       ]),
     ).toBe(true);
-    expect(await gapsFor()).not.toContain("course_needs_instructor");
+    expect(await needCrewFor()).toBe(0);
 
     // And an unspecified role stays the status quo.
     expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
-    expect(await gapsFor()).not.toContain("course_needs_instructor");
+    expect(await needCrewFor()).toBe(0);
   });
 
   it("shows a staff member's crewed trips on their staffing card", async () => {

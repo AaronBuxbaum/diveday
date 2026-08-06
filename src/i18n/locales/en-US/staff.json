@@ -56,7 +56,7 @@
   "staffing": {
     "eyebrow": "Operations",
     "title": "Staffing",
-    "description": "See who is working, what each person is qualified to teach or crew, and where the next boat still has a coverage gap.",
+    "description": "Who is working when, and what each person is qualified to teach or crew. Assign the crew for a boat on Today.",
     "window": {
       "from": "From",
       "through": "Through",
@@ -94,19 +94,11 @@
       "submit": "Add shift",
       "saving": "Saving…"
     },
-    "coverage": {
-      "heading": "Coverage gaps",
-      "detail": "These are prompts to resolve before the manifest becomes a dock-side surprise.",
-      "noTrips": "No scheduled trips in this window.",
-      "covered": "Covered",
-      "gapCount": "{count, plural, one {# gap} other {# gaps}}",
-      "allGood": "Crew is assigned, and their shift covers this trip."
-    },
-    "gap": {
-      "no_crew": "No crew assigned",
-      "course_needs_instructor": "Course needs an instructor",
-      "over_ratio": "More divers booked than this crew covers at the course ratio",
-      "no_shift_coverage": "No working shift covers this trip"
+    "crewGaps": {
+      "needCrew": "{count, plural, one {# departure in this window still needs crew.} other {# departures in this window still need crew.}}",
+      "allCrewed": "Every departure in this window has its crew.",
+      "noDepartures": "No departures scheduled in this window.",
+      "action": "Assign crew on Today"
     },
     "notice": {
       "shiftSaved": "Shift saved.",

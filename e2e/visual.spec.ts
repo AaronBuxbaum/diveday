@@ -1572,10 +1572,11 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "close-out", scheme);
       });
 
-      // Staffing had no baseline at all until the over_ratio parity fix —
-      // the one gap surface whose green "Covered" badge could silently
-      // contradict Today. Captured so a regression there shows as pixels.
-      test(`the staffing gaps page renders true to the design (${scheme})`, async ({ page }) => {
+      // The shift roster. Its per-departure coverage table is gone — crew
+      // gaps are Today's, and reach this page as one summary line
+      // (ADR 20260806-staffing-is-the-shift-roster) — so this capture is
+      // deliberately shorter than the baseline it replaces.
+      test(`the shift roster renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/staffing");
         await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
         await capture(page, "staffing", scheme);
