@@ -199,10 +199,12 @@ The stack provisions two **alert-only** mechanisms — see
 [ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md) for
 the full reasoning. Neither one ever disables or throttles a resource; both only send email.
 
-- **`AWS::Budgets::Budget`** (`diveday-monthly-cost-guardrail`) — a monthly `COST` budget, default
-  $5, with five graduated email notifications: 50% and 80% of actual spend, 100% of *forecasted*
-  spend (an early warning before the month even ends), 100% of actual spend, and 200% of actual
-  spend as the "this is outside normal bands" siren.
+- **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $5, with five graduated email
+  notifications: 50% and 80% of actual spend, 100% of *forecasted* spend (an early warning before
+  the month even ends), 100% of actual spend, and 200% of actual spend as the "this is outside
+  normal bands" siren. It has no fixed name (see the troubleshooting note below for why); find the
+  AWS-assigned one in the `MonthlyCostGuardrailBudgetName` stack output, or Billing and Cost
+  Management -> Budgets in the console.
 - **AWS Cost Anomaly Detection** (`diveday-service-cost-anomalies` monitor +
   `diveday-service-cost-anomaly-alerts` subscription) — an AWS-managed, ML-based monitor over
   per-service spend, checked daily, that emails when any single service's cost moves in an
@@ -222,6 +224,22 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
   be confirmed from the mailbox before AWS will send to it.
 - `monthlyBudgetLimit` — the monthly USD cap the percentage thresholds above are computed against
   (default `5`).
+
+> **Troubleshooting: `cdk deploy` fails on `MonthlyCostGuardrail` with "A budget or resource with
+> the same name but a different internalId already exists."** `Budget` (the nested object holding
+> `budgetLimit`) is a Replacement-only property of `AWS::Budgets::Budget`, so changing
+> `monthlyBudgetLimit` makes CloudFormation create a new budget resource before deleting the old
+> one. Budgets enforces one name per account; a stack that pins a fixed `budgetName` collides on
+> that create, because the old resource with the same name hasn't been deleted yet. The stack no
+> longer sets `budgetName` for this reason (its name is AWS-assigned per create, so a replacement
+> never collides with what it's replacing) — if you still hit this error, it means an orphaned
+> budget from before that fix, or from a stack that failed mid-rollback, is sitting in the account
+> outside this stack's tracking:
+> 1. `aws budgets describe-budgets --account-id <ACCOUNT_ID> --query 'Budgets[].BudgetName'` to
+>    find it.
+> 2. Confirm it isn't one you want to keep, then `aws budgets delete-budget --account-id
+>    <ACCOUNT_ID> --budget-name <NAME>`.
+> 3. Retry `pnpm infra:deploy`.
 
 The Budgets half needs no account-level setup — unlike a CloudWatch billing alarm on
 `EstimatedCharges`, it doesn't need the "Receive Billing Alerts" console toggle enabled first. **Cost
