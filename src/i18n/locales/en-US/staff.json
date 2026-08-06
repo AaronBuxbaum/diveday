@@ -1970,7 +1970,9 @@
         "money": "Money",
         "dataIntegrations": "Data & integrations"
       },
-      "backToSettings": "Back to settings",
+      "subNav": {
+        "ariaLabel": "Settings sections"
+      },
       "whatsapp": {
         "heading": "WhatsApp",
         "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
