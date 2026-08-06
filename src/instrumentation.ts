@@ -17,6 +17,20 @@ import { redactBreadcrumb, redactEvent } from "@/app/observability";
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Structured log lines ship to CloudWatch after the response rather than
+  // during it (ADR 20260806-cloudwatch-log-shipping). `after()` is installed
+  // from here rather than imported by the shipper because `src/lib` is
+  // framework-free by rule, and because this is the one file that already runs
+  // exactly once per server instance. Node runtime only: the Edge entry point
+  // reaches this function above and returns.
+  const [{ after }, { setFlushDeferrer }] = await Promise.all([
+    import("next/server"),
+    import("@/lib/observability"),
+  ]);
+  setFlushDeferrer((task) => {
+    after(task);
+  });
+
   const { checkPublicHost } = await import("@/lib/notifications");
   const result = checkPublicHost(process.env.APP_HOST, process.env.NODE_ENV === "production");
   if (result.status === "invalid") {

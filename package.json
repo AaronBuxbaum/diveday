@@ -53,6 +53,7 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.1104.0",
     "@aws-sdk/client-geo-places": "^3.1104.0",
     "@aws-sdk/client-sesv2": "^3.1104.0",
     "@aws-sdk/client-sns": "^3.1104.0",
@@ -60,6 +61,7 @@
     "@sentry/nextjs": "^10.69.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "aws-rum-web": "^3.2.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "1.0.0-rc.4",
     "fflate": "^0.8.3",
@@ -98,6 +100,7 @@
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "next-devtools-mcp": "^0.4.0",
+    "playwright-core": "1.62.1",
     "reg-keygen-git-hash-plugin": "^0.14.5",
     "reg-notify-github-plugin": "^0.14.5",
     "reg-publish-s3-plugin": "^0.14.4",

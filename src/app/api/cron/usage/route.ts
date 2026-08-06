@@ -12,6 +12,7 @@ import {
 } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
+import { flushLogs } from "@/lib/observability";
 import { alertRecipient } from "@/lib/platform-mail";
 import { claimUsageAlert, releaseUsageAlert } from "@/lib/usage/alert-ledger";
 import { collectUsageSamples } from "@/lib/usage/collect";
@@ -247,5 +248,10 @@ export async function GET(request: Request) {
     log("cron_usage.scan_failed", "error", { scan: "bootstrap" });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "usage_unavailable" }, { status: 503 });
+  } finally {
+    // See the identical block in the retention cron: a scan's log line is the
+    // record of the pass, so it is shipped before the response rather than
+    // after it (ADR 20260806-cloudwatch-log-shipping).
+    await flushLogs();
   }
 }

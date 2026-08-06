@@ -10,6 +10,7 @@ import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
+import { flushLogs } from "@/lib/observability";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -263,5 +264,10 @@ export async function GET(request: Request) {
     log("cron_reminders.tick_failed", "error", { scan: "bootstrap" });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
+  } finally {
+    // See the identical block in the retention cron: a tick's log line is the
+    // record of the pass, so it is shipped before the response rather than
+    // after it (ADR 20260806-cloudwatch-log-shipping).
+    await flushLogs();
   }
 }

@@ -40,6 +40,7 @@ cannot see it.
 | Emailing a fresh waiver link from a dead one | `src/app/waivers/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.waiverLinkResendByBooking` (5/hour) |
 | Seat-claim link | `src/app/claim/[token]/actions.ts` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
+| Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 
 Three notes the table can't carry:
 

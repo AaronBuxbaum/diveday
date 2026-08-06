@@ -77,12 +77,21 @@ this file is the checklist, not the argument.
              SNS console -> Text messaging (SMS) -> Origination identities, for US traffic.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
+
+[8] Confirm the observability alarm subscription email
+    when     once per alert address, and again if the address changes
+    why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
+    run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
+             aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>
+    verify   A real SubscriptionArn, not "PendingConfirmation".
+    if not   The confirmation link expires after three days. Re-issue it with `aws sns subscribe --topic-arn <ObservabilityAlarmTopicArn> --protocol email --notification-endpoint <address>`, which mails a fresh one without touching the stack.
+    note     The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one.
 ```
 
 ## Verification
 
 ```text
-[8] Confirm the usage monitor reports numbers and reaches a real inbox
+[9] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

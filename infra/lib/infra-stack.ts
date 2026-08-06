@@ -1,10 +1,14 @@
 import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
+import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as destinations from "aws-cdk-lib/aws-logs-destinations";
+import * as rum from "aws-cdk-lib/aws-rum";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ses from "aws-cdk-lib/aws-ses";
@@ -18,6 +22,18 @@ import {
   renderCredentialsDocument,
 } from "./credentials-document";
 import type { ManualAction } from "./manual-actions";
+import {
+  alarmDescriptionFor,
+  alarmNameFor,
+  filterPatternFor,
+  LOG_SIGNALS,
+  METRIC_NAMESPACE,
+  queryConstructIdFor,
+  SAVED_LOG_QUERIES,
+  WEB_VITAL_SIGNALS,
+  webVitalAlarmNameFor,
+  webVitalFilterPatternFor,
+} from "./observability";
 
 /** The credential hand-off document. Slash-separated for the `diveday/*` secret namespace. */
 const CREDENTIALS_SECRET_NAME = "diveday/env";
@@ -30,6 +46,14 @@ const MCP_READONLY_LOCAL_USER_NAME = "diveday-mcp-readonly-local";
 const MCP_READONLY_CLOUD_USER_NAME = "diveday-mcp-readonly-cloud";
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
+const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
+
+/**
+ * The app's own log group (§13). A literal rather than a derived token because
+ * it is both an IAM policy's scope and a value a human pastes into Vercel, and
+ * `${Token[...]}` is no use for the second of those.
+ */
+const APP_LOG_GROUP_NAME = "/diveday/app";
 
 export class InfraStack extends cdk.Stack {
   /**
@@ -46,7 +70,7 @@ export class InfraStack extends cdk.Stack {
     const userName = this.node.tryGetContext("userName") || "reg-suit-bot";
 
     // Every access key this stack mints is created by CloudFormation and its
-    // value delivered through the credential hand-off secret (§15). Rotation is a
+    // value delivered through the credential hand-off secret (§16). Rotation is a
     // deploy, not a console visit: `AWS::IAM::AccessKey.Serial` may only ever be
     // incremented, and incrementing it makes CloudFormation replace the key --
     // create-then-delete, so the user is transiently at IAM's two-key ceiling
@@ -153,7 +177,7 @@ export class InfraStack extends cdk.Stack {
     // s3:DeleteObject* on an unversioned bucket via `grantReadWrite` below.
     // Three identities' stated security rationale defeated by one output.
     //
-    // The secret now goes to Secrets Manager (§14) and nowhere else. Outputs
+    // The secret now goes to Secrets Manager (§16) and nowhere else. Outputs
     // carry names, ARNs, and instructions; never key material.
     const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user);
     envValues.REG_SUIT_S3_BUCKET_NAME = bucket.bucketName;
@@ -173,10 +197,10 @@ export class InfraStack extends cdk.Stack {
     // execution role, and a plain `cdk bootstrap` leaves that role at
     // AdministratorAccess (`--cloudformation-execution-policies` defaults to
     // empty). Anything deployable is therefore reachable from this key,
-    // including a stack that reads §14's credentials secret. Bootstrapping with
+    // including a stack that reads §16's credentials secret. Bootstrapping with
     // scoped execution policies is what would actually bound it, and it is a
-    // manual action (§15, `cdk-bootstrap`). Until then, treat this key as an
-    // administrator credential -- which is why the document in §14 marks it
+    // manual action (§17, `cdk-bootstrap`). Until then, treat this key as an
+    // administrator credential -- which is why the document in §16 marks it
     // workstation-only.
     const deployerUser = new iam.User(this, "CdkDeployerUser", {
       userName: "cdk-deployer",
@@ -255,7 +279,7 @@ export class InfraStack extends cdk.Stack {
     // the old `IAMUserSecretKey` output (§4) was readable from here. An explicit
     // Deny on `secretsmanager:GetSecretValue` is what makes the claim true
     // independent of what AWS adds to the managed policy next - a Deny always
-    // beats an Allow, so these credentials can never read §14's secret and
+    // beats an Allow, so these credentials can never read §16's secret and
     // escalate into the write-capable identities it carries.
     const readOnlyAccess = iam.ManagedPolicy.fromAwsManagedPolicyName("ReadOnlyAccess");
 
@@ -865,7 +889,345 @@ exports.handler = async (event) => {
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
 
-    // 13. Retire the access keys this stack did not create.
+    // 13. Observability: where the app's own log lines go, what is counted, and
+    // what wakes somebody up. See ADR 20260806-cloudwatch-log-shipping and
+    // docs/engineering/cloudwatch-observability-runbook.md.
+    //
+    // The gap this fills. DiveDay runs on Vercel, whose log view is a live tail
+    // with about an hour of history and no query language. Sentry catches what
+    // *throws*. Neither keeps what the app *decided*: a Stripe webhook refusing
+    // a payment against a cancelled booking, a reminder that never sent, a prune
+    // that failed one table. Those are `log()` lines on stdout, and until now
+    // they were gone by the time anyone thought to look for them.
+    //
+    // Four resources, in the order a question gets answered: a group to keep the
+    // lines, metric filters to count the ones worth counting, alarms to say so,
+    // and a dashboard plus saved queries to look at afterwards.
+    const appLogGroup = new logs.LogGroup(this, "AppLogs", {
+      logGroupName: APP_LOG_GROUP_NAME,
+      // A month: long enough to answer "what happened at last month-end", short
+      // enough that the record of every payment decision is not an open-ended
+      // liability. Same bounded posture as the SMS receipt groups in §10, and
+      // the reason the group is declared here at all rather than left for the
+      // shipper's first write to create - a group CloudWatch creates for you
+      // never expires anything.
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const logShipperUser = new iam.User(this, "CloudWatchLogShipperUser", {
+      userName: LOG_SHIPPER_USER_NAME,
+    });
+    logShipperUser.addToPolicy(
+      new iam.PolicyStatement({
+        // Append to streams in this one group, and nothing else. No
+        // CreateLogGroup (which would let the app make an unexpiring group and
+        // keep its own operational record forever), no Describe/Get/Filter
+        // (this credential lives in a third party's environment and has no
+        // business reading DiveDay's logs back), no Delete anything.
+        actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
+        resources: [`${appLogGroup.logGroupArn}:*`],
+      }),
+    );
+
+    const logShipperKey = mintAccessKey("CloudWatchLogShipperAccessKey", logShipperUser);
+    envValues.CLOUDWATCH_AWS_REGION = this.region;
+    envValues.CLOUDWATCH_AWS_ACCESS_KEY_ID = logShipperKey.id;
+    envValues.CLOUDWATCH_AWS_SECRET_ACCESS_KEY = logShipperKey.secret;
+    // The literal, not `appLogGroup.logGroupName`: the latter synthesizes a
+    // `Ref` token, and this value is read by a human out of the credentials
+    // document as often as it is pasted into Vercel.
+    envValues.CLOUDWATCH_LOG_GROUP = APP_LOG_GROUP_NAME;
+
+    // Alarms land in the same mailbox as every other operational alert (§7's
+    // cost guardrails, the in-app new-account and demo alerts, Sentry's issue
+    // alerts). One inbox to watch is the whole point; a second alert channel
+    // nobody reads is worse than no alarm.
+    //
+    // An SNS email subscription needs a confirmation click that no API can
+    // perform, which is why this is one of the few things here that turns into
+    // a manual action (§17, `confirm-observability-alarms`).
+    const observabilityAlarms = new sns.Topic(this, "ObservabilityAlarms", {
+      topicName: "diveday-observability-alarms",
+      displayName: "DiveDay alarms",
+    });
+    observabilityAlarms.addSubscription(new subscriptions.EmailSubscription(alertEmail));
+    const alarmAction = new cloudwatchActions.SnsAction(observabilityAlarms);
+
+    // One registry row becomes a filter, an alarm, and a dashboard series. See
+    // infra/lib/observability.ts for why the set is deliberately small.
+    const signalMetrics = LOG_SIGNALS.map((signal) => {
+      const filter = new logs.MetricFilter(this, `${signal.metricName}Filter`, {
+        logGroup: appLogGroup,
+        metricNamespace: METRIC_NAMESPACE,
+        metricName: signal.metricName,
+        filterPattern: logs.FilterPattern.literal(filterPatternFor(signal)),
+        metricValue: "1",
+        // Publish a 0 for a period the app logged in but this signal did not
+        // match. Without it a metric filter emits nothing at all when things are
+        // fine, so every graph is gappy and every alarm sits at
+        // INSUFFICIENT_DATA - which reads identically to "the alarm is broken".
+        defaultValue: 0,
+      });
+      // No `label` here, deliberately: a labelled metric forces CloudFormation
+      // to render the alarm as a metric-math query rather than the flat
+      // MetricName/Period form, which is harder to read in the console and in a
+      // template diff. The dashboard adds the label where it is actually shown.
+      const metric = filter.metric({
+        statistic: "Sum",
+        period: cdk.Duration.minutes(signal.periodMinutes),
+      });
+      const alarm = new cloudwatch.Alarm(this, `${signal.metricName}Alarm`, {
+        alarmName: alarmNameFor(signal),
+        alarmDescription: alarmDescriptionFor(signal),
+        metric,
+        threshold: signal.threshold,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        // A quiet app is a healthy app. `defaultValue` above covers the periods
+        // the app logged anything at all; a genuinely idle period has no
+        // datapoint, and treating that as breaching would page on a slow Tuesday.
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+      alarm.addAlarmAction(alarmAction);
+      return metric;
+    });
+
+    // Core Web Vitals, read out of the `web_vital.reported` line the browser
+    // beacon writes (ADR 20260806-cloudwatch-rum-and-vitals). Same machinery as
+    // the counts above with one difference that matters: `metricValue` names a
+    // *field* rather than the literal 1, so the metric carries the measurement
+    // and the statistic below scores it.
+    const vitalMetrics = WEB_VITAL_SIGNALS.map((signal) => {
+      const filter = new logs.MetricFilter(this, `${signal.metricName}Filter`, {
+        logGroup: appLogGroup,
+        metricNamespace: METRIC_NAMESPACE,
+        metricName: signal.metricName,
+        filterPattern: logs.FilterPattern.literal(webVitalFilterPatternFor(signal)),
+        metricValue: `$.${signal.field}`,
+        // No `defaultValue` here, unlike the counts: a page view that reported
+        // no INP did not score zero on it, and publishing a 0 would drag the
+        // percentile down until the metric flattered the app.
+      });
+      // p75, not average: Core Web Vitals are scored at the 75th percentile
+      // because a mean lets a fast majority hide a slow quarter, and the slow
+      // quarter is the people giving up on a booking form.
+      const metric = filter.metric({
+        statistic: "p75",
+        period: cdk.Duration.hours(1),
+      });
+      if (signal.alarm) {
+        new cloudwatch.Alarm(this, `${signal.metricName}Alarm`, {
+          alarmName: webVitalAlarmNameFor(signal),
+          alarmDescription: `${signal.title} is past Google's "good" boundary. ${signal.response}`,
+          metric,
+          threshold: signal.goodThreshold,
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          // Three hours, not one. A single slow hour on a young product is one
+          // visitor on hotel wifi; a sustained regression is a deploy.
+          evaluationPeriods: 3,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        }).addAlarmAction(alarmAction);
+      }
+      return metric.with({ label: signal.title });
+    });
+
+    // Amazon CloudWatch RUM: the session, geography, and device context the
+    // metrics above cannot answer. The browser reaches it through a Cognito
+    // identity pool, because `PutRumEvents` has to be callable by a visitor who
+    // has not identified themselves and never will.
+    const rumAppMonitorName = "diveday";
+    const rumIdentityPool = new cognito.CfnIdentityPool(this, "RumIdentityPool", {
+      identityPoolName: "diveday_rum",
+      // The whole point: an anonymous visitor exchanges nothing for a
+      // short-lived credential scoped to the one action below.
+      allowUnauthenticatedIdentities: true,
+    });
+
+    const rumGuestRole = new iam.Role(this, "RumGuestRole", {
+      roleName: "diveday-rum-guest",
+      description: "Lets an anonymous browser session write RUM events, and nothing else.",
+      assumedBy: new iam.FederatedPrincipal(
+        "cognito-identity.amazonaws.com",
+        {
+          // Both conditions are load-bearing. The `aud` binds the role to *this*
+          // identity pool, so a role ARN that leaks (and it does leak — it ships
+          // in the browser bundle) cannot be assumed through somebody else's
+          // pool. The `amr` binds it to the unauthenticated flow, so it can
+          // never be handed out as if it were an authenticated identity's role.
+          StringEquals: { "cognito-identity.amazonaws.com:aud": rumIdentityPool.ref },
+          "ForAnyValue:StringLike": { "cognito-identity.amazonaws.com:amr": "unauthenticated" },
+        },
+        "sts:AssumeRoleWithWebIdentity",
+      ),
+    });
+    rumGuestRole.addToPolicy(
+      new iam.PolicyStatement({
+        // One action, one app monitor. This credential is public by
+        // construction — anyone can open the site and mint one — so the only
+        // meaningful bound is how little it can do. The worst an abuser
+        // achieves is writing junk page views into this monitor's own data.
+        actions: ["rum:PutRumEvents"],
+        resources: [`arn:aws:rum:${this.region}:${this.account}:appmonitor/${rumAppMonitorName}`],
+      }),
+    );
+
+    new cognito.CfnIdentityPoolRoleAttachment(this, "RumIdentityPoolRoles", {
+      identityPoolId: rumIdentityPool.ref,
+      roles: { unauthenticated: rumGuestRole.roleArn },
+    });
+
+    const rumAppMonitor = new rum.CfnAppMonitor(this, "RumAppMonitor", {
+      name: rumAppMonitorName,
+      // RUM refuses events whose Origin header is not listed. It is the only
+      // server-side control on who may write here, so it is set to the app's
+      // canonical host rather than left open.
+      domain: new URL(webhookHost).hostname,
+      // Off: RUM would otherwise create its own log group with no retention
+      // policy, duplicating what §13's group already keeps under a bounded one.
+      cwLogEnabled: false,
+      appMonitorConfiguration: {
+        identityPoolId: rumIdentityPool.ref,
+        guestRoleArn: rumGuestRole.roleArn,
+        allowCookies: false,
+        enableXRay: false,
+        sessionSampleRate: 1,
+        // Performance only. Errors are Sentry's, and RUM's `http` telemetry
+        // records request URLs — which in this app include bearer-capability
+        // paths (docs/engineering/capability-telemetry-runbook.md).
+        telemetries: ["performance"],
+      },
+    });
+
+    // Public by necessity: the browser is the only consumer, and none of the
+    // four is a secret — the identity pool hands the same credential to anyone
+    // who loads the page, and it can do exactly one thing.
+    envValues.NEXT_PUBLIC_RUM_APP_MONITOR_ID = rumAppMonitor.attrId;
+    envValues.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID = rumIdentityPool.ref;
+    envValues.NEXT_PUBLIC_RUM_GUEST_ROLE_ARN = rumGuestRole.roleArn;
+    envValues.NEXT_PUBLIC_RUM_REGION = this.region;
+
+    // The one page to open when someone asks how the app is doing. Counts along
+    // the top, trends underneath, and the raw lines at the bottom so a spike is
+    // one scroll from the events that caused it rather than a separate console.
+    const observabilityDashboard = new cloudwatch.Dashboard(this, "ObservabilityDashboard", {
+      dashboardName: "DiveDay",
+      defaultInterval: cdk.Duration.days(7),
+    });
+    observabilityDashboard.addWidgets(
+      new cloudwatch.SingleValueWidget({
+        title: "Last 7 days",
+        metrics: signalMetrics.map((metric, index) =>
+          metric.with({ label: LOG_SIGNALS[index]?.title }),
+        ),
+        width: 24,
+        height: 4,
+      }),
+    );
+    // Two graphs per row, in registry order, so adding a signal extends the page
+    // rather than requiring a layout decision.
+    for (let index = 0; index < signalMetrics.length; index += 2) {
+      observabilityDashboard.addWidgets(
+        ...signalMetrics.slice(index, index + 2).map(
+          (metric, offset) =>
+            new cloudwatch.GraphWidget({
+              title: LOG_SIGNALS[index + offset]?.title,
+              left: [metric],
+              width: 12,
+              height: 6,
+            }),
+        ),
+      );
+    }
+    observabilityDashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: "Core Web Vitals (p75) — timings",
+        left: vitalMetrics.filter((_metric, index) => WEB_VITAL_SIGNALS[index]?.field !== "cls"),
+        // Google's LCP boundary, drawn on the graph so a reader does not have to
+        // remember it to know whether the line is where it should be.
+        leftAnnotations: [{ value: 2_500, label: "LCP good ≤ 2.5s" }],
+        width: 12,
+        height: 6,
+      }),
+      new cloudwatch.GraphWidget({
+        title: "Cumulative Layout Shift (p75)",
+        // Its own widget: CLS is a unitless fraction under 1 and would be a flat
+        // line against milliseconds in the thousands.
+        left: vitalMetrics.filter((_metric, index) => WEB_VITAL_SIGNALS[index]?.field === "cls"),
+        leftAnnotations: [{ value: 0.1, label: "good ≤ 0.1" }],
+        width: 12,
+        height: 6,
+      }),
+    );
+    observabilityDashboard.addWidgets(
+      new cloudwatch.LogQueryWidget({
+        title: "Slowest routes by LCP (p75)",
+        logGroupNames: [APP_LOG_GROUP_NAME],
+        queryLines: [
+          "fields route, lcp",
+          'filter event = "web_vital.reported" and ispresent(lcp)',
+          "stats pct(lcp, 75) as lcpP75, count(*) as views by route",
+          "sort lcpP75 desc",
+          "limit 20",
+        ],
+        width: 24,
+        height: 9,
+      }),
+      new cloudwatch.LogQueryWidget({
+        title: "Handled errors, newest first",
+        logGroupNames: [APP_LOG_GROUP_NAME],
+        queryLines: [
+          "fields @timestamp, event, @message",
+          'filter level = "error"',
+          "sort @timestamp desc",
+          "limit 50",
+        ],
+        width: 24,
+        height: 9,
+      }),
+      new cloudwatch.LogQueryWidget({
+        title: "Event volume by code",
+        logGroupNames: [APP_LOG_GROUP_NAME],
+        queryLines: ["fields event", "stats count(*) as lines by event, level", "sort lines desc"],
+        width: 24,
+        height: 9,
+      }),
+    );
+
+    // Saved Logs Insights queries: the free half of this, and where every event
+    // code that did not earn a metric stays answerable. A query definition costs
+    // nothing and is the difference between an operator picking a question off a
+    // list at 6am and writing query syntax against a schema from memory.
+    for (const query of SAVED_LOG_QUERIES) {
+      new logs.CfnQueryDefinition(this, `LogQuery${queryConstructIdFor(query)}`, {
+        name: query.name,
+        queryString: query.queryString,
+        logGroupNames: [APP_LOG_GROUP_NAME],
+      });
+    }
+
+    new cdk.CfnOutput(this, "AppLogGroupName", {
+      value: APP_LOG_GROUP_NAME,
+      description:
+        "CloudWatch Logs group the app ships its structured lines to. Set as CLOUDWATCH_LOG_GROUP; retention is one month.",
+    });
+
+    new cdk.CfnOutput(this, "ObservabilityAlarmTopicArn", {
+      value: observabilityAlarms.topicArn,
+      description: `SNS topic carrying the log-signal alarms. ${alertEmail} is subscribed by this stack and must confirm the subscription email once.`,
+    });
+
+    new cdk.CfnOutput(this, "ObservabilityDashboardUrl", {
+      value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards/dashboard/${observabilityDashboard.dashboardName}`,
+      description: "The CloudWatch dashboard built from infra/lib/observability.ts.",
+    });
+
+    new cdk.CfnOutput(this, "RumAppMonitorName", {
+      value: rumAppMonitorName,
+      description: `CloudWatch RUM app monitor (console: RUM -> ${rumAppMonitorName}). Its four NEXT_PUBLIC_RUM_* values are in the credentials document; all are public by design.`,
+    });
+
+    // 14. Retire the access keys this stack did not create.
     //
     // Before this stack minted keys, seven of its eight users had theirs made by
     // hand with `aws iam create-access-key`. CloudFormation neither knows about
@@ -968,7 +1330,7 @@ exports.handler = async (event) => {
         "Access keys this deploy revoked because the identity held more than one -- the hand-minted keys that predate CloudFormation-managed ones. 'none' is the steady state.",
     });
 
-    // 14. Stable root material for the app's three independent secrets.
+    // 15. Stable root material for the app's three independent secrets.
     //
     // Secrets Manager can generate one random value in a CloudFormation
     // resource, not three. Keep one 64-character alphanumeric root in a
@@ -994,7 +1356,7 @@ exports.handler = async (event) => {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // 15. The credentials secret: one Secrets Manager secret holding a filled-in
+    // 16. The credentials secret: one Secrets Manager secret holding a filled-in
     // `.env.example`.
     //
     // Every access key above is minted by CloudFormation and delivered here.
@@ -1017,7 +1379,7 @@ exports.handler = async (event) => {
     // *deletes the key*, breaking anything still holding it, where a hand-minted
     // key would have survived untouched. That is the correct default -- a
     // credential this file no longer describes should stop working -- but it is a
-    // sharp edge and it is why §15's checklist carries a rotation entry.
+    // sharp edge and it is why §16's checklist carries a rotation entry.
     //
     // One secret, not eight. Secrets Manager bills $0.40 per secret per month;
     // eight would be $3.20 against the ~$5/month this account is budgeted for
@@ -1044,7 +1406,7 @@ exports.handler = async (event) => {
     // deploy a one-resource stack that reads this secret. Withholding
     // `grantRead` costs them a step, not the capability. What would actually
     // bound it is bootstrapping with scoped execution policies - a manual
-    // action, and named as one in §15.
+    // action, and named as one in §17.
     //
     // That reach is why the deployer's own key is the one credential in the
     // document marked workstation-only: it is the key that yields all the
@@ -1097,7 +1459,7 @@ exports.handler = async (event) => {
         "Secrets Manager secret holding filled-in application env and named workstation profiles. Nothing is granted read access; use an administrator profile.",
     });
 
-    // 16. Only first-run account approvals that no CLI can truthfully perform.
+    // 17. Only first-run account approvals that no CLI can truthfully perform.
     // The deploy wrapper handles workstation actions as an interactive wizard,
     // so those do not become an exhausting post-deploy checklist.
     //
@@ -1243,7 +1605,7 @@ exports.handler = async (event) => {
         title: "Confirm the surplus access keys were revoked",
         category: "Verification",
         when: "after the first deploy, and after any deploy that adds an IAM identity",
-        why: "The stack revokes them itself (infra-stack.ts §13), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded -- on the day someone is rotating because something leaked.",
+        why: "The stack revokes them itself (infra-stack.ts §14), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded -- on the day someone is rotating because something leaked.",
         run: [
           "Read the RetiredAccessKeys stack output: the keys this deploy revoked, or 'none'.",
           'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].AccessKeyId\' --output text; done',
@@ -1356,6 +1718,21 @@ exports.handler = async (event) => {
           '"PendingConfirmation" means the endpoint answered non-2xx -- SES_SNS_TOPIC_ARN or SMS_SNS_TOPIC_ARN is missing from the running app. Set it, redeploy the app, then `aws sns unsubscribe --subscription-arn <pending>` and redeploy this stack to re-issue the handshake. Redeploying this stack alone will not fix it: CloudFormation still believes the subscription exists.',
       },
       {
+        id: "confirm-observability-alarms",
+        title: "Confirm the observability alarm subscription email",
+        category: "AWS account",
+        when: "once per alert address, and again if the address changes",
+        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.",
+        run: [
+          "Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.",
+          "aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>",
+        ],
+        verify: ['A real SubscriptionArn, not "PendingConfirmation".'],
+        onFailure:
+          "The confirmation link expires after three days. Re-issue it with `aws sns subscribe --topic-arn <ObservabilityAlarmTopicArn> --protocol email --notification-endpoint <address>`, which mails a fresh one without touching the stack.",
+        note: "The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one.",
+      },
+      {
         id: "verify-sms-delivery-status",
         title: "Confirm SMS delivery-status logging applied",
         category: "Verification",
@@ -1382,6 +1759,10 @@ exports.handler = async (event) => {
         "verify-usage-guardrails",
         "ses-production-access",
         "sns-sms-account-limits",
+        // Clicking a link in an email is the whole step, and no CLI can do it
+        // (ADR 20260806-cloudwatch-log-shipping). Skipping it leaves every
+        // alarm silently notifying nobody.
+        "confirm-observability-alarms",
       ]).has(id),
     );
 

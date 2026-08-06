@@ -73,6 +73,22 @@ async function run() {
     if (key.startsWith("USAGE_")) {
       continue;
     }
+    // Log shipping is optional by design (ADR 20260806-cloudwatch-log-shipping):
+    // with no credentials `log()` writes the same JSON line to the console it
+    // always did and ships nothing. A local run has nowhere to ship to and
+    // should not be asked for a credential that would send a developer's own
+    // stdout into the production log group.
+    if (key.startsWith("CLOUDWATCH_")) {
+      continue;
+    }
+    // CloudWatch RUM is optional the same way (ADR
+    // 20260806-cloudwatch-rum-and-vitals): unset, no browser SDK is fetched and
+    // the Core Web Vitals half carries on without it. A local run has no app
+    // monitor to report to, and RUM refuses events from an unlisted origin
+    // anyway, so localhost could not report to the real one if it tried.
+    if (key.startsWith("NEXT_PUBLIC_RUM_")) {
+      continue;
+    }
     // Address lookup is optional by design (ADR
     // 20260804-aws-location-address-lookup): with no credentials the settings
     // address card is exactly the five text boxes it has always been, so a

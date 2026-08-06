@@ -4,6 +4,13 @@ How DiveDay learns two things about itself in production: that someone just crea
 and that the app is throwing errors. Decision and rationale:
 [20260727-sentry-error-monitoring-q7fk2p](../architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md).
 
+> **Sentry answers "what threw".** The different question — what the app *decided*, how often, and
+> how fast it felt to a real visitor — is answered by CloudWatch, and lives in
+> [cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md). Neither replaces the
+> other: a refused payment reconciliation, a send that gave up, and a p75 LCP are all 200 responses
+> that Sentry never sees, while a stack trace and a release attribution are things CloudWatch has no
+> idea about.
+
 Both degrade to "not configured" with none of this set — the app runs, sends nothing, throws no
 error of its own for a missing key.
 
@@ -54,6 +61,8 @@ The production build that matters for this is Vercel's own (`scripts/vercel-buil
 | `src/proxy.ts` (the Auth.js edge middleware) | **Not covered.** A third runtime's worth of Sentry init was judged not worth it for this file's current size — see the ADR's consequences |
 | The daily cron tick (`/api/cron/reminders`) | Per-scan `Sentry.captureException` tagged `cron_scan`, plus a Sentry **Cron Monitor** check-in (`diveday-daily-tick`) that alerts when the tick never runs at all |
 | The app being unreachable, or a deployment that never boots | **Not covered by Sentry** — there is no running app to report it. That is what the external uptime monitor over `/api/health` and the public schedule is for; see [incident-response-runbook.md](incident-response-runbook.md) |
+| A decision the app handled and returned 200 for — a refused payment reconciliation, a send that gave up, a prune that failed a table | **Not covered by Sentry**, because nothing threw. Counted and alarmed in CloudWatch; see [cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md) |
+| How fast a page felt to a real visitor | **Not covered by Sentry** (performance is off). Core Web Vitals go to CloudWatch as p75 metrics with alarms, and Vercel Speed Insights keeps its own copy — same runbook |
 
 ### Capability-URL redaction
 
