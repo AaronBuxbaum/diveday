@@ -46,6 +46,7 @@ import {
   formBuddyTeamAction,
   isPushSubscribedAction,
   isPushSubscribedAnywhereAction,
+  type ManifestActionContext,
   removeBuddyTeamMemberAction,
   rollCallAction,
   saveRollCallNoteAction,
@@ -125,9 +126,15 @@ export default async function TripManifestPage({
   // captured from this render by inline `"use server"` closures — the same
   // sealed channel, said out loud — and each action re-proves what it is
   // handed rather than believing it (see the file's own note).
-  const boundRollCallAction = rollCallAction.bind(null, shopSlug, tripId, checkpoint);
-  const boundCrewRollCallAction = crewRollCallAction.bind(null, shopSlug, tripId, checkpoint);
-  const boundSaveRollCallNoteAction = saveRollCallNoteAction.bind(null, shopSlug, tripId);
+  // One named context object, bound once — `shopSlug` and `tripId` are both
+  // opaque ids of the same shape, and as positional arguments swapping them was
+  // a silent, well-typed mistake that revalidated another shop's route.
+  const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
+  const boundRollCallAction = rollCallAction.bind(null, actionContext);
+  const boundCrewRollCallAction = crewRollCallAction.bind(null, actionContext);
+  // The note carries its own checkpoint and the action re-proves it, so this
+  // one takes the narrower context that has none.
+  const boundSaveRollCallNoteAction = saveRollCallNoteAction.bind(null, { shopSlug, tripId });
 
   // Who can still join a *new* team: any active roster entry not already on
   // one — including a member of a team whose other seat was cancelled, which
@@ -392,15 +399,10 @@ export default async function TripManifestPage({
         unteamedDivers={unteamedDivers}
         buddyErrorText={buddyErrorText}
         buddyErrorForm={buddyErrorForm}
-        formBuddyTeamAction={formBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
-        addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, shopSlug, tripId, checkpoint)}
-        removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(
-          null,
-          shopSlug,
-          tripId,
-          checkpoint,
-        )}
-        dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, shopSlug, tripId, checkpoint)}
+        formBuddyTeamAction={formBuddyTeamAction.bind(null, actionContext)}
+        addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, actionContext)}
+        removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
+        dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
         t={t}
       />
 

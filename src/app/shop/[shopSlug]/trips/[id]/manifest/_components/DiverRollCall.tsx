@@ -18,14 +18,18 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
 import {
-  isNotBackAboard,
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
 import { BuddyTeamChip } from "./BuddyTeamChip";
-import { ROLL_CALL_ROW_TONE, RollCallControls } from "./RollCallControls";
+import {
+  ROLL_CALL_ROW_TONE,
+  RollCallControls,
+  rollCallRecordedTone,
+  rollCallRowState,
+} from "./RollCallControls";
 
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
@@ -98,16 +102,13 @@ export function DiverRollCall({
           const diverStatus = diver.readiness.status;
           const ready = diverStatus === "ready";
           const rc = diver.rollCall;
-          const boarded = rc?.state === "boarded";
-          // A result staff recorded at *this* checkpoint, either way round. An
-          // implied not-boarded is carried forward from the dock, so it is not
-          // one — nothing here is undoable and no note attaches to it.
-          const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
-          // ...and after a dive that same record means "did not return to the
-          // boat" (DOM-H3). It is the missing-diver row, not a settled one.
-          const notBackAboard = isNotBackAboard(checkpoint, rc);
-          const explicitNotBoarded = recordedNotBoarded && !notBackAboard;
-          const impliedNotBoarded = rc?.state === "not_boarded" && rc.implied === true;
+          // One derivation of what a roll-call record means, shared with the
+          // crew list and the button stack (`rollCallRowState`). `recordedHere`
+          // is whether a human has said something about this diver *at this
+          // checkpoint* — the two buttons already carry that answer in words,
+          // so the status pill would only repeat them.
+          const rowState = rollCallRowState(checkpoint, rc);
+          const { notBackAboard, impliedNotBoarded, recordedHere } = rowState;
           // Each roll-call state gets its own fill (`ROLL_CALL_ROW_TONE`) so
           // staff can tell at a glance who has been handled — aboard green,
           // left ashore amber, not back aboard red, nothing said yet slate.
@@ -118,24 +119,16 @@ export function DiverRollCall({
           // there is a physical head count that readiness never gates, and a
           // danger-tinted row for a paperwork state would compete with the one
           // red on the page that means somebody is in the water (DD9).
+          const recordedTone = rollCallRecordedTone(rowState);
           const untouchedTone =
             ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
-          const scrollMargin = notBackAboard || (!rc && !ready) ? "scroll-mt-32 " : "";
+          // Only the rows a human still has to walk to carry the scroll margin
+          // that keeps them clear of the sticky panel when something jumps to
+          // them.
+          const scrollMargin = notBackAboard || (!recordedTone && !ready) ? "scroll-mt-32 " : "";
           const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${scrollMargin}${
-            notBackAboard
-              ? ROLL_CALL_ROW_TONE.notBackAboard
-              : boarded
-                ? ROLL_CALL_ROW_TONE.boarded
-                : explicitNotBoarded
-                  ? ROLL_CALL_ROW_TONE.notBoarded
-                  : impliedNotBoarded
-                    ? ROLL_CALL_ROW_TONE.notBoardedImplied
-                    : untouchedTone
+            recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
-          // Whether a human has said something about this diver *at this
-          // checkpoint*. The two buttons below already carry that answer in
-          // words, so the status pill would only repeat them.
-          const recordedHere = !!rc && !rc.implied;
           // The pill is dropped only when something else on the row is
           // already saying the same word. Two cases where nothing is
           // (dive-domain review 20260804):

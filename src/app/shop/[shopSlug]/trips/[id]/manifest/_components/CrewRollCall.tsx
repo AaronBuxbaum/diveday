@@ -9,14 +9,18 @@ import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import {
-  isNotBackAboard,
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
 import { BuddyTeamChip } from "./BuddyTeamChip";
-import { ROLL_CALL_ROW_TONE, RollCallControls } from "./RollCallControls";
+import {
+  ROLL_CALL_ROW_TONE,
+  RollCallControls,
+  rollCallRecordedTone,
+  rollCallRowState,
+} from "./RollCallControls";
 
 /**
  * The crew half of the head count (DOM-H1, ADR
@@ -87,26 +91,18 @@ export function CrewRollCall({
           <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
             {crew.map((member) => {
               const rc = member.rollCall;
-              const aboard = rc?.state === "boarded";
-              const recordedNotAboard = rc?.state === "not_boarded" && rc.implied !== true;
-              const notBackAboard = isNotBackAboard(checkpoint, rc);
-              // Same rule the diver rows follow: the two buttons below
-              // already state this person's status, so the pill only earns
-              // its place while nobody has said anything at this checkpoint.
-              const recordedHere = !!rc && !rc.implied;
+              // The same derivation and the same tone order the diver rows
+              // read (`rollCallRowState`) — written out twice, the two lists
+              // once disagreed about what a colour meant. Crew carry no
+              // readiness, so an untouched crew row is always plain slate.
+              const rowState = rollCallRowState(checkpoint, rc);
+              const { impliedNotBoarded, recordedHere } = rowState;
+              const recordedTone = rollCallRecordedTone(rowState);
               return (
                 <li
                   key={member.id}
                   className={`border-l-4 px-4 py-4 ${
-                    notBackAboard
-                      ? ROLL_CALL_ROW_TONE.notBackAboard
-                      : aboard
-                        ? ROLL_CALL_ROW_TONE.boarded
-                        : recordedNotAboard
-                          ? ROLL_CALL_ROW_TONE.notBoarded
-                          : rc
-                            ? ROLL_CALL_ROW_TONE.notBoardedImplied
-                            : ROLL_CALL_ROW_TONE.awaiting
+                    recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -118,10 +114,16 @@ export function CrewRollCall({
                             on screen only while the buttons beside it carry
                             the word, and always present on paper. Crew always
                             get both buttons, so there is no readiness case to
-                            carve out here. */}
+                            carve out here.
+                            The warning fill is the diver rows' rule too — it
+                            marks a result *carried forward from the dock*, not
+                            merely "has a result". Keyed on `rc` it painted the
+                            printed manifest's "Aboard" pill amber, so a crew
+                            member who was demonstrably on the boat read on
+                            paper as the one thing needing attention. */}
                         <span
                           className={`${recordedHere ? "hidden print:inline-flex " : ""}${
-                            rc
+                            impliedNotBoarded
                               ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
                               : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
                           }`}

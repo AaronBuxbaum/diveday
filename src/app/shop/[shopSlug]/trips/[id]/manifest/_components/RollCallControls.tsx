@@ -49,6 +49,71 @@ export const ROLL_CALL_ROW_TONE = {
 } as const;
 
 /**
+ * What one roll-call record means at one checkpoint, as the booleans every row
+ * on this page asks for.
+ *
+ * **One derivation, three readers.** The diver list, the crew list, and the
+ * button stack below each rebuilt these from `rollCall` by hand, and the four
+ * lines were subtly different in each — which is precisely the shape of the
+ * bug that once printed a green-checked "Not boarded ✓" beside a diver who had
+ * not come back from dive one (DOM-H3). A row's *own* extras (a diver's
+ * readiness fallback, the scroll-margin the missing row wears) stay at the call
+ * site; what a roll-call record means does not.
+ */
+export type RollCallRowState = {
+  /** A human recorded this person aboard here. */
+  boarded: boolean;
+  /**
+   * A result staff recorded at *this* checkpoint, either way round. An implied
+   * not-boarded is carried forward from the dock, so it is not one — nothing
+   * there is undoable and no note attaches to it.
+   */
+  recordedNotBoarded: boolean;
+  /** Recorded not-boarded, and it means "never left the dock", not "did not come back". */
+  explicitNotBoarded: boolean;
+  /** Carried forward from the dock rather than said here. */
+  impliedNotBoarded: boolean;
+  /** After a dive: a human said they did not return to the boat (DOM-H3). */
+  notBackAboard: boolean;
+  /** Whether a human has said anything about this person *at this checkpoint*. */
+  recordedHere: boolean;
+};
+
+export function rollCallRowState(
+  checkpoint: RollCallCheckpoint,
+  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): RollCallRowState {
+  const rc = rollCall;
+  const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
+  const notBackAboard = isNotBackAboard(checkpoint, rc);
+  return {
+    boarded: rc?.state === "boarded",
+    recordedNotBoarded,
+    explicitNotBoarded: recordedNotBoarded && !notBackAboard,
+    impliedNotBoarded: rc?.state === "not_boarded" && rc.implied === true,
+    notBackAboard,
+    recordedHere: !!rc && !rc.implied,
+  };
+}
+
+/**
+ * The fill a *recorded* result wears, in the one order both lists read it —
+ * a stated "did not come back" outranks everything, then aboard, then the two
+ * flavours of ashore. `null` means nothing has been recorded here, and the
+ * caller decides what an untouched row looks like (a diver's depends on
+ * readiness at the dock; a crew member's never does).
+ */
+export function rollCallRecordedTone(
+  state: RollCallRowState,
+): keyof typeof ROLL_CALL_ROW_TONE | null {
+  if (state.notBackAboard) return "notBackAboard";
+  if (state.boarded) return "boarded";
+  if (state.explicitNotBoarded) return "notBoarded";
+  if (state.impliedNotBoarded) return "notBoardedImplied";
+  return null;
+}
+
+/**
  * The two-button stack a roll-call row carries: "aboard" on top, "not
  * boarded" / "not back aboard" below it.
  *
@@ -95,15 +160,10 @@ export function RollCallControls({
   formId?: string;
   t: StaffTranslator;
 }) {
-  const rc = rollCall;
-  const boarded = rc?.state === "boarded";
-  // A result staff recorded at *this* checkpoint, either way round. An
-  // implied not-boarded is carried forward from the dock, so it is not
-  // one — nothing here is undoable and no note attaches to it.
-  const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
-  // ...and after a dive that same record means "did not return to the
-  // boat" (DOM-H3). It is the missing-diver row, not a settled one.
-  const notBackAboard = isNotBackAboard(checkpoint, rc);
+  const { boarded, recordedNotBoarded, notBackAboard, recordedHere } = rollCallRowState(
+    checkpoint,
+    rollCall,
+  );
   const isCrew = kind === "crew";
   return (
     <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-56">
@@ -184,10 +244,17 @@ export function RollCallControls({
         }`}
         copy={copy}
       />
-      {!isCrew && rc && !rc.implied ? (
+      {recordedHere ? (
         // The undo hint names the control it means. A not-back-aboard
         // result deliberately carries no done-check, so the generic
         // "tap the ✓ status again" would point at nothing on screen.
+        //
+        // Crew rows get it too. Re-tap is the app's one undo model for a
+        // high-frequency toggle (design/principles.md §7), and it works
+        // identically here — hiding the hint for crew taught the deck that
+        // a mis-tap on a divemaster was permanent, which is exactly the
+        // wrong lesson on the half of the roll call that closes the
+        // checkpoint.
         <p className="text-xs text-muted">
           {notBackAboard
             ? t("trips.manifest.tapToUndoNotBackAboard")

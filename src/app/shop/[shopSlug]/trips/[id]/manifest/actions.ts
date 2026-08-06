@@ -30,17 +30,40 @@ import { requireStaffSession } from "@/lib/session";
  *
  * Every one of these used to be an inline `"use server"` closure inside
  * `page.tsx`, capturing `tripId`, `checkpoint`, `back`, and `plannedDives` from
- * the render. At module scope they take that context as **bound leading
- * arguments** instead (the page binds them once and hands the bound action to
- * the section that renders it), which is the same channel a closure used —
- * Next serializes and seals what an action carries either way — and re-prove
+ * the render. At module scope they take that context as **one bound leading
+ * argument** instead (the page binds it once and hands the bound action to the
+ * section that renders it), which is the same channel a closure used — Next
+ * serializes and seals what an action carries either way — and re-prove
  * anything the client can still reach: the note action re-derives this trip's
  * planned-dive count from the trip row rather than believing a posted
  * checkpoint, and the two roll-call writers re-prove the checkpoint inside
  * their own transaction (see `provenCheckpoint`).
  *
+ * The context is a **named object, not three positional strings**. `shopSlug`
+ * and `tripId` are both opaque ids of the same shape, and at a `.bind` call
+ * site swapping them is a silent, well-typed mistake that revalidates the
+ * wrong route.
+ *
  * Nothing about what these accept, refuse, record, or redirect to changed.
  * -------------------------------------------------------------------------- */
+
+/**
+ * Where an action on this page is happening: whose shop's route to revalidate,
+ * which departure, and — for everything that writes or lands at a checkpoint —
+ * which checkpoint the staffer was working.
+ */
+export type ManifestActionContext = {
+  shopSlug: string;
+  tripId: string;
+  checkpoint: RollCallCheckpoint;
+};
+
+/**
+ * The note action needs no checkpoint of its own: the one it annotates arrives
+ * with the note and is re-proved against the trip row (`provenCheckpoint`), so
+ * it takes the narrower context rather than pretending to use a bound one.
+ */
+export type ManifestTripContext = Omit<ManifestActionContext, "checkpoint">;
 
 /**
  * The manifest route these actions belong to. In the page this was
@@ -48,7 +71,7 @@ import { requireStaffSession } from "@/lib/session";
  * already had in scope; here it is rebuilt from the two bound arguments so
  * `revalidatePath` still names the route without its query.
  */
-function manifestPath(shopSlug: string, tripId: string): string {
+function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
   return `/shop/${shopSlug}/trips/${tripId}/manifest`;
 }
 
@@ -58,8 +81,8 @@ function manifestPath(shopSlug: string, tripId: string): string {
  * at rather than to "departure". This is the page's old `back`. It is a
  * relative path built from bound values, never anything a caller supplied.
  */
-function manifestBack(shopSlug: string, tripId: string, checkpoint: RollCallCheckpoint): string {
-  return `${manifestPath(shopSlug, tripId)}?checkpoint=${checkpoint}`;
+function manifestBack(ctx: ManifestActionContext): string {
+  return `${manifestPath(ctx)}?checkpoint=${ctx.checkpoint}`;
 }
 
 /**
@@ -248,12 +271,11 @@ export async function isPushSubscribedAnywhereAction(endpoint: string): Promise<
 }
 
 export async function rollCallAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
+  ctx: ManifestActionContext,
   _prev: RollCallResult,
   formData: FormData,
 ): Promise<RollCallResult> {
+  const { tripId, checkpoint } = ctx;
   const staff = await requireStaffSession();
   const parsed = rollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
@@ -282,13 +304,12 @@ export async function rollCallAction(
     return { ok: false, reason: "error" };
   }
   // Settle the card in place instead of a full-page redirect per tap.
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   return { ok: true };
 }
 
 export async function saveRollCallNoteAction(
-  shopSlug: string,
-  tripId: string,
+  ctx: ManifestTripContext,
   bookingId: string,
   checkpointValue: string,
   note: string,
@@ -296,6 +317,7 @@ export async function saveRollCallNoteAction(
   const staff = await requireStaffSession();
   const parsed = noteSchema.safeParse({ bookingId, checkpoint: checkpointValue, note });
   if (!parsed.success) return { ok: false, saved: false };
+  const { tripId } = ctx;
   const db = await getDb();
   const checkpoint = await provenCheckpoint(db, staff.user.shopId, tripId, parsed.data.checkpoint);
   if (!checkpoint) {
@@ -308,7 +330,7 @@ export async function saveRollCallNoteAction(
     checkpoint,
     note: parsed.data.note,
   });
-  if (saved) revalidatePath(manifestPath(shopSlug, tripId));
+  if (saved) revalidatePath(manifestPath(ctx));
   return { ok: true, saved };
 }
 
@@ -319,12 +341,11 @@ export async function saveRollCallNoteAction(
  * instead of a booking, and readiness never applies to crew.
  */
 export async function crewRollCallAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
+  ctx: ManifestActionContext,
   _prev: RollCallResult,
   formData: FormData,
 ): Promise<RollCallResult> {
+  const { tripId, checkpoint } = ctx;
   const staff = await requireStaffSession();
   const parsed = crewRollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
@@ -346,7 +367,7 @@ export async function crewRollCallAction(
   } catch {
     return { ok: false, reason: "error" };
   }
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   return { ok: true };
 }
 
@@ -357,14 +378,10 @@ export async function crewRollCallAction(
  * has written every member row and the trail entry behind them. Every
  * refusal re-lands on this checkpoint with a worded reason.
  */
-export async function formBuddyTeamAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
-  formData: FormData,
-) {
+export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: FormData) {
   const staff = await requireStaffSession();
-  const back = manifestBack(shopSlug, tripId, checkpoint);
+  const { tripId } = ctx;
+  const back = manifestBack(ctx);
   const parsed = formTeamSchema.safeParse({ members: formData.getAll("members") });
   // Fewer than two ticked is the one shape error a staffer can act on, so it
   // gets the size wording rather than the generic one.
@@ -376,19 +393,15 @@ export async function formBuddyTeamAction(
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   redirect(back);
 }
 
 /** Add one more person to a team that already stands. */
-export async function addBuddyTeamMemberAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
-  formData: FormData,
-) {
+export async function addBuddyTeamMemberAction(ctx: ManifestActionContext, formData: FormData) {
   const staff = await requireStaffSession();
-  const back = manifestBack(shopSlug, tripId, checkpoint);
+  const { tripId } = ctx;
+  const back = manifestBack(ctx);
   const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}&buddyError=generic`);
   const outcome = await addBuddyTeamMember(await getDb(), {
@@ -399,7 +412,7 @@ export async function addBuddyTeamMemberAction(
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   redirect(back);
 }
 
@@ -409,14 +422,10 @@ export async function addBuddyTeamMemberAction(
  * appears on teams of three or more — dissolving is its own act, with its
  * own entry on the trail.
  */
-export async function removeBuddyTeamMemberAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
-  formData: FormData,
-) {
+export async function removeBuddyTeamMemberAction(ctx: ManifestActionContext, formData: FormData) {
   const staff = await requireStaffSession();
-  const back = manifestBack(shopSlug, tripId, checkpoint);
+  const { tripId } = ctx;
+  const back = manifestBack(ctx);
   const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}&buddyError=generic`);
   const outcome = await removeBuddyTeamMember(await getDb(), {
@@ -427,19 +436,15 @@ export async function removeBuddyTeamMemberAction(
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   redirect(back);
 }
 
 /** Dissolve a team — the explicit act re-forming always goes through. */
-export async function dissolveBuddyTeamAction(
-  shopSlug: string,
-  tripId: string,
-  checkpoint: RollCallCheckpoint,
-  formData: FormData,
-) {
+export async function dissolveBuddyTeamAction(ctx: ManifestActionContext, formData: FormData) {
   const staff = await requireStaffSession();
-  const back = manifestBack(shopSlug, tripId, checkpoint);
+  const { tripId } = ctx;
+  const back = manifestBack(ctx);
   const parsed = teamSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}&buddyError=generic`);
   const outcome = await dissolveBuddyTeam(await getDb(), {
@@ -449,6 +454,6 @@ export async function dissolveBuddyTeamAction(
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=generic`);
-  revalidatePath(manifestPath(shopSlug, tripId));
+  revalidatePath(manifestPath(ctx));
   redirect(back);
 }
