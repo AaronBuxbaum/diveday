@@ -2507,7 +2507,11 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // DiveDay's published dive-site templates, each card stating the
-      // version it would import into the shop's own library.
+      // version it would import into the shop's own library. It is the
+      // library's own catalog *view* rather than a route of its own
+      // (ADR 20260806-dive-site-catalog-is-a-view), so this navigates through
+      // the redirect the old URL still serves and keeps the
+      // `dive-sites-catalog` capture name.
       test(`the dive-site catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();

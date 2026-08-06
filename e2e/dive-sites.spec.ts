@@ -322,6 +322,33 @@ test.describe("staff", () => {
     await expect(page.getByText("Template update v2 ready — your edits are safe.")).toBeVisible();
   });
 
+  test("the old /dive-sites/catalog URL still works, and keeps the page it was deep-linked to", async ({
+    page,
+  }) => {
+    // The route folded into the library as `?view=catalog`
+    // (ADR 20260806-dive-site-catalog-is-a-view); the links already out in
+    // the world did not. A bare bookmark lands on the catalog view.
+    await page.goto("/shop/blue-mantis/dive-sites/catalog");
+    await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
+    ).toBeVisible();
+
+    // A `?page=` deep link keeps its page rather than silently restarting at
+    // the top of the catalog — landing a bookmarked page 3 on page 1 is the
+    // quiet kind of "it still works" that makes staff re-hunt for a template
+    // they'd found.
+    await page.goto("/shop/blue-mantis/dive-sites/catalog?page=2");
+    await expect(page).toHaveURL(/\/dive-sites\?view=catalog&page=2$/);
+
+    // Page 1 and nonsense both mean "the start of the catalog", which is the
+    // default, so neither is carried across as a query param.
+    for (const query of ["?page=1", "?page=banana"]) {
+      await page.goto(`/shop/blue-mantis/dive-sites/catalog${query}`);
+      await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
+    }
+  });
+
   test("a URL resolving to a private address is blocked server-side, never saved raw (CR-020)", async ({
     page,
   }) => {
