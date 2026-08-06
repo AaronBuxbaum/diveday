@@ -38,6 +38,10 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/calendar/abc123.def456.ics")).toBe("/calendar/[token]");
   });
 
+  it("redacts an email-unsubscribe token path", () => {
+    expect(redactCapabilityUrl("/unsubscribe/abc123.def456")).toBe("/unsubscribe/[token]");
+  });
+
   it("redacts even with query string and hash", () => {
     expect(redactCapabilityUrl("/ready/abc123.def456?photo=error#section")).toBe("/ready/[token]");
   });

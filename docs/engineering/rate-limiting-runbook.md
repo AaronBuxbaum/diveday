@@ -31,7 +31,7 @@ cannot see it.
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |
 | Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP | `RATE_LIMITS.waitlistJoin` (10/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
-| Booking-confirmation actions (rental fit, pay) | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
+| Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP | `RATE_LIMITS.lastMinuteListJoin` (10/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
@@ -70,8 +70,10 @@ so the ceiling is per IP, not per action.
 
 ### What a throttled caller is told
 
-Not one answer — two, and the split is the security-relevant part. Do not
-"unify" it.
+Not one answer. The security-relevant split is the first two bullets — silent
+where the limiter could enumerate, explicit where the caller already holds the
+secret — and that one must not be "unified". The two after it are surfaces that
+say nothing for reasons of their own, one of them by accident.
 
 - **Silent on the surfaces where the limiter itself could enumerate.**
   Sign-in (`authorize()`) returns `null`, indistinguishable from a wrong
@@ -82,13 +84,26 @@ Not one answer — two, and the split is the security-relevant part. Do not
   notice a genuinely dead token gets. Naming the limiter on any of these would
   turn it into an oracle for "is this an account" / "is this a live token".
 - **Explicit where the caller already holds the secret.** A diver on
-  `/waivers/[token]`, `/ready/[token]`, `/claim/[token]` or a trip
-  confirmation is acting on a capability they were sent, so there is nothing
-  left to enumerate — telling them "give it a few seconds and try again,
-  nothing was lost" (`diver.waiver.rateLimited` / `diver.ready.rateLimited`,
-  reached via `?error=rate`) is strictly kinder than a silent no-op that looks
-  like a dead button. Onboarding does the same through the
-  `RATE_LIMIT_MESSAGE` code and `diver.common.rateLimited`.
+  `/waivers/[token]`, `/ready/[token]` or `/claim/[token]` is acting on a
+  capability they were sent, so there is nothing left to enumerate — telling
+  them "give it a few seconds and try again, nothing was lost"
+  (`diver.waiver.rateLimited` / `diver.ready.rateLimited`, which the claim page
+  reuses, all reached via `?error=rate`) is strictly kinder than a silent no-op
+  that looks like a dead button. Onboarding does the same through the
+  `RATE_LIMIT_MESSAGE` code and `diver.common.rateLimited`; the booking form,
+  the course inquiry and the last-minute-list join return that same generic
+  code from their own action state.
+- **The trip-confirmation panel is the exception, and it is not deliberate.**
+  `confirmContextFor` returns `null` on a throttle exactly as it does on a dead
+  token, so its three callers cannot tell the two apart and each redirects to
+  its own generic failure — `?error=pay`, `?error=fit`, `?error=waiver`, never
+  `?error=rate`. The diver already holds the capability, so nothing leaks by it;
+  what they lose is the "wait a moment, nothing was lost" wording that
+  `/ready/[token]` gives them for the same throttle. Closing the gap means
+  giving that helper the two-reason result `contextFor` already has
+  (`{ ok: false; reason: "rate_limited" | "invalid" }`,
+  `src/app/ready/[token]/actions.ts`) — do not "fix" it by widening the
+  silent bucket instead.
 - **Two say nothing at all, on purpose.** `suggestAddressAction` returns
   `{ status: "failed" }` and the settings card falls back to plain text boxes —
   autocomplete is an enhancement, and a throttle notice on a keystroke would be
