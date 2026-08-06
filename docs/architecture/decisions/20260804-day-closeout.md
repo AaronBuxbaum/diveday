@@ -39,7 +39,7 @@ except the leftovers list, which is *deliberately* the queue's own rows (see bel
   output and the `TodayAction` list: per-departure end states (`all_home` / `unreconciled` /
   `count_open` / `still_out` / `not_departed`), today's leftovers (queue rows dated today or
   undated, *minus* the roll-call kinds — a head count is chased, never carried or dismissed), and
-  tomorrow's first `TOMORROW_GLANCE_LIMIT` rows.
+  a count of tomorrow's queue by kind (`TomorrowGlance`; see the amendment below).
 - **Closing is an append-only recorded act** — a `day_closeouts` row: who, when, which shop-local
   day (`shop_day`, text `YYYY-MM-DD`), and an `outstanding` jsonb snapshot recomputed server-side
   at close time (never trusted from the form): the unsettled departures plus every leftover with
@@ -61,6 +61,29 @@ except the leftovers list, which is *deliberately* the queue's own rows (see bel
 - **Out of scope: gear-return reconciliation.** The brainstorm entry lists it, but there is no
   gear register in the product to reconcile against — scoping it in would have meant inventing
   one as a side effect. It joins the ritual when a gear register exists.
+
+## Amendment (2026-08-06) — "Tomorrow, at a glance" is a handoff, not a second queue
+
+As shipped, the tomorrow section re-rendered tomorrow's `TodayAction` rows — the queue's chip,
+subject, detail, and a link — **without any of Today's inline controls**. The same row that sends a
+waiver, invites from the waitlist, or copies a payment link on the shop home was an inert list item
+here, which quietly taught staff that tomorrow's work cannot be touched until morning. That is
+[20260803-not-ready-is-a-view](20260803-not-ready-is-a-view.md)'s finding at section scale: a
+surface re-rendering another's evidence is a view of it, not an owner of it.
+
+The section now states **how much** is waiting (total, plus a count per kind using the queue's own
+`KindChip`) and offers one link to Today, which is the surface that can act on those rows. Nothing
+else about the route changes: the departures list, the leftovers' carry/dismiss choice, the
+acknowledgement checkbox, and the append-only close are untouched, and the close-out keeps its own
+route for the reasons above. `TOMORROW_GLANCE_LIMIT` is gone with the rows it bounded — a count
+cannot scroll, so there is nothing left to cap.
+
+Today gained the other half of the handoff at the same time: once every one of today's departures
+is back at the dock (`lastBoatIsIn`, src/lib/today.ts, read off the departures `getTodayWork`
+already returns — no new detector, no wall-clock band), the shop home shows one calm card pointing
+at the close-out. The registry called this route "Today's evening mirror" while linking to it from
+nowhere but the nav's More drawer. It stays a suggestion: nothing nags, nothing gates, and a day
+with no departures shows no card at all.
 
 ## Alternatives considered
 

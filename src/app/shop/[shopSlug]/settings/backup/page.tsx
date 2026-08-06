@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -126,14 +125,6 @@ export default async function BackupSettingsPage({
         eyebrow={t("backup.eyebrow")}
         title={t("backup.title")}
         description={t("backup.description")}
-        actions={
-          <Link
-            href={`/shop/${session.user.shopSlug}/settings`}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {t("settings.main.backToSettings")}
-          </Link>
-        }
       />
 
       {banner ? (

@@ -2,11 +2,11 @@ import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
+import { BlockedDiverRow } from "@/components/today/BlockedDiverRow";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { BlockerQueue } from "@/db/blockers";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BlockerQueueTrip } from "@/lib/blockers";
 import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
@@ -49,46 +49,33 @@ function DiverRow({
   t: StaffTranslator;
 }) {
   return (
-    <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:px-5">
-      <div className="min-w-0">
-        <Link
-          href={`/shop/${shopSlug}/divers/${diver.personId}`}
-          className="font-semibold hover:text-primary hover:underline"
-        >
-          {diver.fullName}
-        </Link>
-        <ul className="mt-1.5 flex flex-col gap-1 text-base text-muted">
-          {diver.blockers.map((blocker) => (
-            <li key={blocker.code} className="flex gap-2">
-              <span aria-hidden="true" className="text-danger">
-                •
-              </span>
-              <span>{readinessBlockerText(t, blocker)}</span>
-            </li>
-          ))}
-        </ul>
-        {diver.alsoOn.length > 0 ? (
-          <p className="mt-1.5 text-sm text-muted">
-            {t("blockers.alsoBlockedOn", { trips: diver.alsoOn.join(", ") })}
-          </p>
-        ) : null}
-      </div>
-      {diver.fix.sendsWaiver ? (
-        <WaiverSendControl
-          shopSlug={shopSlug}
-          surface="blockers"
-          bookingIds={[diver.fix.bookingId]}
-          label={diver.fix.label}
-          copy={waiverSendCopy(t)}
-        />
-      ) : (
-        <Link
-          href={diver.fix.href}
-          className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-        >
-          {diver.fix.label}
-        </Link>
-      )}
+    <li className="px-4 py-4 sm:px-5">
+      {/* The one blocked-diver presentation, shared with the check-in counter
+          (src/components/today/BlockedDiverRow.tsx). */}
+      <BlockedDiverRow
+        layout="beside"
+        shopSlug={shopSlug}
+        surface="blockers"
+        waiverCopy={waiverSendCopy(t)}
+        blockers={diver.blockers}
+        fix={diver.fix}
+        t={t}
+        identity={
+          <Link
+            href={`/shop/${shopSlug}/divers/${diver.personId}`}
+            className="font-semibold hover:text-primary hover:underline"
+          >
+            {diver.fullName}
+          </Link>
+        }
+        meta={
+          diver.alsoOn.length > 0 ? (
+            <p className="mt-1.5 text-sm text-muted">
+              {t("blockers.alsoBlockedOn", { trips: diver.alsoOn.join(", ") })}
+            </p>
+          ) : null
+        }
+      />
     </li>
   );
 }
