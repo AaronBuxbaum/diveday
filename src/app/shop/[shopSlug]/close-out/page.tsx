@@ -371,11 +371,13 @@ export default async function CloseOutPage({
             <p className="font-semibold">
               {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
             </p>
+            {/* The tally rides *inside* each chip. Set beside one it was bound
+                to its label by a 2px gap difference, and a row of them wrapping
+                at 390px read as loose digits. */}
             <ul className="mt-3 flex flex-wrap items-center gap-2">
               {state.tomorrow.byKind.map((entry) => (
-                <li key={entry.kind} className="flex items-center gap-1.5">
-                  <KindChip kind={entry.kind} t={t} />
-                  <span className="text-sm text-muted tabular-nums">{entry.count}</span>
+                <li key={entry.kind}>
+                  <KindChip kind={entry.kind} count={entry.count} t={t} />
                 </li>
               ))}
             </ul>
