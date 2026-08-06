@@ -1293,7 +1293,12 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on the signed-in CTA itself, not the page heading: the heading
         // renders in the static shell, so it proves nothing about the
         // session-aware nav having streamed in over MarketingNavFallback.
-        await page.getByRole("link", { name: "Go to shop" }).waitFor();
+        // Scoped to the nav: the marketing footer now renders its own
+        // session-aware "Go to shop" link, and this frame is about the header.
+        await page
+          .getByLabel("Main navigation")
+          .getByRole("link", { name: "Go to shop" })
+          .waitFor();
         await capture(page, "marketing-nav-signed-in", scheme);
       });
     });
@@ -1614,6 +1619,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the empty offline manifest renders true to the design (${scheme})`, async ({
         page,
       }) => {
+        // The shop-wide primer (OfflineManifestAutoSave) starts a fetch →
+        // purge → save-all round on every staff page mount, and its parallel
+        // saves can land *after* the deleteDatabase below finishes — the
+        // store quietly refills and the empty heading never renders (caught
+        // as a 164s timeout on CI shard 2, run 31075399016). Cut the race at
+        // the harness boundary: with the upcoming-manifests feed blocked
+        // from the first navigation, no round ever writes, and the delete
+        // stays as defence against any other writer.
+        await page.route("**/api/offline-manifests/upcoming", (route) => route.abort());
         await openReefTrip(page);
         const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
         await page.evaluate(
