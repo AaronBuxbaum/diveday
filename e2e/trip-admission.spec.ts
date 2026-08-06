@@ -38,7 +38,6 @@ const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
 const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
 
-
 test.describe("as owner", () => {
   signedInAsOwner();
 

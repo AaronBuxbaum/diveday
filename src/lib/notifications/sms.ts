@@ -150,14 +150,6 @@ const disabledSmsProvider: SmsProvider = {
   },
 };
 
-/** The only application entry point for an outbound text. */
-export async function notifySms(
-  message: SmsMessage,
-  provider = smsProviderFromEnvironment(),
-): Promise<SmsDelivery> {
-  return provider.send(message);
-}
-
 export function smsProviderFromEnvironment(
   env: SmsEnvironment = process.env,
   options: SnsProviderOptions = {},

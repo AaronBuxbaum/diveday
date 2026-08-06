@@ -319,7 +319,10 @@ export default async function ReviewsPage({
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <StarRating rating={review.rating} />
+                        <StarRating
+                          rating={review.rating}
+                          label={t("reviews.rating", { rating: review.rating })}
+                        />
                         <Badge tone={review.isPublished ? "success" : "neutral"}>
                           {review.isPublished ? t("reviews.published") : t("reviews.waitingOnYou")}
                         </Badge>

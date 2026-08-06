@@ -200,15 +200,6 @@ export function whatsAppProviderForAccount(
   return whatsAppProvider(credentials, options.fetchImpl ?? fetch, options.providerOptions);
 }
 
-export async function whatsAppProviderForShop(
-  db: DbExecutor,
-  shopId: string,
-  options: WhatsAppSenderOptions = {},
-): Promise<CourtesyProvider | null> {
-  const account = await getShopWhatsAppAccount(db, shopId);
-  return account ? whatsAppProviderForAccount(account, options) : null;
-}
-
 /**
  * Senders for many shops at once, keyed by shop id.
  *

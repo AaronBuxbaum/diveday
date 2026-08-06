@@ -214,9 +214,7 @@ export async function findTripOnBoard(
 ): Promise<Locator> {
   await page.goto(`/shop/${shopSlug}/schedule/board`);
   for (let hops = 0; hops < 15; hops++) {
-    const link = page
-      .locator(`a[href^="/shop/${shopSlug}/trips/"]`)
-      .filter({ hasText: title });
+    const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
     if ((await link.count()) > 0) return link.first();
     const later = page.getByRole("link", { name: "Show later departures" });
     if ((await later.count()) === 0) break;

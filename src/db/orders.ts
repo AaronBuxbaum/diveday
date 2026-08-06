@@ -294,29 +294,13 @@ export async function getBookingContext(db: DbExecutor, shopId: string, bookingI
 }
 
 /**
- * The most recent open, Stripe-invoiced order for a booking — what the Today
- * queue's payment row acts on in place. Null when the booking was never
- * invoiced through Stripe (paid at the counter, or invoicing wasn't
- * connected when the trip was booked), so the caller falls back to plain
- * roster navigation instead of rendering a control with nothing to do.
+ * The most recent open, Stripe-invoiced order per booking — what the Today
+ * queue's payment rows act on in place. A booking is absent from the map when
+ * it was never invoiced through Stripe (paid at the counter, or invoicing
+ * wasn't connected when the trip was booked), so the caller falls back to
+ * plain roster navigation instead of rendering a control with nothing to do.
+ * Batched so a page of Today rows enriches in one query.
  */
-export async function getOpenOrderForBooking(
-  db: DbExecutor,
-  shopId: string,
-  bookingId: string,
-): Promise<Order | null> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(
-      and(eq(orders.shopId, shopId), eq(orders.bookingId, bookingId), eq(orders.status, "open")),
-    )
-    .orderBy(desc(orders.createdAt))
-    .limit(1);
-  return order ?? null;
-}
-
-/** Batched form of `getOpenOrderForBooking`, for enriching a page of Today rows in one query. */
 export async function openOrdersForBookings(
   db: DbExecutor,
   shopId: string,
@@ -340,15 +324,6 @@ export async function openOrdersForBookings(
     if (row.bookingId && !byBooking.has(row.bookingId)) byBooking.set(row.bookingId, row);
   }
   return byBooking;
-}
-
-export async function listOrders(db: DbExecutor, shopId: string) {
-  return db
-    .select({ order: orders, person: people })
-    .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
-    .where(eq(orders.shopId, shopId))
-    .orderBy(desc(orders.createdAt));
 }
 
 export type ShopOrderFilter = {
@@ -832,7 +807,7 @@ export type ResendInvoiceOutcome =
  * "resend invoice" row. Never creates a new invoice: a booking with no order
  * yet (never invoiced) or one whose order already closed (paid, voided,
  * refunded) has nothing to resend, and the caller falls back to navigation
- * for those (`getOpenOrderForBooking`/`openOrdersForBookings` gate this
+ * for those (`openOrdersForBookings` gates this
  * before the control is even rendered), but this still re-checks status
  * itself so a stale page can't resend a closed invoice.
  */

@@ -3,19 +3,18 @@ import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
+import { courseSlug } from "@/lib/courses";
 import { seededShopContext } from "@/test/db";
 import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createTestDb } from "./client";
 import {
-  archiveCourse,
   courseAgencies,
-  createCourse,
   getCourseBySlug,
   hasActiveCourses,
   listActiveCourses,
   listActiveCoursesForSitemap,
-  listCourses,
+  type NewCourse,
   pagedCourses,
   setCourseVisibility,
   updateCourse,
@@ -59,6 +58,49 @@ async function courseContext() {
   const discover = sessions.find((session) => session.course?.title === "Discover Scuba Diving");
   if (!discover) throw new Error("discover session missing");
   return { db, shop, discover };
+}
+
+/**
+ * Test-local catalog fixture builder. Production creates catalog entries by
+ * copying a DiveDay-published template (`src/db/course-templates.ts`); these
+ * tests need arbitrary shapes, so they insert directly.
+ */
+async function createCourse(db: AppDb, input: NewCourse) {
+  const title = input.title.trim();
+  const [course] = await db
+    .insert(courses)
+    .values({
+      shopId: input.shopId,
+      title,
+      agency: input.agency ?? "padi",
+      description: input.description?.trim() || null,
+      slug: input.slug ?? courseSlug(title),
+      priceCents: input.priceCents ?? null,
+      eLearningPriceCents: input.eLearningPriceCents ?? null,
+      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
+      summary: input.summary ?? null,
+      overview: input.overview ?? null,
+      heroImageUrl: input.heroImageUrl ?? null,
+      heroImageAlt: input.heroImageAlt ?? null,
+      galleryPhotos: input.galleryPhotos ?? [],
+      durationText: input.durationText ?? null,
+      groupSizeText: input.groupSizeText ?? null,
+      minimumAge: input.minimumAge ?? null,
+      prerequisiteNote: input.prerequisiteNote ?? null,
+      includes: input.includes ?? [],
+      excludes: input.excludes ?? [],
+      scheduleDays: input.scheduleDays ?? [],
+      faqs: input.faqs ?? [],
+      isIntroCourse: input.isIntroCourse ?? false,
+    })
+    .returning();
+  return course ?? null;
+}
+
+/** Test-local full-catalog read in the shared progression order (mirrors `pagedCourses`' sort). */
+async function listCourses(db: AppDb, shopId: string) {
+  const { courses: rows } = await pagedCourses(db, shopId, { limit: 1000 });
+  return rows;
 }
 
 describe("course catalog and sessions (in-memory PGlite)", () => {
@@ -642,7 +684,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       priceCents: 49900,
       eLearningPriceCents: 21000,
     });
-    expect(await archiveCourse(db, shop.id, course.id)).toBe(true);
+    expect((await setCourseVisibility(db, shop.id, course.id, false))?.isActive).toBe(false);
     expect((await listActiveCourses(db, shop.id)).some((entry) => entry.id === course.id)).toBe(
       false,
     );

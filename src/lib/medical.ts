@@ -342,20 +342,16 @@ const BY_KEY = new Map(
   [RSTC_QUESTIONNAIRE, LEGACY_RSTC_QUESTIONNAIRE].map((q) => [`${q.id}:${q.version}`, q]),
 );
 
-export const MEDICAL_JURISDICTION_LABELS: Record<MedicalJurisdiction, string> = {
-  rstc: "RSTC (US / international)",
-  uk: "United Kingdom",
-};
-
+/**
+ * Not a lookup yet: every jurisdiction — including the `uk` value the schema
+ * enum carries — currently falls back to the RSTC questionnaire, because no UK
+ * questionnaire has been written (that wording is a sign-off decision, H-03).
+ * The argument is accepted so call sites don't change when one lands.
+ */
 export function questionnaireForJurisdiction(
   _jurisdiction: MedicalJurisdiction,
 ): MedicalQuestionnaire {
   return CURRENT_QUESTIONNAIRES[0] ?? RSTC_QUESTIONNAIRE;
-}
-
-/** Current questionnaire lookup for callers that do not have a stored version. */
-export function findQuestionnaire(id: string): MedicalQuestionnaire | null {
-  return CURRENT_QUESTIONNAIRES.find((q) => q.id === id) ?? null;
 }
 
 export function findQuestionnaireVersion(id: string, version: number): MedicalQuestionnaire | null {

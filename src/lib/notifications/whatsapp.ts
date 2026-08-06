@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { log } from "@/lib/log";
 import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./courtesy";
 
@@ -75,9 +75,6 @@ const META_LANGUAGE_BY_LOCALE: Record<DiverLocale, string> = {
 export function metaLanguageCode(locale: DiverLocale): string {
   return META_LANGUAGE_BY_LOCALE[locale];
 }
-
-/** The Meta language codes a shop could have templates approved in, for the settings form. */
-export const META_TEMPLATE_LANGUAGES = DIVER_LOCALES.map(metaLanguageCode);
 
 /**
  * The default template name DiveDay documents for shops to create in their own

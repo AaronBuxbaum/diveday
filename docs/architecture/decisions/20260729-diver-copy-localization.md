@@ -128,6 +128,9 @@ negotiated locale via `Vary: Accept-Language`, or two visitors will share one la
 about — shop-authored values that may one day be stored per-locale. It is no longer used for static UI
 copy.
 
+> **Amended 2026-08-06:** the data case never materialized — nothing outside its own test ever read
+> `LocalizedCopy`, so `src/lib/localized-copy.ts` was removed.
+
 What this makes harder: the diver bundle crosses to the client on pages with Client Components, so
 adding a very large namespace would show up in the bundle. It is one small namespace today; if it
 grows, split it and load per-surface. And a Spanish-reading diver currently gets Spanish public pages

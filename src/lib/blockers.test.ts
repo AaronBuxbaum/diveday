@@ -5,7 +5,6 @@ import {
   type BlockerQueueTrip,
   blockerFixFor,
   distinctBlockedDivers,
-  totalBlockedDivers,
 } from "./blockers";
 import type { ReadinessBlocker } from "./readiness";
 
@@ -49,32 +48,7 @@ describe("blockerFixFor", () => {
   });
 });
 
-describe("totalBlockedDivers", () => {
-  it("sums blocked divers across trip groups", () => {
-    expect(
-      totalBlockedDivers([
-        {
-          tripId: "a",
-          title: "",
-          startsAt: nowDate(),
-          courseTitle: null,
-          booked: 3,
-          ready: 1,
-          divers: [{}, {}] as never,
-        },
-        {
-          tripId: "b",
-          title: "",
-          startsAt: nowDate(),
-          courseTitle: null,
-          booked: 2,
-          ready: 2,
-          divers: [],
-        },
-      ]),
-    ).toBe(2);
-  });
-
+describe("distinctBlockedDivers", () => {
   it("counts a diver booked on two boats once for the headline", () => {
     const trips = [
       {
@@ -96,7 +70,6 @@ describe("totalBlockedDivers", () => {
         divers: [{ personId: "p1" }] as never,
       },
     ];
-    expect(totalBlockedDivers(trips)).toBe(3);
     expect(distinctBlockedDivers(trips)).toBe(2);
   });
 });

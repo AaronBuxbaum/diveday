@@ -794,7 +794,7 @@ new domain concept, define it here in the same PR.
   WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
   after the boat leaves is worth nothing.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
-  (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
+  (`SmsProvider.send()`, resolved by `smsProviderFromEnvironment()`). A number is texted only if it is already E.164, and the channel degrades to
   `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
   fallback half of a **courtesy message**. What happened to a sent text arrives later as a **delivery
   receipt**. See [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).

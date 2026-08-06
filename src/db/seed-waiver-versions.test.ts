@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
-import { DEMO_WAIVER_TEMPLATE_VERSION } from "./seed-waiver-versions";
 import { getCurrentWaiverTemplate, listWaiverTemplateHistory } from "./waivers";
 
 /**
@@ -35,7 +34,8 @@ describe("seeded waiver template history", () => {
   it("makes the newest version the live one", async () => {
     const { db, shop } = await seededShopContext();
     const current = await getCurrentWaiverTemplate(db, shop.id);
-    expect(current?.version).toBe(DEMO_WAIVER_TEMPLATE_VERSION);
+    // 3, matching the [3, 2, 1] history asserted above.
+    expect(current?.version).toBe(3);
     const [newest] = await listWaiverTemplateHistory(db, shop.id);
     expect(current?.id).toBe(newest?.id);
   });

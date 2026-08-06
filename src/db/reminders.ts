@@ -249,7 +249,10 @@ export async function sendDueReminders(
 
   // Which cadence, if any, each booking is due for — decided up front so the
   // readiness batch below only covers trips with something to send.
-  const dueRows: Array<{ row: (typeof rows)[number]; cadence: NonNullable<ReturnType<typeof dueReminder>> }> = [];
+  const dueRows: Array<{
+    row: (typeof rows)[number];
+    cadence: NonNullable<ReturnType<typeof dueReminder>>;
+  }> = [];
   for (const row of rows) {
     const cadence = dueReminder({
       startsAt: row.trip.startsAt,
@@ -285,7 +288,10 @@ export async function sendDueReminders(
     }),
   );
 
-  for (const { row: { booking, person, trip, shop }, cadence } of dueRows) {
+  for (const {
+    row: { booking, person, trip, shop },
+    cadence,
+  } of dueRows) {
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,

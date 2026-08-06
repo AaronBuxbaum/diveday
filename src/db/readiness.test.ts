@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
@@ -15,8 +15,6 @@ import {
   createSpecialtyCertification,
   getBookingReadiness,
   getBookingReadinessDetail,
-  listShopCertifications,
-  listShopSpecialtyCertifications,
   listTripReadiness,
   listTripsReadiness,
   restoreCertification,
@@ -26,7 +24,7 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
-import { diveSites, specialtyCertifications } from "./schema";
+import { certifications, diveSites, specialtyCertifications } from "./schema";
 import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -38,6 +36,32 @@ async function readinessContext() {
   const [rosterEntry] = await getTripRoster(db, shop.id, reef.id);
   if (!rosterEntry) throw new Error("demo booking missing");
   return { db, shop, reef, rosterEntry };
+}
+
+/** Ids of the shop's live (unarchived) level cards, read straight off the table. */
+async function activeCertificationIds(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+) {
+  const rows = await db
+    .select({ id: certifications.id })
+    .from(certifications)
+    .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
+  return rows.map((row) => row.id);
+}
+
+/** Ids of the shop's live (unarchived) specialty cards, read straight off the table. */
+async function activeSpecialtyCertificationIds(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+) {
+  const rows = await db
+    .select({ id: specialtyCertifications.id })
+    .from(specialtyCertifications)
+    .where(
+      and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
+    );
+  return rows.map((row) => row.id);
 }
 
 describe("trip readiness (in-memory PGlite)", () => {
@@ -326,7 +350,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       }),
     ).toBeNull();
     expect(
-      await listShopSpecialtyCertifications(db, "00000000-0000-4000-8000-000000000000"),
+      await activeSpecialtyCertificationIds(db, "00000000-0000-4000-8000-000000000000"),
     ).toEqual([]);
   });
 
@@ -341,7 +365,7 @@ describe("trip readiness (in-memory PGlite)", () => {
         identifier: "NOT-OURS",
       }),
     ).toBeNull();
-    expect(await listShopCertifications(db, "00000000-0000-4000-8000-000000000000")).toEqual([]);
+    expect(await activeCertificationIds(db, "00000000-0000-4000-8000-000000000000")).toEqual([]);
   });
 
   it("archives a level card so it stops counting and drops out of the shop list", async () => {
@@ -384,9 +408,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       expect.objectContaining({ code: "certification_insufficient" }),
     );
     // It leaves the active shop list…
-    expect(await listShopCertifications(db, shop.id)).not.toContainEqual(
-      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
-    );
+    expect(await activeCertificationIds(db, shop.id)).not.toContain(card.id);
     // …but the archived slot is freed, so the same card number can be recaptured.
     const recaptured = await createCertification(db, {
       shopId: shop.id,
@@ -416,9 +438,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
       true,
     );
-    expect(await listShopCertifications(db, shop.id)).toContainEqual(
-      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
-    );
+    expect(await activeCertificationIds(db, shop.id)).toContain(card.id);
 
     // Archive it again, then re-capture the same number as a fresh card. Restoring
     // the old one now would collide on the partial unique index, so it's refused.
@@ -529,9 +549,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     expect(
       await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
     ).toBe(true);
-    expect(await listShopSpecialtyCertifications(db, shop.id)).toContainEqual(
-      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
-    );
+    expect(await activeSpecialtyCertificationIds(db, shop.id)).toContain(card.id);
     // Restoring a card that was never archived is a no-op false.
     expect(
       await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
@@ -554,9 +572,7 @@ describe("trip readiness (in-memory PGlite)", () => {
         certificationId: card.id,
       }),
     ).toBe(false);
-    expect(await listShopCertifications(db, shop.id)).toContainEqual(
-      expect.objectContaining({ certification: expect.objectContaining({ id: card.id }) }),
-    );
+    expect(await activeCertificationIds(db, shop.id)).toContain(card.id);
   });
 
   it("archives a specialty card, shop-scoped", async () => {
@@ -578,8 +594,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     expect(
       await archiveSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
     ).toBe(true);
-    const remaining = await listShopSpecialtyCertifications(db, shop.id);
-    expect(remaining.map((row) => row.certification.id)).not.toContain(card.id);
+    expect(await activeSpecialtyCertificationIds(db, shop.id)).not.toContain(card.id);
   });
 });
 
