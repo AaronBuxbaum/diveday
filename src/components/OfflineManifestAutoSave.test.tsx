@@ -100,6 +100,12 @@ describe("OfflineManifestAutoSave", () => {
       "/api/offline-manifests/upcoming",
       expect.objectContaining({ credentials: "same-origin" }),
     );
+    // Exactly one request for the round. This caller wants the board *and* the
+    // tenant, and gets both from the one response — the identity route
+    // (review 20260802, action item 12) is for the offline shell, which wants
+    // the tenant alone; calling it here would be a second round trip for a
+    // string already in hand.
+    expect(fetch).toHaveBeenCalledTimes(1);
     // The server-verified shop identity drives the purge — never a
     // client-supplied value (see ADR 20260726-shopwide-offline-manifest-priming).
     expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
@@ -182,6 +188,58 @@ describe("OfflineManifestAutoSave", () => {
     vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
     vi.mocked(purgeOfflineManifestsExceptShop).mockRejectedValue(new Error("indexeddb error"));
     vi.mocked(fetch).mockResolvedValue(upcomingResponse([payloadFor("trip-1")]));
+
+    render(<OfflineManifestAutoSave />);
+
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  // Security review, 2026-08-06. This round used to read the board with
+  // `(await response.json()) as OfflineManifestUpcomingResponse` — an
+  // assertion about a body nobody checked. A body of `{}` satisfies it, and
+  // `body.shop.slug` then reads `undefined` without throwing on the way past,
+  // so the device-wide delete pass got a slug matching no saved record, which
+  // is to say every one of them. The store refuses that at its own chokepoint
+  // now (see offline-manifest-store.test.ts, which proves nothing is deleted);
+  // these prove this caller never produces it in the first place, and that a
+  // malformed body costs the round rather than the device.
+  it.each([
+    ["carries no shop at all", { payloads: [] }],
+    ["carries a shop with no slug", { shop: {}, payloads: [] }],
+    ["carries an empty slug", { shop: { slug: "" }, payloads: [] }],
+    ["is not an object at all", "gateway timeout"],
+    ["is null", null],
+  ])("purges nothing and saves nothing when the 200 body %s", async (_label, body) => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+
+    render(<OfflineManifestAutoSave />);
+
+    // Priming is the round's independent step and still runs, which is also
+    // how we know the round actually got as far as reading the body rather
+    // than failing earlier for some unrelated reason.
+    await waitFor(() => expect(primeOfflineManifestShell).toHaveBeenCalled());
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    // And nothing is written either: saving without a purge is the
+    // cross-tenant residency the purge exists to prevent.
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("saves nothing, and does not throw, when a good body carries a malformed board", async () => {
+    // `body.payloads.map(...)` on a body with no `payloads` threw outright,
+    // which the outer catch swallowed — so the round died silently *after* the
+    // purge. Parsed to an empty list instead: the tenant is known, the purge is
+    // real, and there is simply nothing to write.
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ shop: { slug: "blue-mantis" } }), { status: 200 }),
+    );
 
     render(<OfflineManifestAutoSave />);
 

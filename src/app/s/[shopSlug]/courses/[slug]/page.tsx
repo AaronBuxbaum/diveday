@@ -169,12 +169,7 @@ export default async function CoursePage({
         t={t}
       />
       <CourseOverview overview={course.overview} />
-      <CourseGallery
-        imageUrls={course.imageUrls}
-        imageAlts={course.imageAlts}
-        title={course.title}
-        t={t}
-      />
+      <CourseGallery photos={course.galleryPhotos} title={course.title} t={t} />
       <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions

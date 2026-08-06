@@ -24,6 +24,7 @@ import {
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
+import { timeZoneLabel } from "@/i18n/timezone-labels";
 import {
   addMonths,
   buildCalendarWeeks,
@@ -262,6 +263,32 @@ export default async function SchedulePage({
           description={t("schedule.diverDescription")}
         />
       )}
+
+      {/* Whose morning is "7:30 AM"? A diver comparing boats from another
+          timezone reads these times against their own clock unless something
+          says otherwise, and until now nothing did (review finding I18N-L2).
+          Stated once, above everything that shows a time — the quick link, the
+          month grid, and every card in the list — rather than stamped onto each
+          of the twenty figures below it. Anchored to the first departure on the
+          page, because a zone's *name* moves with daylight saving and a
+          schedule read in March may be listing July boats. Kept in embed mode
+          too: the widget is the same list of times, and a remote booker
+          misreading them is the same mistake wherever it is framed. */}
+      {(() => {
+        // The first departure actually on this page, not the shop's first
+        // ever: a diver who has paged the calendar to December should be told
+        // December's zone name, not August's.
+        const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+        if (!zoneAnchor) return null;
+        return (
+          <p className="mb-6 text-sm text-muted">
+            {t("schedule.timesInZone", {
+              shop: shop.name,
+              zone: timeZoneLabel(zoneAnchor, locale, tz),
+            })}
+          </p>
+        );
+      })()}
 
       {nextDeparture ? (
         <Link

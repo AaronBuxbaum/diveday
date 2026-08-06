@@ -38,9 +38,26 @@ import { orders, paymentOperationIntents, people, shops } from "./schema";
  * assertion passes for that sequential run exactly as it does for a contended
  * one. So a third connection takes the order row's lock first, the contenders
  * are started, and the test waits until Postgres itself reports them *all*
- * parked on that lock (`waitForLockWaiters`) before releasing it. With the
- * `FOR UPDATE` gone nothing would ever block, the wait would time out, and the
- * test fails — so the guard's presence is asserted, not assumed.
+ * parked on that lock (`waitForLockWaiters`) before releasing it. Only then is
+ * the gate dropped, so every tap is inside its transaction at the same instant.
+ *
+ * ## Which assertion actually catches a missing guard
+ *
+ * The gate proves *simultaneity*; the **provider call count** proves the guard —
+ * the same division `bookings.postgres.test.ts` sets out at length, and worth
+ * restating because an earlier draft of this header had it backwards ("with the
+ * `FOR UPDATE` gone nothing would ever block, the wait would time out"). It does
+ * not. A contender parks on the gate whether or not `claimOrderRefund` locks
+ * anything: `startPaymentOperation`'s `INSERT` carries a foreign key to
+ * `orders`, and the FK check takes a `KEY SHARE` lock on that order row, which
+ * conflicts with the gate's `FOR UPDATE`.
+ *
+ * Measured, not reasoned about. Deleting the `.for("update")` in
+ * `claimOrderRefund` and rerunning this file: `waitForLockWaiters` still passed
+ * and both contended tests failed in about a second on the outcome instead —
+ * two taps refunded the order twice, and five taps sent Stripe five reversals
+ * with five distinct idempotency keys. `expect(invoicing.keys)` is the line that
+ * reports it.
  */
 
 /** A shop, a customer, and one paid order with a refundable Stripe invoice. */
@@ -88,11 +105,63 @@ const orderRowLock = (orderId: string) =>
   sql`select id from orders where id = ${orderId} for update`;
 
 /**
+ * A meeting point for `total` taps, opened once that many have **either
+ * answered or reached the provider**.
+ *
+ * This is what makes the multi-tap tests below deterministic instead of nearly
+ * deterministic. Their claim is that the losing taps are refused *locally*,
+ * with `in_progress`, while the winner is away at Stripe — and in production
+ * that is a network round trip of hundreds of milliseconds, so the losers
+ * certainly answer inside it. A fake provider that returns on the next
+ * microtask does not reproduce that at all: the winner comes straight back and
+ * asks for the order row again to write `status = 'refunded'`, and Postgres is
+ * free to grant it that lock ahead of losers still queued for their turn. Those
+ * losers then read a refunded order and answer `not_paid` — a correct,
+ * different refusal that the test is not describing.
+ *
+ * That is not theoretical. Instrumenting the five-tap test and running the
+ * real-Postgres suites fifteen times produced
+ * `in_progress, not_paid, not_paid, not_paid, refunded` once, and a full-suite
+ * run before that produced two `not_paid`. Both are the same overtake, and
+ * neither is a product defect: one Stripe call, one intent, one refunded order
+ * every time. The test was asserting a scheduling accident.
+ *
+ * Counting arrivals from *both* sides is what keeps it honest when the guard is
+ * gone. Delete the `.for("update")` in `claimOrderRefund` and all five taps
+ * claim, so all five reach the provider — the meeting point still opens, all
+ * five reversals go through, and the run fails on `invoicing.keys` having five
+ * entries, which is the failure this file exists to produce. A rendezvous that
+ * only counted answers would deadlock there and report a timeout instead.
+ */
+function tapsMeetingAtStripe(total: number): { arrive: () => void; open: Promise<void> } {
+  let opened!: () => void;
+  const open = new Promise<void>((resolve) => {
+    opened = resolve;
+  });
+  let arrived = 0;
+  return {
+    arrive: () => {
+      arrived += 1;
+      if (arrived >= total) opened();
+    },
+    open,
+  };
+}
+
+/**
  * An invoicing provider that counts reversals and records the idempotency key
  * of each. Anything that reaches it has already passed the local guard, so the
  * count *is* the number of refunds Stripe was asked for.
+ *
+ * `atStripe` stands in for the round trip's duration: a tap inside it has
+ * committed its claim and cannot answer its caller yet, which is the state the
+ * losing taps are supposed to find. Omitted — for the sequential test, where
+ * there is no second tap to wait for — the call returns as before.
  */
-function countingInvoicing(): { provider: InvoicingProvider; keys: string[] } {
+function countingInvoicing(atStripe?: { arrive: () => void; open: Promise<void> }): {
+  provider: InvoicingProvider;
+  keys: string[];
+} {
   const keys: string[] = [];
   // `refundInvoice` is the only method this path reaches; the rest throw rather
   // than returning a plausible stub, so a call that shouldn't happen fails the
@@ -111,6 +180,10 @@ function countingInvoicing(): { provider: InvoicingProvider; keys: string[] } {
       idempotencyKey: string,
     ): Promise<RefundInvoiceResult> {
       keys.push(idempotencyKey);
+      if (atStripe) {
+        atStripe.arrive();
+        await atStripe.open;
+      }
       return { status: "refunded", refundId: `re_${keys.length}` };
     },
   };
@@ -129,17 +202,25 @@ describePostgres("refundOrder under real concurrency", () => {
   it("lets exactly one of two simultaneous refunds reach Stripe", async () => {
     const pg = await postgresTestDb();
     const { shopId, orderId } = await paidOrder(pg.db);
-    const invoicing = countingInvoicing();
+    const atStripe = tapsMeetingAtStripe(2);
+    const invoicing = countingInvoicing(atStripe);
 
     const gate = await holdRowLock(pg, orderRowLock(orderId));
     // Two genuinely separate connections, so these are two Postgres backends —
-    // not two awaits interleaved on one.
-    const first = refundOrder(pg.connect(), shopId, orderId, invoicing.provider);
-    const second = refundOrder(pg.connect(), shopId, orderId, invoicing.provider);
+    // not two awaits interleaved on one. The winner is held at the provider
+    // until the loser has answered, so what is asserted below is the refusal
+    // that happens *during* the Stripe call rather than one that depends on
+    // which of the two next reached the order row (see `tapsMeetingAtStripe`).
+    const first = refundOrder(pg.connect(), shopId, orderId, invoicing.provider).finally(
+      atStripe.arrive,
+    );
+    const second = refundOrder(pg.connect(), shopId, orderId, invoicing.provider).finally(
+      atStripe.arrive,
+    );
 
     // Both are now inside `claimOrderRefund`'s transaction and blocked on the
-    // order row. This is the assertion that the `FOR UPDATE` exists at all:
-    // without it neither backend would ever wait, and this throws.
+    // order row, so dropping the gate starts them together. This establishes the
+    // race; it is not what detects a missing guard (see the header).
     await waitForLockWaiters(pg.db, 2);
     await gate.release();
 
@@ -163,11 +244,12 @@ describePostgres("refundOrder under real concurrency", () => {
     // replay protection cannot collapse them either.
     const pg = await postgresTestDb();
     const { shopId, orderId } = await paidOrder(pg.db);
-    const invoicing = countingInvoicing();
+    const atStripe = tapsMeetingAtStripe(5);
+    const invoicing = countingInvoicing(atStripe);
 
     const gate = await holdRowLock(pg, orderRowLock(orderId));
     const contenders = [0, 1, 2, 3, 4].map(() =>
-      refundOrder(pg.connect(), shopId, orderId, invoicing.provider),
+      refundOrder(pg.connect(), shopId, orderId, invoicing.provider).finally(atStripe.arrive),
     );
 
     await waitForLockWaiters(pg.db, contenders.length);

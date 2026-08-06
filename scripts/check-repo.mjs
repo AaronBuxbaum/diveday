@@ -33,6 +33,7 @@ const checks = [
   ["timezone", "check-timezone.mjs"],
   ["copy", "check-copy.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
+  ["migrations", "check-migrations.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

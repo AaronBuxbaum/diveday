@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
@@ -891,8 +891,7 @@ const emptyContent = {
   overview: null,
   heroImageUrl: null,
   heroImageAlt: null,
-  imageUrls: [],
-  imageAlts: [],
+  galleryPhotos: [],
   durationText: null,
   groupSizeText: null,
   prerequisiteNote: null,
@@ -1094,6 +1093,84 @@ describe("course content and public pages (in-memory PGlite)", () => {
       minimumCertificationLevel: "open_water",
     });
     expect(saved?.faqs).toEqual([{ question: "Do I need a computer?", answer: "We rent one." }]);
+  });
+
+  it("stores each gallery caption on the photo it belongs to, and reads it back paired", async () => {
+    // DATA-L4: captions used to live in a second jsonb array lined up by
+    // position, so nothing in the round trip could tell a shifted caption from
+    // a correct one. Now the pairing survives the database because it *is* the
+    // row — a caption cannot arrive under a different photo than it left under.
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      galleryPhotos: [
+        { url: "/a.jpg", alt: "Fitting a mask" },
+        // A blank caption is "no caption yet", and it stays attached to its own
+        // photo rather than pulling the next one up a slot.
+        { url: "/b.jpg", alt: "" },
+        { url: "/c.jpg", alt: "Surfacing at the mooring" },
+      ],
+    });
+
+    expect((await getCourseBySlug(db, shop.id, course.slug))?.galleryPhotos).toEqual([
+      { url: "/a.jpg", alt: "Fitting a mask" },
+      { url: "/b.jpg", alt: "" },
+      { url: "/c.jpg", alt: "Surfacing at the mooring" },
+    ]);
+  });
+
+  it("holds the gallery in one column — the superseded pair is gone from the table", async () => {
+    // The contract half of DATA-L4 (20260806105408_drop-course-legacy-gallery).
+    // The dual-write that kept `image_urls`/`image_alts` in step for one
+    // release is deleted, so what this asserts is that a gallery save touches
+    // nothing but `gallery_photos` and the two old columns are not merely
+    // unwritten but absent — a re-added write would fail here rather than
+    // quietly resurrect the parallel-array shape.
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      galleryPhotos: [
+        { url: "/a.jpg", alt: "Fitting a mask" },
+        { url: "/b.jpg", alt: "" },
+      ],
+    });
+
+    const [row] = await db
+      .select({ galleryPhotos: courses.galleryPhotos })
+      .from(courses)
+      .where(eq(courses.id, course.id));
+    expect(row?.galleryPhotos).toEqual([
+      { url: "/a.jpg", alt: "Fitting a mask" },
+      { url: "/b.jpg", alt: "" },
+    ]);
+
+    const columns = await db.execute(
+      sql`SELECT "column_name" FROM information_schema.columns WHERE "table_name" = 'courses'`,
+    );
+    const names = (columns.rows as { column_name: string }[]).map((entry) => entry.column_name);
+    expect(names).toContain("gallery_photos");
+    expect(names).not.toContain("image_urls");
+    expect(names).not.toContain("image_alts");
+  });
+
+  it("clears the gallery to an empty list rather than a null", async () => {
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, {
+      shopId: shop.id,
+      title: "Cavern Diver",
+      galleryPhotos: [{ url: "/a.jpg", alt: "Fitting a mask" }],
+    });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, galleryPhotos: [] });
+
+    expect((await getCourseBySlug(db, shop.id, course.slug))?.galleryPhotos).toEqual([]);
   });
 
   it("hides a course from scheduling without deleting it — staff can still find and reshow it", async () => {

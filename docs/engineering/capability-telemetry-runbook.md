@@ -18,7 +18,13 @@ the single mount point both SDKs go through (CR-001, hardened after a
 security review found the `confirm` token unprotected in the original fix).
 `/forgot-password` carries no token in its URL at all — the email is a POST
 body field — so it needs no redaction entry. Ordinary public/staff routes
-pass through untouched.
+pass through untouched. One capability URL is **not** on that list and should
+be: `/unsubscribe/[token]` — see
+[the gap the redaction itself still has](#the-gap-the-redaction-itself-still-has).
+
+All of this is redaction *inside this application's process*, and there is a
+second, larger copy of the same URLs it can never reach — see
+[What redaction cannot reach: the platform's access logs](#what-redaction-cannot-reach-the-platforms-access-logs).
 
 ## Auditing existing telemetry for leaked tokens
 
@@ -44,6 +50,10 @@ may still contain raw tokens. To check:
    below.
 4. Vercel raw analytics data has a fixed retention window; once it rolls
    off there is nothing further to audit for that period.
+5. Then audit the **access logs** separately. They are a different store with a
+   different window and no redaction at all — the steps are in
+   [What redaction cannot reach](#what-redaction-cannot-reach-the-platforms-access-logs)
+   below, and a token found there is rotated through the same table.
 
 ## Rotating or revoking an exposed capability
 
@@ -53,14 +63,230 @@ may still contain raw tokens. To check:
 | Readiness link (`/ready/[token]`) | Hashed, expiring, revocable row in `booking_capabilities` (`purpose = 'readiness'`; see `src/db/booking-capabilities.ts`, [ADR 20260723-booking-capabilities](../architecture/decisions/20260723-booking-capabilities.md)) | Yes (CR-002) — call `revokeBookingCapabilities(db, { shopId, bookingId, purpose: "readiness" })`; a cancelled booking's outstanding links also fail closed automatically. Note: reissuing does **not** supersede an earlier still-valid link (both stay valid) — revoke explicitly if the old one must stop working. Bounded, though: one booking holds at most `MAX_LIVE_CAPABILITIES_PER_PURPOSE` (20) live links per purpose, and issuing past that revokes the oldest, newest kept. Tokens are stored only as hashes, so a page render that needs a link must mint one — the cap is what stops a confirmation page that is reloaded fifty times leaving fifty working credentials behind. |
 | Seat-claim link (`/claim/[token]`) | Hashed, expiring, revocable row in `booking_capabilities` (`purpose = 'claim'`; same table/module as readiness, [ADR 20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md)) | Yes — and treat an exposed one as high stakes while the seat is unclaimed: it lets its holder re-point that seat's identity to themselves (never any other seat, and never after departure). Call `revokeBookingCapabilities(db, { shopId, bookingId, purpose: "claim" })`; a successful claim also revokes **every** outstanding capability on the booking (all purposes), so a claim link is one-shot in effect, and a cancelled booking's or trip's links fail closed automatically. Same per-purpose live cap as the readiness link. |
 | Confirm link (`/s/[shopSlug]/trips/[id]?booking=[token]`) | Hashed, expiring, revocable row in `booking_capabilities` (`purpose = 'confirm'`; same table/module as readiness) | Yes — call `revokeBookingCapabilities(db, { shopId, bookingId, purpose: "confirm" })`; a cancelled booking's or cancelled trip's outstanding confirm links also fail closed automatically (CR-003, hardened after a security review found trip cancellation alone didn't). Same per-purpose live cap as the readiness link above. |
-| Recap link (`/recap/[token]`) | Stateless signed token, no stored row (`src/lib/recap-links.ts`) | Not yet — the token is valid for the life of the booking id and `AUTH_SECRET`. No ticket has moved this onto `booking_capabilities` yet; until it does, an exposed recap link cannot be individually revoked. |
+| Recap link (`/recap/[token]`) | Stateless signed token, no stored row (`src/lib/recap-links.ts`) | Not individually — there is no row to revoke, and no ticket has moved this onto `booking_capabilities`. It does die on its own, though: every payload carries its own issued-at and stops verifying past `RECAP_TOKEN_MAX_AGE_MS` (180 days), so an exposed recap link is bounded rather than valid for the life of the booking id. |
 | Verify-email link (`/verify/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'email_verification'`; see `src/db/account-tokens.ts`, [ADR 20260725-account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md)) | Low stakes if exposed (it only confirms an address). Reissuing (a fresh onboarding send) supersedes the old token; it also simply expires after 3 days. |
 | Password-reset link (`/reset-password/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'password_reset'`; same table/module) | Yes — issuing a new reset request for the same account supersedes any outstanding one, and a used or expired (1 hour) token stops verifying immediately either way. |
 | Staff-invite link (`/invite/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'invite'`; same table/module, [ADR 20260726-staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md)) | Yes — and treat it as high stakes: an unconsumed invite token creates a *staff* account, so an exposed one is an account-takeover-equivalent path, not a low-stakes confirmation like email verification. Reissuing the invite supersedes the outstanding token; it also expires after 7 days (`INVITE_TTL_MS`, `src/lib/account-tokens.ts`). |
 | Staff calendar feed (`/calendar/[token]`) | Hashed, **non-expiring**, revocable row in `calendar_feeds` (`src/features/calendar-sync/feed-store.ts`, [ADR 20260730-calendar-feed-subscriptions](../architecture/decisions/20260730-calendar-feed-subscriptions.md)) | Yes — call `revokeCalendarFeeds` (sets `revoked_at`), or rotate from the staff UI at `shop/[shopSlug]/settings/calendar`, which revokes the old row and issues a new one in the same step. `verifyCalendarFeed` re-derives access on **every** poll — an unknown token, a revoked row, and a person who has since lost their staff role all return the same 404, and `revokeFeedsForFormerStaff` closes outstanding feeds when a role is removed. This is the longest-lived credential of the set by design: no expiry, because a feed that died after 60 days would silently stop updating a captain's calendar. Rotation is the mitigation, so rotate rather than wait it out. |
+| Email-unsubscribe link (`/unsubscribe/[token]`) | Hashed, **non-expiring, non-revocable** row — two of them, `last_minute_list_unsubscribe_tokens` and `person_courtesy_email_unsubscribe_tokens` (`src/db/last-minute-list.ts`, `src/db/courtesy-email.ts`); neither table has an `expires_at` or a `revoked_at` column | No. Lowest stakes of the set — the capability is "stop sending this address these emails", and the page reveals only the shop's name — but it is also the only one with no expiry *and* no revocation, so an exposed one works forever. It is additionally the one shape `redactCapabilityUrl` does not cover; see [the gap the redaction itself still has](#the-gap-the-redaction-itself-still-has). |
 
-For a leaked recap link, the only current mitigation is confirming the
-redaction above stops further leakage and, for a credible active-abuse
-case, rotating `AUTH_SECRET` (which invalidates every outstanding
-`recap-links.ts`-signed token — a blunt, shop-wide instrument, not a scoped
-revocation, and it does **not** touch `booking_capabilities` rows at all).
+For a leaked recap link, the only current mitigations are confirming the
+redaction above stops further leakage, waiting out the 180 days, and — for a
+credible active-abuse case — rotating the **signing key**. Read that last one
+carefully before reaching for it: the key is `RECAP_LINK_SECRET` when that
+variable is set on the deployment, and only otherwise an HKDF derivation over
+`AUTH_SECRET` (`recapSecret`, `src/lib/recap-links.ts`). Rotating `AUTH_SECRET`
+on a deployment that sets `RECAP_LINK_SECRET` invalidates **no** recap link at
+all, while still signing out every staff member — check which one is set first.
+Either way it is a blunt, shop-wide instrument rather than a scoped revocation,
+and it does **not** touch `booking_capabilities` rows.
+
+## What redaction cannot reach: the platform's access logs
+
+Everything above happens **inside this application's process**. `redactCapabilityUrl`
+has exactly three call sites — the `beforeSend` hooks on Vercel Analytics and
+Speed Insights (`src/app/observability-client.tsx`) and Sentry's
+`beforeSend`/`beforeBreadcrumb` (`src/instrumentation.ts` for the server,
+`src/instrumentation-client.ts` for the browser, both via `redactEvent` /
+`redactBreadcrumb`) — and all three edit an event *this app composes* before it
+is shipped to a vendor.
+
+Vercel's own request logging is not one of those events. The platform records
+the request line it routed — method, full path, query string, status — as part
+of serving it, before any of this repo's code is entered and regardless of
+whether that code runs at all. A 404, a build-time redirect, a request the
+function never saw: all logged, none of them ours to filter. There is no
+`beforeSend` for it, no allowlist, no header. **Nothing that can be written in
+this repository changes what those logs contain**, which is why this is a
+residual to be managed rather than a bug to be fixed.
+
+So the raw capability URL — `/waivers/<token>`, `/ready/<token>`,
+`/claim/<token>`, `/calendar/<token>`, `?booking=<token>`, all of them — is
+retained there in full, for as long as that store retains anything.
+
+### What is actually exposed, and to whom
+
+**Who can read it.** Everyone with access to the Vercel project's
+logs/observability views, which today is every member of the Vercel team the
+project belongs to — the same trust boundary as the production database, not a
+public one. Nothing in this repository or in the
+[manual-actions registry](manual-actions.md) configures a log drain, so by
+default nothing forwards these lines onward — but a drain is a dashboard
+setting with no diff, so confirm rather than assume. The app's own structured
+`log()` output (`src/lib/log.ts`) writes over `console.*` and lands in the same
+store, which is why that module is careful never to log a key or a token
+itself. Adding a drain would copy raw capability URLs into whatever it points
+at, with that system's retention and that system's access list — see
+[the decision this needs](#the-part-that-is-not-engineerings-to-decide).
+
+**For how long.** A fixed, plan-dependent window that this repo does not pin
+and must not restate as a number: read the current figure off the project's
+observability/log settings when you need it. What matters operationally is the
+shape — it is short, it rolls off on its own, and once it has, there is nothing
+left to audit for that period (the same property the analytics audit above
+relies on).
+
+**What someone who found a token there could do.** Exactly what the
+rotate/revoke table says that capability grants — the log gives no extra power,
+only the token. Worst first: `/invite/<token>` mints a **staff** account, which
+is account-takeover-equivalent; `/reset-password/<token>` takes over a staff
+account within its 1-hour window; `/calendar/<token>` replays the shop's whole
+schedule indefinitely and never expires (only the far lower-stakes unsubscribe
+link shares that property); `/claim/<token>` re-points one unclaimed seat's
+identity;
+`/waivers/<token>` reaches one diver's medical answers; `/ready/<token>` and the
+confirm token reach one booking's prep state and can self-cancel it;
+`/recap/<token>` reaches one booking's recap.
+
+Note the escalation that is easy to miss when reasoning about "used" tokens: a
+**completed** waiver link is not inert. `/waivers/[token]` still resolves a
+completed, non-superseded record and renders its confirmation — and that page
+mints a fresh `readiness` capability for the booking and puts the link on the
+screen (`issueBookingCapability`, `src/app/waivers/[token]/page.tsx`). That is
+deliberate and right for the diver who taps their own confirmation twice, but it
+means a signed-and-done waiver URL found in a log is still a working path to a
+readiness link, and from there to self-cancelling the booking. Treat a leaked
+waiver token as live regardless of whether it was already signed.
+
+### Auditing the access logs
+
+Different store, different window, same rotate/revoke table at the end of it.
+
+1. Open the project in the Vercel dashboard → **Observability** / **Logs**, and
+   set the range to the whole retained window rather than the default view.
+2. Filter on `waivers/`, `ready/`, `recap/`, `verify/`, `reset-password/`,
+   `invite/`, `claim/`, `calendar/` and `unsubscribe/` as **path** prefixes, and
+   separately on `booking=` for the query-parameter shape. Unlike Analytics,
+   nothing here is templated, so *every* matching row carries a real token —
+   the question is which ones, not whether.
+3. Treat the result as a credential list, not a report: do not export it, do not
+   paste an excerpt into a ticket or a PR, and do not screenshot it. Note the
+   affected bookings/accounts and rotate per the table above.
+4. This audit is only ever worth running for a concrete reason — a suspected
+   account compromise, a departing team member, a drain that was configured and
+   should not have been. Running it speculatively puts more eyes on the tokens
+   than leaving it alone does.
+
+### The compensating controls, and exactly how far each goes
+
+Stated precisely, because an overstated control is worse than an admitted gap.
+
+- **Nothing plaintext is stored anywhere else.** Every capability above is held
+  as a hash (`hashBearerToken`, `src/lib/bearer-tokens.ts`; `account_tokens`,
+  `waiver_records`, `booking_capabilities`, `calendar_feeds`), and the recap
+  token is stateless and stored nowhere at all. The access log is therefore one
+  of only two places a raw token exists — the other being the diver's own inbox
+  or phone.
+- **Every capability is purpose-bound and single-subject.** A `booking_capabilities`
+  row verifies only against the purpose it was minted for (`verifyBookingCapability`),
+  recap tokens are domain-separated from readiness by a purpose prefix folded
+  into the signature, and a claim link can only ever re-point its own seat.
+  There is no token in this system that widens to a second booking, a second
+  diver, or a second shop.
+- **Most of them expire, and the windows are short where the stakes are high.**
+  Password reset 1 hour, email verification 3 days, staff invite 7 days
+  (`src/lib/account-tokens.ts`); waiver link 7 days (`WAIVER_LINK_TTL_MS`,
+  `src/lib/waivers.ts`); recap 180 days (`RECAP_TOKEN_MAX_AGE_MS`). Booking
+  capabilities are anchored to the **trip**, not to issuance — `tripEndsAt` plus
+  a 30-day grace, floored at 24 hours and capped at two years
+  (`capabilityExpiryFor`, `src/lib/booking-capabilities.ts`) — so a
+  season-ahead booking's readiness link outlives the log window by design.
+  **Two do not expire at all:** the staff calendar feed and the unsubscribe
+  links.
+- **Single-use, but only where it says so.** The three `account_tokens`
+  purposes are genuinely one-time (`consumeAccountToken`), and a successful seat
+  claim revokes *every* capability on that booking, so a claim link is one-shot
+  in effect. A waiver token is **not** single-use in the sense that matters here
+  (see the completed-link escalation above), and readiness, confirm, recap and
+  calendar tokens are replayable by design.
+- **Revocation exists for most of it, and is the real mitigation.**
+  `revokeBookingCapabilities` for readiness/claim/confirm, reissue-supersedes for
+  waivers and account tokens, `revokeCalendarFeeds` (or rotate from
+  `shop/[shopSlug]/settings/calendar`) for the feed. Cancelling a booking or a
+  trip fails its outstanding links closed automatically. **Recap and unsubscribe
+  have no revocation at all.**
+- **A leaked token buys only what it grants.** None of these is a session:
+  `/shop/**` stays staff-only end to end, and a booking capability reaches one
+  booking. The two that *are* account-shaped — invite and password reset — are
+  the two with the shortest windows and the one-time semantics, which is not a
+  coincidence.
+- **Rate limiting bounds guessing, not replay.** `capabilityAction` (60/hour per
+  IP) is spent *before* the token is verified, so it throttles brute force —
+  see [rate-limiting-runbook.md](rate-limiting-runbook.md). It does nothing
+  about a single valid token replayed once.
+
+### The gap the redaction itself still has
+
+`/unsubscribe/[token]` carries a bearer token in its path exactly like the eight
+routes at the top of this document, and `CAPABILITY_ROUTE_PREFIXES` does not
+list it — so its raw token reaches Analytics, Speed Insights and Sentry
+unredacted, on top of the access-log residual every other capability shares. Two
+token kinds share the route (a last-minute-list entry's opt-out and a person's
+courtesy-email opt-out) and neither table carries an expiry or a revocation
+column, so an exposed one works forever.
+
+The stakes are the lowest of the set — the capability is "stop these emails" and
+the page reveals only a shop name — which is presumably why it was missed rather
+than declined. It is a one-line addition to `CAPABILITY_ROUTE_PREFIXES` plus a
+case in `src/app/observability.test.ts`, and it should be made; this section
+records the state until it is, because a list that silently omits an entry is
+how the `confirm` token stayed unprotected through the first CR-001 fix.
+
+### What would remove the residual, and why none of it has been done
+
+- **Exchange the URL token for a cookie on first GET.** `/waivers/<token>` 302s
+  to a token-less path and sets an HttpOnly, path-scoped, short-lived cookie.
+  This is the strongest option and still does not remove the residual — the
+  redeeming GET is itself logged with the token in it. It narrows exposure from
+  "the whole retention window, on every visit" to "one line, once", but only if
+  the exchange also burns the URL form, which makes every one of these links
+  strictly single-use. That is the blocker: the readiness link is *designed* to
+  be reopened all week, and a diver who taps a waiver link, gets interrupted at
+  the dock, and taps the same SMS again is the ordinary case, not an edge one.
+- **Move the token into a fragment (`#token`) or a POST body.** A fragment is
+  never sent to the server, so it genuinely cannot be logged — but the page then
+  has to be a client shell that reads `location.hash` and posts it, which costs
+  these routes their static shell and `export const instant = true`
+  ([ADR 20260804-instant-navigation](../architecture/decisions/20260804-instant-navigation.md)),
+  and a fragment does not survive a redirect — Stripe's checkout return URL
+  carries the `confirm` token back through one. A POST body needs a form, which
+  means the link cannot be a link.
+- **Shorten the TTLs.** The cheap version of the same benefit, needing no design
+  change: a token that has expired by the time anyone reads the log is not a
+  credential. It trades directly against the reason `capabilityExpiryFor` is
+  anchored to the trip — links that die before the trip they are about were a
+  real bug, not a hypothetical one.
+
+None of these is the reason to keep the design. The reason is the property the
+whole capability model exists for: **a URL a shop can paste into an SMS, a
+WhatsApp message or an email, that works when a diver taps it on a phone at a
+dock — no app, no account, no password.** Every alternative above either breaks
+re-tapping the same link, breaks arriving via a redirect, or turns the page into
+a client-rendered shell. Given the exposure is bounded by a short retention
+window inside a trust boundary we already extend to the production database, the
+trade has not been worth making. That judgement is recorded here so it can be
+revisited deliberately rather than rediscovered.
+
+Whatever changes, note that links already sent are already in inboxes and
+already in logs; a redesign narrows the future, never the past.
+
+### The part that is not engineering's to decide
+
+Two questions here are access policy and spend, not code:
+
+1. **Who may hold a Vercel seat with log access, and is that list reviewed?**
+   The access log is a store of live bearer credentials for divers' medical
+   answers and staff account creation. It is currently governed by whoever is on
+   the Vercel team, which no document names.
+2. **May a log drain ever be configured, and if so under what redaction?**
+   A drain copies raw capability URLs into a third system with its own retention
+   and its own access list. This is not theoretical: other runbooks already send
+   operators to "the log drain" to read `rate_limit.store_failed`
+   ([rate-limiting-runbook.md](rate-limiting-runbook.md#when-the-store-is-failing))
+   and `cron_usage.scan_complete` ([manual-actions.md](manual-actions.md)), so
+   the pull toward configuring one is already there.
+
+Both belong in the [decision register](../product/human-decisions.md#decision-register)
+alongside H-04's incident-ownership items, not in this runbook. Until they are
+answered, treat the access log as a credential store: same care, same access
+list, same reason not to paste an excerpt into a ticket.

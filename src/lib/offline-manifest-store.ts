@@ -4,6 +4,7 @@ import { nowDate } from "./clock";
 import {
   canRecordOfflineStatus,
   isOfflineManifestExpired,
+  OFFLINE_MANIFEST_MAX_RETENTION_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
@@ -16,6 +17,90 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
+
+/**
+ * The hard ceiling on the pending-event exception below: how long past a
+ * record's own `expiresAt` it may be kept readable *because* it still holds an
+ * unsynced roll-call event. Past this it is deleted regardless of what is
+ * queued on it, and the loss is written to the discard notice this module
+ * keeps (see {@link readDiscardedOfflineRecords}) instead of vanishing.
+ *
+ * **Why there has to be one at all** (security review, 2026-08-06, F3). The
+ * exception was bounded by prose rather than by arithmetic: a foreign shop's
+ * record survives "until the original shop's own session next runs a purge pass
+ * and finds it resolved". That moment is not guaranteed to arrive. A pending
+ * event can only reconcile under the shop that recorded it, so if that shop's
+ * staff never sign into this tablet again — a freelance captain who moves on, a
+ * boat sold, a tablet reassigned — the record is retained forever, past both its
+ * 14-day and its 7-day window. `/offline-manifest` has no auth gate by design
+ * (the shell must open with the radio off), so "forever" means anyone holding
+ * the tablet can read that shop's diver names, emergency contacts and
+ * readiness/medical blockers, with no session, indefinitely. An unbounded
+ * exception to a retention rule is not a retention rule.
+ *
+ * **Why 28 days.** Twice {@link OFFLINE_MANIFEST_MAX_RETENTION_MS}, the longest
+ * a copy of a roster is ever meant to live on a device, expressed as that
+ * constant rather than as a fresh number so shortening the retention window
+ * shortens this with it. Bracketed on both sides:
+ *
+ * - *Long enough that a real trip's events always get their chance.* A record
+ *   only reaches this ceiling after it has already expired, which is at most 7
+ *   days after the boat came home (`OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS`).
+ *   Four further weeks of any signal, any sign-in by the shop that recorded it,
+ *   any push the worker wakes on, is longer than a liveaboard charter, a crew
+ *   rotation, or a tablet away for repair. Nothing plausible about a dive
+ *   operation makes 35 days from the trip ending "too soon to have tried".
+ * - *Short enough that "indefinitely" stops being true.* The worst case is
+ *   `savedAt + 14 + 28` = 42 days, and measured from the trip itself
+ *   `endsAt + 7 + 28` = 35. That lands the grace period itself just under the 30
+ *   days `RETENTION_DAYS.push_subscriptions` (`src/lib/retention.ts`) gives the
+ *   closest analogue in the server-side table — a *device* credential, kept only
+ *   while its trip is near, "pure blast radius" afterwards. The reasoning there
+ *   applies with more force here, not less: this is a shared boat tablet holding
+ *   emergency contacts and medical blockers, not a row in a managed database.
+ *
+ * `offline-manifest-store.test.ts` asserts both bounds rather than trusting this
+ * comment, the same way `retentionWindowsOutlastStripeRetries` does for Stripe.
+ *
+ * It lives here rather than beside the other windows in `offline-manifests.ts`
+ * because it is a rule about *this store's* deletion behaviour — nothing that
+ * merely reads a snapshot has any use for it.
+ */
+export const OFFLINE_MANIFEST_PENDING_GRACE_MS = 2 * OFFLINE_MANIFEST_MAX_RETENTION_MS;
+
+/**
+ * What this device gave up when the ceiling above fired: enough for a human to
+ * go and find out what was lost, and deliberately nothing more. No diver names,
+ * no booking ids, no emergency contacts, no readiness text — the notice must not
+ * quietly re-retain the very roster the discard exists to remove. A trip title
+ * and the shop's own name are what make the loss actionable ("Reef Runners ·
+ * Morning Two-Tank"); both are already on every staff-facing screen and neither
+ * describes a person.
+ */
+export type DiscardedOfflineRecord = {
+  tripId: string;
+  tripTitle: string;
+  shopName: string;
+  /** How many roll-call events on that record had never reached the server. */
+  pendingEvents: number;
+  discardedAt: string;
+};
+
+/**
+ * Stored beside the encryption key rather than in an object store of its own,
+ * which would mean bumping `DB_VERSION`. That bump is not free here: an older
+ * offline shell held in a device's service-worker cache (the whole reason
+ * `OFFLINE_MANIFEST_SHELL_VERSION` exists) opens this database at version 1, and
+ * `indexedDB.open(name, 1)` against a version-2 database fails outright with a
+ * `VersionError` — so a schema bump would take a stale-but-working dock copy and
+ * brick its storage entirely, on the surface that exists for having no signal.
+ * `KEY_STORE` is an out-of-line-keyed store, so an entry under a different key is
+ * invisible to every version of this module that only ever reads `KEY_ID`.
+ */
+const DISCARD_NOTICE_KEY = "discarded-pending-roll-call-v1";
+
+/** Newest kept; a device that somehow discards more than this has bigger news. */
+const DISCARD_NOTICE_LIMIT = 50;
 
 type StoredRecord = {
   tripId: string;
@@ -170,6 +255,114 @@ function withManifestLock<T>(tripId: string, fn: () => Promise<T>): Promise<T> {
   return navigator.locks.request(`diveday-offline-manifest:${tripId}`, fn);
 }
 
+/**
+ * Serializes the read-modify-write on the discard notice, which several trips'
+ * reads can hit at once (`listOfflineManifests` loads every record in parallel,
+ * and each one can discard). Its own lock name, never taken while holding it —
+ * `withManifestLock` → this, never the reverse — so the pair cannot deadlock.
+ */
+function withNoticeLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) return fn();
+  return navigator.locks.request("diveday-offline-manifest-discards", fn);
+}
+
+async function readNotices(db: IDBDatabase): Promise<DiscardedOfflineRecord[]> {
+  const transaction = db.transaction(KEY_STORE, "readonly");
+  const stored = await requestResult(transaction.objectStore(KEY_STORE).get(DISCARD_NOTICE_KEY));
+  await transactionDone(transaction);
+  return Array.isArray(stored) ? (stored as DiscardedOfflineRecord[]) : [];
+}
+
+/**
+ * Appends the loss so a screen can report it later. **Never a throw path**: the
+ * caller is mid-delete on a record that must go regardless (see
+ * {@link OFFLINE_MANIFEST_PENDING_GRACE_MS}), and failing here would either
+ * abort a retention deletion to preserve a footnote about it, or — worse —
+ * delete the record and then propagate an error to a caller that treats it as
+ * "storage is broken". Losing the notice is bad; keeping a foreign shop's
+ * roster because the notice could not be written is the finding.
+ */
+async function noteDiscardedRecord(
+  db: IDBDatabase,
+  envelope: OfflineManifestEnvelope,
+  pendingEvents: number,
+): Promise<void> {
+  const trip = envelope.snapshot.manifests[0]?.trip;
+  try {
+    await withNoticeLock(async () => {
+      const existing = await readNotices(db);
+      const next = [
+        ...existing,
+        {
+          tripId: trip?.id ?? "",
+          tripTitle: trip?.title ?? "",
+          shopName: envelope.snapshot.shop.name,
+          pendingEvents,
+          discardedAt: nowDate().toISOString(),
+        } satisfies DiscardedOfflineRecord,
+      ].slice(-DISCARD_NOTICE_LIMIT);
+      const transaction = db.transaction(KEY_STORE, "readwrite");
+      transaction.objectStore(KEY_STORE).put(next, DISCARD_NOTICE_KEY);
+      await transactionDone(transaction);
+    });
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Every unsynced roll-call record this device has thrown away at the retention
+ * ceiling and not had acknowledged yet — the offline shell reads this and says
+ * so on screen.
+ *
+ * It is durable rather than a return value from the delete, because the delete
+ * frequently happens where there is no screen at all: the service worker's push
+ * refresh, or `OfflineManifestAutoSave` inside the staff shop layout, both with
+ * the shell closed. A returned value would be dropped by exactly the callers
+ * whose loss nobody would otherwise hear about (that is the same shape as the
+ * bug commit 194ee22 fixed in the worker — "no screen to say so"). Written once
+ * and kept until a human acknowledges it: it carries no personal data, so
+ * holding it costs nothing, and a notice that cleared itself on display would be
+ * missed by the tablet nobody opened that day.
+ */
+export async function readDiscardedOfflineRecords(): Promise<DiscardedOfflineRecord[]> {
+  const db = await openDatabase();
+  try {
+    return await readNotices(db);
+  } finally {
+    db.close();
+  }
+}
+
+/** Clears the notice above, once a human has actually seen it. */
+export async function acknowledgeDiscardedOfflineRecords(): Promise<void> {
+  const db = await openDatabase();
+  try {
+    await withNoticeLock(async () => {
+      const transaction = db.transaction(KEY_STORE, "readwrite");
+      transaction.objectStore(KEY_STORE).delete(DISCARD_NOTICE_KEY);
+      await transactionDone(transaction);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * True once a record is far enough past its own `expiresAt` that the
+ * pending-event exception stops applying — see
+ * {@link OFFLINE_MANIFEST_PENDING_GRACE_MS} for the window and why it is bounded
+ * at all. Reads the *stored* (plaintext) expiry, the same field
+ * `isOfflineManifestExpired` is given here, so the two answers can never be
+ * computed from different copies of the same date.
+ */
+function isPastPendingGrace(
+  record: Pick<StoredRecord, "expiresAt">,
+  now: Date = nowDate(),
+): boolean {
+  return new Date(record.expiresAt).getTime() + OFFLINE_MANIFEST_PENDING_GRACE_MS <= now.getTime();
+}
+
 export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const db = await openDatabase();
   try {
@@ -196,8 +389,29 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       // server is the only copy of that evidence — keep serving it (as
       // stale) rather than silently discarding it, until every event is
       // resolved and it can expire for real on the next read.
-      const hasUnsyncedEvents = envelope.events.some((event) => event.syncStatus === "pending");
-      if (!hasUnsyncedEvents) {
+      //
+      // **Until the ceiling.** That exception used to have no end (security
+      // review, 2026-08-06, F3): an event can only reconcile under the shop
+      // that recorded it, so a record whose shop never signs into this device
+      // again was kept — decryptable, listed, and openable with no session on
+      // a shell that has no auth gate — forever. Past
+      // OFFLINE_MANIFEST_PENDING_GRACE_MS the record goes regardless of what
+      // is queued on it, and the loss is written down (readDiscardedOfflineRecords)
+      // rather than dropped in silence, because unsynced evidence of who came
+      // back from a dive is not something to delete quietly.
+      //
+      // The rule lives here, in the one function that decrypts a record and
+      // decides whether it still exists, so `listOfflineManifests` and
+      // `purgeOfflineManifestsExceptShop` inherit it instead of re-deriving
+      // it — the same chokepoint discipline the purge's own slug guard
+      // follows. It is enforced lazily, on read: IndexedDB has no background
+      // expiry, so the guarantee is "no read after the ceiling ever returns
+      // it", exactly as the ordinary retention window has always worked.
+      const pendingEvents = envelope.events.filter(
+        (event) => event.syncStatus === "pending",
+      ).length;
+      if (pendingEvents === 0 || isPastPendingGrace(record)) {
+        if (pendingEvents > 0) await noteDiscardedRecord(db, envelope, pendingEvents);
         await deleteOfflineManifest(tripId, db);
         return null;
       }
@@ -213,8 +427,11 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
  * ADR 20260726-shopwide-offline-manifest-priming). Reuses loadOfflineManifest
  * per trip rather than a bespoke bulk-decrypt path so the same expiry/
  * pending-event rules (keep an expired record alive only while it still
- * holds an unsynced roll-call event) apply exactly once, in one place,
- * instead of being re-implemented here and risking drift.
+ * holds an unsynced roll-call event, and only until
+ * OFFLINE_MANIFEST_PENDING_GRACE_MS past its expiry) apply exactly once, in
+ * one place, instead of being re-implemented here and risking drift. That is
+ * also what makes simply *opening the shell* enough to clear a record past the
+ * ceiling — no session, no network, no purge pass required.
  *
  * Ordered upcoming-or-active trips first (soonest departure on top — "the
  * next boat leaving"), then past trips still within their post-trip
@@ -263,20 +480,32 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * shop — so a device shared across shops (a freelance captain, a resold or
  * reassigned boat tablet) could otherwise accumulate another shop's roster
  * indefinitely. Call this with the server-verified shop slug from
- * GET /api/offline-manifests/upcoming (never a client-supplied value) any
- * time that endpoint is reached, so the moment a different shop's staff
- * authenticates on this device, the previous shop's cached manifests stop
- * being readable — see ADR 20260726-shopwide-offline-manifest-priming.
+ * GET /api/offline-manifests/upcoming or GET /api/offline-manifests/identity
+ * (never a client-supplied value, and never one read off a snapshot this
+ * device already holds) any time either endpoint is reached, so the moment a
+ * different shop's staff authenticates on this device, the previous shop's
+ * cached manifests stop being readable — see ADR
+ * 20260726-shopwide-offline-manifest-priming.
  *
  * Never deletes a record still holding an unsynced (`pending`) roll-call
  * event: that event cannot be reconciled under a *different* shop's session
  * (the server would look it up against the wrong tenant and reject or
  * misattribute it), so deleting it here would destroy the only copy of that
- * evidence for good. It's left in place — visible until the original shop's
- * own session next runs a purge pass and finds it resolved, or it clears via
- * the ordinary expiry-once-no-pending-events rule above — the same
- * least-bad tradeoff `loadOfflineManifest` already makes for the single-shop
- * expiry case, applied here too.
+ * evidence for good. It's left in place — the same least-bad tradeoff
+ * `loadOfflineManifest` already makes for the single-shop expiry case,
+ * applied here too.
+ *
+ * **That reprieve is bounded, and not by this function.** It lasts until the
+ * original shop's own session next reconciles it, or until
+ * OFFLINE_MANIFEST_PENDING_GRACE_MS past the record's expiry, whichever comes
+ * first — and the ceiling is enforced inside `loadOfflineManifest`, which this
+ * function reads every candidate through. So a past-ceiling record is already
+ * gone by the time the pending check below looks at it (`current` is null), and
+ * there is deliberately no second copy of the rule here to drift from the
+ * first. Before that ceiling existed, "until the original shop signs in again"
+ * was the only bound on record that never had to arrive at all — see
+ * OFFLINE_MANIFEST_PENDING_GRACE_MS for why that is a finding rather than a
+ * tradeoff (security review, 2026-08-06, F3).
  *
  * The pending check and the delete both run under this trip's
  * `withManifestLock`, re-reading the record once the lock is held rather than
@@ -289,6 +518,28 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * lock for exactly this read-then-write race; this one hadn't.
  */
 export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+  // **The guard is here, at the chokepoint, and not at the call sites.**
+  //
+  // This is the most destructive function in the feature: it deletes every
+  // record whose shop does not match, so `""`, `undefined` or `null` makes
+  // *every* record a mismatch and wipes the device — the current shop's copies
+  // included, on a boat, with no page open to say so. A caller-side check only
+  // ever protects the callers that remember to write one, and the two that
+  // exist already disagreed about it: `OfflineManifestView` validated the slug
+  // was a non-empty string, while `OfflineManifestAutoSave` reached this
+  // through `(await response.json()) as OfflineManifestUpcomingResponse` — a
+  // cast, not a parse, which happily yields `undefined` for `body.shop.slug`
+  // and does not throw on the way past (security review, 2026-08-06). Put the
+  // refusal in the one function every path must go through and every present
+  // and future caller — a new surface, the service worker, a test — inherits
+  // it, with no version of "forgot to guard" that still reaches the delete
+  // loop below.
+  //
+  // The parameter stays typed `string`, so a caller that *knows* it may be
+  // holding `undefined` is still a `pnpm typecheck` failure rather than a
+  // silent no-op; this is the runtime half, for the values a cast lets past
+  // the compiler.
+  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return;
   const saved = await listOfflineManifests();
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
   await Promise.all(

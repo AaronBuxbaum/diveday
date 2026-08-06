@@ -5,7 +5,8 @@ import { Copyable } from "@/components/Copyable";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
@@ -230,17 +231,16 @@ export default async function PromosPage({
       ) : null}
 
       {connected ? null : (
-        <div className="mb-6">
-          <ShopNotice tone="warning" role="status">
-            {t.rich("promos.connectBanner", {
-              settingsLink: (chunks) => (
-                <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
-                  {chunks}
-                </Link>
-              ),
-            })}
-          </ShopNotice>
-        </div>
+        <PaymentsConnectCta
+          variant="banner"
+          message={t.rich("promos.connectBanner", {
+            settingsLink: (chunks) => (
+              <Link href={`/shop/${shopSlug}/settings`} className="font-semibold underline">
+                {chunks}
+              </Link>
+            ),
+          })}
+        />
       )}
 
       {/* The target the empty state below jumps to — a plain in-page anchor,

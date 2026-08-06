@@ -1,0 +1,1 @@
+ALTER TYPE "certification_agency" ADD VALUE 'bsac' BEFORE 'other';

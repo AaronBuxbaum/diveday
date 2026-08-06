@@ -1,5 +1,6 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
+import type { CertificationAgency } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
@@ -11,15 +12,26 @@ export type UpcomingTrip = Awaited<
   ReturnType<typeof pagedUpcomingTripsWithCounts>
 >["trips"][number];
 
-type Agency = "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
-
-/** Every value resolves to a `StaffMessageKey` now, not a rendered word — see `divers.shared.*`. */
-export const AGENCY_KEYS: Record<Agency, StaffMessageKey> = {
+/**
+ * Every value resolves to a `StaffMessageKey` now, not a rendered word — see
+ * `divers.shared.*`.
+ *
+ * Keyed by the pg enum (`CertificationAgency`), so an agency added to the
+ * column is a compile error here until it has words in every locale — which is
+ * the only thing standing between "the database accepts CMAS" and a picker that
+ * still cannot offer it (DOM-L1). Declaration order is the order the cert forms
+ * render the `<select>` in, which is why `other` is last.
+ */
+export const AGENCY_KEYS: Record<CertificationAgency, StaffMessageKey> = {
   padi: "divers.shared.agencies.padi",
   ssi: "divers.shared.agencies.ssi",
   naui: "divers.shared.agencies.naui",
   sdi: "divers.shared.agencies.sdi",
   tdi: "divers.shared.agencies.tdi",
+  cmas: "divers.shared.agencies.cmas",
+  raid: "divers.shared.agencies.raid",
+  gue: "divers.shared.agencies.gue",
+  bsac: "divers.shared.agencies.bsac",
   other: "divers.shared.agencies.other",
 };
 

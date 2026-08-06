@@ -135,23 +135,22 @@ export function OfflineManifestManager({
         // round (something was pending before, or a new rejection landed) —
         // a snapshot with only long-resolved events stays silent forever.
         if (pendingBefore > 0 || rejected > rejectedBefore) {
+          // Rejections are deliberately *not* narrated here any more: they get
+          // the pinned danger notice below instead, because a tap that never
+          // entered the safety trail must not be a line in a card at the foot
+          // of the page. This region keeps the states that belong to the card
+          // — still sending, and caught up.
           setMessage(
-            rejected > 0
+            pending > 0
               ? fill(
-                  pluralForm(rejected, {
-                    one: copy.reconcileRejectedOne,
-                    other: copy.reconcileRejectedOther,
+                  pluralForm(pending, {
+                    one: copy.reconcilePendingOne,
+                    other: copy.reconcilePendingOther,
                   }),
-                  { count: rejected },
+                  { count: pending },
                 )
-              : pending > 0
-                ? fill(
-                    pluralForm(pending, {
-                      one: copy.reconcilePendingOne,
-                      other: copy.reconcilePendingOther,
-                    }),
-                    { count: pending },
-                  )
+              : rejected > 0
+                ? ""
                 : copy.reconcileCaughtUp,
           );
           router.refresh();
@@ -416,79 +415,109 @@ export function OfflineManifestManager({
         ? copy.freshnessAging
         : copy.freshnessStale;
 
+  // A rejected event is a tap a crew member made that **never entered the
+  // safety trail** — somebody stood on a deck, said "aboard", saw it stick, and
+  // the server refused it when signal came back. Left in this card at the foot
+  // of the page it is a sentence nobody scrolls to, on the one page where an
+  // unrecorded roll call is the whole failure mode. So it is lifted out of the
+  // card and pinned over the page instead, in danger tone with an `alert` role,
+  // while pending/caught-up/saving stay in the card below where they belong.
+  const rejectedNotice =
+    rejected > 0
+      ? fill(
+          pluralForm(rejected, {
+            one: copy.reconcileRejectedOne,
+            other: copy.reconcileRejectedOther,
+          }),
+          { count: rejected },
+        )
+      : null;
+
   return (
-    <section
-      className="mt-5 rounded-xl border border-border bg-surface p-4 print:hidden"
-      aria-labelledby="offline-heading"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <h2 id="offline-heading" className="font-semibold">
-            {copy.heading}
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ConnectivityStatus
-              offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
-              copy={{
-                online: copy.connectivityOnline,
-                onlineTitle: copy.connectivityOnlineTitle,
-                offlineTitle: copy.connectivityOfflineTitle,
-              }}
-            />
-            {freshness ? (
-              <span
-                className={
-                  freshness === "current"
-                    ? "inline-flex min-h-9 items-center rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
-                    : freshness === "aging"
-                      ? "inline-flex min-h-9 items-center rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
-                      : "inline-flex min-h-9 items-center rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
-                }
-              >
-                {freshnessLabel}
-              </span>
+    <>
+      {rejectedNotice ? (
+        <div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4 print:hidden">
+          <div
+            role="alert"
+            className="pointer-events-auto max-w-2xl rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
+          >
+            {rejectedNotice}
+          </div>
+        </div>
+      ) : null}
+      <section
+        className="mt-5 rounded-xl border border-border bg-surface p-4 print:hidden"
+        aria-labelledby="offline-heading"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <h2 id="offline-heading" className="font-semibold">
+              {copy.heading}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <ConnectivityStatus
+                offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
+                copy={{
+                  online: copy.connectivityOnline,
+                  onlineTitle: copy.connectivityOnlineTitle,
+                  offlineTitle: copy.connectivityOfflineTitle,
+                }}
+              />
+              {freshness ? (
+                <span
+                  className={
+                    freshness === "current"
+                      ? "inline-flex min-h-9 items-center rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
+                      : freshness === "aging"
+                        ? "inline-flex min-h-9 items-center rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+                        : "inline-flex min-h-9 items-center rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
+                  }
+                >
+                  {freshnessLabel}
+                </span>
+              ) : null}
+            </div>
+            {/* The live region stays mounted whether or not it currently has
+              anything to say, so an announcement is heard when one arrives. */}
+            <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
+              {message}
+            </p>
+            {saved ? (
+              <p className="mt-1 text-xs text-muted">
+                {fill(copy.savedSummary, {
+                  date: formatDateTimeTz(
+                    new Date(saved.snapshot.savedAt),
+                    locale,
+                    payload.shop.timezone,
+                  ),
+                  pending: String(pending),
+                  rejected: String(rejected),
+                })}
+              </p>
             ) : null}
           </div>
-          {/* The live region stays mounted whether or not it currently has
-              anything to say, so an announcement is heard when one arrives. */}
-          <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
-            {message}
-          </p>
-          {saved ? (
-            <p className="mt-1 text-xs text-muted">
-              {fill(copy.savedSummary, {
-                date: formatDateTimeTz(
-                  new Date(saved.snapshot.savedAt),
-                  locale,
-                  payload.shop.timezone,
-                ),
-                pending: String(pending),
-                rejected: String(rejected),
-              })}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => refresh({ manual: true })}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {busy ? copy.refreshingLabel : copy.refreshNowLabel}
-          </button>
-          {saved ? (
-            <a
-              href={`/offline-manifest?trip=${tripId}`}
-              className={buttonClass({ variant: "primary", size: "boat" })}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => refresh({ manual: true })}
+              className={buttonClass({ variant: "secondary" })}
             >
-              {copy.openOfflineRollCall}
-            </a>
-          ) : null}
+              {busy ? copy.refreshingLabel : copy.refreshNowLabel}
+            </button>
+            {saved ? (
+              <a
+                href={`/offline-manifest?trip=${tripId}`}
+                className={buttonClass({ variant: "primary", size: "boat" })}
+              >
+                {copy.openOfflineRollCall}
+              </a>
+            ) : null}
+          </div>
         </div>
-      </div>
-      {pushOptIn}
-    </section>
+        {pushOptIn}
+      </section>
+    </>
   );
 }

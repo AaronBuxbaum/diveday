@@ -1,7 +1,8 @@
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { STAFF_ROLES } from "@/lib/authz";
+import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { loadActiveStaffRoles } from "./authz";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import {
@@ -9,7 +10,6 @@ import {
   buddyPairMembers,
   buddyTeamEvents,
   people,
-  personRoles,
   tripAssignments,
   trips,
 } from "./schema";
@@ -102,23 +102,29 @@ function memberKey(member: BuddyTeamMemberInput): string {
 }
 
 /**
- * The staff gate every roll-call write applies: a pairing is a named staff
- * member's call, and the recorder must be staff in *this* shop.
+ * The staff gate every roll-call write applies, which is the same gate every
+ * team write applies: a pairing is a named staff member's call, and the
+ * recorder must be this shop's **live** staff — `loadActiveStaffRoles` in
+ * `src/db/authz.ts`, the one place that rule lives.
+ *
+ * This was a copy of the roll-call writers' hand-rolled `person_roles` join,
+ * filtering `people.id` / `people.shopId` / `person_roles.role` and stopping
+ * there. It caught what it was written for (a diver, or somebody demoted out of
+ * every staff role) and missed the two cases `loadActiveStaffRoles` exists for:
+ * a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
+ * leaves every role row where it is, and a **disabled** account, because
+ * `setStaffAccountStatus` revokes sign-in and leaves `person_roles` entirely
+ * intact — a suspended employee keeps every role row they had. Teams inform
+ * rather than gate, so what both bought was a `buddy_team_events` entry
+ * attributed to somebody the shop had already removed: a trail that outlives
+ * the membership rows, naming the wrong person for the act.
  */
 async function requireStaff(tx: Tx, shopId: string, personId: string): Promise<string | null> {
-  const [staff] = await tx
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        eq(people.id, personId),
-        eq(people.shopId, shopId),
-        inArray(personRoles.role, [...STAFF_ROLES]),
-      ),
-    )
-    .limit(1);
-  return staff?.id ?? null;
+  const roles = await loadActiveStaffRoles(tx, shopId, personId);
+  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
+  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
+  // the old join expressed as an `inArray`.
+  return roles && isStaff(roles) ? personId : null;
 }
 
 /** Same tenancy and trip-status gate `recordRollCall` applies. */

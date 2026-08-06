@@ -20,6 +20,19 @@ free-form image URLs from the certification forms?
   spec chips). Shapes and their textarea parsers live in `src/lib/courses.ts`. Repeatable sections
   are edited as blank-line-separated blocks in a `<textarea>` — the same server-rendered shape
   `dive_sites.landmarks` already uses, and no client-side reordering UI.
+  _Amended 2026-08-06 (review finding DATA-L4): the gallery is one `gallery_photos` array of
+  `{ url, alt }` objects, not the `image_urls`/`image_alts` pair this shipped with. Two arrays lined
+  up by position with nothing enforcing their lengths meant one drifted row silently captioned every
+  photo after it with the previous photo's words._
+  _Amended again 2026-08-06 (contract release): `image_urls`/`image_alts` are dropped
+  (`20260806105408_drop-course-legacy-gallery`), and the dual-write that kept them current is
+  deleted with them. The expand and contract halves are one release apart but the drop still lands
+  while the expand release is serving — migrations apply inside the production build — so for the
+  length of that deploy the previous release fails on every read **and** write of `courses`, the
+  course funnel included, and Instant Rollback past this release is no longer an option. Both costs
+  were weighed and accepted rather than split across two deploys; the migration SQL carries the
+  reasoning and the guard's acknowledgement
+  ([deploy-and-migrations-runbook.md](../../engineering/deploy-and-migrations-runbook.md))._
 - **`is_published` is separate from `is_active`.** `is_active` gates the session picker;
   `is_published` gates the public page. A shop teaches courses it does not market, and drafts a page
   for a course it already schedules.

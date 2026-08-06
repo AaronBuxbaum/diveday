@@ -240,9 +240,9 @@ export default async function EditCoursePage({
                   max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
                 })}
               >
-                {course.imageUrls.length > 0 ? (
+                {course.galleryPhotos.length > 0 ? (
                   <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {course.imageUrls.map((url, index) => (
+                    {course.galleryPhotos.map(({ url, alt }, index) => (
                       <div key={url} className="flex flex-col gap-1.5">
                         {/* The whole cell is one label wrapping its own checkbox, so a
                             tap on the photo toggles *that* photo — not the first one. */}
@@ -280,7 +280,7 @@ export default async function EditCoursePage({
                             name="galleryAltValues"
                             type="text"
                             maxLength={200}
-                            defaultValue={course.imageAlts[index] ?? ""}
+                            defaultValue={alt}
                             placeholder={t("courses.edit.photoCaptionPlaceholder", {
                               n: index + 2,
                             })}

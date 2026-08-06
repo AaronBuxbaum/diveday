@@ -13,7 +13,12 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import {
+  formatDateTimeTz,
+  formatShortDate,
+  formatTimeRangeTz,
+  formatTimeZoneName,
+} from "@/lib/format";
 import type {
   IncidentCertificationEvidence,
   IncidentRollCallResult,
@@ -152,7 +157,10 @@ export default async function IncidentExportPage({
             date: dateTime(doc.meta.generatedAt),
             name: doc.meta.generatedByName,
           })}{" "}
-          · {t("incidentExport.shopTimeLabel", { timezone: doc.meta.timezone })}
+          ·{" "}
+          {t("incidentExport.shopTimeLabel", {
+            timezone: formatTimeZoneName(locale, doc.meta.timezone),
+          })}
         </p>
       </header>
 

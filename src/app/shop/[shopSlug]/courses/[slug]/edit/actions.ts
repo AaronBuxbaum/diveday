@@ -97,7 +97,9 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // Photos are managed by upload now: new files append to the gallery, and the
   // remove checkboxes drop existing ones. No pasted URLs to parse.
   const removedGallery = new Set(formData.getAll("removeGalleryUrls").map(String));
-  const keptGallery = course.imageUrls.filter((url) => !removedGallery.has(url));
+  const keptGallery = course.galleryPhotos
+    .map((photo) => photo.url)
+    .filter((url) => !removedGallery.has(url));
   const addedGallery = gallery
     .map((image) => image.url)
     .filter((url): url is string => Boolean(url));
@@ -108,15 +110,18 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     redirect(`${base}?error=images`);
   }
 
-  // Captions travel as two parallel arrays (one hidden input per existing
-  // photo's URL, one text input for its caption) rather than one input keyed
-  // by the URL, so a URL never has to survive being an HTML attribute value.
-  // A freshly-uploaded photo has no caption input yet — it starts blank and
-  // falls back to the generated "{title} — photo {n}" caption until edited.
+  // On the wire the captions still arrive as two same-length lists (one hidden
+  // input per existing photo's URL, one text input for its caption) rather than
+  // one input keyed by the URL, so a URL never has to survive being an HTML
+  // attribute value. They are paired back up *here*, by URL and not by index,
+  // and stored as one object per photo — a browser that posts the two lists
+  // out of step can no longer put a caption under someone else's photo
+  // (DATA-L4). A freshly-uploaded photo has no caption input yet: it starts
+  // blank and falls back to the generated "{title} — photo {n}" until edited.
   const altUrls = formData.getAll("galleryAltUrls").map(String);
   const altValues = formData.getAll("galleryAltValues").map(String);
   const altByUrl = new Map(altUrls.map((url, index) => [url, altValues[index]?.trim() ?? ""]));
-  const imageAlts = imageUrls.map((url) => altByUrl.get(url) ?? "");
+  const galleryPhotos = imageUrls.map((url) => ({ url, alt: altByUrl.get(url) ?? "" }));
 
   const removeHero = formData.get("removeHero") === "true";
   const heroImageUrl = hero.url ?? (removeHero ? "" : (course.heroImageUrl ?? ""));
@@ -138,8 +143,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     overview: value.overview,
     heroImageUrl,
     heroImageAlt,
-    imageUrls,
-    imageAlts,
+    galleryPhotos,
     durationText: value.durationText,
     groupSizeText: value.groupSizeText,
     prerequisiteNote: value.prerequisiteNote,
@@ -162,7 +166,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   if (saved) {
     const supersededUrls = [
       ...(course.heroImageUrl && course.heroImageUrl !== heroImageUrl ? [course.heroImageUrl] : []),
-      ...course.imageUrls.filter((url) => !imageUrls.includes(url)),
+      ...course.galleryPhotos.map((photo) => photo.url).filter((url) => !imageUrls.includes(url)),
     ];
     for (const url of supersededUrls) {
       await queueAndAttemptMediaDeletion(db, {
