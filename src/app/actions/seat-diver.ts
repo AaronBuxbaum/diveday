@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -42,7 +42,7 @@ const newDiverSchema = z.object({
   tripId: z.uuid(),
   // Shared diver person-field bounds (src/lib/person-fields.ts).
   fullName: diverNameSchema,
-  email: z.union([z.literal(""), diverEmailSchema]).optional(),
+  email: blankableDiverEmailSchema.optional(),
   phone: diverPhoneSchema.optional(),
 });
 

@@ -40,7 +40,7 @@ import {
   urgencyFor,
 } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { inHorizonReadiness } from "./blockers";
+import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -901,7 +901,7 @@ export async function getTodayWork(
    * same request — the shop home passes it so its by-departure view doesn't
    * pay for the pipeline twice. Omitted, the queue runs its own.
    */
-  evidence?: Awaited<ReturnType<typeof inHorizonReadiness>>,
+  evidence?: HorizonReadinessEvidence,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);

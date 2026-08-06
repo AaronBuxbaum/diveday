@@ -21,3 +21,11 @@ export const DIVER_PHONE_MAX = 40;
 export const diverNameSchema = z.string().trim().min(1).max(DIVER_NAME_MAX);
 export const diverEmailSchema = z.email().max(DIVER_EMAIL_MAX);
 export const diverPhoneSchema = z.string().trim().max(DIVER_PHONE_MAX);
+
+/**
+ * A valid email or the empty string — for the staff surfaces where an email
+ * box is always rendered but a diver may genuinely not have one (the record
+ * editor, hand-entered seating). Shared so the two sites can't drift on what
+ * "blank" means.
+ */
+export const blankableDiverEmailSchema = z.union([z.literal(""), diverEmailSchema]);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blankableDiverEmailSchema,
   DIVER_EMAIL_MAX,
   DIVER_NAME_MAX,
   DIVER_PHONE_MAX,
@@ -42,6 +43,12 @@ describe("diver person-field fragments", () => {
     expect(diverEmailSchema.safeParse("not-an-email").success).toBe(false);
     const oversized = `${"a".repeat(DIVER_EMAIL_MAX)}@example.com`;
     expect(diverEmailSchema.safeParse(oversized).success).toBe(false);
+  });
+
+  it("blank-able email takes the empty string, a valid address, and nothing between", () => {
+    expect(blankableDiverEmailSchema.safeParse("").success).toBe(true);
+    expect(blankableDiverEmailSchema.safeParse("asha@example.com").success).toBe(true);
+    expect(blankableDiverEmailSchema.safeParse("not-an-email").success).toBe(false);
   });
 
   it("accepts a phone at the bound, trimmed, and rejects one past it", () => {

@@ -59,6 +59,9 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   return { trips: inWindow, upcoming: fetched, readinessByTrip, truncated };
 }
 
+/** The evidence bundle `inHorizonReadiness` produces, for callers passing it through. */
+export type HorizonReadinessEvidence = Awaited<ReturnType<typeof inHorizonReadiness>>;
+
 export type BlockerQueue = {
   trips: BlockerQueueTrip[];
   /**
@@ -90,7 +93,7 @@ export async function getBlockerQueue(
    * already ran the pass for another surface in the same request. Omitted,
    * the queue runs its own.
    */
-  evidence?: Awaited<ReturnType<typeof inHorizonReadiness>>,
+  evidence?: HorizonReadinessEvidence,
 ): Promise<BlockerQueue> {
   const {
     trips: inspected,
