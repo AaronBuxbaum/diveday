@@ -41,7 +41,44 @@ type SendProps = ComponentProps<typeof WaiverSendControl>;
  * differ: the by-departure view lays the fix **beside** the diver in a dense
  * list of rows, and the counter lays it **below** a card that also carries
  * badges, a trip link, and a check-in button.
+ *
+ * It stays **one** component rather than two layout-specific ones on purpose:
+ * a split is exactly how the three copies this replaces came to disagree about
+ * how many blockers a diver has. What the layouts do get is a discriminated
+ * prop union — each one accepts only the slots it can actually render, so
+ * handing the counter an `identity` (which it draws itself, above this row) is
+ * a compile error rather than a silently dropped node.
  */
+type BlockedDiverRowProps = {
+  blockers: readonly ReadinessBlocker[];
+  /** `null` when nothing maps to an action; the reasons still show. */
+  fix: BlockerFix | null;
+  shopSlug: string;
+  /** Which surface the waiver send is attributed to (analytics + revalidation). */
+  surface: SendProps["surface"];
+  /** The send control's words, composed by the host (`waiverSendCopy(t)`). */
+  waiverCopy: SendProps["copy"];
+  t: StaffTranslator;
+} & (
+  | {
+      /** Fix in a right-hand column, beside the diver — the dense row list. */
+      layout: "beside";
+      /** The host's name block; this layout owns the left column, so it is required. */
+      identity: ReactNode;
+      /** Extra lines under the reasons — the "also blocked on" annotation. */
+      meta?: ReactNode;
+      extra?: never;
+    }
+  | {
+      /** Fix under the reasons — a card whose header the host drew itself. */
+      layout: "below";
+      identity?: never;
+      meta?: never;
+      /** Anything after the fix — the counter's paper-waiver fallback. */
+      extra?: ReactNode;
+    }
+);
+
 export function BlockedDiverRow({
   identity,
   blockers,
@@ -53,29 +90,7 @@ export function BlockedDiverRow({
   extra,
   layout,
   t,
-}: {
-  /**
-   * The host's own name/heading block — a diver link, or a whole card header.
-   * The `beside` layout needs it (it owns the left column); a `below` host that
-   * renders its header itself, above this row, leaves it out.
-   */
-  identity?: ReactNode;
-  blockers: readonly ReadinessBlocker[];
-  /** `null` when nothing maps to an action; the reasons still show. */
-  fix: BlockerFix | null;
-  shopSlug: string;
-  /** Which surface the waiver send is attributed to (analytics + revalidation). */
-  surface: SendProps["surface"];
-  /** The send control's words, composed by the host (`waiverSendCopy(t)`). */
-  waiverCopy: SendProps["copy"];
-  /** Extra lines under the reasons — the "also blocked on" annotation. */
-  meta?: ReactNode;
-  /** Anything after the fix — the counter's paper-waiver fallback. */
-  extra?: ReactNode;
-  /** `beside`: fix in a right-hand column. `below`: fix under the reasons. */
-  layout: "beside" | "below";
-  t: StaffTranslator;
-}) {
+}: BlockedDiverRowProps) {
   const reasons = (
     <>
       <ul

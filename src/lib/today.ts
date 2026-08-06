@@ -616,6 +616,17 @@ export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetin
 }
 
 /**
+ * The slice of `src/db/today.ts`'s `DepartureSummary` the predicate below
+ * reads. Structural on purpose, and for the same reason
+ * `src/lib/closeout.ts`'s `CloseoutRollCallGap` is: `src/lib` never imports
+ * `src/db` (`pnpm check:architecture`), so the db layer's rows are passed in
+ * and matched by shape. The shape is still checked — the shop home hands this
+ * an actual `DepartureSummary[]`, so dropping or retyping `endsAt` upstream
+ * fails to compile at that call site.
+ */
+export type DepartureEnd = { endsAt: Date };
+
+/**
  * Has the day's diving finished — every departure today back at the dock?
  *
  * This is the trigger for Today's evening handoff to the close-out, and it is
@@ -629,6 +640,6 @@ export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetin
  * "last boat in" moment to mark. The close-out is still one nav click away —
  * this is a handoff, not the only door.
  */
-export function lastBoatIsIn(departures: readonly { endsAt: Date }[], now: Date): boolean {
+export function lastBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
   return departures.length > 0 && departures.every((departure) => departure.endsAt <= now);
 }
