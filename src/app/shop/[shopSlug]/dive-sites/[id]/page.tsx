@@ -6,7 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   copyDiveSite,
@@ -17,10 +17,8 @@ import {
   updateDiveSite,
 } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
 import {
   type DiveSiteFormError,
   parseDiveSiteForm,
@@ -32,6 +30,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 
@@ -280,253 +279,13 @@ export default async function EditDiveSitePage({
         errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
         savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
       >
-        <FieldGrid columns={1}>
-          <Field label={t("diveSites.form.nameLabel")}>
-            <input
-              name="name"
-              required
-              maxLength={120}
-              defaultValue={site.name}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <fieldset className="rounded-lg border border-border p-4">
-          <legend className="px-1 text-sm font-medium">{t("diveSites.form.forecastLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("diveSites.form.forecastDescription")}</p>
-          <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field label={t("diveSites.form.latitudeLabel")}>
-              <input
-                name="forecastLatitude"
-                type="number"
-                step="any"
-                min={-90}
-                max={90}
-                defaultValue={site.forecastLatitude ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("diveSites.form.longitudeLabel")}>
-              <input
-                name="forecastLongitude"
-                type="number"
-                step="any"
-                min={-180}
-                max={180}
-                defaultValue={site.forecastLongitude ?? ""}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
-        <FieldGrid columns={1} className="gap-y-5">
-          <Field label={t("diveSites.form.locationLabel")} hint={t("diveSites.form.optionalHint")}>
-            <input
-              name="locationName"
-              maxLength={160}
-              defaultValue={site.locationName ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.descriptionLabel")}>
-            <textarea
-              name="description"
-              rows={3}
-              maxLength={1200}
-              defaultValue={site.description ?? ""}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={2} className="gap-y-5">
-          <Field label={t("diveSites.form.satelliteImageLabel")}>
-            <textarea
-              name="satelliteImageUrl"
-              rows={2}
-              defaultValue={site.satelliteImageUrl ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("diveSites.form.routeImageLabel")}
-            hint={t("diveSites.form.optionalHint")}
-          >
-            <textarea
-              name="routeImageUrl"
-              rows={2}
-              defaultValue={site.routeImageUrl ?? ""}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={1} className="gap-y-5">
-          <Field
-            label={t("diveSites.form.sitePhotosLabel")}
-            hint={t("diveSites.form.sitePhotosHint")}
-          >
-            <textarea
-              name="imageUrls"
-              rows={4}
-              defaultValue={site.imageUrls.join("\n")}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.marineLifeLabel")}>
-            <input
-              name="marineLife"
-              maxLength={400}
-              defaultValue={site.marineLife ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.briefingLabel")}>
-            <textarea
-              name="marineLifeDescription"
-              rows={3}
-              maxLength={1200}
-              defaultValue={site.marineLifeDescription ?? ""}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={2} className="gap-y-5">
-          <Field
-            label={t("diveSites.form.difficultyLabel")}
-            hint={t("diveSites.form.optionalHint")}
-          >
-            <input
-              name="difficulty"
-              maxLength={120}
-              defaultValue={site.difficulty ?? ""}
-              placeholder={t("diveSites.form.difficultyPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("diveSites.form.depthRangeLabel")}
-            hint={t("diveSites.form.optionalHint")}
-          >
-            <input
-              name="depthRange"
-              maxLength={120}
-              defaultValue={site.depthRange ?? ""}
-              placeholder={t("diveSites.form.depthRangePlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={2} className="gap-y-5">
-          {/* The one depth figure a certification ceiling can be compared
-              against (H-08). Blank simply never warns — this advises, never gates. */}
-          <Field
-            label={t(
-              depthUnit === "feet"
-                ? "diveSites.form.maxDepthFeetLabel"
-                : "diveSites.form.maxDepthMetersLabel",
-            )}
-            hint={t("diveSites.form.maxDepthHint")}
-          >
-            <input
-              name="maxDepth"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={maxEnteredDepth(depthUnit)}
-              step={1}
-              defaultValue={
-                site.maxDepthMeters === null ? "" : depthInUnit(site.maxDepthMeters, depthUnit)
-              }
-              placeholder={depthUnit === "feet" ? "60" : "18"}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={1} className="gap-y-5">
-          <Field
-            label={t("diveSites.form.currentNoteLabel")}
-            hint={t("diveSites.form.optionalHint")}
-          >
-            <textarea
-              name="currentNote"
-              rows={2}
-              maxLength={500}
-              defaultValue={site.currentNote ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.divePlanLabel")} hint={t("diveSites.form.optionalHint")}>
-            <textarea
-              name="divePlan"
-              rows={3}
-              maxLength={1200}
-              defaultValue={site.divePlan ?? ""}
-              placeholder={t("diveSites.form.divePlanPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("diveSites.form.landmarksLabel")}
-            hint={t("diveSites.form.landmarksHint")}
-          >
-            <textarea
-              name="landmarks"
-              rows={3}
-              maxLength={4000}
-              defaultValue={site.landmarks.join("\n")}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <fieldset className="rounded-lg border border-border bg-surface-sunken p-5">
-          <legend className="px-1 text-sm font-medium">
-            {t("diveSites.form.certificationLegend")}
-          </legend>
-          <p className="text-sm text-muted">{t("diveSites.edit.certificationDescription")}</p>
-          <FieldGrid columns={1} className="mt-4">
-            <Field label={t("diveSites.form.minimumCertificationLabel")}>
-              <select
-                name="minimumCertificationLevel"
-                defaultValue={site.minimumCertificationLevel ?? ""}
-                className={controlClass}
-              >
-                <option value="">{t("diveSites.form.noLevelRequired")}</option>
-                {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          <div className="mt-4">
-            <p className="text-sm font-medium">{t("diveSites.edit.requiredSpecialties")}</p>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                  <input
-                    name="specialty"
-                    type="checkbox"
-                    value={value}
-                    defaultChecked={site.requiredSpecialties.includes(
-                      value as keyof typeof SPECIALTY_KEYS,
-                    )}
-                    className="size-4 accent-primary"
-                  />
-                  {t(key)}
-                </label>
-              ))}
-              <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-                <input
-                  name="requiresNitrox"
-                  type="checkbox"
-                  defaultChecked={site.requiresNitrox}
-                  className="size-4 accent-primary"
-                />
-                {t("diveSites.form.nitroxCheckbox")}
-              </label>
-            </div>
-          </div>
-        </fieldset>
+        <SiteFields
+          t={t}
+          depthUnit={depthUnit}
+          values={site}
+          certificationDescription={t("diveSites.edit.certificationDescription")}
+          requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+        />
         <SubmitButton
           pendingLabel={t("diveSites.form.saving")}
           className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}

@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -13,12 +14,15 @@ import { getDb } from "@/db/client";
 import {
   currentGlobalDiveSiteVersions,
   diveSiteLibraryStats,
+  importGlobalDiveSiteTemplate,
   listDiveSitesPage,
+  listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 
@@ -45,18 +49,28 @@ export default async function DiveSitesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ notice?: string; q?: string; page?: string; view?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, q, page } = await searchParams;
+  const { notice, q, page, view } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const query = q?.trim() ?? "";
+
+  // The published site catalog re-sorts nothing of the library's own evidence
+  // — it is DiveDay's own dataset — but it was reachable from exactly two
+  // buttons on this page and nowhere else, so it earns the same treatment as
+  // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
+  // one route, a `?view=` switch, and a 308 from the URL it used to own.
+  if (view === "catalog") {
+    return <CatalogView shopSlug={shopSlug} t={t} page={page} />;
+  }
+
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
+  const query = q?.trim() ?? "";
   const [sitePage, stats] = await Promise.all([
     listDiveSitesPage(
       db,
@@ -87,6 +101,7 @@ export default async function DiveSitesPage({
     const encoded = search.toString();
     return encoded ? `/shop/${shopSlug}/dive-sites?${encoded}` : `/shop/${shopSlug}/dive-sites`;
   };
+  const catalogHref = `/shop/${shopSlug}/dive-sites?view=catalog`;
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -109,7 +124,7 @@ export default async function DiveSitesPage({
                 <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
               </Link>
               <Link
-                href={`/shop/${shopSlug}/dive-sites/catalog`}
+                href={catalogHref}
                 className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
               >
                 {t("diveSites.list.browseTemplates")}
@@ -218,7 +233,7 @@ export default async function DiveSitesPage({
                 <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
               </Link>
               <Link
-                href={`/shop/${shopSlug}/dive-sites/catalog`}
+                href={catalogHref}
                 className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
               >
                 {t("diveSites.list.browseTemplates")}
@@ -298,6 +313,82 @@ export default async function DiveSitesPage({
         total={t("diveSites.list.pagination.total", { count: sitePage.total })}
         t={t}
         className="mt-4"
+      />
+    </main>
+  );
+}
+
+/**
+ * DiveDay's published site catalog, folded in from its own former route
+ * (ADR 20260806-dive-site-catalog-is-a-view). Reachable only from the
+ * library's own "Browse templates" doors, so it renders as this page's
+ * `?view=catalog` rather than a peer destination — the same move
+ * 20260803-not-ready-is-a-view made for the by-departure queue.
+ */
+async function CatalogView({
+  shopSlug,
+  t,
+  page,
+}: {
+  shopSlug: string;
+  t: StaffTranslator;
+  page?: string;
+}) {
+  const back = `/shop/${shopSlug}/dive-sites`;
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+  // into range so a bookmarked page past the end lands on the last real one.
+  const catalog = await listGlobalDiveSiteTemplates(await getDb(), {
+    page: Number.parseInt(page ?? "", 10),
+  });
+  const pageHref = (target: number) =>
+    target > 1 ? `${back}?view=catalog&page=${target}` : `${back}?view=catalog`;
+  async function importAction(formData: FormData) {
+    "use server";
+    const active = await requireStaffSession();
+    const id = String(formData.get("templateId") ?? "");
+    const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
+    if (!site) revalidateAndRedirect(back);
+    revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
+  }
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <Link href={back} className="text-sm font-medium text-primary hover:underline">
+        {t("diveSites.backToLibrary")}
+      </Link>
+      <div className="mt-4">
+        <ShopPageHeader
+          eyebrow={t("diveSites.catalogEyebrow")}
+          title={t("diveSites.catalog.title")}
+          description={t("diveSites.catalog.description")}
+        />
+      </div>
+      <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+        {catalog.templates.map(({ template, version }) => (
+          <li key={template.id} className="rounded-lg border border-border bg-surface p-5">
+            <p className="text-sm font-medium text-primary">
+              {t("diveSites.catalog.templateVersion", { version: version.version })}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">{version.briefing.name}</h2>
+            <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
+            <form action={importAction} className="mt-5">
+              <input type="hidden" name="templateId" value={template.id} />
+              <SubmitButton
+                pendingLabel={t("diveSites.catalog.importing")}
+                className={buttonClass()}
+              >
+                {t("diveSites.catalog.importToLibrary")}
+              </SubmitButton>
+            </form>
+          </li>
+        ))}
+      </ul>
+      <Pager
+        page={catalog.page}
+        pageCount={catalog.pageCount}
+        href={pageHref}
+        total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
+        t={t}
+        className="mt-6"
       />
     </main>
   );

@@ -5,14 +5,11 @@ import { z } from "zod";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { type DepthUnit, maxEnteredDepth } from "@/lib/depth-units";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   type DiveSiteFormError,
   parseDiveSiteForm,
@@ -22,6 +19,7 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 
@@ -148,214 +146,18 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
         action={createAction}
         errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
       >
-        <SiteFormFields
+        <SiteFields
           t={t}
-          submitLabel={t("diveSites.new.saveSiteBriefing")}
           depthUnit={depthUnit}
+          certificationDescription={t("diveSites.new.certificationDescription")}
         />
+        <SubmitButton
+          pendingLabel={t("diveSites.form.saving")}
+          className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
+        >
+          {t("diveSites.new.saveSiteBriefing")}
+        </SubmitButton>
       </SiteFormShell>
     </main>
-  );
-}
-
-/**
- * The blank briefing's fields. Rendered on the server (staff copy is
- * server-side) and handed to `SiteFormShell` as children, so a refused submit
- * re-renders nothing here and every value the staffer typed survives.
- */
-function SiteFormFields({
-  t,
-  submitLabel,
-  depthUnit,
-}: {
-  t: StaffTranslator;
-  submitLabel: string;
-  /** How this shop reads depth; the stored figure is always metres. */
-  depthUnit: DepthUnit;
-}) {
-  return (
-    <>
-      <FieldGrid columns={1}>
-        <Field label={t("diveSites.form.nameLabel")}>
-          <input
-            name="name"
-            required
-            maxLength={120}
-            placeholder={t("diveSites.form.namePlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <fieldset className="rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium">{t("diveSites.form.forecastLegend")}</legend>
-        <p className="mt-1 text-sm text-muted">{t("diveSites.form.forecastDescription")}</p>
-        <FieldGrid columns={2} className="mt-4 gap-y-5">
-          <Field label={t("diveSites.form.latitudeLabel")}>
-            <input
-              name="forecastLatitude"
-              type="number"
-              step="any"
-              min={-90}
-              max={90}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("diveSites.form.longitudeLabel")}>
-            <input
-              name="forecastLongitude"
-              type="number"
-              step="any"
-              min={-180}
-              max={180}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-      </fieldset>
-      <FieldGrid columns={1} className="gap-y-5">
-        <Field label={t("diveSites.form.locationLabel")} hint={t("diveSites.form.optionalHint")}>
-          <input
-            name="locationName"
-            maxLength={160}
-            placeholder={t("diveSites.form.locationPlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("diveSites.form.descriptionLabel")}>
-          <textarea name="description" rows={3} maxLength={1200} className={controlClass} />
-        </Field>
-      </FieldGrid>
-      <FieldGrid columns={2} className="gap-y-5">
-        <Field label={t("diveSites.form.satelliteImageLabel")}>
-          <textarea name="satelliteImageUrl" rows={2} className={controlClass} />
-        </Field>
-        <Field label={t("diveSites.form.routeImageLabel")} hint={t("diveSites.form.optionalHint")}>
-          <textarea name="routeImageUrl" rows={2} className={controlClass} />
-        </Field>
-      </FieldGrid>
-      <FieldGrid columns={1} className="gap-y-5">
-        <Field
-          label={t("diveSites.form.sitePhotosLabel")}
-          hint={t("diveSites.form.sitePhotosHint")}
-        >
-          <textarea name="imageUrls" rows={4} className={controlClass} />
-        </Field>
-        <Field label={t("diveSites.form.marineLifeLabel")}>
-          <input
-            name="marineLife"
-            maxLength={400}
-            placeholder={t("diveSites.form.marineLifePlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("diveSites.form.briefingLabel")}>
-          <textarea
-            name="marineLifeDescription"
-            rows={3}
-            maxLength={1200}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <FieldGrid columns={2} className="gap-y-5">
-        <Field label={t("diveSites.form.difficultyLabel")} hint={t("diveSites.form.optionalHint")}>
-          <input
-            name="difficulty"
-            maxLength={120}
-            placeholder={t("diveSites.form.difficultyPlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("diveSites.form.depthRangeLabel")} hint={t("diveSites.form.optionalHint")}>
-          <input
-            name="depthRange"
-            maxLength={120}
-            placeholder={t("diveSites.form.depthRangePlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <FieldGrid columns={2} className="gap-y-5">
-        {/* The one depth figure a certification ceiling can be compared against
-            (H-08). Left blank it simply never warns — this advises, it never gates. */}
-        <Field
-          label={t(
-            depthUnit === "feet"
-              ? "diveSites.form.maxDepthFeetLabel"
-              : "diveSites.form.maxDepthMetersLabel",
-          )}
-          hint={t("diveSites.form.maxDepthHint")}
-        >
-          <input
-            name="maxDepth"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={maxEnteredDepth(depthUnit)}
-            step={1}
-            placeholder={depthUnit === "feet" ? "60" : "18"}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <FieldGrid columns={1} className="gap-y-5">
-        <Field label={t("diveSites.form.currentNoteLabel")} hint={t("diveSites.form.optionalHint")}>
-          <textarea name="currentNote" rows={2} maxLength={500} className={controlClass} />
-        </Field>
-        <Field label={t("diveSites.form.divePlanLabel")} hint={t("diveSites.form.optionalHint")}>
-          <textarea
-            name="divePlan"
-            rows={3}
-            maxLength={1200}
-            placeholder={t("diveSites.form.divePlanPlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("diveSites.form.landmarksLabel")} hint={t("diveSites.form.landmarksHint")}>
-          <textarea name="landmarks" rows={3} maxLength={4000} className={controlClass} />
-        </Field>
-      </FieldGrid>
-      <fieldset className="rounded-2xl border border-border bg-surface-sunken p-5">
-        <legend className="px-1 text-sm font-medium">
-          {t("diveSites.form.certificationLegend")}
-        </legend>
-        <p className="text-sm text-muted">{t("diveSites.new.certificationDescription")}</p>
-        <FieldGrid columns={1} className="mt-4">
-          <Field label={t("diveSites.form.minimumCertificationLabel")}>
-            <select name="minimumCertificationLevel" defaultValue="" className={controlClass}>
-              <option value="">{t("diveSites.form.noLevelRequired")}</option>
-              {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                <option key={value} value={value}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </FieldGrid>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-            <label key={value} className="flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input
-                name="specialty"
-                type="checkbox"
-                value={value}
-                className="size-4 accent-primary"
-              />
-              {t(key)}
-            </label>
-          ))}
-          <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-            <input name="requiresNitrox" type="checkbox" className="size-4 accent-primary" />
-            {t("diveSites.form.nitroxCheckbox")}
-          </label>
-        </div>
-      </fieldset>
-      <SubmitButton
-        pendingLabel={t("diveSites.form.saving")}
-        className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
-      >
-        {submitLabel}
-      </SubmitButton>
-    </>
   );
 }
