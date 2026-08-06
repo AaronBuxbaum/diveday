@@ -1,0 +1,114 @@
+{
+  "id": "evt_1QsAVmLkdIwHu7ixAsyncOkKl",
+  "object": "event",
+  "account": "acct_1Nv0FGQ9RKHgCVdK",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1784900000,
+  "data": {
+    "object": {
+      "id": "cs_test_a1H7QkLmNpRsTuVwXyZ0123456789abcdefghijklmnopqrstuvwxyzAB",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 36000,
+      "amount_total": 36000,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "provider": null,
+        "status": null
+      },
+      "billing_address_collection": null,
+      "cancel_url": "https://diveday.app/s/blue-mantis/trips/trip_1?checkout=cancelled",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": null,
+      "consent": null,
+      "consent_collection": null,
+      "created": 1784640600,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": "cus_TQd8mKp2VnRxLa",
+      "customer_creation": "if_required",
+      "customer_details": {
+        "address": {
+          "city": null,
+          "country": "US",
+          "line1": null,
+          "line2": null,
+          "postal_code": "33040",
+          "state": null
+        },
+        "email": "priya@example.com",
+        "name": "Priya Raman",
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": []
+      },
+      "customer_email": "priya@example.com",
+      "discounts": [],
+      "expires_at": 1784727000,
+      "invoice": null,
+      "invoice_creation": {
+        "enabled": false,
+        "invoice_data": {
+          "account_tax_ids": null,
+          "custom_fields": null,
+          "description": null,
+          "footer": null,
+          "issuer": null,
+          "metadata": {},
+          "rendering_options": null
+        }
+      },
+      "livemode": false,
+      "locale": null,
+      "metadata": {},
+      "mode": "payment",
+      "payment_intent": "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+      "payment_link": null,
+      "payment_method_collection": "if_required",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {},
+      "payment_method_types": ["us_bank_account"],
+      "payment_status": "paid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": null,
+      "setup_intent": null,
+      "shipping_address_collection": null,
+      "shipping_cost": null,
+      "shipping_options": [],
+      "status": "complete",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://diveday.app/s/blue-mantis/trips/trip_1?checkout=success",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.async_payment_succeeded"
+}

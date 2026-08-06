@@ -13,6 +13,7 @@
  * amounts that gate boarding). See docs ADR 20260723-owner-reporting.
  */
 
+import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
 
 /** One trip's contribution to a month, as the db layer hands it up. */
@@ -116,7 +117,7 @@ export function formatPercent(ratio: number | null): string {
  * or a ¥580,000 month would headline as ¥5,800.
  */
 export function formatReportMoney(cents: number, currency = "usd", locale = "en-US"): string {
-  return new Intl.NumberFormat(locale, {
+  return cachedFormatter("num", Intl.NumberFormat, locale, {
     style: "currency",
     currency: currency.toUpperCase(),
     maximumFractionDigits: 0,

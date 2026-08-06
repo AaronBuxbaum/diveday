@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "parameter_unknown",
+    "doc_url": "https://stripe.com/docs/error-codes/parameter-unknown",
+    "message": "This property cannot be expanded (payment_intent). Please make sure it is a valid property on this object.",
+    "param": "expand[0]",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_AbCdEfGhIjKlMn?t=1784645400",
+    "type": "invalid_request_error"
+  }
+}

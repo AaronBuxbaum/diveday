@@ -60,6 +60,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type BuddyAlert,
   isNotBackAboard,
@@ -560,7 +561,7 @@ export default async function TripManifestPage({
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
-  const teamNameList = new Intl.ListFormat(locale, { type: "conjunction" });
+  const teamNameList = cachedListFormat(locale, { type: "conjunction" });
   const buddyTeamLabel = (teams: ReadonlyArray<ManifestBuddyTeam>) => {
     const names = [...new Set(teams.flatMap((team) => team.others.map((o) => o.fullName)))];
     return names.length === 0

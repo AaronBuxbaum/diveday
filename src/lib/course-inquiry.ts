@@ -1,4 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
+import { cachedFormatter } from "./intl-cache";
 
 /**
  * The "get in touch" composer behind a course page.
@@ -150,7 +151,10 @@ export function formatPreferredDate(value: string, locale: string): string | nul
   ) {
     return null;
   }
-  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(reference);
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(reference);
 }
 
 /**

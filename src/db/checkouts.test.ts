@@ -11,6 +11,7 @@ import {
   markCheckoutPaidBySessionId,
   markCheckoutPaymentFailedBySessionId,
   refreshCheckoutFromStripe,
+  retirePendingCheckoutIfRepriced,
   startBookingCheckout,
 } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
@@ -428,6 +429,360 @@ describe("startBookingCheckout", () => {
     expect(second.checkout.totalCents).toBe(REEF_PRICE_CENTS);
   });
 
+  /**
+   * PAY-L2. A pending session is evidence of what the diver was quoted *then*,
+   * and Stripe holds that figure for the life of the session — completing it
+   * later charges the old amount, whatever the trip now costs. So reuse is only
+   * safe while the amounts still agree: `stillQuotesCurrentCharge` re-derives
+   * the charge on every reuse and retires a session that no longer matches.
+   *
+   * These are the shapes that move the figure. Each one asserts three things:
+   * a fresh session was minted, it carries today's amount, and the stale row is
+   * locally `expired` so no later completion can attribute the old price to
+   * this seat (`markCheckoutPaidBySessionId` refuses a non-pending checkout).
+   */
+  async function reprice(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    shopId: string,
+    reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
+    patch: { priceCents?: number | null; depositCents?: number | null },
+  ) {
+    await updateTrip(db, shopId, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: REEF_PRICE_CENTS,
+      ...patch,
+    });
+  }
+
+  async function checkoutStatus(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    checkoutId: string,
+  ) {
+    const [row] = await db
+      .select({ status: bookingCheckouts.status })
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    return row?.status ?? null;
+  }
+
+  it("mints a fresh session when the trip's price changed under a pending one", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.amountPerDiverCents).toBe(REEF_PRICE_CENTS);
+
+    // The shop raises the fare while the diver's tab sits open on the old one.
+    await reprice(db, shop.id, reef, { priceCents: 21_000 });
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.reused).toBe(false);
+    expect(second.checkout.id).not.toBe(first.checkout.id);
+    expect(second.checkout.amountPerDiverCents).toBe(21_000);
+    expect(second.checkout.totalCents).toBe(42_000);
+    // Retired locally, so a completion arriving for it later is ignored rather
+    // than marking this seat paid at the old price.
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("mints a fresh session when a price cut would otherwise overcharge the diver", async () => {
+    // The direction that matters most: reusing here bills the diver more than
+    // the trip now costs, and they would never see the difference — the hosted
+    // page shows the figure the *old* session was minted for.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+
+    await reprice(db, shop.id, reef, { priceCents: 9_000 });
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.amountPerDiverCents).toBe(9_000);
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("mints a fresh session when a deposit policy arrives after the session did", async () => {
+    // Same amount arithmetic, different meaning: the old session charges the
+    // whole fare and says so on Stripe's hosted page, while the trip now asks
+    // for a deposit with a balance due later. Reusing it charges the diver four
+    // times what the shop is now asking for up front.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.isDeposit).toBe(false);
+
+    await reprice(db, shop.id, reef, { depositCents: 5_000 });
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.isDeposit).toBe(true);
+    expect(second.checkout.amountPerDiverCents).toBe(5_000);
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("mints a fresh session when the shop's currency changed under a pending one", async () => {
+    // 18000 of one currency's minor unit is not 18000 of another's. The stored
+    // row is evidence of what the diver was asked for, so a session minted in
+    // the old currency is never handed back under the new one.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.currency).toBe("usd");
+
+    await setShopCurrency(db, shop.id, "eur");
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.currency).toBe("eur");
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("mints a fresh session when the diver's gear selection changed the total", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2);
+
+    const second = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+      },
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2 + 6_000);
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("mints a fresh session when the diver now has a promotion the old one lacks", async () => {
+    // The diver typed a code after abandoning the first tab. Reusing charges
+    // full price with the code silently dropped.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.appliedDiscountPercent).toBeNull();
+
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "later20", discountPercent: 20, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+
+    const second = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
+      },
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.appliedDiscountPercent).toBe(20);
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+  });
+
+  it("keeps a quoted discount when the reusing caller resolved no promotion", async () => {
+    // The counterweight, and the reason the promo comparison is one-directional.
+    // "Finish paying" (`payForBooking`, src/app/s/[shopSlug]/trips/[id]/actions.ts)
+    // and the ready page's Pay button resolve no code at all — a diver who is
+    // simply returning to a session they already have has entered nothing. If
+    // "no code now" counted as a change, every return trip would retire the
+    // discounted session and re-mint at full price, which is the exact harm
+    // this ticket is about, pointed the other way.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "keep20", discountPercent: 20, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+    const first = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
+      },
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    expect(first.checkout.appliedDiscountPercent).toBe(20);
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(true);
+    expect(second.checkout.id).toBe(first.checkout.id);
+  });
+
+  it("re-mints with a different idempotency key and never releases the seat", async () => {
+    // Two invariants the re-mint must not break. The key first: a re-mint is a
+    // *different* attempt, so it mints its own intent and carries its own key —
+    // reusing the stale one would make Stripe replay the very session whose
+    // price is wrong (CR-005). And seats-before-money: the bookings were
+    // committed before any of this ran, so retiring a session touches no seat.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const seen = recordingCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+
+    await reprice(db, shop.id, reef, { priceCents: 21_000 });
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+
+    expect(seen.requests).toHaveLength(2);
+    expect(seen.requests[0]?.idempotencyKey).not.toBe(seen.requests[1]?.idempotencyKey);
+    expect(seen.requests[1]?.lineItems[0]?.unitAmountCents).toBe(21_000);
+    // Both seats are still on the boat, still active, still linked to a
+    // checkout — the fresh one.
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    expect(roster.filter((row) => bookingIds.includes(row.booking.id))).toHaveLength(2);
+    for (const bookingId of bookingIds) {
+      expect((await getLatestCheckoutForBooking(db, shop.id, bookingId))?.id).toBe(
+        second.checkout.id,
+      );
+    }
+  });
+
+  it("keeps the stale session payable-nowhere when Stripe refuses the re-mint", async () => {
+    // Seats-before-money on the failure path. Stripe is down, so there is no
+    // fresh session to hand over — the diver degrades to pay-later, exactly as
+    // a first-time failure does. The stale session stays retired rather than
+    // being handed back as a consolation: it is retired precisely *because* its
+    // figure is wrong, and a Stripe outage does not make it right again.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    await reprice(db, shop.id, reef, { priceCents: 21_000 });
+
+    const second = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout({
+        async createCheckoutSession() {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(second).toEqual({ ok: false, reason: "checkout_unavailable" });
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
+    // The seats are untouched and simply unpaid — the whole point of
+    // seats-before-money (docs ADR 20260721-checkout-at-booking).
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    expect(roster.filter((row) => bookingIds.includes(row.booking.id))).toHaveLength(2);
+    for (const bookingId of bookingIds) {
+      expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
+    }
+  });
+
+  it("never retires a session that already settled", async () => {
+    // The guard only ever looks at `pending` rows. A completed checkout is
+    // evidence of money that moved; a price change afterwards must not touch it.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
+
+    await reprice(db, shop.id, reef, { priceCents: 21_000 });
+    await startBookingCheckout(db, startInput(shop.id, reef.id, bookingIds), provider);
+
+    expect(await checkoutStatus(db, first.checkout.id)).toBe("completed");
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(
+      REEF_PRICE_CENTS,
+    );
+  });
+
   it("starts a fresh session once the previous one expired", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const provider = fakeCheckout();
@@ -463,6 +818,98 @@ describe("startBookingCheckout", () => {
     expect(outcome).toEqual({ ok: false, reason: "checkout_unavailable" });
     // Nothing was recorded: the bookings simply stay unpaid.
     expect(await getLatestCheckoutForBooking(db, shop.id, bookingIds[0])).toBeNull();
+  });
+});
+
+/**
+ * PAY-L2's other hand-back. The confirmation panel's "Finish paying" links a
+ * pending session's Stripe URL directly (`src/app/s/[shopSlug]/trips/[id]/page.tsx`),
+ * never going through `startBookingCheckout` — so the reuse guard above cannot
+ * see it and this is what stands between the diver and a stale figure there.
+ */
+describe("retirePendingCheckoutIfRepriced", () => {
+  async function pending() {
+    const context = await checkoutContext();
+    const start = await startBookingCheckout(
+      context.db,
+      startInput(context.shop.id, context.reef.id, context.bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    return { ...context, checkout: start.checkout };
+  }
+
+  async function repriceTo(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    shopId: string,
+    reef: Awaited<ReturnType<typeof checkoutContext>>["reef"],
+    patch: { priceCents?: number | null; depositCents?: number | null },
+  ) {
+    await updateTrip(db, shopId, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: REEF_PRICE_CENTS,
+      ...patch,
+    });
+  }
+
+  it("retires a session the trip has been repriced under", async () => {
+    const { db, shop, reef, checkout } = await pending();
+    await repriceTo(db, shop.id, reef, { priceCents: 21_000 });
+    const result = await retirePendingCheckoutIfRepriced(db, shop.id, checkout);
+    expect(result.status).toBe("expired");
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(row?.status).toBe("expired");
+  });
+
+  it("retires a session a deposit policy arrived under", async () => {
+    const { db, shop, reef, checkout } = await pending();
+    await repriceTo(db, shop.id, reef, { depositCents: 5_000 });
+    expect((await retirePendingCheckoutIfRepriced(db, shop.id, checkout)).status).toBe("expired");
+  });
+
+  it("retires a session the shop's currency changed under", async () => {
+    const { db, shop, checkout } = await pending();
+    await setShopCurrency(db, shop.id, "eur");
+    expect((await retirePendingCheckoutIfRepriced(db, shop.id, checkout)).status).toBe("expired");
+  });
+
+  it("leaves an unchanged session exactly as it is", async () => {
+    const { db, shop, checkout } = await pending();
+    expect(await retirePendingCheckoutIfRepriced(db, shop.id, checkout)).toEqual(checkout);
+  });
+
+  it("leaves a session alone when the trip became unpriced or unreadable", async () => {
+    // Missing data is not a mismatch. An unpriced trip means checkout no longer
+    // runs at all; retiring the diver's open session over it would take away a
+    // quote they were given without putting anything in its place.
+    const { db, shop, reef, checkout } = await pending();
+    await repriceTo(db, shop.id, reef, { priceCents: null });
+    expect((await retirePendingCheckoutIfRepriced(db, shop.id, checkout)).status).toBe("pending");
+    // …and a cross-tenant call finds no trip and changes nothing either.
+    expect((await retirePendingCheckoutIfRepriced(db, crypto.randomUUID(), checkout)).status).toBe(
+      "pending",
+    );
+  });
+
+  it("never demotes a checkout that settled between the read and the write", async () => {
+    const { db, shop, reef, checkout } = await pending();
+    await repriceTo(db, shop.id, reef, { priceCents: 21_000 });
+    // The caller is holding the row it read a moment ago; Stripe's completion
+    // landed in between. Money that already moved outranks a stale quote.
+    await markCheckoutPaidBySessionId(db, checkout.stripeSessionId);
+    await retirePendingCheckoutIfRepriced(db, shop.id, checkout);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(row?.status).toBe("completed");
   });
 });
 

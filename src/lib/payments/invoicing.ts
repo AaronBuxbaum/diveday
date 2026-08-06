@@ -103,7 +103,60 @@ const invoiceResponseSchema = z.object({
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
     .optional(),
+  /**
+   * The current shape of "which charge paid this invoice". Stripe moved the
+   * payment off the Invoice object and into a list of `invoice_payment`
+   * records; `payment_intent` above is the older spelling, kept because this
+   * repo sends no `Stripe-Version` header (see `stripe-api-version.test.ts`),
+   * so which of the two an account returns depends on the API version that
+   * account defaults to. Accept either rather than betting on one.
+   */
+  payments: z
+    .object({
+      data: z
+        .array(
+          z.object({
+            is_default: z.boolean().optional(),
+            status: z.string().optional(),
+            payment: z
+              .object({ payment_intent: z.string().min(1).nullable().optional() })
+              .nullable()
+              .optional(),
+          }),
+        )
+        .default([]),
+    })
+    .nullable()
+    .optional(),
 });
+
+/**
+ * The payment intent that actually paid an invoice, under either shape.
+ *
+ * Prefers the invoice-payments list — it is what a current account returns,
+ * and it is the only one that survives once the legacy field is gone — and
+ * falls back to the flat field for an account still pinned to an older
+ * version. Within the list, the default payment wins, then any settled one:
+ * an invoice can carry several attempts, and refunding a failed one is not a
+ * refund.
+ *
+ * Returning `null` here means genuinely nothing to refund. That distinction
+ * matters because the caller turns it into `not_refundable`, which staff read
+ * as "Stripe says there is no money here" — so it must never be the answer to
+ * "we looked in the wrong field".
+ */
+function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): string | null {
+  const payments = invoice.payments?.data ?? [];
+  const settled =
+    payments.find((payment) => payment.is_default && payment.payment?.payment_intent) ??
+    payments.find((payment) => payment.status === "paid" && payment.payment?.payment_intent) ??
+    payments.find((payment) => payment.payment?.payment_intent);
+  if (settled?.payment?.payment_intent) return settled.payment.payment_intent;
+
+  const legacy = invoice.payment_intent;
+  if (typeof legacy === "string") return legacy;
+  return legacy?.id ?? null;
+}
 
 const refundResponseSchema = z.object({ id: z.string().min(1) });
 
@@ -244,16 +297,21 @@ export function stripeInvoicingProvider(
 
     async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey) {
       try {
+        // No `expand[]=payment_intent`. That parameter is not merely
+        // redundant on a current account — Stripe rejects the whole request
+        // with `parameter_unknown` ("This property cannot be expanded"), so
+        // the invoice never came back and a staff refund died as a bare
+        // `failed` with no money moved and nothing naming the cause. Both
+        // shapes carry the intent *id* unexpanded, which is all a refund
+        // needs, so ask for the plain object.
         const invoiceResponse = await fetchImpl(
-          `https://api.stripe.com/v1/invoices/${stripeInvoiceId}?expand[]=payment_intent`,
+          `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
           { headers: headersFor(config.secretKey, stripeAccountId) },
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
         if (!invoiceBody.success) return { status: "failed" };
-        const paymentIntent = invoiceBody.data.payment_intent;
-        const paymentIntentId =
-          typeof paymentIntent === "string" ? paymentIntent : paymentIntent?.id;
+        const paymentIntentId = paidPaymentIntentId(invoiceBody.data);
         if (!paymentIntentId) return { status: "not_refundable" };
 
         const response = await post(

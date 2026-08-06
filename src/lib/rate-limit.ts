@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { nowMs } from "./clock";
+import { log } from "./log";
 
 /**
  * A shared per-source abuse-control seam for public write boundaries
@@ -207,6 +208,86 @@ export function rateLimitStoreFromEnvironment(
 const defaultStore = rateLimitStoreFromEnvironment();
 
 /**
+ * Which store the default is, decided once at module load from the same env
+ * vars `rateLimitStoreFromEnvironment` reads. Only ever used as a log/Sentry
+ * tag: "the distributed store is failing" and "the in-process store is
+ * failing" are entirely different operator errands (one is an Upstash/network
+ * incident, the other is a bug in this file), and without the tag a store
+ * error reads the same either way.
+ */
+const defaultStoreKind: "upstash" | "memory" = upstashConfigSchema.safeParse({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+}).success
+  ? "upstash"
+  : "memory";
+
+/**
+ * Minimum gap between two store-failure reports from one process.
+ *
+ * Every public write boundary in the app funnels through `checkRateLimit`, so
+ * whatever breaks a store (Upstash down, a network partition, a bad response
+ * shape) breaks it for *every* request at once — an undamped report would send
+ * one Sentry event and one log line per request for as long as the incident
+ * lasts, which buries the signal in its own volume and burns the Sentry quota
+ * that everything else in the app shares. One report per minute per instance
+ * is enough to see an incident start, and the report carries `swallowed` — how
+ * many failures went unreported since the last one — so the *rate* survives
+ * the damping even though the individual events don't.
+ */
+const STORE_ERROR_REPORT_INTERVAL_MS = 60_000;
+
+/** Per-process damping state for the reporter below. */
+const storeErrors = { lastReportedAt: Number.NEGATIVE_INFINITY, swallowed: 0 };
+
+/**
+ * The fail-open path's one job besides failing open: leave a trace.
+ *
+ * Deliberately says nothing about *which* key failed. `checkRateLimit`'s `key`
+ * is by convention a `rateLimitKey()` hash, but nothing in the type system
+ * makes it one — a future call site could pass a raw email or bearer token,
+ * and a log line is exactly where that must never end up (CR-013's "no raw
+ * token/medical/PII keys"). The store kind, the error's *name* (a code, not a
+ * sentence — `src/lib` never logs prose), and the suppressed count are the
+ * whole payload; Sentry gets the exception itself, which is where the detail
+ * belongs.
+ *
+ * Sentry is imported lazily, only on the report that actually goes out: this
+ * module is imported by every public write boundary and by `src/lib/auth.ts`,
+ * and a static import would pull the Sentry SDK into all of them (and into
+ * every unit test that touches one) to serve a path that should never run.
+ *
+ * The whole body is wrapped: observability failing must never become the
+ * outage the fail-open policy exists to prevent.
+ */
+async function reportStoreFailure(error: unknown, store: RateLimitStore, now: number) {
+  try {
+    storeErrors.swallowed += 1;
+    const sinceLastReport = now - storeErrors.lastReportedAt;
+    // A `now` that moved backwards (a caller passing its own instant) reports
+    // rather than silently suppressing until the clock catches up again.
+    if (sinceLastReport >= 0 && sinceLastReport < STORE_ERROR_REPORT_INTERVAL_MS) return;
+    const swallowed = storeErrors.swallowed;
+    storeErrors.swallowed = 0;
+    storeErrors.lastReportedAt = now;
+
+    const kind = store === defaultStore ? defaultStoreKind : "injected";
+    log("rate_limit.store_failed", "error", {
+      store: kind,
+      error: error instanceof Error ? error.name : typeof error,
+      swallowed,
+    });
+    const Sentry = await import("@sentry/nextjs");
+    Sentry.captureException(error, {
+      tags: { rate_limit_store: kind },
+      extra: { swallowed_since_last_report: swallowed },
+    });
+  } catch {
+    // Nothing to do about a broken reporter but keep the request moving.
+  }
+}
+
+/**
  * The e2e fleet can run as few as one worker (a single shared server, a
  * single shared 127.0.0.1 "IP") replaying dozens of sign-ins/bookings across
  * unrelated spec files against one in-memory store — real throttling there
@@ -229,6 +310,12 @@ function rateLimitDisabled(): boolean {
  * never a thrown error that would take down the caller. Async because the
  * distributed store above does a real network round trip; every call site is
  * already inside an async server action, route handler, or auth callback.
+ *
+ * Fail-open, but never *silent* (OPS-7): a store that is down means every
+ * public write boundary in the app is unprotected, which is precisely the
+ * state nobody may learn about from an attacker. The catch reports before it
+ * allows — damped, awaited (an un-awaited report can be frozen the instant a
+ * serverless response completes), and unable to throw.
  */
 export async function checkRateLimit(
   key: string,
@@ -239,7 +326,8 @@ export async function checkRateLimit(
   if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
   try {
     return await store.take(key, config, now);
-  } catch {
+  } catch (error) {
+    await reportStoreFailure(error, store, now);
     return { allowed: true, retryAfterMs: 0 };
   }
 }
@@ -273,6 +361,15 @@ function per15Min(capacity: number): RateLimitConfig {
  * scattered across action files. Deliberately generous relative to normal
  * human use (a diver never legitimately re-books six times an hour) so a
  * real customer retrying after a typo is never the one who gets throttled.
+ *
+ * **This object is the only source of truth for the numbers, and
+ * docs/engineering/rate-limiting-runbook.md must agree with it.** That is not
+ * a convention: a guard in `rate-limit.test.ts` parses every
+ * `` `RATE_LIMITS.name` (N/window) `` in the runbook and fails on a figure
+ * that drifts or an entry the runbook never mentions. The runbook's stale
+ * "30/hour" for `capabilityAction` (raised to 60 in July) is what that guard
+ * exists to prevent recurring — an operator reading a reassuring wrong number
+ * during an incident is worse served than one reading nothing.
  */
 export const RATE_LIMITS = {
   /** Account + shop creation, per IP. */
@@ -330,11 +427,12 @@ export const RATE_LIMITS = {
   /** Password-reset requests, per requested email — the narrow net. */
   passwordResetRequestByEmail: per15Min(3),
   /**
-   * Consuming a verify/reset/invite account token (the confirm/submit
-   * actions on `/verify/[token]`, `/reset-password/[token]`, and
-   * `/invite/[token]`), per IP. A personal link, not a shared boat WiFi
-   * connection, so this is tighter than `capabilityAction` — one person
-   * retrying their own link a few times is plenty.
+   * Consuming a verify/reset/invite/unsubscribe account token (the
+   * confirm/submit actions on `/verify/[token]`, `/reset-password/[token]`,
+   * `/invite/[token]`, and `/unsubscribe/[token]`), per IP. A personal link,
+   * not a shared boat WiFi connection, so this is tighter than
+   * `capabilityAction` — one person retrying their own link a few times is
+   * plenty.
    */
   accountTokenAction: perHour(20),
   /** Public booking submissions, per IP. */

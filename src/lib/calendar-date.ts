@@ -1,3 +1,4 @@
+import { cachedFormatter } from "./intl-cache";
 import { toDateInputValue, utcToWallTime } from "./zoned";
 
 /**
@@ -39,7 +40,7 @@ export function calendarDateInTimezone(date: Date, timeZone: string): CalendarDa
  */
 export function formatCalendarDate(date: CalendarDate, locale = "en-US"): string {
   const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

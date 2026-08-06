@@ -1,0 +1,24 @@
+{
+  "id": "re_3QsAVgLkdIwHu7ix1KpQrStU",
+  "object": "refund",
+  "amount": 12000,
+  "balance_transaction": "txn_3QsAVgLkdIwHu7ix1VwXyZ0A",
+  "charge": "ch_3QsAVgLkdIwHu7ix1ZpMrX8L",
+  "created": 1784645400,
+  "currency": "usd",
+  "destination_details": {
+    "card": {
+      "reference_status": "pending",
+      "reference_type": "acquirer_reference_number",
+      "type": "refund"
+    },
+    "type": "card"
+  },
+  "metadata": {},
+  "payment_intent": "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+  "reason": null,
+  "receipt_number": null,
+  "source_transfer_reversal": null,
+  "status": "succeeded",
+  "transfer_reversal": null
+}

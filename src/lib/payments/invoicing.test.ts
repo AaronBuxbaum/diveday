@@ -118,12 +118,88 @@ describe("stripe invoicing provider", () => {
       status: "refunded",
       refundId: "re_1",
     });
-    expect(fetchImpl.mock.calls[0][0]).toBe(
-      "https://api.stripe.com/v1/invoices/in_1?expand[]=payment_intent",
-    );
+    // Deliberately no `expand[]=payment_intent`: Stripe rejects that whole
+    // request with `parameter_unknown` on a current account, so asking for it
+    // turned every invoiced refund into a bare `failed`.
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/invoices/in_1");
     expect(fetchImpl.mock.calls[1][0]).toBe("https://api.stripe.com/v1/refunds");
     expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_1");
     expect(fetchImpl.mock.calls[1][1].headers["Idempotency-Key"]).toBe("intent-2");
+  });
+
+  /**
+   * The shape a current Stripe account actually returns: the payment moved off
+   * the Invoice object into an `invoice_payment` list, and the flat
+   * `payment_intent` field is gone. Every hand-written payload in this file
+   * predates that move, which is why the suite stayed green while a real
+   * invoiced refund answered `not_refundable` and moved no money — the gap
+   * TEST-M2's contract fixtures exist to close.
+   */
+  it("refunds from the invoice-payments list when the flat field is absent", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({
+        id: "in_1",
+        status: "paid",
+        total: 22_000,
+        payments: {
+          data: [{ is_default: true, status: "paid", payment: { payment_intent: "pi_9" } }],
+        },
+      }),
+      ok({ id: "re_9" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-9")).toEqual({
+      status: "refunded",
+      refundId: "re_9",
+    });
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_9");
+  });
+
+  it("refunds the settled payment, never a failed attempt on the same invoice", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({
+        id: "in_1",
+        status: "paid",
+        total: 22_000,
+        payments: {
+          data: [
+            { status: "canceled", payment: { payment_intent: "pi_failed" } },
+            { status: "paid", payment: { payment_intent: "pi_settled" } },
+          ],
+        },
+      }),
+      ok({ id: "re_10" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-10")).toEqual({
+      status: "refunded",
+      refundId: "re_10",
+    });
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_settled");
+  });
+
+  it("still refunds an account pinned to the older flat-field shape", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({ id: "in_1", status: "paid", total: 22_000, payment_intent: { id: "pi_legacy" } }),
+      ok({ id: "re_11" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-11")).toEqual({
+      status: "refunded",
+      refundId: "re_11",
+    });
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_legacy");
+  });
+
+  it("reports not_refundable only when the invoice genuinely carries no payment", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({ id: "in_1", status: "open", total: 22_000, payments: { data: [] } }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-12")).toEqual({
+      status: "not_refundable",
+    });
+    expect(fetchImpl.mock.calls).toHaveLength(1);
   });
 
   it("retrieves current invoice status", async () => {

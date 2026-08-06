@@ -1,0 +1,110 @@
+{
+  "id": "evt_1QsAVqLkdIwHu7ixAcctUpQr",
+  "object": "event",
+  "account": "acct_1Nv0FGQ9RKHgCVdK",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1784643000,
+  "data": {
+    "object": {
+      "id": "acct_1Nv0FGQ9RKHgCVdK",
+      "object": "account",
+      "business_profile": {
+        "annual_revenue": null,
+        "estimated_worker_count": null,
+        "mcc": "7999",
+        "minority_owned_business_designation": null,
+        "name": "Blue Mantis Divers",
+        "product_description": null,
+        "support_address": null,
+        "support_email": "hello@bluemantis.example",
+        "support_phone": null,
+        "support_url": null,
+        "url": "https://bluemantis.example"
+      },
+      "business_type": "company",
+      "capabilities": {
+        "card_payments": "active",
+        "transfers": "active"
+      },
+      "charges_enabled": true,
+      "country": "US",
+      "created": 1695830751,
+      "default_currency": "usd",
+      "details_submitted": true,
+      "email": "owner@bluemantis.example",
+      "external_accounts": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/accounts/acct_1Nv0FGQ9RKHgCVdK/external_accounts"
+      },
+      "future_requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "metadata": {},
+      "payouts_enabled": true,
+      "requirements": {
+        "alternatives": [],
+        "current_deadline": null,
+        "currently_due": [],
+        "disabled_reason": null,
+        "errors": [],
+        "eventually_due": [],
+        "past_due": [],
+        "pending_verification": []
+      },
+      "settings": {
+        "bacs_debit_payments": {
+          "display_name": null,
+          "service_user_number": null
+        },
+        "branding": {
+          "icon": null,
+          "logo": null,
+          "primary_color": null,
+          "secondary_color": null
+        },
+        "card_payments": {
+          "decline_on": {
+            "avs_failure": false,
+            "cvc_failure": false
+          },
+          "statement_descriptor_prefix": null
+        },
+        "dashboard": {
+          "display_name": "Blue Mantis Divers",
+          "timezone": "America/New_York"
+        },
+        "payments": {
+          "statement_descriptor": "BLUE MANTIS DIVERS",
+          "statement_descriptor_kana": null,
+          "statement_descriptor_kanji": null
+        },
+        "payouts": {
+          "debit_negative_balances": true,
+          "schedule": {
+            "delay_days": 2,
+            "interval": "daily"
+          },
+          "statement_descriptor": null
+        }
+      },
+      "type": "standard"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "account.updated"
+}

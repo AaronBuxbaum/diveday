@@ -11,6 +11,7 @@ import {
   resolveImageAlt,
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -63,7 +64,7 @@ export function CourseHero({
   // Whole major units: a hero price reads as a headline, and the trailing
   // ".00" is noise. `minorToMajor` (not a literal 100) is what keeps a
   // ¥48,000 course from rendering as ¥480.
-  const money = new Intl.NumberFormat(locale, {
+  const money = cachedFormatter("num", Intl.NumberFormat, locale, {
     style: "currency",
     currency: currency.toUpperCase(),
     maximumFractionDigits: 0,

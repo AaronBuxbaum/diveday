@@ -20,6 +20,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -110,7 +111,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from the pitch that sends shops to it.
-  const competitors = new Intl.ListFormat(locale, { type: "disjunction" }).format(
+  const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
   const dailyMoments = [

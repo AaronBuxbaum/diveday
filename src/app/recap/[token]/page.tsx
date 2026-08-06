@@ -17,6 +17,7 @@ import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { formatShortDate } from "@/lib/format";
+import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
@@ -124,7 +125,7 @@ function SiteCard({ site, lookForLabel }: { site: RecapSite; lookForLabel: strin
 function sitesSentence(sites: RecapSite[], locale: string): string | null {
   const names = sites.map((s) => s.name);
   if (names.length === 0) return null;
-  return new Intl.ListFormat(locale, { type: "conjunction" }).format(names);
+  return cachedListFormat(locale, { type: "conjunction" }).format(names);
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -432,7 +433,7 @@ export default async function DiveRecapPage({
                 {t("recap.tipFinish", {
                   // `minorToMajor`, never a literal 100 — a ¥3,000 tip is
                   // whole yen and dividing it would offer to pay ¥30.
-                  amount: new Intl.NumberFormat(locale, {
+                  amount: cachedFormatter("num", Intl.NumberFormat, locale, {
                     style: "currency",
                     currency: currency.toUpperCase(),
                     maximumFractionDigits: 0,

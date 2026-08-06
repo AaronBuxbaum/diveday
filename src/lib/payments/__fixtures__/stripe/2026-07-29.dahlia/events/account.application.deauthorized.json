@@ -1,0 +1,21 @@
+{
+  "id": "evt_1QsAVrLkdIwHu7ixDeauthSt",
+  "object": "event",
+  "account": "acct_1Nv0FGQ9RKHgCVdK",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1784644000,
+  "data": {
+    "object": {
+      "id": "ca_TQd8mKp2VnRxLaAbCdEfGhIj",
+      "object": "application",
+      "name": "DiveDay"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "account.application.deauthorized"
+}

@@ -7,6 +7,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import { cachedListFormat } from "./intl-cache";
 
 /**
  * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`
@@ -87,7 +88,7 @@ export function forecastText(
   const summary = conditions.conditionsSummary?.trim();
   const stats = measured.length
     ? t("notifications.brief.expect", {
-        list: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(measured),
+        list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(measured),
       })
     : "";
 

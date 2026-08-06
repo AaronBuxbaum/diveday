@@ -8,6 +8,7 @@ import { retryPendingProcessorErasures } from "@/db/processor-erasure";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
+import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,9 +46,16 @@ const CRON_MONITOR_SLUG = process.env.SENTRY_CRON_MONITOR_SLUG || "diveday-daily
  * before Sentry calls it missed; `maxRuntime` (minutes) sits above
  * `maxDuration` above, so a run killed by the platform reads as timed-out
  * rather than as still running forever.
+ *
+ * "Must stay in lockstep" used to be this comment and nothing else. The
+ * schedule now comes from `@/lib/cron-schedule`, whose own test reads
+ * vercel.json and fails if the two disagree — the same constant the retry
+ * bounds in `src/db/notifications.ts` derive from, so a cadence change moves
+ * the dead-man's switch and the retry window together instead of leaving one
+ * of them describing a schedule that no longer runs (OPS-6).
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "0 14 * * *" },
+  schedule: { type: "crontab", value: DAILY_TICK_CRONTAB },
   checkinMargin: 60,
   maxRuntime: 10,
   timezone: "Etc/UTC",

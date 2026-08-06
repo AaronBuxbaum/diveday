@@ -11,6 +11,7 @@ import {
   tripConditionsHoldEmail,
   tripRecapEmail,
   tripReminderEmail,
+  usageCeilingAlertEmail,
   verifyAccountEmail,
   welcomeEmail,
   wrapEmailHtml,
@@ -333,6 +334,83 @@ describe("demoStartedAlertEmail (docs ADR 20260805-demo-try-alerts)", () => {
     });
     expect(email.html).not.toContain("<script>");
     expect(email.html).not.toContain("<img");
+  });
+});
+
+describe("usageCeilingAlertEmail (docs ADR 20260806-provider-usage-guardrails)", () => {
+  const warning = {
+    ceilingId: "vercel_spend",
+    provider: "vercel",
+    metric: "billed_cost",
+    unit: "usd",
+    level: "warn" as const,
+    periodKey: "2026-08",
+    value: 38.5,
+    ceiling: 60,
+    percent: 64,
+    overflow: "bills_overage" as const,
+  };
+
+  it("says which ceiling, how far along, and for which period", () => {
+    const email = usageCeilingAlertEmail(warning);
+    expect(email.subject).toContain("vercel_spend");
+    expect(email.subject).toContain("64%");
+    expect(email.subject).toContain("2026-08");
+    expect(email.text).toContain("38.5 of 60 usd");
+    expect(email.html).toContain("vercel_spend");
+  });
+
+  it("distinguishes a warning from being over the line in the subject", () => {
+    const over = usageCeilingAlertEmail({ ...warning, level: "over", value: 61, percent: 102 });
+    expect(over.subject).not.toBe(usageCeilingAlertEmail(warning).subject);
+    expect(over.subject).toContain("over ceiling");
+  });
+
+  it("says what the provider does at the ceiling, in the provider's own terms", () => {
+    // A ceiling that suspends the database and one that adds to an invoice are
+    // not the same 7am email, and the code alone would not tell the reader that.
+    const suspends = usageCeilingAlertEmail({
+      ...warning,
+      ceilingId: "neon_compute",
+      provider: "neon",
+      metric: "compute_unit_hours",
+      unit: "compute_unit_hour",
+      overflow: "suspends",
+    });
+    expect(suspends.text).toContain("suspends");
+    const drops = usageCeilingAlertEmail({ ...warning, overflow: "drops" });
+    expect(drops.text).toContain("discards");
+  });
+
+  it("states that nothing was turned off, because nothing ever is", () => {
+    // The alert-only posture, inherited from ADR 20260802-aws-cost-guardrails.
+    // Somebody reading this at 7am must not have to wonder whether the site is
+    // already down.
+    const email = usageCeilingAlertEmail(warning);
+    expect(email.text).toContain("Alert-only");
+    expect(email.html).toContain("Alert-only");
+  });
+
+  it("carries no personal data — every field is a machine key or a number", () => {
+    const email = usageCeilingAlertEmail(warning);
+    const body = `${email.subject}\n${email.text}\n${email.html}`;
+    expect(body).not.toContain("@");
+    expect(body).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
+  });
+
+  it("escapes a ceiling id or provider that somehow arrived with markup in it", () => {
+    const email = usageCeilingAlertEmail({
+      ...warning,
+      ceilingId: '<script>alert("x")</script>',
+      provider: '<img src=x onerror="1">',
+    });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).not.toContain("<img");
+  });
+
+  it("renders a figure without locale separators, so no host setting can change it", () => {
+    const email = usageCeilingAlertEmail({ ...warning, value: 1234.567, ceiling: 2000 });
+    expect(email.text).toContain("1234.57 of 2000");
   });
 });
 

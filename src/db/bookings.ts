@@ -326,8 +326,11 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
   const tx = db;
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
-  // and both insert. PGlite is single-connection so tests can't exhibit the
-  // race — the lock is for production Postgres.
+  // and both insert. The unit suite runs on PGlite, which is single-connection
+  // and therefore cannot exhibit the race — but this is no longer untested.
+  // `src/db/bookings.postgres.test.ts` races two real connections for the last
+  // seat against a genuine Postgres server in CI, and asserts exactly one
+  // wins; with this `.for("update")` removed, a one-seat trip sells two.
   const [trip] = await tx
     .select()
     .from(trips)

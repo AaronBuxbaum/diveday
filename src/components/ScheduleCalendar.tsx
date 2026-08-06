@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { DiverTranslator } from "@/i18n/messages";
 import { type CalendarDay, weekStartsOn } from "@/lib/calendar";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 
 /** A single dive/trip placed on a calendar day. `time` is pre-formatted in the shop timezone. */
@@ -20,7 +21,10 @@ export type CalendarTrip = {
  * grid below it (src/lib/calendar.ts, `buildCalendarWeeks`).
  */
 function weekdayNames(locale: string): string[] {
-  const format = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const format = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    weekday: "short",
+    timeZone: "UTC",
+  });
   const firstDay = weekStartsOn(locale);
   return Array.from({ length: 7 }, (_, index) =>
     format.format(new Date(Date.UTC(2024, 0, 7 + firstDay + index))),

@@ -13,6 +13,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
@@ -28,7 +29,7 @@ export const instant = true;
 // default locale — consistent with the rest of this file's un-negotiated
 // metadata, and the reason this reaches for the named constant rather than a
 // literal (pnpm check:locale bans the literal outright).
-const metadataCompetitors = new Intl.ListFormat(DEFAULT_DIVER_LOCALE, {
+const metadataCompetitors = cachedListFormat(DEFAULT_DIVER_LOCALE, {
   type: "disjunction",
 }).format(MIGRATION_GUIDES.map((guide) => guide.competitor));
 

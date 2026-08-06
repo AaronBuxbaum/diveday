@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { OrderLineItemKind } from "@/db/schema";
+import { cachedFormatter } from "./intl-cache";
 
 /**
  * One block of a course's day-by-day plan: a title over a list of what
@@ -28,7 +29,7 @@ function formatClockTime(value: string, locale: string): string | null {
   // fixed UTC reference date is correct here — only the locale may vary, or a
   // Spanish diver reads "2:00 PM" where their own clock says "14:00".
   const reference = new Date(Date.UTC(2000, 0, 1, hours, minutes));
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "UTC",

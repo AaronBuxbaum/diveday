@@ -5,6 +5,8 @@
  * unit-tested on purpose — schedule math is operationally critical.
  */
 
+import { cachedFormatter } from "./intl-cache";
+
 export type WallTime = {
   year: number;
   month: number; // 1-12
@@ -16,7 +18,7 @@ export type WallTime = {
 /** Offset of `timeZone` from UTC at the given instant, in milliseconds. */
 function tzOffsetMs(date: Date, timeZone: string): number {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    cachedFormatter("dt", Intl.DateTimeFormat, "en-US", {
       timeZone,
       hour12: false,
       year: "numeric",
@@ -71,7 +73,7 @@ export function wallTimeToUtc(wall: WallTime, timeZone: string): Date {
 /** Wall-clock parts of a UTC instant in `timeZone` — the inverse of wallTimeToUtc. */
 export function utcToWallTime(date: Date, timeZone: string): WallTime {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    cachedFormatter("dt", Intl.DateTimeFormat, "en-US", {
       timeZone,
       hour12: false,
       year: "numeric",

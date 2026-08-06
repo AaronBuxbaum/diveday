@@ -594,8 +594,14 @@ failure degrades to pay-later; payment truth only from Stripe; percent-only prom
 negative.
 
 **Findings.**
-- **PAY-L2, L3 (Low).** A reused pending checkout doesn't re-verify the current price/deposit
-  policy; `refundOrder` relies on Stripe's over-refund rejection rather than a local lock.
+- **PAY-L2, L3 (Low). Closed 2026-08-06.** Reuse now re-derives the price, deposit policy,
+  currency and promotion and re-mints when any of them moved — and the investigation found the
+  finding understated: the confirmation panel's "Finish paying" button is an `<a href>` straight to
+  the stored `checkout_url`, so the most-travelled path never reached the pricing code at all.
+  `refundOrder` now claims the order row locally inside the transaction that records the intent, so
+  a double tap is refused here rather than at Stripe — Stripe remains payment truth and its
+  over-refund rejection remains the outer gate
+  ([20260806-stale-quote-and-refund-lock](../../architecture/decisions/20260806-stale-quote-and-refund-lock.md)).
   (`async_payment_failed` and the unbounded `stripe_webhook_events` both shipped 2026-08-03.)
 
 ## 7. Testing & quality engineering
@@ -614,11 +620,32 @@ both-halves clock freeze, external HTTP blocked); `retries: 0` with root-caused 
   removed a real product bug (the shell asserted an empty phone before reading the store; every
   offline reload completed only via React hydration-error recovery), which is a plausible cause —
   but the flake itself was never reproduced. A recurrence is unexplained, not new.
-- **TEST-M1 (Medium).** `ci.yml` itself estimates residual 5–10% per-test flake risk on the contended
-  set under `retries: 0`; red shards tax every PR.
-- **TEST-M2 (Medium).** Stripe tested only to the seam (injected fetchers, seeded fakes); no contract
-  fixtures pinned to an API version.
-- **TEST-M3 (Medium).** App/component layer thin (pages covered mainly transitively via e2e).
+- **TEST-M1 (Medium). Root-caused further 2026-08-06; `retries: 0` deliberately kept.** The `Intl`
+  memoization credited with the earlier 6/18 → ~1/18 improvement had stopped at `src/lib/format.ts`'s
+  file boundary: sixteen other modules still constructed their own formatters, `src/lib/zoned.ts`
+  worst of all at *three* `Intl.DateTimeFormat`s per wall-clock conversion on a module 26 others
+  import, and several surfaces built an `Intl.ListFormat` inside a `.map()`. Measured on a CI-class
+  box: 12.3x for construct-vs-reuse on `DateTimeFormat`, 8.6x on `ListFormat`. All now share
+  `src/lib/intl-cache.ts`. What this does **not** fix, and `ci.yml` now says so: two workers each
+  running a browser *and* a `next start` server is four heavy processes on a four-core runner —
+  deliberate oversubscription bought for half the runner minutes, removable only by paying for it.
+- **TEST-M2 (Medium). Closed 2026-08-06.** Contract fixtures for every Stripe object and event the
+  repo consumes, each recording the API version it was captured under, driving the real parsers
+  rather than asserting against themselves; a guard fails when the code's pin and the fixtures'
+  version diverge. It paid for itself immediately by catching a live bug the seam-level tests could
+  not: `refundInvoice` asked Stripe to expand `payment_intent` (rejected outright by a current
+  account) and then read the intent from a field Stripe has removed, so every invoiced refund
+  returned `not_refundable` with no money moved while the hand-written payloads stayed green.
+  Honest limit: no network or Stripe keys here, so the fixtures are **hand-authored** and the guard
+  enforces internal consistency, not truth about Stripe — the fixtures' README documents the
+  re-capture against a real test-mode account that would.
+- **TEST-M3 (Medium). Narrowed 2026-08-06.** Direct component coverage added where e2e reaches only
+  one path, picked by risk rather than convenience: the medical questionnaire's hidden-yes defence
+  (clearing child answers when a parent flips to No — safety-critical and unreachable by e2e's
+  single path), `BlockerGroups` (almost every decision is a *count*, and a wrong one reads
+  plausibly), and roll call's tap-to-jump (invisible to screenshots). Each was proven able to fail by
+  mutating the code path and confirming a targeted red. The layer is no longer untested, but it is
+  three surfaces, not the whole app — this is narrowed, not closed.
 - **TEST-L2, L3 (Low).** The perf budget is one number and never runs locally; guardrail scripts are
   regex-level (cooperative, not boundaries). (a11y breadth, the non-English e2e path and the visual
   mega-tests all closed 2026-08-03: the scan covers sixteen surfaces with a keyboard-only traversal
@@ -682,16 +709,46 @@ migrations, and incident response; fail-closed cron auth.
   that takes the app down takes the alerting with it; the external uptime monitor on `/api/health`
   and the public schedule, and the status page beside them, are still unprovisioned.
   → *Only the owner can decide or spend*, row 12.
-- **OPS-2 (residue, High).** The runbooks exist, but no CI job applies `drizzle/` migrations to a
-  real Postgres — production is still the first real server they touch. Folded into TEST-2 / *Only the owner can decide or spend*, row 11.
-- **OPS-6 (Medium).** Retry cadence is daily (one Vercel cron entry, `0 14 * * *`), not the 30s–1h
-  the backoff math implies; a failed waiver email waits ~24h for retry #1.
-- **OPS-7 (Medium).** Rate limiting per-instance until Upstash; the fail-open catch swallows store
-  errors with zero signal; runbook figures (30/hour) drifted from code (60).
-- **OPS-8 (Medium).** SSE + LISTEN holds one direct Neon connection per warm instance forever;
-  viewers pin instances (cost + connection ceiling + no scale-to-zero); undocumented cliff.
-- **OPS-9 (Medium).** Cost guardrails cover the smallest bill (AWS); Vercel/Neon/Resend (hard
-  1,000/month free cap, unmetered) have none.
+- **OPS-2 (residue, High). Closed 2026-08-06.** A `postgres:16` service-container job now applies
+  `drizzle/` from empty and from the previous release's schema, and races two real connections for
+  the last seat; the `FOR UPDATE` guard fails the job when removed. Gated on `src/db/**`/`drizzle/**`
+  plus nightly. TEST-2 closes with it
+  ([20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md)).
+  Residual, stated in the runbook rather than left implied: the rehearsal is against an *empty*
+  database, so lock duration and backfill runtime at production row counts are still unrehearsed.
+- **OPS-6 (Medium). Closed 2026-08-06.** The cadence stays daily — sub-daily crons are a
+  hosting-plan question — and the arithmetic stopped lying about it. The 30s–1h ladder is gone; a
+  retry lands on the next daily pass, the budget is three passes stated in days rather than eight
+  attempts stated as a count (which silently meant eight *days*), and a provider `Retry-After`
+  longer than a pass is still obeyed. `src/lib/cron-schedule.ts` is the single home for the cadence
+  and its test reads `vercel.json`, so the dead-man's switch and the retry window can no longer
+  drift apart.
+- **OPS-7 (Medium). Engineering half closed 2026-08-06.** The fail-open catch stays fail-open and
+  now reports: a damped `rate_limit.store_failed` log plus a Sentry capture, carrying the store kind
+  and error name but never the key. The runbook was re-audited row by row against `RATE_LIMITS` —
+  the 30/hour figures were the least of it, and **three prose claims were wrong**, including a
+  materially false security claim that every throttled caller gets the same generic notice (sign-in
+  and password reset are deliberately generic; the capability-token surfaces deliberately are not).
+  Still open and **not** engineering's: provisioning Upstash, without which the limits stay
+  per-instance.
+- **OPS-8 (Medium). Closed 2026-08-06.** The real defect was narrower and worse than "held per warm
+  instance": the shared LISTEN connection was *never torn down*, so it was held by an instance's
+  history rather than by any current viewer — which also stopped Neon's compute autosuspending. It
+  now closes 120s after the last subscriber leaves, behind a generation counter so a failing
+  instance stops re-dialling a database already out of connections. The cliff is documented in
+  [realtime-manifest-events-runbook.md](../../engineering/realtime-manifest-events-runbook.md), and
+  a refused viewer degrades to the existing five-minute poll — provably, not promised: the
+  freshness pill reads snapshot age, never stream state
+  ([20260806-manifest-listen-connection-ceiling](../../architecture/decisions/20260806-manifest-listen-connection-ceiling.md)).
+- **OPS-9 (Medium). Closed 2026-08-06.** One correction to the finding: **Resend is not used** —
+  SES has been the sole email provider since 20260803-ses-sole-email-provider, and SES spend is
+  already inside the AWS budget. The real gap was Vercel and Neon, and both now have a ceiling
+  registry (`src/lib/cost-guardrails.ts`) polled by a daily cron that mails the founder alert inbox
+  once per ceiling per period. Alert-only, mirroring the AWS posture — nothing auto-disables. A
+  probe with no credentials reports `not_configured`, never `ok`, because a monitor that reports
+  healthy because it could not measure is worse than none
+  ([20260806-provider-usage-guardrails](../../architecture/decisions/20260806-provider-usage-guardrails.md)).
+
 - **OPS-L1..L3 (Low).** Vercel access logs retain raw capability URLs (undocumented residual); VRT
   bucket world-readable (fine pre-launch, revisit); Sentry errors-only.
 

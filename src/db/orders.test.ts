@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { courseTotalCents } from "@/lib/courses";
 import type {
@@ -10,7 +10,7 @@ import type {
   ResendInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
-import { dbNow, seededShopContext } from "@/test/db";
+import { dbNow, dbNowPlus, seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -35,8 +35,9 @@ import {
   resendOrderInvoice,
   voidOrder,
 } from "./orders";
+import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { orders } from "./schema";
+import { orders, paymentOperationIntents } from "./schema";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -501,14 +502,17 @@ describe("orders", () => {
 
     await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
     const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
-    expect(refunded?.status).toBe("refunded");
-    expect(refunded?.amountPaidCents).toBe(0);
-    expect(refunded?.refundedAt).not.toBeNull();
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+    expect(refunded.order.amountPaidCents).toBe(0);
+    expect(refunded.order.refundedAt).not.toBeNull();
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
       status: "refunded",
       providerRef: result.order.stripeInvoiceId,
     });
-    expect(await refundOrder(db, shop.id, result.order.id, fakeInvoicing())).toBeNull();
+    expect(await refundOrder(db, shop.id, result.order.id, fakeInvoicing())).toEqual({
+      status: "not_paid",
+    });
   });
 
   // The same repeated-tap exposure `refundBookingOnCancellation` has (see
@@ -540,15 +544,191 @@ describe("orders", () => {
     if (!result.ok) throw new Error("expected order creation to succeed");
     await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
 
-    expect((await refundOrder(db, shop.id, result.order.id, invoicing))?.status).toBe("refunded");
+    expect((await refundOrder(db, shop.id, result.order.id, invoicing)).status).toBe("refunded");
     expect(refundInvoiceCalls).toBe(1);
 
     // Second attempt: already refunded, so it never reaches the provider and
     // the order is left exactly as the first refund settled it.
-    expect(await refundOrder(db, shop.id, result.order.id, invoicing)).toBeNull();
+    expect(await refundOrder(db, shop.id, result.order.id, invoicing)).toEqual({
+      status: "not_paid",
+    });
     expect(refundInvoiceCalls).toBe(1);
     const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
     expect(row).toMatchObject({ status: "refunded", amountPaidCents: 0 });
+  });
+
+  /**
+   * PAY-L3. The test above only proves the *sequential* case: the first refund
+   * has fully settled (`status: "refunded"`) before the second tap is read, so
+   * the plain `status !== "paid"` read is enough to turn it away. The exposure
+   * is the window that read cannot see — a second attempt landing while the
+   * first one is still inside its Stripe round trip, with the order row still
+   * saying `paid`. Both attempts pass the check, both mint their own intent
+   * (so their own distinct `Idempotency-Key`, deliberately — PAY-C1), and both
+   * reach Stripe. Only Stripe's own over-refund rejection stops the money
+   * moving twice, which is a second network round trip's worth of trust in a
+   * refusal we can make locally.
+   *
+   * **What PGlite can and cannot prove here.** It is single-connection, so
+   * this is not two transactions genuinely contending on the order row — the
+   * `FOR UPDATE` in `claimOrderRefund` takes an uncontended lock and returns
+   * immediately (same limitation documented in `src/db/bookings.ts` and
+   * `src/db/money-replay.test.ts`; real contention needs the real-Postgres CI
+   * job, HD-19). What it proves exactly is the *ordering* the lock exists to
+   * impose: the second attempt is driven re-entrantly from inside the first
+   * one's Stripe call — precisely the mid-flight window, after the first
+   * attempt's intent has committed and before its order update has — and must
+   * be refused locally, with a code, before the provider is asked again.
+   */
+  it("refuses a second refund that lands while the first is still at Stripe", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    let orderId = "";
+    let refundInvoiceCalls = 0;
+    let midFlight: Awaited<ReturnType<typeof refundOrder>> | null = null;
+    const invoicing: InvoicingProvider = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        refundInvoiceCalls += 1;
+        // The second staff tap, arriving while this first one is still in
+        // flight. It must never reach this provider again.
+        if (refundInvoiceCalls === 1) {
+          midFlight = await refundOrder(db, shop.id, orderId, invoicing);
+        }
+        return { status: "refunded", refundId: `re_${refundInvoiceCalls}` };
+      },
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    orderId = result.order.id;
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+
+    const first = await refundOrder(db, shop.id, orderId, invoicing);
+
+    expect(first.status).toBe("refunded");
+    expect(midFlight).toEqual({ status: "in_progress" });
+    expect(refundInvoiceCalls).toBe(1);
+    const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
+    expect(row).toMatchObject({ status: "refunded", amountPaidCents: 0 });
+    // One refund intent, not two: the refused attempt never claimed one, so
+    // the money trail shows a single attempt against this order.
+    const intents = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.orderId, orderId));
+    expect(intents).toHaveLength(1);
+    expect(intents[0]).toMatchObject({ kind: "refund", status: "succeeded" });
+  });
+
+  /**
+   * The other half of the same guard: a claim is a short-lived guard for one
+   * Stripe round trip, never a permanent lock a crashed process can leave on
+   * an order forever. Same self-healing rule (and the same `STALE_AFTER_MS`
+   * horizon) `claimBookingsForCheckout` already applies to a booking's
+   * checkout claim. Past that horizon Stripe's over-refund rejection is the
+   * gate again, which is exactly where this started — the local lock is a
+   * second gate, never a replacement for it.
+   */
+  it("stops blocking once an abandoned refund attempt goes stale", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    let refundInvoiceCalls = 0;
+    const invoicing = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        refundInvoiceCalls += 1;
+        return { status: "refunded", refundId: "re_after_stale" };
+      },
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+
+    // A process that died mid-refund: its intent is still `started` and will
+    // never resolve itself.
+    await startPaymentOperation(db, {
+      shopId: shop.id,
+      kind: "refund",
+      orderId: result.order.id,
+    });
+    expect(await refundOrder(db, shop.id, result.order.id, invoicing)).toEqual({
+      status: "in_progress",
+    });
+    expect(refundInvoiceCalls).toBe(0);
+
+    // Treat that abandoned intent as stale even though it just started. The
+    // bound is read off the *database's* clock, the one that stamped
+    // `started_at` — the frozen `DIVEDAY_CLOCK` never reaches it, so a bound
+    // derived from `nowDate()` would compare two different clocks (see `dbNow`
+    // in src/test/db.ts, and `claimBookingsForCheckout`'s identical option).
+    expect(
+      (
+        await refundOrder(db, shop.id, result.order.id, invoicing, {
+          staleBefore: await dbNowPlus(db, 1_000),
+        })
+      ).status,
+    ).toBe("refunded");
+    expect(refundInvoiceCalls).toBe(1);
+    // The abandoned intent is left exactly as the dead process left it — this
+    // guard ignores it, it does not rewrite someone else's money trail.
+    const stillStarted = await db
+      .select({ status: paymentOperationIntents.status })
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.orderId, result.order.id),
+          eq(paymentOperationIntents.status, "started"),
+        ),
+      );
+    expect(stillStarted).toHaveLength(1);
+  });
+
+  it("refuses an order that belongs to another shop without asking Stripe", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    let refundInvoiceCalls = 0;
+    const invoicing = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        refundInvoiceCalls += 1;
+        return { status: "refunded", refundId: "re_cross_tenant" };
+      },
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+
+    expect(await refundOrder(db, crypto.randomUUID(), result.order.id, invoicing)).toEqual({
+      status: "not_found",
+    });
+    expect(refundInvoiceCalls).toBe(0);
   });
 
   it("marks an order paid from a webhook invoice.paid event and cascades to its booking", async () => {

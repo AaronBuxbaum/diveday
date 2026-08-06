@@ -196,6 +196,10 @@ describe("resolveDiverNotice", () => {
     expect(resolve("not-authorized-fit")?.form).toBe("fit");
     expect(resolve("refunded")?.form).toBe("payments");
     expect(resolve("refund-failed")?.form).toBe("payments");
+    // A second tap refused locally while the first refund is still at Stripe
+    // (PAY-L3) — a warning beside the payments form, never a page banner.
+    expect(resolve("refund-in-progress")?.form).toBe("payments");
+    expect(resolve("refund-in-progress")?.tone).toBe("warning");
     expect(resolve("booked")?.form).toBe("book-activity");
     expect(resolve("course_min_age")?.form).toBe("book-activity");
     expect(resolve("not-authorized-delete")?.form).toBe("remove");

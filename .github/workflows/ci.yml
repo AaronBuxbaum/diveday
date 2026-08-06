@@ -4,9 +4,35 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly, for `real-postgres` and nothing else. That job is the only one here
+  # whose value decays with time rather than with the diff: it proves the
+  # committed `drizzle/` set still applies to a genuine server, and the thing
+  # that invalidates that proof — a migration merged on another branch, a
+  # Postgres image moving under us — arrives without touching this PR's files.
+  # A path-gated run alone would therefore go quiet exactly when the schema is
+  # busiest.
+  #
+  # A workflow-level trigger fires *every* job in the file, so on its own this
+  # would silently start running lint, typecheck, four unit shards, the build,
+  # and eight Playwright/visual shards every night. Two reasons that is not
+  # merely wasteful: it roughly doubles this workflow's runner minutes for no
+  # signal (the same commit already went green on merge), and `visual-report`
+  # would republish main's S3 snapshot on a run that resolved no baseline —
+  # exactly the "compared nothing, reported everything as new" failure the
+  # comments in that job exist to prevent. Every pre-existing job therefore
+  # carries `if: github.event_name != 'schedule'`, and those guards are load
+  # bearing: deleting one puts that job on the nightly schedule.
+  schedule:
+    # 07:00 UTC — before the working day in the Americas, after it in Europe, so
+    # a red nightly is read by a human rather than found stale the next evening.
+    - cron: "0 7 * * *"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # Unchanged for `pull_request` and `push`, which still share one lane per ref.
+  # The nightly gets a lane of its own so it can never queue behind — or hold up
+  # — a merge to main, since `cancel-in-progress` is false for both of them and
+  # they would otherwise serialize against each other on `ci-refs/heads/main`.
+  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.ref }}
   # Superseded PR pushes are pure waste and get cancelled. Pushes to main are
   # not: `visual-report` is what publishes that commit's screenshot snapshot to
   # S3, and reg-suit resolves a baseline by asking S3 for the *parent commit's*
@@ -20,6 +46,10 @@ concurrency:
 jobs:
   repo-safeguards:
     name: Repository safeguards
+    # Per-commit signal, so it has nothing to say on a nightly re-run of a commit
+    # that already passed it. See the `schedule:` trigger above — this guard is
+    # what keeps that trigger scoped to `real-postgres`.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,6 +59,7 @@ jobs:
 
   lint:
     name: Lint
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -38,6 +69,7 @@ jobs:
 
   typecheck:
     name: Typecheck
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -47,6 +79,12 @@ jobs:
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
+    # These four shards are where the `*.postgres.test.ts` files land in the
+    # ordinary run, and they skip there by design: no `DIVEDAY_TEST_POSTGRES_URL`
+    # is set for this job, so `describePostgres` registers a skipped suite and
+    # nothing tries to open a connection. `real-postgres` below is the only job
+    # that sets it.
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -65,6 +103,7 @@ jobs:
 
   build:
     name: Build
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -124,6 +163,7 @@ jobs:
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
     needs: build
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -178,6 +218,25 @@ jobs:
         # false` means a shard flaking here fails only its own shard, not
         # the run, and E2E_WORKERS is still available as an env override
         # on this step if contention resurfaces.
+        #
+        # A second pass at that same root cause (TEST-M1) found the
+        # memoization had stopped at `format.ts`'s file boundary while
+        # sixteen other modules still constructed their own formatters —
+        # `src/lib/zoned.ts` worst of all, building *three*
+        # `Intl.DateTimeFormat`s per single wall-clock conversion on a
+        # module 26 others import. Measured on a CI-class box, constructing
+        # one and calling `formatToParts` costs ~75µs against ~6µs for
+        # reusing it (12x); `Intl.ListFormat` 8.6x, and several surfaces
+        # built one *inside* a `.map()`. All of it now shares the cache in
+        # `src/lib/intl-cache.ts`.
+        #
+        # What that does NOT fix, and nobody should expect it to: 2 workers
+        # each running a browser *and* a `next start` server is 4 heavy
+        # processes on a 4-core runner. That is deliberate oversubscription
+        # bought for half the runner minutes, and no amount of per-render
+        # micro-optimization removes it — it can only be paid for with
+        # E2E_WORKERS=1 and double the shards. Treat a flake here as a real
+        # finding to root-cause, not as expected noise.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -189,6 +248,7 @@ jobs:
   visual:
     name: Visual capture shard ${{ matrix.shard }}/4
     needs: build
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -250,7 +310,16 @@ jobs:
     # checked — and it silently defeats the `!cancelled()` on the summary step
     # below, which was written to speak on exactly that path. Run whenever the
     # run wasn't cancelled instead; the steps decide what is still meaningful.
-    if: ${{ !cancelled() }}
+    #
+    # The `schedule` clause is not decoration, and it is not the same guard the
+    # other jobs carry. `!cancelled()` is true for a *skipped* dependency as much
+    # as a failed one — that is the entire point of it — so without this the
+    # nightly would skip `visual` and then run this job anyway against zero
+    # screenshots, and the summary step's `!cancelled()` would faithfully
+    # announce on every night's job summary that nothing was compared. Which
+    # would be true, and pure noise, and would teach readers to ignore the one
+    # sentence that matters when it is real.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The only job in this workflow that writes anything back to GitHub: the
@@ -360,3 +429,146 @@ jobs:
           # is missing (every fork PR), so it can still look for a report and
           # explain the miss rather than crash.
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+
+  db-surface-changes:
+    name: Detect database-surface changes
+    # Cheap gate in front of `real-postgres`: a checkout and a `git diff`, so the
+    # ~90% of pull requests that touch no schema surface never pay for a service
+    # container. Written as a job rather than a workflow-level `paths:` filter
+    # because that filter applies to the *whole workflow* — putting one on the
+    # `pull_request` trigger would stop lint, typecheck, and every test shard
+    # from running on any PR that happens not to touch `src/db/`.
+    #
+    # Also written as a `git diff` rather than a third-party filter action: the
+    # comparison is four lines of shell, and this repo would rather read those
+    # than take a new supply-chain dependency into every CI run to save them.
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff below reaches back to the base commit, which a depth-1
+          # checkout does not contain.
+          fetch-depth: 0
+      - id: filter
+        env:
+          # `base.sha` on a pull_request, `before` on a push to main.
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          # Fail *open*, always. Every path out of this script that cannot answer
+          # the question confidently answers "changed", because the cost of a
+          # false positive is two minutes of runner time and the cost of a false
+          # negative is an unrehearsed migration reaching production — which is
+          # the entire problem this job exists to solve. A force-push and a
+          # branch's first push both leave `before` as all-zeros, and neither is
+          # a reason to stop checking.
+          if ! git rev-parse --verify -q "${BASE_SHA}^{commit}" > /dev/null 2>&1; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Base commit '${BASE_SHA}' is unresolvable — running real-postgres anyway." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Three-dot: what this branch changed, not what main did underneath it.
+          # `src/db` covers both the schema and the `*.postgres.test.ts` suites;
+          # the last two are the harness itself, so a change to how the proof is
+          # run is also a reason to re-run it.
+          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- \
+            src/db drizzle src/test/postgres.ts scripts/previous-release-migrations.mjs \
+            .github/workflows/ci.yml)
+          if [ -n "${changed_paths}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "Database surface touched — running real-postgres:"
+              echo '```'
+              echo "${changed_paths}"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No database-surface changes — real-postgres skipped (it still runs nightly)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  real-postgres:
+    name: Real Postgres (migrations + concurrency)
+    needs: db-surface-changes
+    # Two independent reasons to run, and the `always()` is what lets the second
+    # one work: `needs:` on a skipped job would otherwise skip this one too, and
+    # `db-surface-changes` is deliberately skipped on the nightly.
+    if: ${{ always() && (needs.db-surface-changes.outputs.changed == 'true' || github.event_name == 'schedule') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The whole point of the job. Everything else in this repo's db suite runs on
+    # PGlite, which is a genuinely good default — fast, hermetic, no service to
+    # stand up — but it is single-connection and it is not the engine production
+    # runs. Two things follow that nothing else in CI can see:
+    #
+    #   1. The committed `drizzle/` SQL first meets a real server during the
+    #      production deploy (docs/engineering/deploy-and-migrations-runbook.md,
+    #      "What actually happens on deploy"). `CREATE EXTENSION pg_trgm` is the
+    #      concrete example: it is a real statement in `drizzle/`, but PGlite
+    #      satisfies it out-of-band with a wasm extension loaded in JavaScript
+    #      before any migration runs.
+    #   2. `FOR UPDATE` cannot be contended on one connection, so the oversell
+    #      guard in `createBookingRecord` and the serialization in
+    #      `withBookingPaymentLock` have never actually been raced. Both were
+    #      verified to fail this job when their lock is deleted; the header of
+    #      each suite records exactly which assertion catches it.
+    services:
+      postgres:
+        # Pin the major version rather than tracking `postgres:latest`, so this
+        # job's answer changes only when someone changes it on purpose. Keep it
+        # aligned with the major Neon runs; a mismatch here means the migrations
+        # are rehearsed against a different engine than they deploy to, which is
+        # a quieter version of the gap this job closes.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Without a health check the steps start against a server still
+        # initializing, and the failure reads as a connection error rather than
+        # "the container wasn't up yet".
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Required, not tidiness. `migrations.postgres.test.ts` reconstructs
+          # the previous release's `drizzle/` tree out of the object store via
+          # `scripts/previous-release-migrations.mjs`, and a shallow clone has no
+          # merge base to reconstruct it from. That test throws rather than skips
+          # when it cannot find one, precisely so this line cannot be quietly
+          # dropped without someone noticing.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      # A glob, not a hand-maintained list of filenames. The first draft of this
+      # job named its three suites explicitly, on the theory that an auditable
+      # set was worth the friction of adding a line per suite. That theory did
+      # not survive the same afternoon: a fourth suite
+      # (`src/db/refunds.postgres.test.ts`) was written against this harness in a
+      # parallel branch, and an explicit list would have accepted it into the
+      # repo while running it nowhere — it skips in the unit shards for want of
+      # `DIVEDAY_TEST_POSTGRES_URL`, so this job is its only home.
+      #
+      # The failure mode of a stale list is silence, which is the one failure
+      # mode this whole job exists to remove. Bash expands the glob before vitest
+      # sees it; if it ever matches nothing, vitest exits non-zero rather than
+      # reporting a cheerful zero tests.
+      - name: Migrations and concurrency against a real server
+        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts
+        env:
+          # Deliberately *not* `DATABASE_URL`. That variable is what `getDb()`
+          # reads, and both `vitest.config.ts` and `src/test/global-setup.ts` pin
+          # it to `""` so no test can reach a real database by accident. Setting
+          # it here would un-pin that for the whole run and point every unrelated
+          # test at this container. One purpose-built variable keeps the blast
+          # radius to the three files that ask for it by name (src/test/postgres.ts).
+          DIVEDAY_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/postgres

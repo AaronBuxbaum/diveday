@@ -7,6 +7,8 @@
  * is exhaustively unit-testable.
  */
 
+import { cachedFormatter } from "./intl-cache";
+
 export type MonthRef = { year: number; month: number }; // month is 1-12
 
 export type CalendarDay = {
@@ -70,7 +72,7 @@ export function clampMonth(ref: MonthRef, min?: MonthRef | null, max?: MonthRef 
 
 /** "July 2026" for the calendar heading. */
 export function monthLabel(ref: MonthRef, locale = "en-US"): string {
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "long",
     year: "numeric",
     timeZone: "UTC",

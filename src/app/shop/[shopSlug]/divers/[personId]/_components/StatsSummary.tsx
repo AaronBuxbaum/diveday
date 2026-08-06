@@ -4,6 +4,7 @@ import { rentalItemLabel } from "@/i18n/rental-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { shopWaiverStatusText, shopWaiverStatusTone } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { cardsNeedingLookCount, type DiverProfile, type Shop, unpaidBookingCount } from "./shared";
 
@@ -166,7 +167,7 @@ export function StatsSummary({
         detail={
           fit.state === "incomplete"
             ? t("divers.stats.fitMissingSizes", {
-                items: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(
+                items: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
                   fit.missing.map((kind) => rentalItemLabel(t, kind)),
                 ),
               })

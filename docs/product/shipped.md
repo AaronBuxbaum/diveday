@@ -7,6 +7,59 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 review's operations, testing and payments residue (delivered 2026-08-06)
+
+Ten findings closed together, all of them the same species: a mechanism that was written down
+correctly and never proved, or arithmetic that described a system nobody had built.
+
+**Production is no longer the first real Postgres a migration meets** (OPS-2/TEST-2). A CI job with a
+`postgres:16` service container applies `drizzle/` from empty *and* from the previous release's
+schema, then races two genuinely concurrent connections for the last seat on a trip. The `FOR UPDATE`
+oversell guard in `src/db/bookings.ts` was dead code under test — PGlite is single-connection and
+cannot exhibit the race — and is now provably load-bearing: with the lock removed a one-seat trip
+sells two. Gated on `src/db/**`/`drizzle/**` plus a nightly run, so it is not a per-PR tax.
+[20260806-real-postgres-ci-job](../architecture/decisions/20260806-real-postgres-ci-job.md).
+
+**The notification retry ladder stopped describing a system that does not exist** (OPS-6). The code
+computed a 30s → 1h exponential backoff; nothing polls that queue but the daily tick, so every rung
+collapsed to "tomorrow" and the eight attempts sized for a two-hour ladder quietly meant *eight
+days*. A retry now lands on the next daily pass, the budget is stated in days (three) rather than as
+an attempt count, and `src/lib/cron-schedule.ts` is the one place the cadence lives — its test reads
+`vercel.json`, so "must stay in lockstep" is a failing test instead of a comment.
+
+**Two silences got a voice.** `checkRateLimit`'s fail-open catch stays fail-open — a limiter that
+500s a legitimate request is worse than none — but now logs and captures to Sentry, damped, never
+carrying the key (OPS-7). And the manifest SSE channel's LISTEN connection, which was *never* torn
+down, now closes after 120s idle behind a generation counter, with the Neon connection ceiling and
+its escalation written down at last (OPS-8).
+[20260806-manifest-listen-connection-ceiling](../architecture/decisions/20260806-manifest-listen-connection-ceiling.md).
+
+**Cost guardrails reach past the smallest bill** (OPS-9). AWS had a budget and anomaly detection;
+Vercel and Neon — the ones that actually scale with traffic — had nothing. A daily cron polls each
+provider's usage against a ceiling registry and mails the founder alert inbox once per ceiling per
+period. Unmeasurable is not the same as fine: a probe with no credentials reports `not_configured`,
+never `ok`.
+[20260806-provider-usage-guardrails](../architecture/decisions/20260806-provider-usage-guardrails.md).
+
+**A pending checkout is a quote with an expiry, not a permanent price** (PAY-L2/L3). Stripe holds a
+session's amounts for its whole life, so a session minted on Monday still charged Monday's fare on
+Friday — through a "Finish paying" link that bypassed the pricing code entirely. Reuse now re-derives
+the figure and re-mints when it moved. And `refundOrder` claims the order row locally before asking
+Stripe, instead of relying on Stripe's over-refund rejection to catch a double tap.
+[20260806-stale-quote-and-refund-lock](../architecture/decisions/20260806-stale-quote-and-refund-lock.md).
+
+**Testing got the three layers it was missing** (TEST-M1/M2/M3). Stripe is no longer tested only
+against shapes the tests themselves invented: contract fixtures pinned to an API version drive the
+real parsers, and a guard fails when the pin and the fixtures diverge. That immediately earned its
+keep — it caught `refundInvoice` asking Stripe to expand a field current accounts reject, then
+reading the intent from a field Stripe has removed, so *every* invoiced refund failed with no money
+moved while the hand-written tests stayed green. Component tests now cover three risk-picked
+surfaces (medical questionnaire, blocker groups, roll call), each proven able to fail by mutation.
+And the residual CI flake was root-caused rather than retried away: the `Intl` memoization that fixed
+most of it had stopped at `format.ts`'s file boundary, leaving `src/lib/zoned.ts` building *three*
+formatters per wall-clock conversion on a module 26 others import, and several surfaces building one
+inside a `.map()` — 12x measured overhead, now one shared cache in `src/lib/intl-cache.ts`.
+
 ## Dive sites and dive briefings, reconciled (delivered 2026-08-05)
 
 A shop owner read "a two-tank dive with one dive site and 2 dive briefings" and could not tell
