@@ -1,4 +1,5 @@
 import { permanentRedirect } from "next/navigation";
+import { requireStaffSession } from "@/lib/session";
 
 /**
  * Backups are no longer a page: they are the second half of the one data-out
@@ -15,23 +16,34 @@ import { permanentRedirect } from "next/navigation";
  * looking for instead of the top of a long page — the silent kind of "it still
  * works" is what makes staff re-hunt for something they had already found.
  *
- * Redirect only: no gate here, deliberately. The target re-runs
- * `canPersonExportShopData` against the database on arrival, so this route
- * discloses nothing that the target would not.
+ * Two rules this stub still obeys, short as it is:
+ *
+ * - **It re-checks the session server-side** (ADR-0006), rather than trusting
+ *   the edge proxy to have done it. A redirect discloses little, but "this
+ *   route is only a redirect" is exactly the reasoning by which a `/shop/**`
+ *   route ends up as the one that skipped the recheck. (`blockers/page.tsx`,
+ *   the redirect this one is modelled on, still has that gap; it is not this
+ *   change's to close.) *Authorization* stays where it belongs: the target
+ *   re-runs `canPersonExportShopData` on arrival, so a captain following an
+ *   old bookmark gets the refusal rather than a hole.
+ * - **The target is built from the session's own slug, not the URL's** —
+ *   symmetric with `settings/export/actions.ts`. A cross-shop bookmark then
+ *   lands on the reader's own data-out page instead of the shop shell's
+ *   `notFound()`.
  */
 export default async function BackupSettingsRedirect({
-  params,
   searchParams,
 }: {
-  params: Promise<{ shopSlug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ shopSlug }, query] = await Promise.all([params, searchParams]);
+  const [session, query] = await Promise.all([requireStaffSession(), searchParams]);
   const carried = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (typeof value === "string") carried.append(key, value);
     else if (Array.isArray(value)) for (const one of value) carried.append(key, one);
   }
   const search = carried.toString();
-  permanentRedirect(`/shop/${shopSlug}/settings/export${search ? `?${search}` : ""}#backups`);
+  permanentRedirect(
+    `/shop/${session.user.shopSlug}/settings/export${search ? `?${search}` : ""}#backups`,
+  );
 }
