@@ -299,9 +299,13 @@ new domain concept, define it here in the same PR.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
-- **Coverage gap** — a staffing prompt where a scheduled trip has no assigned crew, lacks its
-  required instructor, or has no assigned crew member whose working shift overlaps the trip. It is
-  a prompt for staff, not a boarding authorization by itself.
+- **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
+  reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
+  authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its
+  departure board is where crew are assigned. The shift roster only counts them —
+  "N departures in this window still need crew" — and links across
+  (ADR 20260806-staffing-is-the-shift-roster). Formerly "coverage gap", which named a second
+  vocabulary that no longer exists.
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate.
@@ -582,7 +586,8 @@ new domain concept, define it here in the same PR.
   trip; each one extends the **entry-level in-water ratio** by two students per instructor. A
   person holding both instructor and divemaster roles is counted as the instructor, never as their
   own assistant. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
-  booking gate, the trip page, the staffing coverage list, and the Today queue.
+  booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
+  roster's crew-gap count.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite

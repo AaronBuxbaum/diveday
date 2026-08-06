@@ -1,7 +1,6 @@
 import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
-import { type CourseCrewGap, courseCrewGap } from "@/lib/course-ratios";
-import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
+import { courseCrewGap } from "@/lib/course-ratios";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -12,6 +11,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { courseCrewCountsByTrip } from "./today";
 import { listStaff } from "./trips";
 
 export type StaffCapability = "teach" | "crew" | "captain";
@@ -27,43 +27,34 @@ export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[
 }
 
 /**
- * Why a trip's staffing is not yet settled. A code, not a sentence: the data
- * layer states the fact and the UI renders the words for the reader's locale.
- * An English string returned from here would be copy that no translation pass
- * and no `pnpm check:copy` scan can reach (docs ADR
- * 20260730-staff-copy-localization).
- */
-export type StaffingGapCode =
-  | "no_crew"
-  | "course_needs_instructor"
-  | "over_ratio"
-  | "no_shift_coverage";
-
-/**
- * The two course-crew gaps this list can show, named as `courseCrewGap`
- * (src/lib/course-ratios.ts) names them. Coverage reads that one computation —
- * the same one the trip page and the Today queue read — instead of re-deriving
- * a rule of its own, and reports its two codes *separately*: an over-ratio
- * session already has an instructor, so filing it under
- * `course_needs_instructor` told a manager to do something they had already
- * done, and hid the ratio Today and the trip page were both shouting about.
+ * How many of the window's departures still need somebody on the crew — a
+ * *count*, and deliberately nothing more.
  *
- * Written as an exhaustive record rather than a chain of ifs so that a new
- * `CourseCrewGap` code is a compile error here — a silently unmapped gap would
- * be a session this page calls "Covered" while the other two surfaces flag it.
+ * The shift roster used to render its own per-departure coverage table, with
+ * its own gap vocabulary (`over_ratio` / `course_needs_instructor`) beside
+ * Today's word for the same fact (`instructor_missing`). Two surfaces, two
+ * names, one computation, and only Today's could actually assign anyone —
+ * the roster's rows dead-ended on a link. So the roster keeps the question it
+ * alone answers (who is working, when) and reduces the rest to this summary,
+ * composed from the same reader Today's detection runs on
+ * (`courseCrewCountsByTrip`, src/db/today.ts + `courseCrewGap`,
+ * src/lib/course-ratios.ts). There is no second detector, and no second set of
+ * words — the surface that can crew a boat owns them
+ * (ADR 20260806-staffing-is-the-shift-roster, ADR 20260803-not-ready-is-a-view).
  *
  * Advisory throughout: booking-time ratio enforcement stays in
  * `createBookingRecord` (src/db/bookings.ts). Nothing here refuses anything.
  */
-const COURSE_GAP_CODES: Record<Exclude<CourseCrewGap["code"], "none">, StaffingGapCode> = {
-  no_instructor: "course_needs_instructor",
-  over_ratio: "over_ratio",
+export type StaffingCrewGaps = {
+  /** Scheduled departures overlapping the window — the summary's denominator. */
+  departures: number;
+  /**
+   * How many of them have nobody rostered at all, or a course crew gap
+   * `courseCrewGap` reports (an instructorless session, or one booked past its
+   * ratio). Zero-crew is a plain fact off the assignment rows, not a rule.
+   */
+  needCrew: number;
 };
-
-/** `courseCrewGap`'s verdict as the zero-or-one gap codes coverage lists. */
-function courseGapCodes(gap: CourseCrewGap): StaffingGapCode[] {
-  return gap.code === "none" ? [] : [COURSE_GAP_CODES[gap.code]];
-}
 
 /** A trip a staff member crews, shown on their staffing card (task 165). */
 export type StaffCrewingTrip = {
@@ -86,13 +77,8 @@ export type StaffingView = {
      * (Lens 17 task 165). */
     crewingTrips: StaffCrewingTrip[];
   }[];
-  trips: {
-    trip: typeof trips.$inferSelect;
-    courseTitle: string | null;
-    crew: { personId: string; name: string; roles: string[] }[];
-    coveredByShift: boolean;
-    gaps: StaffingGapCode[];
-  }[];
+  /** The one line this page says about crewing; see {@link StaffingCrewGaps}. */
+  crewGaps: StaffingCrewGaps;
 };
 
 export async function getStaffingView(
@@ -118,7 +104,7 @@ export async function getStaffingView(
     // Trip + course + booked count, independent of who (if anyone) crews it —
     // `courseCrewGap` needs the course's ratio inputs (agency,
     // minimumCertificationLevel) and the booked count on every trip in the
-    // window, not just the ones with a coverage gap.
+    // window, not just the ones with a crew gap.
     db
       .select({ trip: trips, course: courses, booked: count(bookings.id) })
       .from(trips)
@@ -135,20 +121,18 @@ export async function getStaffingView(
       .groupBy(trips.id, courses.id)
       .orderBy(asc(trips.startsAt)),
     // Crew assignments, queried separately from the trip/course row above so
-    // this join's fan-out (one row per assignment×role) never multiplies the
-    // booked count computed alongside it.
+    // this join's fan-out never multiplies the booked count computed alongside
+    // it. Who is rostered, not what they are qualified for: the ratio inputs
+    // come from Today's own reader further down, so this no longer joins
+    // `person_roles` at all.
     db
       .select({
         tripId: tripAssignments.tripId,
         personId: people.id,
-        personName: people.fullName,
-        tripRole: tripAssignments.tripRole,
-        role: personRoles.role,
       })
       .from(tripAssignments)
       .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
       .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .leftJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
       .where(
         and(
           eq(trips.shopId, shopId),
@@ -169,55 +153,35 @@ export async function getStaffingView(
 
   type TripEntry = {
     trip: typeof trips.$inferSelect;
-    courseTitle: string | null;
     course: typeof courses.$inferSelect | null;
     booked: number;
-    crew: {
-      personId: string;
-      name: string;
-      /** Shop-wide roles; what the ratio reads together with `tripRole`. */
-      roles: string[];
-      /** The job this person is rostered to do on this trip, or null. */
-      tripRole: TripCrewRole | null;
-    }[];
+    /** Person ids rostered on this trip, in no particular order. */
+    crew: Set<string>;
   };
   const tripMap = new Map<string, TripEntry>();
   for (const row of tripCourseRows) {
     tripMap.set(row.trip.id, {
       trip: row.trip,
-      courseTitle: row.course?.title ?? null,
       course: row.course,
       booked: row.booked,
-      crew: [],
+      crew: new Set(),
     });
   }
   for (const row of crewRows) {
-    const entry = tripMap.get(row.tripId);
-    if (!entry) continue;
-    let crew = entry.crew.find((member) => member.personId === row.personId);
-    if (!crew) {
-      crew = {
-        personId: row.personId,
-        name: row.personName,
-        roles: [],
-        tripRole: row.tripRole,
-      };
-      entry.crew.push(crew);
-    }
-    if (row.role && !crew.roles.includes(row.role)) crew.roles.push(row.role);
+    tripMap.get(row.tripId)?.crew.add(row.personId);
   }
 
   const crewingByPerson = new Map<string, StaffCrewingTrip[]>();
   for (const entry of tripMap.values()) {
-    for (const member of entry.crew) {
-      const trips = crewingByPerson.get(member.personId) ?? [];
+    for (const personId of entry.crew) {
+      const trips = crewingByPerson.get(personId) ?? [];
       trips.push({
         tripId: entry.trip.id,
         title: entry.trip.title,
         startsAt: entry.trip.startsAt,
         endsAt: entry.trip.endsAt,
       });
-      crewingByPerson.set(member.personId, trips);
+      crewingByPerson.set(personId, trips);
     }
   }
   for (const trips of crewingByPerson.values()) {
@@ -231,44 +195,32 @@ export async function getStaffingView(
     crewingTrips: crewingByPerson.get(entry.person.id) ?? [],
   }));
 
-  const tripsView = [...tripMap.values()].map((entry) => {
-    // One definition of who is an in-water instructor or certified assistant
-    // (`countInWaterCrew`, src/lib/crew-roles.ts), shared with the booking
-    // gate, Today, and the trip page — a divemaster rostered as this trip's
-    // captain is not their own assistant here either.
-    const { instructorCount, assistantCount } = countInWaterCrew(
-      entry.crew.map((member) => ({ tripRole: member.tripRole, shopRoles: member.roles })),
-    );
-    // The one "course crew gap" computation (Lens 17 task 151) — also
-    // consumed by the trip page and the Today queue — so a course this window
-    // calls covered isn't secretly over its ratio on Today, and the two
-    // surfaces name the same shortfall the same way.
+  // Today's own reader, not a second one: `courseCrewCountsByTrip`
+  // (src/db/today.ts) is what `instructor_missing` is computed from, and it
+  // counts in-water crew by the one definition every ratio gate shares
+  // (`countInWaterCrew`, src/lib/crew-roles.ts) — a divemaster rostered as
+  // this trip's captain is not their own assistant here either.
+  const crewCounts = await courseCrewCountsByTrip(db, shopId, [...tripMap.keys()]);
+  let needCrew = 0;
+  for (const entry of tripMap.values()) {
+    // Nobody rostered at all — read straight off the assignment rows. It is
+    // the one crew fact that is not a rule, and the boat it describes needs
+    // people whether or not a course ratio applies.
+    if (entry.crew.size === 0) {
+      needCrew += 1;
+      continue;
+    }
+    const counts = crewCounts.get(entry.trip.id) ?? { instructorCount: 0, assistantCount: 0 };
     const gap = courseCrewGap({
       course: entry.course,
-      instructorCount,
-      assistantCount,
+      instructorCount: counts.instructorCount,
+      assistantCount: counts.assistantCount,
       booked: entry.booked,
     });
-    const crewShifted = entry.crew.some((member) =>
-      (shiftsByPerson.get(member.personId) ?? []).some(
-        (shift) => shift.startsAt < entry.trip.endsAt && shift.endsAt > entry.trip.startsAt,
-      ),
-    );
-    const gaps: StaffingGapCode[] = [
-      ...(entry.crew.length === 0 ? (["no_crew"] as const) : []),
-      ...courseGapCodes(gap),
-      ...(!crewShifted ? (["no_shift_coverage"] as const) : []),
-    ];
-    return {
-      trip: entry.trip,
-      courseTitle: entry.courseTitle,
-      crew: entry.crew,
-      coveredByShift: crewShifted,
-      gaps,
-    };
-  });
+    if (gap.code !== "none") needCrew += 1;
+  }
 
-  return { from, to, staff, trips: tripsView };
+  return { from, to, staff, crewGaps: { departures: tripMap.size, needCrew } };
 }
 
 /**

@@ -517,12 +517,18 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
     return { db, shop, trip, instructorId: instructor.person.id };
   }
 
-  async function unstaffed(
+  /**
+   * Today's verdict on this one session, and the roster's window-wide
+   * needs-crew count taken alongside it. The roster no longer names a
+   * per-trip gap — its whole crewing surface is that count — so agreement is
+   * asserted as a delta: when Today flags the session, exactly one more
+   * departure in the window needs crew.
+   */
+  async function readBoth(
     db: Awaited<ReturnType<typeof courseSessionToday>>["db"],
     shop: Awaited<ReturnType<typeof courseSessionToday>>["shop"],
     trip: { id: string; startsAt: Date; endsAt: Date },
   ) {
-    const tripId = trip.id;
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const view = await getStaffingView(
       db,
@@ -530,33 +536,37 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    const today = work.actions.some(
-      (action) => action.kind === "instructor_missing" && action.id === `instructor:${tripId}`,
-    );
-    const staffing = (view.trips.find((row) => row.trip.id === tripId)?.gaps ?? []).includes(
-      "course_needs_instructor",
-    );
-    // The agreement itself, stated as one assertion.
-    expect(today).toBe(staffing);
-    return today;
+    return {
+      today: work.actions.some(
+        (action) => action.kind === "instructor_missing" && action.id === `instructor:${trip.id}`,
+      ),
+      needCrew: view.crewGaps.needCrew,
+    };
   }
 
   it("agrees that a rostered deck hand does not staff the session, and that the instructor does", async () => {
     const { db, shop, trip, instructorId } = await courseSessionToday();
     // No per-trip role: the status quo, and both surfaces say it is staffed.
-    expect(await unstaffed(db, shop, trip)).toBe(false);
+    const staffed = await readBoth(db, shop, trip);
+    expect(staffed.today).toBe(false);
 
     await db
       .update(tripAssignments)
       .set({ tripRole: "crew" })
       .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.personId, instructorId)));
-    expect(await unstaffed(db, shop, trip)).toBe(true);
+    const asDeckHand = await readBoth(db, shop, trip);
+    expect(asDeckHand.today).toBe(true);
+    // The agreement itself: Today flagged one more session, and the roster's
+    // count rose by exactly one.
+    expect(asDeckHand.needCrew).toBe(staffed.needCrew + 1);
 
     await db
       .update(tripAssignments)
       .set({ tripRole: "instructor" })
       .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.personId, instructorId)));
-    expect(await unstaffed(db, shop, trip)).toBe(false);
+    const asInstructor = await readBoth(db, shop, trip);
+    expect(asInstructor.today).toBe(false);
+    expect(asInstructor.needCrew).toBe(staffed.needCrew);
   });
 });
 

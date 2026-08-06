@@ -825,8 +825,12 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
  * How many instructors and certified assistants (divemasters) each course
  * trip's crew has, counted by the one definition every ratio gate shares
  * (`countInWaterCrew`, src/lib/crew-roles.ts).
+ *
+ * Exported because the shift roster's crew-gap summary composes *this* reader
+ * — the one Today's own `instructor_missing` detection runs on — rather than
+ * re-deriving crew counts of its own (ADR 20260806-staffing-is-the-shift-roster).
  */
-async function courseCrewCountsByTrip(
+export async function courseCrewCountsByTrip(
   db: AppDb,
   shopId: string,
   tripIds: string[],

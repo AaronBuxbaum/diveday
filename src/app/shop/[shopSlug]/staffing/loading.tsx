@@ -1,7 +1,7 @@
 /**
- * Body-shaped skeleton for Staffing (design principle 1) — the shift window,
- * roster-with-shifts grid, and coverage-gap lookup have no loading state to
- * show meanwhile.
+ * Body-shaped skeleton for the shift roster (design principle 1): the window
+ * form, the one crew-gap summary line, the roster-with-shifts grid, and the
+ * add-a-shift form — in the order the page renders them.
  */
 export default function StaffingLoading() {
   return (
@@ -13,17 +13,15 @@ export default function StaffingLoading() {
 
         <div className="mt-8 h-24 rounded-2xl border border-border bg-surface" />
 
+        <div className="mt-4 h-14 rounded-2xl border border-border bg-surface" />
+
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-40 rounded-xl border border-border bg-surface" />
           ))}
         </div>
 
-        <div className="mt-8 grid gap-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-20 rounded-xl border border-border bg-surface" />
-          ))}
-        </div>
+        <div className="mt-8 h-64 rounded-2xl border border-border bg-surface" />
       </div>
     </main>
   );

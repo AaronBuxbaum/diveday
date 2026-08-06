@@ -11,7 +11,7 @@ import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/comp
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { getStaffingView, type StaffingGapCode } from "@/db/staffing";
+import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -55,21 +55,14 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
 
 /**
  * Everything the Add-a-shift form itself can say. It lives a long way down the
- * page, under the working list and the coverage table, so its outcome belongs
- * in its own action row rather than in a banner under the `<h1>`.
+ * page, under the working list, so its outcome belongs in its own action row
+ * rather than in a banner under the `<h1>`.
  * `shift-deleted` is not one of them: it comes from a per-row Remove button in
  * the working list *above*, so it keeps the banner, which is the nearer of the
  * two. `not-authorized` stays there too — a staffer without the right never
  * sees the form at all.
  */
 const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff_not_found", "invalid"]);
-
-const GAP_KEYS: Record<StaffingGapCode, StaffMessageKey> = {
-  no_crew: "staffing.gap.no_crew",
-  course_needs_instructor: "staffing.gap.course_needs_instructor",
-  over_ratio: "staffing.gap.over_ratio",
-  no_shift_coverage: "staffing.gap.no_shift_coverage",
-};
 
 function addDays(value: string, days: number): string {
   const date = new Date(`${value}T00:00:00Z`);
@@ -156,6 +149,35 @@ export default async function StaffingPage({
           </FieldActions>
         </FieldGrid>
       </section>
+
+      {/* One line about crewing, not a table of it. Which departures still
+          need people is Today's question — it is the surface that can answer
+          it, by dragging a name onto a boat — so the roster states the count
+          and hands over. Composed from the same reader Today's own detection
+          runs on, never a second pass (ADR 20260806-staffing-is-the-shift-roster). */}
+      {/* Weight follows what there is to do (design principle 3): a gap gets a
+          card and a way out, while "all crewed" and "nothing scheduled" are
+          quiet lines — a bordered box around good news is a border the page
+          has not earned. */}
+      {view.crewGaps.needCrew > 0 ? (
+        <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
+          <p className="text-sm font-medium text-warning">
+            {t("staffing.crewGaps.needCrew", { count: view.crewGaps.needCrew })}
+          </p>
+          <Link
+            href={`/shop/${shopSlug}`}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("staffing.crewGaps.action")}
+          </Link>
+        </section>
+      ) : (
+        <p className="mt-4 text-sm text-muted">
+          {view.crewGaps.departures === 0
+            ? t("staffing.crewGaps.noDepartures")
+            : t("staffing.crewGaps.allCrewed")}
+        </p>
+      )}
 
       <section className="mt-8" aria-labelledby="working-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -343,67 +365,6 @@ export default async function StaffingPage({
           </FieldGrid>
         </section>
       ) : null}
-
-      <section className="mt-10" aria-labelledby="coverage-heading">
-        <h2 id="coverage-heading" className="text-xl font-semibold">
-          {t("staffing.coverage.heading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted">{t("staffing.coverage.detail")}</p>
-        <div className="mt-4 grid gap-3">
-          {view.trips.length === 0 ? (
-            <p className="text-sm text-muted">{t("staffing.coverage.noTrips")}</p>
-          ) : null}
-          {view.trips.map((entry) => (
-            <article key={entry.trip.id} className="rounded-xl border border-border bg-surface p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">
-                    {/* The trip's own crew editor — every gap below is fixed
-                        here, so the coverage list is never a dead end
-                        (Lens 17 task 139). */}
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${entry.trip.id}#crew`}
-                      className="text-primary hover:underline"
-                    >
-                      {entry.trip.title}
-                    </Link>
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {formatTimeRangeTz(
-                      entry.trip.startsAt,
-                      entry.trip.endsAt,
-                      locale,
-                      shop.timezone,
-                    )}
-                    {entry.courseTitle ? ` · ${entry.courseTitle}` : ""}
-                  </p>
-                </div>
-                <Badge tone={entry.gaps.length === 0 ? "success" : "warning"}>
-                  {entry.gaps.length === 0
-                    ? t("staffing.coverage.covered")
-                    : t("staffing.coverage.gapCount", { count: entry.gaps.length })}
-                </Badge>
-              </div>
-              {entry.gaps.length > 0 ? (
-                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-warning">
-                  {entry.gaps.map((gap) => (
-                    <li key={gap}>
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${entry.trip.id}#crew`}
-                        className="hover:underline"
-                      >
-                        {t(GAP_KEYS[gap])}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-sm text-success">{t("staffing.coverage.allGood")}</p>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
     </main>
   );
 }

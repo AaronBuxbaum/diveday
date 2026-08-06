@@ -3,12 +3,13 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow } from "./helpers";
 
 /**
- * The staffing board (`/shop/[shopSlug]/staffing`): who is working in a window,
- * what each person can teach or crew, and which departures still have a
- * coverage gap. It shipped with no e2e or visual coverage at all — the
- * 2026-08-03 test-system evaluation found it, which is why
- * `scripts/route-coverage.json` carried an exemption for this route until this
- * spec landed.
+ * The shift roster (`/shop/[shopSlug]/staffing`): who is working in a window,
+ * what each person can teach or crew, and one summary line counting the
+ * departures that still need crew — which is crewed on Today, not here
+ * (ADR 20260806-staffing-is-the-shift-roster). It shipped with no e2e or
+ * visual coverage at all — the 2026-08-03 test-system evaluation found it,
+ * which is why `scripts/route-coverage.json` carried an exemption for this
+ * route until this spec landed.
  *
  * Two things worth knowing before reading the assertions:
  *
@@ -102,10 +103,8 @@ test.describe("staffing", () => {
     await expect(keiko.getByText("Demo schedule")).toBeVisible();
   });
 
-  test("a departure with nobody on shift reads as a coverage gap, not a covered boat", async ({
-    page,
-  }) => {
-    // Create the departure, then read it back off staffing — two navigations
+  test("an uncrewed departure is counted in one line that hands off to Today", async ({ page }) => {
+    // Create the departure, then read it back off the roster — two navigations
     // and two server round trips.
     test.setTimeout(30_000);
     const tripDay = daysFromNow(3);
@@ -123,16 +122,25 @@ test.describe("staffing", () => {
     await page.getByLabel("Through").fill(tripDay);
     await page.getByRole("button", { name: "Show window" }).click();
 
-    // Nobody is on shift three days out (the seed's shifts are all today), and
-    // this departure has no crew — the two gaps `getStaffingView` computes
-    // independently of each other.
-    const coverage = page.locator("article").filter({ hasText: title }).filter({ visible: true });
-    await expect(coverage.getByText("2 gaps")).toBeVisible();
-    await expect(coverage.getByText("No crew assigned")).toBeVisible();
-    await expect(coverage.getByText("No working shift covers this trip")).toBeVisible();
-    await expect(
-      coverage.getByText("Crew is assigned, and their shift covers this trip."),
-    ).toHaveCount(0);
+    // One departure in the window, nobody rostered on it: the roster states
+    // the count and nothing else — no per-departure table, no second set of
+    // gap words. The departure's own title is deliberately absent here.
+    await expect(page.getByText("1 departure in this window still needs crew")).toBeVisible();
+    await expect(page.getByText(title)).toHaveCount(0);
+
+    // And the line is not a dead end: it leads to the surface that can crew a
+    // boat, which the old coverage table could not do.
+    await page.getByRole("link", { name: "Assign crew on Today" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test("a window with every departure crewed says so, with nowhere to go", async ({ page }) => {
+    // The seeded demo crews its own boats, so today's window is the covered
+    // case — the quiet sentence, and no hand-off link to chase.
+    await page.goto(STAFFING);
+    await expect(page.getByText("Every departure in this window has its crew.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Assign crew on Today" })).toHaveCount(0);
   });
 });
 
