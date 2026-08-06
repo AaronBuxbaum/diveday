@@ -544,10 +544,12 @@ optimism; minors' ages purged from crew phones.
   2026-01-01 UHMS/DMSC form, including conditional Boxes A-G and its direct-referral questions;
   question 1 yes plus all Box A no answers clears as the source form specifies. See
   [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md).
-- **DOM-L1 (Low).** The agency enum omits CMAS, RAID and GUE, so a diver holding one of those cards
-  cannot be recorded honestly. The only Low left under this lens; flagged as a separate backlog item
-  by [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md),
-  and it widens a safety-adjacent enum, so confirm the list with the domain reviewer first.
+- **DOM-L1 (Low). Closed 2026-08-06.** CMAS, RAID and GUE added to `certification_agency` via
+  `ALTER TYPE … ADD VALUE`, which the destructive-migration guard shipped in the same branch
+  correctly passes as additive. A diver holding one of those cards can now be recorded honestly
+  rather than as `other`. The pre-existing asymmetry the finding sits beside is unchanged and still
+  recorded: `course-ratios.ts` is PADI-only by deliberate choice, so a non-PADI Open Water session
+  carries no ratio cap — widening the enum widens who that applies to without changing the rule.
   → *What to build while those wait*, row 10. (DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.)
 
 ## 5. Data model & persistence
@@ -575,9 +577,23 @@ they serve; real pagination; consistent soft-delete/append-only patterns.
   written with no email, or with an address no diver of the shop held at the time, and matching
   neither email nor phone at erasure, is still unreachable. Closing that needs a human saying "this
   lead is that diver", not fuzzier matching.
-- **DATA-L1, L4–L6 (Low).** PGlite can't exhibit the prod races (lock ordering consistent but
-  unenforced); migrations run inside the Vercel build with no destructive-DDL guard; ILIKE arms
-  without trgm indexes (orders/courses); parallel-array jsonb on `courses.imageUrls/imageAlts`.
+- **DATA-L4–L6 (Low). Closed 2026-08-06.** `scripts/check-migrations.mjs` reads every migration
+  newer than the previous release and refuses fourteen destructive statement shapes, while proving
+  in tests that `ALTER TYPE … ADD VALUE`, `CREATE INDEX` and `ADD COLUMN` still pass — a guard that
+  refuses the common safe case teaches everyone to wave it through. It runs in `pnpm check:repo`
+  and again in `scripts/vercel-build.mjs` immediately before `pnpm db:migrate`, and its escape
+  hatch is a marker in the migration SQL itself rather than an env var a rushed deploy can flip
+  (ADR [20260806-destructive-migration-guard](../../architecture/decisions/20260806-destructive-migration-guard.md)).
+  It paid for itself on its first run by refusing this same branch's gallery-photos migration,
+  which dropped `courses.image_urls`/`image_alts` in the release that added their replacement while
+  the still-serving deployment selected both; that migration is now expand-only and dual-writes
+  (DATA-L4). The parallel arrays are one `gallery_photos` object per photo, with a backfill that
+  decides what an already-drifted row becomes rather than leaving it to whichever array was
+  shorter. Three genuinely uncovered ILIKE arms gained trigram indexes — `courses.title`,
+  `dive_sites.location_name`, `orders.description`; the orders arm the finding named turned out to
+  be already covered by `people_full_name_trgm_idx`, which is the honest answer rather than a
+  fourth index (DATA-L6). **DATA-L1 remains**: PGlite can't exhibit the prod races (lock ordering
+  consistent but unenforced).
   (`default('usd')` on money columns — DATA-L3 — is gone, and **DATA-A10 closed 2026-08-06**: the
   bundle gained seven files, and the two families that stayed out — `day_closeouts` and
   `processor_erasure_obligations` — now say why in the bundle README and on the export page rather
@@ -670,9 +686,22 @@ engineering (correct focus trap, live regions, boat/glare modes, 44px floor stru
   Blocked only on HD-17. → *Only the owner can decide or spend*, row 10.
 - **I18N-4 (Medium).** ADR-0004 has no automated enforcement (currently held by review alone;
   spot-check clean).
-- **I18N-L1..L3 (Low).** Unsupported-language divers get no signal at all (no switcher by design);
-  trip times unlabeled with timezone for cross-tz bookers; a11y/keyboard scan breadth lags the
-  "every important surface" bar.
+- **I18N-L1..L3 (Low). Closed 2026-08-06.** The negotiation now answers a third question about the
+  same header — `unsupportedLanguage()` reports the highest-quality `Accept-Language` tag no bundle
+  exists for, distinct from both "what do I render" and "what may I remember" — and the public shop
+  shell renders one slim band naming the requested language by its own endonym, so the single token
+  a non-English reader recognises sits inside a sentence they cannot otherwise read. No switcher
+  and no `[locale]` route: the finding was silence, not absence of choice, and the notice's test
+  asserts it contains no interactive element so it cannot quietly grow into one (I18N-L1). The
+  public booking hero — the one screen where a diver commits — now names its zone, closing the only
+  step of the flow whose neighbours already did; the schedule states it once at the top rather than
+  stamping a zone onto twenty rows, thirty calendar cells and every card's aria-label, which would
+  make the page worse for a screen-reader user (I18N-L2). The a11y scan went from sixteen tests to
+  twenty-one and gained eleven scans, picked by consequence: three more bearer-token diver
+  surfaces, the close-out and blow-out in their post-write renders, the incident export, backup
+  settings, a full course page, and the schedule as an unsupported-language visitor sees it
+  (I18N-L3). `color-contrast` stays disabled and untouched — I18N-1/HD-17 own it, and re-enabling
+  it here would only hold CI red over debt a human deliberately deferred.
 
 ## 9. Marketing & conversion
 
@@ -749,8 +778,22 @@ migrations, and incident response; fail-closed cron auth.
   healthy because it could not measure is worse than none
   ([20260806-provider-usage-guardrails](../../architecture/decisions/20260806-provider-usage-guardrails.md)).
 
-- **OPS-L1..L3 (Low).** Vercel access logs retain raw capability URLs (undocumented residual); VRT
-  bucket world-readable (fine pre-launch, revisit); Sentry errors-only.
+- **OPS-L1 (Low). Documented 2026-08-06.** The residual is real and now written down where the
+  reasoning lives: `redactCapabilityUrl` runs in-process, in three `beforeSend` hooks, while Vercel
+  records the request line before any DiveDay code is entered — so nothing that can be written in
+  this repository changes what those logs contain.
+  [capability-telemetry-runbook.md](../../engineering/capability-telemetry-runbook.md) states the
+  exposure, the compensating controls with their exact limits rather than their headlines, an audit
+  procedure that treats the result as a credential list, and why the cookie-exchange, fragment and
+  POST alternatives have not been taken — each breaks re-tapping a link, arriving via Stripe's
+  return redirect, or the static shell, and with it the paste-into-an-SMS property the capability
+  model exists for. Two findings came out of writing it: `/unsubscribe/[token]` was a tenth
+  capability URL `CAPABILITY_ROUTE_PREFIXES` had never covered (now fixed, and the list is asserted
+  against the `[token]` directories on disk so the next one fails on the commit that creates it),
+  and a *completed* waiver link still mints a readiness capability, so "already signed" is not
+  "already spent". What remains is not engineering's: who may hold a Vercel seat with log access,
+  and whether a log drain may ever be configured.
+- **OPS-L2, L3 (Low).** VRT bucket world-readable (fine pre-launch, revisit); Sentry errors-only.
 
 ---
 
