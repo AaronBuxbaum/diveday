@@ -7,6 +7,44 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Surface consolidation — fewer, obvious places to go (delivered 2026-08-06)
+
+Eleven PRs (#397–#413, the `claude/sc-*` family) against one finding: many staff surfaces had come
+to answer the same question at two URLs, and the doctrine for fixing that was already written —
+a surface earns a route only with a different question, its own mutation, and its own moment
+([20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)); re-rendering another
+surface's evidence makes a view, not a route
+([20260803-not-ready-is-a-view](../architecture/decisions/20260803-not-ready-is-a-view.md));
+a removed surface keeps its destination as a permanent 308.
+
+**Routes consolidated.** The dive-site catalog is a `?view=catalog` of the library index
+([20260806-dive-site-catalog-is-a-view](../architecture/decisions/20260806-dive-site-catalog-is-a-view.md)).
+Trip creation is the schedule board's add panel with "More options" disclosing the full former
+`/trips/new` form in place — that route is a 308
+([20260806-one-trip-create-form](../architecture/decisions/20260806-one-trip-create-form.md)).
+Export and Backups are one data-out surface at `/settings/export` with `/settings/backup` a 308 into
+its `#backups` half ([20260806-one-data-out-surface](../architecture/decisions/20260806-one-data-out-surface.md)).
+Staffing is the shift roster — its crew-coverage table, a second detector over Today's own reader,
+became one count and a hand-off to where crew are actually assigned
+([20260806-staffing-is-the-shift-roster](../architecture/decisions/20260806-staffing-is-the-shift-roster.md)).
+Reports is a report again: its three back-office queues moved to the surfaces that own their objects
+(stuck payment operations → Orders; media deletions and processor erasures → Settings' Data group),
+recorded as amendments to the three ADRs that had named Reports their home.
+
+**Duplicated UI became shared components.** The four seat-a-diver doors now stand on one
+`SeatDiverPanel`/`PersonSearchForm`/`PersonFieldTrio` family driven by `SEAT_SURFACES`; the 19-field
+dive-site briefing is one `SiteFields`; settings gained a layout + sub-nav derived from one
+`settings-destinations.ts` registry; the day-of-ops family shares one `KindChip` and one
+`BlockedDiverRow` (all blockers listed everywhere, 16px at the counter); close-out's "Tomorrow" is a
+count and a hand-off to Today, and Today returns the favor with an evening close-the-day card once
+`lastBoatIsIn`. Each IA change carried an independent design-critic pass; the export/backup merge and
+the queue moves each carried an independent security review (both merge-safe, LOW hardenings applied).
+
+Deliberately left alone, with the reasoning in the plan of record: the waivers template/signatures
+tabs (the model pattern), the orders triad, the trip tab split, the manifest's deliberate
+self-containment, check-in/walk-in/divers as routes, the `/s` diver namespace, and marketing-page
+copy overlap (thematic, constrained by the claims policy — not mechanical duplication).
+
 ## The 2026-08-02 review's data, i18n and telemetry residue (delivered 2026-08-06)
 
 The buildable tail of the same review. Three of its items turned out to already be closed and were
