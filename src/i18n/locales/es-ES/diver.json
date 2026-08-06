@@ -17,6 +17,16 @@
       "feet": "{value} ft",
       "celsius": "{value} °C",
       "fahrenheit": "{value} °F"
+    },
+    "compass": {
+      "n": "N",
+      "ne": "NE",
+      "e": "E",
+      "se": "SE",
+      "s": "S",
+      "sw": "SO",
+      "w": "O",
+      "nw": "NO"
     }
   },
   "shopChrome": {
@@ -133,6 +143,11 @@
     "waterTemperature": "Temperatura del agua",
     "visibility": "Visibilidad",
     "surface": "Superficie",
+    "surfaceWavesMeters": "mar de {value, number} m",
+    "surfaceWavesFeet": "mar de {value, number} ft",
+    "surfaceWavesFrom": "{waves} del {direction}",
+    "surfaceWavesWithPeriod": "{waves} · periodo de {seconds} s",
+    "surfaceWavesFromWithPeriod": "{waves} del {direction} · periodo de {seconds} s",
     "forecastCrewNote": "Previsión facilitada por la tripulación; las condiciones pueden cambiar. La decisión final se toma en el muelle.",
     "forecastUpdated": "Actualizado el {when}.",
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",

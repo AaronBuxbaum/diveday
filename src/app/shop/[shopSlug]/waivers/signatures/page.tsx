@@ -170,7 +170,22 @@ export default async function WaiverSignaturesPage({
   const auditPage = await listWaiverIntegrityAudit(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
-  const { entries } = auditPage;
+  // The pinned record is rendered above; the list must not render it again.
+  // `SignedRecordRow` puts `id="waiver-record-<id>"` on its `<li>`, so a
+  // highlighted record that also falls on the visible page produced **two
+  // elements with the same DOM id** — invalid HTML, two hit targets for one
+  // anchor, and the same evidence row shown twice on one screen.
+  //
+  // It only surfaced as a test failure because it depends on where the record
+  // lands: the list orders by `signedAt desc, id desc`, and `id` is a random
+  // UUID, so a record sitting on a page boundary among rows that share a
+  // timestamp crosses it or not depending on the UUIDs a given seed drew. The
+  // demo's medical-review fixture sits on exactly that boundary.
+  //
+  // Only the rendered rows are filtered. `auditPage`'s total and page count
+  // describe the whole log and stay untouched — the record has not gone
+  // anywhere, it is one section further up.
+  const entries = auditPage.entries.filter((entry) => entry.id !== highlighted?.id);
   const base = `/shop/${shopSlug}/waivers/signatures`;
   // The `?record=` highlight is a separate pin above this list, so it travels
   // with the page rather than being dropped the moment a reviewer turns one.

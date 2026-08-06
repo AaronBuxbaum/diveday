@@ -439,6 +439,7 @@
       "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
       "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
       "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
+      "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
       "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
       "deleted": "Buceador eliminado. Sus reservas, tarjetas y tallas quedan registradas.",
       "restored": "Buceador restaurado. Vuelve a estar en tus listas activas.",
@@ -743,6 +744,7 @@
         "voidFailed": "No se pudo anular este pedido — puede que ya esté pagado o anulado.",
         "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
         "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
+        "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
         "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
         "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
         "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
@@ -2077,7 +2079,7 @@
       "rowCount": "{count, plural, one {# fila} other {# filas}}",
       "notIncluded": {
         "label": "No incluido, a propósito:",
-        "text": "copias de manifiestos sin conexión, notas del personal, registros de notificaciones, intentos de pago de Stripe (los resultados están en reservas y pedidos), y URLs de imágenes pegadas que nunca se guardaron. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
+        "text": "copias de manifiestos sin conexión, colas de reintento de notificaciones, la vinculación con la cuenta de Stripe, los historiales de cierre del día y de los equipos de compañeros, el estado de las cancelaciones por mal tiempo, los registros internos de conciliación de DiveDay y las URLs de imágenes pegadas que nunca se guardaron. Las notas del personal, el historial de actividad, los resultados de las notificaciones, los intentos de pago, los canjes de códigos y los interesados en cursos <mono>sí</mono> se exportan: son tus registros. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
       }
     },
     "import": {

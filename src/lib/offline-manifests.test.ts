@@ -11,61 +11,67 @@ import {
   serializeManifests,
 } from "./offline-manifests";
 
+/**
+ * One manifest per checkpoint, the way a real snapshot is built: the payload
+ * comes from `getTripManifests`, which returns the whole `rollCallCheckpoints`
+ * list for the trip's planned-dive count. The fixture used to carry only the
+ * "departure" manifest, which is what let `canRecordOfflineStatus` read
+ * `manifests[0]` for years without a test noticing (DOM-L4).
+ */
 function snapshot(): OfflineManifestSnapshot {
+  const checkpoints = ["departure", "after_dive_1", "after_dive_2"] as const;
   return {
     version: OFFLINE_MANIFEST_RECORD_VERSION,
     snapshotId: "snapshot-1",
     savedAt: "2026-07-20T11:00:00.000Z",
     expiresAt: "2026-07-27T16:00:00.000Z",
     shop: { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
-    manifests: [
-      {
-        trip: {
-          id: "trip-1",
-          title: "Two-Tank Reef",
-          startsAt: "2026-07-20T12:00:00.000Z",
-          endsAt: "2026-07-20T16:00:00.000Z",
-          plannedDives: 2,
-        },
-        checkpoint: "departure",
-        crew: [],
-        summary: {
-          totalDivers: 2,
-          ready: 1,
-          blocked: 1,
-          boarded: 0,
-          notBoarded: 0,
-          notBackAboard: 0,
-          awaiting: 2,
-          unaccountedFor: 2,
-        },
-        divers: [
-          {
-            bookingId: "ready",
-            fullName: "Ready Diver",
-            email: null,
-            emergencyContactName: null,
-            emergencyContactPhone: null,
-            readiness: { status: "ready", blockers: [] },
-            rentalFit: { state: "not_recorded" as const },
-            nitroxRequested: false,
-          },
-          {
-            bookingId: "blocked",
-            fullName: "Blocked Diver",
-            email: null,
-            emergencyContactName: null,
-            emergencyContactPhone: null,
-            readiness: {
-              status: "blocked",
-              blockers: [{ code: "waiver_pending", text: "Waiver pending." }],
-            },
-            rentalFit: { state: "not_recorded" as const },
-            nitroxRequested: false,
-          },
-        ],
+    manifests: checkpoints.map((checkpoint) => ({
+      trip: {
+        id: "trip-1",
+        title: "Two-Tank Reef",
+        startsAt: "2026-07-20T12:00:00.000Z",
+        endsAt: "2026-07-20T16:00:00.000Z",
+        plannedDives: 2,
       },
-    ],
+      checkpoint,
+      crew: [],
+      summary: {
+        totalDivers: 2,
+        ready: 1,
+        blocked: 1,
+        boarded: 0,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+        unaccountedFor: 2,
+      },
+      divers: [
+        {
+          bookingId: "ready",
+          fullName: "Ready Diver",
+          email: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "not_recorded" as const },
+          nitroxRequested: false,
+        },
+        {
+          bookingId: "blocked",
+          fullName: "Blocked Diver",
+          email: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: {
+            status: "blocked",
+            blockers: [{ code: "waiver_pending", text: "Waiver pending." }],
+          },
+          rentalFit: { state: "not_recorded" as const },
+          nitroxRequested: false,
+        },
+      ],
+    })),
   };
 }
 
@@ -127,6 +133,65 @@ describe("offline manifest policy", () => {
     const saved = snapshot();
     expect(canRecordOfflineStatus(saved, "missing", "boarded", "after_dive_1")).toBe(false);
     expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "after_dive_1")).toBe(false);
+  });
+
+  // DOM-L4 (review 20260802): the roster came from `manifests[0]` no matter
+  // which checkpoint was asked about, while `latestOfflineRollCall` right
+  // beside it already looked the checkpoint up. Identical per-checkpoint diver
+  // lists hid it. Here they diverge — a booking on the departure manifest only,
+  // and one on the after-dive manifests only — and the two answers must follow
+  // the checkpoint asked about, not whichever manifest happens to be first.
+  //
+  // **No production path produces a diverging roster today**: `getTripManifests`
+  // maps one manifest per checkpoint over the same diver list. This is what
+  // stops that mattering when it changes, not a description of a state the
+  // product currently reaches — do not read it as licence to write code that
+  // assumes the lists differ.
+  it("reads the roster from the checkpoint's own manifest, not the first one", () => {
+    const saved = snapshot();
+    const departure = saved.manifests.find((manifest) => manifest.checkpoint === "departure");
+    const afterDive1 = saved.manifests.find((manifest) => manifest.checkpoint === "after_dive_1");
+    if (!departure || !afterDive1) throw new Error("fixture lost a checkpoint");
+    const diver = (bookingId: string) => ({
+      ...departure.divers[0],
+      bookingId,
+      fullName: bookingId,
+    });
+    departure.divers.push(diver("departure-only"));
+    afterDive1.divers.push(diver("after-dive-only"));
+
+    // Off the departure manifest by the time dive 1 ends: refused there, which
+    // is the fail-closed direction. `manifests[0]` said yes.
+    expect(canRecordOfflineStatus(saved, "departure-only", "boarded", "departure")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "departure-only", "boarded", "after_dive_1")).toBe(false);
+
+    // And the reverse: someone the after-dive manifest carries is boardable
+    // there even though the departure manifest never held them.
+    expect(canRecordOfflineStatus(saved, "after-dive-only", "boarded", "after_dive_1")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "after-dive-only", "boarded", "departure")).toBe(false);
+
+    // Neither refusal reaches the alarm: both are real people on this copy, so
+    // "did not come back" stays recordable at every checkpoint.
+    expect(canRecordOfflineStatus(saved, "departure-only", "not_boarded", "after_dive_1")).toBe(
+      true,
+    );
+    expect(canRecordOfflineStatus(saved, "after-dive-only", "not_boarded", "departure")).toBe(true);
+  });
+
+  // A checkpoint the snapshot does not carry at all — a trip whose planned-dive
+  // count shrank after the copy was saved, or a hand-edited URL. The two
+  // directions part company here, and the asymmetry is the safety property
+  // (dive-domain-expert review, 2026-08-06): boarding needs the checkpoint's own
+  // list and refuses without it, while "this person did not come back" is true
+  // regardless of which list the copy happens to hold and must never be refused
+  // — a crew member who cannot log a missing diver has been silenced.
+  it("refuses to board at a checkpoint the snapshot has no manifest for, but never refuses the alarm", () => {
+    const saved = snapshot();
+    expect(canRecordOfflineStatus(saved, "ready", "boarded", "after_dive_3")).toBe(false);
+    expect(canRecordOfflineStatus(saved, "ready", "not_boarded", "after_dive_3")).toBe(true);
+    // Still nobody, though: an unknown booking is refused in both directions,
+    // because there is no person behind the id to be missing.
+    expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "after_dive_3")).toBe(false);
   });
 
   it("uses the latest non-rejected device event and exposes pending state", () => {

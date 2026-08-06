@@ -4,6 +4,8 @@
  * render time from props a server component translated ahead of it (never a
  * translator itself; that never crosses the client boundary).
  */
+
+import { cachedPluralRules } from "@/lib/intl-cache";
 export function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key) =>
     key in values ? String(values[key]) : match,
@@ -26,5 +28,5 @@ export function pluralForm(
   forms: { one: string; other: string },
   locale?: string,
 ): string {
-  return new Intl.PluralRules(locale).select(count) === "one" ? forms.one : forms.other;
+  return cachedPluralRules(locale).select(count) === "one" ? forms.one : forms.other;
 }

@@ -1,0 +1,29 @@
+{
+  "id": "cus_TQd8mKp2VnRxLa",
+  "object": "customer",
+  "address": null,
+  "balance": 0,
+  "created": 1784640540,
+  "currency": null,
+  "default_source": null,
+  "delinquent": false,
+  "description": null,
+  "discount": null,
+  "email": "priya@example.com",
+  "invoice_prefix": "A1B2C3D4",
+  "invoice_settings": {
+    "custom_fields": null,
+    "default_payment_method": null,
+    "footer": null,
+    "rendering_options": null
+  },
+  "livemode": false,
+  "metadata": {},
+  "name": "Priya Raman",
+  "next_invoice_sequence": 1,
+  "phone": null,
+  "preferred_locales": [],
+  "shipping": null,
+  "tax_exempt": "none",
+  "test_clock": null
+}

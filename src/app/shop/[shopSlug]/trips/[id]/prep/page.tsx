@@ -14,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 
@@ -248,7 +249,7 @@ export default async function TripPrepPage({
                       {diver.state === "not_recorded"
                         ? t("trips.prep.missingSizesNothingOnFile")
                         : t("trips.prep.missingSizesItems", {
-                            items: new Intl.ListFormat(locale, {
+                            items: cachedListFormat(locale, {
                               style: "long",
                               type: "conjunction",
                             }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),

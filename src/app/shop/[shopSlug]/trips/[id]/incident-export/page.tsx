@@ -19,6 +19,7 @@ import type {
   IncidentRollCallResult,
   IncidentWaiverStatus,
 } from "@/lib/incident-export";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -94,7 +95,7 @@ export default async function IncidentExportPage({
   const checkpointText = (checkpoint: string) =>
     rollCallCheckpointText(t, checkpoint as RollCallCheckpoint);
   // The trail's names join in the reader's own locale, never a hard-coded ", ".
-  const memberList = new Intl.ListFormat(locale, { type: "conjunction" });
+  const memberList = cachedListFormat(locale, { type: "conjunction" });
   const agencyText = (agency: string) =>
     t(AGENCY_KEYS[agency as keyof typeof AGENCY_KEYS] ?? AGENCY_KEYS.other);
   const roleKey: Record<string, StaffMessageKey> = {

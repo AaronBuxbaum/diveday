@@ -13,6 +13,7 @@ import {
   tripConditionsHoldEmail,
   tripRecapEmail,
   tripReminderEmail,
+  usageCeilingAlertEmail,
   verifyAccountEmail,
   waitlistInviteEmail,
   waiverRequestEmail,
@@ -61,6 +62,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
   if (notification.kind === "demo_started_alert") return demoStartedAlertEmail(notification);
+  if (notification.kind === "usage_ceiling_alert") return usageCeilingAlertEmail(notification);
   if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   return passwordChangedEmail(notification);
 }

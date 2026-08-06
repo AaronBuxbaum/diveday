@@ -439,6 +439,7 @@
       "tripUnavailable": "Add an email and choose an available activity.",
       "bookingInvalid": "Add an email and choose an available activity.",
       "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
+      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
       "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be refunded.",
       "deleted": "Diver removed. Their bookings, cards, and sizes stay on file.",
       "restored": "Diver restored. They're back on your active lists.",
@@ -743,6 +744,7 @@
         "voidFailed": "Couldn't void this order — it may already be paid or void.",
         "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
         "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
+        "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
         "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
         "fallback": "Something changed on this order — the details below are current."
@@ -2077,7 +2079,7 @@
       "rowCount": "{count, plural, one {# row} other {# rows}}",
       "notIncluded": {
         "label": "Not included, on purpose:",
-        "text": "offline manifest copies, staff notes, notification logs, Stripe checkout attempts (see bookings and orders for outcomes), and unstored pasted image URLs. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials, calendar-subscription links, and your connected WhatsApp account never export — see the README."
+        "text": "offline manifest copies, notification retry queues, Stripe account linkage, the day close-out and buddy-team trails, weather-cancellation cascade state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export — they're your records. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials, calendar-subscription links, and your connected WhatsApp account never export — see the README."
       }
     },
     "import": {

@@ -110,8 +110,21 @@ async function refundAction(formData: FormData) {
     revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
     return;
   }
-  const updated = orderId ? await refundOrder(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(back, `${back}?notice=${updated ? "refunded" : "refund_failed"}`);
+  // A code, never a sentence — `refundOrder` says *why* it did not move money
+  // and this picks the words (docs ADR 20260731-domain-layer-copy-leaks).
+  // `in_progress` is its own notice on purpose: the honest answer to a
+  // double-tapped button is "the first one is still running", not "it failed",
+  // which would send staff back to press it again (PAY-L3).
+  const outcome = orderId
+    ? await refundOrder(db, session.user.shopId, orderId)
+    : ({ status: "not_found" } as const);
+  const notice =
+    outcome.status === "refunded"
+      ? "refunded"
+      : outcome.status === "in_progress"
+        ? "refund_in_progress"
+        : "refund_failed";
+  revalidateAndRedirect(back, `${back}?notice=${notice}`);
 }
 
 // A notice query param maps to a message key, never to a sentence — the words
@@ -123,6 +136,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   void_failed: { tone: "danger", key: "orders.detail.notice.voidFailed" },
   refunded: { tone: "success", key: "orders.detail.notice.refunded" },
   refund_failed: { tone: "danger", key: "orders.detail.notice.refundFailed" },
+  refund_in_progress: { tone: "warning", key: "orders.detail.notice.refundInProgress" },
   not_authorized: { tone: "danger", key: "orders.detail.notice.notAuthorized" },
   demo_disabled: { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };

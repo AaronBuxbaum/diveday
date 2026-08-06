@@ -1,4 +1,5 @@
 import type { DiveSpecialty } from "@/db/schema";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type {
   CertificationLevel,
   ReadinessBlocker,
@@ -128,7 +129,7 @@ export function tripRequirementList(
   ].filter((part): part is string => Boolean(part));
   if (parts.length === 0) return null;
   // A locale-appropriate "X, Y and Z" — never an English comma join.
-  return new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(parts);
+  return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(parts);
 }
 
 /** Every `ReadinessBlockerCode` the engine can raise, to its staff-facing sentence. */
@@ -228,7 +229,7 @@ export function tripAdmissionRefusalText(
       t("shared.tripAdmission.cards", {
         count: cards.length,
         // A locale-appropriate "X, Y and Z", never an English comma join.
-        list: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(cards),
+        list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(cards),
       }),
     );
   }

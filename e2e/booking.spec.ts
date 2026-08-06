@@ -36,6 +36,16 @@ test.describe("staff", () => {
       .filter({ hasText: title })
       .getByRole("link")
       .click();
+    // Wait for the navigation itself, not just for the title to be on screen.
+    // The schedule page renders a trip's "N spots left" badge twice — once in
+    // the "Upcoming trips" list and once in the month calendar
+    // (src/app/s/[shopSlug]/page.tsx) — and it carries the same heading text
+    // this click came from, so every assertion below can pass its *visibility*
+    // check against the page we just left. The badge assertion is the one that
+    // notices, as a strict-mode violation on two identical spans, and only when
+    // the machine is slow enough for the assertion to win the race. Same hazard
+    // the list locator above is scoped against, one step later in the flow.
+    await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
     await expect(page.getByText("$120.00")).toBeVisible();

@@ -7,6 +7,59 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 review's operations, testing and payments residue (delivered 2026-08-06)
+
+Ten findings closed together, all of them the same species: a mechanism that was written down
+correctly and never proved, or arithmetic that described a system nobody had built.
+
+**Production is no longer the first real Postgres a migration meets** (OPS-2/TEST-2). A CI job with a
+`postgres:16` service container applies `drizzle/` from empty *and* from the previous release's
+schema, then races two genuinely concurrent connections for the last seat on a trip. The `FOR UPDATE`
+oversell guard in `src/db/bookings.ts` was dead code under test — PGlite is single-connection and
+cannot exhibit the race — and is now provably load-bearing: with the lock removed a one-seat trip
+sells two. Gated on `src/db/**`/`drizzle/**` plus a nightly run, so it is not a per-PR tax.
+[20260806-real-postgres-ci-job](../architecture/decisions/20260806-real-postgres-ci-job.md).
+
+**The notification retry ladder stopped describing a system that does not exist** (OPS-6). The code
+computed a 30s → 1h exponential backoff; nothing polls that queue but the daily tick, so every rung
+collapsed to "tomorrow" and the eight attempts sized for a two-hour ladder quietly meant *eight
+days*. A retry now lands on the next daily pass, the budget is stated in days (three) rather than as
+an attempt count, and `src/lib/cron-schedule.ts` is the one place the cadence lives — its test reads
+`vercel.json`, so "must stay in lockstep" is a failing test instead of a comment.
+
+**Two silences got a voice.** `checkRateLimit`'s fail-open catch stays fail-open — a limiter that
+500s a legitimate request is worse than none — but now logs and captures to Sentry, damped, never
+carrying the key (OPS-7). And the manifest SSE channel's LISTEN connection, which was *never* torn
+down, now closes after 120s idle behind a generation counter, with the Neon connection ceiling and
+its escalation written down at last (OPS-8).
+[20260806-manifest-listen-connection-ceiling](../architecture/decisions/20260806-manifest-listen-connection-ceiling.md).
+
+**Cost guardrails reach past the smallest bill** (OPS-9). AWS had a budget and anomaly detection;
+Vercel and Neon — the ones that actually scale with traffic — had nothing. A daily cron polls each
+provider's usage against a ceiling registry and mails the founder alert inbox once per ceiling per
+period. Unmeasurable is not the same as fine: a probe with no credentials reports `not_configured`,
+never `ok`.
+[20260806-provider-usage-guardrails](../architecture/decisions/20260806-provider-usage-guardrails.md).
+
+**A pending checkout is a quote with an expiry, not a permanent price** (PAY-L2/L3). Stripe holds a
+session's amounts for its whole life, so a session minted on Monday still charged Monday's fare on
+Friday — through a "Finish paying" link that bypassed the pricing code entirely. Reuse now re-derives
+the figure and re-mints when it moved. And `refundOrder` claims the order row locally before asking
+Stripe, instead of relying on Stripe's over-refund rejection to catch a double tap.
+[20260806-stale-quote-and-refund-lock](../architecture/decisions/20260806-stale-quote-and-refund-lock.md).
+
+**Testing got the three layers it was missing** (TEST-M1/M2/M3). Stripe is no longer tested only
+against shapes the tests themselves invented: contract fixtures pinned to an API version drive the
+real parsers, and a guard fails when the pin and the fixtures diverge. That immediately earned its
+keep — it caught `refundInvoice` asking Stripe to expand a field current accounts reject, then
+reading the intent from a field Stripe has removed, so *every* invoiced refund failed with no money
+moved while the hand-written tests stayed green. Component tests now cover three risk-picked
+surfaces (medical questionnaire, blocker groups, roll call), each proven able to fail by mutation.
+And the residual CI flake was root-caused rather than retried away: the `Intl` memoization that fixed
+most of it had stopped at `format.ts`'s file boundary, leaving `src/lib/zoned.ts` building *three*
+formatters per wall-clock conversion on a module 26 others import, and several surfaces building one
+inside a `.map()` — 12x measured overhead, now one shared cache in `src/lib/intl-cache.ts`.
+
 ## Dive sites and dive briefings, reconciled (delivered 2026-08-05)
 
 A shop owner read "a two-tank dive with one dive site and 2 dive briefings" and could not tell
@@ -142,6 +195,79 @@ would face, supersedes any waiver signed by the placeholder, and revokes every o
 capability on the booking. Claiming never weakens a gate, and an unclaimed seat simply boards under
 the organizer's party as before. Pay-your-own-share stays out of scope. See
 [20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md).
+
+## The 2026-08-02 review's last buildable residues (delivered 2026-08-06)
+
+The tail of the [2026-08-02 review](assessments/comprehensive-review-20260802.md): the residues
+that were still an agent's to close, plus the half of OPS-4 the owner unblocked by creating the
+mailbox. What this did *not* touch is now the whole rest of that document — every remaining row is
+a human decision or a conversation with a real shop.
+
+**Portability (DATA-A10).** The export bundle gained **seven files**, closing the residue that had
+listed five record families as "still undecided and still unrecorded". A leaving shop now takes its
+**private staff notes** and its **staff activity trail** (who did what to which departure, and when
+— append-only, so it reconstructs how a trip reached the state the other files describe), the
+**delivery outcome of every message it ever sent a diver** (`notification_deliveries.csv` — the
+answer to "did this diver ever get their waiver request", which no other file could give), its
+**checkout attempts** and the seats each was paying for (the asks nobody finished, which
+`bookings.csv` and `orders.csv` structurally cannot show), its **promo redemptions** — resolvable at
+last, because the checkout each one points at now travels with it — and its **course leads**,
+including the ones that never converted. Two families stayed out and now say why where a human
+reads it rather than only in a test comment: `day_closeouts`, an attestation over facts the bundle
+already carries, and `processor_erasure_obligations`, which is deliberate under
+[20260803-processor-erasure-obligations](../architecture/decisions/20260803-processor-erasure-obligations.md)
+— an obligation carried into a system that cannot discharge it would read as done. The export
+page's own "not included" line had drifted into naming three things that now export; it, and the
+bundle README, were rewritten to match.
+
+**Safety (DOM-L4, DOM-M7).** `canRecordOfflineStatus` read `manifests[0]` no matter which checkpoint
+it was asked about, while `latestOfflineRollCall` beside it already looked the checkpoint up —
+survivable only because every snapshot so far carries an identical roster per checkpoint, and a trap
+the moment one doesn't. It reads the checkpoint's own manifest now, and a checkpoint the snapshot
+does not carry fails closed rather than borrowing a verdict. The test fixture that hid this for
+years — one manifest where a real snapshot has one per checkpoint — was corrected too. Separately,
+the demo shop gained a **second instructor**, rostered as a session's **divemaster**: the one
+(shop role × trip role) combination the seed had never shown, and the only one that is a genuine
+downgrade rather than a roster over-claim (`inWaterCrewRole` counts her as a certified assistant,
+not an instructor). The reset's stable-staff allowlist turned out to be a second hand-typed copy of
+the cast and now reads off the one definition.
+
+**Cross-tenant residency (SEC-D3).** The offline manifest store's cross-shop purge ran only from
+`OfflineManifestAutoSave`, which mounts in the staff shop layout — so a captain who lives on the
+offline shell, on a shared or reassigned boat tablet, never ran one. The shell runs it on load and
+on every reconnect now, against the same server-verified slug, and lists nothing until it has.
+
+**Units (DOM-L2).** The automated marine forecast composed an English metric sentence in `src/lib`
+— "0.7 m waves from E · 7 s period" — on a page that had already converted the water temperature to
+the shop's own units. It returns numbers and codes now; the shop's existing `depth_unit` decides
+metres or feet (a Florida crew reads "2 ft seas"), and the compass points and decimal separator come
+from the message bundle, because Spanish writes O for west and 0,7 for 0.7. The word changed too:
+the reading is **significant wave height**, so the copy says *seas*, the way every marine forecast a
+captain already reads does — "2 ft waves" states a ceiling where the number is an average.
+
+**What the two mandated reviews changed.** Both found things the work itself had not, and all of it
+landed before merge. The `dive-domain-expert` pass caught that DOM-L4's stricter checkpoint lookup
+had made **"not back aboard" refusable** — at an after-dive checkpoint that is the loudest row the
+app has, and a crew member tapping it would have been told "this diver isn't ready to board yet".
+A known diver can now always be recorded as not aboard, at any checkpoint; only *boarding* needs the
+checkpoint's own list. The `security-reviewer` pass found that the offline shell's new purge ran on
+the list URL but not on `?trip=<id>` — the URL a captain actually bookmarks — and that the
+single-trip reconcile never checked the tenant at all, so a preserved foreign-shop record could be
+submitted under the wrong shop, rejected, and then deleted by the next purge as "resolved",
+destroying the only copy of a boarding record. Both are closed. It also found that
+`internal_notes` was swept on erasure only for the note's *subject*, so a note filed under one diver
+naming another survived that other diver's erasure — harmless while notes never left the shop, and
+not harmless the moment `internal_notes.csv` carries them out of it. Note bodies now get the same
+word-boundary name sweep `activity_events.message` already had. One finding is **not** fixed and is
+recorded instead: `orders.csv` has always exported `hosted_invoice_url` and `invoice_pdf_url` —
+live, unauthenticated Stripe pages showing a diver's name and address — which predates this work and
+is a change to a published export contract, so it sits at the top of the review's buildable list.
+
+**Operations (OPS-4 residue).** `alerts@dive.day` exists. Every alert path terminates there,
+including the AWS cost alerts, whose stack default had been a personal Gmail — the last one landing
+outside the operational inbox. The external uptime monitor and public status page remain an owner
+action, and the runbook now says so as the one thing left rather than burying it under a mailbox
+that did not exist.
 
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 

@@ -48,6 +48,16 @@ test.describe("full-shop data export", () => {
       "orders.csv",
       "dive_sites.csv",
       "courses.csv",
+      // DATA-A10: the families a leaving shop used to lose. Asserted here and
+      // not only in the unit coverage test because the failure mode is a file
+      // that exists in the loader and never reaches the bytes.
+      "booking_checkouts.csv",
+      "booking_checkout_bookings.csv",
+      "internal_notes.csv",
+      "activity_events.csv",
+      "notification_deliveries.csv",
+      "shop_promo_redemptions.csv",
+      "course_inquiries.csv",
     ]) {
       expect(Object.keys(unzipped)).toContain(name);
     }

@@ -30,7 +30,8 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, Intl-cache, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:intl-cache` | every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the call site. Constructing one costs ~12x reusing it (measured) and this app formats on essentially every render, so the constructor is a per-render tax that shows up as CI e2e flake under load. Regressed twice before it was checked — most recently as an `Intl.PluralRules` per interpolated message. `Intl.Locale` is exempt: a parsed locale value, not a compiled formatter |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm check:copy` | find hard-coded user-facing copy in `src/app`/`src/components`; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm check:domain-strings` | find English sentences returned from `src/lib`/`src/db` (the `.message`/`_LABELS` leak — ADR 20260731-domain-layer-copy-leaks); same `--report <path>` / `--write` / `--absorb` as `check:copy` |

@@ -7,7 +7,11 @@ import { JsonLd } from "@/components/JsonLd";
 import { buttonClass } from "@/components/ui/button";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
-import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
+import {
+  getLatestCheckoutForBooking,
+  refreshCheckoutFromStripe,
+  retirePendingCheckoutIfRepriced,
+} from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
@@ -569,6 +573,13 @@ async function resolvePaymentPanel(
     if (checkout?.status === "completed") {
       return paidPanel(await getBookingPayment(db, shopId, bookingId));
     }
+  }
+  if (checkout?.status === "pending") {
+    // "Finish paying" links this session's Stripe URL directly, so the figure
+    // the diver lands on is the one it was minted for. Retire it if the trip
+    // has been repriced since (PAY-L2) — the panel then falls through to its
+    // "Pay now" form, which mints a fresh session at today's price.
+    checkout = await retirePendingCheckoutIfRepriced(db, shopId, checkout);
   }
   if (
     checkout?.status === "pending" &&

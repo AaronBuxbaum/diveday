@@ -262,7 +262,7 @@ describe("listCourseInquiriesForShop", () => {
       experienceLevel: "tried",
       name: "Second Asker",
     });
-    await recordCourseInquiry(db, {
+    const dsdRow = await recordCourseInquiry(db, {
       shopId: shop.id,
       courseId: dsd.id,
       experienceLevel: "never",
@@ -271,7 +271,13 @@ describe("listCourseInquiriesForShop", () => {
 
     const owRows = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
     // Newest first, scoped to this course only — the DSD inquiry never appears.
-    expect(owRows.map((row) => row.id)).toEqual([second.id, first.id]);
+    // Asserted as a prefix rather than as the whole list: the demo seed carries
+    // its own Open Water lead (src/db/seed-course-inquiries.ts), dated days
+    // earlier, so it sorts *behind* these two and its presence is itself part of
+    // what "newest first" means here.
+    const ids = owRows.map((row) => row.id);
+    expect(ids.slice(0, 2)).toEqual([second.id, first.id]);
+    expect(ids).not.toContain(dsdRow.id);
     expect(owRows.every((row) => row.courseId === course.id)).toBe(true);
   });
 });

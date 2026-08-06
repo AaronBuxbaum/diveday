@@ -1,0 +1,35 @@
+{
+  "id": "promo_1QsAVfLkdIwHu7ixTgKpQr2S",
+  "object": "promotion_code",
+  "active": true,
+  "code": "SAVE10-A1B2C3",
+  "coupon": {
+    "id": "cpn_1QsAVeLkdIwHu7ix9YmZaB4C",
+    "object": "coupon",
+    "amount_off": null,
+    "created": 1784640600,
+    "currency": null,
+    "duration": "once",
+    "duration_in_months": null,
+    "livemode": false,
+    "max_redemptions": null,
+    "metadata": {},
+    "name": "Last-minute deal — SAVE10-A1B2C3",
+    "percent_off": 10.0,
+    "redeem_by": null,
+    "times_redeemed": 0,
+    "valid": true
+  },
+  "created": 1784640600,
+  "customer": null,
+  "expires_at": 1784727000,
+  "livemode": false,
+  "max_redemptions": 4,
+  "metadata": {},
+  "restrictions": {
+    "first_time_transaction": false,
+    "minimum_amount": null,
+    "minimum_amount_currency": null
+  },
+  "times_redeemed": 0
+}

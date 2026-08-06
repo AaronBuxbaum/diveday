@@ -34,6 +34,21 @@ responses, so the application needs no hand-rolled request loop. Exhausted retry
 `notification_send_queue`; the daily `/api/cron/reminders` pass drains that queue before running
 reminders, recaps, and checkout recovery. A permanent 4xx is not retried.
 
+**The retry cadence is one attempt per day, and that is the whole of it.** Nothing polls the send
+queue — the daily tick is the only thing that reads `next_attempt_at` — so a message SES refuses at
+09:00 is next attempted at 14:00 UTC the following day, not minutes later. Three daily passes is the
+whole budget (`RETRY_WINDOW_MS` in `src/db/notifications.ts`, derived from
+`DAILY_TICK_INTERVAL_MS`); after the third the row is parked as `failed` for the staff-visible
+failure surface rather than retried a fourth time, so a human sees it while the trip it concerns is
+still ahead of the shop.
+
+This used to read as a 30s → 1h exponential ladder in the code, which described a system that does
+not exist: under a once-a-day drain every rung of it collapsed to "tomorrow", and the eight attempts
+sized for that ladder stretched to eight days (OPS-6). If you need faster than daily, the change is a
+hosting-plan one — a second, sub-daily `crons` entry in `vercel.json` — and both the schedule
+constant and the retry window move together, because `src/lib/cron-schedule.ts` is where the cadence
+lives and `src/lib/cron-schedule.test.ts` reads `vercel.json` and fails if they disagree.
+
 SES has no request-level idempotency token — a client-side timeout racing a server-side success can
 double-send in a way a provider with one wouldn't. The queue-level dedup on
 `notification_send_queue.idempotency_key` is the real safety net; this is a narrower, accepted gap

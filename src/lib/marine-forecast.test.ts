@@ -45,7 +45,7 @@ describe("fetchAutomatedMarineForecast", () => {
     vi.unstubAllEnvs();
   });
 
-  it("selects the forecast hour closest to departure and writes a dive-friendly sea-state note", async () => {
+  it("selects the forecast hour closest to departure and returns the sea state as numbers and codes", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -66,14 +66,75 @@ describe("fetchAutomatedMarineForecast", () => {
       fetcher,
     );
 
+    // Metres and a compass code, never "0.7 m waves from E" — the shop's
+    // `depth_unit` decides whether a crew reads metres or feet, and the
+    // reader's language decides whether the bearing is E or O (DOM-L2).
     expect(forecast).toEqual({
       waterTemperatureC: 27,
-      surfaceConditions: "0.7 m waves from E · 7 s period",
+      surface: { waveHeightMeters: 0.7, waveDirection: "e", wavePeriodSeconds: 7 },
       source: "Open-Meteo marine forecast",
       validAt: new Date(1_784_422_800_000),
     });
     expect(fetcher).toHaveBeenCalledOnce();
     expect(String(fetcher.mock.calls[0]?.[0])).toContain("sea_surface_temperature");
+  });
+
+  it("keeps the sea state when only the wave height is published", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          hourly: {
+            time: [1_784_422_800],
+            sea_surface_temperature: [null],
+            wave_height: [1.2],
+            wave_period: [null],
+            // A bearing the provider has been seen to return below zero rather
+            // than wrapping into [0, 360): −10° is still north, not a crash.
+            wave_direction: [-10],
+          },
+        }),
+      ),
+    );
+
+    const forecast = await fetchAutomatedMarineForecast(
+      { latitude: 25.12, longitude: -80.3 },
+      new Date(1_784_422_800_000),
+      fetcher,
+    );
+
+    expect(forecast?.surface).toEqual({
+      waveHeightMeters: 1.2,
+      waveDirection: "n",
+      wavePeriodSeconds: null,
+    });
+    expect(forecast?.waterTemperatureC).toBeNull();
+  });
+
+  // A period and a bearing describe the shape of a sea nobody can feel unless
+  // there is a height to go with them, so the whole reading drops.
+  it("returns no sea state at all when the wave height is missing", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          hourly: {
+            time: [1_784_422_800],
+            sea_surface_temperature: [26.4],
+            wave_height: [null],
+            wave_period: [7],
+            wave_direction: [92],
+          },
+        }),
+      ),
+    );
+
+    const forecast = await fetchAutomatedMarineForecast(
+      { latitude: 25.12, longitude: -80.3 },
+      new Date(1_784_422_800_000),
+      fetcher,
+    );
+
+    expect(forecast?.surface).toBeNull();
+    expect(forecast?.waterTemperatureC).toBe(26);
   });
 
   it("returns no briefing when the provider is unavailable", async () => {

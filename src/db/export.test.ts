@@ -10,7 +10,11 @@ import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCount
 import { recordCrewAttestation } from "./manifests";
 import * as schema from "./schema";
 import {
+  activityEvents,
   certifications,
+  courseInquiries,
+  courses,
+  internalNotes,
   people,
   personRoles,
   shops,
@@ -39,6 +43,8 @@ const EXPECTED_FILES = [
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
   "booking_payment_events.csv",
+  "booking_checkouts.csv",
+  "booking_checkout_bookings.csv",
   "roll_call_events.csv",
   "roll_call_crew_attestations.csv",
   "roll_call_crew_events.csv",
@@ -47,6 +53,9 @@ const EXPECTED_FILES = [
   "waiver_records.csv",
   "rental_fit.csv",
   "prior_visits.csv",
+  "internal_notes.csv",
+  "activity_events.csv",
+  "notification_deliveries.csv",
   "orders.csv",
   "order_line_items.csv",
   "tips.csv",
@@ -56,7 +65,9 @@ const EXPECTED_FILES = [
   "recap_photos.csv",
   "trip_reviews.csv",
   "shop_promo_codes.csv",
+  "shop_promo_redemptions.csv",
   "courses.csv",
+  "course_inquiries.csv",
 ];
 
 /** Schema tables that get their own CSV in the bundle. */
@@ -75,6 +86,13 @@ const EXPORTED_TABLES = [
   "staff_shifts",
   "bookings",
   "booking_payment_events",
+  "booking_checkouts",
+  "booking_checkout_bookings",
+  "internal_notes",
+  "activity_events",
+  "notification_deliveries",
+  "course_inquiries",
+  "shop_promo_redemptions",
   "trip_waitlist_entries",
   "last_minute_list_entries",
   "trip_last_minute_promos",
@@ -106,20 +124,27 @@ const FOLDED_TABLES = [
 
 /**
  * Deliberate exclusions — each must be defensible in the bundle README and on
- * the export page. Adding a schema table without deciding its export fate
- * fails the coverage test below.
+ * the export page, and as of ADR 20260806-export-operational-records each must
+ * clear that record's rule: a table stays out only when carrying it would be a
+ * credential, a pointer into infrastructure the destination cannot reach, or
+ * DiveDay's own bookkeeping about its own machinery. "Not in this first slice"
+ * is not a reason — that is exactly what `internal_notes` sat on for a fortnight
+ * before DATA-A10 forced the question. Adding a schema table without deciding
+ * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  "activity_events", // in-product operational feed, not a migration record
-  "day_closeouts", // the close-out ritual's append-only trail — in-product operational record, same reasoning as activity_events
-  // The buddy-team pairing trail (ADR 20260804-buddy-teams). An in-product
-  // operational record like the two above — the *standing* teams a shop would
-  // carry to another system are already exported as buddy_pairs.csv; this is
-  // the history of how they got that way, which belongs with activity_events.
+  // The close-out ritual's append-only trail. The one in-product operational
+  // record that stayed out after DATA-A10's sweep, and on a narrower argument
+  // than the ones that moved: a close-out is an attestation *about* a day whose
+  // every underlying fact — the roll call, the blockers, the departures — is
+  // already in the bundle, so the row adds a signature over records the
+  // destination has, and nothing the destination lacks.
+  "day_closeouts",
+  // The buddy-team pairing trail (ADR 20260804-buddy-teams). The *standing*
+  // teams a shop would carry to another system are already exported as
+  // buddy_pairs.csv; this is the history of how they got that way.
   "buddy_team_events",
-  "internal_notes", // private staff working context; deliberately not portable in this first slice
-  "notification_deliveries", // operational plumbing, not shop records
-  "notification_delivery_attempts",
+  "notification_delivery_attempts", // per-attempt retry mechanics behind notification_deliveries.csv, which carries the outcome
   "notification_send_queue", // operational retry state, not shop records
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
@@ -132,9 +157,6 @@ const EXCLUDED_TABLES = [
   "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
-  "booking_checkouts", // payment attempts; outcomes live in bookings/orders
-  "booking_checkout_bookings",
-  "shop_promo_redemptions", // points at a checkout attempt; Stripe holds the authoritative count
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
@@ -152,7 +174,6 @@ const EXCLUDED_TABLES = [
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "course_inquiries", // a marketing lead, not a shop operational record — same reasoning as activity_events
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
@@ -235,6 +256,21 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
   booking_payment_events: ["shop_id", "created_at"],
+  booking_checkouts: [
+    "shop_id",
+    "stripe_account_id", // provider linkage, useless outside this Stripe account
+    // An ephemeral Stripe Checkout link that stopped resolving when the session
+    // expired — same reasoning as tips.checkout_url.
+    "checkout_url",
+  ],
+  // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
+  // which are both exported — same reasoning as buddy_pair_members.id.
+  booking_checkout_bookings: ["shop_id", "id"],
+  shop_promo_redemptions: ["shop_id"],
+  internal_notes: ["shop_id"],
+  activity_events: ["shop_id"],
+  notification_deliveries: ["shop_id"],
+  course_inquiries: ["shop_id"],
   rental_fit_profiles: ["shop_id"],
   prior_visits: [
     "shop_id",
@@ -370,8 +406,18 @@ describe("full-shop export dataset", () => {
       "dive_sites.csv",
       "dive_site_creatures.csv",
       "courses.csv",
+      // The DATA-A10 additions. A file that is *declared* but always empty is
+      // the failure mode this whole list guards against — it reads as "we
+      // export that" on the settings page and hands a leaving shop a header row.
+      "booking_checkouts.csv",
+      "booking_checkout_bookings.csv",
+      "internal_notes.csv",
+      "activity_events.csv",
+      "notification_deliveries.csv",
+      "shop_promo_redemptions.csv",
+      "course_inquiries.csv",
     ]) {
-      expect(table(input, file).rows.length).toBeGreaterThan(0);
+      expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);
     }
 
     // Staff belong in the bundle too, with their roles readable.
@@ -783,6 +829,99 @@ describe("full-shop export dataset", () => {
     expect(JSON.stringify(input.tables.flatMap((exported) => exported.rows))).not.toContain(
       "erica@example.com",
     );
+  });
+
+  /**
+   * The guard ADR 20260806-export-operational-records leans on. The test above
+   * erases a diver with no notes, no leads, no messages and no checkouts, so it
+   * proved nothing about the seven files that record went on to add — a table
+   * exported but not swept by `anonymize.ts` hands a diver's details back out
+   * through the bundle, and nothing mechanical would have said so (security
+   * review, 2026-08-06).
+   *
+   * Written as "no file in the bundle contains any of these strings" rather than
+   * per-file assertions on purpose: a future export file inherits the guard for
+   * free, which is the property the ADR actually claims.
+   */
+  it("keeps an erased diver out of every file, including the operational records", async () => {
+    const { db, shop } = await seededShopContext();
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    const [diver] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Erasable Esme",
+        email: "esme@example.com",
+        phone: "+1 305 555 0424",
+      })
+      .returning();
+    if (!diver || !owner) throw new Error("fixture insert failed");
+
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!course || !trip) throw new Error("seeded course/trip missing");
+
+    await db.insert(internalNotes).values({
+      shopId: shop.id,
+      personId: diver.id,
+      // i18n-exempt: a staff note fixture, stored verbatim — not product copy
+      body: "Esme prefers the 5mm suit; ask before the second tank.",
+      createdByPersonId: owner.id,
+    });
+    // A note filed under *somebody else* that names her. Keyed on the other
+    // diver's `person_id`, so only the word-boundary body sweep can reach it.
+    await db.insert(internalNotes).values({
+      shopId: shop.id,
+      personId: owner.id,
+      // i18n-exempt: a staff note fixture, stored verbatim — not product copy
+      body: "Split Erasable Esme from this group on the next boat.",
+      createdByPersonId: owner.id,
+    });
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: owner.id,
+      // i18n-exempt: a seeded activity-trail fixture, stored verbatim
+      message: "Erasable Esme checked in at the desk",
+    });
+    await db.insert(courseInquiries).values({
+      shopId: shop.id,
+      courseId: course.id,
+      personId: diver.id,
+      name: "Erasable Esme",
+      email: "esme@example.com",
+      phone: "+1 305 555 0424",
+      experienceLevel: "never",
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    if (!erased.ok) throw new Error(`erasure refused: ${erased.reason}`);
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    const wholeBundle = JSON.stringify(
+      input.tables.map((exported) => ({ file: exported.file, rows: exported.rows })),
+    );
+    for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "5mm suit"]) {
+      expect(wholeBundle, `bundle still carries ${secret}`).not.toContain(secret);
+    }
   });
 
   it("never leaks another shop's rows into the bundle", async () => {

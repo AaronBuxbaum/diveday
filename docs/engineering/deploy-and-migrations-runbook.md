@@ -26,12 +26,54 @@ Four consequences follow, and every one of them is load-bearing:
 | Migrations run **inside the build step**, not as a separate gated stage | There is no approval between "schema changed" and "code deployed", and no way to run one without the other |
 | `pnpm db:migrate` can succeed and `pnpm build` can then fail | The database is left **migrated ahead of the live code**. The old deployment keeps serving, now against a newer schema. This is the normal failure mode, not an exotic one |
 | Preview deploys skip migrations entirely (`VERCEL_ENV !== "production"`) | **There is no rehearsal surface.** A preview runs new code against the *old* production schema, or against nothing |
-| CI never touches real Postgres — `.github/workflows/ci.yml` has no `services:` block and no `DATABASE_URL`; unit tests run on PGlite via `createTestDb()` | **The production deploy is the first time any migration executes against real Postgres.** PGlite is close to Postgres, not identical to it |
-| `drizzle/` holds 63 forward-only migration folders (`migration.sql` + `snapshot.json`), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here |
+| CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
+| `drizzle/` holds 85 forward-only migration folders (`migration.sql` + `snapshot.json`), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here |
 
-Put together: an unsafe migration is applied by the same command that builds the code, against a
-database nothing has rehearsed against, with no way to reverse it. That is the blast radius.
-Expand/contract is the mitigation that makes it survivable.
+Put together: an unsafe migration is applied by the same command that builds the code, with no way to
+reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
+is the blast radius. Expand/contract is the mitigation that makes it survivable.
+
+## What CI rehearses, and what it still doesn't
+
+The `real-postgres` job in `.github/workflows/ci.yml` runs the migrations against a genuine
+Postgres 16 service container. It runs on any pull request touching `src/db/**`, `drizzle/**`, or the
+harness itself, and nightly on `main` regardless — the nightly matters because what invalidates the
+proof (a migration merged on another branch, a base image moving) arrives without touching your diff.
+
+**What it proves.** Three things, and it is worth knowing which is which:
+
+| Proof | Test | Catches |
+| --- | --- | --- |
+| Every migration applies to an **empty** database | `src/db/migrations.postgres.test.ts` | SQL that PGlite tolerates and Postgres does not. `CREATE EXTENSION pg_trgm` is the live example: a real statement in `drizzle/`, satisfied in PGlite by a wasm extension loaded in JavaScript before any migration runs |
+| Today's migrations apply **on top of the previous release's schema** | same file | The only shape in which a *contracting* migration can fail. From empty there is nothing to drop, rename, or tighten, so a `DROP COLUMN` that breaks the running deployment applies perfectly cleanly. This is the expand/contract rule's own test |
+| The two paths land on the **same schema** | same file | An upgrade path that has diverged from the fresh-install path — a shop provisioned tomorrow running a different schema from one that upgraded into it. Compared by reading `information_schema` and `pg_constraint`/`pg_indexes`, not by asking Drizzle whether its model is in sync |
+
+The previous release's migration set is reconstructed by `scripts/previous-release-migrations.mjs`,
+which streams the `drizzle/` tree at `git merge-base origin/main HEAD` out of the object store. It
+checks nothing out and moves no ref, so it is safe in a working tree with other work in flight. A
+clone too shallow to resolve a base commit is a **hard failure**, not a skip — hence `fetch-depth: 0`
+on that job's checkout.
+
+The same job also races the two locks that PGlite structurally cannot contend, since it is
+single-connection: the oversell guard in `createBookingRecord` and the serialization in
+`withBookingPaymentLock` (`src/db/bookings.postgres.test.ts`, `src/db/payments.postgres.test.ts`).
+
+**What it does not prove.** Keep reviewing SQL by hand; this job narrows the gap, it does not close it.
+
+- **Nothing about production data.** Every rehearsal runs against an empty or lightly-seeded
+  database. The failures that scale with row count are exactly the ones still unrehearsed: a
+  `CREATE INDEX` that locks writes for minutes, a batched backfill that times out the build, a
+  `NOT NULL` that a real row violates. A migration that is green here can still take production down.
+- **Nothing about Neon specifically.** The container is stock Postgres. Neon's pooler, its
+  connection limits, and its cold-start behaviour are not in the picture — and the deploy applies DDL
+  over `DATABASE_URL_UNPOOLED` for reasons this job never exercises.
+- **Nothing about deploy sequencing.** It does not know that migrations run inside the build step, or
+  that the old code is still live while they do. Expand/contract remains a rule you follow, not one
+  that is enforced.
+- **It is not a substitute for a staging environment.** There still isn't one.
+
+To run it locally, see [testing.md](testing.md#running-the-real-postgres-suites-locally). The suites
+skip cleanly with no server configured, so `pnpm check` is unaffected.
 
 ## The expand/contract rule
 
@@ -129,9 +171,9 @@ run will usually skip what the first already applied — but "usually" is doing 
 sentence, because there is no advisory lock spanning the two processes and their reads of that table
 can interleave.
 
-The repo's CI concurrency group (`ci-${{ github.ref }}`, `cancel-in-progress: true` in
-`.github/workflows/ci.yml`) does not help here: it dedupes CI runs per ref, not Vercel builds, and
-CI is not what applies migrations.
+The repo's CI concurrency group in `.github/workflows/ci.yml` does not help here: it dedupes CI runs
+per ref (and only cancels in-progress ones for pull requests), not Vercel builds, and CI is not what
+applies migrations.
 
 The posture, until something enforces it:
 
@@ -152,9 +194,11 @@ recorded here so the next person does not have to rediscover the problem.
 - **No staging environment exists.** Preview deploys do not migrate, so there is no environment where
   a migration runs before production does. Reviewing the SQL by hand and keeping it expand-only is
   the entire safety net.
-- **No automated migration testing against real Postgres.** Unit tests run against PGlite, which
-  differs from Neon in extension availability, some locking behaviour, and concurrency semantics. A
-  migration that passes `pnpm check` has not been proven against production Postgres.
+- **No migration testing against realistic data volumes.** The `real-postgres` job proves the SQL
+  applies — from empty and from the previous release — but only ever to an empty database. Lock
+  duration, backfill runtime, and constraints that existing rows violate are all still discovered in
+  production. `pnpm check` alone proves even less: it runs on PGlite, which differs from Neon in
+  extension availability, some locking behaviour, and concurrency semantics.
 - **No schema drift detection.** Nothing checks that Neon's actual schema matches `src/db/schema.ts`.
   A hand-run statement in the Neon console would go unnoticed until a later migration failed.
 - **Vercel's own rollback of *environment variables* is not covered** — Instant Rollback repoints
