@@ -2,6 +2,7 @@ import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -321,6 +322,13 @@ export function RosterSection({
         </EmptyState>
       ) : (
         <ul className="mt-5 grid gap-4">
+          {/* Inside the list, so mounting proves the row it scrolls to exists.
+              Every door into this roster is a deep link at one diver — Today's
+              queue, and the manifest's "Resolve blockers" — and a `<Link>`
+              transition does not run the browser's own fragment scroll, so
+              those all landed at the top of a page of ~200px cards with the
+              named diver far below the fold. */}
+          <ScrollToHash />
           {filteredRoster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;

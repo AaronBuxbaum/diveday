@@ -31,7 +31,8 @@ the DiveDay-side S3 export layer described there.
 - The DiveDay-side scheduled export to `DatabaseBackupBucket` (`infra/`), which is disaster
   recovery for the platform; this is vendor-independence for one shop.
 - Route wiring (`src/app/api/cron/backup-export/`) and the staff settings UI
-  (`src/app/shop/[shopSlug]/settings/backup/`), which import this module's `index.ts`.
+  (`src/app/shop/[shopSlug]/settings/export/` — the Backups half of the one data-out surface,
+  ADR 20260806-one-data-out-surface), which import this module's `index.ts`.
 
 ## Public surface
 

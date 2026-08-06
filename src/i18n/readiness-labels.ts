@@ -1,4 +1,4 @@
-import type { DiveSpecialty } from "@/db/schema";
+import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type {
   CertificationLevel,
@@ -237,3 +237,26 @@ export function tripAdmissionRefusalText(
   // sentence is the honest fallback rather than an empty banner.
   return sentences.length > 0 ? sentences.join(" ") : t("shared.tripAdmission.generic");
 }
+
+/**
+ * Training agencies, diver-facing.
+ *
+ * Every entry but `other` is a brand name that reads the same in every
+ * language, and they still go through the bundle rather than being spelled in
+ * a component: `other` is real copy that has to translate, and a half-bundled
+ * map is how the one translatable member gets forgotten. Same
+ * key-set-per-audience split as the certification levels above — this one is
+ * only ever looked up with a `DiverTranslator`.
+ */
+export const DIVER_CERTIFICATION_AGENCY_KEYS: Record<CertificationAgency, DiverMessageKey> = {
+  padi: "ready.certAgencies.padi",
+  ssi: "ready.certAgencies.ssi",
+  naui: "ready.certAgencies.naui",
+  sdi: "ready.certAgencies.sdi",
+  tdi: "ready.certAgencies.tdi",
+  cmas: "ready.certAgencies.cmas",
+  raid: "ready.certAgencies.raid",
+  gue: "ready.certAgencies.gue",
+  bsac: "ready.certAgencies.bsac",
+  other: "ready.certAgencies.other",
+};

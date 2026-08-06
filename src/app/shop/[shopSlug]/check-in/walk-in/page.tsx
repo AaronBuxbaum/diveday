@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
+import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
@@ -15,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { SeatDiverPanel } from "../../_components/SeatDiverPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -35,7 +35,11 @@ export const metadata: Metadata = {
  * fresh one — email optional, the crew can collect it later. One screen,
  * no trip page detour, no required email for someone who just walked up.
  *
- * Both halves submit through the shared seat-a-diver actions
+ * The second half is `SeatDiverPanel` (../../_components), the same panel the
+ * global Add-booking door stands on: this page and that one were ~85% the same
+ * markup, and the email rule they differ on is read there from
+ * `SEAT_SURFACES["walk-in"]` rather than hand-copied into a `required`
+ * attribute. Both halves submit through the shared seat-a-diver actions
  * (src/app/actions/seat-diver.ts) under the `"walk-in"` surface, which is what
  * keeps this page's own vocabulary — email optional, and the deliberately
  * blunt three-code refusal — a parameter rather than a second implementation
@@ -63,6 +67,7 @@ export default async function WalkInPage({
   const candidates = selectedTrip
     ? await listBookableDivers(db, shop.id, selectedTrip.tripId, { query })
     : [];
+  const self = `/shop/${shopSlug}/check-in/walk-in`;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
@@ -79,31 +84,24 @@ export default async function WalkInPage({
       </Link>
 
       {selectedTrip ? (
-        <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-bold tracking-wide text-muted uppercase">
-            {t("checkIn.walkIn.tripLabel")}
-          </p>
-          <p className="mt-1 font-semibold">
-            {t("checkIn.walkIn.tripSummary", {
-              title: selectedTrip.title,
-              date: formatShortDate(selectedTrip.startsAt, locale, shop.timezone),
-              time: formatTimeRange(
-                selectedTrip.startsAt,
-                selectedTrip.endsAt,
-                locale,
-                shop.timezone,
-              ),
-              booked: selectedTrip.booked,
-              capacity: selectedTrip.capacity,
-            })}
-          </p>
-          <Link
-            href={`/shop/${shopSlug}/check-in/walk-in`}
-            className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-          >
-            {t("checkIn.walkIn.changeTrip")}
-          </Link>
-        </section>
+        <SelectedTripCard
+          className="mt-6"
+          label={t("checkIn.walkIn.tripLabel")}
+          summary={t("seatDiver.tripSummary", {
+            title: selectedTrip.title,
+            date: formatShortDate(selectedTrip.startsAt, locale, shop.timezone),
+            time: formatTimeRange(
+              selectedTrip.startsAt,
+              selectedTrip.endsAt,
+              locale,
+              shop.timezone,
+            ),
+            booked: selectedTrip.booked,
+            capacity: selectedTrip.capacity,
+          })}
+          changeHref={self}
+          changeLabel={t("checkIn.walkIn.changeTrip")}
+        />
       ) : (
         <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold">{t("checkIn.walkIn.tripLabel")}</h2>
@@ -120,154 +118,63 @@ export default async function WalkInPage({
               </Link>
             </EmptyState>
           ) : (
-            <ul className="mt-3 flex flex-col gap-2">
-              {trips.map((trip) => (
-                <li key={trip.tripId}>
-                  <Link
-                    href={`/shop/${shopSlug}/check-in/walk-in?tripId=${trip.tripId}`}
-                    className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
-                  >
-                    <span>
-                      {trip.title} ·{" "}
-                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                    </span>
-                    <span className="tabular-nums text-muted">
-                      {trip.booked}/{trip.capacity}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <TripPickerList
+              className="mt-3"
+              options={trips.map((trip) => ({
+                id: trip.tripId,
+                href: `${self}?tripId=${trip.tripId}`,
+                // JSX rather than template literals, for the same reason the
+                // Add-booking picker keeps its own: text is shaped per DOM text
+                // node, so joining these into single strings re-kerns across the
+                // old node boundaries and shifts glyphs sub-pixel.
+                label: (
+                  <>
+                    {trip.title} ·{" "}
+                    {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                  </>
+                ),
+                // A string, unlike `label` above: the same node-joining shifts
+                // these two numbers sub-pixel, but writing them as JSX puts a
+                // bare "/" text node in a component, which `pnpm check:copy`
+                // rightly refuses. Two digits of sub-pixel shaping is the
+                // cheaper side of that trade.
+                meta: `${trip.booked}/${trip.capacity}`,
+              }))}
+            />
           )}
         </section>
       )}
 
       {selectedTrip ? (
-        <>
-          <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-            <h2 className="text-lg font-semibold">{t("checkIn.walkIn.findHeading")}</h2>
-            <form method="get" className="mt-3 flex flex-wrap items-end gap-2">
-              <input type="hidden" name="tripId" value={selectedTrip.tripId} />
-              <Field label={t("checkIn.walkIn.findLabel")} className="min-w-0 flex-1">
-                <input
-                  type="search"
-                  name="diverq"
-                  defaultValue={query}
-                  placeholder={t("checkIn.walkIn.findPlaceholder")}
-                  maxLength={120}
-                  autoComplete="off"
-                  className={controlClass}
-                />
-              </Field>
-              <SubmitButton
-                pendingLabel={t("checkIn.walkIn.searching")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("checkIn.walkIn.search")}
-              </SubmitButton>
-            </form>
-
-            {query ? (
-              candidates.length > 0 ? (
-                <ul className="mt-4 grid gap-2">
-                  {candidates.map(({ person }) => (
-                    <li
-                      key={person.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{person.fullName}</p>
-                        <p className="text-sm text-muted">
-                          {person.email ?? t("checkIn.walkIn.noEmailOnFile")}
-                        </p>
-                      </div>
-                      <form action={seatExistingDiverAction.bind(null, "walk-in", shopSlug)}>
-                        <input type="hidden" name="tripId" value={selectedTrip.tripId} />
-                        <input type="hidden" name="personId" value={person.id} />
-                        <SubmitButton
-                          pendingLabel={t("checkIn.walkIn.adding")}
-                          ariaLabel={t("checkIn.walkIn.addPersonAriaLabel", {
-                            name: person.fullName,
-                          })}
-                          className={buttonClass({ size: "sm" })}
-                        >
-                          {t("checkIn.walkIn.addToBoat")}
-                        </SubmitButton>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                // Same shared box the trip picker above already uses, and the
-                // "below" in the sentence made clickable — the hand-entry
-                // section is a scroll away on a counter phone.
-                <EmptyState className="mt-4">
-                  <h3 className="font-medium">{t("checkIn.walkIn.noMatchesHeading")}</h3>
-                  <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-                    {t("checkIn.walkIn.noMatches", { query })}
-                  </p>
-                  <a
-                    href="#hand-entry"
-                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                  >
-                    {t("checkIn.walkIn.noMatchesAction")}
-                  </a>
-                </EmptyState>
-              )
-            ) : null}
-          </section>
-
-          <section
-            id="hand-entry"
-            className="mt-6 scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
-          >
-            <h2 className="text-lg font-semibold">{t("checkIn.walkIn.handEntryHeading")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("checkIn.walkIn.handEntryDescription")}</p>
-            <form action={seatNewDiverAction.bind(null, "walk-in", shopSlug)} className="mt-4">
-              <input type="hidden" name="tripId" value={selectedTrip.tripId} />
-              <FieldGrid columns={3}>
-                <Field label={t("checkIn.walkIn.nameLabel")}>
-                  <input
-                    name="fullName"
-                    required
-                    maxLength={120}
-                    autoComplete="name"
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("checkIn.walkIn.emailLabel")}
-                  hint={t("checkIn.walkIn.optionalHint")}
-                >
-                  <input
-                    name="email"
-                    type="email"
-                    maxLength={200}
-                    autoComplete="email"
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("checkIn.walkIn.phoneLabel")}
-                  hint={t("checkIn.walkIn.optionalHint")}
-                >
-                  <input
-                    name="phone"
-                    type="tel"
-                    maxLength={30}
-                    autoComplete="tel"
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-              <FieldActions className="mt-4">
-                <SubmitButton pendingLabel={t("checkIn.walkIn.adding")} className={buttonClass()}>
-                  {t("checkIn.walkIn.addToBoat")}
-                </SubmitButton>
-              </FieldActions>
-            </form>
-          </section>
-        </>
+        <SeatDiverPanel
+          surface="walk-in"
+          shopSlug={shopSlug}
+          tripId={selectedTrip.tripId}
+          query={query}
+          candidates={candidates}
+          // A GET search must keep the boat the staffer already picked.
+          searchHiddenFields={{ tripId: selectedTrip.tripId }}
+          copy={{
+            findHeading: t("seatDiver.findHeading"),
+            findLabel: t("seatDiver.findLabel"),
+            findPlaceholder: t("seatDiver.findPlaceholder"),
+            search: t("seatDiver.search"),
+            searching: t("seatDiver.searching"),
+            noEmailOnFile: t("seatDiver.noEmailOnFile"),
+            adding: t("seatDiver.adding"),
+            addLabel: t("checkIn.walkIn.addToBoat"),
+            addPersonAriaLabel: (name) => t("checkIn.walkIn.addPersonAriaLabel", { name }),
+            noMatchesHeading: t("seatDiver.noMatchesHeading"),
+            noMatches: t("seatDiver.noMatches", { query }),
+            noMatchesAction: t("seatDiver.noMatchesAction"),
+            handEntryHeading: t("seatDiver.handEntryHeading"),
+            handEntryDescription: t("checkIn.walkIn.handEntryDescription"),
+            nameLabel: t("seatDiver.nameLabel"),
+            emailLabel: t("seatDiver.emailLabel"),
+            phoneLabel: t("seatDiver.phoneLabel"),
+            optionalHint: t("seatDiver.optionalHint"),
+          }}
+        />
       ) : null}
     </main>
   );

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { RepeatFields } from "./RepeatFields";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -151,6 +153,63 @@ export type BuilderCopy = {
   departureTime: string;
   copying: string;
   copyIt: string;
+  /* ---- the "More options" half of the one trip form (ADR 20260806-one-trip-create-form) ---- */
+  viewOnlyNotice: string;
+  moreOptions: string;
+  fewerOptions: string;
+  moreOptionsDescription: string;
+  titlePlaceholderCourse: string;
+  courseNote: string;
+  courseCertRequired: string;
+  courseNoCardRequired: string;
+  descriptionLabel: string;
+  descriptionPlaceholder: string;
+  daysLabel: string;
+  daysDescription: string;
+  payAtBookingLegend: string;
+  payAtBookingDescription: string;
+  depositLabel: string;
+  depositDescription: string;
+  depositTitle: string;
+  cancellationWindowLabel: string;
+  cancellationWindowDescription: string;
+  hoursSuffix: string;
+  repeatLegend: string;
+  repeatDescription: string;
+  howOftenLabel: string;
+  doesntRepeat: string;
+  everyWeek: string;
+  every2Weeks: string;
+  every4Weeks: string;
+  numberOfTripsLabel: string;
+  numberOfTripsDescription: string;
+  numberOfTripsPlaceholder: string;
+};
+
+/**
+ * A course the panel opens already pointed at, handed over by the staff course
+ * catalogue's "schedule a session" control (`?course=<id>` on the board). Its
+ * title is carried with the id because the select's options arrive on their own
+ * fetch — without it the preselected course would render as a blank row until
+ * the catalogue landed.
+ */
+export type BuilderInitialCourse = {
+  id: string;
+  title: string;
+  /** The admission line the old full form showed under the select, pre-resolved. */
+  requirement: string;
+};
+
+/** Everything the panel needs that only matters once "More options" is open. */
+export type BuilderMoreOptions = {
+  /** Occurrence bounds for the repeat fieldset (src/lib/recurrence.ts). */
+  minOccurrences: number;
+  maxOccurrences: number;
+  /** Meeting-day bounds for a multi-day departure (src/lib/trip-days.ts). */
+  minDays: number;
+  maxDays: number;
+  /** The per-dive cards' own words, shared with the trip editor. */
+  diveFields: TripDiveFieldsCopy;
 };
 
 /** `YYYY-MM-DD`, `offsetDays` from the given ISO day, without touching the clock. */
@@ -180,8 +239,11 @@ function focusOnMount(el: HTMLElement | null) {
 }
 
 /**
- * The "add a departure" form, pre-dated to whichever day header it was opened
- * from. Hoisted to module scope (rather than defined inside `ScheduleBuilder`)
+ * The one form that creates a departure, pre-dated to whichever day header it
+ * was opened from. Two depths, one form, one action: "More options" discloses
+ * the rest of what a trip can be (ADR 20260806-one-trip-create-form).
+ *
+ * Hoisted to module scope (rather than defined inside `ScheduleBuilder`)
  * so its identity is stable across renders — a component defined in a parent's
  * render body gets a new identity every render, which makes React unmount and
  * remount it (and its uncontrolled `<input>`s) on any parent re-render,
@@ -192,6 +254,9 @@ function AddPanel({
   options,
   price,
   copy,
+  more,
+  initialCourse,
+  startExpanded,
   onAdd,
   onCancel,
 }: {
@@ -200,10 +265,47 @@ function AddPanel({
   options: BuilderOptions | null;
   price: BuilderPriceInput;
   copy: BuilderCopy;
+  more: BuilderMoreOptions;
+  initialCourse: BuilderInitialCourse | null;
+  /** Opened straight into its full depth — a link that meant the whole form. */
+  startExpanded: boolean;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   onAdd: (formData: FormData) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const [expanded, setExpanded] = useState(startExpanded);
+  // Controlled, unlike every other select here: the catalogue arrives on its own
+  // fetch, so an uncontrolled preselection from `?course=` would be reconciled
+  // away the moment the real options replaced the stand-in row below.
+  const [courseId, setCourseId] = useState(initialCourse?.id ?? "");
+  const onCourse = initialCourse !== null && courseId === initialCourse.id;
+
+  /**
+   * The two facts both depths ask for, held here so the disclosure can never
+   * eat them: collapsed they are the "Dives" box and the "Dive site" select,
+   * expanded they are the dive plan's own count and dive one's site. State in
+   * the panel, not in either control, is what lets a staff member type 3 dives,
+   * open More options, and still be scheduling three dives.
+   */
+  const [plannedDives, setPlannedDives] = useState(2);
+  const [diveSiteId, setDiveSiteId] = useState("");
+  /**
+   * The dive plan is mounted from the first expansion onward and only hidden
+   * afterwards — never unmounted, because React drops an unmounted subtree's
+   * state and those are typed dive briefings. Seeded once, from whatever the
+   * quick row held at that moment; later toggles must not re-seed it or they
+   * would overwrite the cards with the quick row again.
+   */
+  const [diveSeed, setDiveSeed] = useState<{ count: number; siteId: string } | null>(
+    startExpanded ? { count: 2, siteId: "" } : null,
+  );
+  const toggleExpanded = () => {
+    setExpanded((current) => {
+      if (!current && diveSeed === null) setDiveSeed({ count: plannedDives, siteId: diveSiteId });
+      return !current;
+    });
+  };
+
   return (
     <FieldGrid
       as="form"
@@ -217,9 +319,36 @@ function AddPanel({
           type="text"
           required
           maxLength={120}
-          placeholder={copy.titlePlaceholder}
+          placeholder={
+            onCourse
+              ? fill(copy.titlePlaceholderCourse, { courseTitle: initialCourse.title })
+              : copy.titlePlaceholder
+          }
           className={controlClass}
           ref={focusOnMount}
+        />
+      </Field>
+      {/* Every expanded-only block below is `hidden`, never unmounted, and
+          `disabled` while hidden — React drops an unmounted subtree's state,
+          and a disabled control submits nothing, so the collapsed payload is
+          exactly the quick one. Expanding and collapsing is a change of view,
+          never a loss of work. */}
+      <Field
+        label={copy.descriptionLabel}
+        hint={copy.optional}
+        // `hidden` on the field itself, never a wrapper `<div>`: `FieldGrid`
+        // aligns a row's captions and controls by making each `Field` a direct
+        // grid item, and a wrapper steals that place and drops the row out of
+        // alignment (docs/design/forms-and-controls.md).
+        className={expanded ? undefined : "hidden"}
+      >
+        <textarea
+          name="description"
+          rows={2}
+          maxLength={500}
+          disabled={!expanded}
+          placeholder={copy.descriptionPlaceholder}
+          className={controlClass}
         />
       </Field>
       <FieldGrid columns={3} className="gap-y-4">
@@ -245,6 +374,26 @@ function AddPanel({
           />
         </Field>
       </FieldGrid>
+      {/* Under the date row, where the rest of "when" already lives — not in
+          the Seats/Dives cell. Expanding must only ever *add* a field below;
+          a cell whose label changes out from under the cursor reads as the
+          form rewriting itself. */}
+      <Field
+        label={copy.daysLabel}
+        description={copy.daysDescription}
+        className={expanded ? undefined : "hidden"}
+      >
+        <input
+          name="dayCount"
+          type="number"
+          required={expanded}
+          disabled={!expanded}
+          min={more.minDays}
+          max={more.maxDays}
+          defaultValue={more.minDays}
+          className={`${controlClass} tabular-nums sm:w-40`}
+        />
+      </Field>
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.seats}>
           <input
@@ -257,14 +406,20 @@ function AddPanel({
             className={`${controlClass} tabular-nums`}
           />
         </Field>
-        <Field label={copy.dives}>
+        {/* Handed off, not duplicated: expanded, the count is the dive plan's
+            own select. Two enabled boxes named `plannedDives` would let
+            whichever is last in the DOM win silently, so this one goes
+            disabled — and the panel holds the value either way. */}
+        <Field label={copy.dives} className={expanded ? "hidden" : undefined}>
           <input
             name="plannedDives"
             type="number"
-            required
+            required={!expanded}
+            disabled={expanded}
             min={1}
             max={4}
-            defaultValue={2}
+            value={plannedDives}
+            onChange={(event) => setPlannedDives(Number(event.target.value))}
             className={`${controlClass} tabular-nums`}
           />
         </Field>
@@ -275,7 +430,7 @@ function AddPanel({
           set" badge (task 150, UX persona lens 17). Still optional: the badge
           stays for the departure someone puts up before the season's rate is
           settled. The box is narrow, its helper line is not, so only the input
-          is capped — same shape as the full trip form. */}
+          is capped. */}
       <FieldGrid columns={1}>
         <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
           <input
@@ -289,14 +444,84 @@ function AddPanel({
           />
         </Field>
       </FieldGrid>
+      {/* `<fieldset disabled>` reaches every control inside it, so this whole
+          block leaves the submission in one attribute while it is hidden. */}
+      <fieldset
+        hidden={!expanded}
+        disabled={!expanded}
+        className="rounded-lg border border-border bg-surface p-5"
+      >
+        <legend className="px-1 text-sm font-medium">{copy.payAtBookingLegend}</legend>
+        <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
+        <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+          <Field
+            label={copy.depositLabel}
+            hint={copy.optional}
+            description={copy.depositDescription}
+          >
+            <input
+              name="depositDollars"
+              type="number"
+              step={price.step}
+              min={0}
+              max={price.max}
+              placeholder={price.placeholder}
+              title={copy.depositTitle}
+              className={`${controlClass} tabular-nums sm:w-40`}
+            />
+          </Field>
+          <Field
+            label={copy.cancellationWindowLabel}
+            hint={copy.optional}
+            description={copy.cancellationWindowDescription}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                name="cancellationWindowHours"
+                type="number"
+                step={1}
+                min={0}
+                max={720}
+                placeholder="48"
+                className={`${controlClass} tabular-nums sm:w-28`}
+              />
+              <span className="text-sm text-muted">{copy.hoursSuffix}</span>
+            </div>
+          </Field>
+        </FieldGrid>
+      </fieldset>
+      {/* Two columns in both states: `columns={expanded ? 1 : 2}` made the
+          Course select jump from half-width to full on every toggle. */}
       <FieldGrid columns={2} className="gap-y-4">
-        <Field label={copy.course} hint={copy.optional}>
-          <select name="courseId" defaultValue="" className={controlClass}>
+        <Field
+          label={copy.course}
+          hint={copy.optional}
+          description={
+            onCourse
+              ? fill(copy.courseNote, {
+                  requirement: initialCourse.requirement,
+                })
+              : undefined
+          }
+        >
+          <select
+            name="courseId"
+            value={courseId}
+            onChange={(event) => setCourseId(event.target.value)}
+            className={controlClass}
+          >
             <option value="">{copy.ordinaryTrip}</option>
             {options === null ? (
-              <option value="" disabled>
-                {copy.optionsLoading}
-              </option>
+              <>
+                {/* The catalogue is still in flight; the course this panel was
+                    opened for is the one option that must already be here. */}
+                {initialCourse ? (
+                  <option value={initialCourse.id}>{initialCourse.title}</option>
+                ) : null}
+                <option value="" disabled>
+                  {copy.optionsLoading}
+                </option>
+              </>
             ) : (
               options.courses.map((course) => (
                 <option key={course.id} value={course.id}>
@@ -306,8 +531,21 @@ function AddPanel({
             )}
           </select>
         </Field>
-        <Field label={copy.diveSite} hint={copy.optional}>
-          <select name="diveSiteId" defaultValue="" className={controlClass}>
+        {/* One site for the day, or — expanded — `dive-N-siteId` per dive.
+            Never both: dive one's select is seeded from this one on the first
+            expansion and writes back to it, so the two never disagree. */}
+        <Field
+          label={copy.diveSite}
+          hint={copy.optional}
+          className={expanded ? "hidden" : undefined}
+        >
+          <select
+            name="diveSiteId"
+            value={diveSiteId}
+            disabled={expanded}
+            onChange={(event) => setDiveSiteId(event.target.value)}
+            className={controlClass}
+          >
             <option value="">{copy.decideLater}</option>
             {options === null ? (
               <option value="" disabled>
@@ -323,6 +561,65 @@ function AddPanel({
           </select>
         </Field>
       </FieldGrid>
+      {diveSeed === null ? null : (
+        <TripDiveFields
+          diveSites={(options?.diveSites ?? []).map((site) => ({
+            id: site.id,
+            name: site.title,
+          }))}
+          initialCount={diveSeed.count}
+          initialDives={[{ title: null, diveSiteId: diveSeed.siteId || null, description: null }]}
+          disabled={!expanded}
+          onCountChange={setPlannedDives}
+          onFirstDiveSiteChange={setDiveSiteId}
+          copy={more.diveFields}
+        />
+      )}
+      <fieldset
+        hidden={!expanded}
+        disabled={!expanded}
+        className="rounded-lg border border-border bg-surface p-5"
+      >
+        <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
+        <p className="text-sm text-muted">{copy.repeatDescription}</p>
+        <RepeatFields
+          minOccurrences={more.minOccurrences}
+          maxOccurrences={more.maxOccurrences}
+          disabled={!expanded}
+          copy={{
+            howOftenLabel: copy.howOftenLabel,
+            doesntRepeat: copy.doesntRepeat,
+            everyWeek: copy.everyWeek,
+            every2Weeks: copy.every2Weeks,
+            every4Weeks: copy.every4Weeks,
+            numberOfTripsLabel: copy.numberOfTripsLabel,
+            numberOfTripsDescription: copy.numberOfTripsDescription,
+            numberOfTripsPlaceholder: copy.numberOfTripsPlaceholder,
+          }}
+        />
+      </fieldset>
+      {/* The rare half, collapsed by default (design principles #8). The hint
+          names what is behind it — a bare "More options" would hide the
+          multi-day and repeat mechanisms behind a shrug. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <button
+          type="button"
+          onClick={toggleExpanded}
+          aria-expanded={expanded}
+          className={buttonClass({ variant: "link", size: "sm" })}
+        >
+          {/* The affordance a ghost button has none of: which way this goes,
+              before you press it. Decorative — `aria-expanded` is the state a
+              screen reader is told. */}
+          <span aria-hidden="true" className="inline-block">
+            {expanded ? "▾" : "▸"}
+          </span>{" "}
+          {expanded ? copy.fewerOptions : copy.moreOptions}
+        </button>
+        {expanded ? null : (
+          <span className="text-sm text-muted">{copy.moreOptionsDescription}</span>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
           {copy.putOnBoard}
@@ -365,6 +662,9 @@ export function ScheduleBuilder({
   defaultDateIso,
   canConfigure,
   copy,
+  more,
+  initialCourse,
+  openAdd,
 }: {
   shopSlug: string;
   days: BuilderDay[];
@@ -376,9 +676,18 @@ export function ScheduleBuilder({
   defaultDateIso: string;
   canConfigure: boolean;
   copy: BuilderCopy;
+  more: BuilderMoreOptions;
+  /** Set when the board was reached from a course's "schedule a session" control. */
+  initialCourse: BuilderInitialCourse | null;
+  /**
+   * Whether to arrive with the add panel already open, and how deep. Every
+   * former door to `/trips/new` now lands here instead, and a link that used to
+   * open a whole page of form has to open something.
+   */
+  openAdd: "closed" | "quick" | "expanded";
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
 
   // The add panel's selects, fetched the first time any add panel opens and
@@ -448,12 +757,26 @@ export function ScheduleBuilder({
             ref={registerToggle("add:top")}
             onClick={() => toggle("add:top")}
             aria-expanded={open === "add:top"}
-            className={buttonClass({ className: "rounded-xl" })}
+            // Secondary once open: the panel it reveals ends in "Put it on the
+            // board", and a section carries one primary (design principles #8).
+            className={buttonClass({
+              variant: open === "add:top" ? "secondary" : undefined,
+              className: "rounded-xl",
+            })}
           >
             <span aria-hidden="true">+</span> {copy.addDeparture}
           </button>
         ) : null}
       </div>
+
+      {/* Creating a departure is owner/manager/instructor work (H-14); crew
+          still read the board, so it says whose job this is rather than
+          silently omitting every add control. */}
+      {canConfigure ? null : (
+        <p className="mb-3 rounded-xl border border-border bg-surface-sunken/50 p-4 text-sm text-muted">
+          {copy.viewOnlyNotice}
+        </p>
+      )}
 
       {/* Keyed "add:top" rather than by its date: the header button and the
           first day's own "+ Add" would otherwise share a panel key and render
@@ -464,6 +787,9 @@ export function ScheduleBuilder({
           options={options}
           price={price}
           copy={copy}
+          more={more}
+          initialCourse={initialCourse}
+          startExpanded={openAdd === "expanded"}
           onAdd={actions.add}
           onCancel={() => closePanel("add:top")}
         />
@@ -495,6 +821,9 @@ export function ScheduleBuilder({
                 options={options}
                 price={price}
                 copy={copy}
+                more={more}
+                initialCourse={null}
+                startExpanded={false}
                 onAdd={actions.add}
                 onCancel={() => closePanel(`add:${day.dateIso}`)}
               />

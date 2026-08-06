@@ -72,6 +72,7 @@ import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
@@ -582,6 +583,13 @@ export async function seedDemoSchedule(
     // allows an undefined divemaster even though the demo cast always has one).
     pairedByPersonId: divemasterId ?? instructor.id,
   });
+
+  // Adds-only and late, for the same reason as the two above: one departure
+  // tomorrow whose gates all fire at once, and one diver holding none of them,
+  // so the counter has a card with five reasons on it to render
+  // (src/db/seed-counter-blockers.ts). Nothing seeded before it moves, and it
+  // has not sailed, so it opens no head count.
+  await seedCounterBlockers(db, shopId, { siteByName, captainId, divemasterId });
 
   // A synthetic, status-only medical-review hold on a future departure gives
   // the demo and staff training a real fail-closed waiver path without storing

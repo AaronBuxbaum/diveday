@@ -537,23 +537,53 @@ export default async function WaiverPage({
             version: record.templateVersion,
           })}
         </p>
-        <div className="mt-3 whitespace-pre-wrap text-base leading-7">{record.templateBody}</div>
+        {/* `wrap-anywhere`, not just `whitespace-pre-wrap`. A shop's waiver text
+            is pasted in, usually out of a PDF or a word processor, and real
+            releases carry runs a line break can't fall inside: a signature rule
+            of underscores, a policy URL, a long insurer name. `pre-wrap` alone
+            only breaks at whitespace, so one of those lays the page out wider
+            than the phone it is being signed on — measured at 455px against a
+            390px viewport. `body { overflow-x: clip }` then stops the sideways
+            scroll but not the widened layout viewport, which is what shows as
+            empty space beside the page (2026-08-06 review). */}
+        <div
+          data-waiver-template-body
+          className="mt-3 wrap-anywhere whitespace-pre-wrap text-base leading-7"
+        >
+          {record.templateBody}
+        </div>
       </section>
 
       <form action={completeAction} className="mt-8 flex flex-col gap-6">
         <section id="medical-questionnaire">
           <QuestionnaireProgress
-            total={questionnaire.questions.filter((question) => !question.parentId).length}
+            total={
+              questionnaire.questions.filter((question) => question.section === "primary").length
+            }
             labelTemplate={t("waiver.questionsAnswered")}
           >
             <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
-            <p className="mt-1 text-sm text-muted">{questionnaire.intro}</p>
+            {/* The published form's directions paragraph used to sit here. It
+                asked the diver to memorise which question numbers carry an
+                asterisk and then apply the rule to their own answers, which is
+                work the page can do for them — `MedicalQuestionnaireFields`
+                now states the outcome underneath the questions at the moment
+                it becomes true (2026-08-06 review). The wording itself is
+                unchanged and still on file in `RSTC_QUESTIONNAIRE.intro`; only
+                where the diver meets it has moved. */}
             <MedicalQuestionnaireFields
               questionnaire={questionnaire}
               initialResponses={draftResponses}
-              reassurance={t("waiver.yesReassurance")}
-              yesLabel={t("waiver.answerYes")}
-              noLabel={t("waiver.answerNo")}
+              copy={{
+                yesLabel: t("waiver.answerYes"),
+                noLabel: t("waiver.answerNo"),
+                referralReassurance: t("waiver.yesReassurance"),
+                followUpReassurance: t("waiver.yesOpensFollowUps"),
+                dentalHeading: t("waiver.dentalHeading"),
+                outcomeClear: t("waiver.outcomeClear"),
+                outcomeReferral: t("waiver.outcomeReferral"),
+                outcomeFollowUpsOpen: t("waiver.outcomeFollowUpsOpen"),
+              }}
             />
           </QuestionnaireProgress>
         </section>

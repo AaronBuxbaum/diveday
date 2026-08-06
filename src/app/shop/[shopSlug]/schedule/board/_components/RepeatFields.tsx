@@ -33,10 +33,17 @@ export function RepeatFields({
   minOccurrences,
   maxOccurrences,
   copy,
+  disabled = false,
 }: {
   minOccurrences: number;
   maxOccurrences: number;
   copy: RepeatFieldsCopy;
+  /**
+   * Inert and out of the submission entirely — for a caller that keeps this
+   * block mounted while it is off screen so a chosen cadence survives being
+   * hidden. Same reason the count below is disabled rather than removed.
+   */
+  disabled?: boolean;
 }) {
   const [repeats, setRepeats] = useState(false);
   return (
@@ -45,6 +52,7 @@ export function RepeatFields({
         <select
           name="repeatIntervalWeeks"
           defaultValue="0"
+          disabled={disabled}
           onChange={(event) => setRepeats(event.currentTarget.value !== "0")}
           className={controlClass}
         >
@@ -64,8 +72,8 @@ export function RepeatFields({
           // choosing a cadence doesn't reflow the fieldset out from under the
           // pointer that just chose it. A disabled input submits nothing,
           // which is exactly right for a trip that doesn't repeat.
-          disabled={!repeats}
-          required={repeats}
+          disabled={disabled || !repeats}
+          required={!disabled && repeats}
           placeholder={copy.numberOfTripsPlaceholder}
           className={`${controlClass} tabular-nums disabled:cursor-not-allowed disabled:opacity-60`}
         />

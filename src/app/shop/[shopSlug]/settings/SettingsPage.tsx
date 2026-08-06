@@ -534,6 +534,7 @@ export default async function SettingsPage({
                 searching: t("settings.main.address.searching"),
                 noMatches: t("settings.main.address.noMatches"),
                 lookupFailed: t("settings.main.address.lookupFailed"),
+                lookupResting: t("settings.main.address.lookupResting"),
                 suggestionsLabel: t("settings.main.address.suggestionsLabel"),
                 streetLabel: t("settings.main.address.streetLabel"),
                 streetPlaceholder: t("settings.main.address.streetPlaceholder"),
@@ -1072,7 +1073,14 @@ export default async function SettingsPage({
         ) : null}
 
         {/* Owner/manager only, like the export button below it feeds: the
-            destination it configures receives the whole shop every week. */}
+            destination it configures receives the whole shop every week.
+
+            Two cards, one surface. Backups and the download are the same
+            bundle behind the same gate and share a route now (ADR
+            20260806-one-data-out-surface), but a shop arrives at Settings
+            asking one of two different questions — "let me take a copy" and
+            "make sure a copy keeps happening" — so both doors stay, and this
+            one deep-links to the half it names. */}
         {canExport ? (
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
             <CardHeading
@@ -1082,7 +1090,7 @@ export default async function SettingsPage({
             />
             <div className="mt-4">
               <Link
-                href={`/shop/${shopSlug}/settings/backup`}
+                href={`/shop/${shopSlug}/settings/export#backups`}
                 className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
                 {t("settings.main.backup.cta")}

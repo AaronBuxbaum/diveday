@@ -157,7 +157,7 @@ test.describe("staff", () => {
     await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(1);
   });
 
-  test("a course row schedules a session of itself, landing on the existing new-trip form", async ({
+  test("a course row schedules a session of itself, opening the board's add panel", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/courses");
@@ -166,16 +166,23 @@ test.describe("staff", () => {
       .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
 
     await row.getByRole("link", { name: "Schedule a session of Rescue Diver" }).click();
-    // The existing trip-creation path, not a second one — the course arrives
-    // preselected and the title placeholder is already shaped for it.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/new\?course=[0-9a-f-]{36}$/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Schedule a trip or course session" }),
-    ).toBeVisible();
-    await expect(page.getByLabel("Course", { exact: false })).toHaveValue(/[0-9a-f-]{36}/);
+    // The one trip-creation path, not a second one (ADR
+    // 20260806-one-trip-create-form) — the panel opens with the course
+    // preselected and the title placeholder already shaped for it.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\?course=[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    // By name, not label: every board row carries an aria-label naming the
+    // departure ("Copy Open Water Diver — …"), and a substring label match
+    // sweeps those up alongside the panel's own select.
+    const course = page.locator('select[name="courseId"]');
+    await expect(course).toHaveValue(/[0-9a-f-]{36}/);
     // The preselected course is the one whose row was clicked, not the first
     // in the list — the whole point of arriving here from the catalog.
-    await expect(page.getByLabel("Course", { exact: false })).toContainText("Rescue Diver");
+    await expect(course).toContainText("Rescue Diver");
+    await expect(page.getByLabel("What is it")).toHaveAttribute(
+      "placeholder",
+      /Rescue Diver — Session 1/,
+    );
   });
 
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
@@ -292,6 +299,11 @@ test.describe("staff", () => {
   });
 
   test("a diver books a course session from its public page", async ({ page }) => {
+    // Creates its session through the board's add panel (ADR
+    // 20260806-one-trip-create-form) and then walks staff crewing, a public
+    // catalog page, and a booking — aggregate per-navigation cost across a long
+    // sequence, not a hang; same reasoning as the sibling tests above.
+    test.setTimeout(30_000);
     // Schedule this run's own session rather than spending a seeded seat: the e2e
     // database persists across runs, so a test that books the demo session works
     // exactly six times and then fails as "full".

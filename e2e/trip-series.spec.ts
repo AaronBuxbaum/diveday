@@ -6,15 +6,21 @@ signedInAsOwner();
 test("a repeating series is scheduled, then rolled forward and cancelled as one", async ({
   page,
 }) => {
+  // A series is now scheduled from the board's own add panel (ADR
+  // 20260806-one-trip-create-form), so this walk pays a board render on the way
+  // in and another on the way out — plus the four trip-page navigations it
+  // already had. Aggregate per-navigation cost across a long sequence, not a
+  // hang; same reasoning as e2e/role-permissions.spec.ts.
+  test.setTimeout(30_000);
   // Unique title so the assertions target this spec's own series.
   const title = `Series Test ${e2eNow().getTime()}`;
 
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
+  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(4));
   await page.getByLabel("Departs").fill("08:00");
   await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill("6");
+  await page.getByLabel("Seats").fill("6");
   await page.getByLabel("How often").selectOption("1");
   await page.getByLabel("Number of trips").fill("3");
   await page.getByRole("button", { name: "Put it on the board" }).click();

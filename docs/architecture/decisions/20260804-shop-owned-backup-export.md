@@ -39,7 +39,9 @@ the shop-wide `trips.ics` from `calendar-sync` — never a second bundle format 
   the next weekly tick is the retry policy.
 - **Surface**: `/shop/[shopSlug]/settings/backup` — configure, test-run, disconnect, and read the
   delivery history — gated exactly like the export download (`canPersonExportShopData`,
-  re-checked in the database).
+  re-checked in the database). *(Amended 2026-08-06: that surface is now the Backups half of
+  `/shop/[shopSlug]/settings/export`, and this path is a 308 to it — the two shared a bundle and a
+  gate, so they became one route. See ADR 20260806-one-data-out-surface.)*
 
 ## Alternatives considered
 

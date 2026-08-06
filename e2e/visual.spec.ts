@@ -1470,7 +1470,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The first (and only-ever-first) departure, dated off the frozen
         // clock so the card and queue rows render pixel-identically per run.
-        await page.goto(`/shop/${unique}/trips/new`);
+        await page.goto(`/shop/${unique}/schedule/board?add=1`);
         const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);
@@ -1635,8 +1635,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder", scheme);
       });
 
-      // The whole add-a-departure form, which the board only ever shows as a
-      // button — every field a departure is born with, price included.
+      // The add-a-departure form as a shop meets it all week: the quick path,
+      // which the board only ever shows as a button — every field a departure
+      // is born with, price included, with the rare half collapsed behind
+      // "More options".
       test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "The board" }).waitFor();
@@ -1647,6 +1649,23 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
         await capture(page, "schedule-builder-add", scheme);
+      });
+
+      // The same panel at full depth — everything `/trips/new` used to be, now
+      // disclosed inline (ADR 20260806-one-trip-create-form). This is the tall
+      // one, and the only baseline that can catch the expanded form's own
+      // rhythm: the dive-plan block, the two bordered fieldsets, and the single
+      // submit that still ends it.
+      test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByRole("heading", { name: "The board" }).waitFor();
+        await page.getByRole("button", { name: "Fewer options" }).waitFor();
+        await page
+          .locator('select[name="courseId"] option[disabled]')
+          .waitFor({ state: "detached" });
+        await capture(page, "schedule-builder-add-full", scheme);
       });
 
       // The blow-out confirm — the one deliberate step between the captain's
@@ -1999,19 +2018,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-whatsapp", scheme);
       });
 
-      // Where a shop points its weekly backup at storage it owns (ADR
-      // 20260804-shop-owned-backup-export). The seed ships the destination
-      // configured with six weekly deliveries and one failed week, so this
-      // captures the surface doing its real job: proving where the data went
-      // and naming the week it didn't.
-      test(`backup settings render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/backup");
-        await page.getByRole("heading", { name: "Delivery history" }).waitFor();
-        // The history rows, not just the heading — the table is the surface.
-        await page.getByRole("cell", { name: "Failed" }).waitFor();
-        await capture(page, "settings-backup", scheme);
-      });
-
       /**
        * The two orders surfaces — the densest money screens in the app, and
        * until recently the only ones with no baseline at all. That gap was found
@@ -2052,10 +2058,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
-      // The data-export surface: the "your data is yours" promise, concrete.
+      /**
+       * The one data-out surface: the "your data is yours" promise, concrete,
+       * in both halves (ADR 20260806-one-data-out-surface) — the bundle you
+       * would download now, and the weekly copy already landing in storage the
+       * shop owns. The `settings-backup` capture retired into this one; the
+       * seed ships blue-mantis configured with six weekly deliveries and one
+       * failed week, so the backup half still photographs doing its real job:
+       * proving where the data went and naming the week it didn't.
+       */
       test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
         await page.getByRole("heading", { name: "Data export" }).waitFor();
+        await page.getByRole("heading", { name: "Delivery history" }).waitFor();
+        // The history rows, not just the heading — the table is half the
+        // surface, and a capture taken on the heading alone banks an empty one.
+        await page.getByRole("cell", { name: "Failed" }).waitFor();
         await capture(page, "settings-export", scheme);
       });
 

@@ -2,12 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
-import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { getShopById } from "@/db/shops";
@@ -19,6 +15,7 @@ import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. Not a claim of a static shell: the staff shell layout declares
@@ -132,147 +129,52 @@ export default async function NewBookingDiverPage({
         </ShopNotice>
       ) : null}
 
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <p className="text-xs font-bold tracking-wide text-muted uppercase">
-          {t("bookings.new.tripHeading")}
-        </p>
-        <p className="mt-1 font-semibold">
-          {t("bookings.new.tripSummary", {
-            title: trip.title,
-            date: formatShortDate(trip.startsAt, locale, shop.timezone),
-            time: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
-            booked: trip.booked,
-            capacity: trip.capacity,
-          })}
-        </p>
-        <Link
-          href={`/shop/${shopSlug}/bookings/new`}
-          className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-        >
-          {t("bookings.new.changeTrip")}
-        </Link>
-      </section>
+      <SelectedTripCard
+        className="mt-6"
+        label={t("bookings.new.tripHeading")}
+        summary={t("seatDiver.tripSummary", {
+          title: trip.title,
+          date: formatShortDate(trip.startsAt, locale, shop.timezone),
+          time: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
+          booked: trip.booked,
+          capacity: trip.capacity,
+        })}
+        changeHref={`/shop/${shopSlug}/bookings/new`}
+        changeLabel={t("bookings.new.changeTrip")}
+      />
 
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold">{t("bookings.new.findHeading")}</h2>
-        {/* Server-fed search, same shape as the walk-in counter and the Guests
-            tab: a GET reload carries `diverq`, no client state. */}
-        <form method="get" className="mt-3 flex flex-wrap items-end gap-2">
-          <Field label={t("bookings.new.findLabel")} className="min-w-0 flex-1">
-            <input
-              type="search"
-              name="diverq"
-              defaultValue={query}
-              placeholder={t("bookings.new.findPlaceholder")}
-              maxLength={120}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </Field>
-          <SubmitButton
-            pendingLabel={t("bookings.new.searching")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("bookings.new.search")}
-          </SubmitButton>
-        </form>
-
-        {query ? (
-          candidates.length > 0 ? (
-            <ul className="mt-4 grid gap-2">
-              {candidates.map(({ person }) => (
-                <li
-                  key={person.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${person.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {person.fullName}
-                    </Link>
-                    <p className="text-sm text-muted">
-                      {person.email ?? t("bookings.new.noEmailOnFile")}
-                    </p>
-                  </div>
-                  <form action={seatExistingDiverAction.bind(null, "new-booking", shopSlug)}>
-                    <input type="hidden" name="tripId" value={trip.id} />
-                    <input type="hidden" name="personId" value={person.id} />
-                    <SubmitButton
-                      pendingLabel={t("bookings.new.adding")}
-                      ariaLabel={t("bookings.new.addPersonAriaLabel", { name: person.fullName })}
-                      className={buttonClass({ size: "sm" })}
-                    >
-                      {t("bookings.new.addToTrip")}
-                    </SubmitButton>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            // The shared empty box, with the sentence's "below" as a real door
-            // down to the hand-entry form.
-            <EmptyState className="mt-4">
-              <h3 className="font-medium">{t("bookings.new.noMatchesHeading")}</h3>
-              <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-                {t("bookings.new.noMatches", { query })}
-              </p>
-              <a
-                href="#hand-entry"
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("bookings.new.noMatchesAction")}
-              </a>
-            </EmptyState>
-          )
-        ) : null}
-      </section>
-
-      <section
-        id="hand-entry"
-        className="mt-6 scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
-      >
-        <h2 className="text-lg font-semibold">{t("bookings.new.handEntryHeading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("bookings.new.handEntryDescription")}</p>
-        <form action={seatNewDiverAction.bind(null, "new-booking", shopSlug)} className="mt-4">
-          <input type="hidden" name="tripId" value={trip.id} />
-          <FieldGrid columns={3}>
-            <Field label={t("bookings.new.nameLabel")}>
-              <input
-                name="fullName"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("bookings.new.emailLabel")} hint={t("bookings.new.optionalHint")}>
-              <input
-                name="email"
-                type="email"
-                maxLength={200}
-                autoComplete="email"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("bookings.new.phoneLabel")} hint={t("bookings.new.optionalHint")}>
-              <input
-                name="phone"
-                type="tel"
-                maxLength={30}
-                autoComplete="tel"
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <FieldActions className="mt-4">
-            <SubmitButton pendingLabel={t("bookings.new.adding")} className={buttonClass()}>
-              {t("bookings.new.addToTrip")}
-            </SubmitButton>
-          </FieldActions>
-        </form>
-      </section>
+      {/* The same panel the counter walk-in stands on — this door is that one
+          with the departure chosen a step earlier. The email rule the two
+          differ on comes from `SEAT_SURFACES["new-booking"]`, not from a
+          `required` attribute hand-copied between two files. */}
+      <SeatDiverPanel
+        surface="new-booking"
+        shopSlug={shopSlug}
+        tripId={trip.id}
+        query={query}
+        candidates={candidates}
+        personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+        copy={{
+          findHeading: t("seatDiver.findHeading"),
+          findLabel: t("seatDiver.findLabel"),
+          findPlaceholder: t("seatDiver.findPlaceholder"),
+          search: t("seatDiver.search"),
+          searching: t("seatDiver.searching"),
+          noEmailOnFile: t("seatDiver.noEmailOnFile"),
+          adding: t("seatDiver.adding"),
+          addLabel: t("bookings.new.addToTrip"),
+          addPersonAriaLabel: (name) => t("bookings.new.addPersonAriaLabel", { name }),
+          noMatchesHeading: t("seatDiver.noMatchesHeading"),
+          noMatches: t("seatDiver.noMatches", { query }),
+          noMatchesAction: t("seatDiver.noMatchesAction"),
+          handEntryHeading: t("seatDiver.handEntryHeading"),
+          handEntryDescription: t("bookings.new.handEntryDescription"),
+          nameLabel: t("seatDiver.nameLabel"),
+          emailLabel: t("seatDiver.emailLabel"),
+          phoneLabel: t("seatDiver.phoneLabel"),
+          optionalHint: t("seatDiver.optionalHint"),
+        }}
+      />
     </main>
   );
 }

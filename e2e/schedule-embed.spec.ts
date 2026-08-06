@@ -47,12 +47,12 @@ test.describe("as owner", () => {
 
   test("booking through the embed keeps embed mode through the confirmation", async ({ page }) => {
     const title = `Embed Booking Check ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(6));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Capacity").fill("6");
+    await page.getByLabel("Seats").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
     await signOut(page);

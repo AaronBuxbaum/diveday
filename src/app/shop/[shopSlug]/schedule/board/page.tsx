@@ -7,6 +7,7 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
 import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -16,12 +17,14 @@ import {
   upcomingScheduleRange,
   upcomingScheduleStats,
 } from "@/db/trips";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { MAX_SERIES_OCCURRENCES, MIN_SERIES_OCCURRENCES } from "@/lib/recurrence";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -30,10 +33,13 @@ import {
 } from "@/lib/schedule-pagination";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
   type BuilderDay,
+  type BuilderInitialCourse,
+  type BuilderMoreOptions,
   type BuilderPriceInput,
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
@@ -105,11 +111,21 @@ export default async function ScheduleBoardPage({
      * src/lib/schedule-pagination.ts. */
     back?: string;
     builder?: string;
+    /** The departure just created, named so the notice can say which. */
+    created?: string;
+    /** How many dates a repeating submission put up. */
+    series?: string;
+    /** Arrive with the add panel open: `1` quick, `full` already expanded. */
+    add?: string;
+    /** Pre-dates the add panel — the day a link meant, e.g. "another Saturday". */
+    date?: string;
+    /** Opens the add panel pointed at a course (the catalogue's own control). */
+    course?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder } = await searchParams;
+  const { after, back, builder, created, series, add, date, course } = await searchParams;
   const session = await requireStaffSession();
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug — a staff member
@@ -155,9 +171,27 @@ export default async function ScheduleBoardPage({
     tripCrewByTrip(db, shop.id, boardTripIds),
   ]);
 
+  // A course the catalogue sent us here to schedule. One list read, and only
+  // on the rare navigation that names a course — scoped to the session's own
+  // shop, so a `?course=` from another tenant simply resolves to nothing.
+  const requestedCourse = course
+    ? ((await listActiveCourses(db, shop.id)).find((row) => row.id === course) ?? null)
+    : null;
+
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
+  // The named form whenever the action passed a title back; the anonymous
+  // "It's on the board" survives for a URL that carries none.
+  const seriesCount = series ? Number.parseInt(series, 10) : 0;
   const builderNotice = builderNoticeEntry
-    ? { tone: builderNoticeEntry.tone, message: st(builderNoticeEntry.key) }
+    ? {
+        tone: builderNoticeEntry.tone,
+        message:
+          builderNoticeEntry.key === "schedule.notices.added" && created
+            ? seriesCount > 1
+              ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
+              : st("schedule.notices.addedNamed", { title: created })
+            : st(builderNoticeEntry.key),
+      }
     : undefined;
   const builderCopy: BuilderCopy = {
     heading: st("schedule.builder.heading"),
@@ -214,7 +248,84 @@ export default async function ScheduleBoardPage({
     departureTime: st("schedule.builder.departureTime"),
     copying: st("schedule.builder.copying"),
     copyIt: st("schedule.builder.copyIt"),
+    viewOnlyNotice: st("schedule.builder.viewOnlyNotice"),
+    moreOptions: st("schedule.builder.moreOptions"),
+    fewerOptions: st("schedule.builder.fewerOptions"),
+    moreOptionsDescription: st("schedule.builder.moreOptionsDescription"),
+    titlePlaceholderCourse: st("schedule.builder.titlePlaceholderCourse"),
+    courseNote: st("schedule.builder.courseNote"),
+    courseCertRequired: st("schedule.builder.courseCertRequired"),
+    courseNoCardRequired: st("schedule.builder.courseNoCardRequired"),
+    descriptionLabel: st("schedule.builder.descriptionLabel"),
+    descriptionPlaceholder: st("schedule.builder.descriptionPlaceholder"),
+    daysLabel: st("schedule.builder.daysLabel"),
+    daysDescription: st("schedule.builder.daysDescription"),
+    payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),
+    payAtBookingDescription: st("schedule.builder.payAtBookingDescription"),
+    depositLabel: st("schedule.builder.depositLabel"),
+    depositDescription: st("schedule.builder.depositDescription"),
+    depositTitle: st("schedule.builder.depositTitle"),
+    cancellationWindowLabel: st("schedule.builder.cancellationWindowLabel"),
+    cancellationWindowDescription: st("schedule.builder.cancellationWindowDescription"),
+    hoursSuffix: st("schedule.builder.hoursSuffix"),
+    repeatLegend: st("schedule.builder.repeatLegend"),
+    repeatDescription: st("schedule.builder.repeatDescription"),
+    howOftenLabel: st("schedule.builder.howOftenLabel"),
+    doesntRepeat: st("schedule.builder.doesntRepeat"),
+    everyWeek: st("schedule.builder.everyWeek"),
+    every2Weeks: st("schedule.builder.every2Weeks"),
+    every4Weeks: st("schedule.builder.every4Weeks"),
+    numberOfTripsLabel: st("schedule.builder.numberOfTripsLabel"),
+    numberOfTripsDescription: st("schedule.builder.numberOfTripsDescription", {
+      max: MAX_SERIES_OCCURRENCES,
+    }),
+    numberOfTripsPlaceholder: st("schedule.builder.numberOfTripsPlaceholder"),
   };
+
+  // The rare half of the add panel: bounds the domain owns, and the per-dive
+  // cards' shared words. Resolved here because a Client Component can neither
+  // translate itself nor import the domain's limits at render time.
+  const builderMore: BuilderMoreOptions = {
+    minOccurrences: MIN_SERIES_OCCURRENCES,
+    maxOccurrences: MAX_SERIES_OCCURRENCES,
+    minDays: MIN_TRIP_DAYS,
+    maxDays: MAX_TRIP_DAYS,
+    diveFields: {
+      heading: st("shared.tripDiveFields.heading"),
+      description: st("shared.tripDiveFields.description"),
+      twoTankTrip: st("shared.tripDiveFields.twoTankTrip"),
+      diveCountTrip: st("shared.tripDiveFields.diveCountTrip"),
+      numberOfDivesLabel: st("shared.tripDiveFields.numberOfDivesLabel"),
+      diveOptionOne: st("shared.tripDiveFields.diveOptionOne"),
+      diveOptionOther: st("shared.tripDiveFields.diveOptionOther"),
+      diveLegend: st("shared.tripDiveFields.diveLegend"),
+      nameLabel: st("shared.tripDiveFields.nameLabel"),
+      optionalHint: st("shared.tripDiveFields.optionalHint"),
+      namePlaceholderFirst: st("shared.tripDiveFields.namePlaceholderFirst"),
+      namePlaceholderOther: st("shared.tripDiveFields.namePlaceholderOther"),
+      diveSiteLabel: st("shared.tripDiveFields.diveSiteLabel"),
+      noSiteChosen: st("shared.tripDiveFields.noSiteChosen"),
+      diverFacingDetailsLabel: st("shared.tripDiveFields.diverFacingDetailsLabel"),
+      detailsPlaceholder: st("shared.tripDiveFields.detailsPlaceholder"),
+      footerNote: st("shared.tripDiveFields.footerNote"),
+    },
+  };
+
+  // `?course=` always implies an open panel: it would otherwise land on a board
+  // that silently swallowed the course the link named.
+  const addPanelState = add === "full" ? "expanded" : add || requestedCourse ? "quick" : "closed";
+
+  const initialCourse: BuilderInitialCourse | null = requestedCourse
+    ? {
+        id: requestedCourse.id,
+        title: requestedCourse.title,
+        requirement: requestedCourse.minimumCertificationLevel
+          ? st("schedule.builder.courseCertRequired", {
+              level: st(CERTIFICATION_LEVEL_KEYS[requestedCourse.minimumCertificationLevel]),
+            })
+          : st("schedule.builder.courseNoCardRequired"),
+      }
+    : null;
 
   // The price box follows the shop's currency, same as the full trip form:
   // whole-number entry and a symbol-only placeholder for a zero-decimal
@@ -328,12 +439,6 @@ export default async function ScheduleBoardPage({
             >
               {st("schedule.viewPublicPage")}
             </Link>
-            <Link
-              href={`/shop/${shopSlug}/trips/new`}
-              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-            >
-              {st("schedule.fullTripForm")}
-            </Link>
             {/* The board's primary action. Scheduling a departure is the rarer
                 job — a shop puts a boat on the board once and then seats
                 divers on it all week — and until now "someone just called,
@@ -390,8 +495,11 @@ export default async function ScheduleBoardPage({
         <EmptyState>
           <h2 className="font-medium">{t("schedule.noTrips")}</h2>
           <p className="mt-1 text-sm text-muted">{t("schedule.noTripsStaff")}</p>
+          {/* An empty board's one job is to stop being empty: this opens the
+              add panel right below it rather than sending anyone to a second
+              page for the same form. */}
           <Link
-            href={`/shop/${shopSlug}/trips/new`}
+            href={`/shop/${shopSlug}/schedule/board?add=1`}
             className={buttonClass({ className: "mt-4 rounded-xl" })}
           >
             {st("schedule.scheduleTrip")}
@@ -404,9 +512,16 @@ export default async function ScheduleBoardPage({
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
         price={priceInput}
-        defaultDateIso={firstUpcomingDateIso ?? todayIso}
+        // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else
+        // falls back to the soonest day already on the board.
+        defaultDateIso={
+          date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : (firstUpcomingDateIso ?? todayIso)
+        }
         canConfigure={canConfigure}
         copy={builderCopy}
+        more={builderMore}
+        initialCourse={initialCourse}
+        openAdd={addPanelState}
         actions={{
           add: addDepartureAction.bind(null, shopSlug),
           move: moveDepartureAction.bind(null, shopSlug),

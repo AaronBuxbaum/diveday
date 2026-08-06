@@ -59,7 +59,7 @@ describe("FirstRunChecklist", () => {
     );
     expect(screen.getByRole("link", { name: "Schedule a trip" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/new",
+      "/shop/blue-mantis/schedule/board?add=1",
     );
     expect(screen.getByRole("link", { name: "Connect Stripe" })).toHaveAttribute(
       "href",

@@ -509,7 +509,11 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
     rateLimitKey("address-lookup", session.user.personId),
     RATE_LIMITS.addressLookup,
   );
-  if (!allowed.allowed) return { status: "failed" };
+  // Its own answer, not `failed`: the hour's billed-request budget being spent
+  // is a temporary, self-healing state, and reporting it as the same dead-end
+  // sentence a broken geocoder shows is what made a resting lookup read as one
+  // that simply does not work (2026-08-06 review).
+  if (!allowed.allowed) return { status: "rate_limited" };
 
   const config = addressLookupConfigFromEnvironment();
   // The ordinary local and self-hosted case, not an error: the card falls back
