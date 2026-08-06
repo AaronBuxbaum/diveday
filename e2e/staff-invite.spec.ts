@@ -97,13 +97,15 @@ test.describe("as owner", () => {
     await expect(row.getByText("Disabled")).toBeVisible();
 
     // Land-then-undo (principle 7, docs/design/principles.md): no confirm()
-    // dialog — the removal takes effect immediately and an Undo banner offers
+    // dialog — archiving takes effect immediately and an Undo banner offers
     // a one-tap reversal.
-    await row.getByRole("button", { name: /^Delete/ }).click();
+    await row.getByRole("button", { name: /^Archive/ }).click();
     await expect(
       page.locator("li").filter({ hasText: "Talia Reyes" }).filter({ visible: true }),
     ).toHaveCount(0);
-    await expect(page.getByText("Removed Talia Reyes from the team.")).toBeVisible();
+    await expect(
+      page.getByText("Archived Talia Reyes. Their record and history stay."),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Undo" }).click();
     const restoredRow = page
@@ -118,10 +120,10 @@ test.describe("as owner", () => {
     await page.goto(`/shop/${SHOP}/settings/team`);
 
     const ownerRow = page.locator("li").filter({ hasText: DEV_STAFF_LOGINS.owner.email });
-    // Delete is intentionally only offered after an account is disabled. A sole
+    // Archive is intentionally only offered after an account is disabled. A sole
     // owner cannot be disabled, so exercise the same last-owner guard via the
     // page-level Save changes button that batches every row's role checkboxes.
-    await expect(ownerRow.getByRole("button", { name: /^Delete/ })).toHaveCount(0);
+    await expect(ownerRow.getByRole("button", { name: /^Archive/ })).toHaveCount(0);
     await ownerRow.getByLabel("Owner").uncheck();
     await page.getByRole("button", { name: "Save changes" }).click();
 

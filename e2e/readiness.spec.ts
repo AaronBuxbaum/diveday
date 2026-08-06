@@ -87,3 +87,43 @@ test("a tampered readiness token reveals nothing", async ({ page }) => {
   await page.goto("/ready/not-a-real-token");
   await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
 });
+
+/**
+ * The readiness page carries the day itself, not just what is left to do.
+ *
+ * The link a shop actually sends the night before is this one, and it used to
+ * answer "what's outstanding?" and nothing else — no packing list, and a strip
+ * of site names where the public trip page had a briefing per tank. A diver had
+ * to go and find the trip page for the two things they read on the drive down
+ * (2026-08-06 review). The checklist is still the page's job; this rides below
+ * it, and the thin site peek it duplicated is gone.
+ */
+test("a booked diver's readiness page carries the packing list and the dive briefings", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  // A seeded two-tank charter, so there are real dives at real sites to brief.
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Ada Marlowe");
+  await page.getByLabel("Email", { exact: true }).fill(`ada-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await page.getByRole("link", { name: /readiness page/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  // What to put in the bag, and what each tank actually dives.
+  await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+  await expect(page.getByText("Dive briefings")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  await expect(page.getByText("Molasses Reef").first()).toBeVisible();
+
+  // And the checklist is still the page's own job, above all of it.
+  await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+});

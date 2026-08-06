@@ -22,6 +22,8 @@ export type AddressFieldsCopy = {
   searching: string;
   noMatches: string;
   lookupFailed: string;
+  /** The hour's billed-request budget is spent — temporary, not broken. */
+  lookupResting: string;
   suggestionsLabel: string;
   streetLabel: string;
   streetPlaceholder: string;
@@ -36,8 +38,20 @@ export type AddressFieldsCopy = {
   countryPlaceholder: string;
 };
 
-/** How long to wait after the last keystroke before spending a billed request. */
-const DEBOUNCE_MS = 250;
+/**
+ * How long to wait after the last keystroke before spending a billed request.
+ *
+ * 400ms, not the 250 this shipped with. Every fire is a *billed* Amazon
+ * Location request against an hourly budget, and at 250ms any typist slower
+ * than four characters a second spends one per keystroke — so composing one
+ * long street address could cost thirty requests, and a couple of attempts
+ * could walk through a good share of the hour. The budget running out is
+ * indistinguishable, from the box, from the geocoder being down; both used to
+ * read as "not available right now", which is how this was reported as simply
+ * not working (2026-08-06 review). 400ms sits under the ~500ms where a
+ * type-ahead starts to feel unresponsive, and roughly halves the spend.
+ */
+const DEBOUNCE_MS = 400;
 
 /**
  * The shop's address, with a place lookup over the top of it.
@@ -73,7 +87,7 @@ export function AddressFields({
   const [address, setAddress] = useState(initial);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [status, setStatus] = useState<"idle" | "none" | "failed">("idle");
+  const [status, setStatus] = useState<"idle" | "none" | "failed" | "resting">("idle");
   const [active, setActive] = useState(-1);
   const [isPending, startTransition] = useTransition();
   const listId = useId();
@@ -81,6 +95,10 @@ export function AddressFields({
   // Guards against an out-of-order response overwriting a newer one: only the
   // most recent request may set state.
   const requestSeq = useRef(0);
+  // The last query actually sent. Typing a character and deleting it, or
+  // pausing twice on the same text, would otherwise spend a second billed
+  // request to be told the same thing.
+  const lastSent = useRef<string | null>(null);
 
   const set = (field: keyof ShopAddressFields) => (value: string) =>
     setAddress((current) => ({ ...current, [field]: value }));
@@ -92,17 +110,29 @@ export function AddressFields({
       setStatus("idle");
       return;
     }
+    // Same text as last time buys nothing but another billed request.
+    if (value.trim() === lastSent.current) return;
+    lastSent.current = value.trim();
     startTransition(async () => {
       const result = await suggestAddressAction(value);
       if (seq !== requestSeq.current) return;
       if (result.status === "ok") {
         setSuggestions(result.suggestions);
         setStatus(result.suggestions.length === 0 ? "none" : "idle");
+      } else if (result.status === "rate_limited") {
+        // Temporary and self-healing, so it gets its own sentence — reported
+        // as "failed" it read as permanent breakage, and the staffer stopped
+        // trying rather than waiting or typing the address in by hand.
+        setSuggestions([]);
+        setStatus("resting");
+        // Nothing was learned about this query, so let it be asked again.
+        lastSent.current = null;
       } else if (result.status === "failed" || result.status === "not_configured") {
         // Both read the same to a staffer mid-errand: the lookup is not going
         // to help right now, and the boxes below still work.
         setSuggestions([]);
         setStatus("failed");
+        lastSent.current = null;
       } else {
         setSuggestions([]);
         setStatus("idle");
@@ -203,9 +233,11 @@ export function AddressFields({
               ? copy.searching
               : status === "none"
                 ? copy.noMatches
-                : status === "failed"
-                  ? copy.lookupFailed
-                  : ""}
+                : status === "resting"
+                  ? copy.lookupResting
+                  : status === "failed"
+                    ? copy.lookupFailed
+                    : ""}
           </p>
         </div>
       ) : null}

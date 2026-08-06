@@ -364,11 +364,76 @@ export function findQuestionnaireVersion(id: string, version: number): MedicalQu
 
 export function applicableMedicalQuestions(
   questionnaire: MedicalQuestionnaire,
-  responses: Readonly<Record<string, boolean>>,
+  responses: Readonly<Record<string, boolean | undefined>>,
 ): MedicalQuestion[] {
   return questionnaire.questions.filter(
     (question) => !question.parentId || responses[question.parentId] === true,
   );
+}
+
+/**
+ * Where a half-filled questionnaire stands, for the diver filling it in.
+ *
+ * The published form opens with its own directions — "answer all 10; a NO to
+ * all 10 means no medical evaluation; a YES to 3, 5 or 10, or to any Box
+ * question or the dental one, requires physician evaluation". That is a rule a
+ * diver has to hold in their head across forty questions and then apply to
+ * themselves, and the 2026-08-06 review found it did the opposite of
+ * reassuring. This derives the same conclusion from the answers as they are
+ * given, so the page can state the outcome at the moment it becomes true
+ * instead of asking the reader to compute it.
+ *
+ * `referral` is decisive and monotonic: one applicable yes on a
+ * referral-marked question means physician sign-off no matter what else is
+ * answered afterwards, so it is reported as soon as it happens rather than
+ * held back until the form is complete. It is the same rule
+ * `calculateMedicalResult` records — this one just does not require a complete
+ * form to say what it already knows, and never returns a status of record.
+ *
+ * Counts are over *applicable* questions only: a Box that no answer has opened
+ * is not something the diver has left to do.
+ */
+export type MedicalProgress = {
+  /** Applicable questions answered either way. */
+  answered: number;
+  /** Applicable questions in total, so `answered`/`total` is the honest ratio. */
+  total: number;
+  /** Applicable questions still blank. */
+  remaining: number;
+  /** Primary (page-one) questions still blank — what the progress bar counts. */
+  primaryRemaining: number;
+  outcome:
+    | /** Nothing answered yet — there is nothing true to say. */ "unanswered"
+    | /** Underway, and no referral answer so far. */ "in_progress"
+    | /** Every primary answered, but an opened Box or the dental check is not. */ "follow_ups_open"
+    | /** An applicable referral answer is yes: a physician has to sign off. */ "referral"
+    | /** Every applicable question answered, none of them a referral. */ "clear";
+};
+
+export function medicalProgress(
+  questionnaire: MedicalQuestionnaire,
+  responses: Readonly<Record<string, boolean | undefined>>,
+): MedicalProgress {
+  const applicable = applicableMedicalQuestions(questionnaire, responses);
+  const isAnswered = (question: MedicalQuestion) => typeof responses[question.id] === "boolean";
+  const answered = applicable.filter(isAnswered).length;
+  const remaining = applicable.length - answered;
+  const primaryRemaining = applicable.filter(
+    (question) => question.section === "primary" && !isAnswered(question),
+  ).length;
+  const flagged = applicable.some(
+    (question) => question.referral && responses[question.id] === true,
+  );
+  const outcome: MedicalProgress["outcome"] = flagged
+    ? "referral"
+    : remaining === 0
+      ? "clear"
+      : answered === 0
+        ? "unanswered"
+        : primaryRemaining === 0
+          ? "follow_ups_open"
+          : "in_progress";
+  return { answered, total: applicable.length, remaining, primaryRemaining, outcome };
 }
 
 export type MedicalResult =

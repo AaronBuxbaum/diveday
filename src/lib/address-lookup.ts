@@ -106,11 +106,19 @@ export function toShopAddressFields(parts: LookedUpAddress): ShopAddressFields {
  * answer, not an error: a deployment with no geocoder credentials is the
  * ordinary local and self-hosted case, and the card falls back to the plain
  * boxes it has always been rather than showing a broken control.
+ *
+ * `rate_limited` is its own answer for the same reason. It used to collapse
+ * into `failed`, so a staffer who had simply spent the hour's request budget
+ * read "address lookup isn't available right now" — the same sentence a dead
+ * geocoder shows — and concluded the feature was broken rather than resting.
+ * That is the state a shop most often meets it in: the budget is per hour and
+ * a single hesitant typist can walk through a good share of it.
  */
 export type AddressLookupResult =
   | { status: "ok"; suggestions: PlaceSuggestion[] }
   | { status: "not_configured" }
   | { status: "too_short" }
+  | { status: "rate_limited" }
   | { status: "failed" };
 
 export type AddressLookupProvider = {

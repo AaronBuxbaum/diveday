@@ -8,6 +8,7 @@ import {
   type PlaceSuggestion,
   toShopAddressFields,
 } from "./address-lookup";
+import { log } from "./log";
 
 /**
  * Address suggestions from Amazon Location Service (ADR
@@ -93,11 +94,27 @@ export function awsAddressLookupProvider(
             }),
           }));
         return { status: "ok", suggestions };
-      } catch {
+      } catch (error) {
         // A geocoder being down must never take the settings page with it: the
-        // five boxes still work, and the staffer types the address. The error
-        // body can echo the query back, so it is deliberately not logged —
-        // a partial address is the shop's own business detail.
+        // five boxes still work, and the staffer types the address.
+        //
+        // The error's **shape** is logged, never its message or body: an AWS
+        // error can echo the query back, and a partial address is the shop's
+        // own business detail. A name, an error code and an HTTP status are
+        // enough to tell the three cases that matter apart — expired or
+        // wrong-permission credentials (403 / AccessDeniedException), a region
+        // where the Places API is not available (UnrecognizedClientException),
+        // and throttling — which is exactly what was missing when this was
+        // reported as simply not working, with nothing anywhere to say why
+        // (2026-08-06 review).
+        const shape = error as { name?: unknown; $metadata?: { httpStatusCode?: unknown } };
+        log("address_lookup.failed", "warn", {
+          error: typeof shape?.name === "string" ? shape.name : "unknown",
+          status:
+            typeof shape?.$metadata?.httpStatusCode === "number"
+              ? shape.$metadata.httpStatusCode
+              : null,
+        });
         return { status: "failed" };
       }
     },

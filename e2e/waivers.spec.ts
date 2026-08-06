@@ -472,3 +472,45 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
   await expect(page).toHaveURL(/record=/);
   await expect(pinnedHeading).toBeVisible();
 });
+
+/**
+ * The waiver is signed on a phone, on a dock, from a text message — so the page
+ * must never lay itself out wider than the screen it arrives on.
+ *
+ * The one thing on it that can is the shop's own waiver text, which is pasted
+ * in from a PDF or a word processor and routinely carries runs no line break
+ * can fall inside: a signature rule of underscores, a policy URL, a long
+ * insurer name. `whitespace-pre-wrap` only breaks at whitespace, so before
+ * `wrap-anywhere` one of those laid the page out at 455px against a 390px
+ * viewport. `body { overflow-x: clip }` hides the sideways scroll but not the
+ * widened layout viewport, which is what a diver sees as empty space beside the
+ * page — and it is also why this measures with the clip lifted, since the clip
+ * clamps `scrollWidth` and would report the bug as fixed.
+ */
+test("the waiver page fits a phone even with unbreakable text in the template", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const link = await sendWaiverForFirstDiver(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(link);
+  await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
+
+  const layoutWidth = await page.evaluate(() => {
+    const body = document.querySelector<HTMLElement>("[data-waiver-template-body]");
+    if (!body) throw new Error("the waiver template body is not on the page");
+    body.textContent = `Signature: ______________________________________________
+See https://example.com/policies/liability-release-and-assumption-of-risk-2026-revision`;
+    const previousOverflow = document.body.style.overflowX;
+    document.body.style.overflowX = "visible";
+    const width = document.documentElement.scrollWidth;
+    document.body.style.overflowX = previousOverflow;
+    return width;
+  });
+
+  expect(layoutWidth).toBe(390);
+});

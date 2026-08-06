@@ -1603,6 +1603,9 @@
       "buddyNewTeamHint": "Tick two or more. Crew can be on a team, and a divemaster can lead several.",
       "buddyDiverGroupLabel": "Divers",
       "buddyCrewGroupLabel": "Crew",
+      "buddyDragHint": "Tip: press and hold someone, then drag them onto their buddy to pair the two of you asked about. Ticking boxes still works, and is how you build a team of three or more.",
+      "buddyDragHolding": "Holding {name}. Drag onto a buddy to pair them.",
+      "buddyDragOver": "Release to pair {a} with {b}.",
       "buddyFormSubmit": "Form buddy team",
       "buddyUnteamedOne": "{name} has no buddy team — an odd roster is normal.",
       "buddyEveryoneTeamed": "Everyone on this departure is already on a buddy team.",
@@ -1819,6 +1822,7 @@
         "searching": "Looking…",
         "noMatches": "No matches — fill the boxes in below instead.",
         "lookupFailed": "Address lookup isn't available right now. Fill the boxes in below.",
+        "lookupResting": "That's a lot of lookups for one hour — searching pauses for a bit. Fill the boxes in below, or try again later.",
         "suggestionsLabel": "Address suggestions",
         "streetLabel": "Street address",
         "streetPlaceholder": "100 Ocean Drive",
@@ -1990,7 +1994,7 @@
         "changesSaved": "Team changes saved.",
         "reactivated": "Account re-enabled.",
         "disabled": "Account disabled — they can no longer sign in.",
-        "removed": "Removed from the team.",
+        "removed": "Archived — they keep their record and history, and can no longer sign in.",
         "restored": "Team access restored.",
         "restoreFailed": "Couldn't restore that person's access — check their account first.",
         "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
@@ -2027,7 +2031,7 @@
       },
       "current": {
         "heading": "Current team",
-        "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
+        "description": "Enable, disable, and archive take effect immediately. Role changes below wait for Save changes.",
         "empty": "No staff invited yet.",
         "emptyAction": "Invite a teammate",
         "save": "Save changes",
@@ -2040,12 +2044,12 @@
         "disable": "Disable",
         "enabling": "Enabling…",
         "disabling": "Disabling…",
-        "delete": "Delete",
-        "deleting": "Deleting…",
+        "archive": "Archive",
+        "archiving": "Archiving…",
         "enableAriaLabel": "Enable {name}",
         "disableAriaLabel": "Disable {name}",
-        "deleteAriaLabel": "Delete {name}",
-        "removedToast": "Removed {name} from the team."
+        "archiveAriaLabel": "Archive {name}",
+        "archivedToast": "Archived {name}. Their record and history stay."
       }
     },
     "export": {

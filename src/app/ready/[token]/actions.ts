@@ -9,9 +9,11 @@ import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocale } from "@/db/people";
+import { createCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
+import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
@@ -19,6 +21,7 @@ import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -378,4 +381,59 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
   }
 
   redirect(`${base(capability.token)}?saved=rescheduled`);
+}
+
+/**
+ * The diver's own certification card, typed in from their phone.
+ *
+ * Capture, never clearance. `createCertification` stores every card `pending`,
+ * and only a staff review (`reviewCertification`) makes one count toward
+ * readiness — so nothing a diver types here can clear their own cert gate, and
+ * the boarding decision stays exactly where it was. What it changes is that a
+ * diver told "we still need your certification card" now has somewhere to put
+ * it: before this, the readiness page named the blocker and offered no way to
+ * answer it, so the card arrived as a photo in a reply-to email, or at the dock.
+ *
+ * `agency` and `level` are validated against the database enums rather than a
+ * hand-written list, so widening the enum can never leave this refusing a card
+ * the column accepts (the same rule `CertificationAgency` exists for).
+ */
+const certificationSchema = z.object({
+  agency: z.enum(certificationAgency.enumValues),
+  level: z.enum(certificationLevel.enumValues),
+  // Long enough for every agency's format, short enough that the box can never
+  // be used to push a body at the column.
+  identifier: z.string().trim().min(2).max(60),
+  // Optional: most recreational cards carry no expiry at all, and an empty box
+  // must never become a date.
+  expiresAt: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined)
+    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
+});
+
+export async function saveCertificationFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=cert`);
+
+  const created = await createCertification(ctx.db, {
+    // The person and shop come from the verified capability, never from the
+    // form: a bearer of this token can only ever file a card against its own
+    // booking's diver.
+    shopId: ctx.data.shop.id,
+    personId: ctx.data.person.id,
+    agency: parsed.data.agency,
+    level: parsed.data.level,
+    identifier: parsed.data.identifier,
+    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
+  });
+  // `createCertification` returns null when a live card already holds this
+  // shop/agency/number — most often the diver's own card, already on file and
+  // possibly already verified. Say so rather than reporting a failure: there is
+  // nothing for them to fix, and re-typing it would only be refused again.
+  revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }

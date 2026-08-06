@@ -1603,6 +1603,9 @@
       "buddyNewTeamHint": "Marca dos o más. La tripulación puede formar parte de un equipo, y un divemaster puede guiar varios.",
       "buddyDiverGroupLabel": "Buceadores",
       "buddyCrewGroupLabel": "Tripulación",
+      "buddyDragHint": "Consejo: mantén pulsado a alguien y arrástralo sobre su compañero para emparejarlos. Marcar las casillas sigue funcionando, y es como se forma un equipo de tres o más.",
+      "buddyDragHolding": "Tienes a {name}. Arrástralo sobre un compañero para emparejarlos.",
+      "buddyDragOver": "Suelta para emparejar a {a} con {b}.",
       "buddyFormSubmit": "Crear equipo de buceo",
       "buddyUnteamedOne": "{name} no tiene equipo de buceo — con un número impar es normal.",
       "buddyEveryoneTeamed": "Todas las personas de esta salida ya están en un equipo de buceo.",
@@ -1819,6 +1822,7 @@
         "searching": "Buscando…",
         "noMatches": "Sin coincidencias — completa los campos de abajo.",
         "lookupFailed": "La búsqueda de direcciones no está disponible ahora. Completa los campos de abajo.",
+        "lookupResting": "Son muchas búsquedas en una hora: se pausa un rato. Completa los campos de abajo o inténtalo más tarde.",
         "suggestionsLabel": "Sugerencias de dirección",
         "streetLabel": "Dirección",
         "streetPlaceholder": "100 Ocean Drive",
@@ -1990,7 +1994,7 @@
         "changesSaved": "Cambios del equipo guardados.",
         "reactivated": "Cuenta reactivada.",
         "disabled": "Cuenta deshabilitada — ya no puede iniciar sesión.",
-        "removed": "Eliminado del equipo.",
+        "removed": "Archivado: conserva su ficha y su historial, y ya no puede iniciar sesión.",
         "restored": "Acceso al equipo restaurado.",
         "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
         "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
@@ -2027,7 +2031,7 @@
       },
       "current": {
         "heading": "Equipo actual",
-        "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
+        "description": "Habilitar, deshabilitar y archivar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
         "empty": "Todavía no se ha invitado a nadie.",
         "emptyAction": "Invitar a un compañero",
         "save": "Guardar cambios",
@@ -2040,12 +2044,12 @@
         "disable": "Deshabilitar",
         "enabling": "Habilitando…",
         "disabling": "Deshabilitando…",
-        "delete": "Eliminar",
-        "deleting": "Eliminando…",
+        "archive": "Archivar",
+        "archiving": "Archivando…",
         "enableAriaLabel": "Habilitar a {name}",
         "disableAriaLabel": "Deshabilitar a {name}",
-        "deleteAriaLabel": "Eliminar a {name}",
-        "removedToast": "Se eliminó a {name} del equipo."
+        "archiveAriaLabel": "Archivar a {name}",
+        "archivedToast": "Se archivó a {name}. Su ficha y su historial se conservan."
       }
     },
     "export": {

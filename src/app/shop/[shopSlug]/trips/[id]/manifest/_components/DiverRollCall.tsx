@@ -264,9 +264,20 @@ export function DiverRollCall({
                         ))}
                       </ul>
                       {/* At departure this unblocks boarding; after a dive the
-                          diver is aboard, so it's a shore follow-up on their record. */}
+                          diver is aboard, so it's a shore follow-up on their record.
+
+                          `?rf=blocked` as well as the anchor: the Guests roster
+                          renders every diver on the boat as a ~200px card, so
+                          landing on the anchor alone dropped a captain into the
+                          middle of a long list with no sign of why they were
+                          there or who else still needed the same errand. The
+                          chip is the roster's own "blocked" filter, and this
+                          link only renders for a diver whose readiness *is*
+                          `blocked` (the one non-ready status there is), so the
+                          filter it asks for can never hide the row it scrolls
+                          to (2026-08-06 review). */}
                       <Link
-                        href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
+                        href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
                         className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
                       >
                         {t("trips.manifest.resolveBlockersLink")}

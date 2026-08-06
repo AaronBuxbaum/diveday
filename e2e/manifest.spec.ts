@@ -666,3 +666,62 @@ test("the manifest offers a per-device push opt-in without asking for permission
   // behind the button, because a denial on load cannot be retried from here.
   expect(await page.evaluate(() => Notification.permission)).not.toBe("granted");
 });
+
+/**
+ * The two ways a captain moves around a roll call, both of which the
+ * 2026-08-06 review found broken in the same way — the page looked right on
+ * arrival and then stopped helping the moment anyone scrolled.
+ */
+test("the active-checkpoint panel stays pinned for the whole roll call", async ({ page }) => {
+  test.setTimeout(60_000);
+  // A phone: the panel matters most where the roster is many screens long.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const heading = page.locator("#roll-call-progress-heading");
+  await expect(heading).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  // `sticky` is bounded by its own containing block, so wrapping the card and
+  // the prose under it in one short `<section>` un-pinned the panel a few diver
+  // rows down the page — visible on arrival, gone by the first name a captain
+  // actually had to call.
+  await expect(heading).toBeInViewport();
+  const box = await heading.boundingBox();
+  expect(box?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(200);
+});
+
+test("resolving a blocker from the manifest lands on that diver, under the blocked filter", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const resolve = page.getByRole("link", { name: /Resolve/i }).first();
+  await expect(resolve).toBeVisible();
+  const href = await resolve.getAttribute("href");
+  const bookingAnchor = href?.split("#")[1];
+  expect(bookingAnchor, "the resolve link must name the diver it is about").toBeTruthy();
+
+  await resolve.click();
+  // The roster's own "Blocked" chip, so the captain arrives at the short list
+  // of people who still need something rather than the whole boat.
+  await expect(page).toHaveURL(/rf=blocked/);
+  const blockedChip = page
+    .getByRole("navigation", { name: "Filter the roster" })
+    .getByRole("link", { name: /^Blocked/ });
+  const blockedCount = Number(/\((\d+)\)/.exec((await blockedChip.textContent()) ?? "")?.[1]);
+  expect(blockedCount).toBeGreaterThan(0);
+  // The list is now exactly that set, not the whole boat.
+  await expect(page.locator('li[id^="booking-"]')).toHaveCount(blockedCount);
+
+  // And actually scrolled to them: a `<Link>` transition does not run the
+  // browser's own fragment scroll, so this used to land at the top of a page
+  // of ~200px cards with the named diver far below the fold.
+  const row = page.locator(`#${bookingAnchor}`);
+  await expect(row).toBeInViewport();
+});
