@@ -1,14 +1,14 @@
-import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
-import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { paymentOperationIntents, personRoles } from "@/db/schema";
+import { paymentOperationIntents } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
+import { ariaLabelsIn } from "@/test/jsx-inspect";
+import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
@@ -50,22 +50,6 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> 
       expires: new Date(Date.now() + 60_000).toISOString(),
     },
   };
-}
-
-/** Every `aria-label` anywhere in a tree — how the reconciliation panel names itself. */
-function ariaLabelsIn(node: unknown, found: string[] = []): string[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) ariaLabelsIn(child, found);
-    return found;
-  }
-  if ("props" in node) {
-    const element = node as ReactElement<{ "aria-label"?: unknown; children?: unknown }>;
-    const label = element.props?.["aria-label"];
-    if (typeof label === "string") found.push(label);
-    ariaLabelsIn(element.props?.children, found);
-  }
-  return found;
 }
 
 async function renderOrders(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
@@ -122,9 +106,7 @@ describe("the stuck-payment-operations panel", () => {
     // owner role is dropped first — the gate is DB-checked, so the demotion is
     // what the page sees.
     const element = await renderOrders("manager", async (db, session) => {
-      await db
-        .delete(personRoles)
-        .where(and(eq(personRoles.personId, session.user.personId), eq(personRoles.role, "owner")));
+      await demoteOwnerToManager(db, session.user.personId);
       await stickAnOperation(db, session);
     });
     expect(ariaLabelsIn(element)).toContain(PANEL);

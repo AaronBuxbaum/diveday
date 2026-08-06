@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, personRoles, processorErasureObligations } from "@/db/schema";
+import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { seededShopContext } from "@/test/db";
 import {
+  demoteOwnerToManager,
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -39,6 +40,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
+const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   dischargeProcessorErasureAction,
@@ -288,7 +290,7 @@ describe("the data-compliance queue actions", () => {
     const attemptId = await queueStuckDeletion(db, shop.id);
     signIn(shop, captain);
 
-    await retryMediaDeletionAction(shop.slug, withId("attemptId", attemptId));
+    await retryMediaDeletionAction(withId("attemptId", attemptId));
 
     // Untouched: a permitted retry resolves the row one way or the other.
     expect(await deletionStatus(db, attemptId)).toBe("failed");
@@ -300,13 +302,11 @@ describe("the data-compliance queue actions", () => {
     // The seed's manager is also the owner, so the owner role comes off first.
     const { db, shop, owner } = await context();
     const obligationId = await oweErasure(db, shop.id, owner);
-    await db
-      .delete(personRoles)
-      .where(and(eq(personRoles.personId, owner), eq(personRoles.role, "owner")));
+    await demoteOwnerToManager(db, owner);
     signIn(shop, owner);
 
-    await retryProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
-    await dischargeProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
+    await retryProcessorErasureAction(withId("obligationId", obligationId));
+    await dischargeProcessorErasureAction(withId("obligationId", obligationId));
 
     expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
   });
@@ -316,9 +316,15 @@ describe("the data-compliance queue actions", () => {
     const obligationId = await oweErasure(db, shop.id, owner);
     signIn(shop, owner);
 
-    await dischargeProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
+    await dischargeProcessorErasureAction(withId("obligationId", obligationId));
 
     expect(await erasureStatus(db, shop.id, obligationId)).toBe("discharged");
+    // The revalidated path is derived from the session, never from an argument.
+    // These three actions used to take a bound `shopSlug`, and a server action's
+    // arguments are attacker-controlled — a hand-crafted POST could name any
+    // shop and invalidate its cached settings page. The signature (FormData
+    // only) is what makes that unreachable; this pins the slug it actually uses.
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/shop/${shop.slug}/settings`);
   });
 
   it("ignores a submission with no id rather than acting on a blank one", async () => {
@@ -326,7 +332,7 @@ describe("the data-compliance queue actions", () => {
     const obligationId = await oweErasure(db, shop.id, owner);
     signIn(shop, owner);
 
-    await dischargeProcessorErasureAction(shop.slug, new FormData());
+    await dischargeProcessorErasureAction(new FormData());
 
     expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
   });

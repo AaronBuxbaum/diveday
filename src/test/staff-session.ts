@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import type { AppDb } from "@/db/client";
-import { people } from "@/db/schema";
+import { people, personRoles } from "@/db/schema";
 import type { Role } from "@/lib/authz";
 
 /**
@@ -41,6 +41,24 @@ export async function seededStaffPersonId(
     .limit(1);
   if (!person) throw new Error(`seeded staff member ${email} missing`);
   return person.id;
+}
+
+/**
+ * Take the `owner` role off a seeded person, leaving whatever else they hold.
+ *
+ * The seed's only manager is Dana, who is also the owner
+ * (`src/db/seed-cast.ts`), so "owner" and "manager" are the same person and a
+ * test that wants to prove an owner-only control is hidden from a *manager*
+ * would otherwise prove nothing. Every gate that matters is checked against the
+ * database rather than the session's role list, so this demotion is what the
+ * page and the action both see — no matching change to `staffSession`'s `roles`
+ * is needed, and deliberately so: a stale JWT is exactly the case those gates
+ * exist to survive.
+ */
+export async function demoteOwnerToManager(db: AppDb, personId: string): Promise<void> {
+  await db
+    .delete(personRoles)
+    .where(and(eq(personRoles.personId, personId), eq(personRoles.role, "owner")));
 }
 
 /**

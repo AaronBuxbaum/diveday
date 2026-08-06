@@ -1,14 +1,20 @@
-import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
-import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { JumpNav } from "@/components/JumpNav";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, personRoles, processorErasureObligations } from "@/db/schema";
+import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { seededTestDb } from "@/test/db";
+import {
+  ariaLabelsIn,
+  findElements,
+  hiddenInputNamesIn,
+  hrefsIn,
+  selectNamesIn,
+} from "@/test/jsx-inspect";
+import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -58,99 +64,6 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> 
       expires: new Date(Date.now() + 60_000).toISOString(),
     },
   };
-}
-
-/**
- * Depth-first walk of a returned element tree, collecting every element whose
- * `type` matches. Reads the props the page actually built without rendering —
- * the page's own forms carry server-action functions as `action`, which no
- * HTML serializer will take.
- */
-function findElements<P>(
-  node: unknown,
-  component: unknown,
-  found: ReactElement<P>[] = [],
-): ReactElement<P>[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) findElements(child, component, found);
-    return found;
-  }
-  if ("type" in node && "props" in node) {
-    const element = node as ReactElement<P & { children?: unknown }>;
-    if (element.type === component) found.push(element as unknown as ReactElement<P>);
-    findElements(element.props?.children, component, found);
-  }
-  return found;
-}
-
-/** Every `href` on an anchor or `Link` anywhere in a tree. */
-function hrefsIn(node: unknown, found: string[] = []): string[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) hrefsIn(child, found);
-    return found;
-  }
-  if ("props" in node) {
-    const element = node as ReactElement<{ href?: unknown; children?: unknown }>;
-    if (typeof element.props?.href === "string") found.push(element.props.href);
-    hrefsIn(element.props?.children, found);
-  }
-  return found;
-}
-
-/** Every `name` on a `<select>` anywhere in a tree, in render order. */
-function selectNamesIn(node: unknown, found: string[] = []): string[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) selectNamesIn(child, found);
-    return found;
-  }
-  if ("type" in node && "props" in node) {
-    const element = node as ReactElement<{ name?: unknown; children?: unknown }>;
-    if (element.type === "select" && typeof element.props?.name === "string") {
-      found.push(element.props.name);
-    }
-    selectNamesIn(element.props?.children, found);
-  }
-  return found;
-}
-
-/** Every `aria-label` anywhere in a tree — how each queue panel names itself. */
-function ariaLabelsIn(node: unknown, found: string[] = []): string[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) ariaLabelsIn(child, found);
-    return found;
-  }
-  if ("props" in node) {
-    const element = node as ReactElement<{ "aria-label"?: unknown; children?: unknown }>;
-    const label = element.props?.["aria-label"];
-    if (typeof label === "string") found.push(label);
-    ariaLabelsIn(element.props?.children, found);
-  }
-  return found;
-}
-
-/** Every `name` on a hidden input anywhere in a tree — which rows offered a control. */
-function hiddenInputNamesIn(node: unknown, found: string[] = []): string[] {
-  if (node === null || typeof node !== "object") return found;
-  if (Array.isArray(node)) {
-    for (const child of node) hiddenInputNamesIn(child, found);
-    return found;
-  }
-  if ("type" in node && "props" in node) {
-    const element = node as ReactElement<{ type?: unknown; name?: unknown; children?: unknown }>;
-    if (
-      element.type === "input" &&
-      element.props?.type === "hidden" &&
-      typeof element.props?.name === "string"
-    ) {
-      found.push(element.props.name);
-    }
-    hiddenInputNamesIn(element.props?.children, found);
-  }
-  return found;
 }
 
 async function renderSettings(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
@@ -262,18 +175,10 @@ async function queueStuckDeletion(db: AppDb, session: Session) {
 }
 
 /**
- * The seed's only manager is also the owner (`src/db/seed-cast.ts`), so a
- * plain `renderSettings("manager")` would prove nothing about the owner-only
- * half of this panel. Dropping the `owner` role row leaves a genuine
- * manager — and every gate that matters here is checked against the database,
- * not the session's role list, so the demotion is what the page sees.
+ * `renderSettings("manager")` alone would prove nothing about the owner-only
+ * half of these panels — the seed's only manager is also the owner — so the
+ * cases below demote first (`demoteOwnerToManager`, src/test/staff-session.ts).
  */
-async function demoteToManager(db: AppDb, session: Session) {
-  await db
-    .delete(personRoles)
-    .where(and(eq(personRoles.personId, session.user.personId), eq(personRoles.role, "owner")));
-}
-
 async function oweErasure(
   db: AppDb,
   session: Session,
@@ -311,7 +216,7 @@ describe("the data-compliance queues in the Data group", () => {
     // must still see the queue *and* still get the retry, which is gated the
     // same way (./actions.authz.test.ts proves the action itself).
     const element = await renderSettings("manager", async (db, session) => {
-      await demoteToManager(db, session);
+      await demoteOwnerToManager(db, session.user.personId);
       await queueStuckDeletion(db, session);
     });
     expect(ariaLabelsIn(element)).toContain(MEDIA_PANEL);
@@ -341,7 +246,7 @@ describe("the data-compliance queues in the Data group", () => {
     // (ADR 20260803-processor-erasure-obligations). A manager reads the debt
     // and cannot sign it off.
     const element = await renderSettings("manager", async (db, session) => {
-      await demoteToManager(db, session);
+      await demoteOwnerToManager(db, session.user.personId);
       await oweErasure(db, session, "stripe_customer");
     });
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);

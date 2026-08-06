@@ -555,6 +555,15 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
  * the right answer for a card the page renders for everyone and wrong for a
  * panel it renders for nobody who would be refused. A hand-made post here gets
  * silence, not an explanation of a control that was never on screen.
+ *
+ * The path they revalidate comes from `session.user.shopSlug`, never from a
+ * bound argument. A server action's arguments are attacker-controlled — the
+ * action id ships to the browser and a hand-crafted POST supplies whatever it
+ * likes — so a bound slug would let a signed-in staffer of shop A invalidate
+ * shop B's cached settings page. The writes above were never at risk (every
+ * one is scoped by `session.user.shopId`); this closes the cache-invalidation
+ * half, and matches how `settingsBlock` and the rest of this file already
+ * derive the slug.
  * -------------------------------------------------------------------------- */
 
 /**
@@ -562,14 +571,14 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
  * as every other control on this page, so a crew member can't reach it by
  * posting directly to the action.
  */
-export async function retryMediaDeletionAction(shopSlug: string, formData: FormData) {
+export async function retryMediaDeletionAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) return;
   const attemptId = String(formData.get("attemptId") ?? "");
   if (!attemptId) return;
   await retryMediaDeletion(db, session.user.shopId, attemptId);
-  revalidatePath(`/shop/${shopSlug}/settings`);
+  revalidatePath(`/shop/${session.user.shopSlug}/settings`);
 }
 
 /**
@@ -582,14 +591,14 @@ export async function retryMediaDeletionAction(shopSlug: string, formData: FormD
  * Same erasure gate as the attestation below: this makes a destructive call
  * against the shop's Stripe account, so it is not a settings-reader's button.
  */
-export async function retryProcessorErasureAction(shopSlug: string, formData: FormData) {
+export async function retryProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
   const obligationId = String(formData.get("obligationId") ?? "");
   if (!obligationId) return;
   await retryProcessorErasure(db, session.user.shopId, obligationId);
-  revalidatePath(`/shop/${shopSlug}/settings`);
+  revalidatePath(`/shop/${session.user.shopSlug}/settings`);
 }
 
 /**
@@ -605,7 +614,7 @@ export async function retryProcessorErasureAction(shopSlug: string, formData: Fo
  * finished. A manager who can read the panel sees the outstanding work and
  * cannot sign it off.
  */
-export async function dischargeProcessorErasureAction(shopSlug: string, formData: FormData) {
+export async function dischargeProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
@@ -616,5 +625,5 @@ export async function dischargeProcessorErasureAction(shopSlug: string, formData
     obligationId,
     actorPersonId: session.user.personId,
   });
-  revalidatePath(`/shop/${shopSlug}/settings`);
+  revalidatePath(`/shop/${session.user.shopSlug}/settings`);
 }

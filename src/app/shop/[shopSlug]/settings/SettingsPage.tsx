@@ -390,9 +390,6 @@ export default async function SettingsPage({
   // manager from being shown a button they would be bounced from
   // (ADR 20260724-role-gated-surfaces-hide-not-explain).
   const canErase = await canPersonErasePersonalData(db, session.user.shopId, session.user.personId);
-  const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
-  const dischargeProcessorErasure = dischargeProcessorErasureAction.bind(null, shopSlug);
-  const retryProcessorErasure = retryProcessorErasureAction.bind(null, shopSlug);
   // The same two gates the nav registry hangs Team and Promo codes off
   // (src/lib/staff-destinations.ts), so a divemaster who has neither is never
   // shown a door that would bounce them (ADR
@@ -1103,7 +1100,7 @@ export default async function SettingsPage({
                       })}
                       {attempt.lastError ? ` · ${attempt.lastError}` : ""}
                     </span>
-                    <form action={retryMediaDeletion}>
+                    <form action={retryMediaDeletionAction}>
                       <input type="hidden" name="attemptId" value={attempt.id} />
                       <SubmitButton
                         pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
@@ -1156,7 +1153,7 @@ export default async function SettingsPage({
                       {obligation.lastError ? ` · ${obligation.lastError}` : ""}
                     </span>
                     {canErase && obligation.target === "stripe_customer" ? (
-                      <form action={retryProcessorErasure}>
+                      <form action={retryProcessorErasureAction}>
                         <input type="hidden" name="obligationId" value={obligation.id} />
                         <SubmitButton
                           pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
@@ -1167,7 +1164,7 @@ export default async function SettingsPage({
                       </form>
                     ) : null}
                     {canErase ? (
-                      <form action={dischargeProcessorErasure}>
+                      <form action={dischargeProcessorErasureAction}>
                         <input type="hidden" name="obligationId" value={obligation.id} />
                         <SubmitButton
                           pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
