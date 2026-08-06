@@ -492,8 +492,10 @@ async function TodayBody({
           ) : (
             <>
               <p className="mt-1 text-muted">{t("shopHome.noDeparturesEmpty")}</p>
+              {/* Straight into the board's add panel — creating a departure
+                  is one place now (ADR 20260806-one-trip-create-form). */}
               <Link
-                href={`/shop/${shopSlug}/trips/new`}
+                href={`/shop/${shopSlug}/schedule/board?add=1`}
                 className={buttonClass({ className: "mt-4" })}
               >
                 {t("shopHome.scheduleTrip")}

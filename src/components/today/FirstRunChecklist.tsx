@@ -163,7 +163,10 @@ export function FirstRunChecklist({
           doneLabel={copy.tripTitle}
           doneBadge={copy.doneBadge}
           action={
-            <Link href={`/shop/${shopSlug}/trips/new`} className={buttonClass({ size: "sm" })}>
+            <Link
+              href={`/shop/${shopSlug}/schedule/board?add=1`}
+              className={buttonClass({ size: "sm" })}
+            >
               {copy.tripAction}
             </Link>
           }

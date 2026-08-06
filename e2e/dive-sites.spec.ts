@@ -53,9 +53,12 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
     await expect(page.getByLabel("Longitude")).toHaveValue("-80.321");
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(tripTitle);
-    await page.getByLabel("Dive site").first().selectOption({ label: siteName });
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(tripTitle);
+    // Dive one's site, by name: expanded, the panel keeps the quick row's
+    // single "Dive site" select mounted-but-hidden (so nothing typed is lost on
+    // a collapse), and a label match would find that one first.
+    await page.locator('select[name="dive-1-siteId"]').selectOption({ label: siteName });
     await page.getByLabel("Date").fill(daysFromNow(5));
     await page.getByLabel("Departs").fill("09:00");
     await page.getByLabel("Returns").fill("12:00");
