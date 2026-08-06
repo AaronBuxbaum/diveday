@@ -5,9 +5,10 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { FieldActions } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
@@ -222,16 +223,23 @@ export default async function DiversPage({
           </span>
         </summary>
         <p className="mt-2 text-sm text-muted">{t("divers.page.addDiverBody")}</p>
-        <FieldGrid columns={3} className="mt-4" as="form" action={addDiverAction}>
-          <Field label={t("divers.page.fullNameLabel")}>
-            <input name="fullName" required autoComplete="name" className={controlClass} />
-          </Field>
-          <Field label={t("divers.page.emailLabel")} hint={t("divers.page.optionalHint")}>
-            <input name="email" type="email" autoComplete="email" className={controlClass} />
-          </Field>
-          <Field label={t("divers.page.phoneLabel")} hint={t("divers.page.optionalHint")}>
-            <input name="phone" type="tel" autoComplete="tel" className={controlClass} />
-          </Field>
+        {/* The same name/email/phone trio every seat-a-diver door wears
+            (src/components/seat-diver/). This one mints a person without a
+            departure, so nothing here is required but the name — and its own
+            validator takes a longer address and phone than a seating does, so
+            it passes those caps rather than inheriting the tighter ones. */}
+        <PersonFieldTrio
+          className="mt-4"
+          as="form"
+          action={addDiverAction}
+          email="optional"
+          nameLabel={t("divers.page.fullNameLabel")}
+          emailLabel={t("divers.page.emailLabel")}
+          phoneLabel={t("divers.page.phoneLabel")}
+          optionalHint={t("divers.page.optionalHint")}
+          emailMaxLength={320}
+          phoneMaxLength={40}
+        >
           <FieldActions>
             <SubmitButton
               pendingLabel={t("divers.page.adding")}
@@ -240,7 +248,7 @@ export default async function DiversPage({
               {t("divers.page.addDiver")}
             </SubmitButton>
           </FieldActions>
-        </FieldGrid>
+        </PersonFieldTrio>
       </details>
 
       <DiverList

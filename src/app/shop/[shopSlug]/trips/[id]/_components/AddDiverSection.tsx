@@ -1,8 +1,11 @@
-import Link from "next/link";
-import { EmptyState } from "@/components/EmptyState";
+import { SEAT_SURFACES } from "@/app/actions/seat-diver-surfaces";
 import { SubmitButton } from "@/components/SubmitButton";
+import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
+import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
+import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
+import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { FieldActions, FormStatus } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -15,6 +18,14 @@ import type { FormNotice } from "@/lib/staff-notices";
  * the roster from spawning a second person row and orphaning the first diver's
  * certs, waivers, and rental fit. The hand-entry form stays for a genuine
  * first-timer (and for wait-listing once a trip is full).
+ *
+ * The search box, the candidate rows, the "nobody by that name" box, and the
+ * three-field form are the shared seat-a-diver pieces
+ * (src/components/seat-diver/), the same ones the counter walk-in and the
+ * global Add-booking door wear. What is genuinely this door's own stays here:
+ * the rental-fit line under each candidate ("same as last time"), the
+ * full-boat branch that sends a hand-entered diver to the wait list instead of
+ * the manifest, and the collapsed `<details>` this page opens the form inside.
  */
 export function AddDiverSection({
   shopSlug,
@@ -67,104 +78,51 @@ export function AddDiverSection({
         <>
           <p className="mt-1 text-sm text-muted">{t("trips.addDiver.searchDescription")}</p>
 
-          {/* Server-fed search, same shape as the diver roster: a GET reload
-              carries `diverq` and the section re-renders with matches. No client
-              state, so the picker stays pixel-stable for visual regression. */}
-          <form method="get" className="mt-4 flex flex-wrap items-end gap-2">
-            <Field label={t("trips.addDiver.findLabel")} className="min-w-0 flex-1">
-              <input
-                type="search"
-                name="diverq"
-                // Keyed on the server's own query so the box can never disagree
-                // with it. `defaultValue` applies at mount only, so without this
-                // the typed text survives a navigation as client state the
-                // comment above promises does not exist: seat a diver or trip a
-                // refusal — both redirect to a URL with no `diverq` — and the
-                // server renders an empty box while the DOM still shows the old
-                // search. Whichever the screenshot caught made
-                // `trip-guests-refusal-level` flake between runs on identical
-                // code. Re-keying remounts the input, so the value is always the
-                // server's.
-                key={query}
-                defaultValue={query}
-                placeholder={t("trips.addDiver.findPlaceholder")}
-                maxLength={120}
-                autoComplete="off"
-                className={controlClass}
-              />
-            </Field>
-            <SubmitButton
-              pendingLabel={t("trips.addDiver.searching")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("trips.addDiver.search")}
-            </SubmitButton>
-          </form>
+          <PersonSearchForm
+            className="mt-4"
+            query={query}
+            label={t("trips.addDiver.findLabel")}
+            placeholder={t("trips.addDiver.findPlaceholder")}
+            submitLabel={t("seatDiver.search")}
+            pendingLabel={t("seatDiver.searching")}
+          />
 
           {searched ? (
             candidates.length > 0 ? (
-              <ul className="mt-4 grid gap-2">
-                {candidates.map(({ person, rentalFit }) => {
-                  const fit = rentalFitLine(rentalFit);
-                  return (
-                    <li
-                      key={person.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-sm"
-                    >
-                      <div className="min-w-0">
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${person.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {person.fullName}
-                        </Link>
-                        <p className="text-sm text-muted">
-                          {person.email ?? t("trips.addDiver.noEmailOnFile")}
-                        </p>
-                        {/* "Same as last time": the fit already on file carries
-                            onto the trip, so staff confirm rather than re-enter. */}
-                        <p className="mt-0.5 text-xs text-muted">
-                          {rentalFit
-                            ? t("trips.addDiver.rentalFitOnFile", {
-                                fit: rentalFitLineText(t, locale, fit),
-                              })
-                            : t("trips.addDiver.noRentalFitYet")}
-                        </p>
-                      </div>
-                      <form action={addExistingDiverAction}>
-                        <input type="hidden" name="tripId" value={tripId} />
-                        <input type="hidden" name="personId" value={person.id} />
-                        <SubmitButton
-                          pendingLabel={t("trips.addDiver.adding")}
-                          ariaLabel={t("trips.addDiver.addPersonAriaLabel", {
-                            name: person.fullName,
-                          })}
-                          className={buttonClass({ size: "sm" })}
-                        >
-                          {t("trips.addDiver.addToTrip")}
-                        </SubmitButton>
-                      </form>
-                    </li>
-                  );
-                })}
-              </ul>
+              <PersonCandidateList
+                className="mt-4"
+                candidates={candidates}
+                tripId={tripId}
+                seatAction={addExistingDiverAction}
+                personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+                rowClassName="bg-surface shadow-sm"
+                // "Same as last time": the fit already on file carries onto the
+                // trip, so staff confirm rather than re-enter.
+                extraLine={({ rentalFit }) => (
+                  <p className="mt-0.5 text-xs text-muted">
+                    {rentalFit
+                      ? t("trips.addDiver.rentalFitOnFile", {
+                          fit: rentalFitLineText(t, locale, rentalFitLine(rentalFit)),
+                        })
+                      : t("trips.addDiver.noRentalFitYet")}
+                  </p>
+                )}
+                addLabel={t("trips.addDiver.addToTrip")}
+                pendingLabel={t("seatDiver.adding")}
+                addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
+                noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
+              />
             ) : (
               // The shared empty state, and the sentence's "below" made into a
               // real door: the hand-entry form is also force-opened for this
               // case (see `open=` on the <details> below), so the anchor always
               // lands on a form a staffer can type into.
-              <EmptyState className="mt-4">
-                <h3 className="font-medium">{t("trips.addDiver.noMatchesHeading")}</h3>
-                <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-                  {t("trips.addDiver.noMatches", { query })}
-                </p>
-                <a
-                  href="#hand-entry"
-                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                >
-                  {t("trips.addDiver.noMatchesAction")}
-                </a>
-              </EmptyState>
+              <HandEntryPrompt
+                className="mt-4"
+                heading={t("trips.addDiver.noMatchesHeading")}
+                body={t("trips.addDiver.noMatches", { query })}
+                actionLabel={t("seatDiver.noMatchesAction")}
+              />
             )
           ) : null}
         </>
@@ -191,19 +149,19 @@ export function AddDiverSection({
         <form action={full ? addToWaitlistAction : addBookingAction} className="mt-4">
           {/* Ignored by the wait-list action, which is bound to its trip. */}
           <input type="hidden" name="tripId" value={tripId} />
-          <FieldGrid columns={3}>
-            <Field label={t("trips.addDiver.nameLabel")}>
-              <input name="fullName" required maxLength={120} className={controlClass} />
-            </Field>
-            <Field label={t("trips.addDiver.emailLabel")}>
-              <input name="email" type="email" required maxLength={200} className={controlClass} />
-            </Field>
-            <Field label={t("trips.addDiver.phoneLabel")} hint={t("trips.addDiver.optionalHint")}>
-              <input name="phone" type="tel" maxLength={30} className={controlClass} />
-            </Field>
-          </FieldGrid>
+          <PersonFieldTrio
+            // The roster keeps asking for an email — a diver added here is
+            // usually being set up for a waiver and a confirmation. Read from
+            // the surface table rather than restated, so this form and the
+            // action validating it cannot disagree.
+            email={SEAT_SURFACES["trip-guests"].email}
+            nameLabel={t("trips.addDiver.nameLabel")}
+            emailLabel={t("seatDiver.emailLabel")}
+            phoneLabel={t("seatDiver.phoneLabel")}
+            optionalHint={t("seatDiver.optionalHint")}
+          />
           <FieldActions className="mt-4">
-            <SubmitButton pendingLabel={t("trips.addDiver.adding")} className={buttonClass()}>
+            <SubmitButton pendingLabel={t("seatDiver.adding")} className={buttonClass()}>
               {full ? t("trips.addDiver.addToWaitlist") : t("trips.addDiver.addToTrip")}
             </SubmitButton>
           </FieldActions>

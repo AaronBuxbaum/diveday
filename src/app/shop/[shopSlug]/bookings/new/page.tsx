@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -119,30 +120,18 @@ export default async function NewBookingPage({
           </EmptyState>
         ) : (
           <>
-            <ul className="mt-3 flex flex-col gap-2">
-              {trips.map((trip) => (
-                <li key={trip.id}>
-                  <Link
-                    href={`/shop/${shopSlug}/bookings/new/${trip.id}`}
-                    className="flex min-h-11 items-baseline justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
-                  >
-                    {/* The title wraps inside its own column rather than
-                        pushing the seat count onto a second line: a list
-                        scanned for "where does this diver fit" needs its
-                        numbers in one straight, right-aligned run. */}
-                    <span className="min-w-0 flex-1">
-                      {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                    </span>
-                    {/* Seats left, not "booked/capacity": the question at this
-                        moment is whether this diver fits. */}
-                    <span className="shrink-0 tabular-nums text-muted">
-                      {t("bookings.new.seatsLeft", { count: spotsRemaining(trip) })}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {/* The shared picker row, also worn by the counter walk-in. Seats
+                left, not "booked/capacity": the question at this moment is
+                whether this diver fits. */}
+            <TripPickerList
+              className="mt-3"
+              options={trips.map((trip) => ({
+                id: trip.id,
+                href: `/shop/${shopSlug}/bookings/new/${trip.id}`,
+                label: `${trip.title} · ${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+                meta: t("bookings.new.seatsLeft", { count: spotsRemaining(trip) }),
+              }))}
+            />
             <Pager
               page={tripPage.page}
               pageCount={tripPage.pageCount}
