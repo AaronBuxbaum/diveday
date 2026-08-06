@@ -100,6 +100,7 @@
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "next-devtools-mcp": "^0.4.0",
+    "playwright-core": "1.62.1",
     "reg-keygen-git-hash-plugin": "^0.14.5",
     "reg-notify-github-plugin": "^0.14.5",
     "reg-publish-s3-plugin": "^0.14.4",

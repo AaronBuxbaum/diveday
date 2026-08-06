@@ -74,7 +74,7 @@ importers:
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
-        version: 4.12.1(playwright-core@1.63.0-alpha-2026-08-05)
+        version: 4.12.1(playwright-core@1.62.1)
       '@biomejs/biome':
         specifier: ^2.5.7
         version: 2.5.7
@@ -144,6 +144,9 @@ importers:
       next-devtools-mcp:
         specifier: ^0.4.0
         version: 0.4.0(hono@4.12.33)
+      playwright-core:
+        specifier: 1.62.1
+        version: 1.62.1
       reg-keygen-git-hash-plugin:
         specifier: ^0.14.5
         version: 0.14.5
@@ -6759,10 +6762,10 @@ snapshots:
 
   '@aws/lambda-invoke-store@0.3.0': {}
 
-  '@axe-core/playwright@4.12.1(playwright-core@1.63.0-alpha-2026-08-05)':
+  '@axe-core/playwright@4.12.1(playwright-core@1.62.1)':
     dependencies:
       axe-core: 4.12.1
-      playwright-core: 1.63.0-alpha-2026-08-05
+      playwright-core: 1.62.1
 
   '@babel/code-frame@7.29.7':
     dependencies:

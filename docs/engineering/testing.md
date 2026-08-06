@@ -27,6 +27,21 @@ pnpm visual        # capture screenshots and run reg-suit comparison and publish
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 ```
 
+### Why `playwright-core` is pinned in devDependencies
+
+`playwright-core` is declared explicitly at the exact version `@playwright/test` resolves to. It is
+not a dependency anything imports directly — it is there to decide which copy `@axe-core/playwright`
+binds its `playwright-core` **peer** to.
+
+Without the pin, two copies sit in the tree: `@playwright/test`'s, and the exact alpha that
+`@playwright/mcp` pins for its own use. pnpm picked the higher one for the peer, so `AxeBuilder`
+wanted a `Page` from one copy while `e2e/a11y.spec.ts` had one from the other — structurally the
+same object, a hard `tsc` error, and nothing about the message says "you have two Playwrights". That
+is how `main` went red on typecheck after a routine package bump.
+
+Keep the pin equal to `@playwright/test`'s version when either moves. One browser driver in the
+tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
+
 ## The route coverage ledger
 
 `scripts/route-coverage.json` lists every `src/app/**/page.tsx` route and the tests that cover it:
