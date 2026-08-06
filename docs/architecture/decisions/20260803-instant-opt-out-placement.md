@@ -171,3 +171,39 @@ part of ARCH-7.
 Reopen this if someone can either reproduce the failures with the declarations restored — proving
 them unrelated — or explain the mechanism. Until then the queue item stays open with the
 page-level declarations intact, and ARCH-7 is narrower than it looked.
+
+## Amendment, 2026-08-06 — the mechanism, and it isn't this file
+
+`trip-admission.spec.ts`'s exact "same banner resolved to two DOM nodes" failure recurred on
+2026-08-06 (PR #403, CI shard 4/4) with both declarations above still restored — the one thing the
+prior amendment's "reopen if…" asked for. The CI run's trace (`trace: "retain-on-failure"`, added
+during that same investigation) made the mechanism inspectable for the first time.
+
+The raw HTTP response body the server sent contains the banner exactly once — confirmed from the
+failing run's own network trace, not a local guess. The duplicate is client-side. Polling the live
+DOM immediately after `page.goto()` resolves (not after `networkidle`, which is long enough for it
+to disappear) reproduces it locally on this exact machine roughly half the time: the banner
+paragraph briefly exists **twice** for 20-150ms, then settles back to one. The second node sits
+inside a `<div id="S:1" hidden>` wrapper, `offsetParent: null`, zero-size — invisible to a real
+user. That `S:n`-id hidden-div pattern is React's own streaming/Suspense-resume bookkeeping: a
+transient clone parked off-screen while a boundary's dynamic content settles, cleaned up a frame or
+two later. It is normal, intentional, and has nothing to do with `instant`, PPR, or either layout's
+`instant = false`.
+
+The test bug: `page.locator('[role="alert"]:not(#__next-route-announcer__)')` is a raw `.locator()`
+call, so it never got the visibility filter `e2e/fixtures.ts`'s `makeActivitySafe` applies to every
+`getByText`/`getByRole`/`getByLabel`/`getByPlaceholder` call for exactly this reason — it matches
+React's hidden clone as readily as the real banner, and hits a strict-mode violation whenever the
+assertion's first poll lands inside that 20-150ms window. Fixed by adding `.filter({ visible: true
+})` to that one locator (e2e/trip-admission.spec.ts) — no product code changed. 25/25 repeated runs
+passed afterward; the same run count against the pre-fix locator is not included here because
+reproducing it needed a bespoke polling harness outside Playwright's own retry loop, not a plain
+repeat — see the session that made this amendment if reconstructing it is ever necessary.
+
+This resolves the "reopen if… explain the mechanism" condition, but not in the direction that
+condition was written expecting: the correlation with the two deleted `instant = false` lines was
+real (changing `instant`/PPR config changes render timing and cost enough to shift how often a test
+happens to poll inside that 20-150ms window) but not causal. Nothing here says the two lines this
+ADR is actually about are safe to delete again — that question is untouched — only that *this*
+specific failure class was never evidence either way, and a future attempt at rule 1's cleanup
+should not expect it to reappear as a signal.

@@ -139,8 +139,20 @@ test.describe("as owner", () => {
 
     // The banner still appears — a refusal nobody can read is worse than a
     // vague one — but it says only the generic thing. Located by role minus
-    // Next's own always-present route announcer, which also claims `alert`.
-    const banner = page.locator('[role="alert"]:not(#__next-route-announcer__)');
+    // Next's own always-present route announcer, which also claims `alert`,
+    // and filtered to visible: this route's dynamic content is inside a real
+    // Suspense boundary, and React's own streaming-resume machinery briefly
+    // parks a second, hidden clone of it in a `<div id="S:n" hidden>` wrapper
+    // while the boundary settles (a normal, invisible implementation detail,
+    // not a rendering bug) — a bare `[role="alert"]` locator matches that
+    // clone too and hit a strict-mode violation on it intermittently. Every
+    // other locator in this fleet gets the same filter for free through
+    // `makeActivitySafe`'s `getByText`/`getByRole` patches (e2e/fixtures.ts);
+    // this one is a raw `.locator()` specifically to exclude the announcer,
+    // so it needs the filter spelled out here instead.
+    const banner = page
+      .locator('[role="alert"]:not(#__next-route-announcer__)')
+      .filter({ visible: true });
     await expect(banner).toContainText("cards on file don't reach what this trip");
     await expect(banner).not.toContainText("Deep card");
     await expect(banner).not.toContainText("charter requires");
