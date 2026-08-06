@@ -275,7 +275,9 @@ export function SiteFields({
                 name="specialty"
                 type="checkbox"
                 value={value}
-                defaultChecked={values?.requiredSpecialties.includes(value as DiveSpecialty)}
+                defaultChecked={
+                  values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false
+                }
                 className="size-4 accent-primary"
               />
               {t(key)}
@@ -285,7 +287,7 @@ export function SiteFields({
             <input
               name="requiresNitrox"
               type="checkbox"
-              defaultChecked={values?.requiresNitrox}
+              defaultChecked={values?.requiresNitrox ?? false}
               className="size-4 accent-primary"
             />
             {t("diveSites.form.nitroxCheckbox")}
