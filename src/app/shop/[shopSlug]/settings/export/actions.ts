@@ -20,6 +20,10 @@ import { requireStaffSession } from "@/lib/session";
  * Configure, test, and disconnect a shop's backup destination (docs ADR
  * 20260804-shop-owned-backup-export).
  *
+ * These live beside the export page because scheduled delivery *is* the export
+ * bundle on a schedule — one surface, `/settings/export`, since ADR
+ * 20260806-one-data-out-surface. `/settings/backup` is a 308 to it.
+ *
  * Two rules run through all three actions, the same two as the WhatsApp
  * settings beside them. The gate is re-checked against live roles on every
  * mutation — this surface configures a continuous export of the whole shop,
@@ -67,7 +71,7 @@ async function backupContext(): Promise<{
     shopId: session.user.shopId,
     personId: session.user.personId,
     shopSlug: session.user.shopSlug,
-    path: `/shop/${session.user.shopSlug}/settings/backup`,
+    path: `/shop/${session.user.shopSlug}/settings/export`,
   };
 }
 

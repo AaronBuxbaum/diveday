@@ -15,10 +15,11 @@ export const instant = true;
 
 /**
  * Shared sub-nav for every settings surface (surface-consolidation task T3):
- * the hub plus its seven full-page surfaces (Team, Website embed, Calendar
- * subscriptions, WhatsApp, Backups, Import, Export), which each used to
- * hand-roll their own "Back to settings" button — Website embed twice, once
- * per return branch — and had no way to move sideways between surfaces.
+ * the hub plus its six full-page surfaces (Team, Website embed, Calendar
+ * subscriptions, WhatsApp, Import, Export), which each used to hand-roll their
+ * own "Back to settings" button — Website embed twice, once per return branch
+ * — and had no way to move sideways between surfaces. Backups was a seventh
+ * until it became the second half of Export (ADR 20260806-one-data-out-surface).
  *
  * Unlike `waivers/layout.tsx` and `trips/[id]/layout.tsx` — grandfathered
  * exceptions carved out by ADR 20260803-instant-opt-out-placement's
@@ -29,7 +30,7 @@ export const instant = true;
  * `<Suspense>` with a fallback that holds the nav's height, so every
  * settings route keeps its static shell.
  *
- * Each page below still owns its own `<main>` (the seven sub-pages differ on
+ * Each page below still owns its own `<main>` (the six sub-pages differ on
  * width — Team is `max-w-5xl`, the rest `max-w-3xl` — which a shared `<main>`
  * here would flatten) and still runs its own `requireStaffSession()` plus its
  * own authorization gate. This layout authorizes nothing, same rule as
@@ -99,7 +100,6 @@ function SettingsSubNavFallback() {
         <div className="h-11 w-32 rounded-xl bg-surface" />
         <div className="h-11 w-24 rounded-xl bg-surface" />
         <div className="h-11 w-24 rounded-xl bg-surface" />
-        <div className="h-11 w-20 rounded-xl bg-surface" />
         <div className="h-11 w-20 rounded-xl bg-surface" />
       </div>
     </div>

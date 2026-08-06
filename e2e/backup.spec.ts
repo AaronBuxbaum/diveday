@@ -1,6 +1,14 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
-const BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
+/**
+ * The Backups half of the one data-out surface (docs ADR
+ * 20260806-one-data-out-surface): scheduled delivery lives at
+ * `/settings/export#backups` now, because it is the export bundle on a
+ * schedule behind the identical gate. `/settings/backup` is a 308 that this
+ * spec also pins.
+ */
+const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export#backups";
+const OLD_BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
 
 /**
  * The shop-owned backup settings surface (docs ADR
@@ -42,6 +50,34 @@ async function saveDestination(page: import("@playwright/test").Page) {
 
 test.describe("backup settings", () => {
   signedInAsOwner();
+
+  test("the old /settings/backup URL still lands, query and section carried", async ({ page }) => {
+    // Removing a surface never removes the destination (ADR
+    // 20260806-one-data-out-surface). A bookmark deep into the delivery
+    // history keeps its page, rather than silently restarting at page 1 —
+    // the quiet kind of "it still works" that makes staff re-hunt.
+    await page.goto(`${OLD_BACKUP_SETTINGS}?page=2`);
+
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/export?page=2#backups");
+    await expect(page.getByRole("heading", { name: "Delivery history" })).toBeVisible();
+
+    // And the bare URL, which is what the runbook and every older link say.
+    await page.goto(OLD_BACKUP_SETTINGS);
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/export#backups");
+  });
+
+  test("one surface: the bundle you would download, and the copy that keeps happening", async ({
+    page,
+  }) => {
+    // The whole point of the merge — both halves answer "how do I get my data
+    // out?" and are now read without navigating between them.
+    await page.goto(BACKUP_SETTINGS);
+
+    await expect(page.getByRole("heading", { level: 1, name: "Data export" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download export" })).toBeVisible();
+    await expect(page.getByText("waiver_records.csv")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
+  });
 
   test("shows the seeded destination and its delivery history, failures named", async ({
     page,
@@ -141,10 +177,18 @@ test.describe("backup settings authorization", () => {
   test("a captain is bounced with an explanation, not a blank page", async ({ page }) => {
     await page.goto(BACKUP_SETTINGS);
 
-    await expect(
-      page.getByText("Only an owner or manager can change backup settings."),
-    ).toBeVisible();
+    // One surface, one gate: the merged page refuses with the export notice
+    // (`export_not_authorized`). `backup_not_authorized` is still what the
+    // three backup server actions redirect with — hiding is not a gate, and
+    // those are reachable without the page (settings/export/actions.ts).
+    await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Delivery history" })).toHaveCount(0);
+  });
+
+  test("and the old URL refuses too, rather than redirecting into a hole", async ({ page }) => {
+    await page.goto(OLD_BACKUP_SETTINGS);
+
+    await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
   });
 
   test("and is not offered the door from the settings index", async ({ page }) => {
