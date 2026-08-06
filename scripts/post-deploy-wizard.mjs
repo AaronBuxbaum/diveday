@@ -114,10 +114,26 @@ export async function runPostDeployWizard({
     );
   }
 
+  // A raw `.includes()` would treat "foo.example.com" as present inside
+  // "foo.example.com.evil.com", or inside an unrelated record that happens
+  // to share a substring. Require each field to appear whitespace-bounded
+  // (or at a line edge) instead -- still tolerant of an unknown column
+  // layout, but not fooled by a superset match. Not token-splitting the
+  // line: the TXT value below ("v=spf1 include:amazonses.com ~all")
+  // contains spaces, so it has to be matched as one bounded run, not one
+  // token.
+  function containsField(line, field) {
+    const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(line);
+  }
+
   function dnsRecordExists(name, type, value) {
     return existingRecords
       .split("\n")
-      .some((line) => line.includes(name) && line.includes(type) && line.includes(value));
+      .some(
+        (line) =>
+          containsField(line, name) && containsField(line, type) && containsField(line, value),
+      );
   }
 
   let added = 0;

@@ -149,6 +149,35 @@ describe("post-deploy wizard", () => {
     expect(dnsAdds.map(({ arguments_ }) => arguments_[6])).toEqual(["MX", "TXT"]);
   });
 
+  it("does not treat a superset domain as a match for an existing DNS record", async () => {
+    const answers = ["no", "no", "no", "no", "yes"];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => answers.shift() ?? "no",
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[2] === "dns" && arguments_[3] === "ls") {
+          // A decoy record whose name is a superset of the real one, and
+          // whose value shares a prefix -- a raw `.includes()` would wrongly
+          // treat this as the same record.
+          return "rec_9  first._domainkey.ses.example.com.evil.com  CNAME  first.dkim.amazonses.com.evil.com  3600\n";
+        }
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dnsAdds = commands.filter(
+      ({ command, arguments_ }) =>
+        command === "pnpm" && arguments_[2] === "dns" && arguments_[3] === "add",
+    );
+    expect(dnsAdds).toHaveLength(3);
+  });
+
   it("falls back to adding every DNS record when listing existing ones fails", async () => {
     const answers = ["no", "no", "no", "no", "yes"];
     const commands = [];

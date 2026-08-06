@@ -84,6 +84,20 @@ describe("sync-github-secrets", () => {
     expect(readFileSync(`${inputPath}.synced`, "utf8")).toBe("A=1\nB=changed\n");
   });
 
+  it("diffs and pushes a deliberately blank secret instead of dropping it", () => {
+    const directory = temporaryDirectory("diveday-gh-secrets-");
+    const inputPath = join(directory, ".env.github");
+    writeFileSync(inputPath, "CLEARED=\n");
+    writeFileSync(`${inputPath}.synced`, "CLEARED=was-set\n");
+    const logPath = join(directory, "gh.log");
+    writeGhStub(directory, logPath);
+
+    sync(inputPath, directory);
+
+    expect(readFileSync(logPath, "utf8")).toContain("CLEARED=");
+    expect(readFileSync(`${inputPath}.synced`, "utf8")).toBe("CLEARED=\n");
+  });
+
   it("does not checkpoint when the push fails", () => {
     const directory = temporaryDirectory("diveday-gh-secrets-");
     const inputPath = join(directory, ".env.github");

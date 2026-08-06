@@ -10,7 +10,9 @@ if (!inputPath) {
   process.exit(2);
 }
 
-const envLine = /^([A-Z][A-Z0-9_]*)=(.+)$/;
+// `(.*)`, not `(.+)`: a deliberately blank secret must still be diffed and
+// pushed, not silently dropped from both the checkpoint and the sync.
+const envLine = /^([A-Z][A-Z0-9_]*)=(.*)$/;
 function parseDotenv(content) {
   return new Map(
     content.split(/\r?\n/).flatMap((line) => {
