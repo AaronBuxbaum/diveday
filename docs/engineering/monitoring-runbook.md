@@ -20,11 +20,9 @@ Fires once per shop, from the same post-signup step that emails the new owner
 `ses-email-runbook.md` already covers — it rides the same SES credentials as every other
 notification. The only new piece is the recipient:
 
-1. Create `alerts@dive.day` as a hosted mailbox (or a group/forwarding address), the same way
-   `aaron@dive.day` and `legal@dive.day` were set up — see "DiveDay's own addresses" in
-   `ses-email-runbook.md`.
-2. That's it. `ALERT_EMAIL` in `src/lib/platform-mail.ts` already points there; nothing in the app
-   needs to change to pick up a real mailbox once it exists.
+`alerts@dive.day` exists as of 2026-08-06, set up the same way `aaron@dive.day` and
+`legal@dive.day` were — see "DiveDay's own addresses" in `ses-email-runbook.md`. `ALERT_EMAIL` in
+`src/lib/platform-mail.ts` already points there, so there is nothing left to wire in the app.
 
 ## Error monitoring (Sentry)
 
@@ -76,4 +74,4 @@ from that one place.
 | No errors ever show up in Sentry | `NEXT_PUBLIC_SENTRY_DSN` unset, or set on the server but not exposed to the client build — it must be the exact env var name (the `NEXT_PUBLIC_` prefix is what makes Next inline it into the browser bundle) |
 | Server errors appear but client ones don't (or vice versa) | Confirm both `src/instrumentation.ts` and `src/instrumentation-client.ts` are present at the `src/` root — Next silently no-ops a misplaced instrumentation file rather than erroring |
 | A waiver/ready/recap/invite/calendar URL shows up unredacted in a Sentry event | A gap in `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QUERY_PARAMS` (`src/app/observability.ts`) — fix there, then treat the exposure per `capability-telemetry-runbook.md`'s rotation table |
-| No new-account alert email | Same checklist as any other notification — see "When mail doesn't arrive" in `ses-email-runbook.md` — then confirm `alerts@dive.day` actually exists as a mailbox |
+| No new-account alert email | Same checklist as any other notification — see "When mail doesn't arrive" in `ses-email-runbook.md`. The mailbox itself is no longer a suspect: `alerts@dive.day` exists |

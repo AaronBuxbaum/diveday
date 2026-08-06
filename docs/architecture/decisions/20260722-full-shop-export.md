@@ -66,4 +66,10 @@ exclusion list. Commits us to fflate; escape hatch is swapping the ZIP seam in
 > reference — the "revisit CSV scope" note below is resolved for DiveDay's own storage. A URL never
 > stored through DiveDay (external or a bundled template asset) still exports as a reference only.
 
+> Extended by [20260806-export-operational-records](20260806-export-operational-records.md), which
+> settled the *rule* this record only left a test to enforce: a record DiveDay writes about a shop's
+> work belongs to that shop, unless carrying it would be a credential, a pointer into infrastructure
+> the destination cannot reach, or DiveDay's own bookkeeping. Seven files joined the bundle under it;
+> two exclusions are stated in the README and on the export page rather than only in a test comment.
+
 Revisit the owner/manager gate if finer role permissions land.

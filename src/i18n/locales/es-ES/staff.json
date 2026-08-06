@@ -2077,7 +2077,7 @@
       "rowCount": "{count, plural, one {# fila} other {# filas}}",
       "notIncluded": {
         "label": "No incluido, a propósito:",
-        "text": "copias de manifiestos sin conexión, notas del personal, registros de notificaciones, intentos de pago de Stripe (los resultados están en reservas y pedidos), y URLs de imágenes pegadas que nunca se guardaron. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
+        "text": "copias de manifiestos sin conexión, colas de reintento de notificaciones, la vinculación con la cuenta de Stripe, los historiales de cierre del día y de los equipos de compañeros, el estado de las cancelaciones por mal tiempo, los registros internos de conciliación de DiveDay y las URLs de imágenes pegadas que nunca se guardaron. Las notas del personal, el historial de actividad, los resultados de las notificaciones, los intentos de pago, los canjes de códigos y los interesados en cursos <mono>sí</mono> se exportan: son tus registros. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
       }
     },
     "import": {

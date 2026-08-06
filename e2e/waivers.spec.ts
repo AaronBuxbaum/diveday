@@ -71,6 +71,13 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await expect(diver.getByText("Follow up before boarding")).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
   const record = page.locator('li[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
+  // Exactly one, and that is the assertion, not an incidental `toBeVisible`.
+  // The signature log pins the `?record=` row above the paginated list, and
+  // the list used to render it a second time whenever it also fell on the
+  // visible page — two `<li>`s sharing one DOM id. Which page it lands on is
+  // decided by a random-UUID tiebreak among rows that share a signing
+  // timestamp, so this test lost that coin toss rather than catching a change.
+  await expect(record).toHaveCount(1);
   await expect(record).toBeVisible();
   await expect(record.getByText("View flagged answers")).toHaveCount(0);
 });

@@ -1005,22 +1005,39 @@ describe("diver erasure", () => {
     });
     const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
     if (!course) throw new Error("seed course missing");
-    await db.insert(courseInquiries).values({
-      shopId: shop.id,
-      courseId: course.id,
-      name: "Erasure Elena",
-      email: "ELENA@example.com",
-      phone: "+1 305 555 0142",
-      experienceLevel: "certified",
-      timing: "any weekend in September",
-      message: "Elena here — is the advanced course running?",
-    });
+    // Held by id, not by any of its own text: the sweep blanks every free-text
+    // column on this row, so after erasure there is nothing left on it to
+    // recognise it by.
+    const [elenaInquiry] = await db
+      .insert(courseInquiries)
+      .values({
+        shopId: shop.id,
+        courseId: course.id,
+        name: "Erasure Elena",
+        email: "ELENA@example.com",
+        phone: "+1 305 555 0142",
+        experienceLevel: "certified",
+        timing: "any weekend in September",
+        message: "Elena here — is the advanced course running?",
+      })
+      .returning({ id: courseInquiries.id });
+    if (!elenaInquiry) throw new Error("course inquiry insert returned no row");
 
-    return { db, shop, diver, ownerId, captainId, bookingId, trip, waiverId: issued.recordId };
+    return {
+      db,
+      shop,
+      diver,
+      ownerId,
+      captainId,
+      bookingId,
+      trip,
+      waiverId: issued.recordId,
+      elenaInquiryId: elenaInquiry.id,
+    };
   }
 
   it("scrubs every table that holds the diver's identity or medical data", async () => {
-    const { db, shop, diver, ownerId, bookingId, waiverId } = await erasableDiver();
+    const { db, shop, diver, ownerId, bookingId, waiverId, elenaInquiryId } = await erasableDiver();
 
     const result = await anonymizeDiver(db, {
       shopId: shop.id,
@@ -1197,18 +1214,32 @@ describe("diver erasure", () => {
       .where(eq(bookingCapabilities.bookingId, bookingId));
     expect(capability?.revokedAt).toBeInstanceOf(Date);
 
-    // `course_inquiries` carries no person_id at all, so it is swept on the
-    // contact details the diver themselves supplied — the only link there is.
+    // `course_inquiries` is swept three ways: on `person_id` where the lead was
+    // linked to a live diver at capture time, and otherwise on the email and
+    // phone the diver themselves supplied, which are the only handles a lead
+    // carries. Elena's lead has no `person_id` — it was written straight into
+    // the table by this fixture, not through the capture path — so it is the
+    // email/phone sweep that has to reach it.
     const inquiries = await db
       .select()
       .from(courseInquiries)
       .where(eq(courseInquiries.shopId, shop.id));
     expect(inquiries).not.toHaveLength(0);
-    expect(
-      inquiries.filter(
-        (row) => row.email !== null || row.phone !== null || row.name !== null || row.message,
-      ),
-    ).toEqual([]);
+    const elena = inquiries.find((row) => row.id === elenaInquiryId);
+    expect(elena).toBeDefined();
+    expect(elena).toMatchObject({ name: null, email: null, phone: null, message: null });
+
+    // And the half that matters at least as much: erasing one diver must not
+    // blank a bystander's lead. The seed carries three
+    // (src/db/seed-course-inquiries.ts), none of them Elena's — they must come
+    // through untouched. This assertion could not exist while the table was
+    // empty on a seeded shop, so the sweep's *scoping* was never tested at all;
+    // only its reach was.
+    const bystanders = inquiries.filter((row) => row.id !== elenaInquiryId);
+    expect(bystanders.length).toBeGreaterThan(0);
+    expect(bystanders.some((row) => row.name !== null)).toBe(true);
+    expect(bystanders.some((row) => row.message !== null)).toBe(true);
+    expect(bystanders.some((row) => row.phone !== null)).toBe(true);
   });
 
   it("erases a diver who has nothing but a name", async () => {

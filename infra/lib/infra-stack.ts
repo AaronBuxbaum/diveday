@@ -316,7 +316,13 @@ export class InfraStack extends cdk.Stack {
     // 7. Cost guardrails - alert-only, never auto-disable anything.
     // See ADR 20260802-aws-cost-guardrails for why these two mechanisms and
     // these thresholds specifically.
-    const alertEmail = this.node.tryGetContext("alertEmail") || "aaronbuxbaum@gmail.com";
+    // The operational mailbox, not a personal inbox: every other alert path in
+    // the product already terminated here (`ALERT_EMAIL` in
+    // src/lib/platform-mail.ts, Sentry issue alerts, the cron monitor's missed
+    // check-in), and the AWS cost alerts were the one that still landed
+    // somewhere else. Kept as a context override so a fork or a second account
+    // can point it elsewhere without editing the stack (OPS-4).
+    const alertEmail = this.node.tryGetContext("alertEmail") || "alerts@dive.day";
     const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 5);
 
     const emailSubscriber = (address: string): budgets.CfnBudget.SubscriberProperty => ({
