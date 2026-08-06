@@ -206,35 +206,57 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
  * departures" until a trip card matching `title` appears, then returns its
  * link locator — call `.click()`, or `.getAttribute("href")` to read the
  * path without racing the click's own navigation.
- *
- * Retries the whole crawl a couple of times: several specs create a trip on
- * the exact same frozen-clock date (e.g. every "N days from now" age-gate
- * fixture), and a sibling test's parallel worker inserting one mid-crawl can
- * shift the keyset pagination boundary out from under a single pass. A fresh
- * crawl after the DB has settled clears that; a genuinely missing trip still
- * fails once every attempt turns up nothing.
  */
 export async function findTripOnBoard(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
 ): Promise<Locator> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await page.goto(`/shop/${shopSlug}/schedule/board`);
-    for (let hops = 0; hops < 15; hops++) {
-      const link = page
-        .locator(`a[href^="/shop/${shopSlug}/trips/"]:not([href$="/trips/new"])`)
-        .filter({ hasText: title });
-      if ((await link.count()) > 0) return link.first();
-      const later = page.getByRole("link", { name: "Show later departures" });
-      if ((await later.count()) === 0) break;
-      // A plain client-side <Link> navigation — wait for the URL to actually
-      // move to the href it points at before re-checking, or the next hop's
-      // count() races the still-in-flight page transition.
-      const nextHref = await later.getAttribute("href");
-      await later.click();
-      if (nextHref) await page.waitForURL(`**${nextHref}`);
-    }
+  await page.goto(`/shop/${shopSlug}/schedule/board`);
+  for (let hops = 0; hops < 15; hops++) {
+    const link = page
+      .locator(`a[href^="/shop/${shopSlug}/trips/"]`)
+      .filter({ hasText: title });
+    if ((await link.count()) > 0) return link.first();
+    const later = page.getByRole("link", { name: "Show later departures" });
+    if ((await later.count()) === 0) break;
+    // Each hop is a client-side <Link> navigation into the segment's
+    // loading.tsx skeleton: the URL moves first, the destination's real
+    // content streams in after. `count()` doesn't auto-wait, so without a
+    // barrier the next iteration can read the linkless skeleton, see neither
+    // cards nor pager, and conclude the board ended. Every page reached via
+    // "Show later departures" carries `?after=`, which always renders the
+    // "Back to the next departure" escape link alongside the trip cards (and
+    // the skeleton contains no links at all) — so its appearance proves the
+    // streamed content is in the DOM.
+    const nextHref = await later.getAttribute("href");
+    await later.click();
+    if (nextHref) await page.waitForURL(`**${nextHref}`);
+    await page.getByRole("link", { name: "Back to the next departure" }).first().waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
+}
+
+/**
+ * A staff trip's path, read from the schedule card's own href. Clicking and
+ * then reading `page.url()` races the streaming list — the card can still be
+ * re-rendering, and the URL read lands on the wrong route.
+ */
+export async function tripPathByTitle(
+  page: Page,
+  shopSlug: string,
+  title: string | RegExp,
+): Promise<string> {
+  const link = await findTripOnBoard(page, shopSlug, title);
+  const href = await link.getAttribute("href");
+  if (!href) throw new Error(`no trip card found for ${title}`);
+  return href;
+}
+
+/** A seeded departure's trip id, found the way staff reach it. */
+export async function seededTripId(page: Page, shopSlug: string, title: string): Promise<string> {
+  const href = await tripPathByTitle(page, shopSlug, title);
+  const tripId = href.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
+  if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
+  return tripId;
 }
