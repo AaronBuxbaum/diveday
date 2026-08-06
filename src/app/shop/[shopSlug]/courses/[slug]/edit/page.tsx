@@ -8,6 +8,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
@@ -22,7 +23,6 @@ import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
-import { FieldErrorFocus } from "./_components/FieldErrorFocus";
 import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { saveCourseContentAction } from "./actions";
 
@@ -127,7 +127,9 @@ export default async function EditCoursePage({
           {errorText}
         </ShopNotice>
       ) : null}
-      <FieldErrorFocus field={error ? field : undefined} />
+      {/* Only when a save was refused — the shared component's no-`field`
+          fallback (first aria-invalid control) must not fire on a clean load. */}
+      {error ? <FieldErrorFocus field={field} /> : null}
 
       <UnsavedChangesGuard>
         <form action={saveAction} className="mt-8 flex flex-col gap-6">

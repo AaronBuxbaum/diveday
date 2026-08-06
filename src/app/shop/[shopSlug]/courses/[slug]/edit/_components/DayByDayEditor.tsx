@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { fill } from "@/i18n/fill";
 import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
 
 /**
@@ -31,13 +32,6 @@ export interface DayByDayEditorCopy {
   itemsOverMax: string;
   daysMax: string;
   addDay: string;
-}
-
-/** One-level `{token}` substitution — not a translator, just string.replace. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
 }
 
 /**

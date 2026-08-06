@@ -15,15 +15,6 @@ const emptyMember: PartyMember = { fullName: "", email: "" };
 /** Per-input error keyed by the field's form name, e.g. `email-0` or `phone`. */
 export type BookingFieldErrors = Record<string, string>;
 
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <span id={id} className="text-xs font-normal text-danger">
-      {message}
-    </span>
-  );
-}
-
 /**
  * The party editor for booking and waitlist forms. Controlled so a failed
  * server parse re-renders with everything the diver typed still in place
@@ -197,7 +188,7 @@ export function BookingPartyFields({
                     : t("party.diverNameLabel", { number: index + 1 })
                 }
                 className="text-base"
-                description={<FieldError id={`fullName-${index}-error`} message={nameError} />}
+                error={nameError}
               >
                 <input
                   name={`fullName-${index}`}
@@ -211,8 +202,6 @@ export function BookingPartyFields({
                   // first, which is exactly the friction Priya hits typing
                   // three names by hand on a phone.
                   autoComplete={index === 0 ? "name" : `section-diver${index} name`}
-                  aria-invalid={nameError ? "true" : undefined}
-                  aria-describedby={nameError ? `fullName-${index}-error` : undefined}
                   value={member.fullName}
                   onChange={(event) => updateMember(index, { fullName: event.target.value })}
                   className={controlClass}
@@ -225,19 +214,17 @@ export function BookingPartyFields({
                     : t("party.diverEmailLabel", { number: index + 1 })
                 }
                 className="text-base"
+                error={emailError}
                 description={
-                  <>
-                    <FieldError id={`email-${index}-error`} message={emailError} />
-                    {suggestion ? (
-                      <button
-                        type="button"
-                        onClick={() => updateMember(index, { email: suggestion })}
-                        className="justify-self-start text-xs font-medium text-primary hover:underline"
-                      >
-                        {t("party.didYouMeanEmail", { email: suggestion })}
-                      </button>
-                    ) : null}
-                  </>
+                  suggestion ? (
+                    <button
+                      type="button"
+                      onClick={() => updateMember(index, { email: suggestion })}
+                      className="justify-self-start text-xs font-medium text-primary hover:underline"
+                    >
+                      {t("party.didYouMeanEmail", { email: suggestion })}
+                    </button>
+                  ) : undefined
                 }
               >
                 <input
@@ -248,8 +235,6 @@ export function BookingPartyFields({
                   maxLength={200}
                   inputMode="email"
                   autoComplete={index === 0 ? "email" : `section-diver${index} email`}
-                  aria-invalid={emailError ? "true" : undefined}
-                  aria-describedby={emailError ? `email-${index}-error` : undefined}
                   value={member.email}
                   onChange={(event) => updateMember(index, { email: event.target.value })}
                   onBlur={() => setBlurred((current) => ({ ...current, [index]: true }))}
@@ -276,7 +261,7 @@ export function BookingPartyFields({
                   label={t("party.phoneLabel")}
                   hint={t("party.phoneHint")}
                   className="text-base sm:col-span-2"
-                  description={<FieldError id="phone-error" message={fieldErrors?.phone} />}
+                  error={fieldErrors?.phone}
                 >
                   <input
                     name="phone"
@@ -284,8 +269,6 @@ export function BookingPartyFields({
                     maxLength={30}
                     autoComplete="tel"
                     inputMode="tel"
-                    aria-invalid={fieldErrors?.phone ? "true" : undefined}
-                    aria-describedby={fieldErrors?.phone ? "phone-error" : undefined}
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                     className={controlClass}

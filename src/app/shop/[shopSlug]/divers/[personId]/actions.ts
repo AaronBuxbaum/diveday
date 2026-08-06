@@ -43,6 +43,7 @@ import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
@@ -65,9 +66,11 @@ const dateSchema = z.union([
 ]);
 
 const personSchema = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.union([z.literal(""), z.email().max(320)]),
-  phone: z.string().trim().max(40),
+  // Shared diver person-field bounds (src/lib/person-fields.ts); blank-able
+  // email is this form's own call — clearing a wrong address to "" is valid.
+  fullName: diverNameSchema,
+  email: z.union([z.literal(""), diverEmailSchema]),
+  phone: diverPhoneSchema,
   diveInsurance: z.string().trim().max(120),
   // Same bounds as `emergencyContactSchema` (src/lib/contact.ts), the shared
   // shape the diver-facing /ready and /waivers capture already validates

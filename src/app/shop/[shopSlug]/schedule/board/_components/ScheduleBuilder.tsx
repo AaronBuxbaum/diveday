@@ -8,6 +8,7 @@ import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFi
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { fill } from "@/i18n/fill";
 import { RepeatFields } from "./RepeatFields";
 
 /** One departure as the board hands it to the builder, already shop-local. */
@@ -217,13 +218,6 @@ function shiftIsoDay(dateIso: string, offsetDays: number): string {
   const shifted = new Date(`${dateIso}T00:00:00Z`);
   shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
   return shifted.toISOString().slice(0, 10);
-}
-
-/** Fills `{placeholder}` tokens in a server-supplied template with per-row values. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
-  );
 }
 
 /**

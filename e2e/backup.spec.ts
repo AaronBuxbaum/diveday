@@ -52,6 +52,17 @@ test.describe("backup settings", () => {
   signedInAsOwner();
 
   test("the old /settings/backup URL still lands, query and section carried", async ({ page }) => {
+    // A real 308 at the request level, not a 200 whose hop resolves inside
+    // the streamed payload — a Route Handler, because under `cacheComponents`
+    // a page-based `permanentRedirect()` answers 200 and only a browser
+    // follows it; a bookmark manager, a crawler, and a `curl` do not (ADR
+    // 20260806-one-trip-create-form).
+    const direct = await page.request.get(`${OLD_BACKUP_SETTINGS}?page=2`, {
+      maxRedirects: 0,
+    });
+    expect(direct.status()).toBe(308);
+    expect(direct.headers().location).toBe("/shop/blue-mantis/settings/export?page=2#backups");
+
     // Removing a surface never removes the destination (ADR
     // 20260806-one-data-out-surface). A bookmark deep into the delivery
     // history keeps its page, rather than silently restarting at page 1 —

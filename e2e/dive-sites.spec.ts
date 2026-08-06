@@ -328,6 +328,17 @@ test.describe("staff", () => {
   test("the old /dive-sites/catalog URL still works, and keeps the page it was deep-linked to", async ({
     page,
   }) => {
+    // A real 308 at the request level, not a 200 whose hop resolves inside
+    // the streamed payload — a Route Handler, because under `cacheComponents`
+    // a page-based `permanentRedirect()` answers 200 and only a browser
+    // follows it; a bookmark manager, a crawler, and a `curl` do not (ADR
+    // 20260806-one-trip-create-form).
+    const direct = await page.request.get("/shop/blue-mantis/dive-sites/catalog?page=2", {
+      maxRedirects: 0,
+    });
+    expect(direct.status()).toBe(308);
+    expect(direct.headers().location).toBe("/shop/blue-mantis/dive-sites?view=catalog&page=2");
+
     // The route folded into the library as `?view=catalog`
     // (ADR 20260806-dive-site-catalog-is-a-view); the links already out in
     // the world did not. A bare bookmark lands on the catalog view.

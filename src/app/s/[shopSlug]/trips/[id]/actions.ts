@@ -28,6 +28,13 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  DIVER_NAME_MAX,
+  DIVER_PHONE_MAX,
+  diverEmailSchema,
+  diverNameSchema,
+  diverPhoneSchema,
+} from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
@@ -119,12 +126,13 @@ export type BookingFormState = {
 };
 
 const bookSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
-  email: z.email().max(200),
-  phone: z.string().trim().max(30).optional(),
+  // Shared diver person-field bounds (src/lib/person-fields.ts).
+  fullName: diverNameSchema,
+  email: diverEmailSchema,
+  phone: diverPhoneSchema.optional(),
 });
 
-const emailField = z.email().max(200);
+const emailField = diverEmailSchema;
 
 const rentalFitSchema = z.object({
   bcd: z.string().optional(),
@@ -170,7 +178,7 @@ export async function bookSpot(
     const fullName = String(formData.get(`fullName-${index}`) ?? "").trim();
     const email = String(formData.get(`email-${index}`) ?? "").trim();
     if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
-    if (fullName.length > 120)
+    if (fullName.length > DIVER_NAME_MAX)
       fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
     // The lead booker's email is the one address DiveDay actually uses (the
     // confirmation, the waiver, the readiness link) and stays required.
@@ -190,7 +198,7 @@ export async function bookSpot(
   }
   const phone = String(formData.get("phone") ?? "").trim();
   const groupPreference = String(formData.get("groupPreference") ?? "").trim();
-  if (phone.length > 30) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
+  if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
   if (groupPreference.length > 300)
     fieldErrors.groupPreference = t("booking.fieldErrors.noteTooLong");
   if (Object.keys(fieldErrors).length > 0) {

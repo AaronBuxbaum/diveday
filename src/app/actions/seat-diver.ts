@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -39,9 +40,10 @@ const existingDiverSchema = z.object({ tripId: z.uuid(), personId: z.uuid() });
  */
 const newDiverSchema = z.object({
   tripId: z.uuid(),
-  fullName: z.string().trim().min(1).max(120),
-  email: z.union([z.literal(""), z.email().max(200)]).optional(),
-  phone: z.string().trim().max(30).optional(),
+  // Shared diver person-field bounds (src/lib/person-fields.ts).
+  fullName: diverNameSchema,
+  email: z.union([z.literal(""), diverEmailSchema]).optional(),
+  phone: diverPhoneSchema.optional(),
 });
 
 function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
