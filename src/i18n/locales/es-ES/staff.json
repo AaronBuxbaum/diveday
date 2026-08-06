@@ -1969,7 +1969,9 @@
         "money": "Dinero",
         "dataIntegrations": "Datos e integraciones"
       },
-      "backToSettings": "Volver a configuración",
+      "subNav": {
+        "ariaLabel": "Secciones de configuración"
+      },
       "whatsapp": {
         "heading": "WhatsApp",
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
@@ -2352,7 +2354,6 @@
     "boardedBadge": "Embarcado",
     "checkInButton": "Registrar",
     "checkInAriaLabel": "Registrar a {name}",
-    "blockersMore": "+{count} más",
     "search": {
       "label": "Escanear o buscar buceador",
       "hint": "Un lector de códigos de barras puede escribir aquí un ID de reserva.",
@@ -2442,7 +2443,8 @@
       "heading": "Mañana, de un vistazo",
       "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
       "empty": "Mañana empieza despejado.",
-      "more": "{count, plural, one {Y # más en la cola de mañana.} other {Y # más en la cola de mañana.}}"
+      "count": "{count, plural, one {# tarea espera en la cola de mañana.} other {# tareas esperan en la cola de mañana.}}",
+      "openToday": "Abrir Hoy"
     },
     "close": {
       "heading": "Cerrar el día",
@@ -2506,6 +2508,11 @@
     }
   },
   "shopHome": {
+    "closeOut": {
+      "heading": "El último barco ya está en puerto",
+      "body": "Todas las salidas de hoy han vuelto al muelle. Un repaso en el cierre del día — cómo terminó cada barco, qué sigue abierto y con qué abre mañana — y a casa.",
+      "action": "Cerrar el día"
+    },
     "createdNotice": {
       "single": "“{title}” ya está en el calendario. 🤙",
       "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"

@@ -59,6 +59,7 @@ import {
   saveTimezoneAction,
   saveUnitsAction,
 } from "./actions";
+import { SETTINGS_GROUPS } from "./settings-destinations";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
@@ -187,18 +188,11 @@ function StatusRow({
   );
 }
 
-/**
- * The page's three groups, in render order — "Your shop" / "Money" / "Data &
- * integrations" (task 154). One list rather than three literals so the
- * `JumpNav` this page feeds and the `<h2 id>` it targets cannot disagree: the
- * anchors existed for a release with nothing linking them, which is how a
- * 7,000px page ends up with no way down it but the scrollbar.
- */
-export const SETTINGS_GROUPS = [
-  { id: "your-shop", labelKey: "settings.main.groups.yourShop" },
-  { id: "money", labelKey: "settings.main.groups.money" },
-  { id: "data-integrations", labelKey: "settings.main.groups.dataIntegrations" },
-] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
+// Re-exported (not just imported) so `SettingsPage.test.tsx`'s group-anchor
+// assertions keep reading the same list `layout.tsx`'s `SettingsSubNav`
+// derives from — one registry, `settings-destinations.ts`, not a copy per
+// consumer.
+export { SETTINGS_GROUPS };
 
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 

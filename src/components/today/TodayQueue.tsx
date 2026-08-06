@@ -7,9 +7,10 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { ACTION_KIND_KEYS, seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
+import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
+import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
+import { KindChip } from "./KindChip";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
   ResendConfirmationControl,
@@ -19,23 +20,6 @@ import { WaiverSendControl } from "./WaiverSendControl";
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
 export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
-
-const CHIP_TONES = {
-  danger: "border-danger/30 bg-danger/10 text-danger",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  neutral: "border-border bg-surface-sunken text-muted",
-} as const;
-
-function KindChip({ kind, t }: { kind: TodayAction["kind"]; t: StaffTranslator }) {
-  const { tone } = ACTION_KIND_META[kind];
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
-    >
-      {t(ACTION_KIND_KEYS[kind])}
-    </span>
-  );
-}
 
 function ActionRow({
   action,
