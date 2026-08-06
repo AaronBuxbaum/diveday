@@ -33,6 +33,18 @@ type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
  * One row of signed-record evidence, shared by the "jumped to from the
  * roster" highlight and the paginated list below it, so the two never drift
  * apart in what they show.
+ *
+ * `pinned` exists because the two callers can render the *same* record at
+ * once: `?record=` is resolved independently of which page the list is
+ * showing, so whenever the pinned record also falls on the current page, both
+ * sections render it. Sharing one `id` between them put two elements with the
+ * same DOM id on the page — invalid HTML, and enough to make any
+ * `#waiver-record-…` anchor or `li[id^="waiver-record-"]` selector ambiguous
+ * (it broke the roster's own e2e journey on a strict-mode violation). The
+ * canonical id stays on the log row, which is the evidentiary record and the
+ * thing an anchor should land on; the pin is a convenience copy already at the
+ * top of the page, so it takes a deliberately non-colliding prefix rather than
+ * a suffix that would still match the same selector.
  */
 function SignedRecordRow({
   entry,
@@ -40,16 +52,18 @@ function SignedRecordRow({
   shop,
   locale,
   t,
+  pinned = false,
 }: {
   entry: NonNullable<SignedWaiverEntry>;
   shopSlug: string;
   shop: Shop;
   locale: string;
   t: StaffTranslator;
+  pinned?: boolean;
 }) {
   return (
     <li
-      id={`waiver-record-${entry.id}`}
+      id={`${pinned ? "pinned-" : ""}waiver-record-${entry.id}`}
       className="scroll-mt-24 flex flex-col gap-3 px-4 py-4 text-sm sm:flex-row sm:items-start sm:justify-between"
     >
       <div className="min-w-0">
@@ -203,6 +217,7 @@ export default async function WaiverSignaturesPage({
               shop={shop}
               locale={locale}
               t={t}
+              pinned
             />
           </ul>
         </section>

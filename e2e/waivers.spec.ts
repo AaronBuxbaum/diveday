@@ -70,7 +70,16 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diver.getByText("Follow up before boarding")).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
-  const record = page.locator('li[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
+  // Scoped to the pinned "Signed record" section rather than any row on the
+  // page: that section is what `?record=` puts the reviewer in front of, and
+  // it is present whether or not this record also happens to fall on the
+  // current page of the log below. Matching page-wide instead made the
+  // assertion depend on that coincidence — and when the seed put the record on
+  // page 1, it matched the pin *and* the log row and failed on strict mode.
+  const record = page
+    .locator('section[aria-labelledby="signed-record-heading"]')
+    .getByRole("listitem")
+    .filter({ hasText: "Morgan Vale" });
   await expect(record).toBeVisible();
   await expect(record.getByText("View flagged answers")).toHaveCount(0);
 });
