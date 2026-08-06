@@ -7,6 +7,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
+import { flushLogs } from "@/lib/observability";
 
 /**
  * A pass is one bundle build and one PUT per due shop — bounded work, but a
@@ -143,5 +144,10 @@ export async function GET(request: Request) {
     log("cron_backup_export.pass_failed", "error", { scan: "bootstrap" });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "backup_unavailable" }, { status: 503 });
+  } finally {
+    // See the identical block in the retention cron: a pass's log line is the
+    // record of what was delivered, so it is shipped before the response rather
+    // than after it (ADR 20260806-cloudwatch-log-shipping).
+    await flushLogs();
   }
 }

@@ -462,6 +462,21 @@ export const RATE_LIMITS = {
    * that stays true however many stale URLs exist for their booking.
    */
   waiverLinkResendByBooking: perHour(5),
+  /**
+   * Core Web Vitals beacons to `/api/vitals`, per IP.
+   *
+   * Public and unauthenticated by necessity — the report comes from a diver's
+   * browser before anything has identified them — and every accepted beacon
+   * costs a CloudWatch log line and moves a p75. So this bounds two things at
+   * once: ingest spend, and how far one source can drag a performance metric an
+   * alarm watches.
+   *
+   * Loose on purpose. One beacon per page view, and a shop's whole staff can
+   * sit behind one NAT address on a busy Saturday clicking through the roster
+   * all morning; 300 an hour is five a minute from that entire building, which
+   * no real use reaches and no useful attack fits inside.
+   */
+  webVitalsBeacon: perHour(300),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**

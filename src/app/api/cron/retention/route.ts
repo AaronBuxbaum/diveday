@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { pruneExpiredRecords } from "@/db/retention";
 import { log } from "@/lib/log";
+import { flushLogs } from "@/lib/observability";
 
 /**
  * A prune pass is a handful of bounded deletes (`PRUNE_BATCH_LIMIT` rows per
@@ -125,5 +126,11 @@ export async function GET(request: Request) {
     log("cron_retention.prune_failed", "error", { scan: "bootstrap" });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "prune_unavailable" }, { status: 503 });
+  } finally {
+    // The pass's log line *is* the record that it ran and what it deleted, so
+    // this is one of the few places the shipping is awaited rather than left to
+    // the post-response deferrer (ADR 20260806-cloudwatch-log-shipping). A prune
+    // takes seconds; one PutLogEvents call is not the cost that matters here.
+    await flushLogs();
   }
 }

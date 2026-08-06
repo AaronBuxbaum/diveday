@@ -83,13 +83,18 @@ and it does **not** touch `booking_capabilities` rows.
 
 ## What redaction cannot reach: the platform's access logs
 
-Everything above happens **inside this application's process**. `redactCapabilityUrl`
-has exactly three call sites — the `beforeSend` hooks on Vercel Analytics and
-Speed Insights (`src/app/observability-client.tsx`) and Sentry's
-`beforeSend`/`beforeBreadcrumb` (`src/instrumentation.ts` for the server,
-`src/instrumentation-client.ts` for the browser, both via `redactEvent` /
-`redactBreadcrumb`) — and all three edit an event *this app composes* before it
-is shipped to a vendor.
+Everything above happens **inside this application's process**. Every consumer calls
+`redactCapabilityUrl`, and each one edits an event *this app composes* before it leaves:
+
+| Consumer | Where |
+| --- | --- |
+| Vercel Analytics, Vercel Speed Insights | `beforeSend` hooks in `src/app/observability-client.tsx` |
+| Sentry (server and browser) | `beforeSend`/`beforeBreadcrumb` via `redactEvent`/`redactBreadcrumb`, wired in `src/instrumentation.ts` and `src/instrumentation-client.ts` |
+| CloudWatch RUM page views | `src/app/rum-client.tsx`. RUM's own automatic page-view recorder is switched off precisely so this is the only path a URL takes to it (ADR 20260806-cloudwatch-rum-and-vitals) |
+| The Core Web Vitals beacon | `src/app/web-vitals-client.tsx` on the way out, and again in `src/app/api/vitals/route.ts` on the way in. The server-side copy is the one that counts: a hand-rolled POST bypasses the browser entirely, and the route is what writes to a log group |
+
+All five mount through the one component (`observability-client.tsx`) for the same reason the list
+is short: a telemetry client added anywhere else would not be covered.
 
 Vercel's own request logging is not one of those events. The platform records
 the request line it routed — method, full path, query string, status — as part
