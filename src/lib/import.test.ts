@@ -251,10 +251,84 @@ describe("prepareContactImport — safety rules", () => {
   });
 
   it("maps an unknown agency to 'other' rather than dropping the card", () => {
+    // The enum is not exhaustive and never will be (IANTD, SEI, ANDI, ACUC,
+    // PSAI, NASE are all still out), so the card still has to land — under
+    // "other" rather than being thrown away, which is the behaviour this test
+    // has always been about. (It used to say CMAS, then BSAC; both are real
+    // values now — see below.)
     const csv =
-      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,CMAS,Divemaster,DM-9";
+      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,IANTD,Divemaster,DM-9";
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toMatchObject({ agency: "other", level: "divemaster" });
+  });
+
+  it("records a CMAS, RAID, GUE or BSAC card under its own agency (DOM-L1)", () => {
+    // These four were absent from the enum, so an import filed an honest card
+    // under "other" and the shop lost which agency issued it. Recording only —
+    // nothing about admission or readiness reads the agency.
+    const agencyOf = (name: string) =>
+      prepareContactImport(
+        `full_name,certification_agency,certification_level,certification_number\nA Diver,${name},Open Water,OW-1`,
+      ).rows[0]?.cert?.agency;
+
+    expect(agencyOf("CMAS")).toBe("cmas");
+    expect(agencyOf("RAID")).toBe("raid");
+    expect(agencyOf("GUE")).toBe("gue");
+    expect(agencyOf("BSAC")).toBe("bsac");
+    // And the agencies that already resolved still resolve to the same value —
+    // the new names were appended after them, never inserted ahead.
+    expect(agencyOf("PADI Open Water")).toBe("padi");
+    expect(agencyOf("SDI")).toBe("sdi");
+    // Real cell shapes: the separator is not always a space.
+    expect(agencyOf("CMAS***")).toBe("cmas");
+    expect(agencyOf("SDI/TDI")).toBe("sdi");
+  });
+
+  it("never reads a short agency code out of the middle of a word", () => {
+    // This column's header aliases include the bare "agency", and in a rival's
+    // *bookings* export an "Agency" column is the travel agency or booking
+    // source. Every cell below contains the three letters "gue", and a
+    // substring match filed each as a GUE card — an unrecognized cell became a
+    // *wrongly* recognized one, silently, because `agency_unrecognized` is
+    // only raised when nothing matched at all. That is strictly worse than
+    // `other`: a card labelled GUE that isn't fails the staffer's lookup in
+    // GUE's own portal (20260721-manual-certification), so they either refuse a
+    // certified diver at the rail or stop looking cards up — and the wrong
+    // label prints on the incident-ready export handed to authorities.
+    const rowFor = (agency: string) =>
+      prepareContactImport(
+        `full_name,certification_agency,certification_level,certification_number\nA Diver,${agency},Open Water,OW-1`,
+      ).rows[0];
+
+    const notAnAgency = [
+      "Guest",
+      "Guest Booking",
+      "Direct Guest",
+      // LIFRAS, the Belgian CMAS federation, as a European roster writes it —
+      // and note it is a CMAS body, so "read it as GUE" is wrong twice over.
+      "Ligue Francophone",
+      "Ligue Francophone de Recherches et d'Activités Subaquatiques",
+      // Not only "gue": other short codes hide inside ordinary names too.
+      "Cassidy Travel", // ssi
+      "Padilla Dive Center", // padi
+    ];
+    for (const cell of notAnAgency) {
+      const row = rowFor(cell);
+      expect(row.cert?.agency, cell).toBe("other");
+      // Silence is the actual defect: the shop must still be *told*.
+      expect(
+        row.issues.some((i) => i.code === "agency_unrecognized"),
+        cell,
+      ).toBe(true);
+    }
+
+    // Positive control — matching whole tokens must not have narrowed the real
+    // shapes a cell takes, and a genuine match still raises no issue.
+    const real = rowFor("GUE");
+    expect(real.cert?.agency).toBe("gue");
+    expect(real.issues.some((i) => i.code === "agency_unrecognized")).toBe(false);
+    expect(rowFor("GUE/DIR").cert?.agency).toBe("gue");
+    expect(rowFor("PADI #4471").cert?.agency).toBe("padi");
   });
 
   it("imports nitrox as a verified-and-flagged card only with a card number", () => {

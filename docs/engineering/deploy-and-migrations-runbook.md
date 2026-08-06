@@ -14,12 +14,12 @@ this covers what happens to it after you merge.
 ## What actually happens on deploy
 
 `scripts/vercel-build.mjs` in full, in prose: if `VERCEL_ENV === "production"`, run
-`pnpm db:migrate`; then, always, run `pnpm build`. `pnpm db:migrate` is
-`drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed `drizzle/` SQL against
-`DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a transaction-mode pooler is
-unreliable), falling back to `DATABASE_URL`.
+`node scripts/check-migrations.mjs` and then `pnpm db:migrate`; then, always, run `pnpm build`.
+`pnpm db:migrate` is `drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed
+`drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a
+transaction-mode pooler is unreliable), falling back to `DATABASE_URL`.
 
-Four consequences follow, and every one of them is load-bearing:
+Five consequences follow, and every one of them is load-bearing:
 
 | Fact | Consequence |
 | --- | --- |
@@ -27,7 +27,8 @@ Four consequences follow, and every one of them is load-bearing:
 | `pnpm db:migrate` can succeed and `pnpm build` can then fail | The database is left **migrated ahead of the live code**. The old deployment keeps serving, now against a newer schema. This is the normal failure mode, not an exotic one |
 | Preview deploys skip migrations entirely (`VERCEL_ENV !== "production"`) | **There is no rehearsal surface.** A preview runs new code against the *old* production schema, or against nothing |
 | CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
-| `drizzle/` holds 85 forward-only migration folders (`migration.sql` + `snapshot.json`), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here |
+| A destructive statement is refused before `db:migrate` runs — see [the guard](#the-guard-that-enforces-it) | **Expand/contract is enforced, not merely written.** The rule below is a mechanism now; what it does *not* cover is listed there |
+| `drizzle/` holds 86 forward-only migration folders (`migration.sql` + `snapshot.json`), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here |
 
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
@@ -106,6 +107,50 @@ finished:
 - Add `NOT NULL` to an existing column.
 - Add a `UNIQUE` or foreign-key constraint that existing rows might violate.
 - Remove an enum value.
+
+### The guard that enforces it
+
+`scripts/check-migrations.mjs` reads the SQL of every migration newer than the previous release and
+refuses the contracting statements above. It runs in two places: `pnpm check:repo` (so a branch fails
+locally and in CI, before anything is merged) and `scripts/vercel-build.mjs` immediately before
+`pnpm db:migrate` (so a production build refuses before any DDL touches Neon). See
+[ADR 20260806-destructive-migration-guard](../architecture/decisions/20260806-destructive-migration-guard.md).
+
+**Refused** — fourteen shapes, each named by a rule id you will see in the failure:
+
+| Rule id | Statement |
+| --- | --- |
+| `drop-table`, `drop-schema`, `drop-type`, `drop-extension` | `DROP TABLE` / `SCHEMA` / `TYPE` / `EXTENSION` |
+| `truncate`, `delete-without-where` | `TRUNCATE`, and a `DELETE FROM` with no `WHERE` |
+| `drop-column`, `drop-constraint` | `ALTER TABLE … DROP COLUMN` / `DROP CONSTRAINT` |
+| `rename-table`, `rename-column`, `rename-type` | `ALTER TABLE … RENAME TO` / `RENAME COLUMN`, `ALTER TYPE … RENAME` |
+| `alter-column-type`, `set-not-null`, `drop-default` | `ALTER TABLE … ALTER COLUMN …` `TYPE` / `SET NOT NULL` / `DROP DEFAULT` |
+
+**Allowed**, and asserted to stay allowed by `scripts/check-migrations.test.mjs`: `CREATE TABLE`,
+`ADD COLUMN` (including `NOT NULL DEFAULT` inline), `CREATE INDEX` and `CREATE INDEX CONCURRENTLY`,
+`DROP INDEX`, `ALTER TYPE … ADD VALUE`, `CREATE TYPE … AS ENUM`, `ADD CONSTRAINT … NOT VALID`,
+`VALIDATE CONSTRAINT`, `ADD CONSTRAINT … FOREIGN KEY`, `DROP NOT NULL`, `SET DEFAULT`, and a
+`WHERE`-bounded `UPDATE` backfill. In other words: everything in the expand list above.
+
+**Not covered.** `DROP VIEW` / `DROP FUNCTION` / `DROP TRIGGER` (this schema has none), and the
+constraint *additions* in the contract list — drizzle emits an `ADD CONSTRAINT … FOREIGN KEY` for
+every new table, so a rule there would fire on nearly every additive migration and train everyone to
+wave the guard through. Those two lines of the contract list are still yours to follow by hand. The
+guard is regex-level and cooperative, not a boundary; dynamically assembled DDL will pass it.
+
+**When a statement genuinely cannot break the live deployment**, say so in the migration SQL itself,
+on its own comment line — never with an environment variable, because the deploy this guards is the
+rushed one:
+
+```sql
+-- diveday:allow-destructive drop-column people.full_name: release 4 of the rename; no instance has read it since #391
+ALTER TABLE "people" DROP COLUMN "full_name";
+```
+
+The rule id must be one from the table, the target's every dot-separated part must appear in the
+statement it excuses (so one marker cannot cover a file), and the reason must be at least twenty
+characters. A marker that excuses nothing, names an unknown rule, or breaks the grammar is itself a
+failure — silence there would read exactly like consent.
 
 ### How a rename is split across releases
 
@@ -192,8 +237,8 @@ recorded here so the next person does not have to rediscover the problem.
 ## What this runbook does not cover
 
 - **No staging environment exists.** Preview deploys do not migrate, so there is no environment where
-  a migration runs before production does. Reviewing the SQL by hand and keeping it expand-only is
-  the entire safety net.
+  a migration runs before production does. The destructive-DDL guard refuses the *shapes* that break
+  a live deployment; reviewing the SQL by hand is still what catches everything else.
 - **No migration testing against realistic data volumes.** The `real-postgres` job proves the SQL
   applies — from empty and from the previous release — but only ever to an empty database. Lock
   duration, backfill runtime, and constraints that existing rows violate are all still discovered in
@@ -208,6 +253,7 @@ recorded here so the next person does not have to rediscover the problem.
 
 | Symptom | Look at |
 | --- | --- |
+| Deploy red, "Destructive migration statements", before `db:migrate` | The guard refused. **Nothing ran** — the schema is untouched and the previous deployment is unaffected. Split the change across releases per [the guard](#the-guard-that-enforces-it), or acknowledge the statement in the SQL. This should have been caught by `pnpm check:repo` on the branch |
 | Deploy red, error in `pnpm db:migrate` | The migration never applied (drizzle-kit runs each file transactionally). Schema is unchanged; fix the SQL and re-merge. Read the Vercel build log, not the app logs |
 | Deploy red, error in `pnpm build`, migration already ran | Schema is ahead of live code. Expand-only migration → harmless, fix the build. Contracting migration → the "build failed after migration" path above |
 | App 500s immediately after a green deploy, errors mention a column | A contracting change shipped in one deploy, or old instances are still draining. Instant Rollback first, diagnose second — see [incident-response-runbook.md](incident-response-runbook.md) |

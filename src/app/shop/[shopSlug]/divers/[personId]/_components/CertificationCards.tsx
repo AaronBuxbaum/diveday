@@ -96,7 +96,22 @@ export async function CertificationCards({
                 ))}
               </select>
             </Field>
-            <Field label={t("divers.certifications.level")}>
+            {/* The ladder is agency-neutral by design, but the words on the
+                card are not: a staffer holding a CMAS 2★ or a BSAC Sports
+                Diver has to decide which rung it is, and the answer lived only
+                in the glossary. It belongs where the picking happens
+                (docs/product/glossary.md — CMAS, RAID, GUE). */}
+            <Field
+              label={t("divers.certifications.level")}
+              description={
+                <>
+                  <span className="block">{t("divers.certifications.levelMapping")}</span>
+                  <span className="mt-1 block">
+                    {t("divers.certifications.levelMappingCaution")}
+                  </span>
+                </>
+              }
+            >
               <select name="level" className={controlClass}>
                 {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                   <option key={value} value={value}>

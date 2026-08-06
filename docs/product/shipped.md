@@ -7,6 +7,61 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 review's data, i18n and telemetry residue (delivered 2026-08-06)
+
+The buildable tail of the same review. Three of its items turned out to already be closed and were
+re-verified rather than rebuilt; the rest are below. Two of them found live bugs while being built,
+which is the argument for building them.
+
+**A contracting migration cannot reach the database unannounced** (DATA-L5). Migrations apply inside
+the Vercel production build, while the *previous* release is still serving traffic, and there are no
+down migrations — and nothing checked that a migration was safe under those conditions.
+`scripts/check-migrations.mjs` refuses fourteen destructive statement shapes in anything newer than
+the previous release, and what it deliberately allows matters as much: `ALTER TYPE … ADD VALUE`,
+`CREATE INDEX` and `ADD COLUMN` all pass, because a guard that refuses the common safe case teaches
+everyone to wave it through. Its escape hatch is a marker in the migration SQL naming the rule and a
+reason, not an env var a rushed deploy can flip. It refused a migration in its own pull request on
+the first run.
+[20260806-destructive-migration-guard](../architecture/decisions/20260806-destructive-migration-guard.md).
+
+**Two arrays that had to agree became one object per photo** (DATA-L4). `courses.image_urls` and
+`image_alts` were parallel jsonb arrays paired by position and nothing else, so one drifted row
+captioned every photo after it with the previous photo's words — invisible on screen, and wrong for
+exactly the readers alt text exists for. The backfill decides what an already-drifted row becomes
+rather than leaving it to whichever array was shorter. Expand only: the old columns stay a release
+and keep being written, which is the rule the new guard exists to enforce. Three uncovered `ILIKE`
+arms gained trigram indexes; a fourth the review named turned out to be indexed already (DATA-L6).
+And CMAS, RAID and GUE joined the agency enum, so a diver holding one of those cards can be recorded
+honestly instead of as "other" (DOM-L1).
+
+**The offline shell stopped downloading a roster to learn one word** (new in the same review). It
+needed a single string — which shop this browser is signed in as, for the cross-shop purge — and got
+it by asking for the shop's entire 48-hour board: diver names, emergency contacts, readiness
+blockers, on the one surface that runs on a shared boat tablet. A separate identity route now answers
+`{ shop: { slug } }` and nothing else; a path was chosen over a query flag because a dropped or
+mistyped flag degrades to the full roster with a 200 and a path cannot fail open. Both routes send
+`no-store` on every response including refusals — load-bearing rather than hygiene, since a cached
+answer would have the purge delete the current captain's manifests and keep the previous shop's.
+Found while building it: the service worker's push refresh had been reading the wrong key and had
+never saved a snapshot.
+
+**A diver whose language DiveDay does not carry is now told so** (I18N-L1..L3) — one band naming the
+requested language by its own endonym, so the token they recognise sits inside a sentence they
+cannot read. No switcher: the finding was silence, not absence of choice. Trip times name their zone
+on the screen where a diver commits, stated once per page rather than stamped on every row. The a11y
+scan reaches twenty-one surfaces, chosen by consequence, including two post-write renders no
+route-level scan can produce.
+
+**The capability-URL residual is written down** (OPS-L1). Vercel's access logs retain every raw
+bearer-capability URL and the app's redaction provably cannot reach them — it runs in-process, in
+three `beforeSend` hooks, while the platform records the request line before any DiveDay code is
+entered. The runbook now carries the exposure, the compensating controls with their limits rather
+than their headlines, an audit procedure, and why the alternatives all break the paste-into-an-SMS
+property the design exists for. Writing it up found `/unsubscribe/[token]`, a tenth capability route
+the redaction list had never covered; the list is now asserted against the `[token]` directories on
+disk, so the next one fails on the commit that creates it rather than on the review that happens to
+look.
+
 ## The 2026-08-02 review's operations, testing and payments residue (delivered 2026-08-06)
 
 Ten findings closed together, all of them the same species: a mechanism that was written down

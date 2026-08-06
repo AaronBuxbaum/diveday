@@ -1,3 +1,4 @@
+import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   MAX_MANIFEST_SUBSCRIBERS,
@@ -101,18 +102,66 @@ function logAtCapacity(tripId: string, subscribers: number): void {
 
 /**
  * Push "this trip's roll call changed" to the offline manifest manager, so it
- * refreshes without waiting for its interval. Staff-session-gated the same
- * way the manifest page itself is, plus the same shop-ownership check
- * `getTripWithBooked` enforces elsewhere — a stream can never observe a trip
- * outside the caller's own shop.
+ * refreshes without waiting for its interval. Gated on the caller's *live*
+ * staff roles, plus the same shop-ownership check `getTripWithBooked` enforces
+ * elsewhere — a stream can never observe a trip outside the caller's own shop.
+ *
+ * **Subscribe time only, deliberately, and {@link STREAM_TTL_MS} is what makes
+ * that enough.** A connection held open after the staffer is removed is a real
+ * question, not a hypothetical, so the answer is a bound rather than a shrug:
+ * this route retires every stream itself at four minutes and the client
+ * reconnects two seconds later into a fresh `GET` that runs this whole gate
+ * again. The exposure of an already-open stream is therefore under four minutes,
+ * not thirty days — and what leaks inside it is `event: manifest-changed` with
+ * an empty body: a "something on this boat moved" ping, carrying no roster. Every
+ * byte the client fetches in response goes through separately gated routes,
+ * which now refuse them.
+ *
+ * Re-checking mid-stream would cost the opposite of what this route is for. The
+ * only places to hang it are the 25s heartbeat or the notification callback: the
+ * first turns one push channel into ~10 role lookups per stream lifetime times
+ * every subscriber on the instance, on the same pool the whole app shares, to
+ * shave at most four minutes off a ping; the second puts a database round trip
+ * inside the shared dispatch loop every subscriber rides on, where the route's
+ * own notes (see `send` below) say a throw takes out every *other* viewer. A
+ * cheaper wall already exists and is the one that matters: the data routes.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
+  // A pre-filter, not the gate. Deliberately ahead of any database work so a
+  // caller with no session — or a token that never claimed a staff role — is
+  // refused without costing a connection (there is a test asserting `getDb` is
+  // never reached on this path). The roles it reads are whatever the JWT was
+  // stamped with at sign-in, which is exactly why it cannot be the last word.
   if (!session?.user || !isStaff(session.user.roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
   const { id: tripId } = await params;
   const db = await getDb();
+
+  // The gate that decides: live roles, re-read on every subscribe. No `maxAge`
+  // is set on the session (src/lib/auth.config.ts), so NextAuth's 30-day default
+  // applies — a staffer removed from this shop this morning still carries
+  // `captain` in their token for a month, and `/api/**` is outside the edge gate
+  // (src/proxy.ts), so this handler is the only wall. `loadActiveStaffRoles`
+  // exists for that window (ADR 20260724-role-authorization): it is null for a
+  // deleted person, a disabled account, or someone who was never this shop's,
+  // and the roles it does return are the `person_roles` of right now.
+  //
+  // Before the trip lookup, unlike the sibling offline-manifest routes, and for
+  // a reason that does not apply here: those sequence the live check after a
+  // *tenant* row read, because `loadActiveStaffRoles` is shop-scoped and would
+  // answer 401 for a session pointing at a vanished shop where the caller is
+  // owed a 404. This route reads no shop row at all — `shopId` comes straight
+  // off the session, and `getTripWithBooked` is a resource lookup *inside* that
+  // tenant. So there is no 404 to protect, and putting the gate first means a
+  // revoked staffer cannot use the difference between 404 and 200 to probe which
+  // trip ids their former shop has.
+  const roles = await loadActiveStaffRoles(db, session.user.shopId, session.user.personId);
+  if (!roles || !isStaff(roles)) {
+    return Response.json({ error: "authentication_required" }, { status: 401 });
+  }
+
   const trip = await getTripWithBooked(db, session.user.shopId, tripId);
   if (!trip) return Response.json({ error: "not_found" }, { status: 404 });
 

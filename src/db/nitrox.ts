@@ -3,12 +3,12 @@ import { nowDate } from "@/lib/clock";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { type ReviewRefusal, reviewNoteFor } from "./readiness";
-import { bookings, nitroxCertifications, people, shops } from "./schema";
+import { bookings, type CertificationAgency, nitroxCertifications, people, shops } from "./schema";
 
 export type NewNitroxCertification = {
   shopId: string;
   personId: string;
-  agency: "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
+  agency: CertificationAgency;
   identifier: string;
 };
 

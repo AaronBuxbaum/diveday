@@ -86,3 +86,45 @@ export function negotiateLocale(
 export function firstHandLocale(acceptLanguage: string | null | undefined): DiverLocale | null {
   return matchLocale(parseAcceptLanguage(acceptLanguage));
 }
+
+/** A language a visitor asked for and DiveDay has no bundle for. */
+export type UnsupportedLanguage = {
+  /** The best-quality tag the header offered, verbatim — e.g. `"de-CH"`. */
+  tag: string;
+  /** Its primary subtag (`"de"`), which is what a language name is looked up by. */
+  language: string;
+};
+
+/**
+ * A language the visitor asked for that DiveDay does not carry — or null when
+ * it carried one, or asked for nothing at all.
+ *
+ * This is the third question about the same header, and the one nothing used
+ * to ask. {@link negotiateLocale} answers "what do I render", {@link
+ * firstHandLocale} answers "what may I remember about this person"; neither
+ * can answer "does this person know why they are reading English". A diver
+ * whose device asks for German gets the shop's language with no
+ * acknowledgement at all, which is the honest gap in having no switcher by
+ * design (review finding I18N-L1) — a switcher would be a lie, since there is
+ * no third bundle to switch to, but silence is a smaller lie rather than none.
+ *
+ * The primary subtag is validated (`de`, `zh`, `fil`) before it leaves here.
+ * `Intl.DisplayNames` throws a `RangeError` on a structurally invalid language
+ * code, and this header is attacker-controllable on a public page, so the
+ * guard is what keeps a junk `Accept-Language` from becoming a 500.
+ */
+export function unsupportedLanguage(
+  acceptLanguage: string | null | undefined,
+): UnsupportedLanguage | null {
+  const preferences = parseAcceptLanguage(acceptLanguage);
+  if (matchLocale(preferences) !== null) return null;
+  for (const { tag } of preferences) {
+    // Same reasoning as `matchLocale`: `*` means "anything", which is not a
+    // request for a language and so is not an unmet one either.
+    if (tag === "*") continue;
+    const language = tag.split("-")[0]?.toLowerCase();
+    if (!language || !/^[a-z]{2,3}$/.test(language)) continue;
+    return { tag, language };
+  }
+  return null;
+}

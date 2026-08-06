@@ -1,12 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
+import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
-import { people, shops, waiverRecords, waiverTemplates } from "./schema";
+import { people, personRoles, shops, userAccounts, waiverRecords, waiverTemplates } from "./schema";
 import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
@@ -710,6 +711,166 @@ describe("staff records a paper / in-person signature", () => {
       .from(waiverRecords)
       .where(eq(waiverRecords.bookingId, booking.id));
     expect(rows).toHaveLength(0);
+  });
+});
+
+/**
+ * Security review of the live-roles work, following 40d0a09's fix to the three
+ * roll-call writers in `src/db/manifests.ts`. This writer authorized its
+ * attestor with the same hand-rolled `person_roles` join — `people.id` /
+ * `people.shopId` / `person_roles.role` — and checked neither
+ * `people.deleted_at` nor `user_accounts.status`. So the two cases
+ * `loadActiveStaffRoles` exists for both got through:
+ *
+ * - a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
+ *   leaves every role row exactly where it is;
+ * - a **disabled** account, because `setStaffAccountStatus` revokes sign-in and
+ *   leaves `person_roles` entirely intact — a suspended employee keeps every
+ *   role row they had, which is a role row outliving the person's standing by
+ *   design rather than by oversight.
+ *
+ * What each bought is not a read: it is an immutable `waiver_records` row,
+ * status `completed`, `signature_method` `in_person_attested`, stamped
+ * `recorded_by_person_id`. That row is a signed medical and liability release
+ * and the stamp is the shop's answer to "who watched this diver sign?" — a
+ * document that may have to stand up outside the company, attributed to
+ * somebody the shop had already removed. So the assertion that matters in every
+ * test below is not the refusal code, it is that no record exists afterwards.
+ *
+ * The refusal stays the writer's existing `staff_not_found`: it is the same
+ * answer to the same question, and both server actions above it
+ * (`markWaiverInPersonAction`, `markWaiverInPersonFromCheckIn`) already fold
+ * every non-medical refusal into one `waiver-error` notice.
+ */
+describe("the in-person attestor must be live staff (defence in depth)", () => {
+  async function liveStaff(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
+    const [staff] = await listStaff(db, shopId);
+    if (!staff) throw new Error("demo staff missing");
+    return staff.person;
+  }
+
+  /** Every release on file for this booking, whatever its status. */
+  async function recordsFor(
+    db: Awaited<ReturnType<typeof waiverContext>>["db"],
+    bookingId: string,
+  ) {
+    return db.select().from(waiverRecords).where(eq(waiverRecords.bookingId, bookingId));
+  }
+
+  it("refuses a deleted person, and records no release in their name", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await liveStaff(db, shop.id);
+    // `deleteDiver`'s soft delete, which touches nothing but this column — the
+    // staff roles that authorized them are all still sitting there.
+    await db.update(people).set({ deletedAt: now }).where(eq(people.id, staff.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+
+    // The outcome that matters. A refusal that still wrote the release would be
+    // no fix at all: the row is the document, and it is immutable.
+    expect(await recordsFor(db, booking.id)).toEqual([]);
+  });
+
+  it("refuses a disabled account still holding a stale role row, and records no release", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await liveStaff(db, shop.id);
+    // Access revoked, roster row intact — what `setStaffAccountStatus` leaves
+    // behind. Sign-in already refuses this account; until now the writer did not.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, staff.id));
+    // The stale role row is the whole point of the case, so prove it is there
+    // rather than assuming it.
+    expect(
+      await db.select().from(personRoles).where(eq(personRoles.personId, staff.id)),
+    ).not.toEqual([]);
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await recordsFor(db, booking.id)).toEqual([]);
+  });
+
+  it("still lets live staff attest, and still refuses one demoted to diver", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const staff = await liveStaff(db, shop.id);
+    // The control for both refusals above: same shop, same booking, same call —
+    // only the attestor's standing differs.
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toMatchObject({ ok: true, alreadySigned: false });
+    expect(await recordsFor(db, booking.id)).toMatchObject([
+      { status: "completed", recordedByPersonId: staff.id },
+    ]);
+
+    // Demotion is the case the hand-rolled join did catch, and the rewrite must
+    // keep catching it: every staff role gone, a `diver` row left. The gate runs
+    // before the idempotency read, so the answer is the refusal rather than the
+    // cheerful `alreadySigned` a signed booking would otherwise get.
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values({ personId: staff.id, role: "diver" });
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    // Still just the one release the live staff member attested.
+    expect(await recordsFor(db, booking.id)).toHaveLength(1);
+  });
+
+  it("leaves a live pending link signable when it refuses", async () => {
+    // Adversarial: the writer retires any live pending link so its bearer token
+    // cannot complete a second record. That happens *after* the staff gate, so
+    // a refused attestation must leave the diver's own link exactly as it was —
+    // a removed staff member must not be able to burn a diver's waiver link
+    // just by tapping "signed on paper".
+    const { db, shop, booking } = await waiverContext();
+    const staff = await liveStaff(db, shop.id);
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await db.update(people).set({ deletedAt: now }).where(eq(people.id, staff.id));
+
+    expect(
+      await recordInPersonWaiver(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+    expect((await recordsFor(db, booking.id)).map((row) => row.status)).toEqual(["pending"]);
   });
 });
 

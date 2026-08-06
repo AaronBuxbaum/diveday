@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
-import { STAFF_ROLES } from "@/lib/authz";
+import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { personNamesMatch } from "@/lib/person-name";
@@ -11,18 +11,11 @@ import {
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
 import type { MedicalAnswers } from "./schema";
-import {
-  bookings,
-  people,
-  personRoles,
-  shops,
-  trips,
-  waiverRecords,
-  waiverTemplates,
-} from "./schema";
+import { bookings, people, shops, trips, waiverRecords, waiverTemplates } from "./schema";
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -691,6 +684,44 @@ export type InPersonWaiverOutcome =
     };
 
 /**
+ * The `people.id` of the staff member whose name goes on a paper release, or
+ * `null` when whoever is claiming to attest it is not this shop's live staff
+ * right now.
+ *
+ * This used to be a hand-rolled `person_roles` join here — `people.id` /
+ * `people.shopId` / `person_roles.role` and nothing else. That catches what it
+ * was written for (a diver, or somebody demoted out of every staff role) and
+ * misses the two cases `loadActiveStaffRoles` exists for: a **deleted** person,
+ * because `deleteDiver` sets `people.deleted_at` and leaves every role row
+ * where it is, and a **disabled** account, because `setStaffAccountStatus`
+ * revokes sign-in and leaves `person_roles` entirely intact — a suspended
+ * employee keeps every role row they had. Both wrote a real, immutable
+ * `waiver_records` row stamped `recorded_by_person_id`.
+ *
+ * That row is a signed medical and liability release, and the stamp is the
+ * shop's answer to "who watched this diver sign?". A release attributed to
+ * somebody the shop had already removed is a document that may have to stand up
+ * outside the company, so the gate belongs in the writer rather than only in
+ * the two server actions above it.
+ *
+ * `src/db/authz.ts` is the one place the rule lives; `loadActiveStaffRoles`
+ * takes a `DbExecutor`, so it composes inside this transaction unchanged and
+ * "who counts as live staff" widens once for the role gates and this writer
+ * together. Same shape as `activeStaffRecorderId` in `src/db/manifests.ts`.
+ */
+async function activeStaffAttestorId(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(tx, shopId, personId);
+  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
+  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
+  // the old join expressed as an `inArray`.
+  return roles && isStaff(roles) ? personId : null;
+}
+
+/**
  * A staff member records that a diver signed the release on paper — a copy on
  * the boat or handed over on shore — for a diver the app never sees sign. The
  * result is the same immutable completed record a diver self-service completion
@@ -721,19 +752,8 @@ export async function recordInPersonWaiver(
   const now = input.now ?? nowDate();
   if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
   return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.recordedByPersonId),
-          eq(people.shopId, input.shopId),
-          inArray(personRoles.role, [...STAFF_ROLES]),
-        ),
-      )
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    const attestedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
+    if (!attestedBy) return { ok: false, reason: "staff_not_found" };
 
     const [booking] = await tx
       .select({
@@ -810,7 +830,7 @@ export async function recordInPersonWaiver(
         expiresAt: now,
         signedName: evidence.signerName,
         signatureMethod: evidence.method,
-        recordedByPersonId: staff.id,
+        recordedByPersonId: attestedBy,
         consentedAt: evidence.consentedAt,
         signedAt: evidence.signedAt,
         completedAt: now,

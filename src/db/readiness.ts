@@ -14,7 +14,7 @@ import {
 import { effectiveWaiverForBooking } from "@/lib/waivers";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { paymentsByBooking } from "./payments";
-import type { DiveSpecialty } from "./schema";
+import type { CertificationAgency, DiveSpecialty } from "./schema";
 import {
   bookings,
   certifications,
@@ -172,7 +172,7 @@ export async function getTripMaxDepthMeters(
 export type NewCertification = {
   shopId: string;
   personId: string;
-  agency: "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
+  agency: CertificationAgency;
   level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
@@ -343,7 +343,7 @@ export async function highestVerifiedCertificationLevel(
 export type NewSpecialtyCertification = {
   shopId: string;
   personId: string;
-  agency: "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
+  agency: CertificationAgency;
   specialty: DiveSpecialty;
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */

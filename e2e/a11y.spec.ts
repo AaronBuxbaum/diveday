@@ -1,7 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  createTrip,
   daysFromNow,
   e2eNow,
   findTripOnBoard,
@@ -130,6 +133,8 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   });
 
   test("the staff manifest page has no automated a11y violations", async ({ page }) => {
+    // 2 scans at ~3.5s each, plus the board crawl and the export render.
+    test.setTimeout(70_000);
     await page.goto("/shop/blue-mantis/schedule/board");
     await page
       .locator("li")
@@ -141,6 +146,18 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .getByRole("link", { name: "Manifest" })
       .click();
     await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The document that leaves the building. One tap from the manifest turns
+    // the departure into the print-ready record of who was aboard, the
+    // roll-call timeline and the certification evidence — the page a shop
+    // hands an insurer or an authority after something goes wrong, and the one
+    // safety-critical surface downstream of roll call that nothing scanned. It
+    // is also a table-and-definition-list document rather than a form, which is
+    // the markup shape an automated landmark/heading scan has the most to say
+    // about.
+    await page.getByRole("link", { name: "Incident-ready export" }).click();
+    await page.waitForURL(/\/incident-export$/);
     await expectNoA11yViolations(page);
   });
 
@@ -266,13 +283,20 @@ test.describe("automated accessibility scans of the static staff routes", () => 
   test("the settings surfaces and the not-found backstop have no automated a11y violations", async ({
     page,
   }) => {
-    // 6 scans at ~3.5s each.
-    test.setTimeout(70_000);
+    // 7 scans at ~3.5s each.
+    test.setTimeout(85_000);
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/settings", heading: "Shop settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
       { path: "/shop/blue-mantis/settings/import", heading: "Import contacts" },
       { path: "/shop/blue-mantis/settings/export", heading: "Data export" },
+      // Export's sibling, and the one settings route this table had never
+      // named: scheduled backup to the shop's own storage (ADR
+      // 20260804-shop-owned-backup-export). It carries the same class of
+      // secret-bearing credential form `/settings/import` and `/settings/export`
+      // do — a field nobody can label here is a field a shop fills wrong, on the
+      // surface that decides whether their data survives losing us.
+      { path: "/shop/blue-mantis/settings/backup", heading: "Backups" },
       { path: "/shop/blue-mantis/settings/calendar", heading: "Calendar subscriptions" },
       // The app-wide `notFound()` backstop (src/app/not-found.tsx). Scanned
       // under a staff session because that is the session a mistyped `/shop`
@@ -467,6 +491,157 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
       { path: "/shop/blue-mantis/settings/whatsapp", heading: "WhatsApp" },
     ]);
   });
+
+  test("the end-of-day close-out has no automated a11y violations, open and closed", async ({
+    page,
+  }) => {
+    // 2 scans at ~3.5s each, plus the close-the-day round trip.
+    test.setTimeout(70_000);
+    // The ritual that ends every working day (ADR 20260804-day-closeout), and a
+    // page the static table could have reached by URL all along and never did.
+    // Its body is a decision form: one radio group per leftover, defaulting to
+    // carry, above a single act that records every choice at once. A radio
+    // group with no accessible grouping is exactly the defect that leaves a
+    // keyboard user unable to tell which departure they are answering for.
+    await page.goto("/shop/blue-mantis/close-out", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: /Everyone is home|A few things are still open|A quiet day at the dock/,
+      }),
+      "/shop/blue-mantis/close-out never rendered its <h1>",
+    ).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // And the state after the act. Closing appends a record and re-renders the
+    // page with a section that did not exist a moment ago — who closed it, when,
+    // and what they decided about each leftover — while nothing locks. A render
+    // that only exists after a write is the kind no route-level scan reaches.
+    await page
+      .getByRole("button", { name: /^Close the day( again)?$/ })
+      .first()
+      .click();
+    await expect(page.getByRole("heading", { name: "Day closed" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("the weather blow-out cascade has no automated a11y violations", async ({ page }) => {
+    // 2 scans at ~3.5s each, plus the board crawl and the cascade write.
+    test.setTimeout(80_000);
+    // The highest-consequence act on the schedule: cancelling a departure that
+    // has live bookings on it. Both halves are scanned because they are two
+    // different surfaces — the confirm page a staffer reads *before* messaging
+    // every booked diver, and the cascade record they work from afterwards.
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, REEF_TRIP);
+    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The record: a per-diver table of message state, money and offers, with a
+    // retry affordance on every unresolved row. The fleet configures no email
+    // provider, so every row lands in its "Not sent / Unresolved" state — which
+    // is the densest and least-looked-at render this page has.
+    await page.getByRole("button", { name: "Call the blow-out" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+});
+
+/**
+ * The diver's own bearer-token surfaces.
+ *
+ * `/waivers/<token>` is scanned at the top of this file and was, until now, the
+ * only one of the eight. The rest are where a diver does the work a shop needs
+ * them to do — fill in an emergency contact, state a rental fit, take over a
+ * seat someone booked for them, write a review — and they are the surfaces a
+ * diver reaches on a phone, from a text message, often on the morning of the
+ * dive. Nobody at the shop ever sees them, so nothing about a broken label here
+ * gets reported; it just quietly costs the diver the step.
+ *
+ * The URL *is* the capability on all of them (docs
+ * capability-telemetry-runbook), so each one is reached the way its own owner
+ * reaches it — followed out of a confirmation, or minted from the seeded
+ * booking — rather than typed.
+ */
+test.describe("automated accessibility scans of the diver bearer-token surfaces", () => {
+  test("the readiness and seat-claim pages have no automated a11y violations", async ({ page }) => {
+    // A trip creation, a two-seat booking, and 2 scans at ~3.5s each.
+    test.setTimeout(120_000);
+    const title = `A11y Bearer Trip ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(7),
+      departsAt: "08:30",
+      returnsAt: "12:30",
+      capacity: 6,
+      price: 110,
+    });
+    await signOut(page);
+
+    // Two seats, because that is what puts an unclaimed seat — and therefore a
+    // claim link — on the confirmation (ADR 20260804-seat-claim-links).
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
+    const partySize = page.getByLabel("Number of divers");
+    await expect(partySize).toHaveAttribute("data-hydrated", "true");
+    await partySize.selectOption("2");
+    await page.getByLabel("Name", { exact: true }).fill("Iris Marlow");
+    await page.getByLabel("Email", { exact: true }).fill(`iris-${e2eNow().getTime()}@example.com`);
+    await page.getByLabel("Diver 2 name").fill("Tem Okafor");
+    await page.getByLabel("Use the main contact's email for this diver").check();
+    await page.getByRole("button", { name: "Book these spots" }).click();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Iris/ })).toBeVisible();
+
+    // Read both links off the confirmation before navigating away from it: one
+    // page visit yields both capabilities, and neither can be typed.
+    const readinessHref = await page
+      .getByRole("link", { name: /readiness page/ })
+      .getAttribute("href");
+    const seatRow = page
+      .locator("section", { has: page.getByRole("heading", { name: "Your group’s seats" }) })
+      .locator("li")
+      .filter({ hasText: "Tem Okafor" });
+    await seatRow.getByText("Show link").click();
+    const claimPath = ((await seatRow.locator("p.font-mono").textContent()) ?? "").match(
+      /\/claim\/[^\s/?#]+/,
+    )?.[0];
+    expect(claimPath, "the group panel offered no claim link to scan").toBeTruthy();
+
+    // The prep hub: an emergency-contact form, a rental-fit form, a waiver
+    // hand-off and a checklist whose rows change state as they are satisfied.
+    // The densest diver-facing form surface in the product after booking, and
+    // the one a diver is most likely to be filling in on a phone at a dock.
+    await page.goto(readinessHref ?? "/");
+    await expect(page).toHaveURL(/\/ready\//);
+    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The claim page: a stranger's first-ever DiveDay screen, arriving from a
+    // forwarded message with three fields between them and a seat on a boat.
+    await page.goto(claimPath ?? "/");
+    await expect(
+      page.getByRole("heading", { name: `A seat on ${title} is waiting for you` }),
+    ).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("the post-trip recap has no automated a11y violations", async ({ page }) => {
+    test.setTimeout(60_000);
+    // Minted from the seeded booking rather than flown to through a whole
+    // finished trip — same door e2e/recap.spec.ts and the visual suite use.
+    // The recap is where a diver writes the shop's public review and uploads
+    // photos: a star-rating control, a file input and a free-text form, all of
+    // them hand-rolled markup no other scan in this file covers.
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
 });
 
 /**
@@ -571,8 +746,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   test("the marketing, account and diver surfaces have no automated a11y violations", async ({
     page,
   }) => {
-    // 6 scans at ~3.5s each.
-    test.setTimeout(60_000);
+    // 7 scans at ~3.5s each.
+    test.setTimeout(75_000);
     await scanStaticRoutes(page, [
       // The landing page and the two account-lifecycle forms. Each renders a
       // single `<h1>`, so matching any non-empty one is enough and keeps this
@@ -589,6 +764,45 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    await scanStaticRoutes(page, [{ path: "/s/blue-mantis/courses", heading: "Courses" }]);
+    await scanStaticRoutes(page, [
+      { path: "/s/blue-mantis/courses", heading: "Courses" },
+      // One course page in full, not just the catalog index. It is the longest
+      // diver-facing document in the product — hero photo, gallery, FAQ
+      // disclosures, a session list and an inquiry form — and it is where an
+      // uncertified visitor decides to buy a course, which is the highest-value
+      // conversion on the diver side. Unlike the seeded reef trip's booking
+      // page (absent above, and why), its photos are bundled assets this
+      // worker's own server serves, so the document reaches `networkidle`.
+      { path: "/s/blue-mantis/courses/discover-scuba-diving", heading: /Discover Scuba Diving/ },
+    ]);
+  });
+});
+
+/**
+ * The diver whose language DiveDay does not carry.
+ *
+ * `Accept-Language: de-DE` negotiates to no bundle, so the shop's own language
+ * is rendered and a band appears above the page saying so in as many words
+ * (`src/components/LanguageFallbackNotice.tsx`, review finding I18N-L1). That
+ * band is new markup on the single most-visited diver surface, shown only to
+ * visitors nobody at the shop can reproduce on their own machine — the exact
+ * profile of a render that goes unlooked-at for years. So it is both scanned
+ * and asserted here: the assertion proves the notice reaches a real browser at
+ * all, and the scan proves it does so without breaking the page's landmark and
+ * heading structure.
+ */
+test.describe("automated accessibility scans for an unsupported-language visitor", () => {
+  test.use({ storageState: { cookies: [], origins: [] }, locale: "de-DE" });
+
+  test("the public schedule keeps its structure while announcing the fallback", async ({
+    page,
+  }) => {
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+    // The language's own endonym is the one token a reader of German can pick
+    // out of an English sentence, which is the whole reason it is resolved
+    // through `Intl.DisplayNames` rather than written into the bundle.
+    await expect(page.getByText(/Deutsch/)).toBeVisible();
+    await expectNoA11yViolations(page);
   });
 });
