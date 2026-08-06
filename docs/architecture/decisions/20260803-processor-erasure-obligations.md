@@ -106,12 +106,17 @@ does not roll back an erasure a diver asked for. No network call happens inside 
   transient outage does not require a human to notice a panel. It touches `stripe_customer` rows
   only, and stops at `MAX_AUTOMATIC_DELETE_ATTEMPTS` — the cap ends the nightly Stripe call on a
   permanently broken delete, not the debt, which stays `owed` and visible forever.
-- **Reports panel**, in the same warning-notice pattern as the stuck media-deletion and
-  payment-operation panels. A customer row offers Retry; an invoice row offers only "mark done".
-- **Read behind the reports gate; acted on behind the erasure gate.** Retrying makes a destructive
-  call against the shop's Stripe account and discharging asserts a diver's data is gone, so both
-  need `canPersonErasePersonalData`. A manager who can read reports sees the outstanding work and
-  can neither fire the delete nor sign it off.
+- **Settings panel**, in the same warning-notice pattern as the stuck media-deletion panel beside
+  it. A customer row offers Retry; an invoice row offers only "mark done". *(Amended 2026-08-06:
+  this shipped as a panel on the monthly Reports page. It now sits at the top of Settings' "Data &
+  integrations" group — `src/app/shop/[shopSlug]/settings/SettingsPage.tsx`, actions in that
+  folder's `actions.ts` — because a report answers "how did the month go" and an owed erasure is a
+  data-compliance job, not a number. The reader-side gate is the settings gate rather than the
+  reports gate: the identical `isOwnerOrManager` role set, so nobody gained or lost sight of it.)*
+- **Read behind the surface's own owner/manager gate; acted on behind the erasure gate.** Retrying
+  makes a destructive call against the shop's Stripe account and discharging asserts a diver's data
+  is gone, so both need `canPersonErasePersonalData`. A manager who can read the panel sees the
+  outstanding work and can neither fire the delete nor sign it off.
 - **Idempotent on `(shop_id, target, external_id)`,** per shop, because two Stripe accounts are two
   different places.
 - **The row holds a pointer, not a person.** `external_id` is a `cus_…`/`in_…` handle. No name,

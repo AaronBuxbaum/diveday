@@ -781,6 +781,19 @@
         "showAll": "Mostrar todos los pedidos",
         "allNote": "Mostrando todos los pedidos que ha emitido el centro.",
         "showRecent": "Volver a los últimos {days} días"
+      },
+      "paymentOps": {
+        "sectionLabel": "Pagos que necesitan revisión",
+        "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
+        "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
+        "started": "iniciado {date}",
+        "stripeId": "Stripe: {id}",
+        "openTrip": "Abrir salida",
+        "kind": {
+          "checkout_session": "Pago",
+          "invoice": "Factura",
+          "refund": "Reembolso"
+        }
       }
     }
   },
@@ -887,53 +900,12 @@
     }
   },
   "reports": {
-    "operationKind": {
-      "checkout_session": "Pago",
-      "invoice": "Factura",
-      "refund": "Reembolso"
-    },
-    "mediaKind": {
-      "course_photo": "Foto del curso",
-      "recap_photo": "Foto del resumen",
-      "certification_card": "Foto de la tarjeta",
-      "waiver_document": "Documento de exención"
-    },
     "eyebrow": "Propietario",
     "title": "Cómo va tu mes",
     "description": {
       "thisMonth": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes — hasta ahora.",
       "future": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes.",
       "past": "Reservas, ingresos, ocupación y hojas de exención de las salidas que zarparon."
-    },
-    "paymentOps": {
-      "sectionLabel": "Pagos que necesitan revisión",
-      "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
-      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
-      "started": "iniciado {date}",
-      "stripeId": "Stripe: {id}",
-      "openTrip": "Abrir salida"
-    },
-    "mediaDeletions": {
-      "sectionLabel": "Fotos que no terminaron de eliminarse",
-      "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todavía no borrada del almacenamiento",
-      "detail": "La foto ya no está en la aplicación; el archivo guardado no se borró — reintenta la eliminación, o déjalo para el reintento automático de esta noche.",
-      "queued": "en cola desde {date}",
-      "retry": "Reintentar eliminación",
-      "retrying": "Reintentando…"
-    },
-    "processorErasureTarget": {
-      "stripe_customer": "Cliente de Stripe",
-      "stripe_invoice_snapshot": "Factura de Stripe"
-    },
-    "processorErasures": {
-      "sectionLabel": "Borrados sin terminar en Stripe",
-      "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-      "detail": "Al borrar a un buceador aquí también se borra su cliente de Stripe. Estos no se completaron. Un registro de cliente se puede reintentar — el proceso de esta noche lo intentará de nuevo por su cuenta. Una factura no: Stripe copia el nombre y el correo en cada factura al emitirla, y eso solo se borra con una solicitud de eliminación de datos a Stripe. Envíala y luego márcalo como hecho.",
-      "raised": "registrado el {date}",
-      "retry": "Reintentar borrado",
-      "retrying": "Reintentando…",
-      "discharge": "Marcar como hecho en Stripe",
-      "discharging": "Guardando…"
     },
     "soFar": "hasta ahora",
     "chooseMonth": "Elegir mes",
@@ -1969,7 +1941,37 @@
         "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites.",
         "cta": "Gestionar códigos promocionales"
       },
-      "detailLabel": "Más sobre {heading}"
+      "detailLabel": "Más sobre {heading}",
+      "dataJobs": {
+        "mediaKind": {
+          "course_photo": "Foto del curso",
+          "recap_photo": "Foto del resumen",
+          "certification_card": "Foto de la tarjeta",
+          "waiver_document": "Documento de exención"
+        },
+        "mediaDeletions": {
+          "sectionLabel": "Fotos que no terminaron de eliminarse",
+          "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todavía no borrada del almacenamiento",
+          "detail": "La foto ya no está en la aplicación; el archivo guardado no se borró — reintenta la eliminación, o déjalo para el reintento automático de esta noche.",
+          "queued": "en cola desde {date}",
+          "retry": "Reintentar eliminación",
+          "retrying": "Reintentando…"
+        },
+        "erasureTarget": {
+          "stripe_customer": "Cliente de Stripe",
+          "stripe_invoice_snapshot": "Factura de Stripe"
+        },
+        "processorErasures": {
+          "sectionLabel": "Borrados sin terminar en Stripe",
+          "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
+          "detail": "Al borrar a un buceador aquí también se borra su cliente de Stripe. Estos no se completaron. Un registro de cliente se puede reintentar — el proceso de esta noche lo intentará de nuevo por su cuenta. Una factura no: Stripe copia el nombre y el correo en cada factura al emitirla, y eso solo se borra con una solicitud de eliminación de datos a Stripe. Envíala y luego márcalo como hecho.",
+          "raised": "registrado el {date}",
+          "retry": "Reintentar borrado",
+          "retrying": "Reintentando…",
+          "discharge": "Marcar como hecho en Stripe",
+          "discharging": "Guardando…"
+        }
+      }
     },
     "team": {
       "eyebrow": "Ajustes",
@@ -2992,7 +2994,8 @@
         "inviteFromWaitlist": "Invitar de la lista de espera",
         "resendWaiverLink": "Reenviar enlace de exención",
         "resendConfirmation": "Reenviar confirmación",
-        "openReports": "Revisar en Informes"
+        "openOrders": "Revisar en Pedidos",
+        "openDataSettings": "Revisar en Ajustes"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",

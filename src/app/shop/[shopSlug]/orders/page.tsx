@@ -4,13 +4,15 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
+import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
 import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -45,6 +47,17 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
 const STATUS_TONES: Record<string, BadgeTone> = {
   paid: "success",
   open: "primary",
+};
+
+/**
+ * Which Stripe call an unconfirmed operation was. Without an entry here the
+ * lookup falls through to the raw enum value, so a stuck operation would read
+ * "checkout_session" on the panel below.
+ */
+const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
+  checkout_session: "orders.index.paymentOps.kind.checkout_session",
+  invoice: "orders.index.paymentOps.kind.invoice",
+  refund: "orders.index.paymentOps.kind.refund",
 };
 
 /**
@@ -118,6 +131,25 @@ export default async function OrdersIndexPage({
   // that a day-one shop's Orders index offers the one thing that actually
   // moves them forward instead of a button that bounces them right back here.
   const paymentsConnected = canAcceptPayments(await getShopStripeAccount(db, session.user.shopId));
+
+  // Stripe operations the app started and never saw finish — money that may or
+  // may not have moved. They used to hang off the bottom of the monthly report,
+  // which is a page about how the month *went*, not a queue; reconciling an
+  // unconfirmed charge is order work, so it lives on the order surface now.
+  //
+  // Read behind `canPersonManagePaymentSettings` — the identical owner/manager
+  // role set (`isOwnerOrManager`) that the reports gate it left was built from,
+  // so exactly the same people see it, checked against the database rather than
+  // the JWT. Reading orders itself stays open to every staff role; this panel
+  // does not, and the query does not even run for the roles that can't see it.
+  const canReconcilePayments = await canPersonManagePaymentSettings(
+    db,
+    session.user.shopId,
+    session.user.personId,
+  );
+  const stuckPaymentOperations = canReconcilePayments
+    ? await listStuckPaymentOperations(db, shop.id)
+    : [];
 
   const statusFilter = orderStatus.enumValues.includes(
     status as (typeof orderStatus.enumValues)[number],
@@ -200,6 +232,49 @@ export default async function OrdersIndexPage({
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+
+      {/* Above the filters because it is not something you filter for, and
+          danger-toned rather than folded away: unconfirmed money is a financial
+          obligation, not a notification to dismiss. An empty queue renders
+          nothing at all — the calm state of this page is no panel. `mb-6`, not
+          `mt-6`: the header above already carries `mb-8`, and the filter grid
+          below carries no top margin of its own. */}
+      {stuckPaymentOperations.length > 0 ? (
+        <section aria-label={t("orders.index.paymentOps.sectionLabel")} className="mb-6">
+          <ShopNotice tone="danger" role="status">
+            <p className="font-medium">
+              {t("orders.index.paymentOps.heading", { count: stuckPaymentOperations.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("orders.index.paymentOps.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
+                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
+                  {tripTitle ? <span>· {tripTitle}</span> : null}
+                  {personName ? <span>· {personName}</span> : null}
+                  <span className="text-muted">
+                    ·{" "}
+                    {t("orders.index.paymentOps.started", {
+                      date: formatShortDate(intent.startedAt, locale, shop.timezone),
+                    })}
+                    {intent.stripeObjectId
+                      ? ` · ${t("orders.index.paymentOps.stripeId", { id: intent.stripeObjectId })}`
+                      : ""}
+                  </span>
+                  {tripId ? (
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      {t("orders.index.paymentOps.openTrip")}
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
 
       <FieldGrid as="form" columns={4} className="rounded-lg border border-border bg-surface p-4">
         <Field label={t("orders.index.filters.statusLabel")}>

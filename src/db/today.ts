@@ -10,9 +10,10 @@ import {
   mediaDeletionKindText,
   missingContactDetailText,
   missingFitDetailText,
+  openDataSettingsActionText,
   openGuestsActionText,
+  openOrdersActionText,
   openPrepListActionText,
-  openReportsActionText,
   openRollCallActionText,
   openTripActionText,
   overRatioDetailText,
@@ -1268,8 +1269,10 @@ export async function getTodayWork(
   // departure — there isn't one) so they land in today's queue the same day
   // they go stale; `dueAt: null` still sorts them after every dated row
   // within that band, matching the "undated work never jumps the line"
-  // invariant every other action kind already follows. Reports keeps its own
-  // panel — this is "also surface on Today", not "move".
+  // invariant every other action kind already follows. The full panels these
+  // rows mirror moved off Reports with the surface consolidation — payments to
+  // Orders, deletions to Settings' Data group — and each row's `href` points at
+  // wherever its panel now is.
   if (includeOpsAlerts) {
     const [stuckOperations, pendingDeletions] = await Promise.all([
       listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
@@ -1286,12 +1289,12 @@ export async function getTodayWork(
         context: op.personName && op.tripTitle ? op.tripTitle : null,
         detail: stuckPaymentOperationDetailText(t, op.intent.kind, when, op.intent.stripeObjectId),
         // Points at the trip roster when there's one to point at; otherwise
-        // Reports is the only surface with the reconciliation detail
-        // (Stripe id, exact timestamp) to act from.
-        actionLabel: op.tripId ? openTripActionText(t) : openReportsActionText(t),
+        // Orders, which carries the reconciliation detail (Stripe id, exact
+        // timestamp) to act from. That panel used to live on Reports.
+        actionLabel: op.tripId ? openTripActionText(t) : openOrdersActionText(t),
         href: op.tripId
           ? `/shop/${shopSlug}/trips/${op.tripId}/guests`
-          : `/shop/${shopSlug}/reports`,
+          : `/shop/${shopSlug}/orders`,
         dueAt: null,
       });
     }
@@ -1308,8 +1311,10 @@ export async function getTodayWork(
           attempt.kind,
           formatShortDate(attempt.createdAt, locale, timeZone),
         ),
-        actionLabel: openReportsActionText(t),
-        href: `/shop/${shopSlug}/reports`,
+        // Settings' "Data & integrations" group — the retry button for a stuck
+        // deletion lives there now, at the group anchor this href lands on.
+        actionLabel: openDataSettingsActionText(t),
+        href: `/shop/${shopSlug}/settings#data-integrations`,
         dueAt: null,
       });
     }

@@ -663,7 +663,10 @@ describe("role lens raw material", () => {
       // undated, so it never jumps ahead of a real diver blocker within that band.
       expect(row?.urgency).toBe("now");
       expect(row?.dueAt).toBeNull();
-      expect(row?.href).toBe(`/shop/${shop.slug}/reports`);
+      // Orders, not Reports: an intent with no trip on it can only be
+      // reconciled from the panel that carries its Stripe id, and that panel
+      // moved to the Orders index when the monthly report became only a report.
+      expect(row?.href).toBe(`/shop/${shop.slug}/orders`);
     });
 
     it("surfaces a failed photo-deletion retry as an urgency: now row, only when the caller opts in", async () => {
@@ -698,7 +701,9 @@ describe("role lens raw material", () => {
       expect(row?.kind).toBe("failed_photo_deletion");
       expect(row?.urgency).toBe("now");
       expect(row?.dueAt).toBeNull();
-      expect(row?.href).toBe(`/shop/${shop.slug}/reports`);
+      // The retry button for a stuck deletion lives in Settings' "Data &
+      // integrations" group now, so the row lands on that group's anchor.
+      expect(row?.href).toBe(`/shop/${shop.slug}/settings#data-integrations`);
     });
 
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {

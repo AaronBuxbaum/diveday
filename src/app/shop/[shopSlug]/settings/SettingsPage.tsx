@@ -12,8 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
-import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
+import {
+  canPersonErasePersonalData,
+  canPersonManagePaymentSettings,
+  canPersonManageShopSettings,
+} from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listPendingMediaDeletions } from "@/db/media-deletions";
+import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import { getShopById } from "@/db/shops";
 import {
   canAcceptPayments,
@@ -47,8 +53,11 @@ import {
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { AddressFields } from "./AddressFields";
 import {
+  dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
+  retryMediaDeletionAction,
+  retryProcessorErasureAction,
   saveAddressAction,
   saveContactAction,
   saveDockCallAction,
@@ -199,6 +208,29 @@ type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
 
 /**
+ * Which stored file a deletion never finished on. Without an entry here the
+ * lookup falls through to the raw enum value, so a stuck deletion would read
+ * "certification_card" on the panel. `certification_card` and
+ * `waiver_document` are queued by diver erasure (ADR 20260802-diver-data-erasure).
+ */
+const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
+  course_photo: "settings.main.dataJobs.mediaKind.course_photo",
+  recap_photo: "settings.main.dataJobs.mediaKind.recap_photo",
+  certification_card: "settings.main.dataJobs.mediaKind.certification_card",
+  waiver_document: "settings.main.dataJobs.mediaKind.waiver_document",
+};
+
+/**
+ * Which record at the processor is still owed an erasure, present for the same
+ * reason `MEDIA_KIND_KEYS` is: without it the lookup falls through to the raw
+ * enum value and the panel reads "stripe_invoice_snapshot".
+ */
+const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
+  stripe_customer: "settings.main.dataJobs.erasureTarget.stripe_customer",
+  stripe_invoice_snapshot: "settings.main.dataJobs.erasureTarget.stripe_invoice_snapshot",
+};
+
+/**
  * A labelled group of settings cards with an anchor `#id`. Cards keep their own
  * `<h3>`; this is the page's real `<h2>` level, so the heading hierarchy stays
  * `<h1>` (ShopPageHeader) -> group `<h2>` -> card `<h3>`.
@@ -342,6 +374,22 @@ export default async function SettingsPage({
   // Hiding the link is convenience; the page itself re-checks against live roles.
   const canManageMessaging = canManageMessagingSettings(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
+  // The two data-compliance queues that used to hang off the bottom of the
+  // monthly report (see `actions.ts`). Read behind this page's own gate, which
+  // is the same owner/manager role set the reports gate was, so the same people
+  // see the same work. Both render nothing when empty — a shop that owes
+  // nothing sees no panel, not an empty table.
+  const [pendingMediaDeletions, owedProcessorErasures] = await Promise.all([
+    listPendingMediaDeletions(db, session.user.shopId),
+    listOwedProcessorErasures(db, session.user.shopId),
+  ]);
+  // Owner-only, and tighter than the gate this panel is *read* behind: a retry
+  // fires a destructive call at the shop's Stripe account and a discharge signs
+  // an attestation that a diver's data is gone from the processor. The actions
+  // enforce it themselves and return silently on refusal — this only keeps a
+  // manager from being shown a button they would be bounced from
+  // (ADR 20260724-role-gated-surfaces-hide-not-explain).
+  const canErase = await canPersonErasePersonalData(db, session.user.shopId, session.user.personId);
   // The same two gates the nav registry hangs Team and Promo codes off
   // (src/lib/staff-destinations.ts), so a divemaster who has neither is never
   // shown a door that would bounce them (ADR
@@ -1020,6 +1068,119 @@ export default async function SettingsPage({
       </SettingsGroup>
 
       <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
+        {/*
+          Data this shop said it would delete and hasn't finished deleting —
+          the group's own question, asked first because it is the only thing in
+          it that is *owed* rather than merely configurable, and danger-toned
+          rather than folded away: an unfinished erasure is a legal obligation,
+          not a notification to dismiss. Both blocks vanish entirely when the
+          queue is empty, which is nearly always, so the calm state of this
+          group is the row of cards below.
+        */}
+        {pendingMediaDeletions.length > 0 ? (
+          <section
+            aria-label={t("settings.main.dataJobs.mediaDeletions.sectionLabel")}
+            className="mb-6"
+          >
+            <ShopNotice tone="danger" role="status">
+              <p className="font-medium">
+                {t("settings.main.dataJobs.mediaDeletions.heading", {
+                  count: pendingMediaDeletions.length,
+                })}
+              </p>
+              <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {pendingMediaDeletions.map((attempt) => (
+                  <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
+                    <span className="text-muted">
+                      ·{" "}
+                      {t("settings.main.dataJobs.mediaDeletions.queued", {
+                        date: formatShortDate(attempt.createdAt, locale, shop.timezone),
+                      })}
+                      {attempt.lastError ? ` · ${attempt.lastError}` : ""}
+                    </span>
+                    <form action={retryMediaDeletionAction}>
+                      <input type="hidden" name="attemptId" value={attempt.id} />
+                      <SubmitButton
+                        pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("settings.main.dataJobs.mediaDeletions.retry")}
+                      </SubmitButton>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </ShopNotice>
+          </section>
+        ) : null}
+
+        {/*
+          Erasures that are done here but not yet done at Stripe
+          (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
+          offers what can actually act on each: a customer delete DiveDay makes
+          itself gets "Retry" (the nightly tick also retries it), while an
+          invoice snapshot has no API behind it at all and can only be closed by
+          an owner attesting they filed Stripe's data-deletion request. The panel
+          shows the `cus_…`/`in_…` handle and nothing else — the diver's identity
+          is exactly what erasure already removed here.
+        */}
+        {owedProcessorErasures.length > 0 ? (
+          <section
+            aria-label={t("settings.main.dataJobs.processorErasures.sectionLabel")}
+            className="mb-6"
+          >
+            <ShopNotice tone="danger" role="status">
+              <p className="font-medium">
+                {t("settings.main.dataJobs.processorErasures.heading", {
+                  count: owedProcessorErasures.length,
+                })}
+              </p>
+              <p className="mt-1 text-sm">{t("settings.main.dataJobs.processorErasures.detail")}</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {owedProcessorErasures.map((obligation) => (
+                  <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-medium">
+                      {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
+                    </span>
+                    <span className="font-mono">{obligation.externalId}</span>
+                    <span className="text-muted">
+                      ·{" "}
+                      {t("settings.main.dataJobs.processorErasures.raised", {
+                        date: formatShortDate(obligation.createdAt, locale, shop.timezone),
+                      })}
+                      {obligation.lastError ? ` · ${obligation.lastError}` : ""}
+                    </span>
+                    {canErase && obligation.target === "stripe_customer" ? (
+                      <form action={retryProcessorErasureAction}>
+                        <input type="hidden" name="obligationId" value={obligation.id} />
+                        <SubmitButton
+                          pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("settings.main.dataJobs.processorErasures.retry")}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                    {canErase ? (
+                      <form action={dischargeProcessorErasureAction}>
+                        <input type="hidden" name="obligationId" value={obligation.id} />
+                        <SubmitButton
+                          pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("settings.main.dataJobs.processorErasures.discharge")}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </ShopNotice>
+          </section>
+        ) : null}
+
         <section className="rounded-lg border border-border bg-surface p-6">
           <CardHeading
             t={t}

@@ -781,6 +781,19 @@
         "showAll": "Show every order",
         "allNote": "Showing every order the shop has ever raised.",
         "showRecent": "Back to the last {days} days"
+      },
+      "paymentOps": {
+        "sectionLabel": "Payments that need a check",
+        "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
+        "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
+        "started": "started {date}",
+        "stripeId": "Stripe: {id}",
+        "openTrip": "Open trip",
+        "kind": {
+          "checkout_session": "Checkout",
+          "invoice": "Invoice",
+          "refund": "Refund"
+        }
       }
     }
   },
@@ -887,53 +900,12 @@
     }
   },
   "reports": {
-    "operationKind": {
-      "checkout_session": "Checkout",
-      "invoice": "Invoice",
-      "refund": "Refund"
-    },
-    "mediaKind": {
-      "course_photo": "Course photo",
-      "recap_photo": "Recap photo",
-      "certification_card": "Card photo",
-      "waiver_document": "Waiver document"
-    },
     "eyebrow": "Owner",
     "title": "How's your month",
     "description": {
       "thisMonth": "Bookings, revenue, seat fill, and waivers for this month's trips — so far.",
       "future": "Bookings, revenue, seat fill, and waivers for this month's trips.",
       "past": "Bookings, revenue, seat fill, and waivers for the trips that sailed."
-    },
-    "paymentOps": {
-      "sectionLabel": "Payments that need a check",
-      "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
-      "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
-      "started": "started {date}",
-      "stripeId": "Stripe: {id}",
-      "openTrip": "Open trip"
-    },
-    "mediaDeletions": {
-      "sectionLabel": "Photos that didn't finish deleting",
-      "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
-      "detail": "The photo is already gone from the app; the stored file wasn't — retry the delete, or leave it for tonight's automatic retry.",
-      "queued": "queued {date}",
-      "retry": "Retry delete",
-      "retrying": "Retrying…"
-    },
-    "processorErasureTarget": {
-      "stripe_customer": "Stripe customer",
-      "stripe_invoice_snapshot": "Stripe invoice"
-    },
-    "processorErasures": {
-      "sectionLabel": "Erasures not finished at Stripe",
-      "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-      "detail": "Erasing a diver here also deletes their Stripe customer. These didn't finish. A customer record can be retried — tonight's run will try again on its own. An invoice can't: Stripe copies the name and email onto every invoice when it's issued, and only a data-deletion request to Stripe clears that. File one, then mark it done.",
-      "raised": "raised {date}",
-      "retry": "Retry delete",
-      "retrying": "Retrying…",
-      "discharge": "Mark done at Stripe",
-      "discharging": "Saving…"
     },
     "soFar": "so far",
     "chooseMonth": "Choose month",
@@ -1969,7 +1941,37 @@
         "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",
         "cta": "Manage promo codes"
       },
-      "detailLabel": "More about {heading}"
+      "detailLabel": "More about {heading}",
+      "dataJobs": {
+        "mediaKind": {
+          "course_photo": "Course photo",
+          "recap_photo": "Recap photo",
+          "certification_card": "Card photo",
+          "waiver_document": "Waiver document"
+        },
+        "mediaDeletions": {
+          "sectionLabel": "Photos that didn't finish deleting",
+          "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
+          "detail": "The photo is already gone from the app; the stored file wasn't — retry the delete, or leave it for tonight's automatic retry.",
+          "queued": "queued {date}",
+          "retry": "Retry delete",
+          "retrying": "Retrying…"
+        },
+        "erasureTarget": {
+          "stripe_customer": "Stripe customer",
+          "stripe_invoice_snapshot": "Stripe invoice"
+        },
+        "processorErasures": {
+          "sectionLabel": "Erasures not finished at Stripe",
+          "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
+          "detail": "Erasing a diver here also deletes their Stripe customer. These didn't finish. A customer record can be retried — tonight's run will try again on its own. An invoice can't: Stripe copies the name and email onto every invoice when it's issued, and only a data-deletion request to Stripe clears that. File one, then mark it done.",
+          "raised": "raised {date}",
+          "retry": "Retry delete",
+          "retrying": "Retrying…",
+          "discharge": "Mark done at Stripe",
+          "discharging": "Saving…"
+        }
+      }
     },
     "team": {
       "eyebrow": "Settings",
@@ -2992,7 +2994,8 @@
         "inviteFromWaitlist": "Invite from wait list",
         "resendWaiverLink": "Resend waiver link",
         "resendConfirmation": "Resend confirmation",
-        "openReports": "Review in Reports"
+        "openOrders": "Review in Orders",
+        "openDataSettings": "Review in Settings"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",

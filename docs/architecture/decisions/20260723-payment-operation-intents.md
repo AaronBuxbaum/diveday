@@ -67,10 +67,15 @@ instead of converging on the first.
   never wedging.
 - **`listStuckPaymentOperations` is the reconciliation read** — intents still `started` past that
   same staleness window, batched-joined to the trip/person context a human needs to go check the
-  Stripe dashboard and finish the operation by hand. Surfaced on the owner Reports page (already
-  owner/manager-gated, already the revenue-adjacent surface) as a "needs reconciliation" panel above
-  the month view — deliberately not folded into the Today queue, which assumes every action belongs
-  to a specific upcoming trip departure; an order or refund intent may have no trip at all.
+  Stripe dashboard and finish the operation by hand. Surfaced as a "needs reconciliation" panel on
+  the Orders index (`src/app/shop/[shopSlug]/orders/page.tsx`), above the filters and rendered only
+  when the queue is non-empty. *(Amended 2026-08-06: this shipped on the owner Reports page — then
+  the revenue-adjacent, already-gated surface. Orders has since become the surface the object
+  belongs to, and the report went back to being only a report. Reading orders is open to every staff
+  role but this panel is not: it is behind `canPersonManagePaymentSettings`, the identical
+  `isOwnerOrManager` role set the reports gate was built from, and the query does not run for anyone
+  else.)* A stale intent also appears as an `urgency: "now"` Today row (task 157) linking to
+  whichever of the trip roster or this panel can act on it.
 
 ## Alternatives considered
 
@@ -120,4 +125,4 @@ instead of converging on the first.
 - `listStuckPaymentOperations`'s batched lookups (trip/checkout/order/booking/person) are scoped by
   `shopId` on every query, belt-and-suspenders alongside every caller already validating a
   referenced row's shop before recording it on an intent — so a future `kind` or caller that forgets
-  that check still can't leak another shop's trip title or customer name onto the Reports page.
+  that check still can't leak another shop's trip title or customer name onto the panel.

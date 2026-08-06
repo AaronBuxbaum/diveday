@@ -101,7 +101,7 @@ export async function queueAndAttemptMediaDeletion(
  * tests don't depend on real wall-clock time passing. Exported so
  * `src/db/today.ts` can build the same cutoff from its own `now` (task 157)
  * instead of reading the live clock the way `listPendingMediaDeletions`'s
- * default argument does.
+ * default argument does. (That default is what the Settings panel reads with.)
  */
 export const STALE_PENDING_AFTER_MS = 5 * 60 * 1000;
 
@@ -119,7 +119,7 @@ function stuckDeletionWhere(staleBefore: Date) {
   );
 }
 
-/** Attempts an owner needs to see and can retry — a shop's reports/reconciliation panel. */
+/** Attempts an owner needs to see and can retry — the panel in Settings' "Data & integrations" group. */
 export async function listPendingMediaDeletions(
   db: AppDb,
   shopId: string,

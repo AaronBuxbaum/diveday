@@ -63,10 +63,14 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   blocking the local removal.** The row a user sees disappear (a recap photo's row, a course's
   `heroImageUrl`/`imageUrls`) is *always* removed synchronously — the delete queue runs after that
   commit, never gating it. A `failed` row (or a `pending` row stale past five minutes, meaning the
-  process died mid-attempt — treated identically for retry purposes) shows up on the shop's Reports
-  page (`src/app/shop/[shopSlug]/reports/page.tsx`, same owner/manager gate as the existing stuck-
-  payment-operations panel it sits beside) with a one-tap Retry action
-  (`src/app/shop/[shopSlug]/reports/actions.ts`).
+  process died mid-attempt — treated identically for retry purposes) shows up in Settings' "Data &
+  integrations" group (`src/app/shop/[shopSlug]/settings/SettingsPage.tsx`, owner/manager gate) with
+  a one-tap Retry action (`src/app/shop/[shopSlug]/settings/actions.ts`), and — once stale — as an
+  `urgency: "now"` row on Today. *(Amended 2026-08-06: this shipped on the monthly Reports page,
+  beside the stuck-payment-operations panel. Both queues left when the report became only a report:
+  payments to the Orders index, deletions here. The gate is unchanged in substance —
+  `canPersonManageShopSettings` is the same `isOwnerOrManager` role set `canPersonViewShopReports`
+  was.)*
 - **A bounded orphan-cleanup job rides the existing daily cron tick**
   (`src/app/api/cron/reminders/route.ts`, `retryPendingMediaDeletions`), retrying up to 50 stuck
   attempts across every shop per run. This is deliberately reuse, not a new endpoint: the ticket
