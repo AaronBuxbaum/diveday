@@ -559,8 +559,31 @@
     "cancelConfirmButton": "Yes, cancel my spot",
     "moveConfirmButton": "Yes, move my booking",
     "neverMind": "Never mind",
-    "scheduledSites": "Your scheduled dive sites",
-    "sitesPeek": "Here is a sneak peek at what you will explore on this charter:"
+    "certHeading": "Add your certification card",
+    "certBody": "Type what's on the card. Your shop checks it against the card itself when they see you — adding it here just means they aren't chasing you for it.",
+    "certAgency": "Training agency",
+    "certLevel": "Level",
+    "certNumber": "Card number",
+    "certExpiry": "Expires",
+    "certExpiryHint": "Only if your card shows one.",
+    "certChoose": "Choose one",
+    "certSubmit": "Add my card",
+    "certSubmitting": "Adding…",
+    "certSaved": "Card added. Your shop will check it against the card when they see you.",
+    "certKnown": "That card number is already on file here — nothing more to do.",
+    "certInvalid": "Check the agency, level, and card number, then try again.",
+    "certAgencies": {
+      "padi": "PADI",
+      "ssi": "SSI",
+      "naui": "NAUI",
+      "sdi": "SDI",
+      "tdi": "TDI",
+      "cmas": "CMAS",
+      "raid": "RAID",
+      "gue": "GUE",
+      "bsac": "BSAC",
+      "other": "Another agency"
+    }
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",

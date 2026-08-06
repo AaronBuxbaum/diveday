@@ -559,8 +559,31 @@
     "cancelConfirmButton": "Sí, cancelar mi plaza",
     "moveConfirmButton": "Sí, mover mi reserva",
     "neverMind": "Mejor no",
-    "scheduledSites": "Tus puntos de buceo previstos",
-    "sitesPeek": "Aquí tienes un avance de lo que vas a explorar en esta salida:"
+    "certHeading": "Añade tu tarjeta de certificación",
+    "certBody": "Escribe lo que pone en la tarjeta. Tu centro la comprobará contra la tarjeta cuando te vea; añadirla aquí solo evita que tengan que pedírtela.",
+    "certAgency": "Agencia de formación",
+    "certLevel": "Nivel",
+    "certNumber": "Número de tarjeta",
+    "certExpiry": "Caduca",
+    "certExpiryHint": "Solo si tu tarjeta lleva fecha.",
+    "certChoose": "Elige una opción",
+    "certSubmit": "Añadir mi tarjeta",
+    "certSubmitting": "Añadiendo…",
+    "certSaved": "Tarjeta añadida. Tu centro la comprobará contra la tarjeta cuando te vea.",
+    "certKnown": "Ese número de tarjeta ya está registrado aquí: no hace falta nada más.",
+    "certInvalid": "Revisa la agencia, el nivel y el número de tarjeta, e inténtalo de nuevo.",
+    "certAgencies": {
+      "padi": "PADI",
+      "ssi": "SSI",
+      "naui": "NAUI",
+      "sdi": "SDI",
+      "tdi": "TDI",
+      "cmas": "CMAS",
+      "raid": "RAID",
+      "gue": "GUE",
+      "bsac": "BSAC",
+      "other": "Otra agencia"
+    }
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
