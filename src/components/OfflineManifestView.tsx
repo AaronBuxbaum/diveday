@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -80,6 +80,90 @@ function offlineManifestTranslator() {
   return { t: staffTranslator(resolved), locale: resolved };
 }
 
+/**
+ * The saved copy this view is showing on `?trip=<id>`, and what happened to it.
+ *
+ * A reducer, and not three `useState`s, for one reason: **"the store says this
+ * record is gone" and "whose record was it" are answered in different places
+ * and can arrive in either order**, and the wrong answer to the second one is a
+ * disclosure. The purge round below learns the first from an async callback,
+ * which cannot see React state; the second can only be read from state. Before
+ * this, the round bridged that gap by reading a ref mirroring `envelope`,
+ * written from an effect — and a mirror written from an effect lags its own
+ * commit, so the round's `null` read did not *defer* the repaint, it skipped it:
+ *
+ * - Between a commit and its passive effects the mirror is stale. The purge's
+ *   read landed there often enough to be a measured CI flake.
+ * - Worse on a real tablet, where the tenant lookup is a warm request and the
+ *   store is a cold IndexedDB open plus an AES-GCM decrypt: an entire purge
+ *   round — delete included — can finish before `?trip=<id>`'s opening read has
+ *   resolved at all. Nothing has painted, so the mirror is honestly `null`, and
+ *   the read already in flight then paints the record the purge just deleted.
+ *   Another shop's divers, emergency contacts and readiness blockers, on a
+ *   tablet signed in as someone else, with Board buttons that can only throw —
+ *   the F5 disclosure the repaint exists to end, restored one microtask later.
+ *
+ * Both orderings are the same defect, and a reducer removes it rather than
+ * narrowing it: whichever half arrives second is applied to the half already
+ * held, in one transition, against the state React actually has. The invariant
+ * it keeps is the whole point — **once `goneUnderTenant` is set, `envelope` is
+ * `null` and stays `null`** — so no read that was in flight when the record was
+ * deleted can put it back on screen.
+ *
+ * That latch is per **mount**, and safely so: this shell is one trip per mount.
+ * The list links to `?trip=<id>` with a plain `<a href>`, and `manifest-sw.js`
+ * replays a cached *document*, so both are full loads — `tripId` never changes
+ * under a live mount. The `checkpoint` state below already banks the same
+ * assumption in its `useState` initialiser. A client-side navigation between
+ * two trips would need this state reset with it, exactly as it would need that.
+ */
+type SavedCopyState = {
+  /** The decrypted copy on screen. Cleared the moment the store says it is gone. */
+  envelope: OfflineManifestEnvelope | null;
+  /**
+   * The shop signed in on this device when a purge round positively answered
+   * "gone" for this trip. Also the latch that keeps a late read out.
+   */
+  goneUnderTenant: string | null;
+  /**
+   * Whose copy vanished: `true` for another shop's, `false` for this shop's own
+   * record aging out, `null` for nothing lost — a `?trip=` this device simply
+   * never saved reaches the plain empty state, not an accusation.
+   */
+  removedForOtherShop: boolean | null;
+};
+
+type SavedCopyAction =
+  | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
+  | { type: "gone"; tenant: string };
+
+function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
+  switch (action.type) {
+    case "loaded":
+      if (state.goneUnderTenant === null) return { ...state, envelope: action.envelope };
+      // The store already answered "gone" for this trip, and this read was
+      // issued before it did. It is the only thing that can say whose copy was
+      // lost, so it names the loss — and is never shown.
+      return {
+        ...state,
+        envelope: null,
+        removedForOtherShop:
+          action.envelope === null
+            ? state.removedForOtherShop
+            : action.envelope.snapshot.shop.slug !== state.goneUnderTenant,
+      };
+    case "gone":
+      return {
+        envelope: null,
+        goneUnderTenant: action.tenant,
+        removedForOtherShop:
+          state.envelope === null
+            ? state.removedForOtherShop
+            : state.envelope.snapshot.shop.slug !== action.tenant,
+      };
+  }
+}
+
 export function OfflineManifestView() {
   // Memoized so `reconcile`/`reconcileList` below (and the effect that reruns
   // whenever they change) stay referentially stable across renders — the
@@ -95,7 +179,11 @@ export function OfflineManifestView() {
     [t],
   );
   const searchParams = useSearchParams();
-  const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
+  const [{ envelope, removedForOtherShop }, dispatchSaved] = useReducer(savedCopyReducer, {
+    envelope: null,
+    goneUnderTenant: null,
+    removedForOtherShop: null,
+  });
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
@@ -139,15 +227,6 @@ export function OfflineManifestView() {
   //    branch is chosen by an ordinary client render instead of by error
   //    recovery.
   const [storeRead, setStoreRead] = useState(false);
-  /**
-   * Set when the record this view was *showing* has been deleted out from under
-   * it by the cross-shop purge — see the effect below for why that repaints
-   * rather than leaving the roster up. Only ever true for a record that
-   * belonged to a different shop than the one now signed in on this device, so
-   * the empty state it produces can say that plainly instead of "nothing saved
-   * here", which would be true and useless.
-   */
-  const [removedForOtherShop, setRemovedForOtherShop] = useState(false);
   /**
    * Unsynced roll call this device threw away at the retention ceiling
    * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than
@@ -195,16 +274,6 @@ export function OfflineManifestView() {
    * not answer it differently (security review, 2026-08-06).
    */
   const tenantLookupRef = useRef<Promise<string | null> | null>(null);
-  /**
-   * The shop slug of whatever envelope is currently on screen, mirrored into a
-   * ref so the purge effect below can consult it without taking `envelope` as a
-   * dependency — doing that would re-run the effect (and re-purge, and re-fetch
-   * the tenant) on every roll-call tap.
-   */
-  const shownShopSlugRef = useRef<string | null>(null);
-  useEffect(() => {
-    shownShopSlugRef.current = envelope?.snapshot.shop.slug ?? null;
-  }, [envelope]);
 
   const refreshDiscarded = useCallback(() => {
     readDiscardedOfflineRecords()
@@ -242,7 +311,7 @@ export function OfflineManifestView() {
     try {
       const next = await syncOfflineManifest(tripId);
       if (!next) return;
-      setEnvelope(next);
+      dispatchSaved({ type: "loaded", envelope: next });
       const rejected = next.events.filter((event) => event.syncStatus === "rejected").length;
       const pending = next.events.filter((event) => event.syncStatus === "pending").length;
       setMessage(
@@ -395,19 +464,18 @@ export function OfflineManifestView() {
       // Two things it will not do: blank on a *failed* read (only a store that
       // positively answers "gone" repaints), and blank a record that survived
       // the purge because it still holds unsynced evidence.
+      //
+      // All this round reports is what it found: gone, under this tenant. It
+      // deliberately does not decide whether anything was *lost*, or what to
+      // say about it — that needs the record this view is showing, and an
+      // async callback cannot see React state. It used to bridge that with a
+      // ref mirroring `envelope`, which lags its own commit and made the
+      // repaint droppable in two different orderings; `savedCopyReducer` now
+      // joins the two halves in whichever order they arrive. Read its doc
+      // before changing this line.
       if (tripId) {
-        const shownSlug = shownShopSlugRef.current;
         const held = await loadOfflineManifest(tripId).catch(() => undefined);
-        if (!cancelled && held === null && shownSlug !== null) {
-          const foreign = shownSlug !== slug;
-          setEnvelope(null);
-          setRemovedForOtherShop(foreign);
-          setMessage(
-            foreign
-              ? t("shared.offlineManifest.single.removedOtherShopMessage")
-              : t("shared.offlineManifest.reconcile.noneForTrip"),
-          );
-        }
+        if (!cancelled && held === null) dispatchSaved({ type: "gone", tenant: slug });
       } else {
         await listOfflineManifests()
           .then((saved) => {
@@ -426,7 +494,10 @@ export function OfflineManifestView() {
       cancelled = true;
       window.removeEventListener("online", purge);
     };
-  }, [refreshDiscarded, resolveTenant, t, tripId]);
+    // No `t` any more: this round reports a fact and picks no words, so a
+    // translator identity can no longer cancel a repaint mid-flight by
+    // re-running the effect underneath it.
+  }, [refreshDiscarded, resolveTenant, tripId]);
 
   useEffect(() => {
     if (!tripId) {
@@ -469,7 +540,7 @@ export function OfflineManifestView() {
     }
     loadOfflineManifest(tripId)
       .then((saved) => {
-        setEnvelope(saved);
+        dispatchSaved({ type: "loaded", envelope: saved });
         // The requested checkpoint's shape was checked before the trip's
         // planned-dive count was known; re-validate against it now so a
         // stale or out-of-range checkpoint (from an edited URL, or a trip
@@ -622,13 +693,21 @@ export function OfflineManifestView() {
     );
   }
 
+  // `envelope` is null for two different reasons and this branch covers both,
+  // because `savedCopyReducer` makes them the same state: nothing has been
+  // loaded, or the store said this trip's copy is gone. The second cannot be
+  // undone by a read that was already in flight (see the reducer), so there is
+  // no ordering in which a roster reaches the screen after its record has been
+  // deleted — including for a single commit.
   if (!envelope) {
     // "Nothing saved on this phone yet" is a claim about this device having
     // never held a copy. When the cross-shop purge has just taken one away
     // mid-read (see the purge effect), that sentence is the one thing the
     // captain already knows is false — so this branch names the real cause
     // instead, and offers the only advice that is true for a record belonging
-    // to someone else's shop.
+    // to someone else's shop. `removedForOtherShop === null` means nothing was
+    // lost at all: a `?trip=` this device simply never saved, which is exactly
+    // what the plain empty state is for.
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         {discardNotice}
@@ -641,7 +720,11 @@ export function OfflineManifestView() {
           }
           meta={
             <p className="text-muted" role="status">
-              {message}
+              {removedForOtherShop === null
+                ? message
+                : removedForOtherShop
+                  ? t("shared.offlineManifest.single.removedOtherShopMessage")
+                  : t("shared.offlineManifest.reconcile.noneForTrip")}
             </p>
           }
         />
@@ -769,7 +852,7 @@ export function OfflineManifestView() {
         status,
         note: note.trim() || null,
       });
-      setEnvelope(next);
+      dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
       // Task 73: a typed note must not silently ride along on the next tap
       // for this diver (e.g. tapping "Not boarded" again later re-sends a

@@ -1358,10 +1358,25 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
     vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
       held = afterPurge;
     });
+    // The round the mount already ran has to be excluded, or every wait below
+    // is satisfied before the handover even happens.
+    const roundsBefore = vi.mocked(readDiscardedOfflineRecords).mock.calls.length;
     await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
-    await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
+    // Wait on the *end* of the purge round, not on its purge call. The round
+    // deletes, re-reads, decides whether to repaint, and only then asks what
+    // the retention ceiling threw away — so this last read is the one signal
+    // that the repaint decision has actually been made. Waiting on
+    // `purgeOfflineManifestsExceptShop` instead (or on `loadOfflineManifest`
+    // being called again) waits for a step that happens *before* the decision,
+    // which lets the three cases below that assert a repaint did **not** happen
+    // pass by checking too early.
+    await waitFor(() =>
+      expect(vi.mocked(readDiscardedOfflineRecords).mock.calls.length).toBeGreaterThan(
+        roundsBefore,
+      ),
+    );
   }
 
   it("repaints, and names the cause, when the record it was showing belonged to another shop", async () => {
@@ -1416,6 +1431,61 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
 
     expect(screen.getByRole("heading", { name: "Shop A's Trip" })).toBeInTheDocument();
     expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
+  });
+
+  it("repaints when the purge outruns the very read that puts the record on screen", async () => {
+    // The ordering a real tablet hits whenever the tenant lookup is warm and
+    // the store is cold: `?trip=<id>`'s first decrypt is still in flight when
+    // the purge round deletes the record it is decrypting. The read was issued
+    // before the delete, so it still comes back holding the foreign roster —
+    // and hands it to the view *after* the purge has looked and moved on.
+    //
+    // Nothing is on screen at the moment the purge asks, and "I can't see a
+    // record" is not "there is no record": the read is one microtask away from
+    // painting the very thing the purge just deleted. A repaint conditioned on
+    // what has already painted is therefore skipped exactly here, and the
+    // captain is left holding another shop's divers, emergency contacts and
+    // readiness blockers on a tablet signed in as someone else — with dead
+    // Board buttons, which is the F5 disclosure this whole block exists to end.
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    const foreign = envelope("trip-1", "Shop A's Trip", {
+      shopSlug: "reef-runners",
+      shopName: "Reef Runners",
+    });
+    let releaseFirstRead: (envelope: OfflineManifestEnvelope) => void = () => {};
+    const firstRead = new Promise<OfflineManifestEnvelope>((resolve) => {
+      releaseFirstRead = resolve;
+    });
+    let held: OfflineManifestEnvelope | null = foreign;
+    let reads = 0;
+    vi.mocked(loadOfflineManifest).mockImplementation(async () => {
+      reads += 1;
+      // Only the view's own opening read is held back; the purge's re-read
+      // answers immediately, exactly as a store that has just deleted a key
+      // would.
+      return reads === 1 ? firstRead : held;
+    });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
+    vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
+      held = null;
+    });
+
+    render(<OfflineManifestView />);
+    // The purge round runs to completion first — deleting, re-reading, and
+    // deciding — with nothing painted. See `handOverTablet` for why the round's
+    // closing read is what proves the decision was made.
+    await waitFor(() => expect(readDiscardedOfflineRecords).toHaveBeenCalled());
+
+    // ...and only now does the read that was already in flight come back,
+    // carrying the copy the purge deleted while it was running.
+    await act(async () => {
+      releaseFirstRead(foreign);
+    });
+
+    expect(await screen.findByText("That saved copy has been removed")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Shop A's Trip" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark boarded/ })).not.toBeInTheDocument();
   });
 
   it("does not blame another shop when this shop's own record ages out under it", async () => {
