@@ -6,6 +6,7 @@ import {
   getSeasonalBriefing,
   getTimeOfDayGreeting,
   groupActions,
+  lastBoatIsIn,
   leadWithCrewed,
   primaryBlocker,
   roleLensFor,
@@ -490,6 +491,30 @@ describe("getTimeOfDayGreeting", () => {
   it("returns night for 11 PM local time", () => {
     const dateNight = new Date("2026-11-16T04:00:00Z"); // 04:00 UTC -> 11:00 PM America/New_York
     expect(getTimeOfDayGreeting(dateNight, "America/New_York")).toBe("night");
+  });
+});
+
+describe("lastBoatIsIn", () => {
+  // The trigger for Today's evening handoff to the close-out. It reads the
+  // departures `getTodayWork` already returned — no second detector, no
+  // wall-clock band.
+  const departure = (hoursFromNowEnd: number) => ({ endsAt: hoursFromNow(hoursFromNowEnd) });
+
+  it("is true once every one of today's departures is back at the dock", () => {
+    expect(lastBoatIsIn([departure(-4), departure(-1)], NOW)).toBe(true);
+  });
+
+  it("is false while any boat is still out — one late return keeps the day open", () => {
+    expect(lastBoatIsIn([departure(-4), departure(2)], NOW)).toBe(false);
+  });
+
+  it("counts a boat due back exactly now as in", () => {
+    expect(lastBoatIsIn([departure(0)], NOW)).toBe(true);
+  });
+
+  it("is false on a day with no departures — nothing sailed, so no last boat", () => {
+    // The close-out is still a nav click away; this is a handoff, not the door.
+    expect(lastBoatIsIn([], NOW)).toBe(false);
   });
 });
 

@@ -2361,7 +2361,6 @@
     "boardedBadge": "Boarded",
     "checkInButton": "Check in",
     "checkInAriaLabel": "Check in {name}",
-    "blockersMore": "+{count} more",
     "search": {
       "label": "Scan or search diver",
       "hint": "A barcode scanner can type a booking ID here.",
@@ -2467,7 +2466,8 @@
       "heading": "Tomorrow, at a glance",
       "subtitle": "What the morning queue opens with — read it now, walk out lighter.",
       "empty": "Tomorrow starts clear.",
-      "more": "{count, plural, one {And # more in tomorrow's queue.} other {And # more in tomorrow's queue.}}"
+      "count": "{count, plural, one {# job is waiting in tomorrow's queue.} other {# jobs are waiting in tomorrow's queue.}}",
+      "openToday": "Open Today"
     },
     "close": {
       "heading": "Close the day",
@@ -2531,6 +2531,11 @@
     }
   },
   "shopHome": {
+    "closeOut": {
+      "heading": "The last boat is in",
+      "body": "Every departure today is back at the dock. One pass through the close-out — how each boat ended, what is still open, what tomorrow opens with — and you can go home.",
+      "action": "Close out the day"
+    },
     "createdNotice": {
       "single": "“{title}” is on the board. 🤙",
       "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
