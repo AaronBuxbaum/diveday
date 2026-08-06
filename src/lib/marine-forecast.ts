@@ -7,9 +7,39 @@ const MILLISECONDS_PER_DAY = 86_400_000;
 type ForecastPoint = { latitude: number; longitude: number };
 type Fetcher = typeof fetch;
 
+/**
+ * The eight-point compass, as codes. Not "N"/"NE": those read as English
+ * abbreviations but are not universal — Spanish writes O for west and SO/NO for
+ * the two corners that touch it, so a hard-coded "W" is a wrong word, not a
+ * neutral symbol. The bundle turns each code into the reader's own compass
+ * (`src/i18n/unit-labels.ts`).
+ */
+export const CARDINAL_DIRECTIONS = ["n", "ne", "e", "se", "s", "sw", "w", "nw"] as const;
+export type CardinalDirection = (typeof CARDINAL_DIRECTIONS)[number];
+
+/**
+ * What the marine model says the sea surface will be doing, in the units it is
+ * published in. Numbers and codes only: the shop's own `depth_unit` decides
+ * whether a crew reads 0.7 m or 2 ft, and that is a shop preference already on
+ * `shops.depth_unit` — never a second setting of the forecast's own, and never
+ * a sentence composed down here (DOM-L2, AGENTS.md — `src/lib` returns codes).
+ */
+export type AutomatedSurfaceConditions = {
+  /**
+   * **Significant wave height** — the mean of the highest third, which is what
+   * every wave model behind Open-Meteo (ECMWF WAM, MFWAM, NOAA GFS-Wave)
+   * publishes and what a marine forecast means by "seas". Individual sets run
+   * roughly 1.5–2× this, so the copy says "2 ft seas" rather than "2 ft waves":
+   * the second reads as a ceiling, and it is an average.
+   */
+  waveHeightMeters: number;
+  waveDirection: CardinalDirection | null;
+  wavePeriodSeconds: number | null;
+};
+
 export type AutomatedMarineForecast = {
   waterTemperatureC: number | null;
-  surfaceConditions: string | null;
+  surface: AutomatedSurfaceConditions | null;
   source: "Open-Meteo marine forecast";
   validAt: Date;
 };
@@ -66,20 +96,39 @@ function closestForecastIndex(times: unknown, target: Date) {
   return closestIndex;
 }
 
-function cardinalDirection(degrees: number) {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  return directions[Math.round(degrees / 45) % directions.length] ?? "N";
+/**
+ * **Coming from, not going toward.** Open-Meteo documents this verbatim ("wave
+ * directions are always reported as the direction the waves come from; 0° =
+ * from north"), matching the oceanographic convention its upstream models use
+ * — ECMWF's `mwd` and NOAA's `DIRPW` both say the same — and matching what a
+ * crew says out loud on a dock. The *toward* convention exists, but it belongs
+ * to current direction, not waves. Written down here because the word "from"
+ * lives in an ICU template two modules away, which is how a future reader
+ * "fixes" it to the wrong one (dive-domain-expert review, 2026-08-06).
+ */
+function cardinalDirection(degrees: number): CardinalDirection {
+  const index = Math.round(degrees / 45);
+  // `%` alone keeps the sign of a negative dividend, and Open-Meteo has been
+  // seen returning a small negative bearing rather than clamping to [0, 360).
+  const wrapped =
+    ((index % CARDINAL_DIRECTIONS.length) + CARDINAL_DIRECTIONS.length) %
+    CARDINAL_DIRECTIONS.length;
+  return CARDINAL_DIRECTIONS[wrapped] ?? "n";
 }
 
 function surfaceConditions(
   waveHeight: number | null,
   wavePeriod: number | null,
   waveDirection: number | null,
-) {
+): AutomatedSurfaceConditions | null {
+  // Wave height is the reading that makes the other two mean anything: a period
+  // and a bearing with no height describe the shape of a sea nobody can feel.
   if (waveHeight === null) return null;
-  const direction = waveDirection === null ? "" : ` from ${cardinalDirection(waveDirection)}`;
-  const period = wavePeriod === null ? "" : ` · ${Math.round(wavePeriod)} s period`;
-  return `${waveHeight.toFixed(1)} m waves${direction}${period}`;
+  return {
+    waveHeightMeters: waveHeight,
+    waveDirection: waveDirection === null ? null : cardinalDirection(waveDirection),
+    wavePeriodSeconds: wavePeriod === null ? null : Math.round(wavePeriod),
+  };
 }
 
 /**
@@ -118,16 +167,16 @@ export async function fetchAutomatedMarineForecast(
     if (unixTime === null) return null;
 
     const temperature = numberAt(hourly.sea_surface_temperature, index);
-    const conditions = surfaceConditions(
+    const surface = surfaceConditions(
       numberAt(hourly.wave_height, index),
       numberAt(hourly.wave_period, index),
       numberAt(hourly.wave_direction, index),
     );
-    if (temperature === null && conditions === null) return null;
+    if (temperature === null && surface === null) return null;
 
     return {
       waterTemperatureC: temperature === null ? null : Math.round(temperature),
-      surfaceConditions: conditions,
+      surface,
       source: "Open-Meteo marine forecast",
       validAt: new Date(unixTime * 1_000),
     };

@@ -2077,7 +2077,7 @@
       "rowCount": "{count, plural, one {# row} other {# rows}}",
       "notIncluded": {
         "label": "Not included, on purpose:",
-        "text": "offline manifest copies, staff notes, notification logs, Stripe checkout attempts (see bookings and orders for outcomes), and unstored pasted image URLs. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials, calendar-subscription links, and your connected WhatsApp account never export — see the README."
+        "text": "offline manifest copies, notification retry queues, Stripe account linkage, the day close-out and buddy-team trails, weather-cancellation cascade state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export — they're your records. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials, calendar-subscription links, and your connected WhatsApp account never export — see the README."
       }
     },
     "import": {

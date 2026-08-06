@@ -202,7 +202,8 @@ function activityMessageNameMatch(fullName: string) {
  * The same word-boundary name pattern as {@link activityMessageNameMatch}, but
  * returned as the bare pattern rather than a predicate over one column — the
  * buddy sweep applies it per *array element* twice (once to find the rows, once
- * to rewrite them), so it cannot be handed a column-bound comparison.
+ * to rewrite them), so it cannot be handed a column-bound comparison, and the
+ * internal-notes sweep needs it against a third column.
  *
  * `undefined` for a name too short to anchor safely, exactly as above: the
  * two-character-name blast radius is the same hazard on either table.
@@ -541,6 +542,36 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   await tx
     .delete(internalNotes)
     .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)));
+
+  // And the notes filed under *somebody else* that name this diver in the body.
+  // The delete above is keyed on `person_id` — whose note it is — which reaches
+  // every note *about* the erased diver and none of the ones that merely mention
+  // them: "asked to be split from Elena Marsh on the next boat" sits under a
+  // different diver and survived verbatim. That was survivable while notes never
+  // left the shop; `internal_notes.csv` now carries them out of it in a portable
+  // bundle (ADR 20260806-export-operational-records), which is what makes it
+  // worth the fuzzy handle (security review, 2026-08-06).
+  //
+  // Redacted rather than deleted, unlike the sweep above: this row is another
+  // diver's record and the shop is entitled to keep it, so only the prose goes
+  // — the same treatment, for the same reason, that `activity_events.message`
+  // gets below. Word-boundary matched and refused for a name too short to anchor
+  // safely, and counted separately because a name match can over-reach.
+  const notePattern = buddyMemberNameMatch(ctx.fullName);
+  if (notePattern) {
+    const byName = await tx
+      .update(internalNotes)
+      .set({ body: REDACTED_TEXT })
+      .where(
+        and(
+          eq(internalNotes.shopId, shopId),
+          sql`${internalNotes.body} ~* ${notePattern}`,
+          ne(internalNotes.body, REDACTED_TEXT),
+        ),
+      )
+      .returning({ id: internalNotes.id });
+    logFuzzyMatch(ctx, "internal_note_name", byName.length);
+  }
 
   // --- standing credentials ------------------------------------------------
   // A live feed URL is a read credential; revoked rather than deleted so the

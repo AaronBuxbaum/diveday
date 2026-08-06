@@ -68,9 +68,11 @@ import {
 import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
 import { seedBuddyPairs } from "./seed-buddy-pairs";
+import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { seedCourseInquiries } from "./seed-course-inquiries";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveSites } from "./seed-dive-sites";
@@ -110,6 +112,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-more-trips.ts` | the rest of the month's board beyond today's three headline boats |
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
+ * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
@@ -124,7 +127,8 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * always did, including the lifecycle helpers re-exported at the bottom.
  */
 
-const INSTRUCTOR_EMAIL = "marcus@demo.invalid";
+/** The canonical demo's addresses — `dev-credentials.ts` holds the sign-ins. */
+const canonicalStaffEmail = (local: string) => `${local}@demo.invalid`;
 
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
@@ -198,20 +202,13 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     createdAt: nowDate(),
   });
 
-  const staffDefs = [
-    { fullName: "Dana Reyes", email: "dana@demo.invalid", roles: ["owner", "manager"] },
-    { fullName: "Marcus Webb", email: INSTRUCTOR_EMAIL, roles: ["instructor"] },
-    { fullName: "Keiko Tanaka", email: "keiko@demo.invalid", roles: ["divemaster"] },
-    { fullName: "Sal Moretti", email: "sal@demo.invalid", roles: ["captain"] },
-  ] as const;
-
   const staff = await db
     .insert(people)
     .values(
       staffDefs.map((s) => ({
         shopId: shop.id,
         fullName: s.fullName,
-        email: s.email,
+        email: canonicalStaffEmail(s.local),
         emergencyContactName: "On file",
         emergencyContactPhone: "+1-305-555-0100",
       })),
@@ -385,13 +382,6 @@ export async function createDemoShop(
     createdAt: nowDate(),
   });
 
-  const staffDefs = [
-    { fullName: "Dana Reyes", local: "dana", roles: ["owner", "manager"] },
-    { fullName: "Marcus Webb", local: "marcus", roles: ["instructor"] },
-    { fullName: "Keiko Tanaka", local: "keiko", roles: ["divemaster"] },
-    { fullName: "Sal Moretti", local: "sal", roles: ["captain"] },
-  ] as const;
-
   const staff = await db
     .insert(people)
     .values(
@@ -446,16 +436,25 @@ export async function seedDemoSchedule(
   shopId: string,
   opts: { history?: boolean } = {},
 ): Promise<void> {
-  // Look the instructor up by their role within the shop, not by a hardcoded
-  // email — so this seeds the canonical blue-mantis demo and any freshly-minted
-  // demo shop (whose staff carry per-shop-unique emails) alike.
-  const [instructor] = await db
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "instructor")))
-    .limit(1);
-  if (!instructor) throw new Error("seed: instructor missing from stable staff");
+  // Look the instructors up by **name**, not by a hardcoded email and no longer
+  // by role. The name is the one key both shops share: a minted demo carries
+  // per-shop-unique emails, and since DOM-M7 the shop has two instructors, so
+  // `where role = 'instructor' limit 1` would return whichever row Postgres
+  // felt like and move the whole seeded demo between runs. `staffDefs` is the
+  // single cast both seeders insert from, so these two names always resolve.
+  const instructorsByName = new Map(
+    (
+      await db
+        .select({ id: people.id, fullName: people.fullName })
+        .from(people)
+        .innerJoin(personRoles, eq(people.id, personRoles.personId))
+        .where(and(eq(people.shopId, shopId), eq(personRoles.role, "instructor")))
+    ).map((row) => [row.fullName, { id: row.id }]),
+  );
+  const instructor = instructorsByName.get(LEAD_INSTRUCTOR_NAME);
+  const reliefInstructor = instructorsByName.get(RELIEF_INSTRUCTOR_NAME);
+  if (!instructor) throw new Error("seed: lead instructor missing from stable staff");
+  if (!reliefInstructor) throw new Error("seed: relief instructor missing from stable staff");
 
   // Only the canonical blue-mantis demo pins the recap booking's id — the visual
   // tests mint a recap link from that fixed id. A freshly-minted demo shop gets a
@@ -486,6 +485,7 @@ export async function seedDemoSchedule(
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     instructor,
+    reliefInstructor,
     courseRows,
     courseIdByTitle,
     discoverCourse,
@@ -518,6 +518,9 @@ export async function seedDemoSchedule(
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows);
   await seedRentalFit(db, shopId, customers);
+  // Leads off the public course pages. After the catalog and the divers, so the
+  // one lead that links to an existing diver has somebody to link to.
+  await seedCourseInquiries(db, shopId, { courseIdByTitle });
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
@@ -744,19 +747,24 @@ export async function resetDemoSchedule(
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
 
-  // Everyone except the four staff seeded once at shop creation (seedDemo's
-  // and createDemoShop's own `staffDefs`, by full name since canonical and
-  // minted shops give them different emails) — seeded customers, booking-flow
-  // walk-ups, and any staff invited or promoted mid-test. Checking `STAFF_ROLES`
-  // alone isn't enough: e2e/staff-invite.spec.ts invites and accepts a new
-  // instructor, which makes them a real staff-role person indistinguishable
-  // from the seeded four by role — so without the name check, that invited
-  // person became permanently "stable" and leaked into every later spec
-  // sharing this worker (a "Priya Nair" row on the settings/team screenshot
-  // whose invite email embeds the wall-clock millisecond it was created,
-  // never matching twice — this was the flakiest screenshot in the visual
-  // suite, stability 0.07).
-  const STABLE_STAFF_NAMES = new Set(["Dana Reyes", "Marcus Webb", "Keiko Tanaka", "Sal Moretti"]);
+  // Everyone except the staff seeded once at shop creation (`staffDefs`, by
+  // full name since canonical and minted shops give them different emails) —
+  // seeded customers, booking-flow walk-ups, and any staff invited or promoted
+  // mid-test. Checking `STAFF_ROLES` alone isn't enough: e2e/staff-invite.spec.ts
+  // invites and accepts a new instructor, which makes them a real staff-role
+  // person indistinguishable from the seeded cast by role — so without the name
+  // check, that invited person became permanently "stable" and leaked into every
+  // later spec sharing this worker (a "Priya Nair" row on the settings/team
+  // screenshot whose invite email embeds the wall-clock millisecond it was
+  // created, never matching twice — this was the flakiest screenshot in the
+  // visual suite, stability 0.07).
+  //
+  // Read off `staffDefs` rather than re-typed here. This list was a second
+  // hand-maintained copy of the cast, and it did exactly what a second copy
+  // does: adding the shop's relief instructor (DOM-M7) left her outside the
+  // set, so the first reset purged her and the very next `seedDemoSchedule`
+  // threw looking her back up.
+  const STABLE_STAFF_NAMES = new Set<string>(staffDefs.map((s) => s.fullName));
   const staffRows = await db
     .select({ personId: personRoles.personId, fullName: people.fullName })
     .from(personRoles)

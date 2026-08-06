@@ -1,5 +1,5 @@
 import { diverTranslator } from "@/i18n/messages";
-import { depthText, temperatureText } from "@/i18n/unit-labels";
+import { depthText, surfaceConditionsText, temperatureText } from "@/i18n/unit-labels";
 import { formatShortDate } from "@/lib/format";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
@@ -28,6 +28,18 @@ export function ForecastSection({
   const waterTemperatureC = crewPrediction
     ? trip.waterTemperatureC
     : (automatedForecast?.waterTemperatureC ?? null);
+  // Two different things share this row. The crew's own read is free text they
+  // typed ("choppy after lunch") and is shown exactly as written — never
+  // translated, never re-unitted. The automated outlook is numbers and codes
+  // from the marine model, so it is written out here in the shop's depth unit
+  // and the reader's language (DOM-L2); it used to arrive from `src/lib` as a
+  // pre-composed English metric string, which a shop reading feet could do
+  // nothing with.
+  const surfaceText = crewPrediction
+    ? trip.surfaceConditions
+    : automatedForecast?.surface
+      ? surfaceConditionsText(t, automatedForecast.surface, depthUnit)
+      : null;
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">
@@ -53,12 +65,10 @@ export function ForecastSection({
             </dd>
           </div>
         ) : null}
-        {(crewPrediction ? trip.surfaceConditions : automatedForecast?.surfaceConditions) ? (
+        {surfaceText ? (
           <div className="rounded-lg bg-surface-sunken p-3">
             <dt className="text-sm text-muted">{t("trip.surface")}</dt>
-            <dd className="mt-1 text-lg font-semibold">
-              {crewPrediction ? trip.surfaceConditions : automatedForecast?.surfaceConditions}
-            </dd>
+            <dd className="mt-1 text-lg font-semibold">{surfaceText}</dd>
           </div>
         ) : null}
       </dl>

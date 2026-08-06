@@ -17,6 +17,16 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
+    },
+    "compass": {
+      "n": "N",
+      "ne": "NE",
+      "e": "E",
+      "se": "SE",
+      "s": "S",
+      "sw": "SW",
+      "w": "W",
+      "nw": "NW"
     }
   },
   "shopChrome": {
@@ -133,6 +143,11 @@
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
     "surface": "Surface",
+    "surfaceWavesMeters": "{value, number} m seas",
+    "surfaceWavesFeet": "{value, number} ft seas",
+    "surfaceWavesFrom": "{waves} from {direction}",
+    "surfaceWavesWithPeriod": "{waves} · {seconds} s period",
+    "surfaceWavesFromWithPeriod": "{waves} from {direction} · {seconds} s period",
     "forecastCrewNote": "Forecast supplied by the crew; conditions can change. The final call happens at the dock.",
     "forecastUpdated": "Updated {when}.",
     "forecastUpdateUnavailable": "Update time unavailable.",

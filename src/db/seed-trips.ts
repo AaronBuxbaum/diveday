@@ -33,6 +33,8 @@ export async function seedTrips(
   shopId: string,
   ctx: {
     instructor: { id: string };
+    /** The shop's second instructor — see the crew block below (DOM-M7). */
+    reliefInstructor: { id: string };
     courseRows: (typeof courses.$inferSelect)[];
     discoverCourse: typeof courses.$inferSelect;
     openWaterCourse: typeof courses.$inferSelect | undefined;
@@ -44,6 +46,7 @@ export async function seedTrips(
 ) {
   const {
     instructor,
+    reliefInstructor,
     courseRows,
     courseIdByTitle,
     discoverCourse,
@@ -357,6 +360,10 @@ export async function seedTrips(
   // Every course session needs an instructor before it can take a booking. The
   // charters get a captain and a divemaster, because a boat with an empty crew
   // list is the one thing no dive shop has ever had.
+  // Last-wins over an unordered select, so this is only safe for a role exactly
+  // one person holds. `instructor` is no longer one of those (DOM-M7) — which is
+  // why both instructors are resolved by name in `seedDemoSchedule` and passed
+  // in, and why nothing below reads `crewByRole.get("instructor")`.
   const crewByRole = new Map(
     (
       await db
@@ -390,12 +397,28 @@ export async function seedTrips(
    *   the roster is a scheduling document and cannot mint a credential, so she
    *   still counts as a certified assistant and the session's real instructor
    *   is still the one carrying it.
+   * - a course session where an **instructor is rostered as its divemaster**
+   *   (DOM-M7, review 20260802): the last (shop role × trip role) combination
+   *   with no visible example, and the one direction that is a genuine, common
+   *   *downgrade* rather than a roster over-claim — the shop's second
+   *   instructor assisting somebody else's class. `inWaterCrewRole` counts her
+   *   as a certified assistant, not an instructor, which is what
+   *   `crew-roles.test.ts` asserts abstractly and nothing showed concretely.
+   *   This needs two instructors on the shop; before Talia there was one, and
+   *   rostering him as an assistant would have left the class unstaffed.
    *
-   * None of this moves a seeded ratio: a captain and a deckhand were already
-   * worth nothing to it, and the divemaster-as-instructor still counts as the
-   * assistant she is qualified to be.
+   * None of this moves a seeded ratio downward: a captain and a deckhand were
+   * already worth nothing to it, the divemaster-as-instructor still counts as
+   * the assistant she is qualified to be, and the instructor-as-divemaster adds
+   * an assistant to a session that already has its instructor.
    */
   type CrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  // The one session the relief instructor assists on. A specialty course rather
+  // than an entry-level one on purpose: a second instructor spending the day as
+  // somebody else's assistant is what a small shop's specialty day looks like,
+  // and it keeps the Discover Scuba and Open Water sessions — the two a demo
+  // visitor is most likely to open — showing exactly what they showed before.
+  const reliefAssistedCourseId = courseIdByTitle.get("Nitrox Diver");
   let charterIndex = 0;
   await db.insert(tripAssignments).values(
     tripRows.flatMap((trip): CrewRow[] => {
@@ -415,6 +438,15 @@ export async function seedTrips(
                   tripId: trip.id,
                   personId: divemasterId,
                   tripRole: "instructor" as TripAssignmentRole,
+                },
+              ]
+            : []),
+          ...(reliefAssistedCourseId && trip.courseId === reliefAssistedCourseId
+            ? [
+                {
+                  tripId: trip.id,
+                  personId: reliefInstructor.id,
+                  tripRole: "divemaster" as TripAssignmentRole,
                 },
               ]
             : []),
