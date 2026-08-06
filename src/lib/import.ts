@@ -106,10 +106,20 @@ export const MAX_IMPORT_CELL_LENGTH = 2_000;
  * list is how a shop's honest CMAS card would have kept landing as "other"
  * after the column started accepting it (DOM-L1).
  *
- * Order is load-bearing for `normalizeAgency`, which takes the first entry the
- * cell contains: it matches the enum's declaration order, and every agency
- * added there has been appended after the ones already recognized, so no cell
- * that resolved to an agency before can resolve to a different one now.
+ * Widening this list has **two** ways to go wrong, and only one of them is
+ * about cells that already resolved:
+ *
+ *   - A cell that resolved to agency A must not start resolving to agency B.
+ *     Order is what rules that out: `normalizeAgency` takes the first entry the
+ *     cell names, the order here is the enum's declaration order, and every
+ *     agency added has been appended after the ones already recognized.
+ *   - A cell that resolved to **nothing** must not start resolving to an
+ *     agency. That is the failure the order argument says nothing about, and it
+ *     is the worse one: `other` comes with an `agency_unrecognized` issue, so
+ *     the shop is *told*; a wrong agency is silent, and the staffer who cannot
+ *     find the card in that agency's portal either refuses a certified diver at
+ *     the rail or stops looking cards up at all. `normalizeAgency` matches whole
+ *     tokens for exactly this reason — see its own note.
  */
 export const IMPORT_AGENCIES = certificationAgency.enumValues;
 export type ImportAgency = CertificationAgency;
@@ -818,10 +828,32 @@ export type PreparedImport = {
   fatal: ImportFatal | null;
 };
 
+/**
+ * Read the agency a cell names, or `other` when it names none we know.
+ *
+ * **Whole tokens, never substrings.** The agency codes are three and four
+ * letters, and this column's header aliases include the bare "agency" — which
+ * in a rival's *bookings* export routinely means the travel agency or booking
+ * source ("Guest", "Guest Booking", "Direct Guest"), and on a European roster
+ * can be the national federation that issues the card ("Ligue Francophone", the
+ * Belgian CMAS body). Every one of those contains `gue`. A substring match read
+ * them as GUE cards: an unrecognized cell became a *wrongly* recognized one,
+ * and the `agency_unrecognized` issue that would have told the shop was never
+ * raised. The agency is what a staffer acts on — they look the card number up
+ * in the issuing agency's own portal
+ * (docs/architecture/decisions/20260721-manual-certification.md) — and it prints
+ * on the incident-ready export handed to authorities, so a confidently wrong
+ * label is worse than an honest `other`.
+ *
+ * Splitting on non-alphanumerics rather than whitespace keeps the real shapes
+ * working ("PADI/SSI", "CMAS***", "SDI #4471"); the Unicode classes keep an
+ * accented word whole so it cannot be diced into a token it never contained.
+ */
 function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recognized: boolean } {
   const value = (raw ?? "").trim().toLowerCase();
   if (!value) return { agency: "other", recognized: false };
-  const direct = IMPORT_AGENCIES.find((agency) => agency !== "other" && value.includes(agency));
+  const tokens = new Set(value.split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+  const direct = IMPORT_AGENCIES.find((agency) => agency !== "other" && tokens.has(agency));
   if (direct) return { agency: direct, recognized: true };
   return { agency: "other", recognized: false };
 }

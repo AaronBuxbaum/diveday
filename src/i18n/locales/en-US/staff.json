@@ -146,6 +146,7 @@
         "cmas": "CMAS",
         "raid": "RAID",
         "gue": "GUE",
+        "bsac": "BSAC",
         "other": "Other agency"
       },
       "paymentStatus": {
@@ -175,6 +176,8 @@
       "addCard": "Add card",
       "agency": "Agency",
       "level": "Level",
+      "levelMapping": "Rungs from other agencies: CMAS 1★, RAID Open Water 20 and BSAC Ocean Diver go in as Open Water; CMAS 2★, RAID Advanced 35 and BSAC Sports Diver as Advanced Open Water; CMAS 3★ and BSAC Dive Leader as Divemaster.",
+      "levelMappingCaution": "Read the card, not the words. CMAS stars are instructor grades too, so “2 star” can be a 30 m diver or a full instructor. GUE has no Advanced, Rescue or Divemaster rung — Rec 1 already goes past Open Water, and Fundamentals is a skills course, not an entry-level card.",
       "cardNumber": "Card number",
       "refresherDue": "Refresher due",
       "refresherHint": "(optional)",

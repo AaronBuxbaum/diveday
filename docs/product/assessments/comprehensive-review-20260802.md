@@ -544,12 +544,34 @@ optimism; minors' ages purged from crew phones.
   2026-01-01 UHMS/DMSC form, including conditional Boxes A-G and its direct-referral questions;
   question 1 yes plus all Box A no answers clears as the source form specifies. See
   [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md).
-- **DOM-L1 (Low). Closed 2026-08-06.** CMAS, RAID and GUE added to `certification_agency` via
-  `ALTER TYPE … ADD VALUE`, which the destructive-migration guard shipped in the same branch
-  correctly passes as additive. A diver holding one of those cards can now be recorded honestly
-  rather than as `other`. The pre-existing asymmetry the finding sits beside is unchanged and still
-  recorded: `course-ratios.ts` is PADI-only by deliberate choice, so a non-PADI Open Water session
-  carries no ratio cap — widening the enum widens who that applies to without changing the rule.
+- **DOM-L1 (Low). Narrowed 2026-08-06, not closed.** CMAS, RAID and GUE added to
+  `certification_agency` via `ALTER TYPE … ADD VALUE`, which the destructive-migration guard shipped
+  in the same branch correctly passes as additive; **BSAC** followed the same day on the
+  `dive-domain-expert` review of that change — a national governing body with a full ISO-aligned
+  ladder and, on UK visitor traffic, the most common non-listed card on a Florida or Caribbean boat.
+  A diver holding one of those four can now be recorded honestly rather than as `other`.
+  **What is still open, and why this is not a closure.** There is **no free-text companion to
+  `other` anywhere in the schema**, so a diver holding an IANTD, SEI, ANDI, ACUC, PSAI or NASE card
+  is still recorded as "Other agency" with nowhere to write which one — and the staffer who later
+  has to look that number up has no idea whose portal to open. Each widening narrows the problem for
+  the next shop; the companion field is what would close it. The three ladders the level enum cannot
+  express (CMAS stars, RAID's 35 m Advanced, GUE's Fundamentals/Rec/Tech progression) are now
+  written down in [glossary.md](../glossary.md) and on the cert form's own level picker rather than
+  left as tribal knowledge.
+  **Two things the first widening got wrong, both fixed in the review's own change.** The importer's
+  agency matcher was a **substring** test, so with `gue` in the list an "Agency" column holding a
+  booking source ("Guest", "Direct Guest") or a European federation name ("Ligue Francophone", a
+  *CMAS* body) resolved to a GUE card — silently, because `agency_unrecognized` is only raised when
+  nothing matched. It now matches whole tokens (`src/lib/import.ts`), with the adversarial cells as
+  tests. And the same branch added the new agencies to `AGENCY_FULL_NAME_KEYS` in
+  `CourseSections.tsx`, which is keyed on the **free-text `courses.agency`**, not on the enum — so
+  the product renders a polished full-name expansion on the **public course hero** for a RAID or GUE
+  course, presenting a competence it does not have, while every non-intro entry-level session under
+  those agencies carries **no in-water ratio cap at all** (`src/lib/course-ratios.ts:167`, PADI-only
+  by deliberate choice). That map was left at its current eight and its docblock now says it is not
+  a mirror of the enum; BSAC was deliberately **not** added to it. The PADI-only ratio scope is
+  itself unchanged and still recorded — widening the enum widens who that applies to without
+  changing the rule.
   → *What to build while those wait*, row 10. (DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.)
 
 ## 5. Data model & persistence

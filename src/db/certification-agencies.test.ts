@@ -13,15 +13,22 @@ import { type CertificationAgency, certificationAgency, certifications } from ".
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 /**
- * CMAS, RAID and GUE are recordable, and recording them changes no gate.
+ * CMAS, RAID, GUE and BSAC are recordable, and recording them changes no gate.
  *
- * The agency enum omitted all three, so a diver holding one of those cards
+ * The agency enum omitted all four, so a diver holding one of those cards
  * could only be filed as "other" — a card the shop can see is not the card the
  * diver holds (DOM-L1, review 20260802). Widening a safety-adjacent enum earns
  * the second half of this file: nothing in readiness, trip admission, or the
  * nitrox fill gate reads the agency, so a card clears on its **level** and its
  * **verification state** and a CMAS diver is admitted on exactly the terms a
  * PADI diver is — never more, and never less.
+ *
+ * BSAC arrived a change later, on the `dive-domain-expert` review of the first
+ * widening: a national governing body with a full ISO-aligned ladder, and the
+ * most common non-listed card on a Florida or Caribbean boat. It is still not
+ * an exhaustive list — IANTD, SEI, ANDI, ACUC, PSAI and NASE remain `other`,
+ * and the honest fix for those is a free-text companion to `other`, not an
+ * ever-longer enum (glossary, "Other agency").
  */
 async function agencyContext() {
   const { db, shop } = await seededShopContext();
@@ -33,23 +40,28 @@ async function agencyContext() {
   return { db, shop, reef, rosterEntry };
 }
 
-const ADDED_AGENCIES = ["cmas", "raid", "gue"] as const satisfies readonly CertificationAgency[];
+const ADDED_AGENCIES = [
+  "cmas",
+  "raid",
+  "gue",
+  "bsac",
+] as const satisfies readonly CertificationAgency[];
 
 describe("certification agencies (DOM-L1)", () => {
-  it("names every agency the enum carries, with 'other' last for the picker", () => {
+  it("carries the agencies the review named, and keeps 'other' last for the picker", () => {
+    const values = certificationAgency.enumValues;
+
+    expect(values).toEqual(expect.arrayContaining([...ADDED_AGENCIES]));
     // The cert forms render `AGENCY_KEYS` in declaration order, so "other"
-    // sitting last is a UI fact this list owes them.
-    expect(certificationAgency.enumValues).toEqual([
-      "padi",
-      "ssi",
-      "naui",
-      "sdi",
-      "tdi",
-      "cmas",
-      "raid",
-      "gue",
-      "other",
-    ]);
+    // sitting last is a UI fact this list owes them — and the one thing a later
+    // widening can silently get wrong, since `ADD VALUE` appends unless it is
+    // told `BEFORE 'other'`.
+    expect(values.at(-1)).toBe("other");
+    // Asserted as properties rather than as a literal list on purpose: this
+    // enum is meant to keep growing, and a copy of it here would turn every
+    // future agency into a failing test in a file that has nothing to say
+    // about it. What must not change is above.
+    expect(new Set(values).size).toBe(values.length);
   });
 
   it.each(ADDED_AGENCIES)("records a level card issued by %s", async (agency) => {

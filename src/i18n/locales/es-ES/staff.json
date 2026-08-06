@@ -146,6 +146,7 @@
         "cmas": "CMAS",
         "raid": "RAID",
         "gue": "GUE",
+        "bsac": "BSAC",
         "other": "Otra agencia"
       },
       "paymentStatus": {
@@ -175,6 +176,8 @@
       "addCard": "Añadir tarjeta",
       "agency": "Agencia",
       "level": "Nivel",
+      "levelMapping": "Niveles de otras agencias: CMAS 1★, RAID Open Water 20 y BSAC Ocean Diver se registran como Open Water; CMAS 2★, RAID Advanced 35 y BSAC Sports Diver como Advanced Open Water; CMAS 3★ y BSAC Dive Leader como Divemaster.",
+      "levelMappingCaution": "Lee la tarjeta, no las palabras. Las estrellas CMAS también son grados de instructor, así que “2 estrellas” puede ser un buceador de 30 m o un instructor completo. GUE no tiene nivel Advanced, Rescue ni Divemaster — Rec 1 ya supera Open Water, y Fundamentals es un curso de destrezas, no una tarjeta de nivel inicial.",
       "cardNumber": "Número de tarjeta",
       "refresherDue": "Vencimiento del repaso",
       "refresherHint": "(opcional)",

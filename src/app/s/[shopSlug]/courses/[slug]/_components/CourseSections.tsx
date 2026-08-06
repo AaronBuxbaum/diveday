@@ -30,9 +30,16 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * idea it's an acronym, let alone what it stands for. Anything outside this
  * short list falls back to the bare code, same as before — `courses.agency` is
  * free text a shop types, so this is a lookup with a fallback and never a gate.
- * Kept in step with the `certification_agency` enum (`AGENCY_KEYS`, staff side)
- * so a shop teaching under an agency divers can now hold a card from does not
- * meet a bare acronym on the one page a newcomer reads first (DOM-L1).
+ *
+ * **Not a mirror of the `certification_agency` enum, and it must not become
+ * one.** That enum is which *card* a diver may be recorded as holding; this is
+ * a word on a public sales page. DOM-L1's widening was read as licence to add
+ * the new agencies here too, and the effect on the hero is a polished, official-
+ * looking expansion for an agency DiveDay does nothing else for — a non-intro
+ * entry-level session under RAID, GUE or BSAC still carries no in-water ratio
+ * cap (`src/lib/course-ratios.ts`, PADI-only by deliberate choice). The bare
+ * code is the honest fallback; growing this map is a *product* decision about
+ * what the page is claiming, taken on its own terms.
  */
 const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
   padi: "course.agencyFullNames.padi",

@@ -342,6 +342,17 @@ export const tripSeries = pgTable(
  * not already admit; it only ends the alternative, which was recording an
  * honest card as "other" (DOM-L1, review 20260802).
  *
+ * `bsac` is a national governing body with a full ISO-aligned ladder (Ocean
+ * Diver / Sports Diver / Dive Leader / Advanced Diver / First Class Diver) and
+ * the most common non-listed card on a Florida or Caribbean boat, on UK visitor
+ * traffic alone — it was the omission the first widening still left in place
+ * (`dive-domain-expert` review of DOM-L1).
+ *
+ * Still absent, ranked by how often a shop meets one: IANTD, SEI, ANDI, ACUC,
+ * PSAI, NASE. The list is deliberately not exhaustive — see
+ * docs/product/glossary.md, "Other agency", for why the honest fix is a
+ * free-text companion to `other` rather than an ever-longer enum.
+ *
  * `other` stays last for the reader's sake, not the database's — the cert forms
  * render `AGENCY_KEYS` in declaration order, so it is the picker's final option
  * rather than something buried mid-list.
@@ -359,6 +370,7 @@ export const certificationAgency = pgEnum("certification_agency", [
   "cmas",
   "raid",
   "gue",
+  "bsac",
   "other",
 ]);
 
@@ -3054,6 +3066,17 @@ export const nitroxCertifications = pgTable(
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
     // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
+    //
+    // **Some agencies issue no standalone nitrox card.** RAID and GUE bundle
+    // EANx into the level card itself — RAID Open Water 20 and GUE Rec 1 both
+    // certify enriched air — so there is no separate number to type here, and
+    // the honest entry is the *level* card's own number (docs/product/
+    // glossary.md, "Nitrox card"). That works by construction: the index is
+    // keyed per agency and per table, so the same number living on a
+    // `certifications` row and this one is not a collision. It is written down
+    // because it looks like a mistake to whoever does it, and the two things a
+    // staffer does instead — refuse a fill to a properly trained diver, or hand
+    // the tank over off-system — are both worse.
     uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
       .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
