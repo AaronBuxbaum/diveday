@@ -31,6 +31,7 @@ import {
   rollCallEvents,
   shops,
   tripAssignments,
+  userAccounts,
   waiverRecords,
 } from "./schema";
 import { listRollCallGaps } from "./today";
@@ -595,6 +596,121 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         occurredAt: new Date("2099-01-01T00:01:00.000Z"),
       }),
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+  });
+});
+
+/**
+ * Security review of the live-roles work (commits 78ba3c4 / 98e3bd9). The
+ * writer authorized its recorder with its own `person_roles` join and checked
+ * neither `people.deleted_at` nor `user_accounts.status`, so a person the shop
+ * had already removed still wrote real `roll_call_events` rows — head-count
+ * entries in the record of who came back from a dive, attributed to somebody
+ * who is not there.
+ *
+ * `/api/offline-manifests/sync` refuses both cases at the door, so this was
+ * never exploitable through the shipped path. It is the defence-in-depth layer:
+ * `recordRollCall` is a `src/db` writer, and the next call site — a route, a
+ * cron, an import — would have inherited the hole. The refusal a caller sees is
+ * the writer's existing `staff_not_found`, because it is the same answer to the
+ * same question: whoever is claiming to record this is not this shop's staff.
+ */
+describe("the roll-call recorder must be live staff (defence in depth)", () => {
+  /** Rows written against this booking, whatever the checkpoint or status. */
+  async function eventsFor(
+    db: Awaited<ReturnType<typeof manifestContext>>["db"],
+    tripId: string,
+    bookingId: string,
+  ) {
+    return db
+      .select()
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.tripId, tripId), eq(rollCallEvents.bookingId, bookingId)));
+  }
+
+  it("refuses a deleted person, and writes no roll-call row for them", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    // Removed from the roster. `removeStaffMember` soft-deletes the person and
+    // does not touch `person_roles`, so the role row they were authorized by is
+    // still sitting there.
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, staff.id));
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+    // The outcome that matters: a refusal that still wrote the row would be no
+    // fix at all, because the row is the thing an incident report is read off.
+    expect(await eventsFor(db, reef.id, booking.booking.id)).toEqual([]);
+  });
+
+  it("refuses a disabled account still holding a stale role row, and writes no roll-call row", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    // Access revoked, roster row intact — the ordinary "they left, keep the
+    // history" shape. Sign-in already refuses this account; until now the
+    // writer did not.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, staff.id));
+    expect(
+      await db.select().from(personRoles).where(eq(personRoles.personId, staff.id)),
+    ).not.toEqual([]);
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await eventsFor(db, reef.id, booking.booking.id)).toEqual([]);
+  });
+
+  it("still lets a live staff member record, and still refuses one demoted to diver", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    // The control for both refusals above: same shop, same booking, same call
+    // — only the recorder's standing differs.
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(await eventsFor(db, reef.id, booking.booking.id)).toMatchObject([
+      { recordedByPersonId: staff.id, status: "not_boarded" },
+    ]);
+
+    // Demotion is the case the original hand-rolled join did catch, and the
+    // rewrite must keep catching it: every staff role gone, a `diver` row left.
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values({ personId: staff.id, role: "diver" });
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+    // Still just the one row the live staff member wrote.
+    expect(await eventsFor(db, reef.id, booking.booking.id)).toHaveLength(1);
   });
 });
 

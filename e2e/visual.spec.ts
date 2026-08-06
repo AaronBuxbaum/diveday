@@ -1,24 +1,30 @@
 import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
+import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Eighty-three key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 332 screenshots per run (see
+ * Visual regression coverage. Ninety-five key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 380 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
- * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
- * has drifted from it before (it read 48 while the grep said 56, and 71 while
- * the grep said 72), so trust the grep and correct the prose.
+ * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
+ * has drifted from it before (it read 48 while the grep said 56, 71 while the
+ * grep said 72, and 83 while the grep said 93), so trust the grep and correct
+ * the prose. The trailing comma in that pattern is load-bearing: without it the
+ * grep also matches this very sentence and reads one high, which is how the
+ * "correct the prose" instruction above ended up chasing a number that was
+ * never right.
  *
  * Three more come from the `print` block at the bottom: the manifest, prep,
  * and incident-export pages as they render for the printer. Print is its own
  * concern, not a light/dark one — the `@media print` token override collapses
  * both schemes to one black-and-white palette — so each is captured once, at a
- * US-Letter width, via `capturePrint()`. That brings the run to 335
+ * US-Letter width, via `capturePrint()`. That brings the run to 383
  * screenshots.
  *
  * ## One surface, one `test()`
@@ -731,6 +737,205 @@ async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
   await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
 }
 
+/** The IndexedDB names `src/lib/offline-manifest-store.ts` writes under. */
+const OFFLINE_DB = "diveday-offline-manifests";
+const OFFLINE_KEY_STORE = "keys";
+const OFFLINE_MANIFEST_STORE = "manifests";
+const OFFLINE_KEY_ID = "manifest-aes-gcm-v1";
+
+/**
+ * An `expiresAt` far enough in the past that the pending-event reprieve has
+ * run out — see `OFFLINE_MANIFEST_PENDING_GRACE_MS`. Derived from the frozen
+ * clock and the constant itself rather than written as "29 days ago", so
+ * shortening the ceiling in the product does not silently leave this seed on
+ * the wrong side of it.
+ */
+const PAST_PENDING_GRACE = new Date(
+  Date.parse(E2E_FROZEN_CLOCK) - OFFLINE_MANIFEST_PENDING_GRACE_MS - 24 * 60 * 60 * 1000,
+).toISOString();
+
+/** A shop that is not the seeded one, for the cross-shop purge. */
+const OTHER_SHOP = { slug: "reef-runners", name: "Reef Runners" };
+
+/**
+ * Rewrite one saved offline record in place, through the store's own AES key.
+ *
+ * Two of the offline shell's states are only reachable from a record in a
+ * condition the app cannot be asked to produce on a fresh fixture: one that has
+ * been sitting on this device for weeks past its retention window while still
+ * holding roll call that never sent, and one saved by a *different* shop than
+ * the session the tablet now holds. Both are ordinary records otherwise, so
+ * this takes a real one the app just wrote and edits the two facts that matter.
+ *
+ * It decrypts and re-encrypts rather than fabricating an envelope: the key is
+ * non-extractable and lives in the same database, the AAD is
+ * `<version>:<tripId>` (`OFFLINE_MANIFEST_RECORD_VERSION`, imported so a bump
+ * cannot leave this seeding silently undecryptable), and everything not named
+ * below stays exactly what the product wrote — the roster, the shop timezone,
+ * the snapshot id. A hand-built payload would be a second copy of the snapshot
+ * shape to keep in step, and it would photograph a roster nobody ships.
+ *
+ * **Call it from `/offline-manifest`, never from a `/shop/**` page.** The staff
+ * shell mounts `OfflineManifestAutoSave` (and the manifest page its own
+ * manager), either of which can overwrite this record from a save round already
+ * in flight; the offline shell is the one surface in the app that never writes
+ * one.
+ */
+async function rewriteSavedOfflineRecord(
+  page: Page,
+  tripId: string,
+  change: {
+    shop?: { slug: string; name: string };
+    expiresAt?: string;
+    /** Roll-call events to queue as never-sent, one per diver on the roster. */
+    pendingRollCalls?: number;
+  },
+) {
+  await page.evaluate(
+    async ({ tripId, change, recordVersion, names }) => {
+      const openDatabase = () =>
+        new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open(names.db);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error ?? new Error("could not open the store"));
+        });
+      const read = <T>(db: IDBDatabase, store: string, key: string) =>
+        new Promise<T | undefined>((resolve, reject) => {
+          const request = db.transaction(store, "readonly").objectStore(store).get(key);
+          request.onsuccess = () => resolve(request.result as T | undefined);
+          request.onerror = () => reject(request.error ?? new Error("could not read the store"));
+        });
+
+      const db = await openDatabase();
+      try {
+        const key = await read<CryptoKey>(db, names.keyStore, names.keyId);
+        const record = await read<{ iv: ArrayBuffer; ciphertext: ArrayBuffer }>(
+          db,
+          names.manifestStore,
+          tripId,
+        );
+        if (!key || !record) throw new Error(`no offline record saved for trip ${tripId}`);
+        const additionalData = new TextEncoder().encode(`${recordVersion}:${tripId}`);
+        const plaintext = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: record.iv, additionalData },
+          key,
+          record.ciphertext,
+        );
+        const envelope = JSON.parse(new TextDecoder().decode(plaintext)) as {
+          snapshot: {
+            shop: { slug: string; name: string };
+            snapshotId: string;
+            savedAt: string;
+            expiresAt: string;
+            manifests: Array<{ divers: Array<{ bookingId: string }> }>;
+          };
+          events: unknown[];
+        };
+
+        if (change.shop) envelope.snapshot.shop = { ...envelope.snapshot.shop, ...change.shop };
+        if (change.expiresAt) envelope.snapshot.expiresAt = change.expiresAt;
+        for (let index = 0; index < (change.pendingRollCalls ?? 0); index += 1) {
+          const bookingId = envelope.snapshot.manifests[0]?.divers[index]?.bookingId;
+          if (!bookingId) throw new Error("the saved roster has too few divers to record against");
+          envelope.events.push({
+            // Fixed rather than randomUUID: this rides in the encrypted
+            // payload, so a per-run value would be a per-run ciphertext.
+            clientEventId: `visual-${tripId}-${index}`,
+            snapshotId: envelope.snapshot.snapshotId,
+            snapshotSavedAt: envelope.snapshot.savedAt,
+            tripId,
+            bookingId,
+            checkpoint: "departure",
+            status: "not_boarded",
+            note: null,
+            occurredAt: envelope.snapshot.savedAt,
+            syncStatus: "pending",
+          });
+        }
+
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv, additionalData },
+          key,
+          new TextEncoder().encode(JSON.stringify(envelope)),
+        );
+        await new Promise<void>((resolve, reject) => {
+          const transaction = db.transaction(names.manifestStore, "readwrite");
+          // `expiresAt` is stored beside the ciphertext in the clear, and it is
+          // the copy both the retention check and the grace ceiling read — so
+          // it has to move with the one inside the envelope, or the record
+          // would claim two different expiries.
+          transaction.objectStore(names.manifestStore).put({
+            tripId,
+            expiresAt: envelope.snapshot.expiresAt,
+            iv: iv.buffer,
+            ciphertext,
+          });
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error("could not write the store"));
+          transaction.onabort = () =>
+            reject(transaction.error ?? new Error("the store write was aborted"));
+        });
+      } finally {
+        db.close();
+      }
+    },
+    {
+      tripId,
+      change,
+      recordVersion: OFFLINE_MANIFEST_RECORD_VERSION,
+      names: {
+        db: OFFLINE_DB,
+        keyStore: OFFLINE_KEY_STORE,
+        manifestStore: OFFLINE_MANIFEST_STORE,
+        keyId: OFFLINE_KEY_ID,
+      },
+    },
+  );
+}
+
+/**
+ * The offline shell's tenant lookup. Refusing it is how both tests below hold
+ * the cross-shop purge still: `fetchOfflineManifestShopSlug` answers `null` for
+ * a refused request exactly as it does for no signal, and the purge declines to
+ * run rather than guess a shop — which is also the shell's own everyday state,
+ * since it exists for the tablet that cannot reach DiveDay.
+ */
+const IDENTITY_ROUTE = "**/api/offline-manifests/identity*";
+
+/**
+ * Open the seeded reef charter's live manifest, wait for the device copy it
+ * saves in the background, and leave the page on the offline shell with the
+ * tenant lookup refused — ready for `rewriteSavedOfflineRecord`.
+ *
+ * Both halves of that landing are load-bearing, and the second one was found
+ * the hard way. Being on `/offline-manifest` keeps the staff shell's auto-save
+ * from overwriting the record (see `rewriteSavedOfflineRecord`); refusing the
+ * lookup *before* the shell is ever opened keeps the purge from deleting it.
+ * The shell starts a purge round on mount and only reaches the store once its
+ * tenant request comes back, which is long after the list has painted — so a
+ * rewrite made on the strength of "the heading is up" lands in the middle of
+ * that round, and a record rewritten to another shop's name is then correctly
+ * purged before the test can go look at it. With no tenant there is no purge,
+ * and the seed sits still until the test asks for one.
+ */
+async function savedOfflineRecordFor(page: Page): Promise<string> {
+  await openReefTrip(page);
+  await openTripTab(page, "Manifest");
+  await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+  const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
+  if (!tripId) throw new Error(`could not read a trip id from ${page.url()}`);
+  await page.route(IDENTITY_ROUTE, (route) => route.abort());
+  await page.goto("/offline-manifest");
+  // The with-trips heading, so this also proves the store was read and the
+  // rows are on screen — the empty branch says "Nothing saved on this device
+  // yet" instead, and a rewrite against a record the list never found would
+  // throw somewhere less obvious.
+  await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
+  return tripId;
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
@@ -816,6 +1021,24 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link").waitFor();
         await capture(page, "schedule", scheme);
+      });
+
+      // The unsupported-language band (I18N-L1). Every other capture in this
+      // file runs under the fleet's default locale, so nothing here has ever
+      // rendered this surface — and a shop cannot reproduce it on its own
+      // machine either, which is exactly why it wants a baseline. `de-DE` is a
+      // language DiveDay carries no bundle for, so `unsupportedLanguage()`
+      // answers and the band appears under the shop header.
+      test.describe("unsupported language", () => {
+        test.use({ locale: "de-DE" });
+
+        test(`the schedule's language-fallback band renders true to the design (${scheme})`, async ({
+          page,
+        }) => {
+          await page.goto("/s/blue-mantis");
+          await publicReefCard(page).getByRole("link").waitFor();
+          await capture(page, "schedule-language-fallback", scheme);
+        });
       });
 
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
@@ -1293,12 +1516,17 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on the signed-in CTA itself, not the page heading: the heading
         // renders in the static shell, so it proves nothing about the
         // session-aware nav having streamed in over MarketingNavFallback.
-        // Scoped to the nav: the marketing footer now renders its own
-        // session-aware "Go to shop" link, and this frame is about the header.
-        await page
-          .getByLabel("Main navigation")
-          .getByRole("link", { name: "Go to shop" })
-          .waitFor();
+        // Scoped to the banner because the footer grew its own session-aware
+        // "Go to shop" link when it was aligned with the nav (#394). That one
+        // streams in from a different server component, so waiting on whichever
+        // resolved first would let the header still be showing its fallback at
+        // capture time — the one thing this frame exists to catch.
+        //
+        // By landmark role rather than by the nav's accessible name: that name
+        // is `t("nav.mainNavigation")`, a message-bundle string, so matching on
+        // its English text would couple this spec to one locale. `banner` is
+        // the `<header>` the nav sits in and carries no copy.
+        await page.getByRole("banner").getByRole("link", { name: "Go to shop" }).waitFor();
         await capture(page, "marketing-nav-signed-in", scheme);
       });
     });
@@ -1642,6 +1870,115 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/offline-manifest?trip=${tripId}`);
         await page.getByRole("heading", { name: "Nothing saved on this phone yet" }).waitFor();
         await capture(page, "offline-manifest-empty", scheme);
+      });
+
+      /**
+       * The discard notice: roll call a crew member recorded offline that never
+       * reached DiveDay, on a saved copy the store finally deleted for passing
+       * `OFFLINE_MANIFEST_PENDING_GRACE_MS` — 28 days past its own expiry — with
+       * that evidence still queued on it (security review 2026-08-06, F3).
+       *
+       * It earns a baseline because of *where* it lands and *when*. The delete
+       * almost always happens with no page open (the worker's push refresh, the
+       * staff layout's auto-save), so this danger-toned panel is the first and
+       * only place a human is told; and the surface it appears on is a shared
+       * boat tablet at the dock, in the minute a captain is counting heads. It
+       * is also the one thing on this shell that reconnecting cannot undo.
+       *
+       * Captured on the **list** branch, once. The notice is a single component
+       * rendered identically by all three branches (list, the trip empty state,
+       * and the roster) — the only difference is which sibling precedes it — so
+       * a second and third frame would cost eight more PNGs to photograph the
+       * same markup at a different vertical offset. The list is where a tablet
+       * picked up at the dock opens.
+       *
+       * Left on Blue Mantis's own record rather than a foreign shop's: the
+       * ceiling is shop-agnostic, and keeping it on the seeded shop means every
+       * word in the notice is a seeded value rather than an invented one.
+       */
+      test(`the offline manifest's discard notice renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest → the shell, twice, plus the store rewrite.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        // Two divers' worth, so the plural of both strings is what is banked —
+        // one lost tap is the rarer shape, and it is the narrower one to lay out.
+        await rewriteSavedOfflineRecord(page, tripId, {
+          expiresAt: PAST_PENDING_GRACE,
+          pendingRollCalls: 2,
+        });
+
+        // The tenant lookup stays refused for the rest of this test (see
+        // `savedOfflineRecordFor`), and here that is what makes the panel
+        // deterministic rather than merely still. A tenant the shell *can*
+        // resolve starts a cross-shop purge, and that purge reads every saved
+        // record through `loadOfflineManifest` — the same function the list
+        // branch is already reading them through. Both would reach this record
+        // before either deleted it, both would append a notice for it, and the
+        // panel would photograph one row or two depending on which finished
+        // first. One reader, one row.
+        await page.reload();
+        // The notice itself, not the list heading: the discard is written while
+        // the store is being read and the panel arrives after the rows, so the
+        // heading resolves against a page that has not yet been told anything
+        // was lost. `role="alert"` is the panel's own element — waiting on the
+        // "Got it" button would equally prove it mounted, but this is the
+        // sentence a regression would move.
+        await page
+          .getByRole("alert")
+          .filter({ hasText: "Roll call that never sent has been removed" })
+          .waitFor();
+        await capture(page, "offline-manifest-discarded", scheme);
+      });
+
+      /**
+       * `?trip=<id>` for a record the cross-shop purge has just deleted out from
+       * under the captain reading it — a different shop signed in on this
+       * tablet, so this trip's saved copy is gone and roll call for it has to be
+       * recorded on that shop's own live manifest (security review 2026-08-06,
+       * F5).
+       *
+       * The point of the state is the *copy*: before this it repainted to the
+       * ordinary "Nothing saved on this phone yet", which is the one sentence
+       * the captain already knows is false — they were looking at the roster a
+       * moment ago. `offline-manifest-empty` is the baseline for that ordinary
+       * sentence and stays pointed at it; this is its own frame because the two
+       * render the same layout with different words, and a regression that
+       * collapsed one into the other would move nothing on that one.
+       *
+       * Reached the way it happens on a boat, in order: no signal, so the shell
+       * paints the saved roster; then signal, so the purge runs and the record
+       * goes. That order is the whole test — the state needs the roster to have
+       * been on screen first (it is what tells the purge whose copy it was
+       * removing), so a purge that wins the race to the store instead produces
+       * the plain empty state and photographs the wrong page.
+       */
+      test(`an offline copy removed by another shop renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest → the shell, twice, plus the store rewrite.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        await rewriteSavedOfflineRecord(page, tripId, { shop: OTHER_SHOP });
+
+        // No signal for the first paint — the tenant lookup is still refused
+        // from `savedOfflineRecordFor`, so the purge declines to run and the
+        // saved roster paints from storage exactly as it does on the dock.
+        // Cutting the whole context offline would say the same thing, and would
+        // also put this navigation through the service worker's cached shell:
+        // a second thing to prime and a second thing to be flaky.
+        await page.goto(`/offline-manifest?trip=${tripId}`);
+        await page.getByRole("heading", { name: "Before departure roll call" }).waitFor();
+
+        // Signal returns. The shell re-runs its purge on `online` — the same
+        // event the fixture's own `setOffline(false)` dispatches — and this time
+        // the tenant answers, so the foreign record is deleted and the branch
+        // repaints saying why.
+        await page.unroute(IDENTITY_ROUTE);
+        await page.evaluate(() => window.dispatchEvent(new Event("online")));
+        await page.getByRole("heading", { name: "That saved copy has been removed" }).waitFor();
+        await capture(page, "offline-manifest-removed-other-shop", scheme);
       });
 
       // Shop settings, where staff set the rental catalog and its prices.

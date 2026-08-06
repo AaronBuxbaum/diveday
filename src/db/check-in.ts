@@ -1,13 +1,14 @@
 import { and, asc, count, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/operational-window";
 import type { ReadinessResult } from "@/lib/readiness";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
-import { activityEvents, bookings, people, personRoles, trips } from "./schema";
+import { activityEvents, bookings, people, trips } from "./schema";
 
-const STAFF_ROLES = ["owner", "manager", "instructor", "divemaster", "captain", "crew"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type CheckInQueueRow = {
@@ -158,6 +159,38 @@ export type CheckInOutcome =
     };
 
 /**
+ * The `people.id` of the staff member **behind the counter**, or `null` when
+ * whoever is claiming to check this diver in is not this shop's live staff
+ * right now.
+ *
+ * This used to be a hand-rolled `person_roles` join here, against a local copy
+ * of `STAFF_ROLES` — `people.id` / `people.shopId` / `person_roles.role` and
+ * nothing else. It catches what it was written for (a diver, or somebody
+ * demoted out of every staff role) and misses the two cases
+ * `loadActiveStaffRoles` exists for: a **deleted** person, because
+ * `deleteDiver` sets `people.deleted_at` and leaves every role row where it is,
+ * and a **disabled** account, because `setStaffAccountStatus` revokes sign-in
+ * and leaves `person_roles` entirely intact — a suspended employee keeps every
+ * role row they had. Both moved a booking to `checked_in` and signed the
+ * activity trail with their name.
+ *
+ * `src/db/authz.ts` is the one place the rule lives; `loadActiveStaffRoles`
+ * takes a `DbExecutor`, so it composes inside this transaction unchanged. Same
+ * shape as `activeStaffRecorderId` in `src/db/manifests.ts`.
+ */
+async function activeStaffRecorderId(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(tx, shopId, personId);
+  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
+  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
+  // the old join expressed as an `inArray`.
+  return roles && isStaff(roles) ? personId : null;
+}
+
+/**
  * Record a counter check-in atomically. A successful check-in is not boarding:
  * the manifest still performs its own departure-time readiness gate. This
  * mutation only closes the arrival queue and leaves an activity trail.
@@ -168,19 +201,8 @@ export async function checkInBooking(
 ): Promise<CheckInOutcome> {
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.recordedByPersonId),
-          eq(people.shopId, input.shopId),
-          inArray(personRoles.role, STAFF_ROLES),
-        ),
-      )
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
     const [booking] = await tx
       .select({
@@ -226,7 +248,7 @@ export async function checkInBooking(
       shopId: input.shopId,
       tripId: booking.tripId,
       bookingId: booking.id,
-      actorPersonId: staff.id,
+      actorPersonId: recordedBy,
       message: `${booking.personName} checked in at the counter`,
       occurredAt: now,
     });

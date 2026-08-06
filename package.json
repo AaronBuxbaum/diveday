@@ -40,6 +40,7 @@
     "check:timezone": "node scripts/check-timezone.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:domain-strings": "node scripts/check-domain-strings.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
     "check": "pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test",
