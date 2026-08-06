@@ -608,8 +608,9 @@ they serve; real pagination; consistent soft-delete/append-only patterns.
   (ADR [20260806-destructive-migration-guard](../../architecture/decisions/20260806-destructive-migration-guard.md)).
   It paid for itself on its first run by refusing this same branch's gallery-photos migration,
   which dropped `courses.image_urls`/`image_alts` in the release that added their replacement while
-  the still-serving deployment selected both; that migration is now expand-only and dual-writes
-  (DATA-L4). The parallel arrays are one `gallery_photos` object per photo, with a backfill that
+  the still-serving deployment selected both; that migration shipped expand-only and dual-writing,
+  and `20260806105408_drop-course-legacy-gallery` is the contract release that drops the pair
+  behind an acknowledged marker (DATA-L4). The parallel arrays are one `gallery_photos` object per photo, with a backfill that
   decides what an already-drifted row becomes rather than leaving it to whichever array was
   shorter. Three genuinely uncovered ILIKE arms gained trigram indexes — `courses.title`,
   `dive_sites.location_name`, `orders.description`; the orders arm the finding named turned out to
