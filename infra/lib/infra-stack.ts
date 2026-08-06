@@ -343,9 +343,12 @@ export class InfraStack extends cdk.Stack {
       subscribers: [emailSubscriber(alertEmail)],
     });
 
-    new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
+    // No `budgetName` here, deliberately: a fixed one collides with itself on
+    // the replacement `--context monthlyBudgetLimit=...` forces. See the
+    // "Troubleshooting" note in docs/engineering/infrastructure-runbook.md
+    // §6 for the mechanism; the resolved name is in the output below.
+    const monthlyCostGuardrail = new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
       budget: {
-        budgetName: "diveday-monthly-cost-guardrail",
         budgetType: "COST",
         timeUnit: "MONTHLY",
         budgetLimit: {
@@ -361,6 +364,12 @@ export class InfraStack extends cdk.Stack {
         // Outside-normal-bands siren: still just an email, nothing stops running.
         budgetNotification("ACTUAL", 200),
       ],
+    });
+
+    new cdk.CfnOutput(this, "MonthlyCostGuardrailBudgetName", {
+      value: monthlyCostGuardrail.ref,
+      description:
+        "AWS-assigned name of the monthly cost guardrail budget (Billing and Cost Management -> Budgets). No longer a fixed literal -- see the comment above.",
     });
 
     // AWS-managed Cost Anomaly Detection catches an unexpectedly fast rate of
