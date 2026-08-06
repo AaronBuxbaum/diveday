@@ -126,6 +126,14 @@ Vercel, update GitHub visual-test secrets, and add SES DNS records through Verce
 `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The Vercel CLI is pinned in this
 repository's dev dependencies and is invoked with `pnpm exec vercel`, never downloaded ad hoc.
 
+Each of these three sync steps only pushes what actually changed, not the whole document every
+time — answering "yes" is safe to do on every deploy. Vercel variables (`import-vercel-env.mjs`)
+and DNS records (inline in `post-deploy-wizard.mjs`) diff against what's already live, by pulling
+the current values/records first. GitHub secrets (`sync-github-secrets.mjs`) can't do that — the
+Actions secrets API never returns a value to any token — so it diffs against a local checkpoint
+(`.env.github.synced`, gitignored) of what this script last pushed; a secret edited directly in the
+GitHub UI is invisible to it and reads as still in sync.
+
 > [!IMPORTANT]
 > `infra:deploy` is a plain `cdk deploy`, so CDK's default `--require-approval broadening` applies:
 > a deploy that changes IAM — which is most of them here — stops and asks. That is worth keeping now

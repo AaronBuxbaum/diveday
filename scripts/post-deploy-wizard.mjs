@@ -71,7 +71,7 @@ export async function runPostDeployWizard({
   }
 
   if (yes(await ask("Update GitHub Actions secrets for visual regression? [y/N] "))) {
-    run("gh", ["secret", "set", "--env-file", ".env.github"]);
+    run(process.execPath, [join(scriptDirectory, "sync-github-secrets.mjs"), ".env.github"]);
   }
 
   if (!yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) return;
@@ -96,38 +96,57 @@ export async function runPostDeployWizard({
     ),
   );
 
+  // `vercel dns add` has no upsert semantics: adding a record that already
+  // matches by name/type/value creates a duplicate rather than updating one.
+  // For a TXT record like SPF that is actively harmful -- two "v=spf1"
+  // records break SPF validation for every outbound mail. List what Vercel
+  // already has once, and skip any add whose exact name/type/value already
+  // appears together on one line of it. If the listing itself fails, fall
+  // back to adding everything rather than silently skipping real work.
+  let existingRecords = "";
+  try {
+    existingRecords = execute("pnpm", ["exec", "vercel", "dns", "ls", dnsZone, "--limit", "100"], {
+      encoding: "utf8",
+    });
+  } catch (error) {
+    log(
+      `Could not list existing Vercel DNS records (${error instanceof Error ? error.message : error}); adding all records instead of only what's missing.`,
+    );
+  }
+
+  function dnsRecordExists(name, type, value) {
+    return existingRecords
+      .split("\n")
+      .some((line) => line.includes(name) && line.includes(type) && line.includes(value));
+  }
+
+  let added = 0;
+  function addDnsRecord(name, type, value, extraArguments = []) {
+    if (dnsRecordExists(name, type, value)) {
+      log(`Skipping ${type} ${name} -- already present in Vercel DNS.`);
+      return;
+    }
+    run("pnpm", ["exec", "vercel", "dns", "add", dnsZone, name, type, value, ...extraArguments]);
+    added += 1;
+  }
+
   for (const token of tokens) {
-    run("pnpm", [
-      "exec",
-      "vercel",
-      "dns",
-      "add",
-      dnsZone,
+    addDnsRecord(
       recordName(`${token}._domainkey.${emailDomain}`, dnsZone),
       "CNAME",
       `${token}.dkim.amazonses.com`,
-    ]);
+    );
   }
-  run("pnpm", [
-    "exec",
-    "vercel",
-    "dns",
-    "add",
-    dnsZone,
+  addDnsRecord(
     recordName(mailFromDomain, dnsZone),
     "MX",
     `feedback-smtp.${syncEnvironment.AWS_DEFAULT_REGION || "us-east-1"}.amazonses.com`,
-    "10",
-  ]);
-  run("pnpm", [
-    "exec",
-    "vercel",
-    "dns",
-    "add",
-    dnsZone,
-    recordName(mailFromDomain, dnsZone),
-    "TXT",
-    "v=spf1 include:amazonses.com ~all",
-  ]);
-  log(`Added SES DNS records to Vercel zone ${dnsZone}.`);
+    ["10"],
+  );
+  addDnsRecord(recordName(mailFromDomain, dnsZone), "TXT", "v=spf1 include:amazonses.com ~all");
+  log(
+    added === 0
+      ? `SES DNS records already present in Vercel zone ${dnsZone}; nothing added.`
+      : `Added ${added} SES DNS record(s) to Vercel zone ${dnsZone}.`,
+  );
 }
