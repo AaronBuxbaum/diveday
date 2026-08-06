@@ -1293,7 +1293,12 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on the signed-in CTA itself, not the page heading: the heading
         // renders in the static shell, so it proves nothing about the
         // session-aware nav having streamed in over MarketingNavFallback.
-        await page.getByRole("link", { name: "Go to shop" }).waitFor();
+        // Scoped to the nav: the marketing footer now renders its own
+        // session-aware "Go to shop" link, and this frame is about the header.
+        await page
+          .getByLabel("Main navigation")
+          .getByRole("link", { name: "Go to shop" })
+          .waitFor();
         await capture(page, "marketing-nav-signed-in", scheme);
       });
     });
