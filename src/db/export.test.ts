@@ -587,7 +587,15 @@ describe("full-shop export dataset", () => {
     const before = await loadShopExportBundleInput(db, shop.id);
     if (!before) throw new Error("shop failed to load");
     const bookingsTable = table(before, "bookings.csv");
-    const bookingId = String(bookingsTable.rows[0][bookingsTable.header.indexOf("id")]);
+    const recordsBefore = table(before, "waiver_records.csv");
+    const issuedBookingIds = new Set(
+      recordsBefore.rows.map((row) => row[recordsBefore.header.indexOf("booking_id")]),
+    );
+    const unissuedBooking = bookingsTable.rows.find(
+      (row) => !issuedBookingIds.has(row[bookingsTable.header.indexOf("id")]),
+    );
+    if (!unissuedBooking) throw new Error("seeded shop has no booking without a waiver request");
+    const bookingId = String(unissuedBooking[bookingsTable.header.indexOf("id")]);
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     expect(issued.ok).toBe(true);
