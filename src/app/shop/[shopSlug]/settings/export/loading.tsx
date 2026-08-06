@@ -1,4 +1,8 @@
-/** Header + two-column file list skeleton, so the route never blocks blank. */
+/**
+ * Header + the bundle's two-column file list + the backups half (status card
+ * and destination form), so the one data-out surface never blocks blank
+ * (ADR 20260806-one-data-out-surface).
+ */
 export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -12,6 +16,25 @@ export default function Loading() {
             {["a", "b", "c", "d", "e", "f", "g", "h"].map((slot) => (
               <div key={slot} className="h-16 rounded-xl bg-surface-sunken" />
             ))}
+          </div>
+        </div>
+        <div className="mt-10">
+          <div className="h-5 w-28 rounded bg-surface-sunken" />
+          <div className="mt-4 rounded-lg border border-border bg-surface p-6">
+            <div className="h-5 w-44 rounded bg-surface-sunken" />
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["a", "b", "c", "d"].map((slot) => (
+                <div key={slot} className="h-10 rounded-lg bg-surface-sunken" />
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <div className="h-5 w-52 rounded bg-surface-sunken" />
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {["a", "b", "c", "d", "e", "f"].map((slot) => (
+                <div key={slot} className="h-11 rounded-lg bg-surface-sunken" />
+              ))}
+            </div>
           </div>
         </div>
       </div>

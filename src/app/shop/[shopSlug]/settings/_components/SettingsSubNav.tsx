@@ -11,8 +11,8 @@ import {
 
 /**
  * The settings surface's sub-nav (surface-consolidation task T3): a Settings
- * hub plus its seven full-page surfaces (Team, Website embed, Calendar
- * subscriptions, WhatsApp, Backups, Import, Export), each of which used to
+ * hub plus its six full-page surfaces (Team, Website embed, Calendar
+ * subscriptions, WhatsApp, Import, Export), each of which used to
  * hand-roll its own "Back to settings" button and had no way to move
  * sideways to a sibling surface. Grouping and order come from
  * `settings-destinations.ts` — the same registry `SettingsPage.tsx`'s hub

@@ -288,8 +288,8 @@
     "visual": ["settings-payments", "settings-trial"]
   },
   "/shop/[shopSlug]/settings/backup": {
-    "e2e": ["a11y.spec.ts", "backup.spec.ts"],
-    "visual": ["settings-backup"]
+    "e2e": ["backup.spec.ts"],
+    "visual": []
   },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],
@@ -300,7 +300,7 @@
     "visual": ["settings-embed"]
   },
   "/shop/[shopSlug]/settings/export": {
-    "e2e": ["export.spec.ts"],
+    "e2e": ["a11y.spec.ts", "backup.spec.ts", "export.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["settings-export"]
   },
   "/shop/[shopSlug]/settings/import": {

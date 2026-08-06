@@ -1998,19 +1998,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-whatsapp", scheme);
       });
 
-      // Where a shop points its weekly backup at storage it owns (ADR
-      // 20260804-shop-owned-backup-export). The seed ships the destination
-      // configured with six weekly deliveries and one failed week, so this
-      // captures the surface doing its real job: proving where the data went
-      // and naming the week it didn't.
-      test(`backup settings render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/backup");
-        await page.getByRole("heading", { name: "Delivery history" }).waitFor();
-        // The history rows, not just the heading — the table is the surface.
-        await page.getByRole("cell", { name: "Failed" }).waitFor();
-        await capture(page, "settings-backup", scheme);
-      });
-
       /**
        * The two orders surfaces — the densest money screens in the app, and
        * until recently the only ones with no baseline at all. That gap was found
@@ -2051,10 +2038,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
-      // The data-export surface: the "your data is yours" promise, concrete.
+      /**
+       * The one data-out surface: the "your data is yours" promise, concrete,
+       * in both halves (ADR 20260806-one-data-out-surface) — the bundle you
+       * would download now, and the weekly copy already landing in storage the
+       * shop owns. The `settings-backup` capture retired into this one; the
+       * seed ships blue-mantis configured with six weekly deliveries and one
+       * failed week, so the backup half still photographs doing its real job:
+       * proving where the data went and naming the week it didn't.
+       */
       test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
         await page.getByRole("heading", { name: "Data export" }).waitFor();
+        await page.getByRole("heading", { name: "Delivery history" }).waitFor();
+        // The history rows, not just the heading — the table is half the
+        // surface, and a capture taken on the heading alone banks an empty one.
+        await page.getByRole("cell", { name: "Failed" }).waitFor();
         await capture(page, "settings-export", scheme);
       });
 

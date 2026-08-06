@@ -283,20 +283,19 @@ test.describe("automated accessibility scans of the static staff routes", () => 
   test("the settings surfaces and the not-found backstop have no automated a11y violations", async ({
     page,
   }) => {
-    // 7 scans at ~3.5s each.
+    // 6 scans at ~3.5s each.
     test.setTimeout(85_000);
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/settings", heading: "Shop settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
       { path: "/shop/blue-mantis/settings/import", heading: "Import contacts" },
+      // One page, both halves: the download manifest and — since ADR
+      // 20260806-one-data-out-surface folded `/settings/backup` into it — the
+      // scheduled-backup credential form. That form is the reason this route
+      // is scanned at all: a field nobody can label is a field a shop fills
+      // wrong, on the surface that decides whether their data survives
+      // losing us.
       { path: "/shop/blue-mantis/settings/export", heading: "Data export" },
-      // Export's sibling, and the one settings route this table had never
-      // named: scheduled backup to the shop's own storage (ADR
-      // 20260804-shop-owned-backup-export). It carries the same class of
-      // secret-bearing credential form `/settings/import` and `/settings/export`
-      // do — a field nobody can label here is a field a shop fills wrong, on the
-      // surface that decides whether their data survives losing us.
-      { path: "/shop/blue-mantis/settings/backup", heading: "Backups" },
       { path: "/shop/blue-mantis/settings/calendar", heading: "Calendar subscriptions" },
       // The app-wide `notFound()` backstop (src/app/not-found.tsx). Scanned
       // under a staff session because that is the session a mistyped `/shop`
