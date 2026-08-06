@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
@@ -6,13 +6,18 @@ import { createBooking } from "./bookings";
 import {
   applyProviderEmailEvent,
   drainNotificationRetries,
-  listDeliveryAttempts,
   listNotificationDeliveryIssues,
   recordNotificationDelivery,
   retryBookingConfirmation,
   sendNotification,
 } from "./notifications";
-import { notificationDeliveries, notificationSendQueue, people, shops } from "./schema";
+import {
+  notificationDeliveries,
+  notificationDeliveryAttempts,
+  notificationSendQueue,
+  people,
+  shops,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -156,12 +161,18 @@ describe("notification delivery status", () => {
     const delivery = await retryBookingConfirmation(db, shop.id, booking.bookingId);
     expect(delivery?.status).toBe("not_configured");
 
-    const attempts = await listDeliveryAttempts(
-      db,
-      shop.id,
-      booking.bookingId,
-      "booking_confirmation",
-    );
+    // Read the trail straight off the table, oldest first.
+    const attempts = await db
+      .select()
+      .from(notificationDeliveryAttempts)
+      .where(
+        and(
+          eq(notificationDeliveryAttempts.shopId, shop.id),
+          eq(notificationDeliveryAttempts.bookingId, booking.bookingId),
+          eq(notificationDeliveryAttempts.kind, "booking_confirmation"),
+        ),
+      )
+      .orderBy(asc(notificationDeliveryAttempts.attemptedAt));
     expect(attempts).toHaveLength(2);
     expect(attempts[0]).toMatchObject({ status: "failed", isRetry: false });
     expect(attempts[1]).toMatchObject({ status: "not_configured", isRetry: true });

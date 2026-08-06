@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
 import { nowDate } from "./clock";
-import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
+import { needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -248,68 +248,4 @@ export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMar
   if (record.medicalAnswers) return { at, source: "digital" };
   if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };
   return null;
-}
-
-export type WaiverActivityEntry = {
-  recordId: string;
-  at: Date;
-  kind: "issued" | "started" | "completed" | "medical_review" | "superseded";
-  title: string;
-  detail: string;
-};
-
-/**
- * Staff activity is derived from the immutable evidence and lifecycle fields;
- * it never mutates a signed record or invents an event that was not stored.
- */
-export function waiverActivityTimeline(records: readonly WaiverRecord[]): WaiverActivityEntry[] {
-  const entries: WaiverActivityEntry[] = [];
-  for (const record of records) {
-    // No link was ever issued for a paper-attested or imported record — both
-    // are born already completed, never handed a bearer token to complete.
-    if (record.signatureMethod !== "in_person_attested" && record.signatureMethod !== "imported") {
-      entries.push({
-        recordId: record.id,
-        at: record.createdAt,
-        kind: "issued",
-        title: "Completion link issued",
-        detail: `${record.templateTitle} v${record.templateVersion}`,
-      });
-    }
-    if (record.startedAt) {
-      entries.push({
-        recordId: record.id,
-        at: record.startedAt,
-        kind: "started",
-        title: "Diver started the waiver",
-        detail: "Progress was saved for later completion.",
-      });
-    }
-    if (record.completedAt) {
-      const medicalReview = record.status === "medical_review";
-      const flagged =
-        medicalReview && record.medicalAnswers ? flaggedMedicalPrompts(record.medicalAnswers) : [];
-      entries.push({
-        recordId: record.id,
-        at: record.completedAt,
-        kind: medicalReview ? "medical_review" : "completed",
-        title: medicalReview ? "Medical review required" : "Waiver signed",
-        detail: medicalReview
-          ? flagged.length > 0
-            ? `Physician clearance needed — flagged: ${flagged.join("; ")}`
-            : "A staff member must follow up before the diver is ready."
-          : "Signed evidence is complete.",
-      });
-    }
-    if (record.supersededAt) {
-      entries.push({
-        recordId: record.id,
-        at: record.supersededAt,
-        kind: "superseded",
-        title: "Completion link replaced",
-        detail: "The pending link is no longer usable.",
-      });
-    }
-  }
-  return entries.sort((a, b) => a.at.getTime() - b.at.getTime());
 }

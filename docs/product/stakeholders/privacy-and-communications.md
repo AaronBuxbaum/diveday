@@ -35,7 +35,7 @@ Prepare before starting; incomplete campaigns bounce back and reset the clock:
   dive-shop platform; **no marketing sends**.
 - Sample messages: pull real copy from the shipped reminder cadence (7-day and 24-hour) and the
   waiver-link SMS; include opt-out language. Confirm STOP/HELP handling and that our sender
-  records opt-outs — verify what `notifySms()` does with a `stop`-ed recipient before claiming
+  records opt-outs — verify what the SNS `SmsProvider` does with a `stop`-ed recipient before claiming
   compliance ([SNS SMS ADR](../../architecture/decisions/20260802-sns-sms-adapter.md)).
 - Opt-in description: consent is captured at booking when the diver provides a phone number for
   trip communications — make the booking form's language actually say that (check it; if it

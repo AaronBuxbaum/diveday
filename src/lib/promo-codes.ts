@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 /**
  * Shop-wide promo codes: what a code may say, what it may be spent on, and
  * whether it is live right now. Framework-free (docs ADR
@@ -113,14 +111,4 @@ export function isPromoRedeemable(
 export function discountedAmountCents(amountCents: number, discountPercent: number): number {
   const discount = Math.round((amountCents * discountPercent) / 100);
   return Math.max(0, amountCents - discount);
-}
-
-/**
- * A suggested code for the staff form to prefill — memorable prefix, random
- * suffix. Staff can overwrite it with anything typeable; the shop-scoped unique
- * index is the real backstop against a collision.
- */
-export function suggestPromoCode(prefix = "DIVE"): string {
-  const suffix = randomBytes(3).toString("hex").toUpperCase();
-  return `${normalizePromoCode(prefix) ?? "DIVE"}-${suffix}`;
 }

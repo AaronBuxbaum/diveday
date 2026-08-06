@@ -45,8 +45,8 @@ import { at, nextCreatedAt } from "./seed-clock";
  * back. Capacity 8 with one seat sold leaves 7 — clear of the remaining-seat
  * counts the e2e fleet matches trips by (3, 6, and Full).
  */
-export const DEMO_COUNTER_BLOCKED_DIVER = "Tomás Ferreira";
-export const DEMO_COUNTER_BLOCKED_TRIP = "Deep Wreck Charter — the Duane on EANx";
+const DEMO_COUNTER_BLOCKED_DIVER = "Tomás Ferreira";
+const DEMO_COUNTER_BLOCKED_TRIP = "Deep Wreck Charter — the Duane on EANx";
 const DEMO_COUNTER_BLOCKED_EMAIL = "tomas.ferreira@example.com";
 
 export async function seedCounterBlockers(

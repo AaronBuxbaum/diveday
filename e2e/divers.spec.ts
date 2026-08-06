@@ -1,28 +1,10 @@
-import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
 signedInAsOwner();
-
-/**
- * A staff trip's path, read from the schedule card's own href. Clicking and
- * then reading `page.url()` races the streaming list — the card can still be
- * re-rendering, and the URL read lands on the wrong route.
- */
-async function tripPathByTitle(page: Page, title: string | RegExp) {
-  await page.goto(`/shop/${SHOP}/schedule/board`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
-    .filter({ hasText: title })
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
-  if (!href) throw new Error(`no trip card found for ${title}`);
-  return href;
-}
 
 test("staff opens a diver from their avatar and can reach them from the header", async ({
   page,
@@ -117,7 +99,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
     returnsAt: "12:00",
   });
 
-  const tripPath = await tripPathByTitle(page, title);
+  const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}/guests`);
   await page.getByLabel("Name", { exact: true }).fill(diverName);
   await page.getByLabel("Email", { exact: true }).fill(`contact-${stamp}@example.com`);

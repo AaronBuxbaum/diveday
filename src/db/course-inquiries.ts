@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { AppDb, DbExecutor } from "./client";
 import { courseInquiries, people } from "./schema";
@@ -106,54 +106,4 @@ export async function recordCourseInquiry(
     .returning({ id: courseInquiries.id, createdAt: courseInquiries.createdAt });
   if (!inserted) throw new Error("recordCourseInquiry: insert returned no row");
   return inserted;
-}
-
-export type CourseInquiryListRow = {
-  id: string;
-  courseId: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  experienceLevel: CourseInquiryExperience;
-  timing: string | null;
-  preferredDate: string | null;
-  divers: number | null;
-  message: string | null;
-  createdAt: Date;
-};
-
-/**
- * This shop's inquiries, newest first. Not surfaced in any UI yet — the email
- * notification is the delivery path task 7 asks for — but kept shop-scoped
- * and queryable from the start the way every other lead-capture table
- * (`lastMinuteListEntries`, `tripWaitlistEntries`) is, for a moderation view
- * to read from later without a second migration.
- */
-export async function listCourseInquiriesForShop(
-  db: DbExecutor,
-  shopId: string,
-  options: { courseId?: string; limit?: number } = {},
-): Promise<CourseInquiryListRow[]> {
-  const limit = options.limit ?? 50;
-  const scope = options.courseId
-    ? and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.courseId, options.courseId))
-    : eq(courseInquiries.shopId, shopId);
-  return db
-    .select({
-      id: courseInquiries.id,
-      courseId: courseInquiries.courseId,
-      name: courseInquiries.name,
-      email: courseInquiries.email,
-      phone: courseInquiries.phone,
-      experienceLevel: courseInquiries.experienceLevel,
-      timing: courseInquiries.timing,
-      preferredDate: courseInquiries.preferredDate,
-      divers: courseInquiries.divers,
-      message: courseInquiries.message,
-      createdAt: courseInquiries.createdAt,
-    })
-    .from(courseInquiries)
-    .where(scope)
-    .orderBy(desc(courseInquiries.createdAt))
-    .limit(limit);
 }

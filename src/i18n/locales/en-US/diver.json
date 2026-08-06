@@ -313,9 +313,7 @@
     "submit": "Stop these emails",
     "submitting": "Stopping…",
     "confirmedTitle": "You're unsubscribed",
-    "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates.",
-    "unavailableTitle": "This link isn't available",
-    "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
+    "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates."
   },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
@@ -381,6 +379,7 @@
     "askBody": "A rating takes a second. Words are welcome but never required.",
     "ratingLegend": "Your rating",
     "ratingOption": "{rating} out of 5 stars",
+    "anonymousReviewer": "A diver",
     "commentLabel": "Anything you’d tell another diver?",
     "commentModerationHint": "Ratings post right away; the shop reads written words first.",
     "commentPlaceholder": "The crew, the sites, how the day ran",
@@ -462,14 +461,12 @@
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
-    "withTheShop": "With the shop",
     "allSetHeading": "You’re all set",
     "allSetBody": "Your shop is finishing the last checks — there’s nothing you need to do right now.",
     "emergencyContact": "Emergency contact",
     "emergencyContactBody": "Someone we can reach for you on the day — a name and a phone the crew can call.",
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
-    "updateContact": "Update contact",
     "saveContact": "Save contact",
     "chooseTrip": "Choose a trip…",
     "moveConfirm": "Move your booking to this trip? Your current spot releases as soon as the new one holds.",
@@ -678,8 +675,6 @@
     "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "nameRequired": "Add your name — this seat becomes yours.",
-      "emailInvalid": "That email doesn’t look right.",
       "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified card on file before this seat can change hands. Contact the shop and they can sort it out."
     },
@@ -1188,6 +1183,7 @@
     "tryLabel": "Try:",
     "current": "Current",
     "switchAction": "Switch",
+    "switchFailed": "That role switch didn’t go through — try again in a moment.",
     "switchToAria": "Switch to {role}",
     "roles": {
       "owner": {

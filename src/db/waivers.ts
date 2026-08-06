@@ -845,24 +845,13 @@ export async function recordInPersonWaiver(
   });
 }
 
-/** Staff roster view: only the current record joins each active booking. */
+/**
+ * Staff roster view: only the current record joins each active booking. The
+ * single-trip form of `listTripsWaiverStatuses` below — one query, one rule,
+ * so the two can never disagree about which record is current.
+ */
 export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tripId: string) {
-  return db
-    .select({ booking: bookings, person: people, waiver: waiverRecords })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .leftJoin(
-      waiverRecords,
-      and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
-    )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .orderBy(asc(bookings.createdAt));
+  return listTripsWaiverStatuses(db, shopId, [tripId]);
 }
 
 /** Staff roster view: only the current record joins each active booking across multiple trips. */
@@ -884,28 +873,4 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
       ),
     )
     .orderBy(asc(bookings.createdAt));
-}
-
-/**
- * Full evidence history for a staff timeline. Unlike the roster status query,
- * this deliberately includes superseded pending links so a replacement is
- * explainable without exposing its bearer token.
- */
-export async function listTripWaiverActivity(db: AppDb, shopId: string, tripId: string) {
-  return db
-    .select({ booking: bookings, person: people, waiver: waiverRecords })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .leftJoin(
-      waiverRecords,
-      and(eq(waiverRecords.bookingId, bookings.id), eq(waiverRecords.shopId, shopId)),
-    )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .orderBy(asc(bookings.createdAt), asc(waiverRecords.createdAt));
 }

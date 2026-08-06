@@ -5,7 +5,7 @@ import {
   MAX_BATCH_BYTES,
   MAX_BATCH_RECORDS,
   MAX_EVENT_BYTES,
-  TRUNCATION_MARKER,
+  TRUNCATION_EVENT,
   truncateMessage,
 } from "./cloudwatch-batch";
 
@@ -20,17 +20,40 @@ describe("truncateMessage", () => {
     expect(truncateMessage(line)).toBe(line);
   });
 
-  it("cuts an oversized line to what CloudWatch accepts, marker included", () => {
+  it("replaces an oversized line with valid JSON that fits", () => {
+    // The property that matters: every line `log()` produces stays parseable,
+    // because the metric filters read `$.level` and `$.event` out of it. A
+    // spliced-together string would only be JSON by luck.
     const truncated = truncateMessage("x".repeat(MAX_EVENT_BYTES * 2));
+
     expect(bytes(truncated) + EVENT_OVERHEAD_BYTES).toBeLessThanOrEqual(MAX_EVENT_BYTES);
-    expect(truncated.endsWith(TRUNCATION_MARKER)).toBe(true);
+    expect(() => JSON.parse(truncated)).not.toThrow();
+    expect(JSON.parse(truncated)).toMatchObject({
+      event: TRUNCATION_EVENT,
+      truncated: true,
+      originalBytes: MAX_EVENT_BYTES * 2,
+    });
   });
 
-  it("cuts on a byte boundary, so a multi-byte character never straddles the limit", () => {
-    // Four bytes per emoji: a naive character-count cut lands over the ceiling.
-    const truncated = truncateMessage("🤿".repeat(MAX_EVENT_BYTES));
-    expect(bytes(truncated) + EVENT_OVERHEAD_BYTES).toBeLessThanOrEqual(MAX_EVENT_BYTES);
-    expect(truncated).not.toContain("�");
+  it("carries the start of the original so a human can still tell what it was", () => {
+    const original = `${JSON.stringify({ event: "stripe_webhook.event_received" })}${"y".repeat(MAX_EVENT_BYTES * 2)}`;
+    const head = JSON.parse(truncateMessage(original)).head as string;
+    expect(head.startsWith('{"event":"stripe_webhook.event_received"}')).toBe(true);
+  });
+
+  it("stays valid and within the ceiling when every character needs escaping", () => {
+    // A quote becomes two bytes once escaped and a control character up to six,
+    // so a head chosen by raw byte count can overshoot after JSON.stringify.
+    for (const filler of ['"', "\\", "\u0000", "🤿"]) {
+      const truncated = truncateMessage(filler.repeat(MAX_EVENT_BYTES));
+      expect(bytes(truncated) + EVENT_OVERHEAD_BYTES).toBeLessThanOrEqual(MAX_EVENT_BYTES);
+      expect(() => JSON.parse(truncated)).not.toThrow();
+    }
+  });
+
+  it("never splits a multi-byte character into a replacement glyph", () => {
+    const head = JSON.parse(truncateMessage("🤿".repeat(MAX_EVENT_BYTES))).head as string;
+    expect(head).not.toContain("�");
   });
 });
 
@@ -81,9 +104,11 @@ describe("batchRecords", () => {
     expect(flattened.map((entry) => entry.message)).toEqual(records.map((entry) => entry.message));
   });
 
-  it("truncates an oversized record rather than emitting a batch AWS would reject", () => {
+  it("replaces an oversized record rather than emitting a batch AWS would reject", () => {
     const [batch] = batchRecords([record(0, "z".repeat(MAX_EVENT_BYTES * 3))]);
     expect(batch).toHaveLength(1);
     expect(batchBytes(batch ?? [])).toBeLessThanOrEqual(MAX_EVENT_BYTES);
+    // Still parseable, so a metric filter can still read it.
+    expect(JSON.parse(batch?.[0]?.message ?? "")).toMatchObject({ event: TRUNCATION_EVENT });
   });
 });

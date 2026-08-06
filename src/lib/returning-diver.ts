@@ -38,11 +38,3 @@ export function loadReturningDiver(): ReturningDiver | null {
     return null;
   }
 }
-
-export function clearReturningDiver(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Nothing to do if storage is unavailable.
-  }
-}

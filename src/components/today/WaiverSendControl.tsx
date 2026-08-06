@@ -13,10 +13,7 @@ import { Copyable } from "@/components/Copyable";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-
-function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
-}
+import { fill, pluralForm } from "@/i18n/fill";
 
 function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: WaiverSendCopy }) {
   const url =
@@ -50,16 +47,24 @@ function reasonCopy(
   reason: WaiverFallbackLink["reason"],
   count: number,
 ): string {
-  const plural = count > 1;
-  const values = { count: String(count) };
+  const values = { count };
   if (reason === "no_email") {
-    return plural ? fill(copy.reasonNoEmailOther, values) : copy.reasonNoEmailOne;
+    return fill(
+      pluralForm(count, { one: copy.reasonNoEmailOne, other: copy.reasonNoEmailOther }),
+      values,
+    );
   }
   if (reason === "failed") {
-    return plural ? fill(copy.reasonFailedOther, values) : copy.reasonFailedOne;
+    return fill(
+      pluralForm(count, { one: copy.reasonFailedOne, other: copy.reasonFailedOther }),
+      values,
+    );
   }
   if (reason === "test_recipient") {
-    return plural ? fill(copy.reasonTestRecipientOther, values) : copy.reasonTestRecipientOne;
+    return fill(
+      pluralForm(count, { one: copy.reasonTestRecipientOne, other: copy.reasonTestRecipientOther }),
+      values,
+    );
   }
   if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
   return copy.reasonUnconfigured;

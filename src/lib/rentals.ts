@@ -294,13 +294,13 @@ export function hasAnyRentalPricing(pricing: RentalPricing): boolean {
   );
 }
 
-export type RentalQuoteLine = {
+type RentalQuoteLine = {
   /** `"set"` and `"nitrox"` are synthetic; every other value is a rentable kind. */
   kind: RentableItemKind | "set" | "nitrox";
   cents: number;
 };
 
-export type RentalQuote = {
+type RentalQuote = {
   lines: RentalQuoteLine[];
   subtotalCents: number;
   /**

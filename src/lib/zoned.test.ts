@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   addCalendarDays,
-  calendarDayDelta,
   parseWallTime,
   shiftInstantByCalendarDays,
   shiftInstantByWallTimeDelta,
@@ -94,35 +93,6 @@ describe("addCalendarDays", () => {
       hour: 7,
       minute: 30,
     });
-  });
-});
-
-describe("calendarDayDelta", () => {
-  it("counts whole calendar days between two wall dates, ignoring time-of-day", () => {
-    expect(
-      calendarDayDelta(
-        { year: 2026, month: 3, day: 6, hour: 7, minute: 30 },
-        { year: 2026, month: 3, day: 13, hour: 9, minute: 0 },
-      ),
-    ).toBe(7);
-  });
-
-  it("returns a negative delta when moving earlier", () => {
-    expect(
-      calendarDayDelta(
-        { year: 2026, month: 3, day: 13, hour: 7, minute: 30 },
-        { year: 2026, month: 3, day: 6, hour: 7, minute: 30 },
-      ),
-    ).toBe(-7);
-  });
-
-  it("is zero for the same calendar day even with different times", () => {
-    expect(
-      calendarDayDelta(
-        { year: 2026, month: 3, day: 6, hour: 7, minute: 30 },
-        { year: 2026, month: 3, day: 6, hour: 22, minute: 0 },
-      ),
-    ).toBe(0);
   });
 });
 

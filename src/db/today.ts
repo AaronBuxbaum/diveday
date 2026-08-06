@@ -28,7 +28,7 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
-import { OPERATIONAL_MAX_TRIPS, operationalWindow, shopDayWindow } from "@/lib/operational-window";
+import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
@@ -40,6 +40,7 @@ import {
   urgencyFor,
 } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -47,7 +48,6 @@ import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
-import { listTripsReadiness } from "./readiness";
 import {
   bookings,
   nitroxCertifications,
@@ -63,7 +63,7 @@ import {
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
-import { listStaff, pagedUpcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -104,14 +104,6 @@ export async function todayNextDepartureTripId(
   const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
   return active?.id ?? null;
 }
-
-/**
- * How many upcoming departures the queue will inspect. Shared with Not ready
- * (`src/db/blockers.ts`) via `src/lib/operational-window.ts` — the two surfaces
- * rank the same people, so a cap either of them applied alone would make their
- * counts disagree for a shop busy enough to reach it.
- */
-const MAX_TRIPS = OPERATIONAL_MAX_TRIPS;
 
 /** A departure happening today, with just enough to know whether it can sail. */
 export type DepartureSummary = {
@@ -903,34 +895,28 @@ export async function getTodayWork(
    * getting the diver-blocker-only queue.
    */
   includeOpsAlerts = false,
+  /**
+   * Precomputed horizon evidence from `inHorizonReadiness` (`./blockers`),
+   * when the caller already ran the pass for another readiness surface in the
+   * same request — the shop home passes it so its by-departure view doesn't
+   * pay for the pipeline twice. Omitted, the queue runs its own.
+   */
+  evidence?: HorizonReadinessEvidence,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
-  // The board only ever shows the soonest MAX_TRIPS departures, so bound the
-  // query itself with the already-existing keyset page (`pagedUpcomingTripsWithCounts`)
-  // rather than fetching every scheduled trip in the shop's future and slicing after.
-  const { trips: upcoming } = await pagedUpcomingTripsWithCounts(db, shopId, {
-    now,
-    limit: MAX_TRIPS,
-  });
-  const inWindow = upcoming.filter((trip) => trip.startsAt <= horizon);
-  const today = shopDay(now, timeZone);
-  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
-
   // One batched readiness pass for the whole window, not one per trip. The
   // per-trip call issues about ten queries of its own, so a six-departure
   // morning was sixty round trips to render the shop's most-visited page;
-  // `listTripsReadiness` answers the same question for every trip at once.
-  const readinessByTrip = new Map<string, Awaited<ReturnType<typeof listTripsReadiness>>>();
-  for (const trip of inWindow) readinessByTrip.set(trip.id, []);
-  for (const row of await listTripsReadiness(
-    db,
-    shopId,
-    inWindow.map((trip) => trip.id),
-    now,
-  )) {
-    readinessByTrip.get(row.booking.tripId)?.push(row);
-  }
+  // `inHorizonReadiness` bounds the fetch with the already-existing keyset
+  // page and answers readiness for every trip at once.
+  const {
+    trips: inWindow,
+    upcoming,
+    readinessByTrip,
+  } = evidence ?? (await inHorizonReadiness(db, shopId, now));
+  const today = shopDay(now, timeZone);
+  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
   const bookingIdsByTrip = new Map(
     inWindow.map((trip) => [
       trip.id,

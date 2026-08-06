@@ -23,8 +23,6 @@ import type { Role } from "@/lib/authz";
 
 /** Dana Reyes — owner *and* manager: passes every H-14 gate. */
 export const SEEDED_OWNER_EMAIL = "dana@demo.invalid";
-/** Marcus Webb — instructor: configures trips, but no money and no roster deletion. */
-export const SEEDED_INSTRUCTOR_EMAIL = "marcus@demo.invalid";
 /** Sal Moretti — captain: the lowest-privilege seeded staff role, refused by every H-14 gate. */
 export const SEEDED_CAPTAIN_EMAIL = "sal@demo.invalid";
 

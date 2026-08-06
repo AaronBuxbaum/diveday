@@ -1,19 +1,23 @@
 import type { NextRequest } from "next/server";
+import { requireStaffSession } from "@/lib/session";
 
 /**
  * 308 to the board's add panel, which is now the only trip form
  * (ADR 20260806-one-trip-create-form).
  *
- * A Route Handler, not a `page.tsx` calling `permanentRedirect()` (how
- * `/blockers` does it): under `cacheComponents` a page is partially prerendered,
- * so a redirect thrown from its body answers **200** with the hop resolving in
- * the streamed payload — a browser follows it, a bookmark, a crawler, and a
- * `curl` do not.
+ * A Route Handler, not a `page.tsx` calling `permanentRedirect()`: under
+ * `cacheComponents` a page is partially prerendered, so a redirect thrown from
+ * its body answers **200** with the hop resolving in the streamed payload — a
+ * browser follows it, a bookmark, a crawler, and a `curl` do not. And it
+ * re-checks the session server-side (ADR-0006) rather than trusting the edge
+ * proxy alone, same as its `/blockers`, `/settings/backup`, and
+ * `/dive-sites/catalog` siblings.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ shopSlug: string }> },
 ) {
+  await requireStaffSession();
   const { shopSlug } = await params;
   const query = new URLSearchParams({ add: "full" });
   const course = request.nextUrl.searchParams.get("course");

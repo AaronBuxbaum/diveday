@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { clearReturningDiver, loadReturningDiver, saveReturningDiver } from "./returning-diver";
+import { loadReturningDiver, saveReturningDiver } from "./returning-diver";
 
 afterEach(() => {
   localStorage.clear();
@@ -12,12 +12,6 @@ describe("returning diver storage", () => {
     expect(loadReturningDiver()).toBeNull();
     saveReturningDiver({ fullName: "Marco Reyes", email: "marco@example.com" });
     expect(loadReturningDiver()).toEqual({ fullName: "Marco Reyes", email: "marco@example.com" });
-  });
-
-  it("clears the saved diver", () => {
-    saveReturningDiver({ fullName: "Marco Reyes", email: "marco@example.com" });
-    clearReturningDiver();
-    expect(loadReturningDiver()).toBeNull();
   });
 
   it("never saves a blank name or email", () => {

@@ -6,7 +6,6 @@ import {
   COST_PROVIDERS,
   type CostCeiling,
   ceilingAlertKey,
-  ceilingById,
   ceilingPercent,
   evaluateCeiling,
   evaluateCeilings,
@@ -264,11 +263,6 @@ describe("the registry itself", () => {
     }
   });
 
-  it("finds a ceiling by id and nothing by a made-up one", () => {
-    expect(ceilingById("vercel_spend")?.provider).toBe("vercel");
-    expect(ceilingById("no_such_ceiling")).toBeUndefined();
-  });
-
   it("names at least one ceiling nothing can measure, rather than omitting it", () => {
     // The honest half of the registry. An entry we cannot poll still belongs
     // here — leaving it out would make the table read as full coverage.
@@ -280,7 +274,8 @@ describe("the registry itself", () => {
     const suspends = COST_CEILINGS.filter((entry) => entry.overflow === "suspends");
     expect(suspends.map((entry) => entry.id)).toContain("neon_compute");
     // And it warns earlier than a ceiling that merely costs money.
-    const spend = ceilingById("vercel_spend");
-    expect(ceilingById("neon_compute")?.warnAt).toBeLessThan(spend?.warnAt ?? 1);
+    const spend = COST_CEILINGS.find((entry) => entry.id === "vercel_spend");
+    const neon = COST_CEILINGS.find((entry) => entry.id === "neon_compute");
+    expect(neon?.warnAt).toBeLessThan(spend?.warnAt ?? 1);
   });
 });

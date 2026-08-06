@@ -29,10 +29,6 @@ export const TRIP_CREW_ROLES = ["instructor", "divemaster", "captain", "crew"] a
 
 export type TripCrewRole = (typeof TRIP_CREW_ROLES)[number];
 
-export function isTripCrewRole(value: string): value is TripCrewRole {
-  return (TRIP_CREW_ROLES as readonly string[]).includes(value);
-}
-
 /**
  * What a crew member contributes to the in-water supervision ratio.
  *

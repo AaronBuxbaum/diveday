@@ -38,38 +38,62 @@ export const MAX_BATCH_BYTES = 1_048_576;
 export const MAX_BATCH_RECORDS = 1_000;
 
 /**
- * Marks a line the byte ceiling cut short, so a truncated record is never
- * mistaken for a complete one. Deliberately not valid JSON on its own — a line
- * this long is already malformed for a Logs Insights `parse`, and saying so
- * plainly beats a silently short object.
+ * The event code an over-long line is replaced by. A real code, greppable and
+ * countable like any other, rather than a marker spliced onto a broken string.
  */
-export const TRUNCATION_MARKER = '…","truncated":true}';
+export const TRUNCATION_EVENT = "cloudwatch_shipper.line_truncated";
 
 function byteLength(value: string): number {
   return new TextEncoder().encode(value).length;
 }
 
+/** Cuts a string to a UTF-8 byte budget without splitting a character in half. */
+function cutToBytes(value: string, budget: number): string {
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.length <= budget) return value;
+  let end = Math.max(0, budget);
+  // Every UTF-8 continuation byte matches `10xxxxxx`. Walking back off one is
+  // what stops a multi-byte character being halved and decoded as `U+FFFD`.
+  while (end > 0 && ((encoded[end] ?? 0) & 0b1100_0000) === 0b1000_0000) end -= 1;
+  return new TextDecoder().decode(encoded.subarray(0, end));
+}
+
 /**
- * Cuts a line down to what CloudWatch will accept, on a UTF-8 byte boundary.
+ * Replaces a line CloudWatch would reject with a **valid JSON** line saying so.
  *
- * The cut is made in the encoded bytes rather than in the string, because a
- * character's byte length is not its length: slicing by characters and hoping
- * either overshoots the ceiling (and CloudWatch rejects the whole batch) or
- * undershoots it by a factor of four. Walking back off UTF-8 continuation bytes
- * — every one of which matches `10xxxxxx` — is what keeps a multi-byte
- * character from being cut in half and decoded as `U+FFFD`.
+ * The first version of this cut the serialized line and glued a marker on the
+ * end, which only produced parseable JSON by luck — a cut landing mid-number or
+ * mid-key yields a line no `$.level = "error"` metric filter can read, so an
+ * over-long error line would have silently stopped being counted (raised in
+ * review, and the right call: every line `log()` writes is JSON, and the filters
+ * and saved queries all depend on that holding without exception).
+ *
+ * So nothing is spliced. A fresh object is built, with the original's opening
+ * bytes carried as a properly-escaped string field — readable for a human,
+ * parseable for a machine, and honest about having been cut. The re-check loop
+ * exists because escaping can grow a string (a `"` becomes two bytes, a control
+ * character up to six), so the head is halved until the finished line fits.
  *
  * Nothing this app logs is remotely near 256 KiB; the context is ids and codes.
  * This is the guard for the line nobody predicted.
  */
 export function truncateMessage(message: string): string {
   const limit = MAX_EVENT_BYTES - EVENT_OVERHEAD_BYTES;
-  const encoded = new TextEncoder().encode(message);
-  if (encoded.length <= limit) return message;
+  const originalBytes = byteLength(message);
+  if (originalBytes <= limit) return message;
 
-  let end = limit - byteLength(TRUNCATION_MARKER);
-  while (end > 0 && ((encoded[end] ?? 0) & 0b1100_0000) === 0b1000_0000) end -= 1;
-  return new TextDecoder().decode(encoded.subarray(0, end)) + TRUNCATION_MARKER;
+  // Leaves generous room for the wrapper's own keys and any escaping growth.
+  let headBudget = Math.floor(limit / 2);
+  for (;;) {
+    const line = JSON.stringify({
+      event: TRUNCATION_EVENT,
+      truncated: true,
+      originalBytes,
+      head: cutToBytes(message, headBudget),
+    });
+    if (byteLength(line) <= limit || headBudget === 0) return line;
+    headBudget = Math.floor(headBudget / 2);
+  }
 }
 
 /**

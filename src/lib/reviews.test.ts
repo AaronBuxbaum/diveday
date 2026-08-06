@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  aggregateLabel,
   EMPTY_REVIEW_AGGREGATE,
   MAX_REVIEW_COMMENT_LENGTH,
   normalizeReviewComment,
   parseReviewRating,
   publishesImmediately,
-  ratingLabel,
   reviewAggregate,
   reviewerDisplayName,
 } from "./reviews";
@@ -64,7 +62,6 @@ describe("reviewAggregate", () => {
   it("reports no average at all when nothing is published, rather than 0", () => {
     expect(reviewAggregate(0, 0)).toEqual(EMPTY_REVIEW_AGGREGATE);
     expect(reviewAggregate(0, 0).average).toBeNull();
-    expect(aggregateLabel(reviewAggregate(0, 0))).toBeNull();
   });
 
   it("averages to one decimal", () => {
@@ -74,13 +71,10 @@ describe("reviewAggregate", () => {
 
   it("shows a single review honestly instead of hiding a thin sample", () => {
     expect(reviewAggregate(1, 3)).toEqual({ count: 1, average: 3 });
-    expect(aggregateLabel(reviewAggregate(1, 3))).toBe("3.0 out of 5 from 1 review");
   });
 
   it("never rounds a mixed record up to a clean five", () => {
-    const aggregate = reviewAggregate(10, 49);
-    expect(aggregate.average).toBe(4.9);
-    expect(aggregateLabel(aggregate)).toBe("4.9 out of 5 from 10 reviews");
+    expect(reviewAggregate(10, 49).average).toBe(4.9);
   });
 });
 
@@ -94,13 +88,7 @@ describe("reviewerDisplayName", () => {
     expect(reviewerDisplayName("Kai")).toBe("Kai");
   });
 
-  it("falls back to a neutral byline rather than rendering a blank one", () => {
-    expect(reviewerDisplayName("   ")).toBe("A diver");
-  });
-});
-
-describe("ratingLabel", () => {
-  it("spells the rating out, since a row of stars reads as nothing aloud", () => {
-    expect(ratingLabel(4)).toBe("4 out of 5 stars");
+  it("reports an absent name as absence, never words — the surface picks the byline", () => {
+    expect(reviewerDisplayName("   ")).toBe("");
   });
 });

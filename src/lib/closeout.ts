@@ -394,22 +394,6 @@ export function buildCloseoutSnapshot(
   };
 }
 
-/** The recorded act's headline numbers. */
-export type CloseoutSummary = {
-  /** Departures recorded not-yet-settled (any non-`all_home` state). */
-  outstandingDepartures: number;
-  carried: number;
-  dismissed: number;
-};
-
-export function summarizeCloseoutSnapshot(snapshot: CloseoutSnapshot): CloseoutSummary {
-  return {
-    outstandingDepartures: snapshot.departures.length,
-    carried: snapshot.leftovers.filter((leftover) => leftover.decision === "carry").length,
-    dismissed: snapshot.leftovers.filter((leftover) => leftover.decision === "dismiss").length,
-  };
-}
-
 const DEPARTURE_STATUSES = new Set<string>(Object.keys(CLOSEOUT_STATUS_RANK));
 const GAP_REASONS = new Set<string>(Object.keys(GAP_REASON_RANK));
 

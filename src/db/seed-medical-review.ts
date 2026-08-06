@@ -4,8 +4,8 @@ import { bookings, certifications, people, personRoles, type trips, waiverRecord
 import { at } from "./seed-clock";
 
 /** A fictitious diver used only to train on the unresolved medical-review state. */
-export const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
-export const DEMO_MEDICAL_REVIEW_TRIP = "Afternoon Two-Tank — French Reef";
+const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
+const DEMO_MEDICAL_REVIEW_TRIP = "Afternoon Two-Tank — French Reef";
 const DEMO_MEDICAL_REVIEW_EMAIL = "medical-review-demo@demo.invalid";
 
 /**

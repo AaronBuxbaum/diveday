@@ -6,6 +6,7 @@ import { AmbientContrastControl, AmbientGlareDetector } from "@/components/Ambie
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
+import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
@@ -660,17 +661,9 @@ export function OfflineManifestView() {
                         {t("shared.offlineManifest.list.expiredViewOnly")}
                       </span>
                     ) : (
-                      <span
-                        className={
-                          savedFreshness === "current"
-                            ? "inline-flex min-h-9 items-center self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
-                            : savedFreshness === "aging"
-                              ? "inline-flex min-h-9 items-center self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
-                              : "inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
-                        }
-                      >
+                      <OfflineFreshnessPill freshness={savedFreshness} className="self-start">
                         {t(`shared.offlineManifest.freshnessPill.${savedFreshness}`)}
-                      </span>
+                      </OfflineFreshnessPill>
                     )}
                   </a>
                 </li>
@@ -922,17 +915,9 @@ export function OfflineManifestView() {
                   offlineTitle: t("shared.connectivity.offlineTitle"),
                 }}
               />
-              <span
-                className={
-                  freshness === "current"
-                    ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
-                    : freshness === "aging"
-                      ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
-                      : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
-                }
-              >
+              <OfflineFreshnessPill freshness={freshness}>
                 {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
-              </span>
+              </OfflineFreshnessPill>
             </>
           }
         />

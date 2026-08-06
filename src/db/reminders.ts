@@ -37,7 +37,7 @@ import {
   recordNotificationDelivery,
   sendNotificationBatch,
 } from "./notifications";
-import { getBookingReadinessDetail } from "./readiness";
+import { listTripsReadiness } from "./readiness";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -247,17 +247,51 @@ export async function sendDueReminders(
     smsBody: string;
   }> = [];
 
-  for (const { booking, person, trip, shop } of rows) {
+  // Which cadence, if any, each booking is due for — decided up front so the
+  // readiness batch below only covers trips with something to send.
+  const dueRows: Array<{
+    row: (typeof rows)[number];
+    cadence: NonNullable<ReturnType<typeof dueReminder>>;
+  }> = [];
+  for (const row of rows) {
     const cadence = dueReminder({
-      startsAt: trip.startsAt,
+      startsAt: row.trip.startsAt,
       now,
-      sentKinds: sentByBooking.get(booking.id) ?? new Set(),
+      sentKinds: sentByBooking.get(row.booking.id) ?? new Set(),
     });
     if (!cadence) {
       summary.skipped += 1;
       continue;
     }
+    dueRows.push({ row, cadence });
+  }
 
+  // One batched readiness pass per shop, the same call Today and check-in
+  // make — not a full-roster recompute per booking. The night before a full
+  // boat every seat on it comes due at once, and the per-booking detail read
+  // re-derives the whole trip's readiness (~a dozen queries) each time.
+  const dueTripsByShop = new Map<string, Set<string>>();
+  for (const { row } of dueRows) {
+    const set = dueTripsByShop.get(row.shop.id) ?? new Set<string>();
+    set.add(row.trip.id);
+    dueTripsByShop.set(row.shop.id, set);
+  }
+  const readinessByBooking = new Map<
+    string,
+    Awaited<ReturnType<typeof listTripsReadiness>>[number]
+  >();
+  await Promise.all(
+    [...dueTripsByShop].map(async ([shopId, tripIds]) => {
+      for (const row of await listTripsReadiness(db, shopId, [...tripIds], now)) {
+        readinessByBooking.set(row.booking.id, row);
+      }
+    }),
+  );
+
+  for (const {
+    row: { booking, person, trip, shop },
+    cadence,
+  } of dueRows) {
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,
@@ -283,9 +317,9 @@ export async function sendDueReminders(
 
     // Name the diver's own outstanding items from the same checklist the diver
     // page shows, so the reminder never diverges from the readiness engine.
-    const detail = await getBookingReadinessDetail(db, booking.id);
-    const { outstanding, medicalReview } = detail
-      ? reminderReadiness(buildDiverChecklist(detail.requirement, detail.readiness))
+    const evidence = readinessByBooking.get(booking.id);
+    const { outstanding, medicalReview } = evidence
+      ? reminderReadiness(buildDiverChecklist(evidence.requirement, evidence.readiness))
       : { outstanding: [], medicalReview: false };
 
     // The night-before (day) lead becomes the full brief: plain-language

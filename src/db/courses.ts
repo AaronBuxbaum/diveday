@@ -1,9 +1,9 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
-import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import { offsetPage } from "./paging";
+import type { Course } from "./schema";
 import { courses, shops } from "./schema";
 
 export type NewCourse = {
@@ -28,43 +28,6 @@ export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
  * minimum age is the agency's and never edited here, so it is not in the patch.
  */
 export type CourseContentPatch = Omit<CourseContent, "minimumAge">;
-
-/**
- * The catalog owns the reusable admission baseline. A particular session
- * inherits it when scheduled; later course edits never silently rewrite an
- * already-published session's readiness requirements.
- */
-export async function createCourse(db: AppDb, input: NewCourse) {
-  const title = input.title.trim();
-  const [course] = await db
-    .insert(courses)
-    .values({
-      shopId: input.shopId,
-      title,
-      agency: input.agency ?? "padi",
-      description: input.description?.trim() || null,
-      slug: input.slug ?? courseSlug(title),
-      priceCents: input.priceCents ?? null,
-      eLearningPriceCents: input.eLearningPriceCents ?? null,
-      minimumCertificationLevel: input.minimumCertificationLevel ?? null,
-      summary: input.summary ?? null,
-      overview: input.overview ?? null,
-      heroImageUrl: input.heroImageUrl ?? null,
-      heroImageAlt: input.heroImageAlt ?? null,
-      galleryPhotos: input.galleryPhotos ?? [],
-      durationText: input.durationText ?? null,
-      groupSizeText: input.groupSizeText ?? null,
-      minimumAge: input.minimumAge ?? null,
-      prerequisiteNote: input.prerequisiteNote ?? null,
-      includes: input.includes ?? [],
-      excludes: input.excludes ?? [],
-      scheduleDays: input.scheduleDays ?? [],
-      faqs: input.faqs ?? [],
-      isIntroCourse: input.isIntroCourse ?? false,
-    })
-    .returning();
-  return course ?? null;
-}
 
 /**
  * Progression order: the sequence a shop teaches its catalog in, read off the
@@ -137,21 +100,6 @@ export async function listActiveCoursesForSitemap(
 }
 
 /**
- * Full shop copy, including entries hidden from new session scheduling. Used
- * wherever the *complete* catalog is needed, not one page of it: the New Trip
- * course dropdown, the certification-path builder's course picker, and the
- * roster this file also exposes a paginated view of below. Never add a
- * `limit` here — every one of those callers needs the whole set.
- */
-export async function listCourses(db: AppDb, shopId: string) {
-  return db
-    .select()
-    .from(courses)
-    .where(eq(courses.shopId, shopId))
-    .orderBy(...progressionOrder);
-}
-
-/**
  * The agencies this shop's catalog actually holds, alphabetically.
  *
  * Drives the roster's agency tabs, which is why it is a `SELECT DISTINCT` over
@@ -173,7 +121,7 @@ export async function courseAgencies(db: AppDb, shopId: string): Promise<string[
 export const COURSE_PAGE_SIZE = 20;
 
 export type CoursePage = {
-  courses: Awaited<ReturnType<typeof listCourses>>;
+  courses: Course[];
   page: number;
   pageCount: number;
   pageSize: number;
@@ -181,11 +129,11 @@ export type CoursePage = {
 };
 
 /**
- * The staff roster's own paginated view of {@link listCourses} — same scope
- * (full catalog, hidden entries included) and the same progression sort, just
- * one page at a time, and optionally narrowed to one agency by the roster's
- * tabs. Every other caller of `listCourses`/`listActiveCourses` needs the
- * complete set for a dropdown or picker and must keep calling those, not this.
+ * The staff roster's paginated view of the full catalog — hidden entries
+ * included, in the shared progression sort, just one page at a time, and
+ * optionally narrowed to one agency by the roster's tabs. Callers that need
+ * the complete set for a dropdown or picker use {@link listActiveCourses},
+ * not this.
  *
  * `scope` is built once and used by **both** the count and the row query: a
  * count taken over a wider scope than the rows would promise pages that render
@@ -247,16 +195,6 @@ export async function updateCourse(
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
   return course ?? null;
-}
-
-/** Catalog deletion is an archive so historical course sessions keep their snapshot. */
-export async function archiveCourse(db: AppDb, shopId: string, courseId: string) {
-  const [course] = await db
-    .update(courses)
-    .set({ isActive: false })
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
-    .returning({ id: courses.id });
-  return Boolean(course);
 }
 
 export async function setCourseVisibility(

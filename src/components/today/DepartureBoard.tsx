@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -182,11 +183,7 @@ function DepartureCard({
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
             {formatTime(departure.startsAt, locale, timeZone)}
-            {crewed ? (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-                {copy.crewingBadge}
-              </span>
-            ) : null}
+            {crewed ? <Badge tone="primary">{copy.crewingBadge}</Badge> : null}
           </p>
           <h3 className="mt-0.5 font-semibold">{departure.title}</h3>
           {departure.courseTitle ? (

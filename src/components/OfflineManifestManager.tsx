@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
@@ -465,17 +466,7 @@ export function OfflineManifestManager({
                 }}
               />
               {freshness ? (
-                <span
-                  className={
-                    freshness === "current"
-                      ? "inline-flex min-h-9 items-center rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
-                      : freshness === "aging"
-                        ? "inline-flex min-h-9 items-center rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
-                        : "inline-flex min-h-9 items-center rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger"
-                  }
-                >
-                  {freshnessLabel}
-                </span>
+                <OfflineFreshnessPill freshness={freshness}>{freshnessLabel}</OfflineFreshnessPill>
               ) : null}
             </div>
             {/* The live region stays mounted whether or not it currently has

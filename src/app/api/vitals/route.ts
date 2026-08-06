@@ -27,13 +27,24 @@ import { clientIp } from "@/lib/request-ip";
 /** Bodies are a few hundred bytes; this is the guard against the one that isn't. */
 const MAX_BODY_BYTES = 8_192;
 
+/**
+ * UTF-8 bytes, not `String.length`. The two differ by up to 3x on non-ASCII
+ * input, so measuring characters against a limit named in bytes lets a
+ * multi-byte payload through at several times the intended size — raised in
+ * review, and worth fixing on a public endpoint even though the cap is
+ * generous.
+ */
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
   const ip = await clientIp();
   const limit = await checkRateLimit(rateLimitKey("web-vitals", ip), RATE_LIMITS.webVitalsBeacon);
   if (!limit.allowed) return new NextResponse(null, { status: 204 });
 
   const raw = await request.text().catch(() => "");
-  if (raw.length === 0 || raw.length > MAX_BODY_BYTES) {
+  if (raw.length === 0 || byteLength(raw) > MAX_BODY_BYTES) {
     return new NextResponse(null, { status: 204 });
   }
 

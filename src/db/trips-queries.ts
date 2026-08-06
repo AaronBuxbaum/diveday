@@ -42,9 +42,9 @@ import {
  * one departure".
  *
  * The paged reads are the ones to reach for. `upcomingTripsWithCounts` loads
- * every future trip and stays only for callers that genuinely need them all;
- * a page never should, because a busy shop's board grows without bound
- * (`pagedUpcomingTripsWithCounts` keysets it instead).
+ * every future trip and survives ONLY as a test fixture — no production code
+ * calls it, and none should ever again, because a busy shop's board grows
+ * without bound (`pagedUpcomingTripsWithCounts` keysets it instead).
  */
 
 /**
@@ -69,6 +69,14 @@ export type TripWithBookedCount = typeof trips.$inferSelect & {
 /**
  * Upcoming scheduled trips with their active-booking counts.
  * Cancelled bookings free the spot; every other status holds one.
+ *
+ * **Test fixture only.** This is an unbounded whole-schedule read — every
+ * future trip in one query — and it has no production callers left. It stays
+ * because dozens of test files use it to find a seeded trip by title; it must
+ * never be reached for in product code, where a busy shop's board grows
+ * without bound. Product surfaces page instead: `pagedUpcomingTripsWithCounts`
+ * (keyset) or a window-bounded read like
+ * `listTripIdsInOfflineManifestWindow`.
  */
 export async function upcomingTripsWithCounts(
   db: AppDb,

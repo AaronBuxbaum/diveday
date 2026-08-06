@@ -17,7 +17,6 @@ import {
   getWaiverForToken,
   issueWaiverRequest,
   listSignedWaiversByPerson,
-  listTripWaiverActivity,
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
@@ -72,7 +71,7 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("supersedes a pending link and fails the old bearer token closed", async () => {
-    const { db, shop, trip, booking } = await waiverContext();
+    const { db, shop, booking } = await waiverContext();
     const first = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
@@ -86,12 +85,12 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!first.ok || !second.ok) throw new Error("expected both links to issue");
     expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
     expect(await getWaiverForToken(db, second.token, now)).toMatchObject({ state: "available" });
-    const activity = await listTripWaiverActivity(db, shop.id, trip.id);
-    expect(
-      activity
-        .filter((row) => row.booking.id === booking.id)
-        .flatMap((row) => (row.waiver ? [row.waiver] : [])),
-    ).toEqual(
+    // Both records stay on the booking — the superseded one marked, not erased.
+    const records = await db
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.bookingId, booking.id)));
+    expect(records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: first.recordId, supersededAt: expect.any(Date) }),
         expect.objectContaining({ id: second.recordId, supersededAt: null }),

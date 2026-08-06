@@ -24,10 +24,11 @@ const PASSWORD_CONFIRM_ERROR_MESSAGES: Record<
   invalid_input: (t) => t("account.common.passwordErrors.invalid"),
 };
 
-/** Resolves a known `?error=` code, or falls back to the raw text of an
- * unrecognized value rather than rendering nothing. */
+/** Resolves a known `?error=` code; anything else gets the generic invalid
+ * message. Never the raw query text — `?error=` is attacker-writable, and
+ * echoing it hands a phishing link its own copy on our page. */
 export function passwordConfirmErrorText(t: DiverTranslator, error: string): string {
   return Object.hasOwn(PASSWORD_CONFIRM_ERROR_MESSAGES, error)
     ? PASSWORD_CONFIRM_ERROR_MESSAGES[error as keyof typeof PASSWORD_CONFIRM_ERROR_MESSAGES](t)
-    : decodeURIComponent(error);
+    : PASSWORD_CONFIRM_ERROR_MESSAGES.invalid_input(t);
 }
