@@ -456,26 +456,16 @@ export const courses = pgTable(
      * already writes, and it falls back to the generated "{title} — photo {n}"
      * exactly as a blank always has. Asserted against the shipped SQL in
      * `courses-gallery-backfill.test.ts`.
+     *
+     * The two old columns are gone: `20260806105408_drop-course-legacy-gallery`
+     * dropped them, and nothing has written them since. That migration is the
+     * contract half of the expand/contract split
+     * (docs/engineering/deploy-and-migrations-runbook.md) and carries the
+     * acknowledgement marker `pnpm check:migrations` requires, including what
+     * the single-deploy shape of it cost — read it before assuming a drop here
+     * is routine.
      */
     galleryPhotos: jsonb("gallery_photos").$type<CourseGalleryPhoto[]>().notNull().default([]),
-    /**
-     * @deprecated Superseded by `gallery_photos`; **kept for one release only.**
-     *
-     * Expand/contract (docs/engineering/deploy-and-migrations-runbook.md):
-     * migrations run inside the production build while the *previous* release
-     * is still serving, and that release selects both of these on every course
-     * page — so dropping them in the same deploy that stops reading them takes
-     * the live site down, and `pnpm check:repo`'s migration guard refuses it.
-     * They are therefore still written (`createCourse` / `updateCourseContent`
-     * derive them from `galleryPhotos`) so an Instant Rollback lands on correct
-     * captions rather than stale ones, and nothing reads them.
-     *
-     * The contract release drops both columns. Confirm they are unreferenced
-     * outside this file first.
-     */
-    imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
-    /** @deprecated Superseded by `gallery_photos` — see `imageUrls` above. */
-    imageAlts: jsonb("image_alts").$type<string[]>().notNull().default([]),
     durationText: text("duration_text"),
     groupSizeText: text("group_size_text"),
     minimumAge: integer("minimum_age"),

@@ -28,8 +28,11 @@ the first run.
 `image_alts` were parallel jsonb arrays paired by position and nothing else, so one drifted row
 captioned every photo after it with the previous photo's words — invisible on screen, and wrong for
 exactly the readers alt text exists for. The backfill decides what an already-drifted row becomes
-rather than leaving it to whichever array was shorter. Expand only: the old columns stay a release
-and keep being written, which is the rule the new guard exists to enforce. Three uncovered `ILIKE`
+rather than leaving it to whichever array was shorter. It shipped expand-only, with the old columns
+still written; `20260806105408_drop-course-legacy-gallery` is the contract half that drops them and
+deletes the dual-write, accepting a deploy window in which the previous release cannot read or write
+`courses` at all — the migration SQL states that cost and carries the guard's acknowledgement. Three
+uncovered `ILIKE`
 arms gained trigram indexes; a fourth the review named turned out to be indexed already (DATA-L6).
 And CMAS, RAID and GUE joined the agency enum, so a diver holding one of those cards can be recorded
 honestly instead of as "other" (DOM-L1).
