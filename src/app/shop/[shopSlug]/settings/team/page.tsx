@@ -223,15 +223,24 @@ function StaffRow({ member, t }: { member: StaffMember; t: StaffTranslator }) {
                 {/* Land-then-undo, not a blocking confirm: stripping roles and
                     disabling sign-in is a purely reversible edit (principle 7,
                     docs/design/principles.md) — the toast on the next render
-                    carries what's needed to hand back to setStaffRoles. */}
+                    carries what's needed to hand back to setStaffRoles.
+
+                    "Archive", not "Delete": nothing is deleted. `removeStaffMember`
+                    strips staff roles, disables the login, and revokes the
+                    person's push subscriptions — the `people` row, and every
+                    booking, manifest and signature attached to it, deliberately
+                    survives. Calling that Delete promised an erasure the button
+                    does not perform and made a reversible edit read as the one
+                    irreversible act on the page (ADR 20260719-crud-archive-semantics
+                    is the vocabulary the rest of the app already uses). */}
                 <SubmitButton
-                  pendingLabel={t("settings.team.staffRow.deleting")}
-                  ariaLabel={t("settings.team.staffRow.deleteAriaLabel", {
+                  pendingLabel={t("settings.team.staffRow.archiving")}
+                  ariaLabel={t("settings.team.staffRow.archiveAriaLabel", {
                     name: member.fullName,
                   })}
                   className={buttonClass({ variant: "danger", size: "sm" })}
                 >
-                  {t("settings.team.staffRow.delete")}
+                  {t("settings.team.staffRow.archive")}
                 </SubmitButton>
               </form>
             ) : null}
@@ -306,7 +315,7 @@ export default async function TeamSettingsPage({
 
       {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (
         <UndoToast
-          message={t("settings.team.staffRow.removedToast", { name: undoName ?? "" })}
+          message={t("settings.team.staffRow.archivedToast", { name: undoName ?? "" })}
           action={restoreStaffAction}
           fields={{
             personId: undoPersonId,

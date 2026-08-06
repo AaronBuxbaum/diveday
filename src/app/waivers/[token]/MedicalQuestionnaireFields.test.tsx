@@ -28,11 +28,19 @@ afterEach(() => {
   cleanup();
 });
 
-const LABELS = {
+const COPY = {
   yesLabel: "Yes",
   noLabel: "No",
-  reassurance: "A yes is not a no — it just means we check with a doctor first.",
+  referralReassurance: "A yes is not a no — it just means we check with a doctor first.",
+  followUpReassurance: "A yes here only opens a few follow-up questions.",
+  dentalHeading: "One last check, for everyone",
+  outcomeClear: "No medical evaluation is required.",
+  outcomeReferral: "A doctor should confirm you are fit to dive.",
+  outcomeFollowUpsOpen: "A few follow-up questions are still open.",
 };
+
+/** The props every render in this file shares. */
+const LABELS = { copy: COPY };
 
 /**
  * A minimal questionnaire with the one shape that matters: a primary question
@@ -89,8 +97,8 @@ const BRANCHING: MedicalQuestionnaire = {
 function radiosFor(prompt: string) {
   const fieldset = screen.getByRole("group", { name: prompt });
   return {
-    yes: within(fieldset).getByRole("radio", { name: LABELS.yesLabel }),
-    no: within(fieldset).getByRole("radio", { name: LABELS.noLabel }),
+    yes: within(fieldset).getByRole("radio", { name: COPY.yesLabel }),
+    no: within(fieldset).getByRole("radio", { name: COPY.noLabel }),
   };
 }
 
@@ -217,13 +225,135 @@ describe("reassurance copy", () => {
     // disqualified themselves. The line is shown per-question and only on yes.
     const user = userEvent.setup();
     render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
-    expect(screen.queryByText(LABELS.reassurance)).not.toBeInTheDocument();
+    expect(screen.queryByText(COPY.referralReassurance)).not.toBeInTheDocument();
 
     await user.click(radiosFor("Are you pregnant?").yes);
-    expect(screen.getAllByText(LABELS.reassurance)).toHaveLength(1);
+    expect(screen.getAllByText(COPY.referralReassurance)).toHaveLength(1);
 
     await user.click(radiosFor("Are you pregnant?").no);
-    expect(screen.queryByText(LABELS.reassurance)).not.toBeInTheDocument();
+    expect(screen.queryByText(COPY.referralReassurance)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The 2026-08-06 review's finding: "a yes means a doctor should confirm
+   * you're fit to dive" was shown under *every* yes, including the seven
+   * primaries where the published form's own directions say a yes only opens a
+   * Box. Stating a consequence that has not happened — and on those questions
+   * may never — is the opposite of reassurance.
+   */
+  it("promises a doctor only where a yes really is a referral", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+
+    // `p1` opens Box A and is not itself a referral.
+    await user.click(radiosFor("Have you ever had problems with your heart?").yes);
+    expect(screen.getByText(COPY.followUpReassurance)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.referralReassurance)).not.toBeInTheDocument();
+
+    // A yes *inside* the box is a referral, and says so.
+    await user.click(radiosFor("Heart surgery").yes);
+    expect(screen.getByText(COPY.referralReassurance)).toBeInTheDocument();
+  });
+});
+
+describe("the live outcome", () => {
+  /**
+   * Replaces the published form's directions paragraph, which asked the diver
+   * to memorise which question numbers carry an asterisk and then apply the
+   * rule to their own answers.
+   */
+  it("says nothing until there is something true to say", () => {
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+    for (const text of [COPY.outcomeClear, COPY.outcomeReferral, COPY.outcomeFollowUpsOpen]) {
+      expect(screen.queryByText(text)).not.toBeInTheDocument();
+    }
+  });
+
+  it("reports the all-clear once every applicable question is a no", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+
+    await user.click(radiosFor("Have you ever had problems with your heart?").no);
+    await user.click(radiosFor("Are you pregnant?").no);
+    expect(screen.queryByText(COPY.outcomeClear)).not.toBeInTheDocument();
+
+    await user.click(radiosFor("Have you had recent dental surgery?").no);
+    expect(screen.getByText(COPY.outcomeClear)).toBeInTheDocument();
+  });
+
+  it("names the referral as soon as one happens, without waiting for a full form", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+
+    await user.click(radiosFor("Are you pregnant?").yes);
+    expect(screen.getByText(COPY.outcomeReferral)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.outcomeClear)).not.toBeInTheDocument();
+  });
+
+  it("points at an open Box once the page-one questions are all answered", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+
+    await user.click(radiosFor("Have you ever had problems with your heart?").yes);
+    await user.click(radiosFor("Are you pregnant?").no);
+    await user.click(radiosFor("Have you had recent dental surgery?").no);
+
+    expect(screen.getByText(COPY.outcomeFollowUpsOpen)).toBeInTheDocument();
+  });
+
+  it("goes back to the all-clear when a corrected answer closes the branch", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+    const heart = radiosFor("Have you ever had problems with your heart?");
+
+    await user.click(heart.yes);
+    await user.click(radiosFor("Heart surgery").yes);
+    expect(screen.getByText(COPY.outcomeReferral)).toBeInTheDocument();
+
+    await user.click(heart.no);
+    await user.click(radiosFor("Are you pregnant?").no);
+    await user.click(radiosFor("Have you had recent dental surgery?").no);
+    expect(screen.getByText(COPY.outcomeClear)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.outcomeReferral)).not.toBeInTheDocument();
+  });
+});
+
+describe("progress scope", () => {
+  /**
+   * `QuestionnaireProgress` counts `data-question-scope="primary"` radios only.
+   * The bar used to open at "0 of 11" — ten numbered questions plus the dental
+   * check — against a form that asks ten, and then *grew* as a diver's own yes
+   * answers opened Boxes.
+   */
+  it("marks page-one questions apart from the follow-ups a yes opens", async () => {
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={RSTC_QUESTIONNAIRE} {...LABELS} />);
+
+    const primaryNames = new Set(
+      Array.from(
+        document.querySelectorAll<HTMLInputElement>('input[data-question-scope="primary"]'),
+        (input) => input.name,
+      ),
+    );
+    expect(primaryNames.size).toBe(
+      RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary").length,
+    );
+    // The dental check must answer to the same rule as a Box: required, but not
+    // one of the ten the bar counts.
+    expect(primaryNames.has("q_dental_recovery")).toBe(false);
+
+    // Opening a Box adds follow-up radios and leaves the primary count alone.
+    await user.click(radiosFor(RSTC_QUESTIONNAIRE.questions[0].prompt).yes);
+    const afterOpening = new Set(
+      Array.from(
+        document.querySelectorAll<HTMLInputElement>('input[data-question-scope="primary"]'),
+        (input) => input.name,
+      ),
+    );
+    expect(afterOpening.size).toBe(primaryNames.size);
+    expect(
+      document.querySelectorAll('input[data-question-scope="follow-up"]').length,
+    ).toBeGreaterThan(primaryNames.size);
   });
 });
 

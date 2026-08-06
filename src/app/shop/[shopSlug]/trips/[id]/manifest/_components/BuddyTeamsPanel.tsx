@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { BuddyDragGroups } from "./BuddyDragGroups";
 
 /** One person the builder can offer: the form's flat member token plus a name. */
 export type BuddyMemberOption = { token: string; label: string };
@@ -210,60 +211,21 @@ export function BuddyTeamsPanel({
               {t("trips.manifest.buddyNewTeamHeading")}
             </legend>
             <p className="max-w-prose text-sm text-muted">{t("trips.manifest.buddyNewTeamHint")}</p>
-            {diverOptions.length > 0 ? (
-              <>
-                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("trips.manifest.buddyDiverGroupLabel")}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
-                  {diverOptions.map((option) => (
-                    // A horizontal checkbox row is not a stacked `Field`
-                    // (docs/design/forms-and-controls.md), but it is still a
-                    // target: `min-h-11` and a control big enough to hit
-                    // without aiming.
-                    <label
-                      key={option.token}
-                      className="flex min-h-11 cursor-pointer items-center gap-2 text-base"
-                    >
-                      <input
-                        type="checkbox"
-                        name="members"
-                        value={option.token}
-                        className="size-5 accent-primary"
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            ) : null}
-            {crewOptions.length > 0 ? (
-              <>
-                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("trips.manifest.buddyCrewGroupLabel")}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
-                  {crewOptions.map((option) => (
-                    // A horizontal checkbox row is not a stacked `Field`
-                    // (docs/design/forms-and-controls.md), but it is still a
-                    // target: `min-h-11` and a control big enough to hit
-                    // without aiming.
-                    <label
-                      key={option.token}
-                      className="flex min-h-11 cursor-pointer items-center gap-2 text-base"
-                    >
-                      <input
-                        type="checkbox"
-                        name="members"
-                        value={option.token}
-                        className="size-5 accent-primary"
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            ) : null}
+            {/* The same checkboxes, in the same form — plus drag-one-onto-another
+                for the two-person case, which is what a phone at the dock wants
+                and what ticking boxes is worst at (2026-08-06 review). Ticking
+                three still builds a team of three. */}
+            <BuddyDragGroups
+              groups={[
+                { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
+                { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
+              ].filter((group) => group.options.length > 0)}
+              copy={{
+                hint: t("trips.manifest.buddyDragHint"),
+                holding: t("trips.manifest.buddyDragHolding"),
+                over: t("trips.manifest.buddyDragOver"),
+              }}
+            />
             {/* The action row is where this form's own answer lands — a
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}

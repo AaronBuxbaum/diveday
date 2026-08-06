@@ -16,6 +16,7 @@ const copy = {
   searching: "Looking…",
   noMatches: "No matches",
   lookupFailed: "Address lookup isn't available right now.",
+  lookupResting: "That's a lot of lookups for one hour — searching pauses for a bit.",
   suggestionsLabel: "Address suggestions",
   streetLabel: "Street address",
   streetPlaceholder: "",
@@ -136,6 +137,58 @@ describe("the address card with a geocoder", () => {
     expect(await screen.findByText(copy.lookupFailed)).toBeInTheDocument();
     await user.type(field("Street address"), "1 Dock Road");
     expect(field("Street address")).toHaveValue("1 Dock Road");
+  });
+
+  /**
+   * Every fire is a *billed* Amazon Location request against an hourly budget,
+   * and the budget running out looks, from this box, exactly like the geocoder
+   * being down — which is how the card came to be reported as simply not
+   * working (2026-08-06 review). These three keep the spend honest and the two
+   * states apart.
+   */
+  it("does not re-ask the same question, however many times the typist pauses", async () => {
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({ status: "ok", suggestions: [KEY_LARGO] });
+    renderFields();
+    const combobox = screen.getByRole("combobox");
+
+    await user.type(combobox, "102 Ocean");
+    await screen.findByText(KEY_LARGO.label);
+    expect(suggest).toHaveBeenCalledTimes(1);
+
+    // A character typed and taken straight back out again lands on the same
+    // query — the second pause must cost nothing.
+    await user.type(combobox, "s");
+    await user.keyboard("{Backspace}");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(suggest).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the lookup is resting, not broken, when the hour's budget is spent", async () => {
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({ status: "rate_limited" });
+    renderFields();
+
+    await user.type(screen.getByRole("combobox"), "102 Ocean");
+    expect(await screen.findByText(copy.lookupResting)).toBeInTheDocument();
+    expect(screen.queryByText(copy.lookupFailed)).not.toBeInTheDocument();
+  });
+
+  it("lets a refused query be asked again once the lookup recovers", async () => {
+    // A rate-limited call learned nothing about the query, so the de-dupe must
+    // not hold it back — otherwise the box stays dead for that text forever.
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({ status: "rate_limited" });
+    renderFields();
+    const combobox = screen.getByRole("combobox");
+
+    await user.type(combobox, "102 Ocean");
+    await screen.findByText(copy.lookupResting);
+
+    suggest.mockResolvedValue({ status: "ok", suggestions: [KEY_LARGO] });
+    await user.type(combobox, " ");
+    await user.keyboard("{Backspace}");
+    expect(await screen.findByText(KEY_LARGO.label)).toBeInTheDocument();
   });
 
   it("says when a real query simply matched nothing", async () => {

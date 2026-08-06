@@ -540,6 +540,7 @@ export default async function SettingsPage({
                 searching: t("settings.main.address.searching"),
                 noMatches: t("settings.main.address.noMatches"),
                 lookupFailed: t("settings.main.address.lookupFailed"),
+                lookupResting: t("settings.main.address.lookupResting"),
                 suggestionsLabel: t("settings.main.address.suggestionsLabel"),
                 streetLabel: t("settings.main.address.streetLabel"),
                 streetPlaceholder: t("settings.main.address.streetPlaceholder"),

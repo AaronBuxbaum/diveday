@@ -408,7 +408,15 @@ async function TripGuestsBody({
             </svg>
           </span>
         </summary>
-        <div className="border-t border-border px-4">
+        {/* `p-4`, not `px-4`: with horizontal padding alone the panel's last
+            row — the sent-deal list, or the empty state — ran flush into the
+            card's bottom edge, while the section's own top margin left a wide
+            gap above it. On a phone, where the rows wrap and fill the width,
+            that read as a cut-off panel (2026-08-06 review). The section
+            itself no longer carries a page-level top margin here; this
+            container owns the inset, and it is the same `p-4` as the summary
+            above it. */}
+        <div className="border-t border-border p-4">
           <LastMinuteDealSection
             shopSlug={shopSlug}
             locale={locale}
