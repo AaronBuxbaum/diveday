@@ -17,7 +17,7 @@ import { at } from "./seed-clock";
  * fixtures only; they let the Promos page demonstrate both a live code and
  * the redemption history that follows a completed checkout.
  */
-export async function seedPromos(
+async function seedPromosInTransaction(
   db: DbExecutor,
   shopId: string,
   booking: { id: string; tripId: string } | undefined,
@@ -75,11 +75,9 @@ export async function seedPromos(
     .innerJoin(bookingPayments, eq(bookingPayments.bookingId, bookings.id))
     .where(and(eq(bookings.shopId, shopId), eq(bookings.id, booking.id)))
     .limit(1);
-  if (!source || source.tripId !== booking.tripId || source.amountCents === null) {
-    throw new Error("seedPromos: redemption booking must have a matching payment");
-  }
+  if (!source || source.tripId !== booking.tripId || source.amountCents === null) return;
   const settledTotalCents = Math.round(source.amountCents * (1 - reef10.discountPercent / 100));
-  const stripeSessionId = "cs_demo_reef10_redeemed";
+  const stripeSessionId = `cs_demo_reef10_redeemed_${shopId}`;
   const [insertedCheckout] = await db
     .insert(bookingCheckouts)
     .values({
@@ -126,4 +124,13 @@ export async function seedPromos(
       redeemedAt: checkout.completedAt ?? at(-2, 11),
     })
     .onConflictDoNothing({ target: shopPromoRedemptions.checkoutId });
+}
+
+/** Seed promo configuration and its representative redemption atomically. */
+export async function seedPromos(
+  db: DbExecutor,
+  shopId: string,
+  booking: { id: string; tripId: string } | undefined,
+): Promise<void> {
+  await db.transaction((tx) => seedPromosInTransaction(tx, shopId, booking));
 }
