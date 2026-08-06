@@ -3131,6 +3131,9 @@
         "eyebrow": "Offline manifest",
         "emptyHeading": "Nothing saved on this phone yet",
         "emptyHint": "While you still have signal, open the trip's live manifest — it keeps this device's copy current on its own, so roll call works all the way out to the site.",
+        "removedOtherShopHeading": "That saved copy has been removed",
+        "removedOtherShopMessage": "A different shop is signed in on this tablet.",
+        "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop's own live manifest.",
         "skipLink": "Skip to offline roll call",
         "savedAt": "Saved {when}",
         "expiredBanner": "This saved copy has expired and can't be used to board divers. Any change still waiting to send below will keep trying, but new roll call must be recorded on the live manifest.",
@@ -3184,6 +3187,12 @@
         "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",
         "updateBanner": "A newer version of DiveDay is ready.",
         "refreshButton": "Refresh now"
+      },
+      "discarded": {
+        "heading": "Roll call that never sent has been removed",
+        "body": "{count, plural, one {# roll-call change} other {# roll-call changes}} recorded on this device never reached DiveDay. The saved copy each one belonged to is long past the date a manifest may stay on a device, so it was removed from here. If any of these trips still needs that record, it has to be re-entered on the live manifest.",
+        "item": "{shop} · {trip} — {count, plural, one {# change lost} other {# changes lost}}",
+        "acknowledge": "Got it"
       }
     },
     "boatMode": {

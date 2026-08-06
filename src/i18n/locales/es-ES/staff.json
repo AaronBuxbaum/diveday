@@ -3131,6 +3131,9 @@
         "eyebrow": "Manifiesto sin conexión",
         "emptyHeading": "Todavía no hay nada guardado en este teléfono",
         "emptyHint": "Mientras tengas señal, abre el manifiesto en vivo de la salida — mantiene actualizada por su cuenta la copia de este dispositivo, así el pase de lista funciona hasta en el sitio de inmersión.",
+        "removedOtherShopHeading": "Esa copia guardada se eliminó",
+        "removedOtherShopMessage": "En esta tablet hay otro centro con la sesión iniciada.",
+        "removedOtherShopHint": "Esta salida la guardó otro centro, así que su copia se eliminó de esta tablet cuando cambió el centro con la sesión iniciada aquí. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",
         "skipLink": "Ir directo al pase de lista sin conexión",
         "savedAt": "Guardado {when}",
         "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
@@ -3184,6 +3187,12 @@
         "staleBanner": "Esta copia guardada es de una versión anterior de DiveDay. Actualízala con conexión antes de embarcar buceadores.",
         "updateBanner": "Hay una nueva versión de DiveDay lista.",
         "refreshButton": "Actualizar ahora"
+      },
+      "discarded": {
+        "heading": "Se eliminó un pase de lista que nunca se envió",
+        "body": "{count, plural, one {# cambio de pase de lista registrado} other {# cambios de pase de lista registrados}} en este dispositivo nunca llegó a DiveDay. La copia guardada a la que pertenecía cada uno lleva mucho tiempo pasada la fecha en que un manifiesto puede seguir en un dispositivo, así que se eliminó de aquí. Si alguna de estas salidas todavía necesita ese registro, hay que volver a ingresarlo en el manifiesto en vivo.",
+        "item": "{shop} · {trip} — {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
+        "acknowledge": "Entendido"
       }
     },
     "boatMode": {

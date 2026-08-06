@@ -7,16 +7,39 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import {
+  acknowledgeDiscardedOfflineRecords,
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
+  OFFLINE_MANIFEST_PENDING_GRACE_MS,
   purgeOfflineManifestsExceptShop,
+  readDiscardedOfflineRecords,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
-import type { OfflineManifestPayload } from "./offline-manifests";
+import {
+  OFFLINE_MANIFEST_MAX_RETENTION_MS,
+  type OfflineManifestPayload,
+} from "./offline-manifests";
+import { RETENTION_DAYS } from "./retention";
 
 const FROZEN_MS = Date.parse(TEST_FROZEN_CLOCK);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * An expiry in the past but still inside the pending-event grace window — the
+ * state the preserved-because-pending exception exists for. A day inside the
+ * ceiling rather than a hair, so the assertion is about the rule and not about
+ * millisecond rounding.
+ */
+const EXPIRED_WITHIN_GRACE = new Date(
+  FROZEN_MS - OFFLINE_MANIFEST_PENDING_GRACE_MS + DAY_MS,
+).toISOString();
+
+/** The same record a day past the ceiling: the reprieve is over, pending or not. */
+const EXPIRED_PAST_GRACE = new Date(
+  FROZEN_MS - OFFLINE_MANIFEST_PENDING_GRACE_MS - DAY_MS,
+).toISOString();
 
 const payload: OfflineManifestPayload = {
   shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
@@ -146,6 +169,26 @@ function patchStoredExpiresAt(tripId: string, expiresAt: string): Promise<void> 
   });
 }
 
+/** The raw stored row, to tell "deleted" apart from "not returned to a reader". */
+function rawStoredRecord(tripId: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      const getRequest = db
+        .transaction("manifests", "readonly")
+        .objectStore("manifests")
+        .get(tripId);
+      getRequest.onsuccess = () => {
+        db.close();
+        resolve(getRequest.result);
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
@@ -220,15 +263,102 @@ describe("loadOfflineManifest", () => {
     // Simulate the retention window having passed while that change never
     // made it to the server — there's no delete button, so this must not
     // silently destroy the only record of it.
-    // Well before the frozen test clock (src/test/frozen-clock.ts) that
-    // `nowDate()` reads in tests — using real wall-clock time here wouldn't
-    // reliably be "in the past" relative to that frozen instant.
-    await patchStoredExpiresAt(tripId, "2020-01-01T00:00:00.000Z");
+    // In the past relative to the frozen test clock (src/test/frozen-clock.ts)
+    // that `nowDate()` reads in tests — real wall-clock time wouldn't reliably
+    // be "in the past" relative to that frozen instant — and still inside the
+    // pending-event grace window, which is what this exception is bounded by.
+    await patchStoredExpiresAt(tripId, EXPIRED_WITHIN_GRACE);
 
     const reloaded = await loadOfflineManifest(tripId);
     expect(reloaded).not.toBeNull();
     expect(reloaded?.events).toHaveLength(1);
     expect(reloaded?.events[0].syncStatus).toBe("pending");
+  });
+
+  // Security review, 2026-08-06 (F3). The exception above had no end to it: a
+  // pending event can only reconcile under the shop that recorded it, so a
+  // record whose shop never signs into this tablet again was kept forever —
+  // and `/offline-manifest` has no auth gate, so "forever" means anyone
+  // holding the tablet can read that shop's diver names, emergency contacts
+  // and readiness/medical blockers with no session at all. Past the ceiling
+  // the record goes, whatever is queued on it.
+  it("discards an expired record past the pending-event ceiling even though the event never synced", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+
+    expect(await loadOfflineManifest(tripId)).toBeNull();
+    // Gone from storage, not merely withheld from this one reader — the
+    // finding is that the ciphertext stays decryptable on the device.
+    expect(await rawStoredRecord(tripId)).toBeUndefined();
+  });
+
+  // Deleting unsynced evidence of who came back from a dive is its own harm,
+  // so the loss is written down where a screen can report it — the delete
+  // frequently happens with no page open at all (the service worker's push
+  // refresh, the staff layout's auto-save), which is why this is durable
+  // rather than a return value nobody would read.
+  it("writes down what it discarded, and nothing about the divers on it", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: "left with the shore boat",
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    await loadOfflineManifest(tripId);
+
+    const discarded = await readDiscardedOfflineRecords();
+    expect(discarded).toEqual([
+      {
+        tripId,
+        tripTitle: payload.manifests[0].trip.title,
+        shopName: payload.shop.name,
+        pendingEvents: 1,
+        discardedAt: new Date(FROZEN_MS).toISOString(),
+      },
+    ]);
+
+    // Adversarial: the notice must not quietly re-retain the roster the
+    // discard exists to remove. Nothing personal survives the delete — not the
+    // diver, not their emergency contact, not the booking id that points at
+    // them, not the note a captain typed.
+    const serialized = JSON.stringify(discarded);
+    for (const leak of [
+      payload.manifests[0].divers[0].fullName,
+      payload.manifests[0].divers[0].emergencyContactName,
+      payload.manifests[0].divers[0].emergencyContactPhone ?? "",
+      payload.manifests[0].divers[0].bookingId,
+      "left with the shore boat",
+    ]) {
+      expect(serialized).not.toContain(leak);
+    }
+
+    // It survives a reload — a captain who never opened the shell that day
+    // still hears about it — until someone acknowledges it.
+    expect(await readDiscardedOfflineRecords()).toHaveLength(1);
+    await acknowledgeDiscardedOfflineRecords();
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
+  });
+
+  it("says nothing when an expired record with no pending events is cleaned up", async () => {
+    // The ordinary retention delete is not a loss: there was no unsynced
+    // evidence on it. A notice for every routine expiry would be noise on the
+    // one surface that must stay quiet enough to be read.
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+
+    expect(await loadOfflineManifest(tripId)).toBeNull();
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
   });
 
   it("deletes an expired record once it has no unsynced pending events", async () => {
@@ -276,10 +406,35 @@ describe("listOfflineManifests", () => {
       status: "not_boarded",
       note: null,
     });
-    await patchStoredExpiresAt(tripId, "2020-01-01T00:00:00.000Z");
+    await patchStoredExpiresAt(tripId, EXPIRED_WITHIN_GRACE);
 
     const list = await listOfflineManifests();
     expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([tripId]);
+  });
+
+  // The ceiling is enforced in loadOfflineManifest, which this reads every
+  // record through, so *opening the shell* is enough to clear a past-ceiling
+  // record: no session, no network, no purge pass, nobody signing in. That is
+  // what makes the bound hold on the tablet the original shop never touches
+  // again (security review, 2026-08-06, F3).
+  it("drops a past-ceiling pending record on an ordinary read, with no session involved", async () => {
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(earlierPayload);
+    const tripId = payload.manifests[0].trip.id;
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+
+    const list = await listOfflineManifests();
+    expect(list.map((envelope) => envelope.snapshot.manifests[0].trip.id)).toEqual([
+      earlierPayload.manifests[0].trip.id,
+    ]);
+    expect(await rawStoredRecord(tripId)).toBeUndefined();
+    expect(await readDiscardedOfflineRecords()).toHaveLength(1);
   });
 
   it("returns an empty list when nothing has been saved on this device", async () => {
@@ -392,6 +547,59 @@ describe("purgeOfflineManifestsExceptShop", () => {
     expect(preserved).not.toBeNull();
     expect(preserved?.events[0].syncStatus).toBe("pending");
   });
+
+  // The other half of that reprieve (security review, 2026-08-06, F3). The
+  // preserved record above belongs to a shop that may never sign into this
+  // tablet again, and `/offline-manifest` has no auth gate — so "preserved
+  // until they come back" was, for that device, "readable by whoever is
+  // holding it, forever". Past the ceiling it goes even here, and the purge
+  // inherits that from loadOfflineManifest rather than repeating the rule.
+  it("deletes another shop's past-ceiling record despite its unsynced event, and says what it lost", async () => {
+    const foreignTripId = otherShopPayload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await saveOfflineManifest(otherShopPayload);
+    await appendOfflineRollCall(foreignTripId, {
+      bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(foreignTripId, EXPIRED_PAST_GRACE);
+
+    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+
+    expect(await rawStoredRecord(foreignTripId)).toBeUndefined();
+    expect(await readDiscardedOfflineRecords()).toMatchObject([
+      { tripId: foreignTripId, shopName: otherShopPayload.shop.name, pendingEvents: 1 },
+    ]);
+    // This shop's own copy is untouched: the ceiling is about age, not tenancy.
+    expect(await loadOfflineManifest(payload.manifests[0].trip.id)).not.toBeNull();
+  });
+});
+
+/**
+ * The window itself, asserted rather than commented — the same discipline
+ * `retentionWindowsOutlastStripeRetries` (src/lib/retention.ts) applies to the
+ * Stripe webhook window. An unbounded exception to a retention rule was the
+ * finding; a bound nobody checks is the same finding one edit later.
+ */
+describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
+  it("outlasts the longest a copy is meant to live, so real trips get their chance to sync", async () => {
+    expect(OFFLINE_MANIFEST_PENDING_GRACE_MS).toBeGreaterThanOrEqual(
+      OFFLINE_MANIFEST_MAX_RETENTION_MS,
+    );
+  });
+
+  it("stays inside the shortest window the retention table gives a device-held artifact", async () => {
+    // `push_subscriptions` (30 days) is the closest analogue in
+    // `src/lib/retention.ts`: a device credential, useful only while its trip
+    // is near, "pure blast radius" afterwards. A dock copy holds emergency
+    // contacts and medical blockers on a shared tablet, so its grace period
+    // has no business being more generous than that.
+    expect(OFFLINE_MANIFEST_PENDING_GRACE_MS).toBeLessThanOrEqual(
+      RETENTION_DAYS.push_subscriptions * DAY_MS,
+    );
+  });
 });
 
 describe("appendOfflineRollCall", () => {
@@ -406,9 +614,12 @@ describe("appendOfflineRollCall", () => {
     // *embedded* snapshot.expiresAt, a separate copy inside the encrypted
     // envelope. Record the first event against a normal, unexpired snapshot,
     // then re-save (carrying that event forward, as saveOfflineManifest
-    // always does) against a trip whose endsAt is long past — the new
-    // snapshot's expiresAt is now genuinely in the past, exactly as real
-    // wall-clock expiry would leave it.
+    // always does) against a trip that ended eight days ago — one day past the
+    // 7-day post-trip window, so the new snapshot's expiresAt is genuinely in
+    // the past, exactly as real wall-clock expiry would leave it, and still
+    // comfortably inside the pending-event grace window (past *that* the
+    // record is deleted outright and the refusal below would be "unavailable"
+    // rather than "expired" — see the case after this one).
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
     await appendOfflineRollCall(tripId, {
@@ -422,7 +633,10 @@ describe("appendOfflineRollCall", () => {
       manifests: [
         {
           ...payload.manifests[0],
-          trip: { ...payload.manifests[0].trip, endsAt: "2020-01-01T00:00:00.000Z" },
+          trip: {
+            ...payload.manifests[0].trip,
+            endsAt: new Date(FROZEN_MS - 8 * DAY_MS).toISOString(),
+          },
         },
       ],
     };
@@ -441,6 +655,31 @@ describe("appendOfflineRollCall", () => {
     // doesn't discard evidence already recorded.
     const reloaded = await loadOfflineManifest(tripId);
     expect(reloaded?.events).toHaveLength(1);
+  });
+
+  // Past the ceiling the record is not "expired", it is gone — so the refusal
+  // a captain's tap produces changes too. `OfflineManifestView` is what turns
+  // that into something readable: it repaints instead of leaving a roster on
+  // screen whose buttons all raise this (security review, 2026-08-06, F5).
+  it("refuses with unavailable, not expired, once the ceiling has discarded the record", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+
+    await expect(
+      appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        checkpoint: "departure",
+        status: "not_boarded",
+        note: null,
+      }),
+    ).rejects.toMatchObject({ code: "unavailable" });
   });
 
   // Dive-domain-expert review (docs/product/archive/ux-personas-20260730-findings.md,

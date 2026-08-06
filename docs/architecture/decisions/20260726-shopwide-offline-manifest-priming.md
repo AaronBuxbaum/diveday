@@ -113,9 +113,12 @@ holding an unsynced roll-call event is never deleted by this purge, even for a s
 matches — that event cannot reconcile under a different shop's session (the server would check it
 against the wrong tenant and reject or misattribute it), so purging it would destroy the only copy of
 that safety evidence outright. It stays — visible until the original shop's own session next runs a
-purge and finds it resolved, or it clears via the ordinary retention rule — the same trade-off 20260718
-already accepts for a single shop's own expired-but-pending records, extended here across the tenant
-boundary rather than overridden by it.
+purge and finds it resolved, or until `OFFLINE_MANIFEST_PENDING_GRACE_MS` past its own expiry,
+whichever comes first, after which it is deleted regardless and the loss is reported on screen (see
+the 2026-08-06 ceiling amendment below; the first of those two is not guaranteed to arrive at all,
+which is why the reprieve needed an end). It is the same trade-off 20260718 already accepts for a
+single shop's own expired-but-pending records, extended here across the tenant boundary rather than
+overridden by it — and bounded in both places.
 
 Three follow-up correctness fixes on top of that first pass, all from continued review:
 
@@ -307,6 +310,77 @@ server-verified tenant in hand from `/upcoming` and was writing the board withou
 worker-only refresh wrote shop B's whole 48-hour roster in beside shop A's resident records; it now runs
 the same purge, in the same fail-closed order, that `OfflineManifestAutoSave` does.
 
+**Amendment (2026-08-06): the pending-event reprieve has a ceiling, and the shell repaints when a
+record is taken out from under it.** Two further findings from the security review of that work.
+
+**F3 — the exception above had no end.** The bound this record stated for a preserved foreign-shop
+record was "until the original shop's own session next runs a purge pass and finds it resolved". That
+is not a bound: a pending event can only reconcile under the shop that recorded it, so if that shop's
+staff never sign into this tablet again — a freelance captain who moves on, a boat sold, a tablet
+reassigned — the moment never arrives and the record is retained past both the 14-day and the 7-day
+window, forever. `/offline-manifest` has no auth gate by design (the shell has to open with the radio
+off), so "forever" means anyone holding the tablet can read that shop's diver names, emergency
+contacts and readiness/medical blockers, with no session, indefinitely. An unbounded exception to a
+retention rule is not a retention rule, and this one sat on the largest personal-data body in the
+product.
+
+`OFFLINE_MANIFEST_PENDING_GRACE_MS` (`src/lib/offline-manifest-store.ts`) is the ceiling: **twice
+`OFFLINE_MANIFEST_MAX_RETENTION_MS`, so 28 days past the record's own `expiresAt`**, after which it is
+deleted whatever is queued on it. Expressed as a multiple of the retention constant rather than as a
+new number, so shortening retention shortens this with it. It is long enough that a real trip's events
+always get their chance — a record only reaches the ceiling after it has already expired, at most 7
+days after the boat came home, so this is four further weeks of any signal, any sign-in by the shop
+that recorded it, any push the worker wakes on; longer than a liveaboard charter, a crew rotation, or
+a tablet away for repair. And it is short enough that "indefinitely" stops being true: 42 days from
+the save at the very worst, 35 from the trip itself, with the grace period landing just under the 30
+days `RETENTION_DAYS.push_subscriptions` gives the closest analogue in `src/lib/retention.ts` — a
+device credential, useful only while its trip is near, pure blast radius afterwards. Both bounds are
+asserted by tests rather than left to this paragraph, the way `retentionWindowsOutlastStripeRetries`
+is.
+
+The rule lives in `loadOfflineManifest`, the one function that decrypts a record and decides whether
+it still exists, so `listOfflineManifests` and `purgeOfflineManifestsExceptShop` inherit it instead of
+carrying second copies to drift — the same chokepoint discipline the purge's own slug guard follows.
+That placement is what makes the bound hold for the device this finding is about: **opening the shell
+is enough**, with no session, no network and no purge pass, because the read itself is the eviction.
+IndexedDB has no background expiry, so the guarantee is precisely "no read after the ceiling ever
+returns it", exactly as the ordinary retention window has always worked here.
+
+**And the loss is surfaced, not dropped.** A pending event is unsynced evidence of who came back from
+a dive, so deleting it silently is its own harm. The store writes a durable note of each discard —
+trip, shop name, how many changes were lost, when — and the offline shell reports it on every branch
+until a human acknowledges it. Durable rather than a return value from the delete, because the delete
+usually happens where there is no screen at all: the service worker's push refresh, or
+`OfflineManifestAutoSave` inside the staff shop layout. A returned value would be dropped by exactly
+the callers whose loss nobody would otherwise hear about, which is the shape of the worker bug fixed
+earlier the same day. The note deliberately carries no diver, no emergency contact, no booking id and
+no captain's note — it must not quietly re-retain the roster the discard exists to remove — and it
+lives beside the encryption key rather than in a new object store, because bumping `DB_VERSION` would
+make an older cached shell's `indexedDB.open(name, 1)` fail with `VersionError` and brick the storage
+of the exact stale-but-working dock copy this feature exists for.
+
+**F5 — the single-trip view did not repaint when the purge deleted the record it was showing.** The
+re-read after a purge only ever touched the list branch, so on `?trip=<id>` the component kept
+rendering the in-memory envelope of a record that no longer existed, and every Board / Not-boarded
+button then raised `OfflineManifestError("unavailable")` with the generic copy: a roster that looks
+fine at the dock, with dead buttons and a refusal that explains nothing. The asymmetry was deliberate
+once — blanking the screen a captain is actively reading is its own harm, and a vanished list row
+costs a link rather than the working surface — but it does not survive what the record actually is.
+The cross-shop purge can only delete a record belonging to a *different* shop than the session the
+tablet now holds, so what stayed on screen was another shop's diver names, emergency contacts and
+readiness/medical blockers rendered with no session behind them: the exact exposure the purge exists
+to end. Nothing on it could be acted on either, and a roster that cannot record is worse than no
+roster, because it reads as a head count being kept.
+
+So the trip branch repaints too — but never to "Nothing saved on this phone yet", the one sentence the
+captain already knows is false. The empty state names the cause (a different shop is signed in on this
+tablet, and roll call for that trip belongs on that shop's own live manifest), and the reasoning now
+sits in the code beside the list-branch guard that used to make the asymmetry invisible. Two things it
+refuses to do: repaint on a *failed* store read — "gone" and "couldn't ask" are different answers, and
+only the first takes a manifest off a captain's screen — and repaint a record that survived the purge
+because it still holds unsynced evidence. When the vanished record was this shop's own, the ordinary
+empty state stands; only a genuine tenant mismatch gets the sentence about another shop.
+
 ## Alternatives considered
 
 - **Register the auto-save fetch from the marketing home page (`/`) instead of the shop layout** —
@@ -354,4 +428,7 @@ The device store now purges on shop mismatch (above), so a device that changes s
 previous shop's data as soon as the new shop's staff is online once — but a device that stays offline
 throughout a handoff, or one where the new shop's staff never opens a DiveDay page, keeps the old
 data until its own retention window lapses, same as any other accepted-storage-eviction gap in this
-design.
+design. That window now genuinely lapses for every record, including one holding roll call that never
+synced: `OFFLINE_MANIFEST_PENDING_GRACE_MS` caps the reprieve at 28 days past expiry (see the ceiling
+amendment above), and the cost of that cap — a queued roll-call event thrown away — is reported on
+screen rather than taken quietly.
