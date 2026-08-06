@@ -20,7 +20,7 @@ import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { readinessBlockerText, readinessStatusText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -154,6 +154,11 @@ export default async function TripManifestPage({
   // with three back puts the alert on three rows, and the line says "N teams
   // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
   const separatedTeams = isDeparture ? 0 : splitBuddyTeamIds(manifest, "separated_after_dive").size;
+  // Nobody has said anything about these divers at this checkpoint — the face
+  // grid's whole population. Derived once: it used to be filtered twice, once
+  // for the tiles and once for the heading's count, which is two chances for
+  // the number and the faces to disagree.
+  const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -248,6 +253,22 @@ export default async function TripManifestPage({
           <PrintButton label={t("shared.printButton.label")} />
         </div>
       </header>
+      {/* Souls on board, on paper only. The printed manifest is the document
+          that goes ashore with the dock or into a coastguard's hands, and the
+          first question either asks is how many people the boat left with —
+          which the screen answers with a live progress panel that does not
+          print. Deliberately **static facts**: how many divers the trip
+          carries and how many crew it names, never a live status count. A
+          "Boarded 6" printed at 07:12 is a lie by 07:20 and paper cannot
+          correct itself, so nothing here moves after the sheet comes off the
+          printer. */}
+      <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
+        {t("trips.manifest.soulsOnBoardLine", {
+          divers: manifest.summary.totalDivers,
+          crew: manifest.crew.length,
+          souls: manifest.summary.totalDivers + manifest.crew.length,
+        })}
+      </p>
       {/* Where the owner-only incident export lands everyone else. The link
           above is hidden for them, so this is for a bookmark, a deep link, or
           a role that changed under them. */}
@@ -276,9 +297,6 @@ export default async function TripManifestPage({
             {rollCallCheckpointText(t, value)}
           </Link>
         ))}
-        <WaterLockerToggle
-          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-        />
       </nav>
 
       {/* The one count surface on this page: the checkpoint's progress, the
@@ -332,23 +350,33 @@ export default async function TripManifestPage({
         t={t}
       />
 
+      {/* Who nobody has said anything about yet — and only them. A diver a
+          human recorded as not back aboard is *not* in this grid: they have a
+          result, and it is the loudest row on the list above. That is why
+          nothing here is worded as "missing", and why the dock's version of
+          this state is calm — the boat has not left. */}
       <MissingDiversGrid
-        divers={manifest.divers
-          .filter((diver) => !diver.rollCall)
-          .map((diver) => ({
-            bookingId: diver.bookingId,
-            fullName: diver.fullName,
-            rentsKit: diver.rentalFit.state === "rents",
-          }))}
+        divers={uncalledDivers.map((diver) => ({
+          bookingId: diver.bookingId,
+          fullName: diver.fullName,
+          rentsKit: diver.rentalFit.state === "rents",
+          blocked: diver.readiness.status === "blocked",
+        }))}
+        tone={isDeparture ? "neutral" : "urgent"}
         copy={
           {
-            heading: t("trips.manifest.missingDiversHeading", {
-              count: manifest.divers.filter((diver) => !diver.rollCall).length,
-            }),
-            awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+            heading: isDeparture
+              ? t("trips.manifest.stillToBoardHeading", { count: uncalledDivers.length })
+              : t("trips.manifest.notCountedBackHeading", { count: uncalledDivers.length }),
+            statusLabel: isDeparture
+              ? t("trips.manifest.missingDiversPillDock")
+              : t("trips.manifest.missingDiversPillAfterDive"),
             tapHint: t("trips.manifest.missingDiversTapHint"),
             rentsKitLabel: t("trips.manifest.rentsKitLabel"),
             ownKitLabel: t("trips.manifest.ownKitLabel"),
+            // The one readiness vocabulary (src/i18n/readiness-labels.ts) —
+            // the same word the diver's own row wears.
+            blockedLabel: readinessStatusText(t, "blocked"),
           } satisfies MissingDiversGridCopy
         }
       />
@@ -446,6 +474,17 @@ export default async function TripManifestPage({
           />
         }
       />
+
+      {/* The spray guard is a *this device* preference, like the offline copy
+          and the push opt-in above it — not a checkpoint. It used to sit in
+          the checkpoint nav, where it read as a fifth destination beside
+          "Before departure" and "After dive 1" and put a settings toggle in
+          the one row a captain taps to change what the page is showing. */}
+      <div className="mt-4 print:hidden">
+        <WaterLockerToggle
+          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+        />
+      </div>
 
       <WaterLocker
         copy={{

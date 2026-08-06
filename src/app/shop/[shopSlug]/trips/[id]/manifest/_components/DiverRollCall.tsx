@@ -16,7 +16,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
 import {
   isNotBackAboard,
   type ManifestBuddyTeam,
@@ -79,12 +79,19 @@ export function DiverRollCall({
               the boat is out, and the crew tapping it in the dark should be
               told which one they are looking at (DOM-H3). */}
           {isDeparture ? null : (
-            <p className="mt-1 max-w-prose text-sm font-semibold text-warning">
+            <p className="mt-1 max-w-prose text-base font-semibold text-warning-strong">
               {t("trips.manifest.notBackAboardDescription")}
             </p>
           )}
         </div>
-        <p className="text-sm text-muted">{t("trips.manifest.shopTimeLabel", { timezone })}</p>
+        {/* The zone by the name a captain says, never the IANA id it is stored
+            under (`formatTimeZoneName`) — "Shop time: America/New_York" was
+            the page showing its own storage format. */}
+        <p className="text-sm text-muted">
+          {t("trips.manifest.shopTimeLabel", {
+            timezone: formatTimeZoneName(locale, timezone),
+          })}
+        </p>
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {divers.map((diver, index) => {
@@ -104,25 +111,30 @@ export function DiverRollCall({
           // Each roll-call state gets its own fill (`ROLL_CALL_ROW_TONE`) so
           // staff can tell at a glance who has been handled — aboard green,
           // left ashore amber, not back aboard red, nothing said yet slate.
-          const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${
+          //
+          // Untouched rows are where the diver list differs from the crew's: at
+          // the dock a blocked diver's readiness *is* the thing to fix before
+          // they board, so the row says so. After a dive it is not — roll call
+          // there is a physical head count that readiness never gates, and a
+          // danger-tinted row for a paperwork state would compete with the one
+          // red on the page that means somebody is in the water (DD9).
+          const untouchedTone =
+            ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
+          const scrollMargin = notBackAboard || (!rc && !ready) ? "scroll-mt-32 " : "";
+          const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${scrollMargin}${
             notBackAboard
-              ? `scroll-mt-32 ${ROLL_CALL_ROW_TONE.notBackAboard}`
+              ? ROLL_CALL_ROW_TONE.notBackAboard
               : boarded
                 ? ROLL_CALL_ROW_TONE.boarded
                 : explicitNotBoarded
                   ? ROLL_CALL_ROW_TONE.notBoarded
                   : impliedNotBoarded
                     ? ROLL_CALL_ROW_TONE.notBoardedImplied
-                    : ready
-                      ? ROLL_CALL_ROW_TONE.awaiting
-                      : `scroll-mt-32 ${ROLL_CALL_ROW_TONE.blocked}`
+                    : untouchedTone
           }`;
           // Whether a human has said something about this diver *at this
           // checkpoint*. The two buttons below already carry that answer in
-          // words, so the status pill would only repeat them — it stays for
-          // the rows nobody has touched, where nothing else says so. An
-          // implied not-boarded is carried forward from the dock, not said
-          // here, so it keeps its pill.
+          // words, so the status pill would only repeat them.
           const recordedHere = !!rc && !rc.implied;
           // The pill is dropped only when something else on the row is
           // already saying the same word. Two cases where nothing is
@@ -215,7 +227,7 @@ export function DiverRollCall({
                       here too, not only on the desk-side roster. Warning
                       tone, never a gate (H-08). */}
                   {diver.depthAdvisory?.status === "exceeds" ? (
-                    <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning">
+                    <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong">
                       <span aria-hidden="true">▲</span>
                       <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                     </p>

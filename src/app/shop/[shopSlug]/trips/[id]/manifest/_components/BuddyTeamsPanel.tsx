@@ -107,8 +107,8 @@ export function BuddyTeamsPanel({
                         return (
                           <li
                             key={token}
-                            className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken py-1 font-semibold ${
-                              removable ? "ps-3 pe-1" : "px-3"
+                            className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
+                              removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
                             }`}
                           >
                             <span>{name}</span>
@@ -119,10 +119,16 @@ export function BuddyTeamsPanel({
                                 {/* A real target, not a bare "×" glyph: this
                                     panel is worked on a moving deck, and the
                                     chip shape is what makes the control read
-                                    as a control rather than a typo. */}
+                                    as a control rather than a typo. `size-11`
+                                    is the dock test's floor (44px,
+                                    design/principles.md §2) — at `size-7` this
+                                    was a 28px hit area for wet fingers, and
+                                    the act behind it removes a person from a
+                                    buddy team. The chip's own padding grew to
+                                    hold it. */}
                                 <button
                                   type="submit"
-                                  className="flex size-7 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
+                                  className="flex size-11 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
                                 >
                                   <span aria-hidden="true">×</span>
                                   <span className="sr-only">
@@ -141,12 +147,15 @@ export function BuddyTeamsPanel({
                       {t("trips.manifest.buddyRecordedBy", { name: team.recordedByName })}
                     </p>
                   </div>
+                  {/* Nothing in this panel is worked at the rail — grouping
+                      people is desk/dock prep, so these controls take the
+                      app's default size rather than the roll-call buttons'
+                      `boat`. Dissolving is destructive but never this
+                      section's main action, so it is `danger` weight, not
+                      `danger-solid` (docs/design/forms-and-controls.md). */}
                   <form action={dissolveBuddyTeamAction}>
                     <input type="hidden" name="teamId" value={team.teamId} />
-                    <button
-                      type="submit"
-                      className={buttonClass({ variant: "secondary", size: "boat" })}
-                    >
+                    <button type="submit" className={buttonClass({ variant: "danger" })}>
                       {t("trips.manifest.buddyDissolve")}
                     </button>
                   </form>
@@ -178,10 +187,7 @@ export function BuddyTeamsPanel({
                         </optgroup>
                       </select>
                     </Field>
-                    <button
-                      type="submit"
-                      className={buttonClass({ variant: "secondary", size: "boat" })}
-                    >
+                    <button type="submit" className={buttonClass({ variant: "secondary" })}>
                       {t("trips.manifest.buddyAddMemberSubmit")}
                     </button>
                   </form>
@@ -211,8 +217,20 @@ export function BuddyTeamsPanel({
                 </p>
                 <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
                   {diverOptions.map((option) => (
-                    <label key={option.token} className="flex items-center gap-2 text-base">
-                      <input type="checkbox" name="members" value={option.token} />
+                    // A horizontal checkbox row is not a stacked `Field`
+                    // (docs/design/forms-and-controls.md), but it is still a
+                    // target: `min-h-11` and a control big enough to hit
+                    // without aiming.
+                    <label
+                      key={option.token}
+                      className="flex min-h-11 cursor-pointer items-center gap-2 text-base"
+                    >
+                      <input
+                        type="checkbox"
+                        name="members"
+                        value={option.token}
+                        className="size-5 accent-primary"
+                      />
                       <span>{option.label}</span>
                     </label>
                   ))}
@@ -226,8 +244,20 @@ export function BuddyTeamsPanel({
                 </p>
                 <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
                   {crewOptions.map((option) => (
-                    <label key={option.token} className="flex items-center gap-2 text-base">
-                      <input type="checkbox" name="members" value={option.token} />
+                    // A horizontal checkbox row is not a stacked `Field`
+                    // (docs/design/forms-and-controls.md), but it is still a
+                    // target: `min-h-11` and a control big enough to hit
+                    // without aiming.
+                    <label
+                      key={option.token}
+                      className="flex min-h-11 cursor-pointer items-center gap-2 text-base"
+                    >
+                      <input
+                        type="checkbox"
+                        name="members"
+                        value={option.token}
+                        className="size-5 accent-primary"
+                      />
                       <span>{option.label}</span>
                     </label>
                   ))}
@@ -238,7 +268,7 @@ export function BuddyTeamsPanel({
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <button type="submit" className={buttonClass({ size: "boat" })}>
+              <button type="submit" className={buttonClass()}>
                 {t("trips.manifest.buddyFormSubmit")}
               </button>
               <FormStatus>{builderError}</FormStatus>
