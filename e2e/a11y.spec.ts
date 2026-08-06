@@ -76,15 +76,15 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     page,
   }) => {
     const title = `A11y Scan Trip ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(5));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("11:30");
-    await page.getByLabel("Capacity").fill("6");
+    await page.getByLabel("Seats").fill("6");
     await page.getByLabel(/Price per diver/).fill("120");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page).not.toHaveURL(/\/trips\/new/);
+    await expect(page.getByRole("status")).toContainText(title);
 
     // A staff session adds a preview banner to the booking page
     // (src/app/s/[shopSlug]/trips/[id]/page.tsx) that no diver ever sees, so
@@ -250,7 +250,12 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
       { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
       { path: "/shop/blue-mantis/schedule/board", heading: "Board" },
-      { path: "/shop/blue-mantis/trips/new", heading: "Schedule a trip or course session" },
+      // Creating a trip is the board's own add panel now (ADR
+      // 20260806-one-trip-create-form), and `?add=full` is the deep end of it
+      // — the whole former `/trips/new` form, disclosed inline. `/trips/new`
+      // itself is a permanent redirect here, so this scans the surface the
+      // fields actually live on.
+      { path: "/shop/blue-mantis/schedule/board?add=full", heading: "Board" },
       { path: "/shop/blue-mantis/divers", heading: "Divers" },
     ]);
   });

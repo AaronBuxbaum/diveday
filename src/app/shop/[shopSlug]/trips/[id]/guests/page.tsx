@@ -98,7 +98,7 @@ type TripGuestsSearchParams = Promise<{
  * `revalidateAndRedirect(...?notice=diver-added...)` (the shared
  * src/app/actions/seat-diver.ts) raced
  * that hole's own pending fetch, matching the class of bug fixed on
- * /sign-in, dive-sites/new, and trips/new. This action lives in a sibling
+ * /sign-in and dive-sites/new. This action lives in a sibling
  * `actions.ts` rather than this file, which is also why the earlier grep for
  * this bug class (co-located `redirect(` in the same `page.tsx`) missed it.
  * (`addBookingAction` is now the shared `seatNewDiverAction`; the hazard and
@@ -300,8 +300,14 @@ async function TripGuestsBody({
           </p>
           <h2 className="mt-1 text-lg font-semibold">{t("trips.guests.demandHeading")}</h2>
           <p className="mt-1 text-sm text-muted">{demand.message}</p>
+          {/* Opens the board's add panel already dated to *this* departure's
+              day: the demand signal is "this boat is turning divers away", and
+              the answer a shop reaches for is a second boat on the same day,
+              not a blank date box. */}
           <Link
-            href={`/shop/${shopSlug}/trips/new`}
+            href={`/shop/${shopSlug}/schedule/board?add=1&date=${toDateInputValue(
+              utcToWallTime(trip.startsAt, shop.timezone),
+            )}`}
             className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
           >
             {t("trips.guests.scheduleAnotherDeparture")}

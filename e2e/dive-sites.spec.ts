@@ -53,8 +53,8 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
     await expect(page.getByLabel("Longitude")).toHaveValue("-80.321");
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(tripTitle);
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(tripTitle);
     await page.getByLabel("Dive site").first().selectOption({ label: siteName });
     await page.getByLabel("Date").fill(daysFromNow(5));
     await page.getByLabel("Departs").fill("09:00");

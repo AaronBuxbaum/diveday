@@ -16,6 +16,12 @@ test.describe("schedule builder", () => {
   test("staff add, move, copy, and remove a departure without leaving the board", async ({
     page,
   }) => {
+    // Four whole mutations, each one a form post and a board re-render — and
+    // the board is the app's heaviest staff render (KPI tiles, a keyset page of
+    // departures, per-trip crew and day counts). Aggregate per-navigation cost
+    // across the sequence, not a hang; same reasoning as
+    // e2e/role-permissions.spec.ts.
+    test.setTimeout(30_000);
     // Unique title so every assertion targets this spec's own departure rather
     // than a seeded one. (Isolation itself comes from the per-test demo reset.)
     const title = `Builder Trip ${e2eNow().getTime()}`;
@@ -34,7 +40,9 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Returns").fill("13:00");
     await page.getByLabel("Seats").fill("8");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText("It’s on the board.");
+    // Named, so a staffer adding three departures in a row can read which one
+    // landed (ADR 20260806-one-trip-create-form).
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0/8")).toBeVisible();
@@ -86,7 +94,9 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Seats").fill("6");
     await page.getByLabel(/Price per diver/).fill("129");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText("It’s on the board.");
+    // Named, so a staffer adding three departures in a row can read which one
+    // landed (ADR 20260806-one-trip-create-form).
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);

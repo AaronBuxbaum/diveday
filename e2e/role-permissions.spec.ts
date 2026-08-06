@@ -84,9 +84,11 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Save shop address" })).toHaveCount(0);
 
-      // Trip creation is hidden.
-      await page.goto(`/shop/${SHOP}/trips/new`);
+      // Trip creation is hidden — and the board says whose job it is rather
+      // than just omitting the control (ADR 20260806-one-trip-create-form).
+      await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Add a departure" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
 
       // Diver deletion is hidden — and so is the strictly stricter erasure
@@ -151,7 +153,7 @@ test.describe("H-14 role permissions", () => {
 
     test("an instructor may configure trips but not money or legal", async ({ page }) => {
       // Trip configuration is instructor work — the form is present.
-      await page.goto(`/shop/${SHOP}/trips/new`);
+      await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       // Money and the legal waiver are still owner/manager only — including
@@ -184,7 +186,7 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
 
-      await page.goto(`/shop/${SHOP}/trips/new`);
+      await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       await page.goto(await firstDiverDetailHref(page));

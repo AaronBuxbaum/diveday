@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type BuilderCopy,
   type BuilderDay,
+  type BuilderMoreOptions,
   type BuilderPriceInput,
   ScheduleBuilder,
 } from "./ScheduleBuilder";
@@ -80,6 +82,63 @@ const COPY: BuilderCopy = {
   departureTime: "Departure time",
   copying: "Copying…",
   copyIt: "Copy it",
+  viewOnlyNotice: "Scheduling and editing trips is limited to owners, managers, and instructors.",
+  moreOptions: "More options",
+  fewerOptions: "Fewer options",
+  moreOptionsDescription: "Description, multi-day, deposit, cancellation window, repeat.",
+  titlePlaceholderCourse: "{courseTitle} — Session 1",
+  courseNote: "{requirement} · add an instructor before sharing the session",
+  courseCertRequired: "{level} card required at enrollment",
+  courseNoCardRequired: "No existing C-card required",
+  descriptionLabel: "Description",
+  descriptionPlaceholder: "Sites, conditions, who it's for.",
+  daysLabel: "How many days",
+  daysDescription: "Most departures are one day.",
+  payAtBookingLegend: "Pay at booking",
+  payAtBookingDescription: "Optional.",
+  depositLabel: "Deposit per diver",
+  depositDescription: "Charged now.",
+  depositTitle: "Only applies when set below the trip price.",
+  cancellationWindowLabel: "Free cancellation window",
+  cancellationWindowDescription: "Hours before departure.",
+  hoursSuffix: "hours",
+  repeatLegend: "Repeat",
+  repeatDescription: "Put the same trip on the board for several weeks at once.",
+  howOftenLabel: "How often",
+  doesntRepeat: "Doesn't repeat",
+  everyWeek: "Every week",
+  every2Weeks: "Every 2 weeks",
+  every4Weeks: "Every 4 weeks",
+  numberOfTripsLabel: "Number of trips",
+  numberOfTripsDescription: "Counting the first, up to 12.",
+  numberOfTripsPlaceholder: "e.g. 8",
+};
+
+/** The bounds and shared dive-card words the expanded half of the panel needs. */
+const MORE: BuilderMoreOptions = {
+  minOccurrences: 2,
+  maxOccurrences: 12,
+  minDays: 1,
+  maxDays: 7,
+  diveFields: {
+    heading: "The dive plan",
+    description: "A {tripShape}.",
+    twoTankTrip: "two-tank trip",
+    diveCountTrip: "{count}-dive trip",
+    numberOfDivesLabel: "Number of dives",
+    diveOptionOne: "{count} dive",
+    diveOptionOther: "{count} dives",
+    diveLegend: "Dive {number}",
+    nameLabel: "Name",
+    optionalHint: "(optional)",
+    namePlaceholderFirst: "Morning reef",
+    namePlaceholderOther: "Second tank",
+    diveSiteLabel: "Dive site",
+    noSiteChosen: "Decide later",
+    diverFacingDetailsLabel: "Diver-facing details",
+    detailsPlaceholder: "Depth, conditions, what to expect.",
+    footerNote: "Divers see this on the booking page.",
+  },
 };
 
 function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
@@ -142,6 +201,9 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -168,6 +230,9 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -189,6 +254,9 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
   }
@@ -244,6 +312,9 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -270,6 +341,9 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -293,6 +367,9 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -315,6 +392,9 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -335,6 +415,9 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -361,6 +444,9 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
 
@@ -396,6 +482,9 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
       />,
     );
   }
@@ -463,5 +552,103 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     expect(screen.queryByText(/not counted/)).toBeNull();
     expect(screen.queryByText(/roll call still open/)).toBeNull();
     expect(screen.getByRole("button", { name: /^Move Two-Tank Reef/ })).toBeInTheDocument();
+  });
+});
+
+describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip-create-form)", () => {
+  const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+
+  function renderBuilder(overrides: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+        {...overrides}
+      />,
+    );
+  }
+
+  it("keeps the rare half collapsed, and reveals the whole trip form on request", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+
+    // Collapsed: the questions the board is for, and nothing else.
+    expect(screen.getByLabelText("What is it")).toBeInTheDocument();
+    expect(screen.getByLabelText("Seats")).toBeInTheDocument();
+    expect(screen.getByLabelText("Dives")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Description/)).toBeNull();
+    expect(screen.queryByLabelText("How many days")).toBeNull();
+    expect(screen.queryByLabelText(/Deposit per diver/)).toBeNull();
+    expect(screen.queryByLabelText("How often")).toBeNull();
+
+    const more = screen.getByRole("button", { name: "More options" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(more);
+
+    // Expanded: everything /trips/new used to ask, on the same form.
+    expect(screen.getByLabelText(/^Description/)).toBeInTheDocument();
+    expect(screen.getByLabelText("How many days")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Deposit per diver/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Free cancellation window/)).toBeInTheDocument();
+    expect(screen.getByLabelText("How often")).toBeInTheDocument();
+    expect(screen.getByLabelText("Number of dives")).toBeInTheDocument();
+    // Still one submit — expanding deepens the form, it never forks it.
+    expect(screen.getAllByRole("button", { name: "Put it on the board" })).toHaveLength(1);
+  });
+
+  it("never posts two dive counts: the quick box gives way to the dive plan's own", async () => {
+    // `plannedDives` decides how many dive cards render, so two controls
+    // sharing the name would make the last one in the DOM win silently.
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    expect(container.querySelectorAll('[name="plannedDives"]')).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "More options" }));
+    expect(container.querySelectorAll('[name="plannedDives"]')).toHaveLength(1);
+    // Same for the site: one for the day, or one per dive — never both.
+    expect(container.querySelectorAll('[name="diveSiteId"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[name="dive-1-siteId"]')).toHaveLength(1);
+  });
+
+  it("opens already pointed at the course a catalogue link named", async () => {
+    renderBuilder({
+      openAdd: "quick",
+      initialCourse: {
+        id: "course-1",
+        title: "Open Water Diver",
+        requirement: "No existing C-card required",
+      },
+    });
+
+    // No click needed — the link was the click.
+    const course = await screen.findByLabelText(/^Course/);
+    expect(course).toHaveValue("course-1");
+    expect(screen.getByLabelText("What is it")).toHaveAttribute(
+      "placeholder",
+      "Open Water Diver — Session 1",
+    );
+    expect(screen.getByText(/No existing C-card required · add an instructor/)).toBeInTheDocument();
+  });
+
+  it("opens at full depth for a link that meant the whole form", async () => {
+    renderBuilder({ openAdd: "expanded" });
+    expect(await screen.findByLabelText("How often")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fewer options" })).toBeInTheDocument();
+  });
+
+  it("tells a captain whose job scheduling is, rather than showing an empty board", () => {
+    renderBuilder({ canConfigure: false });
+
+    expect(screen.queryByRole("button", { name: "Add a departure" })).toBeNull();
+    expect(screen.getByText(/limited to owners, managers, and instructors/)).toBeInTheDocument();
   });
 });

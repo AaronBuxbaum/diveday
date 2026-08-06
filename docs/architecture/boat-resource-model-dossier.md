@@ -78,7 +78,7 @@ migration cost against this list.
 | --- | --- |
 | `/s/[shopSlug]` public schedule + `/s/[shopSlug]/trips/[id]` booking page | List/sell every scheduled trip; capacity label; waitlist when full; party booking ≤ 6 (`createBookingParty`). |
 | `/shop/[shopSlug]/schedule/board` (`ScheduleBuilder.tsx` + `actions.ts`) | Day-grouped stream of departures with no lane/resource dimension; add/move/copy/remove cannot collide because nothing is exclusive. |
-| `/shop/[shopSlug]/trips/new` + `/trips/[id]` | Trip editor: capacity is a bare number staff retype per trip; crew and roster sections. |
+| The board's add panel + `/trips/[id]` | One trip form (creation lives in `ScheduleBuilder`'s panel — ADR 20260806-one-trip-create-form) and the trip editor: capacity is a bare number staff retype per trip; crew and roster sections. |
 | Today (`/shop/[shopSlug]` `?view=`) | Departure cards; no boat name to anchor "which boat is this pile of problems on". |
 | Reports (`/shop/[shopSlug]/reports`) | Utilization against stated capacity; no per-boat cut. |
 | `calendar-sync` feature (`src/features/calendar-sync`) | Trips → VEVENT; a boat name would belong in the event title/location for crew phones. |
