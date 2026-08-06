@@ -13,6 +13,7 @@
  * modules that were still paying the constructor on every call — see the
  * reasoning there.
  */
+import { nowDate } from "./clock";
 import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
 
@@ -84,6 +85,31 @@ export function formatTime(date: Date, locale = "en-US", timeZone: string): stri
     minute: "2-digit",
     timeZone,
   }).format(date);
+}
+
+/**
+ * A timezone as a **name a person says out loud** — "Eastern Daylight Time",
+ * not `America/New_York`.
+ *
+ * An IANA id is a database value, and design/principles.md §4 keeps that
+ * vocabulary off the screen: a manifest that labels its column "Shop time:
+ * America/New_York" is showing the reader our storage format. The long name is
+ * what a captain already calls the zone, and it stays honest about the
+ * invariant — the id still decides the instant, this only spells it.
+ *
+ * Read through the clock (`nowDate`) because the answer moves with DST: the
+ * same zone is "Eastern Standard Time" in January. The e2e fleet freezes that
+ * clock, so the rendered name is stable for visual regression.
+ *
+ * Falls back to the id when a runtime has no long name for the zone — a raw id
+ * is worse than a name, and far better than an empty label.
+ */
+export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
+  const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    timeZone,
+    timeZoneName: "long",
+  }).formatToParts(now);
+  return parts.find((part) => part.type === "timeZoneName")?.value ?? timeZone;
 }
 
 /**
