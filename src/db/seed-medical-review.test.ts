@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { bookings, people, trips, waiverRecords } from "./schema";
-import {
-  DEMO_MEDICAL_REVIEW_DIVER,
-  DEMO_MEDICAL_REVIEW_TRIP,
-  seedMedicalReview,
-} from "./seed-medical-review";
+import { seedMedicalReview } from "./seed-medical-review";
+
+// The scenario's fixture names, as seedMedicalReview writes them.
+const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
+const DEMO_MEDICAL_REVIEW_TRIP = "Afternoon Two-Tank — French Reef";
+
 import { getCurrentWaiverTemplate } from "./waivers";
 
 describe("seeded medical-review training scenario", () => {

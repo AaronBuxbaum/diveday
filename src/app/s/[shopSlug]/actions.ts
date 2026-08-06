@@ -6,13 +6,15 @@ import { joinLastMinuteList } from "@/db/last-minute-list";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
 const joinSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
-  email: z.email().max(200),
-  phone: z.string().trim().max(30).optional(),
+  // Shared diver person-field bounds (src/lib/person-fields.ts).
+  fullName: diverNameSchema,
+  email: diverEmailSchema,
+  phone: diverPhoneSchema.optional(),
   availableFrom: z.string().optional(),
   availableUntil: z.string().optional(),
 });

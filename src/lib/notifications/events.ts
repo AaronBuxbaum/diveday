@@ -24,7 +24,3 @@ export const ACTIONABLE_PROVIDER_STATUSES = [
   "complained",
   "failed",
 ] as const satisfies readonly ProviderEmailStatus[];
-
-export function isActionableProviderStatus(status: ProviderEmailStatus | null): boolean {
-  return status !== null && (ACTIONABLE_PROVIDER_STATUSES as readonly string[]).includes(status);
-}

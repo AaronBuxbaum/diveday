@@ -143,10 +143,6 @@
     ],
     "visual": ["today", "today-empty", "today-first-bookable"]
   },
-  "/shop/[shopSlug]/blockers": {
-    "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
-    "visual": ["blockers"]
-  },
   "/shop/[shopSlug]/bookings/new": {
     "e2e": ["add-diver.spec.ts"],
     "visual": ["booking-new"]
@@ -182,10 +178,6 @@
   "/shop/[shopSlug]/dive-sites/[id]": {
     "e2e": ["dive-sites.spec.ts"],
     "visual": []
-  },
-  "/shop/[shopSlug]/dive-sites/catalog": {
-    "e2e": ["dive-sites.spec.ts"],
-    "visual": ["dive-sites-catalog"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -247,7 +239,7 @@
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {
     "e2e": ["a11y.spec.ts", "blowout.spec.ts"],
-    "visual": ["blowout-confirm", "blowout-cascade"]
+    "visual": ["blowout-cascade", "blowout-confirm"]
   },
   "/shop/[shopSlug]/schedule/board": {
     "e2e": [
@@ -293,10 +285,6 @@
       "whatsapp-settings.spec.ts"
     ],
     "visual": ["settings-payments", "settings-trial"]
-  },
-  "/shop/[shopSlug]/settings/backup": {
-    "e2e": ["backup.spec.ts"],
-    "visual": []
   },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],
@@ -375,6 +363,10 @@
       "trip-guests-refusal-level"
     ]
   },
+  "/shop/[shopSlug]/trips/[id]/incident-export": {
+    "e2e": ["a11y.spec.ts", "incident-export.spec.ts"],
+    "visual": ["incident-export"]
+  },
   "/shop/[shopSlug]/trips/[id]/manifest": {
     "e2e": [
       "a11y.spec.ts",
@@ -390,10 +382,6 @@
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard"
     ]
-  },
-  "/shop/[shopSlug]/trips/[id]/incident-export": {
-    "e2e": ["a11y.spec.ts", "incident-export.spec.ts"],
-    "visual": ["incident-export"]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],

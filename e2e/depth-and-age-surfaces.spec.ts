@@ -1,24 +1,9 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
-
-/**
- * A staff trip's path, read from the schedule card's own href. Clicking and
- * then reading `page.url()` races the streaming list.
- */
-async function tripPathByTitle(page: Page, title: string | RegExp) {
-  await page.goto(`/shop/${SHOP}/schedule/board`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
-    .filter({ hasText: title })
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
-  if (!href) throw new Error(`no trip card found for ${title}`);
-  return href;
-}
 
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
@@ -66,7 +51,7 @@ test.describe("staff", () => {
   test("the roster shows a diver's age and flags a minor without blocking them", async ({
     page,
   }) => {
-    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/guests`);
 
     // The seed gives one diver on this trip a date of birth putting them at 13
@@ -91,7 +76,7 @@ test.describe("staff", () => {
   test("a birthday within the window is celebrated on the roster and in its own section", async ({
     page,
   }) => {
-    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/guests`);
 
     // The seeded minor's birthday is two days out, so both surfaces fire. The
@@ -103,7 +88,7 @@ test.describe("staff", () => {
   test("the manifest carries age and the minor flag to the crew's boarding list", async ({
     page,
   }) => {
-    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/manifest`);
 
     // A captain reading the boarding list can see it without opening a profile.
@@ -116,7 +101,7 @@ test.describe("staff", () => {
     // Give the reef site a depth past an Open Water diver's 18 m ceiling.
     await setSiteDepth(page, "Molasses Reef", "32", /Maximum depth/);
 
-    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/guests`);
 
     // The warning names both numbers and says plainly that it is not a block.
@@ -174,7 +159,7 @@ test.describe("staff", () => {
   });
 
   test("water temperature is entered and read back in the shop's own unit", async ({ page }) => {
-    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
 
     // Celsius by default, and the unit is part of the field's label rather
     // than a hint beside it — a bare "Water temp" is how a 27 meant as °F

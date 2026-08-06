@@ -81,28 +81,14 @@ export function reviewAggregate(count: number, sum: number): ReviewAggregate {
 /**
  * How a review is signed in public: first name plus a last initial ("Marta R."),
  * the most a shop's page should ever say about someone who came diving. A
- * single-word name stands alone; an empty one falls back to a neutral label
- * rather than rendering a blank byline.
+ * single-word name stands alone; an empty one comes back as `""` — absence,
+ * never words. The rendering surface picks its own localized neutral byline
+ * (`reviews.anonymousReviewer` in the diver bundle); this layer holds no prose.
  */
 export function reviewerDisplayName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "A diver";
+  if (parts.length === 0) return "";
   const [first, ...rest] = parts;
   const last = rest[rest.length - 1];
   return last ? `${first} ${last[0].toUpperCase()}.` : first;
-}
-
-/**
- * The rating as words, for screen readers and for anywhere a row of stars would
- * be decorative. Spelled out because "4/5" read aloud is ambiguous.
- */
-export function ratingLabel(rating: number): string {
-  return `${rating} out of ${MAX_REVIEW_RATING} stars`;
-}
-
-/** The aggregate as one honest phrase — never rounded up, never hidden at low counts. */
-export function aggregateLabel(aggregate: ReviewAggregate): string | null {
-  if (aggregate.average === null || aggregate.count === 0) return null;
-  const reviews = aggregate.count === 1 ? "1 review" : `${aggregate.count} reviews`;
-  return `${aggregate.average.toFixed(1)} out of ${MAX_REVIEW_RATING} from ${reviews}`;
 }

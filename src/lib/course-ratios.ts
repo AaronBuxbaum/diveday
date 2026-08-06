@@ -93,28 +93,6 @@ export function courseRatioCapacity(
 }
 
 /**
- * How many students an entry-level (DSD/Open Water) session may seat given the
- * instructors and certified assistants (Divemasters) actually assigned as crew.
- * `isIntroCourse` (DSD) uses the tighter {@link INTRO_COURSE_RATIO} — the
- * Instructor Manual's open-water DSD figure — with no assistant bonus; every
- * other entry-level course uses {@link ENTRY_LEVEL_COURSE_RATIO}.
- *
- * Prefer `courseSeatCapacity`, which reads the course row and decides *whether*
- * a ratio applies at all. This is the arithmetic underneath it.
- */
-export function entryLevelCourseCapacity(
-  instructorCount: number,
-  assistantCount: number,
-  isIntroCourse = false,
-): number {
-  return courseRatioCapacity(
-    isIntroCourse ? INTRO_COURSE_RATIO : ENTRY_LEVEL_COURSE_RATIO,
-    instructorCount,
-    assistantCount,
-  );
-}
-
-/**
  * The subset of a course row the ratio rules need — narrower than the full
  * `courses` row so every caller (a joined query, a form field, a test fixture)
  * can pass its own shape without importing the schema type.

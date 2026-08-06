@@ -313,9 +313,7 @@
     "submit": "Dejar de recibir estos correos",
     "submitting": "Cancelando…",
     "confirmedTitle": "Te has dado de baja",
-    "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
-    "unavailableTitle": "Este enlace no está disponible",
-    "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
+    "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
   },
   "course": {
     "hidden": "Oculto — los buceadores no ven esta página.",
@@ -381,6 +379,7 @@
     "askBody": "Puntuar lleva un segundo. Las palabras son bienvenidas, pero nunca obligatorias.",
     "ratingLegend": "Tu puntuación",
     "ratingOption": "{rating} sobre 5 estrellas",
+    "anonymousReviewer": "Un buceador",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentModerationHint": "Las puntuaciones se publican al momento; el centro lee antes tus palabras.",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
@@ -462,14 +461,12 @@
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
-    "withTheShop": "Con el centro",
     "allSetHeading": "Lo tienes todo listo",
     "allSetBody": "El centro está terminando las últimas revisiones — ahora mismo no tienes que hacer nada.",
     "emergencyContact": "Contacto de emergencia",
     "emergencyContactBody": "Alguien a quien podamos llamar por ti ese día: un nombre y un teléfono al que llame la tripulación.",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
-    "updateContact": "Actualizar contacto",
     "saveContact": "Guardar contacto",
     "chooseTrip": "Elige una salida…",
     "moveConfirm": "¿Mover tu reserva a esta salida? Tu plaza actual se libera en cuanto la nueva quede confirmada.",
@@ -678,8 +675,6 @@
     "unavailableBody": "Puede que ya se haya usado, que lo hayan reemplazado por uno más nuevo o que haya caducado. Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
-      "nameRequired": "Añade tu nombre — esta plaza pasa a ser tuya.",
-      "emailInvalid": "Ese email no parece correcto.",
       "alreadyBooked": "Ya tienes tu propia plaza en esta salida, así que esta se queda con quien organiza el grupo.",
       "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una tarjeta verificada en la ficha antes de que esta plaza pueda cambiar de manos. Contacta con el centro y lo resolverán."
     },
@@ -1188,6 +1183,7 @@
     "tryLabel": "Prueba:",
     "current": "Actual",
     "switchAction": "Cambiar",
+    "switchFailed": "El cambio de rol no se realizó — inténtalo de nuevo en un momento.",
     "switchToAria": "Cambiar a {role}",
     "roles": {
       "owner": {

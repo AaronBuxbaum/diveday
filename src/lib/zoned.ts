@@ -112,13 +112,6 @@ export function addCalendarDays(wall: WallTime, days: number): WallTime {
   };
 }
 
-/** Whole calendar days between two wall dates' date parts, ignoring time-of-day. */
-export function calendarDayDelta(from: WallTime, to: WallTime): number {
-  const fromUtc = Date.UTC(from.year, from.month - 1, from.day);
-  const toUtc = Date.UTC(to.year, to.month - 1, to.day);
-  return Math.round((toUtc - fromUtc) / 86_400_000);
-}
-
 /**
  * The exact UTC instants that bracket the shop's own calendar day containing
  * `now` — `from` inclusive, `to` exclusive.

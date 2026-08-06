@@ -1,5 +1,7 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
+
 type MissingDiver = {
   bookingId: string;
   fullName: string;
@@ -89,15 +91,7 @@ export function MissingDiversGrid({
     <section id="missing-divers-grid" className="mt-9 print:hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{copy.heading}</h2>
-        <span
-          className={
-            tone === "urgent"
-              ? "rounded-full bg-danger/10 px-3 py-1 text-sm font-semibold text-danger"
-              : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold text-muted"
-          }
-        >
-          {copy.statusLabel}
-        </span>
+        <Badge tone={tone === "urgent" ? "danger" : "neutral"}>{copy.statusLabel}</Badge>
       </div>
       <p className="mt-1 text-sm text-muted">{copy.tapHint}</p>
       <div className="mt-4 flex flex-wrap justify-start gap-4">

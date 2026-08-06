@@ -6,24 +6,12 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
-  findTripOnBoard,
   signInAs,
   signOut,
+  tripPathByTitle,
 } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
-
-/**
- * A staff trip's path, read from the schedule card's own href. Clicking and
- * then reading `page.url()` races the streaming list — the card can still be
- * re-rendering, and the URL read lands on the wrong route.
- */
-async function tripPathByTitle(page: Page, title: string | RegExp) {
-  const link = await findTripOnBoard(page, SHOP, title);
-  const href = await link.getAttribute("href");
-  if (!href) throw new Error(`no trip card found for ${title}`);
-  return href;
-}
 
 /** The seeded diver the shop is out of a size for — flagged for staff fit. */
 const DIVER_WITH_FIT = "Sam Whitfield";
@@ -56,7 +44,7 @@ test.describe("staff", () => {
     // The seed flags one diver on today's reef trip — no XL BCD left. Read the
     // card's href rather than clicking: the schedule list streams in, and
     // reading page.url() after a click races that render.
-    const tripPath = await tripPathByTitle(page, "Two-Tank Reef — Molasses & French");
+    const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
     await page.goto(`${tripPath}/prep`);
 
     const fitSection = page.getByRole("region", { name: "Fit these divers at check-in" });
@@ -178,7 +166,7 @@ test.describe("minimum age (H-08, fail open)", () => {
       returnsAt: "17:00",
     });
 
-    const tripPath = await tripPathByTitle(page, title);
+    const tripPath = await tripPathByTitle(page, SHOP, title);
     await page.goto(tripPath);
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
@@ -285,7 +273,7 @@ test.describe("minimum age (H-08, fail open)", () => {
       returnsAt: "17:00",
     });
 
-    const tripPath = await tripPathByTitle(page, sessionTitle);
+    const tripPath = await tripPathByTitle(page, SHOP, sessionTitle);
     await page.goto(tripPath);
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
@@ -358,7 +346,7 @@ test.describe("the prep list on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("stacks the packing lines into cards instead of a four-column table", async ({ page }) => {
-    const tripPath = await tripPathByTitle(page, "Two-Tank Reef — Molasses & French");
+    const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
     await page.goto(`${tripPath}/prep`);
     await expect(page.getByRole("heading", { name: "Tanks" })).toBeVisible();
 

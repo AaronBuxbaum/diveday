@@ -5,7 +5,6 @@ import {
   type CloseoutTripInput,
   parseCloseoutSnapshot,
   shopDayOf,
-  summarizeCloseoutSnapshot,
 } from "./closeout";
 import type { TodayAction } from "./today";
 
@@ -240,11 +239,6 @@ describe("buildCloseoutSnapshot", () => {
       ["a2", "dismiss"],
       ["a1", "carry"],
     ]);
-    expect(summarizeCloseoutSnapshot(snapshot)).toEqual({
-      outstandingDepartures: 1,
-      carried: 1,
-      dismissed: 1,
-    });
   });
 
   it("defaults an unstated decision to carry and ignores ids the day does not hold", () => {

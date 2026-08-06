@@ -29,6 +29,8 @@ interface DemoBannerCopy {
   tryLabel: string;
   current: string;
   switchAction: string;
+  /** Shown when `switchDemoRoleAction` throws — the tap must not fail silently. */
+  switchFailed: string;
 }
 
 interface DemoBannerProps {
@@ -62,17 +64,22 @@ export function DemoBanner({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
+  const [switchFailed, setSwitchFailed] = useState(false);
 
   const activeInfo = roles.find((r) => r.id === currentRole);
 
   const handleRoleSwitch = (roleId: string) => {
     if (roleId === currentRole) return;
     setSwitchingTo(roleId);
+    setSwitchFailed(false);
     startTransition(async () => {
       try {
         await switchDemoRoleAction(roleId, shopSlug);
       } catch (err) {
         console.error("Failed to switch demo role:", err);
+        // The panel has already closed by now — say so in the banner itself,
+        // not only in a console nobody on a demo is watching.
+        setSwitchFailed(true);
       } finally {
         setSwitchingTo(null);
       }
@@ -121,6 +128,12 @@ export function DemoBanner({
             {copy.switchRole} {isExpanded ? "▲" : "▼"}
           </button>
         </div>
+
+        {switchFailed ? (
+          <p role="alert" className="mt-2 text-sm font-medium text-danger">
+            {copy.switchFailed}
+          </p>
+        ) : null}
 
         {isMintedDemo ? (
           <div className="mt-2 space-y-1 text-xs text-muted">
@@ -185,11 +198,11 @@ export function DemoBanner({
                       disabled={isActive || isPending}
                       aria-label={isActive ? undefined : role.switchAriaLabel}
                       onClick={() => handleRoleSwitch(role.id)}
-                      className={`mt-4 w-full rounded-lg py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? "bg-surface-sunken text-muted border border-border cursor-not-allowed"
-                          : "bg-primary text-primary-foreground hover:bg-primary-hover shadow-xs active:scale-[0.98] disabled:opacity-50"
-                      }`}
+                      className={buttonClass({
+                        variant: isActive ? "secondary" : "primary",
+                        size: "sm",
+                        className: "mt-4 w-full",
+                      })}
                     >
                       {isThisSwitching ? (
                         <span className="inline-flex items-center gap-1 justify-center w-full">

@@ -27,13 +27,3 @@ const BUDDY_ALERT_KEYS: Record<BuddyAlert, StaffMessageKey> = {
 export function buddyAlertText(t: StaffTranslator, alert: BuddyAlert): string {
   return t(BUDDY_ALERT_KEYS[alert]);
 }
-
-/**
- * The one tone a buddy alert wears. After a dive, "back without their buddy"
- * is the state a deck watches for — danger. At the dock it is ordinary
- * boarding churn — warning, a heads-up. Colour never carries the meaning on
- * its own (design/principles.md #6); it only must not contradict the words.
- */
-export function buddyAlertTone(alert: BuddyAlert): "warning" | "danger" {
-  return alert === "separated_after_dive" ? "danger" : "warning";
-}

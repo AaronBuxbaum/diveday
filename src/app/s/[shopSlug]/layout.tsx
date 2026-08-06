@@ -213,6 +213,7 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
             tryLabel: t("demo.tryLabel"),
             current: t("demo.current"),
             switchAction: t("demo.switchAction"),
+            switchFailed: t("demo.switchFailed"),
           }}
           isMintedDemo={shop.slug !== DEMO_SHOP_SLUG}
           currentEmail={session?.user?.email}

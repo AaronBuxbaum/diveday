@@ -1,13 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-/** Fills `{placeholder}` tokens in a server-supplied template with per-render values. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
-  );
-}
+import { fill } from "@/i18n/fill";
 
 /**
  * A sticky "N of M answered" bar over the medical questionnaire — a dock, on

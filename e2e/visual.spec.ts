@@ -4,7 +4,7 @@ import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-s
 import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
+import { openTripFromBoard, openTripTab, seededTripId } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
@@ -690,15 +690,6 @@ async function openDiverProfile(page: Page, search: string, fullName: string, in
   await page.mouse.move(0, 0);
 }
 
-/** A seeded departure's trip id, found the way staff reach it. */
-async function seededTripId(page: Page, title: string): Promise<string> {
-  const link = await findTripOnBoard(page, "blue-mantis", title);
-  const href = await link.getAttribute("href");
-  const tripId = href?.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
-  if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
-  return tripId;
-}
-
 /**
  * The same id, read on a disposable staff context so the test's own `page`
  * stays the unauthenticated visitor it is capturing as — the CR-019 pattern the
@@ -712,7 +703,7 @@ async function tripIdWithoutSigningIn(
 ): Promise<string> {
   const context = await browser.newContext({ storageState });
   try {
-    return await seededTripId(makeActivitySafe(await context.newPage()), title);
+    return await seededTripId(makeActivitySafe(await context.newPage()), "blue-mantis", title);
   } finally {
     await context.close();
   }
@@ -1671,7 +1662,7 @@ for (const scheme of ["light", "dark"] as const) {
       // word and cancelling live bookings (ADR 20260804-blowout-cascade).
       // Read-only: nothing is cancelled by rendering it.
       test(`the blow-out confirm page renders true to the design (${scheme})`, async ({ page }) => {
-        const tripId = await seededTripId(page, REEF_TRIP);
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("heading", { level: 1, name: "Call a blow-out?" }).waitFor();
         await capture(page, "blowout-confirm", scheme);
@@ -1685,7 +1676,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the blow-out cascade record renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        const tripId = await seededTripId(page, REEF_TRIP);
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
@@ -2452,7 +2443,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         // A board crawl to a day-31 departure, then a real seating attempt.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, ADVANCED_CHARTER);
+        const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
         // Diego Alvarez is on file with a verified Open Water card and nothing
         // above it, so the refusal can only be about the rung.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
@@ -2465,7 +2456,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, DEEP_CHARTER);
+        const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
         // Odile Marchand holds a verified Instructor card — the top rung — and
         // no specialty card at all, so nothing about her level can explain it.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Odile+Marchand`);
@@ -2488,7 +2479,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         // A board crawl out to the day-29 session, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, AOW_COURSE);
+        const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page
           .locator("section")

@@ -1,6 +1,6 @@
 import type { PublishCommand } from "@aws-sdk/client-sns";
 import { describe, expect, it, vi } from "vitest";
-import { notifySms, smsProviderFromEnvironment, smsRecipient, snsSmsProvider } from "./sms";
+import { smsProviderFromEnvironment, smsRecipient, snsSmsProvider } from "./sms";
 
 describe("smsRecipient", () => {
   it("accepts and cleans an E.164 number", () => {
@@ -30,7 +30,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "sns-message-id" }) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toEqual({
+    await expect(provider.send(message)).resolves.toEqual({
       status: "sent",
       providerMessageId: "sns-message-id",
     });
@@ -50,7 +50,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "sns-message-id" }) };
     const provider = snsSmsProvider({ ...snsConfig, senderId: "DiveDay" }, { client });
 
-    await notifySms(message, provider);
+    await provider.send(message);
     const command = client.send.mock.calls[0]?.[0] as PublishCommand;
     expect(command.input.MessageAttributes?.["AWS.SNS.SMS.SenderID"]).toEqual({
       DataType: "String",
@@ -62,7 +62,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockResolvedValue({}) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toEqual({
+    await expect(provider.send(message)).resolves.toEqual({
       status: "failed",
       retryable: true,
       errorCode: "invalid_response",
@@ -77,7 +77,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockRejectedValue(error) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toEqual({
+    await expect(provider.send(message)).resolves.toEqual({
       status: "failed",
       retryable: false,
       httpStatus: 400,
@@ -94,7 +94,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockRejectedValue(error) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toMatchObject({
+    await expect(provider.send(message)).resolves.toMatchObject({
       status: "failed",
       retryable: true,
       httpStatus: 429,
@@ -109,7 +109,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockRejectedValue(error) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toMatchObject({
+    await expect(provider.send(message)).resolves.toMatchObject({
       status: "failed",
       retryable: true,
       httpStatus: 500,
@@ -120,7 +120,7 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     const client = { send: vi.fn().mockRejectedValue(new Error("fetch failed")) };
     const provider = snsSmsProvider(snsConfig, { client });
 
-    await expect(notifySms(message, provider)).resolves.toEqual({
+    await expect(provider.send(message)).resolves.toEqual({
       status: "failed",
       retryable: true,
       errorCode: "network_error",

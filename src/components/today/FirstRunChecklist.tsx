@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 
 export type FirstRunChecklistCopy = {
@@ -62,9 +63,9 @@ function ChecklistStep({
         </div>
       </div>
       {done ? (
-        <span className="shrink-0 self-start rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success sm:self-center">
+        <Badge tone="success" size="sm" className="shrink-0 self-start sm:self-center">
           {doneBadge}
-        </span>
+        </Badge>
       ) : (
         <div className="shrink-0 self-start sm:self-center">{action}</div>
       )}

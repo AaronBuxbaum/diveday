@@ -12,7 +12,7 @@ import { RoleOrientationCard } from "@/components/today/RoleOrientationCard";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { YourSessions } from "@/components/today/YourSessions";
 import { buttonClass } from "@/components/ui/button";
-import { getBlockerQueue } from "@/db/blockers";
+import { getBlockerQueue, inHorizonReadiness } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
@@ -185,6 +185,12 @@ async function TodayBody({
   // The lens (20260721-role-aware-landing): a captain or divemaster's Today
   // leads with the boat they crew; an instructor's with their sessions.
   const lens = roleLensFor(session.user.roles);
+  // When the by-departure view is on screen, both it and the urgency queue
+  // need the same in-horizon readiness evidence — run the pipeline (~ten
+  // queries) once here and hand it to both, instead of letting each consumer
+  // recompute it. On the default view `getTodayWork` runs its own pass.
+  const readinessEvidence =
+    queueView === "departures" ? await inHorizonReadiness(db, shop.id, now) : undefined;
   const work = await getTodayWork(
     db,
     shop.id,
@@ -197,6 +203,7 @@ async function TodayBody({
     // Stuck Stripe operations and failed photo deletions are owner/manager
     // chores — same gate as Reports (task 157).
     canViewShopReports(session.user.roles),
+    readinessEvidence,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   // Real shops only — the demo shop already teaches its own tour via the
@@ -248,12 +255,14 @@ async function TodayBody({
 
   // The by-departure view's own grouping pass, run only when it is the view on
   // screen — the default urgency view must not pay for a query it never
-  // renders. It reads the same shared horizon and the same batched
-  // `listTripsReadiness` evidence `getTodayWork` just did, and resolves each
-  // fix through the same `BLOCKER_ACTIONS` map, so the two views cannot
-  // disagree about who is blocked or about what clears them.
+  // renders. It is handed the very `readinessEvidence` `getTodayWork` just
+  // consumed, and resolves each fix through the same `BLOCKER_ACTIONS` map,
+  // so the two views cannot disagree about who is blocked or about what
+  // clears them.
   const blockerQueue =
-    queueView === "departures" ? await getBlockerQueue(db, shop.id, shopSlug, now, t) : null;
+    queueView === "departures"
+      ? await getBlockerQueue(db, shop.id, shopSlug, now, t, readinessEvidence)
+      : null;
   // The view is a query param on this page, so every link that changes it —
   // the switch, the by-departure pager — is built here from one rule. Page 1
   // and the default view are both omitted, so a plain `/shop/<slug>` stays the

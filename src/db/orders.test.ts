@@ -21,9 +21,7 @@ import { updateCourse } from "./courses";
 import {
   createOrder,
   getBookingContext,
-  getOpenOrderForBooking,
   getOrder,
-  listOrders,
   listShopOrders,
   MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR,
   markOrderPaidByInvoiceId,
@@ -285,7 +283,7 @@ describe("orders", () => {
     // order at all, so nothing about its creator leaks either.
     expect(fetched?.order.createdByPersonId).toBe(staff);
 
-    const list = await listOrders(db, shop.id);
+    const { rows: list } = await listShopOrders(db, shop.id);
     expect(list.map((row) => row.order.id)).toContain(result.order.id);
 
     // Not yet paid: the booking's payment gate is untouched.
@@ -1273,10 +1271,9 @@ async function invoicedOrderContext() {
   return { db, shop, entry, order: result.order };
 }
 
-describe("getOpenOrderForBooking / openOrdersForBookings", () => {
+describe("openOrdersForBookings", () => {
   it("finds nothing for a booking that was never invoiced", async () => {
     const { db, shop, entry } = await orderContext();
-    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
     expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
   });
 
@@ -1287,25 +1284,22 @@ describe("getOpenOrderForBooking / openOrdersForBookings", () => {
 
   it("finds the open order for an invoiced booking", async () => {
     const { db, shop, entry, order } = await invoicedOrderContext();
-    const found = await getOpenOrderForBooking(db, shop.id, entry.booking.id);
+    const batch = await openOrdersForBookings(db, shop.id, [entry.booking.id]);
+    const found = batch.get(entry.booking.id);
     expect(found?.id).toBe(order.id);
     expect(found?.hostedInvoiceUrl).toBe(order.hostedInvoiceUrl);
-
-    const batch = await openOrdersForBookings(db, shop.id, [entry.booking.id]);
-    expect(batch.get(entry.booking.id)?.id).toBe(order.id);
   });
 
   it("stops surfacing a booking's order once it is paid — no longer 'open'", async () => {
     const { db, shop, entry, order } = await invoicedOrderContext();
     await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
-    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
     expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
   });
 
   it("never leaks an order across shops", async () => {
     const { db, entry } = await invoicedOrderContext();
     const otherShopId = "00000000-0000-4000-8000-000000000000";
-    expect(await getOpenOrderForBooking(db, otherShopId, entry.booking.id)).toBeNull();
+    expect(await openOrdersForBookings(db, otherShopId, [entry.booking.id])).toEqual(new Map());
   });
 });
 

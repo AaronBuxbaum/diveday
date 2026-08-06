@@ -125,6 +125,7 @@ export default async function ManageTripPage({
     scheduleDays,
     canConfigure,
     recapPhotos,
+    blowoutCalled,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewAssignments(db, shop.id, tripId),
@@ -136,6 +137,10 @@ export default async function ManageTripPage({
     listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
     listRecapPhotosForTrip(db, shop.id, tripId),
+    // Whether this trip's cancellation was a called blow-out — the cascade
+    // record is the surface a weather morning is worked from, so the trip page
+    // must always offer the way back to it (ADR 20260804-blowout-cascade).
+    hasTripBlowout(db, shop.id, tripId),
   ]);
   // Where this departure goes, composed from the dives already loaded above —
   // no second query, and the same answer the public schedule card gives.
@@ -145,10 +150,6 @@ export default async function ManageTripPage({
       site: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
     })),
   );
-  // Whether this trip's cancellation was a called blow-out — the cascade
-  // record is the surface a weather morning is worked from, so the trip page
-  // must always offer the way back to it (ADR 20260804-blowout-cascade).
-  const blowoutCalled = await hasTripBlowout(db, shop.id, tripId);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   // Day one's window, not the trip's whole span: a multi-day departure ends on
   // its *last* day, and the details editor's Departs/Returns boxes describe

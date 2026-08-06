@@ -89,23 +89,11 @@ export function AmbientGlareDetector() {
     };
   }, [mode, sensorLux]);
 
-  // AmbientLightSensor and custom lux event listeners
+  // AmbientLightSensor readings drive auto mode, when the device has one.
+  // Tests install a mock `window.AmbientLightSensor` constructor — there is
+  // no separate test-only event pathway into this component.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleCustomLux = (e: Event) => {
-      const detail = (e as CustomEvent<{ lux: number }>)?.detail;
-      if (detail && typeof detail.lux === "number") {
-        setSensorLux(detail.lux);
-      }
-    };
-    window.addEventListener("diveday:set-lux", handleCustomLux);
-
-    if (!("AmbientLightSensor" in window)) {
-      return () => {
-        window.removeEventListener("diveday:set-lux", handleCustomLux);
-      };
-    }
+    if (typeof window === "undefined" || !("AmbientLightSensor" in window)) return;
 
     let sensor: LightSensor | null = null;
 
@@ -135,7 +123,6 @@ export function AmbientGlareDetector() {
       sensor.start();
 
       return () => {
-        window.removeEventListener("diveday:set-lux", handleCustomLux);
         if (sensor) {
           sensor.removeEventListener("reading", handleReading);
           sensor.removeEventListener("error", handleError);
@@ -148,9 +135,6 @@ export function AmbientGlareDetector() {
       };
     } catch (err) {
       console.warn("Failed to initialize AmbientLightSensor:", err);
-      return () => {
-        window.removeEventListener("diveday:set-lux", handleCustomLux);
-      };
     }
   }, []);
 
@@ -222,7 +206,7 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
     // Real radios in a fieldset, not styled buttons: exactly one of the three
     // is on, arrow keys move between them for free, and the legend names the
     // group without a second visible heading.
-    <fieldset data-testid="contrast-control" className="select-none text-left print:hidden">
+    <fieldset className="select-none text-left print:hidden">
       <legend className="text-xs font-bold tracking-wide text-muted uppercase">
         {copy.modeLabel}
       </legend>

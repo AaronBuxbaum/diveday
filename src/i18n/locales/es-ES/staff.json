@@ -309,14 +309,10 @@
       "description": "El estado de pago, los pedidos y los reembolsos se mantienen con el buceador para que la siguiente acción sea fácil de encontrar.",
       "newPayment": "Nuevo pago",
       "noPaymentsYet": "Aún no hay pagos — aparecerán aquí en cuanto este buceador reserve una salida o emitas un pedido.",
-      "bookingPaymentSuffix": " · pago de reserva",
-      "paymentStatusText": "Pago: {status}",
-      "paymentNotRecorded": "Pago: no registrado",
       "openPayment": "Abrir pago",
       "createOrder": "Crear pedido",
       "noOrder": "Sin pedido",
       "shopPaymentFallback": "Pago del centro",
-      "noTripAttached": " · sin salida asociada",
       "refund": "Reembolsar",
       "refunding": "Reembolsando…",
       "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí.",
@@ -541,8 +537,7 @@
       "faqLabel": "Preguntas frecuentes",
       "faqPlaceholder": "¿Está incluido el equipo?\nSí — máscara, aletas, traje, BCD, regulador y botellas.\n\n¿Necesito ser buen nadador?\nNecesitas sentirte cómodo en el agua.",
       "savePage": "Guardar página del curso",
-      "saving": "Guardando…",
-      "optionalHint": "(opcional)"
+      "saving": "Guardando…"
     },
     "dayByDay": {
       "dayLabel": "Día {number}",
@@ -836,7 +831,6 @@
       "restoreFailed": "No se pudo restaurar ese código. Créalo de nuevo abajo."
     },
     "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — los códigos se crean en tu propia cuenta de Stripe, no en la de DiveDay.",
-    "settingsLink": "Ajustes",
     "scope": {
       "all": "Salidas y cursos",
       "trips": "Solo salidas",
@@ -993,6 +987,7 @@
     "emptyReviewLinkBody": "Aquí no hay nada que activar: una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
     "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
     "ratingOnly": "Solo valoración — sin palabras que revisar.",
+    "rating": "{rating} sobre 5 estrellas",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
@@ -3289,7 +3284,6 @@
     }
   },
   "backup": {
-    "eyebrow": "Ajustes",
     "title": "Respaldos",
     "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas — o DiveDay desaparece — la copia ya está en tus manos.",
     "notice": {

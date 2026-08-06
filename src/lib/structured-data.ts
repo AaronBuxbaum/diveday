@@ -96,7 +96,11 @@ function aggregateRatingOf(aggregate: ReviewAggregate | null): JsonLdObject | un
 }
 
 export type ReviewForStructuredData = {
-  /** First name and last initial — the same already-public byline `ShopReviews` renders. */
+  /**
+   * First name and last initial — the same already-public byline `ShopReviews`
+   * renders. `""` means the diver has no display name; the `author` node is
+   * omitted rather than invented, since this layer holds no prose.
+   */
   reviewer: string;
   rating: number;
   comment: string;
@@ -117,7 +121,7 @@ export function reviewsJsonLd(
   if (reviews.length === 0) return undefined;
   return reviews.map((review) => ({
     "@type": "Review",
-    author: { "@type": "Person", name: review.reviewer },
+    author: review.reviewer ? { "@type": "Person", name: review.reviewer } : undefined,
     reviewRating: {
       "@type": "Rating",
       ratingValue: review.rating,

@@ -21,8 +21,15 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
  * dropping the tail in silence.
  */
 
-/** Every in-horizon departure plus its readiness rows, in one place. */
-async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
+/**
+ * Every in-horizon departure plus its readiness rows, in one place. Exported
+ * so a page rendering more than one readiness surface in a single request
+ * (the shop home's urgency queue plus its by-departure view) can run the
+ * pipeline once and hand the same evidence to each consumer — the pass costs
+ * about ten queries, so recomputing it per surface doubles the page's whole
+ * database bill.
+ */
+export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   const { to: horizon } = operationalWindow(now);
   const { trips: fetched, nextCursor } = await pagedUpcomingTripsWithCounts(db, shopId, {
     now,
@@ -46,8 +53,14 @@ async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   )) {
     readinessByTrip.get(row.booking.tripId)?.push(row);
   }
-  return { trips: inWindow, readinessByTrip, truncated };
+  // `upcoming` keeps the pre-horizon fetch alongside the windowed list:
+  // Today's "next departure" fallback reads past the window when nothing
+  // sails inside it.
+  return { trips: inWindow, upcoming: fetched, readinessByTrip, truncated };
 }
+
+/** The evidence bundle `inHorizonReadiness` produces, for callers passing it through. */
+export type HorizonReadinessEvidence = Awaited<ReturnType<typeof inHorizonReadiness>>;
 
 export type BlockerQueue = {
   trips: BlockerQueueTrip[];
@@ -75,12 +88,18 @@ export async function getBlockerQueue(
    * working unchanged; the page passes its own request-locale translator.
    */
   t: StaffTranslator = staffTranslator("en-US"),
+  /**
+   * Precomputed horizon evidence from `inHorizonReadiness`, when the caller
+   * already ran the pass for another surface in the same request. Omitted,
+   * the queue runs its own.
+   */
+  evidence?: HorizonReadinessEvidence,
 ): Promise<BlockerQueue> {
   const {
     trips: inspected,
     readinessByTrip,
     truncated,
-  } = await inHorizonReadiness(db, shopId, now);
+  } = evidence ?? (await inHorizonReadiness(db, shopId, now));
 
   const trips: BlockerQueueTrip[] = [];
   for (const trip of inspected) {

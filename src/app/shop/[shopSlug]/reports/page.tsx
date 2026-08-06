@@ -185,6 +185,11 @@ export default async function ReportsPage({
   // real rather than querying the year 1. A shop with no trips at all floors at
   // the current month; a shop whose only trips are still ahead floors there too
   // (`clampMonth` needs min <= max, and "earliest" can be in the future).
+  //
+  // #411 batched this into a `Promise.all` alongside the ops-panel lists and
+  // the erase gate. Those four reads left with the panels they fed, so the one
+  // read that remains is a plain await again — a `Promise.all` of one is a
+  // parallelization of nothing.
   const earliestTripStart = await earliestReportedTripStart(db, shop.id);
   const earliestWall = earliestTripStart ? utcToWallTime(earliestTripStart, tz) : null;
   const earliestTripMonth: MonthRef = earliestWall

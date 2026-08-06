@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fill } from "@/i18n/fill";
 import type { BuddyMemberOption } from "./BuddyTeamsPanel";
 
 /** Every word this renders, resolved server-side — `staffTranslator` is server-only. */
@@ -17,12 +18,6 @@ export type BuddyDragCopy = {
 const HOLD_MS = 250;
 /** How far a finger may wander during that hold before it counts as a scroll. */
 const SLOP_PX = 10;
-
-function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? values[key] : match,
-  );
-}
 
 /**
  * The buddy-team builder's people, pairable by dragging one onto another.

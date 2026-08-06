@@ -67,7 +67,7 @@ In rough order of how often it would kill the deal:
 2. **Messages** (H-09). Booking confirmation, the waiver link, and the wait-list freed-seat invite go
    through one `notify()` seam and send for real once Resend is configured — degrading to a
    copyable/mailto composer when it isn't. The remaining channel/cadence scope is now built: courtesy
-   SMS through an AWS SNS `notifySms()` seam
+   SMS through an AWS SNS `SmsProvider` seam
    ([ADR](../../architecture/decisions/20260802-sns-sms-adapter.md)) and scheduled 7-day/
    24-hour pre-trip reminders via an idempotent cron endpoint
    ([ADR](../../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
@@ -150,7 +150,7 @@ with one material re-ranking from the buyer's chair:
    automate, and live Connect platform credentials (H-07).
 2. ✅ **Real notifications (H-09)** — the wait-list freed-seat invite sends through the same
    `notify()` seam as booking confirmations and waiver links, and the remaining channel/cadence scope
-   is now built too: courtesy SMS via an AWS SNS `notifySms()` seam and scheduled 7-day/24-hour
+   is now built too: courtesy SMS via an AWS SNS `SmsProvider` seam and scheduled 7-day/24-hour
    pre-trip reminders via an idempotent cron endpoint (both off until their env is set). Remaining is
    policy, not mechanism: the H-09 consent/copy/sender ownership decision.
 3. Field-validate the manifest (V-02) before marketing leans on safety.

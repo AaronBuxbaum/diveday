@@ -70,7 +70,10 @@ export default async function ShopLayout({
 }) {
   const { shopSlug } = await params;
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
+  // The shop row and the session don't depend on one another — resolve them
+  // together instead of serially. The tenant checks below still run before
+  // anything renders, so the notFound() gating is unchanged.
+  const [shop, session] = await Promise.all([getShopBySlug(db, shopSlug), auth()]);
   const showBanner = shop?.isDemo ?? false;
   // Staff read chrome in the language their own device asks for, same
   // negotiation as every other staff surface.
@@ -108,7 +111,6 @@ export default async function ShopLayout({
     ];
   }
 
-  const session = await auth();
   let currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver" = "diver";
   if (session?.user) {
     if (session.user.roles.includes("owner") || session.user.roles.includes("manager")) {
@@ -122,7 +124,7 @@ export default async function ShopLayout({
     }
   }
 
-  const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
+  const demoT = showBanner ? diverTranslator(locale) : undefined;
   const staffT = staffTranslator(locale);
 
   // INVARIANT: staff chrome and counts are scoped to the session's own shop —
@@ -152,13 +154,16 @@ export default async function ShopLayout({
   // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
   // already run on every visit, gated the same way the nav itself is so a
   // signed-out or embedded render never pays for them.
-  const [navReviewsCount, navBlockersCount] =
+  // The boat-boarding link rides along: it doesn't depend on the counts, so
+  // the three resolve together instead of serially.
+  const [navReviewsCount, navBlockersCount, boatBoardingHref] =
     showNav && session?.user && shop
       ? await Promise.all([
           countReviewsAwaitingModeration(db, shop.id),
           countBlockedDivers(db, shop.id, nowDate()),
+          todayBoatHref(db, shop.id, shop.timezone, shopSlug),
         ])
-      : [0, 0];
+      : [0, 0, undefined];
 
   return (
     <>
@@ -194,6 +199,7 @@ export default async function ShopLayout({
             tryLabel: demoT("demo.tryLabel"),
             current: demoT("demo.current"),
             switchAction: demoT("demo.switchAction"),
+            switchFailed: demoT("demo.switchFailed"),
           }}
           // A minted (per-visitor) demo is addressable by its slug and readable
           // by anyone who has it, so warn against entering real customer data;
@@ -207,7 +213,7 @@ export default async function ShopLayout({
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
-          boatBoardingHref={await todayBoatHref(db, shop.id, shop.timezone, shopSlug)}
+          boatBoardingHref={boatBoardingHref}
           navGates={{
             waivers: canManageWaiverTemplates(session.user.roles),
             reports: canViewShopReports(session.user.roles),

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripTab } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripTab, seededTripId } from "./helpers";
 
 /**
  * **The boat's own cert gate, at the moment the seat is sold** (DOM-M6, ADR
@@ -38,15 +38,6 @@ const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
 const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
 
-/** The trip id behind a seeded departure, found the way staff reach it. */
-async function seededTripId(page: import("@playwright/test").Page, title: string): Promise<string> {
-  const link = await findTripOnBoard(page, "blue-mantis", title);
-  const href = await link.getAttribute("href");
-  const tripId = href?.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
-  if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
-  return tripId;
-}
-
 test.describe("as owner", () => {
   signedInAsOwner();
 
@@ -57,7 +48,7 @@ test.describe("as owner", () => {
     // visitor — two full page journeys, same aggregate-cost reasoning as
     // booking.spec.ts's own multi-navigation tests.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
 
     // Read it as a diver would: no session at all.
     await page.context().clearCookies();
@@ -97,7 +88,7 @@ test.describe("as owner", () => {
   test("the Guests tab names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {
-    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
     await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
 
@@ -132,15 +123,26 @@ test.describe("as owner", () => {
     // clears admission on the next attempt (H-24). So the tamper doesn't bypass
     // a gate — it manufactures the prompt that gets a staffer to bypass one
     // (security review finding).
-    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
     await page.goto(
       `/shop/blue-mantis/trips/${tripId}/guests?notice=diver-trip-prerequisite&gate=~~deep~0`,
     );
 
     // The banner still appears — a refusal nobody can read is worse than a
-    // vague one — but it says only the generic thing. Located by role minus
-    // Next's own always-present route announcer, which also claims `alert`.
-    const banner = page.locator('[role="alert"]:not(#__next-route-announcer__)');
+    // vague one — but it says only the generic thing. `getByRole` (patched to
+    // visible-only by `makeActivitySafe`, e2e/fixtures.ts) rather than a raw
+    // `[role="alert"]` locator, same as invoicing.spec.ts and
+    // promo-codes.spec.ts's own alert/status queries: this route's dynamic
+    // content sits inside a real Suspense boundary, and React's own
+    // streaming-resume machinery briefly parks a second, hidden clone of it
+    // in a `<div id="S:n" hidden>` wrapper while the boundary settles — a
+    // normal, invisible implementation detail, not a rendering bug — that an
+    // unfiltered role query matches as readily as the real banner. `hasText`
+    // rather than excluding Next's own always-present route announcer by id:
+    // it also carries `role="alert"` but is filtered out here as a side
+    // effect of not matching the text, the same disambiguation the other two
+    // specs use.
+    const banner = page.getByRole("alert").filter({ hasText: "cards on file" });
     await expect(banner).toContainText("cards on file don't reach what this trip");
     await expect(banner).not.toContainText("Deep card");
     await expect(banner).not.toContainText("charter requires");
@@ -149,7 +151,7 @@ test.describe("as owner", () => {
   test("the global Add-booking door says a missing specialty card is missing, whatever the diver's level", async ({
     page,
   }) => {
-    const tripId = await seededTripId(page, DEEP_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
     // Odile Marchand holds a verified Instructor card — the top rung — and no
     // specialty card at all. Nothing about her level can explain this refusal.
     await page.goto(`/shop/blue-mantis/bookings/new/${tripId}?diverq=Odile+Marchand`);
@@ -179,7 +181,7 @@ test.describe("as owner", () => {
       returnsAt: "22:00",
       capacity: 4,
     });
-    const tripId = await seededTripId(page, title);
+    const tripId = await seededTripId(page, "blue-mantis", title);
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
@@ -209,7 +211,7 @@ test.describe("as owner", () => {
     // for, so an AOW session's deep dive at a site marked `advanced_open_water`
     // + Deep must never refuse the student the course exists to create.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, AOW_COURSE);
+    const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Kwame+Asante`);
     await page.getByRole("button", { name: "Add Kwame Asante to the trip" }).click();
@@ -245,7 +247,7 @@ test.describe("as owner", () => {
       returnsAt: "13:00",
       capacity: 4,
     });
-    const tripId = await seededTripId(page, title);
+    const tripId = await seededTripId(page, "blue-mantis", title);
 
     // Seated while the trip states the shop's Open Water default, which his
     // verified card clears.

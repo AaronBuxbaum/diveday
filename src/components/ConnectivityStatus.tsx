@@ -40,9 +40,12 @@ export function ConnectivityStatus({
       aria-live="polite"
       title={online ? copy.onlineTitle : copy.offlineTitle}
       className={
+        // Badge doesn't fit here (role/title/live-region props, min-h-9, its
+        // own glyph pair) — but the AA rule from ui/badge.tsx still applies:
+        // -strong text on the tinted fill.
         online
-          ? "inline-flex min-h-9 items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
-          : "inline-flex min-h-9 items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning"
+          ? "inline-flex min-h-9 items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success-strong"
+          : "inline-flex min-h-9 items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning-strong"
       }
     >
       <span aria-hidden="true" className="text-base leading-none">
