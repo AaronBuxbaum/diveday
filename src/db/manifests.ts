@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, exists, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
-import { STAFF_ROLES } from "@/lib/authz";
+import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveCrewRoles } from "@/lib/crew-roles";
@@ -18,6 +18,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
+import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
@@ -81,6 +82,49 @@ function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
         ),
     ),
   );
+}
+
+/**
+ * The `people.id` of the staff member **writing** a head-count row, or `null`
+ * when whoever is claiming to record it is not this shop's live staff right
+ * now. Every writer in this file asks it, so the three of them can never answer
+ * "who is allowed to write this" differently.
+ *
+ * Not to be confused with `isOnTripCrew` above, which is about the **subject**
+ * of a result — a former divemaster stays a subject forever, because who was on
+ * the boat that day does not change. This is about the **author**, and
+ * employment very much does change that.
+ *
+ * The three writers each grew their own `person_roles` join instead, filtering
+ * `people.id` / `people.shopId` / `person_roles.role` and stopping there. That
+ * catches the case it was written for — a diver, or somebody demoted out of
+ * every staff role — and misses the two `loadActiveStaffRoles` exists for: a
+ * **deleted** person (`removeStaffMember` soft-deletes and leaves
+ * `person_roles` alone) and a **disabled** account whose stale role row is
+ * still there. Both wrote real `roll_call_events` rows attributed to somebody
+ * the shop had already removed. `/api/offline-manifests/sync` refuses both at
+ * the door, so nothing shipped was exploitable — but a writer in `src/db` is
+ * inherited by every future call site, and roll call is the record of who came
+ * back from a dive.
+ *
+ * So the join is gone and `src/db/authz.ts` is the one place the rule lives:
+ * `loadActiveStaffRoles` takes a `DbExecutor`, so it composes inside these
+ * transactions unchanged, and widening "who counts as live staff" happens once
+ * for the role gates and these writers together. It costs two extra indexed
+ * point-lookups per call — paid once per event, including down the sync route's
+ * batch loop, which is the right trade against a head count signed by a name
+ * that is not there.
+ */
+async function activeStaffRecorderId(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(tx, shopId, personId);
+  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
+  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
+  // the old join expressed as an `inArray`.
+  return roles && isStaff(roles) ? personId : null;
 }
 
 async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
@@ -506,19 +550,8 @@ export async function recordRollCall(
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
     const occurredAt = input.occurredAt ?? nowDate();
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.recordedByPersonId),
-          eq(people.shopId, input.shopId),
-          inArray(personRoles.role, [...STAFF_ROLES]),
-        ),
-      )
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    if (!staffId) return { ok: false, reason: "staff_not_found" };
 
     if (source === "offline" && input.clientEventId) {
       const [existing] = await tx
@@ -597,7 +630,7 @@ export async function recordRollCall(
         shopId: input.shopId,
         tripId: input.tripId,
         bookingId: booking.id,
-        recordedByPersonId: staff.id,
+        recordedByPersonId: staffId,
         status: input.status,
         checkpoint,
         source,
@@ -660,19 +693,8 @@ export async function recordCrewRollCall(
     const checkpoint = input.checkpoint ?? "departure";
     const occurredAt = input.occurredAt ?? nowDate();
 
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.recordedByPersonId),
-          eq(people.shopId, input.shopId),
-          inArray(personRoles.role, [...STAFF_ROLES]),
-        ),
-      )
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    if (!staffId) return { ok: false, reason: "staff_not_found" };
 
     // Same tenancy and trip-status gate the other two writers apply.
     const [trip] = await tx
@@ -728,7 +750,7 @@ export async function recordCrewRollCall(
         shopId: input.shopId,
         tripId: input.tripId,
         personId: assigned.personId,
-        recordedByPersonId: staff.id,
+        recordedByPersonId: staffId,
         status: input.status,
         checkpoint,
         note: input.note?.trim() || null,
@@ -802,19 +824,8 @@ export async function recordCrewAttestation(
       return { ok: false, reason: "invalid_count" };
     }
 
-    const [staff] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.attestedByPersonId),
-          eq(people.shopId, input.shopId),
-          inArray(personRoles.role, [...STAFF_ROLES]),
-        ),
-      )
-      .limit(1);
-    if (!staff) return { ok: false, reason: "staff_not_found" };
+    const staffId = await activeStaffRecorderId(tx, input.shopId, input.attestedByPersonId);
+    if (!staffId) return { ok: false, reason: "staff_not_found" };
 
     // Same tenancy and trip-status gate `recordRollCall` applies before writing
     // a diver event: a trip belonging to another shop, or one already cancelled,
@@ -845,7 +856,7 @@ export async function recordCrewAttestation(
         checkpoint,
         crewAboard: input.crewAboard,
         crewAssigned: crew.length,
-        attestedByPersonId: staff.id,
+        attestedByPersonId: staffId,
         note: input.note?.trim() || null,
         occurredAt,
       })
