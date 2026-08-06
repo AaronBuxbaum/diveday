@@ -56,10 +56,13 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await openTripTab(page, "Manifest");
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  // "Blocked divers", not "Readiness needs attention": the shop has one
-  // readiness vocabulary now (src/i18n/readiness-labels.ts), and this panel
-  // names the same state its diver rows do.
-  await expect(page.getByRole("heading", { name: "Blocked divers" })).toBeVisible();
+  // Blocked divers are said once, in the checkpoint panel, as a sentence
+  // about what blocked *means here* — the standalone "Blocked divers" banner
+  // that used to restate the panel's own count is gone. The count itself is
+  // asserted below, on the panel's count row.
+  await expect(
+    page.getByText(/blocked\. They remain on this manifest and cannot board/),
+  ).toBeVisible();
   // Her own row heading, not a bare text match: every unteamed diver's name
   // also appears on the buddy-team builder's checkbox below (ADR
   // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
@@ -110,14 +113,27 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
-  // The mobile-only summary tiles (collapsed behind "More stats", sm:hidden)
-  // and the desktop-only ones (hidden below sm) both carry this label — at
-  // the default desktop test viewport the mobile copy is DOM-first but
-  // never visible, so an unfiltered .first() picks it and the assertion
-  // below would report "hidden" forever. Filter to the one actually shown.
-  await expect(
-    page.getByText("Not boarded", { exact: true }).and(page.locator(":visible")).first(),
-  ).toBeVisible();
+  // The head count now lives once, in the checkpoint panel's count row —
+  // the six summary tiles (three responsive layouts of the same numbers,
+  // one of them collapsed behind "More stats") are gone. Scoped to the
+  // panel and asserted on the *number* as well as the word: an unscoped
+  // text match would also find each row's own `print:inline-flex` status
+  // pill, which is in the DOM but never visible on screen.
+  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  const notBoardedCount = progressPanel.locator("dl > div").filter({ hasText: "Not boarded" });
+  await expect(notBoardedCount).toBeVisible();
+  await expect(notBoardedCount).toContainText("1");
+  // And the row **adds up to the boat**. The entries are mutually exclusive
+  // by construction (every diver has at most one result), so the three
+  // numbers must total the roster — the row used to carry a fourth,
+  // "Blocked", which is a readiness fact overlapping "Awaiting" and made a
+  // nine-diver departure read as ten people.
+  await expect(progressPanel.getByText("Blocked", { exact: true })).toHaveCount(0);
+  const rosterTotal = await page.locator("#roll-call-list > ul > li").count();
+  const rowTotal = await progressPanel
+    .locator("dl > div dd")
+    .evaluateAll((cells) => cells.reduce((sum, cell) => sum + Number(cell.textContent), 0));
+  expect(rowTotal).toBe(rosterTotal);
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);
@@ -421,9 +437,19 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
 
-  // Validate the face grid is visible and has missing divers
-  await expect(page.locator("#missing-divers-grid").filter({ visible: true })).toBeVisible();
-  await expect(page.getByText(/Missing divers/)).toBeVisible();
+  // At the dock these are people still to board — ordinary, expected, and
+  // deliberately not called "missing": a recorded not-back-aboard diver is
+  // the missing one, and they are never in this grid (glossary; DD/D review).
+  const grid = page.locator("#missing-divers-grid").filter({ visible: true });
+  await expect(grid).toBeVisible();
+  await expect(grid.getByRole("heading", { name: /Still to board \(\d+\)/ })).toBeVisible();
+  await expect(grid.getByText("Not yet called")).toBeVisible();
+  await expect(page.getByText(/[Mm]issing divers/)).toHaveCount(0);
+  // Priya is blocked at departure, and the grid says the same word her own
+  // row does rather than contradicting it.
+  await expect(
+    grid.locator("button").filter({ hasText: "Priya" }).getByText("Blocked"),
+  ).toBeVisible();
 
   // Clicking an avatar scrolls to the corresponding diver row
   const firstAvatar = page.locator("#missing-divers-grid button").filter({ visible: true }).first();
@@ -443,9 +469,10 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // pull the shared trip's roll-call state out from under the tests above.
   // This charter carries three divers and two crew and belongs to no other spec.
   const TRIP = "Afternoon Two-Tank — French Reef";
-  // Three sequential diver writes plus two crew writes, each a full server
-  // action round trip — more than the default per-test budget allows for.
-  test.setTimeout(60_000);
+  // Three sequential diver writes plus two crew writes and three corrections,
+  // each a full server action round trip — more than the default per-test
+  // budget allows for.
+  test.setTimeout(90_000);
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
@@ -523,6 +550,34 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
+
+  // DD1. A stated crew emergency must never be hidden behind a clerical diver
+  // gap. `rollCallCompleteness` ranks `divers_awaiting` above
+  // `crew_not_back_aboard` (other surfaces key off that ranking, so it stays),
+  // and the panel used to render only that single top reason — so a boat with
+  // a divemaster in the water and a diver uncalled read as a muted "1 diver
+  // still to call" and nothing else.
+  //
+  // Set exactly that state up: clear the diver's result so they are awaiting
+  // again, then record a crew member as not back aboard.
+  const clearNotBack = page
+    .locator("#roll-call-list")
+    .getByRole("button", { name: "Not back aboard", exact: true })
+    .first();
+  await clearNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await clearNotBack.click();
+  await expect(page.getByText(/diver still to call/)).toBeVisible();
+
+  const crewNotBack = page.getByRole("button", { name: "Mark not back aboard" }).last();
+  await crewNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await crewNotBack.click();
+
+  // Both lines, at once: the diver gap in muted prose, and the crew emergency
+  // in danger tone that no clerical gap is allowed to suppress.
+  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
+  await expect(page.getByText(/diver still to call/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({

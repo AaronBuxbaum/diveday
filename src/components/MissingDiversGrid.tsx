@@ -4,15 +4,30 @@ type MissingDiver = {
   bookingId: string;
   fullName: string;
   rentsKit: boolean;
+  /**
+   * Readiness says this diver cannot board yet. Display only — the grid never
+   * gates anything, it just stops saying "not yet called" beside somebody whose
+   * own row says "Blocked". Absent on the offline copy, which carries readiness
+   * but is a dock document, not a readiness screen.
+   */
+  blocked?: boolean;
 };
 
 /** Every word `MissingDiversGrid` renders, resolved server-side. */
 export interface MissingDiversGridCopy {
   heading: string;
-  awaitingBoarding: string;
+  /**
+   * The pill beside the heading — what the *absence* means at this checkpoint,
+   * in the checkpoint's own words. Never "missing": the people in this grid
+   * are the ones nobody has said anything about yet, and a diver a human
+   * actually recorded as not back aboard is on the roster below, not here.
+   */
+  statusLabel: string;
   tapHint: string;
   rentsKitLabel: string;
   ownKitLabel: string;
+  /** The one readiness word (`readinessStatusText`), for a blocked diver's chip. */
+  blockedLabel: string;
 }
 
 function getInitials(fullName: string): string {
@@ -44,28 +59,48 @@ function getAvatarColor(fullName: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
+/**
+ * Who nobody has called yet, as faces — the list a crew member scans across a
+ * deck, where a name in a roster of nine is slower to find than a face.
+ *
+ * **Tone follows the checkpoint, because the words do.** At the dock these are
+ * people still to board: ordinary, expected, and worth no alarm colour — the
+ * boat has not left. After a dive the same absence means nobody has counted
+ * them back aboard, which is the state this whole page exists to close, so it
+ * keeps the urgent tone. Both are supplied by the caller as words; this only
+ * decides which fill goes behind them.
+ */
 export function MissingDiversGrid({
   divers,
   copy,
+  tone = "urgent",
 }: {
   divers: MissingDiver[];
   copy: MissingDiversGridCopy;
+  /**
+   * `neutral` at the dock, `urgent` after a dive. Never colour alone: the pill
+   * carries the checkpoint's own words either way.
+   */
+  tone?: "neutral" | "urgent";
 }) {
   if (divers.length === 0) return null;
 
   return (
-    <section
-      id="missing-divers-grid"
-      className="mt-8 rounded-2xl border border-border bg-surface-sunken p-5 print:hidden"
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">{copy.heading}</h2>
-        <span className="text-xs font-semibold text-danger bg-danger/10 px-2 py-0.5 rounded-full">
-          {copy.awaitingBoarding}
+    <section id="missing-divers-grid" className="mt-9 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">{copy.heading}</h2>
+        <span
+          className={
+            tone === "urgent"
+              ? "rounded-full bg-danger/10 px-3 py-1 text-sm font-semibold text-danger"
+              : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold text-muted"
+          }
+        >
+          {copy.statusLabel}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted">{copy.tapHint}</p>
-      <div className="mt-4 flex flex-wrap gap-4 justify-start">
+      <p className="mt-1 text-sm text-muted">{copy.tapHint}</p>
+      <div className="mt-4 flex flex-wrap justify-start gap-4">
         {divers.map((diver) => {
           const colorClass = getAvatarColor(diver.fullName);
           return (
@@ -75,7 +110,17 @@ export function MissingDiversGrid({
               onClick={() => {
                 const element = document.getElementById(`diver-row-${diver.bookingId}`);
                 if (!element) return;
-                element.scrollIntoView({ behavior: "smooth", block: "center" });
+                // Motion has a job (design/principles.md §5) and a reader who
+                // asked for less of it still gets the jump — instantly, and
+                // without the two-second ring pulsing at them.
+                const reduced =
+                  typeof window.matchMedia === "function" &&
+                  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                element.scrollIntoView({
+                  behavior: reduced ? "auto" : "smooth",
+                  block: "center",
+                });
+                if (reduced) return;
                 element.classList.add("ring-4", "ring-primary/50", "ring-offset-2");
                 setTimeout(() => {
                   element.classList.remove("ring-4", "ring-primary/50", "ring-offset-2");
@@ -97,6 +142,16 @@ export function MissingDiversGrid({
               <span className="block w-full truncate text-xs text-muted">
                 {diver.rentsKit ? copy.rentsKitLabel : copy.ownKitLabel}
               </span>
+              {/* A blocked diver's own row says "Blocked"; without this the
+                  grid quietly said the opposite beside their face. Same word,
+                  from the same readiness vocabulary — and *below* the kit
+                  line, so one blocked diver doesn't push their own tile's
+                  labels a line out of step with the rest of the row. */}
+              {diver.blocked ? (
+                <span className="mt-0.5 max-w-full truncate rounded-full bg-danger/10 px-2 text-xs font-semibold text-danger">
+                  {copy.blockedLabel}
+                </span>
+              ) : null}
             </button>
           );
         })}

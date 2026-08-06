@@ -415,8 +415,23 @@ export function ScheduleBuilder({
   // 100fcf8). Reset on the leading edge of any (re)navigation, same pattern
   // as InlineConfirm.
   const pathname = usePathname();
+  // Skipping the genuine first mount is load-bearing: effects run only after
+  // hydration *completes*, but selective hydration lets a person open a panel
+  // the moment its own button is interactive — so on a slow connection this
+  // effect's initial run landed after their click and snapped the panel shut
+  // (caught as a detached-mid-click flake in e2e/schedule-builder.spec.ts on
+  // CI). A ref, not state: refs survive an Activity-preserved hide/re-show
+  // while its effects re-run, so the re-show still resets — only the true
+  // first mount is exempt. The race itself can't be scripted deterministically
+  // (nothing schedules a click between commit and passive effects), which is
+  // why no regression test accompanies this.
+  const pathnameEffectRan = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the panel, which is the point.
   useEffect(() => {
+    if (!pathnameEffectRan.current) {
+      pathnameEffectRan.current = true;
+      return;
+    }
     setOpen(null);
   }, [pathname]);
 

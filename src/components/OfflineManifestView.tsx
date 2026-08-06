@@ -15,6 +15,7 @@ import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
+import { readinessStatusText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -1127,18 +1128,29 @@ export function OfflineManifestView() {
         </ul>
       </section>
 
+      {/* Same words as the live page, chosen by the same checkpoint rule: at
+          the dock these are people still to board, after a dive they are
+          people nobody has counted back aboard yet. The dock copy must never
+          be louder than the live manifest about a benign state. */}
       <MissingDiversGrid
         divers={missingDivers.map((diver) => ({
           bookingId: diver.bookingId,
           fullName: diver.fullName,
           rentsKit: diver.rentalFit.state === "rents",
+          blocked: diver.readiness.status === "blocked",
         }))}
+        tone={isDeparture ? "neutral" : "urgent"}
         copy={{
-          heading: t("trips.manifest.missingDiversHeading", { count: missingDivers.length }),
-          awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+          heading: isDeparture
+            ? t("trips.manifest.stillToBoardHeading", { count: missingDivers.length })
+            : t("trips.manifest.notCountedBackHeading", { count: missingDivers.length }),
+          statusLabel: isDeparture
+            ? t("trips.manifest.missingDiversPillDock")
+            : t("trips.manifest.missingDiversPillAfterDive"),
           tapHint: t("trips.manifest.missingDiversTapHint"),
           rentsKitLabel: t("trips.manifest.rentsKitLabel"),
           ownKitLabel: t("trips.manifest.ownKitLabel"),
+          blockedLabel: readinessStatusText(t, "blocked"),
         }}
       />
 

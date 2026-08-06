@@ -126,8 +126,22 @@ export function InlineConfirm(props: InlineConfirmProps) {
   // `cacheComponents: true` be re-enabled (its effects re-run on re-show the
   // same as a fresh mount even though local state survives). Never trust a
   // prior arm.
+  //
+  // The genuine first mount is exempt: effects run only once hydration
+  // completes, but selective hydration makes the trigger tappable earlier, so
+  // on a slow connection this effect's initial run could land *after* a
+  // person armed the confirm and silently disarm it under their thumb (the
+  // same race snapped ScheduleBuilder's remove panel shut on CI). A ref
+  // survives the Activity hide/re-show that re-runs effects, so every
+  // re-show still disarms — only the first mount, where `armed` is
+  // necessarily fresh, is skipped.
+  const pathnameEffectRan = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change re-arms the disarm, which is the point.
   useEffect(() => {
+    if (!pathnameEffectRan.current) {
+      pathnameEffectRan.current = true;
+      return;
+    }
     setArmed(false);
   }, [pathname]);
 
