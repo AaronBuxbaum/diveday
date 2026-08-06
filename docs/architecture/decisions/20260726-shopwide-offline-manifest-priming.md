@@ -113,9 +113,12 @@ holding an unsynced roll-call event is never deleted by this purge, even for a s
 matches — that event cannot reconcile under a different shop's session (the server would check it
 against the wrong tenant and reject or misattribute it), so purging it would destroy the only copy of
 that safety evidence outright. It stays — visible until the original shop's own session next runs a
-purge and finds it resolved, or it clears via the ordinary retention rule — the same trade-off 20260718
-already accepts for a single shop's own expired-but-pending records, extended here across the tenant
-boundary rather than overridden by it.
+purge and finds it resolved, or until `OFFLINE_MANIFEST_PENDING_GRACE_MS` past its own expiry,
+whichever comes first, after which it is deleted regardless and the loss is reported on screen (see
+the 2026-08-06 ceiling amendment below; the first of those two is not guaranteed to arrive at all,
+which is why the reprieve needed an end). It is the same trade-off 20260718 already accepts for a
+single shop's own expired-but-pending records, extended here across the tenant boundary rather than
+overridden by it — and bounded in both places.
 
 Three follow-up correctness fixes on top of that first pass, all from continued review:
 
@@ -194,6 +197,190 @@ trip ids it holds, the server telling it which are stale) is real new protocol s
 design, not a rider here; revisit if cancellations close enough to departure to matter in practice turn
 out to be common enough for this friction to be worth closing.
 
+**Amendment (2026-08-06): the tenant question got an endpoint of its own.** Everything above stands,
+with one correction to *how* the offline shell learns which shop this browser is signed in as. It was
+reading that one string out of `GET /api/offline-manifests/upcoming` — a response carrying the shop's
+entire 48-hour board: every diver's name, emergency contact and readiness blocker, pulled onto a shared
+boat tablet, used for `shop.slug`, and thrown away unread (review 20260802, action item 12). It now
+calls **`GET /api/offline-manifests/identity`**, same staff gate and same session-derived shop scope,
+which answers `{ shop: { slug } }` and nothing else — no roster, no names, not even a count of them.
+`OfflineManifestAutoSave` and the service worker's `refreshSavedManifests` still call `/upcoming`,
+because they are there for the board, and `/upcoming` still carries `shop` so neither pays a second
+round trip for a string it is being handed — which also means an already-deployed offline shell held in
+a device's `v2` cache keeps working unchanged against it.
+
+A separate path rather than an `?identityOnly=1` flag, because the two are different questions with
+different consequences: a dropped or mistyped query parameter degrades to the *roster*, silently, with
+a 200, whereas a path cannot fail open that way; a request logged against this path is legible as
+identity-only without anyone reading its query string; and the two have different costs (one
+primary-key row read against a trip window plus per-trip manifest assembly) on the surface with the
+worst network in the product. Both routes now send `Cache-Control: private, no-store`, which the
+roster route never had. On the identity route that header is load-bearing rather than hygienic: a
+cached answer on a shared boat tablet tells the *next* shop's browser it is the *previous* shop, so
+`purgeOfflineManifestsExceptShop` would delete the current captain's manifests and preserve the
+previous shop's roster — both directions of the bug this check exists to prevent, at once.
+
+**Amendment (2026-08-06): both routes gate on live roles, not the ones the token was stamped with**
+(F4, security review of this PR). Both handlers checked `isStaff(session.user.roles)` — the roles
+baked into the JWT at sign-in. No `maxAge` is set on the session (`src/lib/auth.config.ts`), so
+NextAuth's 30-day default applies, and `/api/**` is excluded from the edge gate (`src/proxy.ts`), which
+leaves each handler's own `auth()` as the only wall. A staffer removed from a shop therefore kept
+pulling that shop's complete 48-hour board — diver names, emergency contacts, readiness and medical
+blockers — from any device they were still signed in on, for up to a month after they stopped working
+there. Both routes now re-read `loadActiveStaffRoles(db, shop.id, session.user.personId)`
+(`src/db/authz.ts`) and refuse unless it returns live staff roles, closing the same revocation window
+the H-14 surfaces already close: null for a deleted person, a disabled account, or someone who was
+never this shop's.
+
+Three properties of the sequence are deliberate, and each is pinned by a test:
+
+- **The unauthenticated refusal still happens before any database work.** The token check stays first
+  as a *pre-filter* — a caller with no session, or one whose token never claimed a staff role, is
+  refused without costing a connection. Only an authenticated caller whose token might be stale pays
+  for the row read.
+- **The live check runs after the shop lookup, not before.** `loadActiveStaffRoles` is shop-scoped, so
+  a session pointing at a shop row that no longer exists would find no person and answer 401 where the
+  offline shell is owed a 404. "The tenant cannot be established" is a different fact from "you are no
+  longer their staff"; nothing has been disclosed to the caller at either point, and the two refusals
+  are one primary-key row read apart.
+- **The new refusal carries `Cache-Control: private, no-store` like every other response** from these
+  routes. It is still an authenticated, per-session answer on a shared tablet.
+
+The identity route discloses only the caller's own shop slug — which their token already carries — so
+fixing it changes no exposure. It was fixed anyway, and the two gates are now byte-identical: two
+checks that read the same and behave differently is how the next reader copies the wrong one, and this
+pair sits either side of the largest personal-data body in the product. The refusal is the same
+`401 { error: "authentication_required" }` these routes already return to a signed-in diver, rather
+than a new 403 — a demoted staffer is that same case discovered one row read later, and both clients
+(`OfflineManifestAutoSave`, the worker's `refreshSavedManifests`) branch only on `response.ok`.
+
+The sibling staff API routes — `/api/offline-manifests/sync`, `/api/search`,
+`/api/trips/[id]/manifest-events` — were followed up in the same series and now carry the same
+live-roles gate, each sequenced against its own tenant answer rather than copying this one's. Search
+answers an unresolvable tenant with an empty result set rather than a status, so its check sits below
+that branch; the other two read no shop row at all, so theirs go first, which additionally stops a
+revoked caller telling a real trip id from an invented one. The sync route's gate also runs ahead of
+body parsing, so an unauthorized caller's batch is never read, and the manifest-events stream is
+checked at subscribe time only — bounded by its own `STREAM_TTL_MS` retirement, after which
+`EventSource` reconnects into a fresh `GET` that runs the whole gate again.
+
+Still open, and the reason these fixes were needed one route at a time: `recordRollCall`
+(`src/db/manifests.ts`) authorizes with its own `person_roles` join that checks neither
+`people.deleted_at` nor `user_accounts.status`, so the *writer* still accepts a deleted person or a
+disabled account holding a stale role row. Every route above it now refuses them, but a future call
+site would inherit the hole. And `src/lib/auth.config.ts` sets no `session.maxAge`, so NextAuth's
+30-day default is what every one of these gates exists to bound — shortening it would shrink the
+class rather than patching its members.
+
+**Amendment (2026-08-06): the purge refuses a slug it cannot trust, and the service worker stops
+crossing tenants.** A security review of the identity endpoint above found the two ways this design
+could still be walked past.
+
+The first is the purge's own signature. `purgeOfflineManifestsExceptShop(currentShopSlug)` deletes every
+record whose shop does not match, so `""`, `undefined` or `null` makes *every* record a mismatch — the
+signed-in shop's copies included — and wipes the device. Nothing about that is hypothetical: the offline
+shell validated its slug, while `OfflineManifestAutoSave` reached the same function through
+`(await response.json()) as OfflineManifestUpcomingResponse`, a cast rather than a parse, which yields
+`undefined` for `body.shop.slug` on a malformed 200 and does not throw on the way past. The refusal now
+lives in the store, at the chokepoint, rather than at either call site: a caller-side check protects only
+the callers that remember to write one, and putting it in the one function every path must go through
+means every present and future caller inherits it. The parameter stays typed `string`, so a caller that
+*knows* it may be holding `undefined` is still a typecheck failure rather than a silent no-op. The
+callers were fixed too — one shared parser (`offlineManifestShopSlug`, in `src/lib/offline-manifests.ts`)
+reads the tenant out of either route's body, destructuring the route's own declared response type so a
+rename is a build failure rather than a parser that quietly answers null forever, and a round that cannot
+establish its tenant now abandons itself rather than saving a board without purging first.
+
+The second is the service worker, and it is the one that destroys evidence. `flushPendingRollCall`
+iterated every envelope on the device and submitted it under whatever session the tablet currently
+holds — precisely what the page-side reconcile pass above was fixed *not* to do, and with the same
+consequence, one step further along: the sync route scopes to `session.user.shopId`, so a foreign shop's
+event returns `rejected`; a rejected event is no longer `pending`; and the pending-event exception that
+keeps a foreign record alive therefore stops protecting it, so the next purge deletes it. Shop A's
+captain records roll call offshore, the tablet is handed to shop B, a push arrives with no page open,
+and the only record of who came back aboard is gone — with no screen to say so. The worker now resolves
+the tenant once through `GET /api/offline-manifests/identity` (the same lookup the shell uses, shared
+rather than copied — the worker is bundled out of its own tsconfig project and cannot reach a client
+component, so the shared piece lives in the framework-free module both can import) and skips any
+envelope whose snapshot names a different shop; if the tenant cannot be established at all — offline, a
+401, a 404, a body of the wrong shape — it reconciles nothing and rethrows so the browser retries the
+sync tag later, rather than guessing. It also skips the lookup entirely when nothing is queued, so a
+push on a quiet phone costs no extra request. Separately, `refreshSavedManifests` already had the
+server-verified tenant in hand from `/upcoming` and was writing the board without acting on it, so a
+worker-only refresh wrote shop B's whole 48-hour roster in beside shop A's resident records; it now runs
+the same purge, in the same fail-closed order, that `OfflineManifestAutoSave` does.
+
+**Amendment (2026-08-06): the pending-event reprieve has a ceiling, and the shell repaints when a
+record is taken out from under it.** Two further findings from the security review of that work.
+
+**F3 — the exception above had no end.** The bound this record stated for a preserved foreign-shop
+record was "until the original shop's own session next runs a purge pass and finds it resolved". That
+is not a bound: a pending event can only reconcile under the shop that recorded it, so if that shop's
+staff never sign into this tablet again — a freelance captain who moves on, a boat sold, a tablet
+reassigned — the moment never arrives and the record is retained past both the 14-day and the 7-day
+window, forever. `/offline-manifest` has no auth gate by design (the shell has to open with the radio
+off), so "forever" means anyone holding the tablet can read that shop's diver names, emergency
+contacts and readiness/medical blockers, with no session, indefinitely. An unbounded exception to a
+retention rule is not a retention rule, and this one sat on the largest personal-data body in the
+product.
+
+`OFFLINE_MANIFEST_PENDING_GRACE_MS` (`src/lib/offline-manifest-store.ts`) is the ceiling: **twice
+`OFFLINE_MANIFEST_MAX_RETENTION_MS`, so 28 days past the record's own `expiresAt`**, after which it is
+deleted whatever is queued on it. Expressed as a multiple of the retention constant rather than as a
+new number, so shortening retention shortens this with it. It is long enough that a real trip's events
+always get their chance — a record only reaches the ceiling after it has already expired, at most 7
+days after the boat came home, so this is four further weeks of any signal, any sign-in by the shop
+that recorded it, any push the worker wakes on; longer than a liveaboard charter, a crew rotation, or
+a tablet away for repair. And it is short enough that "indefinitely" stops being true: 42 days from
+the save at the very worst, 35 from the trip itself, with the grace period landing just under the 30
+days `RETENTION_DAYS.push_subscriptions` gives the closest analogue in `src/lib/retention.ts` — a
+device credential, useful only while its trip is near, pure blast radius afterwards. Both bounds are
+asserted by tests rather than left to this paragraph, the way `retentionWindowsOutlastStripeRetries`
+is.
+
+The rule lives in `loadOfflineManifest`, the one function that decrypts a record and decides whether
+it still exists, so `listOfflineManifests` and `purgeOfflineManifestsExceptShop` inherit it instead of
+carrying second copies to drift — the same chokepoint discipline the purge's own slug guard follows.
+That placement is what makes the bound hold for the device this finding is about: **opening the shell
+is enough**, with no session, no network and no purge pass, because the read itself is the eviction.
+IndexedDB has no background expiry, so the guarantee is precisely "no read after the ceiling ever
+returns it", exactly as the ordinary retention window has always worked here.
+
+**And the loss is surfaced, not dropped.** A pending event is unsynced evidence of who came back from
+a dive, so deleting it silently is its own harm. The store writes a durable note of each discard —
+trip, shop name, how many changes were lost, when — and the offline shell reports it on every branch
+until a human acknowledges it. Durable rather than a return value from the delete, because the delete
+usually happens where there is no screen at all: the service worker's push refresh, or
+`OfflineManifestAutoSave` inside the staff shop layout. A returned value would be dropped by exactly
+the callers whose loss nobody would otherwise hear about, which is the shape of the worker bug fixed
+earlier the same day. The note deliberately carries no diver, no emergency contact, no booking id and
+no captain's note — it must not quietly re-retain the roster the discard exists to remove — and it
+lives beside the encryption key rather than in a new object store, because bumping `DB_VERSION` would
+make an older cached shell's `indexedDB.open(name, 1)` fail with `VersionError` and brick the storage
+of the exact stale-but-working dock copy this feature exists for.
+
+**F5 — the single-trip view did not repaint when the purge deleted the record it was showing.** The
+re-read after a purge only ever touched the list branch, so on `?trip=<id>` the component kept
+rendering the in-memory envelope of a record that no longer existed, and every Board / Not-boarded
+button then raised `OfflineManifestError("unavailable")` with the generic copy: a roster that looks
+fine at the dock, with dead buttons and a refusal that explains nothing. The asymmetry was deliberate
+once — blanking the screen a captain is actively reading is its own harm, and a vanished list row
+costs a link rather than the working surface — but it does not survive what the record actually is.
+The cross-shop purge can only delete a record belonging to a *different* shop than the session the
+tablet now holds, so what stayed on screen was another shop's diver names, emergency contacts and
+readiness/medical blockers rendered with no session behind them: the exact exposure the purge exists
+to end. Nothing on it could be acted on either, and a roster that cannot record is worse than no
+roster, because it reads as a head count being kept.
+
+So the trip branch repaints too — but never to "Nothing saved on this phone yet", the one sentence the
+captain already knows is false. The empty state names the cause (a different shop is signed in on this
+tablet, and roll call for that trip belongs on that shop's own live manifest), and the reasoning now
+sits in the code beside the list-branch guard that used to make the asymmetry invisible. Two things it
+refuses to do: repaint on a *failed* store read — "gone" and "couldn't ask" are different answers, and
+only the first takes a manifest off a captain's screen — and repaint a record that survived the purge
+because it still holds unsynced evidence. When the vanished record was this shop's own, the ordinary
+empty state stands; only a genuine tenant mismatch gets the sentence about another shop.
+
 ## Alternatives considered
 
 - **Register the auto-save fetch from the marketing home page (`/`) instead of the shop layout** —
@@ -205,6 +392,10 @@ out to be common enough for this friction to be worth closing.
   URL, a page that requires network) should see that, not be redirected into a manifest list that has
   nothing to do with what they were trying to open. Root is added as a second explicit pattern, not a
   wildcard.
+- **`?identityOnly=1` on the roster route instead of a second route** — rejected (2026-08-06, see the
+  amendment above): the failure mode of a missing flag is the full roster returned with a 200, which is
+  exactly the exposure the change exists to remove, and the two questions differ in cost, cacheability
+  and what a future authorization change would want to do to each.
 - **Require a `?shop=` slug on the offline shell instead of purging leftover records** — rejected: a
   shop slug is not a secret (it's in every staff-facing URL), so requiring it as a display filter would
   add friction without adding a real access boundary, and it does nothing about data already sitting in
@@ -237,4 +428,7 @@ The device store now purges on shop mismatch (above), so a device that changes s
 previous shop's data as soon as the new shop's staff is online once — but a device that stays offline
 throughout a handoff, or one where the new shop's staff never opens a DiveDay page, keeps the old
 data until its own retention window lapses, same as any other accepted-storage-eviction gap in this
-design.
+design. That window now genuinely lapses for every record, including one holding roll call that never
+synced: `OFFLINE_MANIFEST_PENDING_GRACE_MS` caps the reprieve at 28 days past expiry (see the ceiling
+amendment above), and the cost of that cap — a queued roll-call event thrown away — is reported on
+screen rather than taken quietly.

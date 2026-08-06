@@ -32,11 +32,13 @@
   "shopChrome": {
     "skipToContent": "Saltar al contenido principal",
     "navAriaLabel": "Páginas del centro",
-    "footerLine": "{shop} · Con la tecnología de DiveDay"
+    "footerLine": "{shop} · Con la tecnología de DiveDay",
+    "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}."
   },
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "diverDescription": "Encuentra tu próximo día en el agua, mira qué esperar y reserva tu plaza.",
     "noTrips": "Todavía no hay salidas programadas",
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
@@ -325,7 +327,10 @@
       "ssi": "SSI (Scuba Schools International)",
       "naui": "NAUI (Asociación Nacional de Instructores de Buceo)",
       "sdi": "SDI (Scuba Diving International)",
-      "tdi": "TDI (Technical Diving International)"
+      "tdi": "TDI (Technical Diving International)",
+      "cmas": "CMAS (Confederación Mundial de Actividades Subacuáticas)",
+      "raid": "RAID (Dive RAID International)",
+      "gue": "GUE (Global Underwater Explorers)"
     },
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",

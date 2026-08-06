@@ -30,11 +30,12 @@ afterEach(() => {
 });
 
 const COPY: MissingDiversGridCopy = {
-  heading: "Still ashore",
-  awaitingBoarding: "Awaiting boarding",
-  tapHint: "Tap a diver to find them on the manifest.",
+  heading: "Still to board (2)",
+  statusLabel: "Not yet called",
+  tapHint: "Tap a diver to jump to their row.",
   rentsKitLabel: "Rental",
   ownKitLabel: "Own kit",
+  blockedLabel: "Blocked",
 };
 
 const DIVERS = [
@@ -62,7 +63,7 @@ describe("what the grid shows", () => {
 
   it("disappears entirely once everyone is aboard", () => {
     // Not an empty card with a cheerful heading — the section is gone, because
-    // "Awaiting boarding" next to nobody is a contradiction on a dock.
+    // "Not yet called" next to nobody is a contradiction on a dock.
     const { container } = render(<MissingDiversGrid divers={[]} copy={COPY} />);
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByText(COPY.heading)).not.toBeInTheDocument();
@@ -109,6 +110,34 @@ describe("what the grid shows", () => {
     const tile = screen.getByRole("button");
     expect(within(tile).getByText("K")).toBeInTheDocument();
     expect(within(tile).getByText("Kai")).toBeInTheDocument();
+  });
+
+  it("marks a blocked diver with the readiness word, and leaves everyone else alone", () => {
+    // The grid used to say "awaiting boarding" beside a diver whose own row
+    // said "Blocked" — two answers to one question, on a dock.
+    render(
+      <MissingDiversGrid
+        divers={[
+          { ...DIVERS[0], blocked: true },
+          { ...DIVERS[1], blocked: false },
+        ]}
+        copy={COPY}
+      />,
+    );
+    const [priya, tomas] = screen.getAllByRole("button");
+    expect(within(priya).getByText(COPY.blockedLabel)).toBeInTheDocument();
+    expect(within(tomas).queryByText(COPY.blockedLabel)).not.toBeInTheDocument();
+  });
+
+  it("keeps the dock's absence calm and the after-dive one urgent", () => {
+    // Nobody has boarded yet at 7am; that is not an emergency. After a dive
+    // the same absence means nobody has counted them back aboard.
+    const dock = render(<MissingDiversGrid divers={DIVERS} copy={COPY} tone="neutral" />);
+    expect(screen.getByText(COPY.statusLabel).className).not.toMatch(/danger/);
+    dock.unmount();
+
+    render(<MissingDiversGrid divers={DIVERS} copy={COPY} tone="urgent" />);
+    expect(screen.getByText(COPY.statusLabel).className).toMatch(/danger/);
   });
 
   it("hides the whole grid from print, where the manifest is the record", () => {
@@ -158,6 +187,27 @@ describe("tapping a diver jumps to their manifest row", () => {
     // colour and emphasis mean readiness.
     expect(row.classList.contains("ring-4")).toBe(false);
     expect(row.classList.contains("ring-offset-2")).toBe(false);
+  });
+
+  it("jumps instantly and skips the flash when the reader asked for less motion", () => {
+    // The jump is the point and still happens; the smooth scroll and the
+    // two-second ring are the decoration `prefers-reduced-motion` turns off
+    // (design/principles.md §5).
+    const matchMedia = vi.fn((query: string) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    vi.stubGlobal("matchMedia", matchMedia);
+    const row = mountRow("booking-1");
+    render(<MissingDiversGrid divers={DIVERS} copy={COPY} />);
+
+    fireEvent.click(screen.getAllByRole("button")[0]);
+
+    expect(row.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "center" });
+    expect(row.classList.contains("ring-4")).toBe(false);
+    vi.unstubAllGlobals();
   });
 
   it("does nothing when the diver has no row on the page", () => {

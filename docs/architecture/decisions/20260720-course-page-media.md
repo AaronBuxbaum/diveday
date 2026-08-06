@@ -20,6 +20,12 @@ free-form image URLs from the certification forms?
   spec chips). Shapes and their textarea parsers live in `src/lib/courses.ts`. Repeatable sections
   are edited as blank-line-separated blocks in a `<textarea>` — the same server-rendered shape
   `dive_sites.landmarks` already uses, and no client-side reordering UI.
+  _Amended 2026-08-06 (review finding DATA-L4): the gallery is one `gallery_photos` array of
+  `{ url, alt }` objects, not the `image_urls`/`image_alts` pair this shipped with. Two arrays lined
+  up by position with nothing enforcing their lengths meant one drifted row silently captioned every
+  photo after it with the previous photo's words. `image_urls`/`image_alts` survive one more release,
+  still written and no longer read, so the drop is a separate contract deploy
+  ([deploy-and-migrations-runbook.md](../../engineering/deploy-and-migrations-runbook.md))._
 - **`is_published` is separate from `is_active`.** `is_active` gates the session picker;
   `is_published` gates the public page. A shop teaches courses it does not market, and drafts a page
   for a course it already schedules.

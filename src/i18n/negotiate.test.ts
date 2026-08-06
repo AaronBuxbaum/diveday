@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { firstHandLocale, matchLocale, negotiateLocale, parseAcceptLanguage } from "./negotiate";
+import {
+  firstHandLocale,
+  matchLocale,
+  negotiateLocale,
+  parseAcceptLanguage,
+  unsupportedLanguage,
+} from "./negotiate";
 
 describe("parseAcceptLanguage", () => {
   it("orders by quality, best first", () => {
@@ -94,5 +100,58 @@ describe("firstHandLocale", () => {
     }
     expect(firstHandLocale("de-DE,fr;q=0.8")).toBeNull();
     expect(firstHandLocale("🙂")).toBeNull();
+  });
+});
+
+// The third question about the same header, and the one that used to go
+// unasked: a diver whose language DiveDay does not carry got the shop's
+// language with no acknowledgement at all (review finding I18N-L1).
+describe("unsupportedLanguage", () => {
+  it("names the language a visitor asked for that DiveDay does not carry", () => {
+    expect(unsupportedLanguage("de-CH,de;q=0.9")).toEqual({ tag: "de-CH", language: "de" });
+    expect(unsupportedLanguage("fr-FR")).toEqual({ tag: "fr-FR", language: "fr" });
+  });
+
+  it("stays silent when the visitor asked for something we do carry", () => {
+    // Including the case that matters most: they asked for German *and*
+    // Spanish, and Spanish is what they get. Nothing went unmet, so there is
+    // nothing honest to say.
+    expect(unsupportedLanguage("es-MX,en;q=0.5")).toBeNull();
+    expect(unsupportedLanguage("de;q=0.4,es-AR;q=0.9")).toBeNull();
+    expect(unsupportedLanguage("de;q=0.9,en;q=0.4")).toBeNull();
+    expect(unsupportedLanguage("en-GB")).toBeNull();
+  });
+
+  it("stays silent when the visitor expressed no preference", () => {
+    // A client that sends no header, or only `*`, has told us nothing about
+    // itself — announcing a fallback there would be inventing a reader.
+    expect(unsupportedLanguage(null)).toBeNull();
+    expect(unsupportedLanguage("")).toBeNull();
+    expect(unsupportedLanguage("*")).toBeNull();
+    expect(unsupportedLanguage("*;q=0.5")).toBeNull();
+  });
+
+  it("takes the highest-quality unmet language, not the first one written", () => {
+    expect(unsupportedLanguage("fr;q=0.2,ja;q=0.9")).toEqual({ tag: "ja", language: "ja" });
+  });
+
+  it("only ever returns a structurally valid language subtag", () => {
+    // This is the guard that keeps an attacker-controllable header out of
+    // `Intl.DisplayNames`, which throws a RangeError on a malformed code.
+    for (const header of [
+      "🙂",
+      ";;;",
+      "-",
+      "123",
+      "toolongsubtag",
+      "e",
+      "en_US",
+      "de-DE;q=notanumber",
+    ]) {
+      const result = unsupportedLanguage(header);
+      expect(result === null || /^[a-z]{2,3}$/.test(result.language)).toBe(true);
+    }
+    // Junk in the front position must not mask a real preference behind it.
+    expect(unsupportedLanguage("🙂,de;q=0.8")).toEqual({ tag: "de", language: "de" });
   });
 });

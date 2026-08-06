@@ -1,5 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
   addBuddyTeamMember,
@@ -10,7 +12,15 @@ import {
   removeBuddyTeamMember,
 } from "./buddy-pairs";
 import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall } from "./manifests";
-import { bookings, buddyPairMembers, tripAssignments, trips } from "./schema";
+import {
+  bookings,
+  buddyPairMembers,
+  people,
+  personRoles,
+  tripAssignments,
+  trips,
+  userAccounts,
+} from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -630,5 +640,135 @@ describe("buddy teams (in-memory PGlite)", () => {
     });
     manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.find((e) => e.bookingId === a.booking.id)?.buddyAlert).toBeNull();
+  });
+});
+
+/**
+ * Security review of the live-roles work, following 40d0a09's fix to the three
+ * roll-call writers in `src/db/manifests.ts`. `requireStaff` here was
+ * demonstrably a copy of that hand-rolled join — its docblock said so — filtering
+ * `people.id` / `people.shopId` / `person_roles.role` and checking neither
+ * `people.deleted_at` nor `user_accounts.status`. So the two cases
+ * `loadActiveStaffRoles` exists for both got through:
+ *
+ * - a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
+ *   leaves every role row exactly where it is;
+ * - a **disabled** account, because `setStaffAccountStatus` revokes sign-in and
+ *   leaves `person_roles` entirely intact — a suspended employee keeps every
+ *   role row they had.
+ *
+ * Teams inform rather than gate, so the stakes are lower than roll call's: what
+ * each bought is a `buddy_team_events` entry naming the wrong person for the
+ * act — a trail whose whole job is to outlive the membership rows a dissolve
+ * deletes, and which the incident export renders. The tests assert the refusal
+ * *and* that no membership row and no trail entry exist afterwards; the refusal
+ * stays the module's existing `staff_not_found`, one of its nine codes, which
+ * the manifest page already words.
+ */
+describe("the buddy-team recorder must be live staff (defence in depth)", () => {
+  async function stateOf(
+    db: Awaited<ReturnType<typeof buddyContext>>["db"],
+    shopId: string,
+    tripId: string,
+  ) {
+    return {
+      teams: await listTripBuddyTeams(db, shopId, tripId),
+      trail: await listTripBuddyTeamEvents(db, shopId, tripId),
+    };
+  }
+
+  it("refuses a deleted person, and forms no team and no trail entry", async () => {
+    const { db, shop, trip, a, b, staff } = await buddyContext();
+    // `deleteDiver`'s soft delete, which touches nothing but this column — the
+    // staff roles that authorized them are all still sitting there.
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, staff.id));
+
+    expect(
+      await formBuddyTeam(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        members: [diver(a.booking.id), diver(b.booking.id)],
+        recordedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+
+    // The outcome that matters: a refusal that still appended to the trail
+    // would be no fix at all, because the trail is the record of the act.
+    expect(await stateOf(db, shop.id, trip.id)).toEqual({ teams: [], trail: [] });
+  });
+
+  it("refuses a disabled account still holding a stale role row, and forms no team", async () => {
+    const { db, shop, trip, a, b, staff } = await buddyContext();
+    // Access revoked, roster row intact — what `setStaffAccountStatus` leaves
+    // behind. Sign-in already refuses this account; until now the writer did not.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, staff.id));
+    // The stale role row is the whole point of the case, so prove it is there.
+    expect(
+      await db.select().from(personRoles).where(eq(personRoles.personId, staff.id)),
+    ).not.toEqual([]);
+
+    expect(
+      await formBuddyTeam(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        members: [diver(a.booking.id), diver(b.booking.id)],
+        recordedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+
+    expect(await stateOf(db, shop.id, trip.id)).toEqual({ teams: [], trail: [] });
+  });
+
+  it("still lets live staff form, refuses a removed one dissolving, and refuses a demotion", async () => {
+    const { db, shop, trip, a, b, c, staff } = await buddyContext();
+    // The control for both refusals above: same shop, same trip, same call —
+    // only the recorder's standing differs.
+    const formed = await formBuddyTeam(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      members: [diver(a.booking.id), diver(b.booking.id)],
+      recordedByPersonId: staff.id,
+    });
+    expect(formed).toMatchObject({ ok: true });
+    if (!formed.ok) return;
+
+    // Every writer goes through the one gate, so the *destructive* one is worth
+    // naming: a removed staff member must not be able to take a standing team
+    // apart, which would delete the membership rows and leave only a trail entry
+    // in their name.
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, staff.id));
+    expect(
+      await dissolveBuddyTeam(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        teamId: formed.teamId,
+        recordedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    const after = await stateOf(db, shop.id, trip.id);
+    expect(after.teams).toHaveLength(1);
+    expect(after.trail.map((event) => event.action)).toEqual(["formed"]);
+
+    // Demotion is the case the hand-rolled join did catch, and the rewrite must
+    // keep catching it: every staff role gone, a `diver` row left.
+    await db.update(people).set({ deletedAt: null }).where(eq(people.id, staff.id));
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values({ personId: staff.id, role: "diver" });
+
+    expect(
+      await addBuddyTeamMember(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        teamId: formed.teamId,
+        member: diver(c.booking.id),
+        recordedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    expect((await stateOf(db, shop.id, trip.id)).trail.map((e) => e.action)).toEqual(["formed"]);
   });
 });

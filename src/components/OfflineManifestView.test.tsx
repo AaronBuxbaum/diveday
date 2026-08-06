@@ -2,10 +2,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  acknowledgeDiscardedOfflineRecords,
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
   purgeOfflineManifestsExceptShop,
+  readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
@@ -28,6 +30,10 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
   syncOfflineManifest: vi.fn(),
+  // The retention ceiling's discard notice: nothing thrown away is the right
+  // default for every test that isn't about one.
+  readDiscardedOfflineRecords: vi.fn().mockResolvedValue([]),
+  acknowledgeDiscardedOfflineRecords: vi.fn().mockResolvedValue(undefined),
   // The version-mismatch banner (task 124) resolves this on mount; no active
   // worker in jsdom, so "nothing to warn about" is the correct default here.
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
@@ -264,8 +270,14 @@ function setOnline(online: boolean) {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: online });
 }
 
-function upcomingResponse(shopSlug: string) {
-  return new Response(JSON.stringify({ shop: { slug: shopSlug }, payloads: [] }), { status: 200 });
+/**
+ * What `GET /api/offline-manifests/identity` answers: the tenant slug, and
+ * nothing else. This shell asks a one-word question and now gets a one-word
+ * answer — it used to call `/upcoming`, which replies with the shop's entire
+ * 48-hour board (review 20260802, action item 12).
+ */
+function identityResponse(shopSlug: string) {
+  return new Response(JSON.stringify({ shop: { slug: shopSlug } }), { status: 200 });
 }
 
 beforeEach(() => {
@@ -279,7 +291,7 @@ beforeEach(() => {
   // one caller reaches this endpoint per mount.
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockImplementation(async () => upcomingResponse("blue-mantis")),
+    vi.fn().mockImplementation(async () => identityResponse("blue-mantis")),
   );
 });
 
@@ -396,7 +408,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     });
     vi.mocked(listOfflineManifests).mockResolvedValue([foreignShopEnvelope]);
     // The device is currently signed in as blue-mantis, not reef-runners.
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -418,7 +430,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   // belongs.
   it("purges another shop's leftover records when the shell loads", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -436,6 +448,91 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     );
   });
 
+  // Review 20260802, action item 12. This shell needs one string — which shop
+  // this browser is signed in as — and used to get it by asking for the shop's
+  // whole 48-hour roster: every diver's name, emergency contact and readiness
+  // blocker, pulled onto a shared boat tablet and then thrown away unread.
+  it("asks the identity endpoint for the tenant, and never pulls the roster to get it", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/offline-manifests/identity",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+    // Not "called with /upcoming fewer times" — never, on any URL. This surface
+    // has no use for a roster it did not already save.
+    for (const [url] of vi.mocked(fetch).mock.calls) {
+      expect(String(url)).not.toContain("/api/offline-manifests/upcoming");
+    }
+  });
+
+  // The 2026-08-06 deduplication, still holding after the endpoint changed
+  // shape. Two independent consumers want the tenant on every mount and every
+  // reconnect — the purge effect and the branch effect that gates reconcile —
+  // and each request can sit for the full ten-second timeout on a marina
+  // connection. Two of them can also come back disagreeing, which would have
+  // the purge and the reconcile acting on different answers to "which shop is
+  // this".
+  it("resolves the tenant once per round, however many callers need it", async () => {
+    const pendingEvent = {
+      clientEventId: "evt-1",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+      tripId: "trip-1",
+      bookingId: "booking-1",
+      checkpoint: "departure" as const,
+      status: "boarded" as const,
+      note: null,
+      occurredAt: new Date(FROZEN_MS).toISOString(),
+      syncStatus: "pending" as const,
+    };
+    const saved = envelope("trip-1", "Two-Tank Reef", { events: [pendingEvent] });
+    vi.mocked(listOfflineManifests).mockResolvedValue([saved]);
+    vi.mocked(syncOfflineManifest).mockResolvedValue({
+      ...saved,
+      events: [{ ...pendingEvent, syncStatus: "applied" }],
+    });
+
+    render(<OfflineManifestView />);
+
+    // Both consumers have run: the purge fired and the pending event synced.
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  // The whole reason the tenant is re-verified from the server on every
+  // reconnect rather than cached: a reconnect is exactly when the signed-in
+  // shop may have changed (a shared boat tablet handed to the next operator).
+  it("purges against the new shop when the identity changes on reconnect", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
+
+    render(<OfflineManifestView />);
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+
+    // A different shop's staff signs in on this tablet.
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("reef-runners"));
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    // The purge follows the *new* answer, so blue-mantis's rosters are the ones
+    // that stop being decryptable on this device.
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("reef-runners"),
+    );
+  });
+
   // Security review, 2026-08-06: `?trip=<id>` is the URL the list itself links
   // to and the one `manifest-sw.js` replays after a failed reload, so it is what
   // a captain actually bookmarks — a purge that ran only on the list branch
@@ -443,7 +540,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   it("purges on the single-trip surface too, not only on the list", async () => {
     searchParams = new URLSearchParams("trip=trip-1");
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
-    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+    vi.mocked(fetch).mockResolvedValue(identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
 
@@ -471,7 +568,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
 
-    releaseFetch(upcomingResponse("blue-mantis"));
+    releaseFetch(identityResponse("blue-mantis"));
     await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
   });
 
@@ -487,6 +584,39 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     await screen.findByText("Two-Tank Reef");
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("purges nothing when the identity endpoint refuses the caller", async () => {
+    // The session expired, or this browser was never signed in — the shell
+    // itself is deliberately reachable without one. A 401 is "cannot establish
+    // the tenant", never "the tenant is nobody", and purging on it would delete
+    // every roster on the device.
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ error: "authentication_required" }), { status: 401 }),
+    );
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    expect(syncOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("purges nothing when the identity response carries no slug", async () => {
+    // A 200 whose body is the wrong shape — a proxy's error page, a truncated
+    // response, a future version of the route — must read as "cannot establish
+    // the tenant" and not as `purgeOfflineManifestsExceptShop(undefined)`,
+    // which matches no saved record and would delete every one of them.
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
   });
 
   it("still lists the device's records when the purge itself fails", async () => {
@@ -1185,5 +1315,276 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
     expect(priya.getByRole("button", { name: "Not boarded ✓" })).toBeInTheDocument();
     expect(screen.queryByText("Not back aboard")).not.toBeInTheDocument();
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
+  });
+});
+
+// Security review, 2026-08-06 (F5). The purge repainted only the list branch —
+// `setList((current) => (current === null ? current : saved))` is what confined
+// it there — so on `?trip=<id>` the component kept rendering the in-memory
+// envelope of a record that had just been deleted, and every Board /
+// Not-boarded button raised `OfflineManifestError("unavailable")`. A captain at
+// the dock got a roster that looked fine, dead buttons, and a refusal that
+// explained nothing.
+describe("OfflineManifestView — when a purge deletes the record on screen", () => {
+  /**
+   * Renders a single-trip view already showing `shown`, then hands the tablet
+   * to whoever `signedInAs` says — the reconnect that fires the purge. The
+   * store's answer after that purge is `afterPurge`: an envelope (it survived),
+   * null (deleted), or a rejection (the read failed).
+   */
+  async function handOverTablet({
+    shown,
+    signedInAs,
+    afterPurge,
+  }: {
+    shown: OfflineManifestEnvelope;
+    signedInAs: string;
+    afterPurge: OfflineManifestEnvelope | null | Error;
+  }) {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    let held: OfflineManifestEnvelope | null | Error = shown;
+    vi.mocked(loadOfflineManifest).mockImplementation(async () => {
+      if (held instanceof Error) throw held;
+      return held;
+    });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(fetch).mockImplementation(async () => identityResponse(signedInAs));
+
+    render(<OfflineManifestView />);
+    // Wait for the roster to actually paint before the handover, so the test is
+    // about the repaint and not about which effect happened to land first.
+    await screen.findByRole("heading", { name: shown.snapshot.manifests[0].trip.title });
+
+    vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
+      held = afterPurge;
+    });
+    // The round the mount already ran has to be excluded, or every wait below
+    // is satisfied before the handover even happens.
+    const roundsBefore = vi.mocked(readDiscardedOfflineRecords).mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    // Wait on the *end* of the purge round, not on its purge call. The round
+    // deletes, re-reads, decides whether to repaint, and only then asks what
+    // the retention ceiling threw away — so this last read is the one signal
+    // that the repaint decision has actually been made. Waiting on
+    // `purgeOfflineManifestsExceptShop` instead (or on `loadOfflineManifest`
+    // being called again) waits for a step that happens *before* the decision,
+    // which lets the three cases below that assert a repaint did **not** happen
+    // pass by checking too early.
+    await waitFor(() =>
+      expect(vi.mocked(readDiscardedOfflineRecords).mock.calls.length).toBeGreaterThan(
+        roundsBefore,
+      ),
+    );
+  }
+
+  it("repaints, and names the cause, when the record it was showing belonged to another shop", async () => {
+    await handOverTablet({
+      shown: envelope("trip-1", "Shop A's Trip", {
+        shopSlug: "reef-runners",
+        shopName: "Reef Runners",
+      }),
+      signedInAs: "blue-mantis",
+      afterPurge: null,
+    });
+
+    // Not "Nothing saved on this phone yet" — the one sentence the captain
+    // already knows is wrong — and not the hint telling them to open a live
+    // manifest that isn't theirs to open.
+    expect(await screen.findByText("That saved copy has been removed")).toBeInTheDocument();
+    expect(screen.getByText(/A different shop is signed in on this tablet/)).toBeInTheDocument();
+    expect(screen.getByText(/saved by a different shop/)).toBeInTheDocument();
+    expect(screen.queryByText("Nothing saved on this phone yet")).not.toBeInTheDocument();
+    // And the roster — another shop's divers, emergency contacts and readiness
+    // blockers, on a tablet now signed in as someone else — is off the screen,
+    // along with the buttons that could only have thrown.
+    expect(screen.queryByRole("heading", { name: "Shop A's Trip" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark boarded/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps showing the roster when the record survives the purge", async () => {
+    // The pending-event exception: a foreign record still holding unsynced roll
+    // call is deliberately preserved, and preserved means still readable.
+    const preserved = envelope("trip-1", "Shop A's Trip", {
+      shopSlug: "reef-runners",
+      shopName: "Reef Runners",
+    });
+    await handOverTablet({ shown: preserved, signedInAs: "blue-mantis", afterPurge: preserved });
+
+    expect(screen.getByRole("heading", { name: "Shop A's Trip" })).toBeInTheDocument();
+    expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
+  });
+
+  it("never blanks the roster because the store read failed", async () => {
+    // "Gone" and "couldn't ask" are different answers. Only a store that
+    // positively says the record is deleted takes a manifest off a captain's
+    // screen — a storage hiccup must not.
+    await handOverTablet({
+      shown: envelope("trip-1", "Shop A's Trip", {
+        shopSlug: "reef-runners",
+        shopName: "Reef Runners",
+      }),
+      signedInAs: "blue-mantis",
+      afterPurge: new Error("storage gone"),
+    });
+
+    expect(screen.getByRole("heading", { name: "Shop A's Trip" })).toBeInTheDocument();
+    expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
+  });
+
+  it("repaints when the purge outruns the very read that puts the record on screen", async () => {
+    // The ordering a real tablet hits whenever the tenant lookup is warm and
+    // the store is cold: `?trip=<id>`'s first decrypt is still in flight when
+    // the purge round deletes the record it is decrypting. The read was issued
+    // before the delete, so it still comes back holding the foreign roster —
+    // and hands it to the view *after* the purge has looked and moved on.
+    //
+    // Nothing is on screen at the moment the purge asks, and "I can't see a
+    // record" is not "there is no record": the read is one microtask away from
+    // painting the very thing the purge just deleted. A repaint conditioned on
+    // what has already painted is therefore skipped exactly here, and the
+    // captain is left holding another shop's divers, emergency contacts and
+    // readiness blockers on a tablet signed in as someone else — with dead
+    // Board buttons, which is the F5 disclosure this whole block exists to end.
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    const foreign = envelope("trip-1", "Shop A's Trip", {
+      shopSlug: "reef-runners",
+      shopName: "Reef Runners",
+    });
+    let releaseFirstRead: (envelope: OfflineManifestEnvelope) => void = () => {};
+    const firstRead = new Promise<OfflineManifestEnvelope>((resolve) => {
+      releaseFirstRead = resolve;
+    });
+    let held: OfflineManifestEnvelope | null = foreign;
+    let reads = 0;
+    vi.mocked(loadOfflineManifest).mockImplementation(async () => {
+      reads += 1;
+      // Only the view's own opening read is held back; the purge's re-read
+      // answers immediately, exactly as a store that has just deleted a key
+      // would.
+      return reads === 1 ? firstRead : held;
+    });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
+    vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
+      held = null;
+    });
+
+    render(<OfflineManifestView />);
+    // The purge round runs to completion first — deleting, re-reading, and
+    // deciding — with nothing painted. See `handOverTablet` for why the round's
+    // closing read is what proves the decision was made.
+    await waitFor(() => expect(readDiscardedOfflineRecords).toHaveBeenCalled());
+
+    // ...and only now does the read that was already in flight come back,
+    // carrying the copy the purge deleted while it was running.
+    await act(async () => {
+      releaseFirstRead(foreign);
+    });
+
+    expect(await screen.findByText("That saved copy has been removed")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Shop A's Trip" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark boarded/ })).not.toBeInTheDocument();
+  });
+
+  it("does not blame another shop when this shop's own record ages out under it", async () => {
+    // The same repaint, a different sentence: nothing crossed a tenant
+    // boundary here, so the ordinary empty state is the honest one.
+    await handOverTablet({
+      shown: envelope("trip-1", "Two-Tank Reef"),
+      signedInAs: "blue-mantis",
+      afterPurge: null,
+    });
+
+    expect(await screen.findByText("Nothing saved on this phone yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("There's no current saved manifest for this trip on this device."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("That saved copy has been removed")).not.toBeInTheDocument();
+  });
+});
+
+// Security review, 2026-08-06 (F3). Past its ceiling the store discards a
+// record even when it still holds roll call that never synced — unsynced
+// evidence of who came back from a dive. Deleting that quietly is its own
+// harm, so the store writes the loss down and this surface is where a human
+// finally hears about it: the delete itself usually happens with no page open
+// at all (the service worker's push refresh, the staff layout's auto-save).
+describe("OfflineManifestView — reporting roll call the ceiling threw away", () => {
+  const discarded = [
+    {
+      tripId: "trip-9",
+      tripTitle: "Morning Two-Tank",
+      shopName: "Reef Runners",
+      pendingEvents: 2,
+      discardedAt: new Date(FROZEN_MS).toISOString(),
+    },
+  ];
+
+  // `vi.clearAllMocks()` keeps implementations, so restate the quiet default
+  // per test rather than letting one case's notice bleed into the next.
+  beforeEach(() => {
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([]);
+  });
+
+  it("says what was lost, and for which trip, on the list branch", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([]);
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue(discarded);
+
+    render(<OfflineManifestView />);
+
+    expect(
+      await screen.findByText("Roll call that never sent has been removed"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Reef Runners · Morning Two-Tank — 2 changes lost"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/2 roll-call changes/)).toBeInTheDocument();
+  });
+
+  it("says it on the single-trip branch too, wherever the captain happens to look", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue(discarded);
+
+    render(<OfflineManifestView />);
+
+    expect(
+      await screen.findByText("Roll call that never sent has been removed"),
+    ).toBeInTheDocument();
+  });
+
+  it("stays put until a human acknowledges it", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([]);
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue(discarded);
+
+    render(<OfflineManifestView />);
+    const notice = await screen.findByText("Roll call that never sent has been removed");
+    // A reconnect — the moment everything else on this surface re-reads and
+    // repaints — must not quietly clear it.
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(notice).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Got it" }));
+
+    await waitFor(() => expect(acknowledgeDiscardedOfflineRecords).toHaveBeenCalled());
+    expect(
+      screen.queryByText("Roll call that never sent has been removed"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing at all when nothing has been thrown away", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    expect(
+      screen.queryByText("Roll call that never sent has been removed"),
+    ).not.toBeInTheDocument();
   });
 });

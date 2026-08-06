@@ -36,6 +36,7 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
+import { certificationAgency } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
@@ -44,7 +45,10 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
-const agencySchema = z.enum(["padi", "ssi", "naui", "sdi", "tdi", "other"]);
+// The pg enum itself, not a copy of it: a card the column accepts is a card the
+// form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
+// here while the database was ready for them (DOM-L1).
+const agencySchema = z.enum(certificationAgency.enumValues);
 const levelSchema = z.enum([
   "open_water",
   "advanced_open_water",

@@ -1,13 +1,18 @@
+import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
 import {
   MAX_MANIFEST_SUBSCRIBERS,
   manifestSubscriberCount,
   publishManifestEvent,
   subscribeManifestEvents,
 } from "@/db/manifest-events";
+import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -28,24 +33,75 @@ function manifestEventsRequest(tripId: string, signal?: AbortSignal) {
   return new Request(`http://localhost/api/trips/${tripId}/manifest-events`, { signal });
 }
 
+/**
+ * The seeded shop, one of its trips, and one of its *real* staff members.
+ *
+ * The person id has to be real now: the route re-reads roles from
+ * `person_roles` (through `loadActiveStaffRoles`, which also insists on a live
+ * `user_accounts` row) at every subscribe, so a made-up `personId` would refuse
+ * every request and every stream assertion below would go red for a reason that
+ * has nothing to do with what it is testing. Dana Reyes is the seeded owner,
+ * which is who this file's session has always claimed to be.
+ */
 async function seededContext() {
   const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((t) => t.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");
-  return { db, shop, trip };
+  const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  return { db, shop, trip, personId };
 }
 
-const staffSession = (shopId: string): Session => ({
+const staffSession = (
+  shopId: string,
+  personId: string,
+  roles: Session["user"]["roles"] = ["owner"],
+): Session => ({
   user: {
-    personId: "staff-1",
+    personId,
     shopId,
     shopSlug: "blue-mantis",
     name: "Dana Reyes",
-    roles: ["owner"],
+    roles,
   },
   expires: new Date(Date.now() + 60_000).toISOString(),
 });
+
+let seq = 0;
+
+/**
+ * A staff member built to order, so a test can say "their account is disabled"
+ * or "they have no roles left" as a fact in the database rather than a claim on
+ * a token. Same shape as `src/db/authz.test.ts`'s helper, which is the one
+ * `loadActiveStaffRoles` is specified against.
+ */
+async function makeStaff(
+  db: AppDb,
+  shopId: string,
+  roles: Role[],
+  opts: { status?: "active" | "disabled"; deleted?: boolean } = {},
+): Promise<string> {
+  seq += 1;
+  const [person] = await db
+    .insert(people)
+    .values({
+      shopId,
+      fullName: `Stream Staff ${seq}`,
+      deletedAt: opts.deleted ? new Date("2026-06-01T00:00:00Z") : null,
+    })
+    .returning();
+  if (!person) throw new Error("failed to insert staff");
+  if (roles.length > 0) {
+    await db.insert(personRoles).values(roles.map((role) => ({ personId: person.id, role })));
+  }
+  await db.insert(userAccounts).values({
+    personId: person.id,
+    email: `stream.staff.${seq}@example.com`,
+    hashedPassword: "x",
+    status: opts.status ?? "active",
+  });
+  return person.id;
+}
 
 // Distinct sentinels rather than a shared `null` — the stream actually
 // closing (controller.close() ran) and the stream just not having produced a
@@ -95,18 +151,37 @@ beforeEach(() => {
 });
 
 describe("GET /api/trips/[id]/manifest-events", () => {
-  it("rejects an unauthenticated caller", async () => {
+  it("rejects an unauthenticated caller without touching the database", async () => {
+    // The live-roles re-check below needs a database, so this ordering is a
+    // property worth pinning rather than an accident: a caller with no session
+    // at all must never reach the pool. Only an authenticated caller whose token
+    // *might* be stale pays for the lookup.
     vi.mocked(auth).mockResolvedValue(null);
     const response = await GET(manifestEventsRequest("00000000-0000-0000-0000-000000000000"), {
       params: Promise.resolve({ id: "00000000-0000-0000-0000-000000000000" }),
     });
     expect(response.status).toBe(401);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signed-in diver, whose token never claimed staff", async () => {
+    const { db, shop, trip, personId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId, ["diver"]));
+
+    const response = await GET(manifestEventsRequest(trip.id), {
+      params: Promise.resolve({ id: trip.id }),
+    });
+    expect(response.status).toBe(401);
+    // Same short-circuit: the token itself never claimed staff, so there is
+    // nothing for a live re-check to disagree with.
+    expect(getDb).not.toHaveBeenCalled();
   });
 
   it("404s for a trip that doesn't belong to the caller's shop", async () => {
-    const { db, shop } = await seededContext();
+    const { db, shop, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const otherTripId = "11111111-1111-1111-1111-111111111111";
     const response = await GET(manifestEventsRequest(otherTripId), {
@@ -116,9 +191,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("closes the stream immediately when the request is already aborted before start() runs", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const controller = new AbortController();
     controller.abort();
@@ -135,9 +210,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("unsubscribes when the stream is cancelled directly, without aborting the request", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const first = await GET(manifestEventsRequest(trip.id), {
       params: Promise.resolve({ id: trip.id }),
@@ -164,9 +239,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("opens with a reconnect delay, so a retired stream is replaced without waiting on the browser default", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const response = await GET(manifestEventsRequest(trip.id), {
       params: Promise.resolve({ id: trip.id }),
@@ -181,9 +256,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("retires its own stream well inside the function's duration budget", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     vi.useFakeTimers();
     try {
@@ -234,9 +309,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
    * life of the page rather than for a minute.
    */
   it("turns a viewer away at the instance ceiling, as a reconnect rather than an error", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const release = Array.from({ length: MAX_MANIFEST_SUBSCRIBERS }, () =>
@@ -286,9 +361,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("admits a viewer while the instance is one below its ceiling", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const release = Array.from({ length: MAX_MANIFEST_SUBSCRIBERS - 1 }, () =>
       subscribeManifestEvents(shop.id, trip.id, () => {}),
@@ -308,9 +383,9 @@ describe("GET /api/trips/[id]/manifest-events", () => {
   });
 
   it("pushes a manifest-changed event through the stream when the trip's roll call changes", async () => {
-    const { db, shop, trip } = await seededContext();
+    const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const response = await GET(manifestEventsRequest(trip.id), {
       params: Promise.resolve({ id: trip.id }),
@@ -320,5 +395,180 @@ describe("GET /api/trips/[id]/manifest-events", () => {
     await publishManifestEvent(db, shop.id, trip.id);
     const chunk = await readOneChunk(response);
     expect(chunk).toContain("event: manifest-changed");
+  });
+
+  /**
+   * The same window `/api/offline-manifests/identity` and `/upcoming` closed
+   * (78ba3c4). The gate used to read the roles baked into the JWT at sign-in,
+   * and no `maxAge` is set on the session (src/lib/auth.config.ts) so NextAuth's
+   * 30-day default applies. `/api/**` is excluded from the edge gate
+   * (src/proxy.ts), so this handler is the only wall — which meant a staffer
+   * removed from the shop kept a live push channel onto its boats for a month.
+   *
+   * This one is a *stream*, so the gate is at subscribe time and the last test
+   * in this block says what that does and does not buy. Placement differs from
+   * the sibling routes too: they run the live check after their shop-row lookup,
+   * because `loadActiveStaffRoles` is shop-scoped and would turn an owed 404
+   * into a 401; this route reads no shop row at all, so the check goes first and
+   * a revoked caller cannot tell a real trip id from a made-up one.
+   */
+  describe("live roles, not the ones the token was stamped with", () => {
+    it("refuses a caller whose person_roles rows are gone, token still saying owner", async () => {
+      const { db, shop, trip } = await seededContext();
+      const stripped = await makeStaff(db, shop.id, []);
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(staffSession(shop.id, stripped));
+
+      const before = manifestSubscriberCount();
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(response.status).toBe(401);
+      // A refusal, not an event stream: no subscription was taken out, so the
+      // caller holds nothing and costs the instance nothing. A refused viewer
+      // that still took a slot would ratchet the ceiling shut on a warm
+      // instance, which is the failure the capacity test above guards from the
+      // other side.
+      expect(response.headers.get("Content-Type")).not.toBe("text/event-stream");
+      expect(manifestSubscriberCount()).toBe(before);
+    });
+
+    it("refuses a caller demoted to diver, token still saying owner", async () => {
+      const { db, shop, trip } = await seededContext();
+      const demoted = await makeStaff(db, shop.id, ["diver"]);
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(staffSession(shop.id, demoted));
+
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(response.status).toBe(401);
+    });
+
+    it("refuses a disabled account and a deleted person, both still holding a staff token", async () => {
+      const { db, shop, trip } = await seededContext();
+      const disabled = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
+      const deleted = await makeStaff(db, shop.id, ["owner"], { deleted: true });
+      vi.mocked(getDb).mockResolvedValue(db);
+
+      for (const person of [disabled, deleted]) {
+        vi.mocked(auth).mockResolvedValue(staffSession(shop.id, person));
+        const response = await GET(manifestEventsRequest(trip.id), {
+          params: Promise.resolve({ id: trip.id }),
+        });
+        expect(response.status).toBe(401);
+      }
+    });
+
+    it("refuses a token whose personId belongs to another shop's staff", async () => {
+      // The re-check is shop-scoped, so it stands as a second wall in front of
+      // the tenant boundary `shopId` already draws: this shop's id paired with a
+      // person who is not theirs finds nothing.
+      const { db, shop, trip } = await seededContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Reef Runners", slug: "reef-runners", timezone: "America/New_York" })
+        .returning();
+      if (!otherShop) throw new Error("insert failed");
+      const foreign = await makeStaff(db, otherShop.id, ["owner"]);
+
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(staffSession(shop.id, foreign));
+
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(response.status).toBe(401);
+    });
+
+    it("refuses before the trip lookup, so a revoked caller cannot tell a real trip id from a made-up one", async () => {
+      // The ordering choice, stated as behaviour. A live staff member still gets
+      // 404 for a trip that is not their shop's (test above) — the difference is
+      // only ever visible to someone who is still staff.
+      const { db, shop, trip } = await seededContext();
+      const stripped = await makeStaff(db, shop.id, []);
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(staffSession(shop.id, stripped));
+
+      const real = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      const invented = "11111111-1111-1111-1111-111111111111";
+      const missing = await GET(manifestEventsRequest(invented), {
+        params: Promise.resolve({ id: invented }),
+      });
+      expect([real.status, missing.status]).toEqual([401, 401]);
+      expect(await real.json()).toEqual(await missing.json());
+    });
+
+    it("refuses on the next subscribe after the role is revoked, without a re-issued token", async () => {
+      // The revocation window itself, measured: the same session object either
+      // side of the delete, and the only thing that changed is a row.
+      const { db, shop, trip } = await seededContext();
+      const person = await makeStaff(db, shop.id, ["captain"]);
+      const session = staffSession(shop.id, person, ["captain"]);
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(session);
+
+      const first = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(first.status).toBe(200);
+      await first.body?.getReader().cancel();
+
+      await db.delete(personRoles).where(eq(personRoles.personId, person));
+      const second = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(second.status).toBe(401);
+    });
+
+    /**
+     * The deliberate residual, pinned so the next reader knows it was decided
+     * rather than missed.
+     *
+     * A stream already open when the role is revoked keeps running: the check is
+     * at subscribe time only, because the alternatives are a role lookup on each
+     * 25s heartbeat (ten per stream, times every subscriber on the instance, on
+     * the pool the whole app shares) or one inside the shared dispatch loop,
+     * where a throw takes out every *other* viewer. What the survivor receives
+     * is `event: manifest-changed` with an empty body — a ping, no diver data;
+     * every byte behind it is fetched through routes that now refuse them.
+     *
+     * And the window is bounded without any of that, by machinery the route
+     * already has: it retires each stream itself at STREAM_TTL_MS (four minutes,
+     * asserted by "retires its own stream well inside the function's duration
+     * budget"), and `EventSource` reconnects two seconds later into a fresh GET
+     * that runs the whole gate again — which is the second half of this test.
+     * Under four minutes of pings, against thirty days of push before the fix.
+     */
+    it("lets an already-open stream finish, and refuses its reconnect", async () => {
+      const { db, shop, trip } = await seededContext();
+      const person = await makeStaff(db, shop.id, ["captain"]);
+      const session = staffSession(shop.id, person, ["captain"]);
+      vi.mocked(getDb).mockResolvedValue(db);
+      vi.mocked(auth).mockResolvedValue(session);
+
+      const open = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(open.status).toBe(200);
+
+      await db.delete(personRoles).where(eq(personRoles.personId, person));
+
+      // Still connected, and still pushed to — this is the accepted cost.
+      await publishManifestEvent(db, shop.id, trip.id);
+      const chunk = await readOneChunk(open);
+      expect(chunk).toContain("event: manifest-changed");
+      // ...and it carries no roster: the payload is empty by design, so the
+      // residual is "something moved on this boat", not anybody's name.
+      expect(chunk).toContain("data: {}");
+
+      // The reconnect the retirement forces is where revocation lands.
+      const reconnect = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(reconnect.status).toBe(401);
+    });
   });
 });

@@ -18,8 +18,13 @@ new domain concept, define it here in the same PR.
 ## Certification
 
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,
-  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**. A diver's card is agency-specific but
-  levels are broadly equivalent across agencies.
+  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**. A diver's card is agency-specific but
+  levels are broadly equivalent across agencies. Two different fields carry an agency name and they
+  must not be confused: `certification_agency` is a **pg enum** — the agencies a diver's *card* may
+  be recorded under — while `courses.agency` is **free text a shop types** for a course it teaches,
+  and is the one `src/lib/course-ratios.ts` reads. Nothing in readiness, trip admission, or the
+  nitrox fill gate reads either one; a card clears on its level and its verification state. See
+  **Other agency** for what the enum still cannot say.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
   agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
   may require a refresher after long inactivity. DiveDay stores that optional date on the card
@@ -103,6 +108,54 @@ new domain concept, define it here in the same PR.
   Dives. It is the agency's real prerequisite for Deep, Wreck, and Rescue. DiveDay's ladder cannot
   record it, so those courses are gated at AOW — again a **shop-set** gate, and a valid Adventure
   Diver deserves to be told the difference is ours and invited to ask.
+- **CMAS** — a **confederation, not an issuer**: the card is issued and numbered by a *national
+  federation* (FFESSM in France, VDST in Germany, FIPSAS in Italy, LIFRAS in francophone Belgium…)
+  under CMAS standards, so there is no single CMAS registry a staffer can check a number against —
+  the lookup **Verified certification** describes has to go to the federation named on the card.
+  Its ladder is stars, and DiveDay's ladder holds it like this: **1★ ≈ Open Water** (ISO 24801-2
+  *Autonomous Diver*, the same rung PADI Open Water maps to), **2★ ≈ Advanced Open Water**, **3★ ≈
+  Divemaster** (ISO 24801-3 *Dive Leader*). Two traps live in that mapping. **The stars are also
+  instructor grades** — "CMAS 2 star" is genuinely ambiguous between a roughly-30 m recreational
+  diver and a fully qualified instructor, a four-rung gap on the same two words, so the card itself
+  has to be read rather than the cell. And **2★ → AOW silently drops rescue content**: CMAS bundles
+  rescue skills into 2★ that PADI puts in a separate Rescue course, so recording an honest 2★ as
+  Advanced Open Water under-records a diver who would clear a Rescue gate. Both directions are
+  DiveDay's ladder failing to hold the agency's rung, not the diver's card being wrong.
+- **RAID** — Dive RAID International. **Open Water 20 ≈ Open Water**, **Advanced 35 ≈ Advanced
+  Open Water** — and the numbers in those names are the depths, which is where DiveDay is wrong
+  about a real diver: RAID's Advanced is a **35 m** qualification and DiveDay's Advanced Open Water
+  ceiling is **30 m** (`src/lib/depth-ceiling.ts`), so a RAID Advanced diver booked on a 32 m site
+  draws a depth warning that is factually wrong about *that* diver. It stays a **warning and never a
+  gate** (H-08, see **Depth ceiling**), so nobody is refused — but a warning that is routinely wrong
+  is one a crew learns to click past, and the cost lands on the next warning, which may be right.
+  Also see **Bundled nitrox**: RAID issues no standalone EANx card.
+- **GUE** — Global Underwater Explorers, and the agency DiveDay's ladder **does not hold at all**.
+  There is no AOW rung, no Rescue rung and no Divemaster rung to map to: the progression is
+  **Fundamentals → Rec 1–3 → Tech 1–2 → Cave 1–2**. **Rec 1 ≈ Open Water is an under-record, not an
+  equivalence** — Rec 1 goes past 18 m and includes EANx 32, so filing it as Open Water hands the
+  diver a 18 m ceiling they trained past and loses the nitrox training entirely. **Fundamentals is
+  not an entry-level card**: it is a skills course that presupposes an entry-level certification
+  from another agency, so the honest record for a Fundamentals diver is **two cards** — their
+  original agency's rung, plus the GUE card — never one GUE row parked at an invented rung. Also see
+  **Bundled nitrox**.
+- **Bundled nitrox** — **RAID and GUE issue no standalone enriched-air card.** EANx is trained
+  inside the level card (RAID Open Water 20, GUE Rec 1), so there is no second number to type, and
+  a staffer filling enriched air for one of those divers enters the **level card's own number** in
+  the nitrox row. That is correct and it works: `nitrox_certifications`' unique index is per shop,
+  per agency and per table, so the same number on a `certifications` row and a `nitrox_certifications`
+  row is not a collision. It is written down because it looks like a mistake to whoever does it, and
+  the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
+  tank over off-system — are both worse than an entry that looks odd.
+- **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
+  there is no free-text companion column anywhere in the schema, so a diver holding an **IANTD**,
+  **SEI**, **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere
+  to write *which* one — and the staffer who later has to look that number up has no idea whose
+  portal to open. Widening the enum (CMAS/RAID/GUE, then BSAC) narrows the problem for the next shop
+  and never closes it; the closing fix is the companion field, not a longer list. **BSAC** —
+  British Sub-Aqua Club, the UK national governing body, ISO-aligned ladder **Ocean Diver ≈ Open
+  Water → Sports Diver ≈ Advanced Open Water → Dive Leader ≈ Divemaster → Advanced Diver → First
+  Class Diver** — was added because UK visitor traffic makes it the most common non-listed card on a
+  Florida or Caribbean boat.
 - **Junior certification** — the age-linked form of a level for divers under 15: **Junior Open
   Water**, **Junior Advanced Open Water**, **Junior Night Diver**, and so on. Same card, extra
   restrictions — 10–11-year-olds are limited to 12 m and must dive with a PADI Professional or a
@@ -396,6 +449,12 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+- **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
+  left with: divers plus crew, one number, no distinction between who paid and who works. It is
+  printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
+  **static** fact about the departure — how many the trip carries, how many crew it names — never a
+  live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
+  correct itself. The screen answers the live question, in the checkpoint panel.
 - **Incident-ready export** — the print-optimized document a shop hands to authorities or insurers
   after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
   complete append-only roll-call timeline (corrections included), certification evidence as held,
