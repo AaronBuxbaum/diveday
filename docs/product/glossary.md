@@ -127,7 +127,10 @@ new domain concept, define it here in the same PR.
 - **Depth unit** — `shops.depth_unit`, whether a shop's staff read depths in metres or feet.
   Display and entry only: storage is canonical metres, so switching it moves no stored number.
   Florida crews say "sixty feet"; every agency standard DiveDay encodes is published in metres,
-  which is why the stored unit and the default are metric.
+  which is why the stored unit and the default are metric. It governs every vertical distance the
+  product shows, not only depths — including the automated outlook's wave height, at its own
+  precision rule (a tenth of a metre, a whole foot), because whole metres would collapse the entire
+  range a reef boat ever sees into 0 and 1.
 - **Temperature unit** — `shops.temperature_unit`, whether a shop's staff and divers read water
   temperature in Celsius or Fahrenheit. Display and entry only, on the same terms as the depth unit
   above: storage is canonical Celsius (`trips.water_temperature_c`), so switching it moves no
@@ -342,8 +345,14 @@ new domain concept, define it here in the same PR.
   the crew makes the final go/no-go call.
 - **Automated marine outlook** — a provider-generated, date-specific planning fallback shown only
   in the ten days before a charter when no crew prediction exists. It states its source and valid
-  time, never makes a go/no-go call, and yields completely to a crew prediction. The first slice
-  supplies water temperature and surface state; underwater visibility remains a crew observation.
+  time, never makes a go/no-go call, and yields completely to a crew prediction. It supplies water
+  temperature and a **sea state** — three values, none of them a judgement: wave height, the
+  direction the waves come *from*, and the wave period. Underwater visibility remains a crew
+  observation. Two conventions worth stating, because both are easy to get backwards and neither is
+  visible in the number: the height is **significant wave height** (the mean of the highest third,
+  which is what every marine forecast means by "seas" — individual sets run roughly 1.5–2× it, so
+  the product says *seas*, never *waves*), and the direction is where the waves are **coming from**,
+  not where they are going. The going-toward convention exists, but it belongs to current.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment.

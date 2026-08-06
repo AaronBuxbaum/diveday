@@ -33,18 +33,6 @@ type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
  * One row of signed-record evidence, shared by the "jumped to from the
  * roster" highlight and the paginated list below it, so the two never drift
  * apart in what they show.
- *
- * `pinned` exists because the two callers can render the *same* record at
- * once: `?record=` is resolved independently of which page the list is
- * showing, so whenever the pinned record also falls on the current page, both
- * sections render it. Sharing one `id` between them put two elements with the
- * same DOM id on the page — invalid HTML, and enough to make any
- * `#waiver-record-…` anchor or `li[id^="waiver-record-"]` selector ambiguous
- * (it broke the roster's own e2e journey on a strict-mode violation). The
- * canonical id stays on the log row, which is the evidentiary record and the
- * thing an anchor should land on; the pin is a convenience copy already at the
- * top of the page, so it takes a deliberately non-colliding prefix rather than
- * a suffix that would still match the same selector.
  */
 function SignedRecordRow({
   entry,
@@ -52,18 +40,16 @@ function SignedRecordRow({
   shop,
   locale,
   t,
-  pinned = false,
 }: {
   entry: NonNullable<SignedWaiverEntry>;
   shopSlug: string;
   shop: Shop;
   locale: string;
   t: StaffTranslator;
-  pinned?: boolean;
 }) {
   return (
     <li
-      id={`${pinned ? "pinned-" : ""}waiver-record-${entry.id}`}
+      id={`waiver-record-${entry.id}`}
       className="scroll-mt-24 flex flex-col gap-3 px-4 py-4 text-sm sm:flex-row sm:items-start sm:justify-between"
     >
       <div className="min-w-0">
@@ -184,7 +170,22 @@ export default async function WaiverSignaturesPage({
   const auditPage = await listWaiverIntegrityAudit(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
-  const { entries } = auditPage;
+  // The pinned record is rendered above; the list must not render it again.
+  // `SignedRecordRow` puts `id="waiver-record-<id>"` on its `<li>`, so a
+  // highlighted record that also falls on the visible page produced **two
+  // elements with the same DOM id** — invalid HTML, two hit targets for one
+  // anchor, and the same evidence row shown twice on one screen.
+  //
+  // It only surfaced as a test failure because it depends on where the record
+  // lands: the list orders by `signedAt desc, id desc`, and `id` is a random
+  // UUID, so a record sitting on a page boundary among rows that share a
+  // timestamp crosses it or not depending on the UUIDs a given seed drew. The
+  // demo's medical-review fixture sits on exactly that boundary.
+  //
+  // Only the rendered rows are filtered. `auditPage`'s total and page count
+  // describe the whole log and stay untouched — the record has not gone
+  // anywhere, it is one section further up.
+  const entries = auditPage.entries.filter((entry) => entry.id !== highlighted?.id);
   const base = `/shop/${shopSlug}/waivers/signatures`;
   // The `?record=` highlight is a separate pin above this list, so it travels
   // with the page rather than being dropped the moment a reviewer turns one.
@@ -217,7 +218,6 @@ export default async function WaiverSignaturesPage({
               shop={shop}
               locale={locale}
               t={t}
-              pinned
             />
           </ul>
         </section>

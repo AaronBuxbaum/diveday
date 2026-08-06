@@ -11,22 +11,25 @@ runbook" as still to be written down. This is that document.
 There is one operator. Everything here is written to be followed alone, at speed, without
 consulting anyone.
 
-## Prerequisite: the alert address does not exist yet
+## Prerequisite: where the alerts go
 
-> `TODO(owner)` — **Create `alerts@dive.day` as a hosted mailbox (or forwarding group).** Every
-> destination in this runbook and in [monitoring-runbook.md](monitoring-runbook.md) points at it —
-> Sentry issue alerts, Sentry Cron Monitor missed check-ins, the uptime monitor below, and the app's
-> own new-account alert (`ALERT_EMAIL` in `src/lib/platform-mail.ts` already targets it). Set it up
-> the same way `aaron@dive.day` and `legal@dive.day` were — see "DiveDay's own addresses" in
-> [ses-email-runbook.md](ses-email-runbook.md). Until it exists, **every alert in this
-> document goes nowhere.**
+`alerts@dive.day` **exists** (owner, 2026-08-06), set up the same way `aaron@dive.day` and
+`legal@dive.day` were — see "DiveDay's own addresses" in
+[ses-email-runbook.md](ses-email-runbook.md). Every destination in this runbook and in
+[monitoring-runbook.md](monitoring-runbook.md) points at it: Sentry issue alerts, Sentry Cron
+Monitor missed check-ins, the uptime monitor below, the app's own new-account alert (`ALERT_EMAIL`
+in `src/lib/platform-mail.ts`), and the AWS budget-threshold and cost-anomaly alerts, whose
+`alertEmail` default in `infra/lib/infra-stack.ts` §7 is now that address rather than a personal
+Gmail. The stack default only takes effect on the next `pnpm infra:deploy`; a stack deployed before
+2026-08-06 still carries the old subscription until then, and the SNS email subscription it creates
+needs a human to click Confirm in the mailbox either way.
 
-> `TODO(owner)` — **Repoint the AWS cost alerts too.** `infra/lib/infra-stack.ts` §7 defaults
-> `alertEmail` to a personal Gmail address, so budget-threshold and cost-anomaly alerts land in a
-> personal inbox rather than the operational one. Once `alerts@dive.day` exists, either redeploy with
-> `--context alertEmail=alerts@dive.day` or change the default in the stack. Noted here because it is
-> the same class of drift this runbook is trying to prevent: alerts nobody has confirmed a human
-> actually receives.
+> `TODO(owner)` — **Stand up the external uptime monitor and the public status page.** Everything
+> above is a path *out of* DiveDay's own infrastructure into a mailbox. Nothing yet watches from
+> outside: a total outage — the Vercel project down, DNS wrong, the region gone — takes the alerting
+> with it, so the first person to notice is a shop with a boat leaving. The target and the cadence
+> are specified in [monitoring-runbook.md](monitoring-runbook.md); this is the half of OPS-4 that is
+> still zero.
 
 ## Severity ladder
 
@@ -137,8 +140,7 @@ sufficient at this scale):
 1. Create both checks above at a **5-minute** interval, HTTP GET, 10-second timeout.
 2. Require **two consecutive failures** before alerting. A single failed poll is noise; the second
    is signal.
-3. Send alerts to `alerts@dive.day` (the `TODO(owner)` at the top of this file — until it exists,
-   use a real inbox you actually read, and fix it afterward).
+3. Send alerts to `alerts@dive.day` — the mailbox exists, so this needs no interim address.
 4. On the schedule check, add a keyword assertion on text you expect the page to contain, so a
    `200` that renders an empty shell still fails. **Do not** assert on a date or price — those move
    with the clock and the negotiated locale, and the check will flap.
@@ -241,4 +243,4 @@ down once will let you down again.
 | Errors appeared right after a deploy | [deploy-and-migrations-runbook.md](deploy-and-migrations-runbook.md) — most likely a contracting migration, or a build that failed after `pnpm db:migrate` already ran |
 | Instant Rollback didn't help | The damage is in data, not code. [backup-and-restore-runbook.md](backup-and-restore-runbook.md) §1 |
 | Nothing seems wrong but a shop says it is | Ask which URL and what time, then check that shop's schedule directly. Shop-scoped data problems are invisible from every dashboard in this document |
-| Errors are reported but no alert email arrived | `alerts@dive.day` almost certainly doesn't exist yet — the `TODO(owner)` at the top. Then the checklist in [monitoring-runbook.md](monitoring-runbook.md) |
+| Errors are reported but no alert email arrived | The mailbox exists, so this is a wiring problem, not a missing address: check Sentry's alert rule actually names it, then that the SNS email subscription was confirmed (AWS won't send to an unconfirmed one, and it looks identical to a working one in the console until you look at its status). Then the checklist in [monitoring-runbook.md](monitoring-runbook.md) |

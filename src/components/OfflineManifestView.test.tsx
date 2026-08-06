@@ -5,6 +5,7 @@ import {
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
+  purgeOfflineManifestsExceptShop,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
@@ -25,6 +26,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
+  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
   syncOfflineManifest: vi.fn(),
   // The version-mismatch banner (task 124) resolves this on mount; no active
   // worker in jsdom, so "nothing to warn about" is the correct default here.
@@ -273,7 +275,12 @@ beforeEach(() => {
   // endpoint before syncing any pending event — default to matching the
   // fixtures' own shop ("blue-mantis") so existing reconcile tests keep
   // working; tests for the cross-shop case override this per-call.
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(upcomingResponse("blue-mantis")));
+  // A fresh Response per call: a body can be consumed only once, and more than
+  // one caller reaches this endpoint per mount.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async () => upcomingResponse("blue-mantis")),
+  );
 });
 
 afterEach(() => {
@@ -401,6 +408,98 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(screen.getByText(/Reef Runners/)).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(syncOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  // SEC-D3 (review 20260802). The purge used to fire only from
+  // OfflineManifestAutoSave, which mounts in the staff shop layout — so a
+  // captain who only ever opens this shell on a shared or reassigned boat
+  // tablet kept the previous shop's roster decryptable indefinitely. This
+  // surface is where those records are read, so it is where the second trigger
+  // belongs.
+  it("purges another shop's leftover records when the shell loads", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    // The server-verified slug, never one read off a snapshot this device holds.
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+    // And the list is re-read afterwards, so a record the purge removed stops
+    // being displayed within the same round rather than until the next visit.
+    await waitFor(() =>
+      expect(vi.mocked(listOfflineManifests).mock.invocationCallOrder.at(-1)).toBeGreaterThan(
+        vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0],
+      ),
+    );
+  });
+
+  // Security review, 2026-08-06: `?trip=<id>` is the URL the list itself links
+  // to and the one `manifest-sw.js` replays after a failed reload, so it is what
+  // a captain actually bookmarks — a purge that ran only on the list branch
+  // would miss exactly the person SEC-D3 exists for.
+  it("purges on the single-trip surface too, not only on the list", async () => {
+    searchParams = new URLSearchParams("trip=trip-1");
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
+    vi.mocked(fetch).mockResolvedValue(upcomingResponse("blue-mantis"));
+
+    render(<OfflineManifestView />);
+
+    await waitFor(() =>
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+    );
+  });
+
+  // The purge needs a server round trip to learn the tenant; the roll call does
+  // not. A captain on a marina connection must get the list this device already
+  // holds without waiting on the network — this surface exists precisely for
+  // the case where the network is the thing that isn't working.
+  it("paints the device's list before consulting the network", async () => {
+    let releaseFetch: (value: Response) => void = () => {};
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(fetch).mockReturnValue(
+      new Promise<Response>((resolve) => {
+        releaseFetch = resolve;
+      }),
+    );
+
+    render(<OfflineManifestView />);
+
+    // Painted while the request is still outstanding.
+    expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+
+    releaseFetch(upcomingResponse("blue-mantis"));
+    await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
+  });
+
+  it("purges nothing when the current shop cannot be established", async () => {
+    // Genuinely offline: there is no way to learn which tenant this browser is
+    // signed in as, and guessing would delete the copy a captain is standing on
+    // the dock holding. Fail toward keeping the records, and toward showing them.
+    setOnline(false);
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Two-Tank Reef");
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("still lists the device's records when the purge itself fails", async () => {
+    // Unlike the auto-save path, which fails its whole round rather than write
+    // a second shop's rosters in beside the first, this surface must still
+    // paint: refusing to show a captain the manifest they came for does not
+    // remove the foreign record, it only removes the working one.
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+    vi.mocked(purgeOfflineManifestsExceptShop).mockRejectedValueOnce(new Error("storage gone"));
+
+    render(<OfflineManifestView />);
+
+    expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
   });
 
   it("does not attempt to reconcile while offline", async () => {

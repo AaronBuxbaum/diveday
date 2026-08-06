@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -32,6 +32,7 @@ import {
   listOfflineManifests,
   loadOfflineManifest,
   OfflineManifestError,
+  purgeOfflineManifestsExceptShop,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
@@ -51,6 +52,42 @@ import {
  */
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
+}
+
+const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
+
+/**
+ * Server-verified "who is this browser signed in as", the same way
+ * `OfflineManifestAutoSave` learns it — never a client-supplied value, never a
+ * slug read off a snapshot this device already holds. Null whenever the answer
+ * cannot be established (offline, signed out, a request that failed): every
+ * caller treats null as "do nothing", because guessing the tenant is the one
+ * mistake worth more than the work it would unblock.
+ */
+async function fetchCurrentShopSlug(): Promise<string | null> {
+  if (!navigator.onLine) return null;
+  // `navigator.onLine` says a radio is on, not that anything answers. On a
+  // marina connection the request can hang indefinitely, and everything
+  // downstream of this — the purge, and the reconcile of a captain's queued
+  // roll call — would hang with it. Give up and let the next trigger (reconnect,
+  // or the next visit) try again. An explicit controller rather than
+  // `AbortSignal.timeout`, matching `fetchExportPhotos`: the static helper is
+  // absent under jsdom, so using it would have made this function return null
+  // in every component test and silently disable the reconcile it guards.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
+  try {
+    const response = await fetch("/api/offline-manifests/upcoming", {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return ((await response.json()) as { shop: { slug: string } }).shop.slug;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
@@ -150,8 +187,46 @@ export function OfflineManifestView() {
     return () => clearInterval(interval);
   }, []);
 
+  /**
+   * The server-verified tenant, cached for this mount. The purge effect below
+   * refreshes it on load and on every reconnect; this is the cheap read for the
+   * call sites that only need to *check* it (a captain tapping Board should not
+   * pay for a request).
+   */
+  const tenantSlugRef = useRef<string | null>(null);
+  /**
+   * The in-flight lookup, so the purge effect and the branch effect below share
+   * one request instead of racing two on every mount and every reconnect. This
+   * endpoint returns the shop's whole 48-hour roster to answer a one-word
+   * question, so a duplicate is not free (security review, 2026-08-06).
+   */
+  const tenantLookupRef = useRef<Promise<string | null> | null>(null);
+
+  const resolveTenant = useCallback(async (): Promise<string | null> => {
+    if (tenantSlugRef.current) return tenantSlugRef.current;
+    tenantLookupRef.current ??= fetchCurrentShopSlug().finally(() => {
+      tenantLookupRef.current = null;
+    });
+    const slug = await tenantLookupRef.current;
+    if (slug) tenantSlugRef.current = slug;
+    return slug;
+  }, []);
+
   const reconcile = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
+    // Same rule `reconcileList` applies to the device-wide list, and it belongs
+    // here at least as much (security review, 2026-08-06): a foreign shop's
+    // record is *deliberately preserved* by the purge while it still holds a
+    // pending event, and it is listed and tappable. Submitting that event under
+    // whatever shop is currently signed in gets it rejected for a tenant
+    // mismatch rather than a real domain refusal — and a rejected event is no
+    // longer "pending", so the very next purge pass deletes the record outright.
+    // That destroys the only copy of a boarding record. If the tenant cannot be
+    // established, reconcile nothing rather than guess.
+    const slug = await resolveTenant();
+    if (!slug) return;
+    const held = await loadOfflineManifest(tripId).catch(() => null);
+    if (!held || held.snapshot.shop.slug !== slug) return;
     try {
       const next = await syncOfflineManifest(tripId);
       if (!next) return;
@@ -168,7 +243,7 @@ export function OfflineManifestView() {
     } catch {
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t]);
+  }, [tripId, t, resolveTenant]);
 
   // Reconciles every saved trip that still has a pending roll-call event, not
   // just the one a captain happens to open next — otherwise a change recorded
@@ -177,7 +252,7 @@ export function OfflineManifestView() {
   // back in service" (see the P1 fix in ADR
   // 20260726-shopwide-offline-manifest-priming's review follow-up).
   const reconcileList = useCallback(
-    async (saved: OfflineManifestEnvelope[]) => {
+    async (saved: OfflineManifestEnvelope[], currentShopSlug: string | null) => {
       if (!navigator.onLine) return;
       const withPending = saved.filter((envelope) =>
         envelope.events.some((event) => event.syncStatus === "pending"),
@@ -191,20 +266,11 @@ export function OfflineManifestView() {
       // purgeOfflineManifestsExceptShop — would otherwise get submitted under
       // whatever shop *is* currently signed in, rejected for a tenant mismatch
       // rather than a genuine domain refusal, and then look "resolved" to the
-      // very next purge pass, which would delete it outright. Learn the
-      // server-verified current shop the same way the auto-save does; if that
-      // can't be determined (offline, signed out, request failure), reconcile
-      // nothing rather than guess.
-      let currentShopSlug: string;
-      try {
-        const response = await fetch("/api/offline-manifests/upcoming", {
-          credentials: "same-origin",
-        });
-        if (!response.ok) return;
-        currentShopSlug = ((await response.json()) as { shop: { slug: string } }).shop.slug;
-      } catch {
-        return;
-      }
+      // very next purge pass, which would delete it outright. The
+      // server-verified current shop is resolved once by the caller (it also
+      // drives the cross-tenant purge); if it can't be determined (offline,
+      // signed out, request failure), reconcile nothing rather than guess.
+      if (!currentShopSlug) return;
       const reconcilable = withPending.filter(
         (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
       );
@@ -244,21 +310,87 @@ export function OfflineManifestView() {
     [t],
   );
 
+  /**
+   * SEC-D3 (review 20260802). The cross-shop purge used to run only from
+   * `OfflineManifestAutoSave`, which mounts in the *staff shop layout*. A
+   * captain who lives on this shell — bookmarks it, opens it at the dock, never
+   * navigates into `/shop/**` on that device — therefore never ran one, so a
+   * shared or reassigned boat tablet kept the previous shop's roster
+   * decryptable indefinitely.
+   *
+   * Deliberately its **own** effect rather than a step inside the list branch
+   * below: the URL a captain actually bookmarks is the one the list links to,
+   * `?trip=<id>`, and the one `manifest-sw.js` replays after a failed reload —
+   * so a purge that ran only on the list branch would miss exactly the person
+   * SEC-D3 is about (security review, 2026-08-06). Runs on both branches, and
+   * again on every reconnect.
+   *
+   * It never blocks a render. The purge needs a server round trip to learn
+   * which tenant this browser is signed in as, and on a marina connection that
+   * can take as long as `fetchCurrentShopSlug`'s timeout allows — a captain
+   * opening the roll call must never wait on it, which is the entire premise of
+   * this surface. What SEC-D3 shortens is how *long* a foreign roster stays
+   * decryptable, not the moment it stops being on screen.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    const purge = async () => {
+      // Re-verified each round rather than read from the cache: a reconnect is
+      // exactly when the signed-in shop may have changed, which is the event
+      // this whole mechanism exists for.
+      tenantSlugRef.current = null;
+      const slug = await resolveTenant();
+      if (cancelled || !slug) return;
+      try {
+        await purgeOfflineManifestsExceptShop(slug);
+      } catch {
+        // Best-effort, unlike the auto-save path, which fails its whole round
+        // when the purge throws. There the alternative is writing a second
+        // shop's rosters in beside the first; here the alternative is blanking
+        // the list a captain is standing on the dock reading. Residency is
+        // shortened when this succeeds and unchanged when it does not.
+        return;
+      }
+      if (cancelled) return;
+      // Re-read so a record the purge removed stops being displayed in this
+      // round rather than at the next visit.
+      listOfflineManifests()
+        .then((saved) => {
+          if (!cancelled) setList((current) => (current === null ? current : saved));
+        })
+        .catch(() => {});
+    };
+    void purge();
+    window.addEventListener("online", purge);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", purge);
+    };
+  }, [resolveTenant]);
+
   useEffect(() => {
     if (!tripId) {
       // No specific trip requested — this is the dive.day-root/shell landing
       // page (see ADR 20260726-shopwide-offline-manifest-priming), so list
       // whatever this device already has rather than asking for a trip id.
+      const showList = (saved: OfflineManifestEnvelope[]) => {
+        setList(saved);
+        setMessage(
+          saved.length > 0
+            ? t("shared.offlineManifest.reconcile.savedCount", { count: saved.length })
+            : t("shared.offlineManifest.reconcile.noneSavedYet"),
+        );
+      };
+
       const refreshList = () =>
         listOfflineManifests()
-          .then((saved) => {
-            setList(saved);
-            setMessage(
-              saved.length > 0
-                ? t("shared.offlineManifest.reconcile.savedCount", { count: saved.length })
-                : t("shared.offlineManifest.reconcile.noneSavedYet"),
-            );
-            void reconcileList(saved);
+          .then(async (saved) => {
+            // Paint from storage alone, before anything touches the network —
+            // the whole premise of this surface. The cross-shop purge runs in
+            // its own effect above and repaints if it removes anything.
+            showList(saved);
+            setStoreRead(true);
+            void reconcileList(saved, await resolveTenant());
           })
           .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")))
           // Settled either way: a device whose storage can't be opened at all
@@ -295,7 +427,7 @@ export function OfflineManifestView() {
       .finally(() => setStoreRead(true));
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, reconcileList, tripId, t]);
+  }, [reconcile, reconcileList, resolveTenant, tripId, t]);
 
   // Before the store has been read — which includes every server render, since
   // the effect above only runs in the browser — say what is actually true and

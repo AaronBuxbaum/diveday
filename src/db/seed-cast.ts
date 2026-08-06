@@ -1,4 +1,46 @@
 /**
+ * The shop's staff, shared by both seeders — the canonical `blue-mantis` demo
+ * and every freshly-minted per-visitor demo shop — so the two can never drift
+ * into different casts. They differ only in how an email is built: the
+ * canonical shop uses `<local>@demo.invalid` (the addresses in
+ * `dev-credentials.ts`), a minted shop namespaces the same local part under its
+ * own slug.
+ *
+ * The names are the stable key. `seedDemoSchedule` runs against both shops and
+ * so cannot look staff up by a hard-coded email — but it also cannot look the
+ * instructor up by role any more, because as of DOM-M7 there are two, and a
+ * bare `where role = 'instructor' limit 1` would pick whichever row Postgres
+ * happened to return first and silently reshuffle the demo between runs.
+ *
+ * **Order is load-bearing** and matches the insert order both seeders use.
+ */
+export const staffDefs = [
+  { fullName: "Dana Reyes", local: "dana", roles: ["owner", "manager"] },
+  { fullName: "Marcus Webb", local: "marcus", roles: ["instructor"] },
+  { fullName: "Keiko Tanaka", local: "keiko", roles: ["divemaster"] },
+  { fullName: "Sal Moretti", local: "sal", roles: ["captain"] },
+  /**
+   * The shop's second instructor (DOM-M7, review 20260802). A real shop of this
+   * size has one lead and one more who teaches some of the week — and without
+   * her the demo could not show the one (shop role × trip role) combination the
+   * seed never covered: **an instructor rostered as a session's divemaster**.
+   * That case needs two, because rostering the only instructor as somebody
+   * else's assistant leaves the course with nobody on the ratio.
+   *
+   * She is not one of the sign-in accounts in `dev-credentials.ts` — she is crew
+   * on the boat, not a demo persona to log in as. (A *minted* demo shop mints an
+   * account for every entry in this list, so she has one there; that is the
+   * minting path being uniform, not a second persona.)
+   */
+  { fullName: "Talia Okonkwo", local: "talia", roles: ["instructor"] },
+] as const;
+
+/** Whose course sessions these are — the instructor of record on every one. */
+export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";
+/** The second instructor, rostered as a session's *divemaster* (DOM-M7). */
+export const RELIEF_INSTRUCTOR_NAME = "Talia Okonkwo";
+
+/**
  * The shop's divers. **Order is load-bearing**: the rosters below index into
  * this list, and tests assert on the exact names that land on today's boat.
  * Append to the end; never reorder or insert.

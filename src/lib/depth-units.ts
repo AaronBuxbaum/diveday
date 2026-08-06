@@ -42,6 +42,22 @@ export function depthToMeters(value: number, unit: DepthUnit): number {
 }
 
 /**
+ * A forecast wave height in metres, in the shop's unit and at the precision
+ * that unit actually carries — a tenth of a metre, but a whole foot.
+ *
+ * Not `depthInUnit`: that rounds to whole units because a site's maximum depth
+ * is a briefing figure, and applied here it would erase the entire useful range
+ * of a sea state. Every ordinary day on a Keys reef boat is under a metre, so
+ * whole metres collapse "flat calm" (0.2 m), "pleasant" (0.6 m) and "some
+ * people will be sick" (1.4 m) into 0, 1 and 1. In feet the same three
+ * readings are 1, 2 and 5 and need no decimal to stay apart — which is the
+ * whole reason a Florida crew reads feet (DOM-L2).
+ */
+export function waveHeightInUnit(meters: number, unit: DepthUnit): number {
+  return unit === "feet" ? Math.round(metersToFeet(meters)) : Math.round(meters * 10) / 10;
+}
+
+/**
  * The largest depth the entry forms accept, in the shop's own unit. A typo
  * guard, not a claim about diveable depth: it sits well past the 40 m/130 ft
  * recreational limit so a technical site is still recordable, while a chart

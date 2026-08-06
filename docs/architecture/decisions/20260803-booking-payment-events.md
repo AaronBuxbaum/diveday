@@ -97,8 +97,9 @@ unique-index operations on a table with one index.
   screen can be added over a full history, but history cannot be added retroactively.
 - **It does not backfill.** Bookings settled before this migration have no events. Their current
   row is all there is, exactly as before.
-- **It does not export.** `src/db/export.ts` does not carry this table (the portability decision
-  DATA-A10 tracks covers several tables at once and is not this record's to make).
+- **It did not export.** `src/db/export.ts` gained `booking_payment_events.csv` shortly after this
+  record, and the several-tables-at-once decision it deferred was made on 2026-08-06 by
+  [20260806-export-operational-records](20260806-export-operational-records.md).
 - **It does not record refusals, or Stripe-side events that never touched a booking's payment
   state** — a failed async payment, an expired session. Those live in `stripe_webhook_events` and
   the structured logs.

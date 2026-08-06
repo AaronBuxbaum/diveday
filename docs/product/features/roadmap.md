@@ -223,14 +223,13 @@ ADR rather than letting this become an unbounded second backlog.
    AGENTS.md makes accounting for every diff a hard rule.
 3. **Realistic seeded scenarios and visual-regression coverage for the states that aren't the happy
    path** — empty, loading, error, and safety states. The seed is realistic and busy, and the money
-   surfaces and a first empty state are captured; systematic coverage of the rest is not. The first
-   concrete gap: **add a second seeded instructor**, then seed an instructor rostered as a session's
-   **divemaster**. That is the one (shop roles × trip role) combination
-   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md) leaves
-   unseeded, because the demo shop has a single instructor and rostering them as DM would leave that
-   session with nobody on the supervision ratio and move seeded bookings, staffing and Today across
-   the whole demo. The rule is asserted by a monotonicity test meanwhile; what is missing is a
-   visible example (review 20260802, DOM-M7).
+   surfaces and a first empty state are captured; systematic coverage of the rest is not. Its first
+   concrete gap is closed: the demo shop has a **second instructor** (Talia Okonkwo), rostered as
+   the Nitrox session's **divemaster** — the one (shop roles × trip role) combination
+   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md) had
+   left unseeded, and the only one that is a genuine downgrade rather than a roster over-claim
+   (review 20260802, DOM-M7; delivered 2026-08-06). What remains under this heading is the rest of
+   the non-happy-path states, which nothing has systematically enumerated yet.
 4. **A real-Postgres CI job — shipped 2026-08-06.** A `postgres:16` service-container job applies
    `drizzle/` from empty *and* from the previous release's schema, and races two genuinely concurrent
    connections for the last seat; the `FOR UPDATE` oversell guard is no longer dead code under test

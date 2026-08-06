@@ -60,6 +60,10 @@ export const EXPORT_FILE_NOTES = {
     "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "booking_payment_events.csv":
     "Every recorded change to a booking's payment state, oldest first — what it moved to, what it moved from, the amount and currency at that moment, and which operation caused it (a checkout settling, a staff mark, a refund). bookings.csv carries only where each booking's money stands *now*, and a refund overwrites that in place, so this is the file that says how it got there. It records transitions, not writes: a webhook redelivered twice appends nothing the second time, and a refused write appends nothing at all — so a row here always means the state genuinely changed.",
+  "booking_checkouts.csv":
+    "Every pay-at-booking checkout attempt this shop started, settled or not — the amount asked, the discount applied and where it came from, and how the attempt ended (completed, expired, or a bank payment that failed after the fact). bookings.csv and orders.csv say what the shop was *paid*; this file is what it *asked for*, including the asks nobody finished. Read it that way: only a row with a completed_at is money, and an abandoned row is a diver who got as far as the payment page. The Stripe account id is excluded (provider linkage, useless outside this Stripe account) and so is the checkout link, which stopped working when the session expired.",
+  "booking_checkout_bookings.csv":
+    "Which seats each checkout was paying for, one row per seat, with the rental gear charged on that seat. A checkout covers a whole party, so a single attempt in booking_checkouts.csv can carry several rows here — and the per-seat gear figure lives nowhere else, since the checkout total has it already folded in.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "roll_call_crew_attestations.csv":
@@ -75,6 +79,12 @@ export const EXPORT_FILE_NOTES = {
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
+  "internal_notes.csv":
+    "The shop's own private notes about its divers and their bookings — what the front desk wrote down so the next person on the counter would know. Never shown to a diver, and never part of any gate: a note is context, not evidence, so nothing in readiness, boarding, or medical clearance has ever read one. They are here because they are the shop's own words about its own customers, and a shop that leaves without them arrives somewhere else having forgotten everything it knew.",
+  "activity_events.csv":
+    "The staff activity trail: who did what, to which trip or booking, and when. Append-only and never edited, so reading it in order reconstructs how a departure got to the state the other files describe. The messages are DiveDay's own wording rather than something staff typed, and they are written in English regardless of what language the shop reads — a record of an action, not copy.",
+  "notification_deliveries.csv":
+    'Whether each diver actually got each message the shop sent them — booking confirmation, waiver request, trip reminder, conditions hold, recap — with what the email or SMS provider said came of it and, when something went wrong, why. One row per booking and message kind: a resend overwrites in place rather than appending, so this is the latest outcome per message, not a send history. It is here because "did this diver ever get their waiver request" is a question a shop has to be able to answer about its own past, sometimes years later, and no other file in this bundle can. The retry queue and rate-limit state behind it are not included — those are plumbing.',
   "orders.csv":
     "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
@@ -90,8 +100,12 @@ export const EXPORT_FILE_NOTES = {
   "trip_reviews.csv":
     "Ratings and words from divers who provably dived — each row was written through that booking's own post-trip recap link, so there are no unverified reviews here. Only is_published rows were shown publicly and only those were counted in the shop's displayed average; a review carrying a comment stayed unpublished until staff released it, while a bare rating published on arrival. One row per booking: a diver revising their review updated it in place.",
   "shop_promo_codes.csv":
-    "Shop-wide discount codes as configured, with their validity window, scope, and redemption cap. status 'active' was live; 'disabled' was switched off by staff and 'failed' never minted at Stripe at all. The redemption history itself is not included — see the notes below.",
+    "Shop-wide discount codes as configured, with their validity window, scope, and redemption cap. status 'active' was live; 'disabled' was switched off by staff and 'failed' never minted at Stripe at all. The redemption history is in shop_promo_redemptions.csv.",
+  "shop_promo_redemptions.csv":
+    "Every time one of those codes was actually spent: which code, which checkout attempt in booking_checkouts.csv, and what the shop took on that sale. Read amount_charged_cents as \"what this code was worth on this sale\" — Stripe's own settled total where Stripe reported one, and otherwise the asking price less this code's own discount. It is not a full order total: another discount stacked by Stripe, or a later refund, is not reflected here, so reconcile against orders.csv for revenue and use this file for how a code performed.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
+  "course_inquiries.csv":
+    "Course leads: someone asked about a course through the shop's public page and left their details, their experience level, and when they were hoping to go. Not a booking and never a seat — a lead that never converted still has a row here, which is the point of taking it with you. person_id is filled in only where the address exactly matched a diver the shop already had at the time; a lead with no match stays an unlinked name and email, and was never back-filled.",
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
@@ -156,11 +170,13 @@ export function exportFileName(shopSlug: string, now: Date, timezone: string): s
  * an export that is quiet about its gaps is how migrations lose data.
  */
 const NOT_INCLUDED = [
-  "Private staff notes and the in-product activity feed — working context, not diver or migration records.",
   "Offline manifest snapshots (device-side copies of the live records exported here).",
-  "Notification delivery logs — operational plumbing, not shop records.",
-  "Stripe account linkage and checkout-session attempts — every money outcome is in bookings.csv and orders.csv, and the Stripe account itself already belongs to the shop.",
-  "Promo-code redemption rows — each one points at a checkout attempt, which is itself not exported for the reason above; the shop's own Stripe account holds the authoritative redemption record for every code in shop_promo_codes.csv.",
+  "Notification retry queues, per-attempt logs, and provider rate-limit state — plumbing behind notification_deliveries.csv, which carries the outcome that actually happened.",
+  "Stripe account linkage — the Stripe account itself already belongs to the shop, and an account id means nothing anywhere else.",
+  "The day close-out trail and the buddy-team pairing trail — in-product operational records of a ritual and of how teams were formed; the teams that stood are in buddy_pairs.csv.",
+  "Weather-cancellation cascade state (who had been messaged, who had been rebooked) — the cancellation itself is on the trip in trips.csv.",
+  "Per-device push-notification credentials, which cannot be transferred between systems and are a credential besides.",
+  "Internal reconciliation ledgers DiveDay keeps about its own work: payment-operation intents, the Stripe webhook-delivery ledger, media-deletion attempts, and the outstanding data-deletion requests an erasure still owes at Stripe. Each is a pointer into DiveDay's own infrastructure plus the state of work being done there — the last one is deliberate rather than incidental, because an obligation carried into a system that cannot discharge it would read as done.",
   "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
   "A pasted image URL a CSV references that was never stored through DiveDay (an external link, or a bundled template asset) — only files DiveDay's own storage actually holds can be bundled as bytes.",
   "Login accounts, password hashes, email-verification/password-reset tokens, and staff calendar-subscription links — credentials are never exported.",

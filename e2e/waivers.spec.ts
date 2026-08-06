@@ -70,16 +70,14 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diver.getByText("Follow up before boarding")).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
-  // Scoped to the pinned "Signed record" section rather than any row on the
-  // page: that section is what `?record=` puts the reviewer in front of, and
-  // it is present whether or not this record also happens to fall on the
-  // current page of the log below. Matching page-wide instead made the
-  // assertion depend on that coincidence — and when the seed put the record on
-  // page 1, it matched the pin *and* the log row and failed on strict mode.
-  const record = page
-    .locator('section[aria-labelledby="signed-record-heading"]')
-    .getByRole("listitem")
-    .filter({ hasText: "Morgan Vale" });
+  const record = page.locator('li[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
+  // Exactly one, and that is the assertion, not an incidental `toBeVisible`.
+  // The signature log pins the `?record=` row above the paginated list, and
+  // the list used to render it a second time whenever it also fell on the
+  // visible page — two `<li>`s sharing one DOM id. Which page it lands on is
+  // decided by a random-UUID tiebreak among rows that share a signing
+  // timestamp, so this test lost that coin toss rather than catching a change.
+  await expect(record).toHaveCount(1);
   await expect(record).toBeVisible();
   await expect(record.getByText("View flagged answers")).toHaveCount(0);
 });

@@ -1,5 +1,9 @@
 /**
- * Loads one shop's full export dataset (ADR 20260722-full-shop-export).
+ * Loads one shop's full export dataset (ADR 20260722-full-shop-export; what
+ * belongs in it is ADR 20260806-export-operational-records — a record DiveDay
+ * writes *about* a shop's work belongs to that shop, unless carrying it would
+ * be a credential, a pointer into infrastructure the destination cannot reach,
+ * or DiveDay's own bookkeeping about its own machinery).
  * Every query is scoped by shopId — the caller passes the session's shop, and
  * nothing here trusts a URL. Soft-archived rows are included on purpose:
  * the bundle is migration-grade history, not a view of the active roster.
@@ -18,18 +22,24 @@ import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
 import type { AppDb } from "./client";
 import {
+  activityEvents,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPaymentEvents,
   bookingPayments,
   bookings,
   buddyPairMembers,
   certificationLevel,
   certifications,
+  courseInquiries,
   courses,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  internalNotes,
   lastMinuteListEntries,
   nitroxCertifications,
+  notificationDeliveries,
   orderLineItems,
   orders,
   people,
@@ -41,6 +51,7 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
+  shopPromoRedemptions,
   shops,
   specialtyCertifications,
   staffShifts,
@@ -191,12 +202,14 @@ export async function loadShopExportBundleInput(
         .from(shopPromoCodes)
         .where(eq(shopPromoCodes.shopId, shopId))
         .orderBy(asc(shopPromoCodes.createdAt), asc(shopPromoCodes.id));
+      const promoCodeText = new Map(promoCodeRows.map((row) => [row.id, row.code]));
 
       const courseRows = await tx
         .select()
         .from(courses)
         .where(eq(courses.shopId, shopId))
         .orderBy(asc(courses.createdAt), asc(courses.id));
+      const courseTitle = new Map(courseRows.map((row) => [row.id, row.title]));
 
       const seriesRows = await tx
         .select()
@@ -312,6 +325,60 @@ export async function loadShopExportBundleInput(
         .from(bookingPaymentEvents)
         .where(eq(bookingPaymentEvents.shopId, shopId))
         .orderBy(asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id));
+
+      // What the shop *asked* for, next to what it was paid. `booking_payments`
+      // folds into bookings.csv and `booking_payment_events` says how that
+      // state moved; neither can show an attempt that was never finished, and
+      // an abandoned checkout is a real fact about a diver who reached the
+      // payment page. Oldest first, like the other append-shaped files.
+      const checkoutRows = await tx
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.shopId, shopId))
+        .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id));
+
+      // Which seats each of those attempts was paying for. Ordered by checkout
+      // then booking so a reader walking the file stays inside one attempt.
+      const checkoutBookingRows = await tx
+        .select()
+        .from(bookingCheckoutBookings)
+        .where(eq(bookingCheckoutBookings.shopId, shopId))
+        .orderBy(asc(bookingCheckoutBookings.checkoutId), asc(bookingCheckoutBookings.bookingId));
+
+      const promoRedemptionRows = await tx
+        .select()
+        .from(shopPromoRedemptions)
+        .where(eq(shopPromoRedemptions.shopId, shopId))
+        .orderBy(asc(shopPromoRedemptions.redeemedAt), asc(shopPromoRedemptions.id));
+
+      const noteRows = await tx
+        .select()
+        .from(internalNotes)
+        .where(eq(internalNotes.shopId, shopId))
+        .orderBy(asc(internalNotes.createdAt), asc(internalNotes.id));
+
+      // `seq` is the tiebreaker, not `id`: it is the column the in-product feed
+      // already orders by within a single timestamp, so the exported file reads
+      // in the order the shop saw the events happen.
+      const activityRows = await tx
+        .select()
+        .from(activityEvents)
+        .where(eq(activityEvents.shopId, shopId))
+        .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq));
+
+      // One row per (booking, kind) by unique index — a resend overwrites in
+      // place — so this is the standing outcome per message, not a send log.
+      const notificationRows = await tx
+        .select()
+        .from(notificationDeliveries)
+        .where(eq(notificationDeliveries.shopId, shopId))
+        .orderBy(asc(notificationDeliveries.attemptedAt), asc(notificationDeliveries.id));
+
+      const inquiryRows = await tx
+        .select()
+        .from(courseInquiries)
+        .where(eq(courseInquiries.shopId, shopId))
+        .orderBy(asc(courseInquiries.createdAt), asc(courseInquiries.id));
 
       const rollCallRows = await tx
         .select()
@@ -1046,6 +1113,71 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["booking_payment_events.csv"],
         },
         {
+          file: "booking_checkouts.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "status",
+            "stripe_session_id",
+            "customer_email",
+            "promo_code_id",
+            "trip_promo_id",
+            "promo_code",
+            "applied_discount_percent",
+            "currency",
+            "amount_per_diver_cents",
+            "total_cents",
+            "settled_total_cents",
+            "is_deposit",
+            "abandoned_recovery_sent_at",
+            "expires_at",
+            "completed_at",
+            "async_payment_failed_at",
+            "created_at",
+          ],
+          rows: checkoutRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.status,
+            row.stripeSessionId,
+            row.customerEmail,
+            row.promoCodeId,
+            row.tripPromoId,
+            row.promoCode,
+            row.appliedDiscountPercent,
+            row.currency,
+            row.amountPerDiverCents,
+            row.totalCents,
+            row.settledTotalCents,
+            row.isDeposit,
+            row.abandonedRecoverySentAt,
+            row.expiresAt,
+            row.completedAt,
+            row.asyncPaymentFailedAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["booking_checkouts.csv"],
+        },
+        {
+          file: "booking_checkout_bookings.csv",
+          header: ["checkout_id", "booking_id", "person_id", "person_name", "gear_cents"],
+          rows: checkoutBookingRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId) ?? null;
+            return [
+              row.checkoutId,
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.gearCents,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["booking_checkout_bookings.csv"],
+        },
+        {
           file: "roll_call_events.csv",
           header: [
             "id",
@@ -1362,6 +1494,97 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["prior_visits.csv"],
         },
         {
+          file: "internal_notes.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "booking_id",
+            "body",
+            "created_by_person_id",
+            "created_by_name",
+            "created_at",
+          ],
+          rows: noteRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.bookingId,
+            row.body,
+            row.createdByPersonId,
+            personName.get(row.createdByPersonId),
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["internal_notes.csv"],
+        },
+        {
+          file: "activity_events.csv",
+          header: [
+            "id",
+            "seq",
+            "trip_id",
+            "trip_title",
+            "booking_id",
+            "actor_person_id",
+            "actor_name",
+            "message",
+            "occurred_at",
+          ],
+          rows: activityRows.map((row) => [
+            row.id,
+            row.seq,
+            row.tripId,
+            row.tripId ? tripTitle.get(row.tripId) : null,
+            row.bookingId,
+            row.actorPersonId,
+            personName.get(row.actorPersonId),
+            row.message,
+            row.occurredAt,
+          ]),
+          note: EXPORT_FILE_NOTES["activity_events.csv"],
+        },
+        {
+          file: "notification_deliveries.csv",
+          header: [
+            "id",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "kind",
+            "status",
+            "provider_message_id",
+            "provider_status",
+            "provider_status_at",
+            "provider_detail",
+            "send_http_status",
+            "send_error_code",
+            "send_error",
+            "attempted_at",
+            "created_at",
+          ],
+          rows: notificationRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId) ?? null;
+            return [
+              row.id,
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.kind,
+              row.status,
+              row.providerMessageId,
+              row.providerStatus,
+              row.providerStatusAt,
+              row.providerDetail,
+              row.sendHttpStatus,
+              row.sendErrorCode,
+              row.sendError,
+              row.attemptedAt,
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["notification_deliveries.csv"],
+        },
+        {
           file: "orders.csv",
           header: [
             "id",
@@ -1632,6 +1855,29 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["shop_promo_codes.csv"],
         },
         {
+          file: "shop_promo_redemptions.csv",
+          header: [
+            "id",
+            "promo_code_id",
+            "code",
+            "checkout_id",
+            "amount_charged_cents",
+            "redeemed_at",
+          ],
+          // The code travels beside its id for the same reason every other file
+          // carries a `*_name` next to a `*_person_id`: a bundle a human opens
+          // in a spreadsheet must be readable without joining it back together.
+          rows: promoRedemptionRows.map((row) => [
+            row.id,
+            row.promoCodeId,
+            promoCodeText.get(row.promoCodeId),
+            row.checkoutId,
+            row.amountChargedCents,
+            row.redeemedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["shop_promo_redemptions.csv"],
+        },
+        {
           file: "courses.csv",
           header: [
             "id",
@@ -1688,6 +1934,45 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["courses.csv"],
+        },
+        {
+          file: "course_inquiries.csv",
+          header: [
+            "id",
+            "course_id",
+            "course_title",
+            "person_id",
+            "person_name",
+            "name",
+            "email",
+            "phone",
+            "experience_level",
+            "timing",
+            "preferred_date",
+            "divers",
+            "message",
+            "created_at",
+          ],
+          rows: inquiryRows.map((row) => [
+            row.id,
+            row.courseId,
+            courseTitle.get(row.courseId),
+            row.personId,
+            // Resolved at capture time by exact email match against a live
+            // diver, never back-filled — so a null here is a lead nobody could
+            // tie to a person, not a lookup this export skipped.
+            row.personId ? personName.get(row.personId) : null,
+            row.name,
+            row.email,
+            row.phone,
+            row.experienceLevel,
+            row.timing,
+            row.preferredDate,
+            row.divers,
+            row.message,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["course_inquiries.csv"],
         },
       ];
 
@@ -1782,6 +2067,36 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(bookingPaymentEvents)
         .where(eq(bookingPaymentEvents.shopId, shopId)),
+    ),
+    "booking_checkouts.csv": await countOf(
+      db.select({ n: count() }).from(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId)),
+    ),
+    "booking_checkout_bookings.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(bookingCheckoutBookings)
+        .where(eq(bookingCheckoutBookings.shopId, shopId)),
+    ),
+    "internal_notes.csv": await countOf(
+      db.select({ n: count() }).from(internalNotes).where(eq(internalNotes.shopId, shopId)),
+    ),
+    "activity_events.csv": await countOf(
+      db.select({ n: count() }).from(activityEvents).where(eq(activityEvents.shopId, shopId)),
+    ),
+    "notification_deliveries.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(notificationDeliveries)
+        .where(eq(notificationDeliveries.shopId, shopId)),
+    ),
+    "shop_promo_redemptions.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(shopPromoRedemptions)
+        .where(eq(shopPromoRedemptions.shopId, shopId)),
+    ),
+    "course_inquiries.csv": await countOf(
+      db.select({ n: count() }).from(courseInquiries).where(eq(courseInquiries.shopId, shopId)),
     ),
     "waitlist_entries.csv": await countOf(
       db

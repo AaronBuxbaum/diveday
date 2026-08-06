@@ -20,7 +20,9 @@ Add two AWS-native, no-server-required guardrails to the existing `DiveDay` stac
 
 1. **`AWS::Budgets::Budget`** — a `COST` budget, `MONTHLY`, limit driven by the `monthlyBudgetLimit`
    CDK context value (default `5`, USD), with five `EMAIL` notification thresholds against the
-   `alertEmail` context value (default `aaronbuxbaum@gmail.com`):
+   `alertEmail` context value (default `alerts@dive.day` since 2026-08-06, when that mailbox was
+   created and OPS-4's residue closed; a personal Gmail before then, which was the one alert path
+   in the product still landing outside the operational inbox):
    - `ACTUAL` / `PERCENTAGE` ≥ 50% — early heads-up.
    - `ACTUAL` / `PERCENTAGE` ≥ 80% — approaching the cap.
    - `FORECASTED` / `PERCENTAGE` ≥ 100% — trending to exceed by month end, before it happens.

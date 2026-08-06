@@ -216,7 +216,10 @@ Both use CDK context values, overridable the same way as `bucketName`/`userName`
 pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLimit=10
 ```
 
-- `alertEmail` — where every alert goes (default `aaronbuxbaum@gmail.com`).
+- `alertEmail` — where every alert goes (default `alerts@dive.day`, the operational mailbox every
+  other alert path in the product already used; it was a personal Gmail until 2026-08-06). Changing
+  the default only takes effect on the next deploy, and the SNS email subscription it creates has to
+  be confirmed from the mailbox before AWS will send to it.
 - `monthlyBudgetLimit` — the monthly USD cap the percentage thresholds above are computed against
   (default `5`).
 

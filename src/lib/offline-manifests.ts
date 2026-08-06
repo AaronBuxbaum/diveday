@@ -325,6 +325,18 @@ export function isOfflineManifestExpired(
  * silently refused here even though the UI renders a live "Board" button for
  * exactly that case (`ready || !isDeparture` in OfflineManifestView). See the
  * regression test in offline-manifests.test.ts and offline-manifest-store.test.ts.
+ *
+ * The **roster** is read from the checkpoint's own manifest for the same
+ * reason, and `latestOfflineRollCall` below already did (DOM-L4, review
+ * 20260802). Reading `manifests[0]` was survivable only because every snapshot
+ * written so far carries one manifest per checkpoint with an identical diver
+ * list; the moment one carries a checkpoint the others don't — a diver seated
+ * after departure, a snapshot assembled from a narrower window — the two
+ * functions would disagree about who is on the boat, and this one would answer
+ * for the wrong checkpoint. Answering from the checkpoint asked about is also
+ * what makes the unknown-checkpoint case fail *closed*: no manifest means no
+ * diver means no boarding, rather than a readiness verdict borrowed from a
+ * checkpoint the caller never named.
  */
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
@@ -332,9 +344,34 @@ export function canRecordOfflineStatus(
   status: OfflineRollCallEvent["status"],
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
 ): boolean {
-  const diver = snapshot.manifests[0]?.divers.find((entry) => entry.bookingId === bookingId);
-  if (!diver) return false;
+  // "Is this booking on this dock copy at all?" is asked across every manifest,
+  // and it is asked first. A booking id nothing here has heard of is refused
+  // outright: there is no name behind it, so the event would queue a claim
+  // about nobody.
+  const known = snapshot.manifests.some((manifest) =>
+    manifest.divers.some((entry) => entry.bookingId === bookingId),
+  );
+  if (!known) return false;
+
+  // **A real diver can always be recorded as not aboard**, at any checkpoint,
+  // including one this snapshot carries no manifest for. That is not a
+  // permissive fallback, it is the whole point: after a numbered dive
+  // `not_boarded` means *this person did not come back*, the loudest row the
+  // app has, and nothing about a gap in the saved copy's contents makes it less
+  // true. Refusing it would silence the alarm and hand the crew the readiness
+  // refusal's copy — "this diver isn't ready to board yet" — which is the worst
+  // sentence this product could show at that moment (dive-domain-expert review,
+  // 2026-08-06). The server re-validates checkpoint, tenant, staff and booking
+  // on reconcile, so the worst case is an event it rejects, not a bad write.
   if (status === "not_boarded") return true;
+
+  // Boarding, by contrast, is answered only from the checkpoint's own manifest,
+  // and having no manifest for it refuses — fail closed in the direction that
+  // puts someone on a boat (DOM-L4).
+  const diver = snapshot.manifests
+    .find((manifest) => manifest.checkpoint === checkpoint)
+    ?.divers.find((entry) => entry.bookingId === bookingId);
+  if (!diver) return false;
   if (checkpoint !== "departure") return true;
   return diver.readiness.status === "ready";
 }
