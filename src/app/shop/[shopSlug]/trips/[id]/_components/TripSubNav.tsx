@@ -58,13 +58,14 @@ export function TripSubNav({
   const TABS = TAB_ORDER.map((tab) => ({ ...tab, label: copy[tab.copyKey] }));
   // Overview is the bare trip route; any suffixed surface wins over it. Match on
   // the exact segment (or a deeper path under it) so a query string never throws
-  // the highlight off.
-  const current: TripSubNavPage =
-    TABS.find(
-      (tab) =>
-        tab.suffix &&
-        (pathname === `${root}${tab.suffix}` || pathname.startsWith(`${root}${tab.suffix}/`)),
-    )?.page ?? "overview";
+  // the highlight off. A path that matches no tab (e.g. incident-export) highlights
+  // nothing rather than falsely claiming Overview.
+  const current: TripSubNavPage | null =
+    TABS.find((tab) =>
+      tab.suffix
+        ? pathname === `${root}${tab.suffix}` || pathname.startsWith(`${root}${tab.suffix}/`)
+        : pathname === root,
+    )?.page ?? null;
 
   return (
     <nav
