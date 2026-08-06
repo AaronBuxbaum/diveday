@@ -94,10 +94,16 @@ export function BlockedDiverRow({
   const reasons = (
     <>
       <ul
-        className={`flex flex-col gap-1 text-muted ${
+        // `text-base` in both layouts, never `text-sm`: "why this diver cannot
+        // board" is the most critical sentence on either surface, and
+        // design/principles.md #2 puts critical text at 16px or more. The
+        // counter rendered it at 14px, which was the stakes exactly inverted —
+        // the smallest type in the app on the one screen where a staffer reads
+        // it with a diver waiting.
+        className={`flex flex-col gap-1 text-base text-muted ${
           // Below a card header the list needs a rule to sit under; beside the
           // diver's name it is simply the next line.
-          layout === "below" ? "mt-4 border-t border-border pt-3 text-sm" : "mt-1.5 text-base"
+          layout === "below" ? "mt-4 border-t border-border pt-3" : "mt-1.5"
         }`}
       >
         {blockers.map((blocker) => (

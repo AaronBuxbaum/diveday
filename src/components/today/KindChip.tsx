@@ -18,13 +18,35 @@ const CHIP_TONES = {
   neutral: "border-border bg-surface-sunken text-muted",
 } as const;
 
-export function KindChip({ kind, t }: { kind: TodayAction["kind"]; t: StaffTranslator }) {
+export function KindChip({
+  kind,
+  count,
+  t,
+}: {
+  kind: TodayAction["kind"];
+  /**
+   * A tally to carry *inside* the chip ("WAIVER · 3"), for a summary that
+   * counts kinds rather than listing rows. It has to live in the chip: set
+   * beside one, a bare number is bound to its label by a gap alone, and at
+   * 390px a wrapped row of them reads as a list of unrelated digits.
+   */
+  count?: number;
+  t: StaffTranslator;
+}) {
   const { tone } = ACTION_KIND_META[kind];
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
     >
       {t(ACTION_KIND_KEYS[kind])}
+      {count === undefined ? null : (
+        <>
+          <span aria-hidden="true" className="font-normal opacity-60">
+            ·
+          </span>
+          <span className="tabular-nums">{count}</span>
+        </>
+      )}
     </span>
   );
 }
