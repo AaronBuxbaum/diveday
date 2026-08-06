@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { KindChip } from "@/components/today/KindChip";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -18,8 +19,8 @@ import {
   closeoutDepartureDetailText,
 } from "@/i18n/closeout-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { ACTION_KIND_KEYS, openRollCallActionText } from "@/i18n/today-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { openRollCallActionText } from "@/i18n/today-labels";
 import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -30,7 +31,6 @@ import {
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -43,13 +43,6 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Close-out — DiveDay" };
 
-/** The queue's chip tones, worn by the same kinds here (src/lib/today.ts). */
-const CHIP_TONES = {
-  danger: "border-danger/30 bg-danger/10 text-danger",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  neutral: "border-border bg-surface-sunken text-muted",
-} as const;
-
 /** `CLOSEOUT_STATUS_TONES` → the shared Badge vocabulary. */
 const STATUS_BADGE_TONES: Record<"danger" | "warning" | "neutral" | "positive", BadgeTone> = {
   danger: "danger",
@@ -57,17 +50,6 @@ const STATUS_BADGE_TONES: Record<"danger" | "warning" | "neutral" | "positive", 
   neutral: "neutral",
   positive: "success",
 };
-
-function KindChip({ kind, t }: { kind: TodayAction["kind"]; t: StaffTranslator }) {
-  const { tone } = ACTION_KIND_META[kind];
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
-    >
-      {t(ACTION_KIND_KEYS[kind])}
-    </span>
-  );
-}
 
 /**
  * The end-of-day close-out (ADR 20260804-day-closeout): the evening mirror of
@@ -366,50 +348,44 @@ export default async function CloseOutPage({
         </section>
       </form>
 
+      {/* Tomorrow is a *handoff*, not a second queue. This section used to
+          re-render tomorrow's `TodayAction` rows with none of Today's inline
+          controls — the same row that sends a waiver, invites from the
+          waitlist, or copies a payment link on the shop home was a dumb list
+          here, which taught staff those jobs wait until morning. A surface that
+          re-renders another's evidence is a view, not a route (ADR
+          20260803-not-ready-is-a-view), and the same reasoning applies to a
+          section: state how much is waiting, name it in the queue's own chips,
+          and hand the work to the surface that owns it. */}
       <section aria-labelledby="closeout-tomorrow-heading" className="mb-6">
         <h2 id="closeout-tomorrow-heading" className="text-lg font-semibold">
           {t("closeout.tomorrow.heading")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("closeout.tomorrow.subtitle")}</p>
-        {state.tomorrow.length === 0 ? (
+        {state.tomorrow.total === 0 ? (
           <EmptyState className="mt-4">
             <p className="text-sm text-muted">{t("closeout.tomorrow.empty")}</p>
           </EmptyState>
         ) : (
-          <>
-            <ul className="mt-4 flex flex-col gap-3">
-              {state.tomorrow.map((action) => (
-                <li
-                  key={action.id}
-                  className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <KindChip kind={action.kind} t={t} />
-                        <p className="font-semibold">{action.subject}</p>
-                        {action.context ? (
-                          <p className="text-sm text-muted">{action.context}</p>
-                        ) : null}
-                      </div>
-                      <p className="mt-1.5 text-muted">{action.detail}</p>
-                    </div>
-                    <Link
-                      href={action.href}
-                      className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-                    >
-                      {action.actionLabel}
-                    </Link>
-                  </div>
+          <div className="mt-4 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
+            <p className="font-semibold">
+              {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
+            </p>
+            <ul className="mt-3 flex flex-wrap items-center gap-2">
+              {state.tomorrow.byKind.map((entry) => (
+                <li key={entry.kind} className="flex items-center gap-1.5">
+                  <KindChip kind={entry.kind} t={t} />
+                  <span className="text-sm text-muted tabular-nums">{entry.count}</span>
                 </li>
               ))}
             </ul>
-            {state.tomorrowMore > 0 ? (
-              <p className="mt-3 text-sm text-muted">
-                {t("closeout.tomorrow.more", { count: state.tomorrowMore })}
-              </p>
-            ) : null}
-          </>
+            <Link
+              href={`/shop/${shopSlug}`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("closeout.tomorrow.openToday")}
+            </Link>
+          </div>
         )}
       </section>
     </main>

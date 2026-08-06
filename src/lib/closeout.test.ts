@@ -6,7 +6,6 @@ import {
   parseCloseoutSnapshot,
   shopDayOf,
   summarizeCloseoutSnapshot,
-  TOMORROW_GLANCE_LIMIT,
 } from "./closeout";
 import type { TodayAction } from "./today";
 
@@ -54,7 +53,7 @@ describe("assembleDayCloseout", () => {
     expect(state.shopDay).toBe("2026-08-04");
     expect(state.departures.map((d) => d.status)).toEqual(["all_home", "all_home"]);
     expect(state.leftovers).toEqual([]);
-    expect(state.tomorrow).toEqual([]);
+    expect(state.tomorrow).toEqual({ total: 0, byKind: [] });
     expect(state.mustAcknowledge).toEqual([]);
   });
 
@@ -185,23 +184,32 @@ describe("assembleDayCloseout", () => {
     });
 
     expect(state.leftovers.map((a) => a.id)).toEqual(["a-today", "a-undated"]);
-    expect(state.tomorrow.map((a) => a.id)).toEqual(["a-tomorrow"]);
-    expect(state.tomorrowMore).toBe(0);
+    expect(state.tomorrow).toEqual({ total: 1, byKind: [{ kind: "waiver", count: 1 }] });
   });
 
-  it("bounds tomorrow's glance and counts the rest instead of scrolling", () => {
-    const rows = Array.from({ length: TOMORROW_GLANCE_LIMIT + 3 }, (_, i) =>
-      action({
-        id: `a-${i}`,
-        subject: `Diver ${String(i).padStart(2, "0")}`,
-        dueAt: new Date(`2026-08-05T1${(i % 9) + 1}:00:00Z`),
-      }),
-    );
+  it("counts tomorrow by kind instead of re-rendering rows Today owns", () => {
+    // Tomorrow's queue as a mix of kinds. The close-out states how much is
+    // waiting and hands the rows themselves to Today, the only surface that
+    // can act on them (ADR 20260803-not-ready-is-a-view, applied at section
+    // level) — so what comes back is counts, never actions.
+    const rows = [
+      action({ id: "a-0", dueAt: new Date("2026-08-05T11:00:00Z") }),
+      action({ id: "a-1", dueAt: new Date("2026-08-05T12:00:00Z") }),
+      action({ id: "a-2", kind: "payment", dueAt: new Date("2026-08-05T13:00:00Z") }),
+      action({ id: "a-3", kind: "certification", dueAt: new Date("2026-08-05T14:00:00Z") }),
+      action({ id: "a-4", kind: "payment", dueAt: new Date("2026-08-05T15:00:00Z") }),
+    ];
 
     const state = assembleDayCloseout({ trips: [], gaps: [], actions: rows, timeZone: TZ, now });
 
-    expect(state.tomorrow).toHaveLength(TOMORROW_GLANCE_LIMIT);
-    expect(state.tomorrowMore).toBe(3);
+    expect(state.tomorrow.total).toBe(5);
+    // Queue order — `sortActions`'s own ranking, so the glance names the kinds
+    // in the order the morning will meet them.
+    expect(state.tomorrow.byKind).toEqual([
+      { kind: "waiver", count: 2 },
+      { kind: "payment", count: 2 },
+      { kind: "certification", count: 1 },
+    ]);
   });
 });
 
