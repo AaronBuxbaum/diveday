@@ -343,17 +343,10 @@ export class InfraStack extends cdk.Stack {
       subscribers: [emailSubscriber(alertEmail)],
     });
 
-    // No `budgetName` here, deliberately. `Budget` (the nested object holding
-    // budgetLimit) is a Replacement-only property in the CloudFormation
-    // resource type, so any `--context monthlyBudgetLimit=...` change makes
-    // CloudFormation create a new AWS::Budgets::Budget before deleting the
-    // old one. Budgets enforces a unique name per account, so a fixed literal
-    // here made that create collide with the not-yet-deleted old resource --
-    // "A budget or resource with the same name but a different internalId
-    // already exists." Leaving the name unset lets Budgets mint a fresh one
-    // on every create, so a replacement never collides with what it's
-    // replacing. The resolved name is still discoverable: see the
-    // MonthlyCostGuardrailBudgetName output below.
+    // No `budgetName` here, deliberately: a fixed one collides with itself on
+    // the replacement `--context monthlyBudgetLimit=...` forces. See the
+    // "Troubleshooting" note in docs/engineering/infrastructure-runbook.md
+    // §6 for the mechanism; the resolved name is in the output below.
     const monthlyCostGuardrail = new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
       budget: {
         budgetType: "COST",
