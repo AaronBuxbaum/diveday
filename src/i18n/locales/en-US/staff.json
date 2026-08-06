@@ -143,6 +143,9 @@
         "naui": "NAUI",
         "sdi": "SDI",
         "tdi": "TDI",
+        "cmas": "CMAS",
+        "raid": "RAID",
+        "gue": "GUE",
         "other": "Other agency"
       },
       "paymentStatus": {

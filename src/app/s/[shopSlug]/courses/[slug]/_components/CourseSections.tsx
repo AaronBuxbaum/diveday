@@ -6,6 +6,7 @@ import type { Course } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import {
   type CourseFaq,
+  type CourseGalleryPhoto,
   type CourseScheduleDay,
   formatScheduleDayTime,
   resolveImageAlt,
@@ -27,8 +28,11 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * The known certification agencies' full names, for one first-mention
  * expansion on the course hero (task 5) — a newcomer meets "PADI" with no
  * idea it's an acronym, let alone what it stands for. Anything outside this
- * short, shop-typed list (src/app/shop/[shopSlug]/divers/[personId]/actions.ts
- * has the same enum) falls back to the bare code, same as before.
+ * short list falls back to the bare code, same as before — `courses.agency` is
+ * free text a shop types, so this is a lookup with a fallback and never a gate.
+ * Kept in step with the `certification_agency` enum (`AGENCY_KEYS`, staff side)
+ * so a shop teaching under an agency divers can now hold a card from does not
+ * meet a bare acronym on the one page a newcomer reads first (DOM-L1).
  */
 const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
   padi: "course.agencyFullNames.padi",
@@ -36,6 +40,9 @@ const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
   naui: "course.agencyFullNames.naui",
   sdi: "course.agencyFullNames.sdi",
   tdi: "course.agencyFullNames.tdi",
+  cmas: "course.agencyFullNames.cmas",
+  raid: "course.agencyFullNames.raid",
+  gue: "course.agencyFullNames.gue",
 };
 
 export function CourseHero({
@@ -322,29 +329,27 @@ export function CourseIncludes({
 }
 
 export function CourseGallery({
-  imageUrls,
-  imageAlts,
+  photos,
   title,
   t,
 }: {
-  imageUrls: string[];
-  /** Parallel to `imageUrls`; a blank entry falls back to a generated caption. */
-  imageAlts: string[];
+  /** Each photo carries its own caption; a blank one falls back to a generated caption. */
+  photos: CourseGalleryPhoto[];
   title: string;
   t: DiverTranslator;
 }) {
-  if (imageUrls.length === 0) return null;
+  if (photos.length === 0) return null;
   return (
     <section className="mt-12">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {imageUrls.map((url, index) => (
+        {photos.map(({ url, alt }, index) => (
           <StoredPhoto
             key={url}
             src={url}
             // The hero photo claims "photo 1"; gallery photos continue from 2.
             alt={resolveImageAlt(
-              imageAlts[index],
+              alt,
               t("course.photoAltFallback", { course: title, n: index + 2 }),
             )}
             className="h-40 w-full rounded-2xl border border-border sm:h-48"

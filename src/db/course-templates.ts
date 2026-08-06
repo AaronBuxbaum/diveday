@@ -1,5 +1,5 @@
 // i18n-exempt-file: shop-editable starter course content, not app UI copy — see CourseContent's doc comment
-import type { CourseContent } from "@/lib/courses";
+import type { CourseContent, CourseGalleryPhoto } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 
 /**
@@ -29,13 +29,26 @@ function bundledImage(filename: string): string {
   return `/dive-sites/${encodeURIComponent(filename)}`;
 }
 
+/**
+ * A gallery of bundled photos, deliberately uncaptioned.
+ *
+ * DiveDay ships the art; the caption is the shop's — it describes *its* course
+ * and is written in the shop's own language, which a bundled English string
+ * could only get wrong. A blank caption renders as the generated
+ * "{title} — photo {n}" (`resolveImageAlt`), which is what a shop that never
+ * touches the page publishes and is exactly what it published before this
+ * helper existed.
+ */
+function bundledGallery(...filenames: string[]): CourseGalleryPhoto[] {
+  return filenames.map((filename) => ({ url: bundledImage(filename), alt: "" }));
+}
+
 const blank: CourseContent = {
   summary: null,
   overview: null,
   heroImageUrl: null,
   heroImageAlt: null,
-  imageUrls: [],
-  imageAlts: [],
+  galleryPhotos: [],
   durationText: null,
   groupSizeText: null,
   minimumAge: null,
@@ -62,10 +75,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Discover Scuba Diving is not a certification — it is the afternoon you find out whether breathing underwater is for you. An instructor covers the few things that matter, fits your gear, and stays with you the whole time.\n\nYou will start in shallow, confined water, practice clearing your mask and recovering your regulator, and then, if you are comfortable, make a shallow open-water dive. Nobody is graded, and nobody goes deeper than they want to.\n\nIf you love it, your instructor can credit the skills you learn here toward the Open Water Diver course.",
       heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
-      imageUrls: [
-        bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
-        bundledImage("Stoplight parrotfish Pickles Reef.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "French Angelfish Molasses Reef 20080309.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
       durationText: "Half a day · about 3 hours",
       // Instructor ratios are an agency standard a shop must actually meet, and
       // they depend on whether a certified assistant is in the water. Stating a
@@ -135,11 +148,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "The Open Water Diver certification is the one that opens the door: qualified to dive to 18 meters with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
-      imageUrls: [
-        bundledImage("Blue Tang Pickles 20080310.jpg"),
-        bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
-        bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "Blue Tang Pickles 20080310.jpg",
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+      ),
       durationText: "3 days · 8:00am–5:00pm",
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 10,
@@ -243,10 +256,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Advanced Open Water Diver is not a repeat of Open Water with harder skills — it is five dives, each a first taste of a different specialty, done under instructor supervision.\n\nTwo are required: a deep dive, which extends your limit to 30 meters (21 meters for divers aged 12–14), and an underwater navigation dive. You choose the other three from what the site and the season offer — night, wreck, drift, buoyancy, naturalist, and others.\n\nThere is no final exam. There is a short knowledge review before each dive, and the dives themselves count as training dives.",
       heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
-      imageUrls: [
-        bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
-        bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
       durationText: "2 days · 5 dives",
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 12,
@@ -322,7 +335,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Most divers describe Rescue as the hardest course they have enjoyed. The focus shifts outward: from your own diving to the divers around you, and to the problems that are still small enough to solve.\n\nYou will practice self-rescue, recognizing and managing stress in another diver, in-water rescue and tows, surfacing an unresponsive diver, and giving rescue breaths while bringing them in. The course finishes with two scenarios that put it together under pressure.\n\nEmergency First Response (CPR and first aid) training within the past 24 months is required. We run it alongside the course if you need it.",
       heroImageUrl: bundledImage("Dasyatis americana NOAA.jpg"),
-      imageUrls: [bundledImage("Sponge 06 Molasses Reef 20230714.jpg")],
+      galleryPhotos: bundledGallery("Sponge 06 Molasses Reef 20230714.jpg"),
       durationText: "3 days",
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 12,
@@ -413,7 +426,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your card, and it is the honest thing to do before you get on a boat with strangers.",
       heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
-      imageUrls: [bundledImage("Brain coral 2 Molasses Reef 20080309.jpg")],
+      galleryPhotos: bundledGallery("Brain coral 2 Molasses Reef 20080309.jpg"),
       durationText: "Half a day · about 4 hours",
       groupSizeText: "A small group, with your instructor in the water with you",
       minimumAge: 10,
@@ -478,7 +491,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Nitrox is ordinary air with more oxygen and less nitrogen. Less nitrogen means slower nitrogen loading, which usually means longer no-decompression limits — the difference shows up most on the second and third dives of a day.\n\nThe trade is a new limit to respect. Oxygen becomes the thing you can get too much of, so every dive has a maximum operating depth set by the mix. The course teaches you to analyze your own cylinder, log the result, set your computer to the mix you actually have, and work out the depth you must not pass.\n\nThe certification covers recreational blends from 22% to 40% oxygen. There are no required training dives — this is a knowledge and practical-skills course — though we usually run two dives with it so you use the procedures for real.",
       heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
-      imageUrls: [bundledImage("Grouper 2 Molasses Reef 1999.jpg")],
+      galleryPhotos: bundledGallery("Grouper 2 Molasses Reef 1999.jpg"),
       durationText: "1 day · knowledge and practical sessions",
       groupSizeText: "A small group, working through the analyzer and your own computer",
       minimumAge: 12,
@@ -556,10 +569,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Buoyancy is the skill that makes every other skill easier. Divers who hover use less air, silt less, damage nothing, and look calm because they are calm.\n\nThe course is two dives and the work between them. You start with a real weight check — most divers are carrying several kilos they do not need — then move the weight around until you are flat in the water instead of standing up in it. After that it is practice: hovering without using your hands, moving through tight spaces, ascending at a controlled rate without a line.\n\nIt is the least dramatic course we teach and the one that changes people's diving the most.",
       heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
-      imageUrls: [
-        bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
-        bundledImage("Stoplight parrotfish Pickles Reef.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "Sponge 06 Molasses Reef 20230714.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
       durationText: "1 day · 2 dives",
       groupSizeText: "A small group, so your instructor can watch each diver hover",
       minimumAge: 10,
@@ -628,10 +641,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "A reef you know well is a stranger after dark. Day fish sleep in the coral, hunters come out, and coral polyps open to feed. Your world shrinks to the beam of your light, which is exactly why it feels bigger.\n\nThe course is three dives. You learn light handling and light signals, how to stay with a buddy when you cannot see their face, how to navigate when the landmarks you use in daylight are invisible, and what to do if your primary light fails — which is why you carry a backup.\n\nThe first dive usually starts at dusk so you enter in fading light and watch the change happen. Later dives go in fully dark.",
       heroImageUrl: bundledImage("Dasyatis americana NOAA.jpg"),
-      imageUrls: [
-        bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
-        bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "Sponge 06 Molasses Reef 20230714.jpg",
+        "French Angelfish Pickles Reef 20230713.jpg",
+      ),
       durationText: "2 evenings · 3 dives",
       groupSizeText: "A small group — smaller after dark than we run in daylight",
       minimumAge: 12,
@@ -717,10 +730,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Deep diving is not about being brave. It is about how little margin you have: air goes faster, no-decompression limits shrink, narcosis is real, and the surface is further away when something goes wrong.\n\nThe course is four dives, the deepest to a maximum of 40 meters — the limit of recreational diving, and the deepest this certification will ever take you. You will plan gas and time before you get wet, practice using a safety cylinder on a line, and see for yourself what narcosis does to you by running a simple task at depth and again at the surface.\n\nColor disappears with depth too. Bring a light and watch what red does at 30 meters.",
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
-      imageUrls: [
-        bundledImage("AtlanticGoliathGrouper.jpg"),
-        bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "AtlanticGoliathGrouper.jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
       durationText: "2 days · 4 dives",
       groupSizeText: "A small group — deeper dives mean fewer divers per instructor",
       minimumAge: 15,
@@ -809,10 +822,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Wrecks are the best artificial reefs there are, and the most unforgiving places to improvise. Sharp steel, silt that hangs for an hour once you disturb it, and overheads that take away your straight route to the surface.\n\nThe course is four dives. You survey and map a wreck from the outside first, learn to look for hazards and entry points before you take any, then practice running and following a penetration line so that a lost visibility situation has a rope answer rather than a guessing answer. Only the fourth dive involves limited penetration, and only inside the light zone.\n\nRecreational wreck penetration stays shallow and short: your depth plus the distance you swim inside stays within 40 meters of the surface, and you stay on a continuous guideline back to the exit. Deeper or further is technical wreck training, which is a different course.",
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
-      imageUrls: [
-        bundledImage("AtlanticGoliathGrouper.jpg"),
-        bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "AtlanticGoliathGrouper.jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
       durationText: "2 days · 4 dives",
       groupSizeText: "A small group — smaller again on the penetration dive",
       minimumAge: 15,
@@ -904,10 +917,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       overview:
         "Divemaster is where you stop being a customer. You learn to supervise certified divers, assist an instructor with students, lead dives, brief a boat, and take responsibility for people who are not looking after themselves as well as you are.\n\nThe program is longer and less scheduled than a specialty course. It runs across knowledge development, waterskills and stamina exercises, a rescue assessment, practical application workshops, and internship days working real dives with real customers. Expect weeks, not days, and expect to be on the boat before the customers arrive.\n\nYou need 40 logged dives to begin and 60 to certify, so the program is also where a chunk of your logbook fills in. The stamina exercises are scored rather than pass-or-fail, which surprises people less than the amount of paperwork does.",
       heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
-      imageUrls: [
-        bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
-        bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
-      ],
+      galleryPhotos: bundledGallery(
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+        "French Angelfish Pickles Reef 20230713.jpg",
+      ),
       durationText: "4–8 weeks, depending on your dive count and availability",
       groupSizeText: "Candidates work closely with a staff instructor, in small cohorts",
       minimumAge: 18,

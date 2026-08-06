@@ -19,7 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CloseoutSnapshot } from "@/lib/closeout";
-import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
+import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
@@ -331,14 +331,46 @@ export const tripSeries = pgTable(
   (table) => [index("trip_series_shop_idx").on(table.shopId)],
 );
 
+/**
+ * The agencies a diver's card can be recorded under.
+ *
+ * Recording only, never gating: nothing in `src/lib/readiness.ts`,
+ * `trip-admission.ts`, or the nitrox gate reads the agency — a card clears on
+ * its *level* and its verification state, both of which are agency-independent
+ * by design, because a CMAS two-star and a PADI Advanced Open Water diver are
+ * the same diver at the rail. Widening this list therefore admits no one it did
+ * not already admit; it only ends the alternative, which was recording an
+ * honest card as "other" (DOM-L1, review 20260802).
+ *
+ * `other` stays last for the reader's sake, not the database's — the cert forms
+ * render `AGENCY_KEYS` in declaration order, so it is the picker's final option
+ * rather than something buried mid-list.
+ *
+ * `courses.agency` is a **different** field: free text a shop types, and the one
+ * `src/lib/course-ratios.ts` reads for the PADI-only entry-level ratio cap. This
+ * enum does not reach it.
+ */
 export const certificationAgency = pgEnum("certification_agency", [
   "padi",
   "ssi",
   "naui",
   "sdi",
   "tdi",
+  "cmas",
+  "raid",
+  "gue",
   "other",
 ]);
+
+/**
+ * One name for the agency list, so a widening lands everywhere at once.
+ *
+ * Spelling the union out by hand is how the enum and its readers drift: the
+ * three agencies DOM-L1 added had to be typed into five separate literal
+ * copies, each of which would have compiled perfectly while silently refusing a
+ * card the database accepts.
+ */
+export type CertificationAgency = (typeof certificationAgency.enumValues)[number];
 
 /** Ordered in src/lib/readiness.ts — extend deliberately with the rank map. */
 export const certificationLevel = pgEnum("certification_level", [
@@ -391,8 +423,46 @@ export const courses = pgTable(
     heroImageUrl: text("hero_image_url"),
     /** Real alt text, staff-authored; falls back to "{title} — photo N" when blank (H-accessibility). */
     heroImageAlt: text("hero_image_alt"),
+    /**
+     * The gallery: one object per photo, each carrying its own caption.
+     *
+     * Replaces the `image_urls` / `image_alts` pair, which were two jsonb
+     * arrays lined up by position with nothing enforcing that they stayed the
+     * same length — so one drifted row captioned every photo after it with the
+     * previous photo's words, silently and only for the readers alt text is for
+     * (DATA-L4, review 20260802). One object per photo makes the pairing
+     * structural.
+     *
+     * The `20260806051740_course-gallery-photos` migration backfilled by
+     * zipping the two old arrays on index, and it had to choose what to do with
+     * a row where they had already drifted: **a url with no matching alt keeps
+     * the photo and takes an empty caption; an alt with no matching url is
+     * dropped.** A photo is the thing a diver sees, so losing one would visibly
+     * change a published page; a caption with no photo has nothing to caption,
+     * and keeping it would only re-create the misalignment under a new name.
+     * The empty caption it lands on is the same "no caption yet" the editor
+     * already writes, and it falls back to the generated "{title} — photo {n}"
+     * exactly as a blank always has. Asserted against the shipped SQL in
+     * `courses-gallery-backfill.test.ts`.
+     */
+    galleryPhotos: jsonb("gallery_photos").$type<CourseGalleryPhoto[]>().notNull().default([]),
+    /**
+     * @deprecated Superseded by `gallery_photos`; **kept for one release only.**
+     *
+     * Expand/contract (docs/engineering/deploy-and-migrations-runbook.md):
+     * migrations run inside the production build while the *previous* release
+     * is still serving, and that release selects both of these on every course
+     * page — so dropping them in the same deploy that stops reading them takes
+     * the live site down, and `pnpm check:repo`'s migration guard refuses it.
+     * They are therefore still written (`createCourse` / `updateCourseContent`
+     * derive them from `galleryPhotos`) so an Instant Rollback lands on correct
+     * captions rather than stale ones, and nothing reads them.
+     *
+     * The contract release drops both columns. Confirm they are unreferenced
+     * outside this file first.
+     */
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
-    /** Parallel to `imageUrls` — same length, same order, "" where no caption was given. */
+    /** @deprecated Superseded by `gallery_photos` — see `imageUrls` above. */
     imageAlts: jsonb("image_alts").$type<string[]>().notNull().default([]),
     durationText: text("duration_text"),
     groupSizeText: text("group_size_text"),
@@ -437,6 +507,11 @@ export const courses = pgTable(
     uniqueIndex("courses_shop_title_unique").on(table.shopId, table.title),
     uniqueIndex("courses_shop_slug_unique").on(table.shopId, table.slug),
     index("courses_shop_active_idx").on(table.shopId, table.isActive),
+    // Backs the command-palette's courses arm (src/db/search.ts) — a leading
+    // wildcard `ilike '%query%'`, which the (shop_id, title) unique btree above
+    // cannot serve however tempting it looks: that index answers equality and
+    // prefixes, never an interior substring (DATA-L6).
+    index("courses_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
   ],
 );
 
@@ -603,6 +678,10 @@ export const diveSites = pgTable(
     index("dive_sites_shop_name_idx").on(table.shopId, table.name),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("dive_sites_name_trgm_idx").using("gin", sql`${table.name} gin_trgm_ops`),
+    // The site library's own search box matches a place as well as a name
+    // ("Key Largo") — `listDiveSitesPage` in src/db/dive-sites.ts ors the two,
+    // and only the name half was indexed (DATA-L6).
+    index("dive_sites_location_trgm_idx").using("gin", sql`${table.locationName} gin_trgm_ops`),
   ],
 );
 
@@ -1834,6 +1913,12 @@ export const orders = pgTable(
     index("orders_shop_booking_idx").on(table.shopId, table.bookingId),
     /** Backs listOrdersForPerson — the person-first diver workspace's payment history. */
     index("orders_shop_person_idx").on(table.shopId, table.personId),
+    // Backs the command-palette's orders arm, which searches an order's own
+    // description alongside the payer's name (src/db/search.ts) — a leading
+    // wildcard, so only a trigram GIN index can serve it (DATA-L6). The payer
+    // half of that `or` already rides `people_full_name_trgm_idx`; this is the
+    // half that was scanning every order the shop has ever written.
+    index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
   ],

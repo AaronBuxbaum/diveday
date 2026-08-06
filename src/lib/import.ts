@@ -75,7 +75,7 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
-import type { DiveSpecialty } from "@/db/schema";
+import { type CertificationAgency, certificationAgency, type DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 
@@ -98,9 +98,21 @@ export const MAX_IMPORT_ROWS = 20_000;
 export const MAX_IMPORT_COLUMNS = 64;
 export const MAX_IMPORT_CELL_LENGTH = 2_000;
 
-/** Certification agencies we can name; anything else lands as "other". Mirrors the pg enum. */
-export const IMPORT_AGENCIES = ["padi", "ssi", "naui", "sdi", "tdi", "other"] as const;
-export type ImportAgency = (typeof IMPORT_AGENCIES)[number];
+/**
+ * Certification agencies we can name; anything else lands as "other".
+ *
+ * *Is* the pg enum rather than a copy that mirrors it, so an agency added to
+ * the database is one an import can immediately recognize — a hand-kept second
+ * list is how a shop's honest CMAS card would have kept landing as "other"
+ * after the column started accepting it (DOM-L1).
+ *
+ * Order is load-bearing for `normalizeAgency`, which takes the first entry the
+ * cell contains: it matches the enum's declaration order, and every agency
+ * added there has been appended after the ones already recognized, so no cell
+ * that resolved to an agency before can resolve to a different one now.
+ */
+export const IMPORT_AGENCIES = certificationAgency.enumValues;
+export type ImportAgency = CertificationAgency;
 
 /** Recreational ladder rungs; mirrors the certification_level pg enum. */
 export const IMPORT_LEVELS = [

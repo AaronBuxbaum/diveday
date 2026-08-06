@@ -251,10 +251,31 @@ describe("prepareContactImport — safety rules", () => {
   });
 
   it("maps an unknown agency to 'other' rather than dropping the card", () => {
+    // BSAC is not in the enum, so the card still lands — under "other" rather
+    // than being thrown away, which is the behaviour this test has always been
+    // about. (It used to say CMAS; CMAS is a real value now — see below.)
     const csv =
-      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,CMAS,Divemaster,DM-9";
+      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,BSAC,Divemaster,DM-9";
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toMatchObject({ agency: "other", level: "divemaster" });
+  });
+
+  it("records a CMAS, RAID or GUE card under its own agency (DOM-L1)", () => {
+    // These three were absent from the enum, so an import filed an honest card
+    // under "other" and the shop lost which agency issued it. Recording only —
+    // nothing about admission or readiness reads the agency.
+    const agencyOf = (name: string) =>
+      prepareContactImport(
+        `full_name,certification_agency,certification_level,certification_number\nA Diver,${name},Open Water,OW-1`,
+      ).rows[0]?.cert?.agency;
+
+    expect(agencyOf("CMAS")).toBe("cmas");
+    expect(agencyOf("RAID")).toBe("raid");
+    expect(agencyOf("GUE")).toBe("gue");
+    // And the agencies that already resolved still resolve to the same value —
+    // the new names were appended after them, never inserted ahead.
+    expect(agencyOf("PADI Open Water")).toBe("padi");
+    expect(agencyOf("SDI")).toBe("sdi");
   });
 
   it("imports nitrox as a verified-and-flagged card only with a card number", () => {

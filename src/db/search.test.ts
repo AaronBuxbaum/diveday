@@ -127,8 +127,15 @@ describe("CR-018 trigram search indexes", () => {
       sql`select indexname from pg_indexes where indexname like '%_trgm_idx' order by indexname`,
     );
     const names = rows.rows.map((row) => row.indexname);
+    // The inventory, by name. Which *columns* need to be in it is no longer a
+    // fact this hand-kept list carries alone — `search-indexes.test.ts` derives
+    // the searched set from `src/db/**` and fails on an unindexed arm, which is
+    // how the three DATA-L6 added went unnoticed under this assertion.
     expect(names).toEqual([
+      "courses_title_trgm_idx",
+      "dive_sites_location_trgm_idx",
       "dive_sites_name_trgm_idx",
+      "orders_description_trgm_idx",
       "people_email_trgm_idx",
       "people_full_name_trgm_idx",
       "people_phone_trgm_idx",
