@@ -343,9 +343,19 @@ export class InfraStack extends cdk.Stack {
       subscribers: [emailSubscriber(alertEmail)],
     });
 
-    new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
+    // No `budgetName` here, deliberately. `Budget` (the nested object holding
+    // budgetLimit) is a Replacement-only property in the CloudFormation
+    // resource type, so any `--context monthlyBudgetLimit=...` change makes
+    // CloudFormation create a new AWS::Budgets::Budget before deleting the
+    // old one. Budgets enforces a unique name per account, so a fixed literal
+    // here made that create collide with the not-yet-deleted old resource --
+    // "A budget or resource with the same name but a different internalId
+    // already exists." Leaving the name unset lets Budgets mint a fresh one
+    // on every create, so a replacement never collides with what it's
+    // replacing. The resolved name is still discoverable: see the
+    // MonthlyCostGuardrailBudgetName output below.
+    const monthlyCostGuardrail = new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
       budget: {
-        budgetName: "diveday-monthly-cost-guardrail",
         budgetType: "COST",
         timeUnit: "MONTHLY",
         budgetLimit: {
@@ -361,6 +371,12 @@ export class InfraStack extends cdk.Stack {
         // Outside-normal-bands siren: still just an email, nothing stops running.
         budgetNotification("ACTUAL", 200),
       ],
+    });
+
+    new cdk.CfnOutput(this, "MonthlyCostGuardrailBudgetName", {
+      value: monthlyCostGuardrail.ref,
+      description:
+        "AWS-assigned name of the monthly cost guardrail budget (Billing and Cost Management -> Budgets). No longer a fixed literal -- see the comment above.",
     });
 
     // AWS-managed Cost Anomaly Detection catches an unexpectedly fast rate of
