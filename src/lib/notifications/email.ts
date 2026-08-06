@@ -11,6 +11,7 @@ import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
+import { cachedListFormat } from "../intl-cache";
 
 // i18n-exempt-file: the terminal renderer for outbound email — no downstream
 // React component picks words for a sent message, so this file resolves its
@@ -580,7 +581,7 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   // Name the sites they dived when we know them — the recap is warmer when it
   // remembers the day rather than nudging generically.
   const siteList = sites.length
-    ? new Intl.ListFormat(input.locale, { style: "long", type: "conjunction" }).format(sites)
+    ? cachedListFormat(input.locale, { style: "long", type: "conjunction" }).format(sites)
     : "";
   const where = sites.length ? ` ${t("notifications.tripRecap.dived", { sites: siteList })}` : "";
   const whereHtml = sites.length
@@ -694,6 +695,73 @@ export function demoStartedAlertEmail(input: DemoStartedAlertEmailInput): Notifi
   };
 }
 
+type UsageCeilingAlertEmailInput = {
+  ceilingId: string;
+  provider: string;
+  metric: string;
+  unit: string;
+  level: "warn" | "over";
+  periodKey: string;
+  value: number;
+  ceiling: number;
+  percent: number;
+  overflow: "bills_overage" | "suspends" | "drops";
+};
+
+/**
+ * What the provider does at this ceiling, in the founder's own words.
+ *
+ * The mapping lives here rather than in `@/lib/cost-guardrails` on purpose:
+ * the registry holds the code, this file — the terminal renderer — picks the
+ * sentence, which is the same division `readinessStatusText` applies to every
+ * status in the product.
+ */
+const overflowConsequence: Record<UsageCeilingAlertEmailInput["overflow"], string> = {
+  bills_overage: "keeps serving and bills the overage",
+  suspends: "suspends the resource until the period rolls over",
+  drops: "silently discards whatever is over the line",
+};
+
+/** Two decimals is enough for dollars and for GiB; no locale, no separators. */
+function usageFigure(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}
+
+/**
+ * A provider ceiling this deployment is approaching or past (docs ADR
+ * 20260806-provider-usage-guardrails).
+ *
+ * Internal and English, exactly like `newAccountAlertEmail` and
+ * `demoStartedAlertEmail` above: it lands in the founder's alert inbox, where
+ * there is no shop or diver to address in their own language. It carries no
+ * personal data of any kind — every field is a machine key or a number about
+ * an invoice.
+ *
+ * The last line is not decoration. This alert exists on an explicitly
+ * alert-only guardrail (ADR 20260802-aws-cost-guardrails set that posture for
+ * AWS and this change mirrors it), and an operator reading a cost warning at
+ * 7am should not have to wonder whether something already shut itself off.
+ */
+export function usageCeilingAlertEmail(input: UsageCeilingAlertEmailInput): NotificationEmail {
+  const ceilingId = escapeHtml(input.ceilingId);
+  const provider = escapeHtml(input.provider);
+  const metric = escapeHtml(input.metric);
+  const unit = escapeHtml(input.unit);
+  const period = escapeHtml(input.periodKey);
+  const value = usageFigure(input.value);
+  const ceiling = usageFigure(input.ceiling);
+  const headline = input.level === "over" ? "over ceiling" : "warning";
+  const consequence = overflowConsequence[input.overflow];
+  const reading = `${value} of ${ceiling} ${input.unit} (${input.percent}%)`;
+  const readingHtml = `${escapeHtml(value)} of ${escapeHtml(ceiling)} ${unit} (${input.percent}%)`;
+
+  return {
+    subject: `Usage ${headline}: ${input.ceilingId} at ${input.percent}% (${input.periodKey})`,
+    text: `${input.ceilingId} is at ${reading} for ${input.periodKey}.\n\nProvider: ${input.provider} / ${input.metric}.\nAt the ceiling, ${input.provider} ${consequence}.\n\nAlert-only: nothing has been disabled, throttled, or turned off.\n`,
+    html: `<p><strong>${ceilingId}</strong> is at ${readingHtml} for ${period}.</p><p>Provider: <code>${provider}</code> / <code>${metric}</code>. At the ceiling, ${provider} ${consequence}.</p><p>Alert-only: nothing has been disabled, throttled, or turned off.</p>`,
+  };
+}
+
 type VerifyAccountEmailInput = {
   locale: DiverLocale;
   ownerName: string;
@@ -731,7 +799,7 @@ type StaffInviteEmailInput = {
 export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.inviteeName, t("notifications.common.genericName"));
-  const roles = new Intl.ListFormat(input.locale, { style: "long", type: "conjunction" }).format(
+  const roles = cachedListFormat(input.locale, { style: "long", type: "conjunction" }).format(
     input.roleLabels,
   );
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);

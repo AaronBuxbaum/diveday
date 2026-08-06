@@ -439,6 +439,7 @@
       "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
       "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
       "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
+      "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
       "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
       "deleted": "Buceador eliminado. Sus reservas, tarjetas y tallas quedan registradas.",
       "restored": "Buceador restaurado. Vuelve a estar en tus listas activas.",
@@ -743,6 +744,7 @@
         "voidFailed": "No se pudo anular este pedido — puede que ya esté pagado o anulado.",
         "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
         "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
+        "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
         "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
         "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
         "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."

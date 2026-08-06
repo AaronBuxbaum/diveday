@@ -13,6 +13,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -76,7 +77,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
-  const competitors = new Intl.ListFormat(locale, { type: "conjunction" }).format(
+  const competitors = cachedListFormat(locale, { type: "conjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
 

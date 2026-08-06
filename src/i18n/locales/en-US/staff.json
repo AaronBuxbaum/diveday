@@ -439,6 +439,7 @@
       "tripUnavailable": "Add an email and choose an available activity.",
       "bookingInvalid": "Add an email and choose an available activity.",
       "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
+      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
       "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be refunded.",
       "deleted": "Diver removed. Their bookings, cards, and sizes stay on file.",
       "restored": "Diver restored. They're back on your active lists.",
@@ -743,6 +744,7 @@
         "voidFailed": "Couldn't void this order — it may already be paid or void.",
         "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
         "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
+        "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
         "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
         "fallback": "Something changed on this order — the details below are current."

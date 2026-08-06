@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
@@ -363,6 +364,19 @@ describe("setShopPromoEnabled", () => {
   });
 });
 
+/**
+ * The redemptions this test wrote, never the whole table: the demo seed the
+ * fixture is built on already carries one completed promo redemption of its
+ * own, so an unscoped `select` returns rows in no defined order and asserts
+ * against whichever one the planner handed back first.
+ */
+async function redemptionsFor(db: TestDb, checkoutId: string) {
+  return db
+    .select()
+    .from(shopPromoRedemptions)
+    .where(eq(shopPromoRedemptions.checkoutId, checkoutId));
+}
+
 describe("redemption recording", () => {
   it("counts one redemption per paid checkout, and never twice on a replayed webhook", async () => {
     const { db, shop } = await promoContext();
@@ -421,13 +435,16 @@ describe("redemption recording", () => {
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(1);
     // The redemption records what the shop received with this code applied,
     // copied from Stripe's own total — not the $180 that was asked (PAY-H2).
-    const [redemption] = await db.select().from(shopPromoRedemptions);
+    // Scoped to this test's own checkout: the demo seed plants a completed
+    // promo redemption of its own (`src/db/seed-promos.ts`), so an unscoped
+    // read of the table asserts against whichever row came back first.
+    const [redemption] = await redemptionsFor(db, started.checkout.id);
     expect(redemption?.amountChargedCents).toBe(14_400);
 
     // Stripe retries deliveries; a second one must not inflate the count.
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(1);
-    expect((await db.select().from(shopPromoRedemptions)).length).toBe(1);
+    expect(await redemptionsFor(db, started.checkout.id)).toHaveLength(1);
   });
 
   it("records the total net of this code's own discount when Stripe reported no settled figure", async () => {
@@ -480,7 +497,7 @@ describe("redemption recording", () => {
     if (!started.ok) throw new Error(`checkout failed: ${started.reason}`);
 
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
-    const [redemption] = await db.select().from(shopPromoRedemptions);
+    const [redemption] = await redemptionsFor(db, started.checkout.id);
     // No settled figure exists, so the redemption is recorded at $180 less
     // this code's own 20% — never the pre-discount $180 the diver was quoted,
     // which would overstate every unsettled redemption in this history

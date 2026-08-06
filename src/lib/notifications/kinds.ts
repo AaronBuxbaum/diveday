@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
+import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -365,6 +366,44 @@ const demoStartedAlertSchema = z.object({
   source: z.string().trim().min(1).max(60),
 });
 
+/**
+ * A provider ceiling this deployment is approaching or past (docs ADR
+ * 20260806-provider-usage-guardrails). The third founder-only alert, on the
+ * same SES pipeline and in the same inbox as the two above — English, no
+ * locale, nobody to address.
+ *
+ * **The only kind with no `shopId`, and the reason is structural rather than
+ * an oversight.** Every other notification is about one tenant's booking,
+ * diver, or account; this one is about the platform's Vercel bill. There is no
+ * shop it belongs to, so it also never rides `sendNotification` — that path
+ * enqueues a retryable failure into `notification_send_queue`, whose `shop_id`
+ * is a non-null FK. This kind goes through `notify()` instead: one attempt, no
+ * durable retry, and a failed send shows up as the cron's own non-ok Sentry
+ * check-in rather than as a queued row nobody owns. A cost warning that is a
+ * day late is not the failure worth building a tenant-scoped retry around.
+ *
+ * Everything here is a number or a machine key. The words are chosen in
+ * `./email.ts`, and every value is escaped there anyway.
+ */
+const usageCeilingAlertSchema = z.object({
+  kind: z.literal("usage_ceiling_alert"),
+  to: emailAddressSchema,
+  /** `CostCeiling.id` from `@/lib/cost-guardrails` — also what keys the alert. */
+  ceilingId: z.string().trim().min(1).max(60),
+  provider: z.enum(COST_PROVIDERS),
+  metric: z.string().trim().min(1).max(60),
+  unit: z.enum(CEILING_UNITS),
+  level: z.enum(ALERTING_LEVELS),
+  /** What the period the sample belongs to is called, e.g. `2026-08`. */
+  periodKey: z.string().trim().min(1).max(20),
+  value: z.number().finite().nonnegative(),
+  ceiling: z.number().finite().positive(),
+  /** Whole percent of the ceiling, pre-rounded so the body does no arithmetic. */
+  percent: z.number().int().min(0),
+  /** What the provider does at this ceiling: bills, suspends, or silently drops. */
+  overflow: z.enum(["bills_overage", "suspends", "drops"]),
+});
+
 // The shop's own inbox learns about a lead the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
 // task 7) — carries the course_inquiries row id so a retried send can't double
@@ -421,6 +460,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   lastMinuteDealSchema,
   newAccountAlertSchema,
   demoStartedAlertSchema,
+  usageCeilingAlertSchema,
   courseInquirySchema,
 ]);
 
@@ -488,6 +528,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // somehow reached the same shop converges on one send rather than two.
     case "demo_started_alert":
       return `demo-started-alert/${notification.shopSlug}`;
+    // One alert per ceiling per period per level — the same key
+    // `ceilingAlertKey` computes, so whatever suppresses a repeat send and
+    // whatever would dedup a queued retry agree on what "the same alert" means.
+    // Level is in the key deliberately: crossing from warn to over is news.
+    case "usage_ceiling_alert":
+      return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
     // One notification per submitted inquiry row.
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;

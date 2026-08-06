@@ -470,15 +470,27 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
     revalidateAndRedirect(base, backTo(base, "demo-disabled", "payments"));
     return;
   }
-  const refunded = orderId ? await refundOrder(db, staff.user.shopId, orderId) : null;
+  // `refundOrder` returns a code, never a sentence; the words are picked here
+  // (docs ADR 20260731-domain-layer-copy-leaks). `in_progress` — a second tap
+  // arriving while the first refund is still at Stripe — is its own notice, not
+  // a failure: telling staff it failed invites the third tap (PAY-L3).
+  const outcome = orderId
+    ? await refundOrder(db, staff.user.shopId, orderId)
+    : ({ status: "not_found" } as const);
   if (orderId) {
     await trackEvent({
       name: "refund_issued",
       auto: false,
-      status: refunded ? "refunded" : "failed",
+      status: outcome.status === "refunded" ? "refunded" : "failed",
     });
   }
-  revalidateAndRedirect(base, backTo(base, refunded ? "refunded" : "refund-failed", "payments"));
+  const notice =
+    outcome.status === "refunded"
+      ? "refunded"
+      : outcome.status === "in_progress"
+        ? "refund-in-progress"
+        : "refund-failed";
+  revalidateAndRedirect(base, backTo(base, notice, "payments"));
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {

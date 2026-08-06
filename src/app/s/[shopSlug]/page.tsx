@@ -36,6 +36,7 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
@@ -455,7 +456,7 @@ export default async function SchedulePage({
                             ? t("schedule.diveSite")
                             : t("schedule.diveSites")}{" "}
                           ·{" "}
-                          {new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                          {cachedListFormat(locale, { type: "conjunction" }).format(
                             diveSites.sites.map((site) => site.name),
                           )}
                           {/* The other half of the count: a two-tank day with

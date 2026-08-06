@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { FormNotice } from "@/lib/staff-notices";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
@@ -60,7 +61,7 @@ export function RequirementsSection({
     ) ?? []),
     siteRequirement?.requiresNitrox ? t("trips.requirements.nitroxCardRequired") : null,
   ].filter((part): part is string => Boolean(part));
-  const siteRequirementList = new Intl.ListFormat(locale, {
+  const siteRequirementList = cachedListFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(siteRequirementParts);
@@ -84,7 +85,7 @@ export function RequirementsSection({
    */
   const multipleSites = siteNames.length > 1;
   const siteNoteSubject = multipleSites
-    ? new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(siteNames)
+    ? cachedListFormat(locale, { style: "long", type: "conjunction" }).format(siteNames)
     : (siteNames[0] ?? t("trips.requirements.thisSite"));
   const siteNote = (kind: "trip" | "course") => (
     <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">

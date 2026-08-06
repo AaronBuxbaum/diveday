@@ -64,6 +64,15 @@ async function run() {
     if (key === "OPS_ALERT_EMAIL") {
       continue;
     }
+    // Provider usage guardrails are optional by design (ADR
+    // 20260806-provider-usage-guardrails): with no token the affected ceiling
+    // reports `not_configured` — which the monitor keeps distinct from `ok`
+    // everywhere it surfaces — and nothing else changes. A local run, a fork,
+    // or a deployment whose owner has not minted the read-only tokens
+    // legitimately has none.
+    if (key.startsWith("USAGE_")) {
+      continue;
+    }
     // Address lookup is optional by design (ADR
     // 20260804-aws-location-address-lookup): with no credentials the settings
     // address card is exactly the five text boxes it has always been, so a

@@ -18,6 +18,7 @@ import { matchLocale } from "@/i18n/negotiate";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
   isNotBackAboard,
   isRollCallCheckpoint,
@@ -348,7 +349,7 @@ export function OfflineManifestView() {
               // own distinct label here (the per-trip view already says this
               // plainly once opened).
               const savedExpired = isOfflineManifestExpired(saved.snapshot);
-              const dateTime = new Intl.DateTimeFormat(deviceLocale(), {
+              const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
                 dateStyle: "medium",
                 timeStyle: "short",
                 timeZone: saved.snapshot.shop.timezone,
@@ -571,7 +572,7 @@ export function OfflineManifestView() {
     }
   }
 
-  const dateTime = new Intl.DateTimeFormat(deviceLocale(), {
+  const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: envelope.snapshot.shop.timezone,
@@ -781,7 +782,7 @@ export function OfflineManifestView() {
                     <span className="ms-1 font-normal">
                       ·{" "}
                       {t("shared.buddyTeam.with", {
-                        names: new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                        names: cachedListFormat(locale, { type: "conjunction" }).format(
                           member.buddyTeamNames ?? [],
                         ),
                       })}
@@ -1084,7 +1085,7 @@ function OfflineBuddyTeamChip({
   return (
     <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
       {t("shared.buddyTeam.with", {
-        names: new Intl.ListFormat(locale, { type: "conjunction" }).format(names),
+        names: cachedListFormat(locale, { type: "conjunction" }).format(names),
       })}
     </span>
   );

@@ -9,16 +9,18 @@ import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
+  STALE_AFTER_MS,
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
-import type { Order, OrderLineItemKind, OrderStatus } from "./schema";
+import type { Order, OrderLineItemKind, OrderStatus, PaymentOperationIntent } from "./schema";
 import {
   bookings,
   courses,
   orderLineItemKind,
   orderLineItems,
   orders,
+  paymentOperationIntents,
   people,
   trips,
 } from "./schema";
@@ -674,28 +676,131 @@ export async function voidOrder(
   return applyOrderUpdate(db, order, { status: "void" });
 }
 
+/**
+ * Why a refund attempt did not move money — a code, never a sentence; the UI
+ * picks the words (docs ADR 20260731-domain-layer-copy-leaks).
+ *
+ * - `not_found` — no such order in this shop.
+ * - `not_paid` — nothing captured to reverse (open, void, already refunded).
+ * - `in_progress` — another refund of this same order is already at Stripe;
+ *   refused *locally* rather than sent as a second reversal (PAY-L3).
+ * - `failed` — Stripe refused the reversal, or the local write after it did.
+ */
+export type RefundOrderOutcome =
+  | { status: "refunded"; order: Order }
+  | { status: "not_found" | "not_paid" | "in_progress" | "failed" };
+
+type OrderRefundClaim =
+  | { status: "claimed"; order: Order; intent: PaymentOperationIntent }
+  | { status: "not_found" | "not_paid" | "in_progress" };
+
+/**
+ * Claim the sole in-flight refund of one order, under that order row's own
+ * lock (PAY-L3).
+ *
+ * Before this, `refundOrder`'s only gate was a plain `SELECT` of
+ * `orders.status`. Two staff taps (two tabs, a double-submitted form, a retry
+ * after a slow response) both read `paid`, both minted their own intent — and
+ * therefore their own distinct `Idempotency-Key`, which is deliberate and must
+ * stay that way, since one payment intent covers a whole party and two genuine
+ * refunds must not collapse into one (PAY-C1) — and both reached Stripe. The
+ * only thing stopping the second reversal was Stripe rejecting an over-refund:
+ * correct, but a network round trip's worth of trust in a refusal we can make
+ * here.
+ *
+ * The shape is the house pattern from `createBookingRecord` (src/db/bookings.ts)
+ * and `applyOrderUpdate` above: `SELECT … FOR UPDATE` on the always-existing
+ * order row, then read-check-write entirely inside that lock. Two callers
+ * serialize on the row, so the loser re-reads *after* the winner's intent has
+ * committed and sees it.
+ *
+ * The transaction is deliberately short and commits **before** Stripe is
+ * called, never around it: it exists to order two local decisions, not to hold
+ * a database lock across a network round trip. That also keeps
+ * `startPaymentOperation`'s durability contract intact (CR-005) — the intent is
+ * committed on its own, ahead of the Stripe call it describes, so a crash
+ * mid-call still leaves it for `listStuckPaymentOperations` to surface.
+ *
+ * A claim is a guard for the duration of one Stripe round trip, never a
+ * permanent lock: an intent still `started` past `STALE_AFTER_MS` belonged to a
+ * process that died and is ignored, exactly as `claimBookingsForCheckout`
+ * treats an abandoned checkout claim. Past that horizon Stripe's own
+ * over-refund rejection is the gate again — this lock is a second gate in
+ * front of it, never a replacement for it.
+ *
+ * **PGlite caveat.** The repo's default test database is single-connection, so
+ * `FOR UPDATE` never actually blocks there and a PGlite test cannot exhibit two
+ * transactions genuinely inside this critical section at once — deleting the
+ * `.for("update")` below would leave the whole PGlite suite green. What those
+ * tests pin is the ordering and the refusal code; the lock's *presence* is
+ * asserted under real contention in `src/db/refunds.postgres.test.ts`, which
+ * runs only when `DIVEDAY_TEST_POSTGRES_URL` names a server (`src/test/postgres.ts`).
+ *
+ * `staleBefore` exists for the same reason `claimBookingsForCheckout`'s does:
+ * `payment_operation_intents.started_at` is stamped by the *database's* clock
+ * (`defaultNow()`), which `DIVEDAY_CLOCK` does not freeze, so a test that wants
+ * to age an intent past the horizon has to express the bound against that same
+ * clock (`dbNow`, src/test/db.ts). Production passes nothing and gets
+ * `nowDate() - STALE_AFTER_MS`, where app and database clocks agree to well
+ * inside the five-minute window.
+ */
+async function claimOrderRefund(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+  staleBefore: Date = new Date(nowDate().getTime() - STALE_AFTER_MS),
+): Promise<OrderRefundClaim> {
+  return db.transaction(async (tx): Promise<OrderRefundClaim> => {
+    const [order] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
+      .for("update");
+    if (!order) return { status: "not_found" };
+    if (order.status !== "paid") return { status: "not_paid" };
+
+    const [live] = await tx
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.shopId, shopId),
+          eq(paymentOperationIntents.orderId, order.id),
+          eq(paymentOperationIntents.kind, "refund"),
+          eq(paymentOperationIntents.status, "started"),
+          gte(paymentOperationIntents.startedAt, staleBefore),
+        ),
+      )
+      .limit(1);
+    if (live) return { status: "in_progress" };
+
+    const intent = await startPaymentOperation(tx, {
+      shopId,
+      kind: "refund",
+      orderId: order.id,
+    });
+    return { status: "claimed", order, intent };
+  });
+}
+
 /** Refund a paid Stripe invoice and reopen its booking payment gate. */
 export async function refundOrder(
   db: AppDb,
   shopId: string,
   orderId: string,
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
-): Promise<Order | null> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
-    .limit(1);
-  if (order?.status !== "paid") return null;
-
+  /** See {@link claimOrderRefund} — the abandoned-attempt horizon, for tests. */
+  options: { staleBefore?: Date } = {},
+): Promise<RefundOrderOutcome> {
   // Durable evidence before calling Stripe, and a deterministic idempotency
   // key so a retry of this same refund attempt converges on the one Stripe
-  // refund already issued rather than refunding the diver twice (CR-005).
-  const intent = await startPaymentOperation(db, {
-    shopId,
-    kind: "refund",
-    orderId: order.id,
-  });
+  // refund already issued rather than refunding the diver twice (CR-005) —
+  // now written under the order row's lock, so a *second* attempt is refused
+  // locally instead of racing this one to Stripe (PAY-L3).
+  const claim = await claimOrderRefund(db, shopId, orderId, options.staleBefore);
+  if (claim.status !== "claimed") return { status: claim.status };
+  const { order, intent } = claim;
+
   const result = await invoicing.refundInvoice(
     order.stripeAccountId,
     order.stripeInvoiceId,
@@ -703,7 +808,7 @@ export async function refundOrder(
   );
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
-    return null;
+    return { status: "failed" };
   }
   // Durable the moment Stripe confirms the refund exists — before the local
   // update below that could still fail (CR-005).
@@ -712,7 +817,10 @@ export async function refundOrder(
   await resolvePaymentOperation(db, intent.id, {
     status: "succeeded",
   });
-  return updated;
+  // Stripe reversed the charge; only the local write after it can have failed.
+  // `failed` is the honest answer for staff (retry, then reconcile) — the
+  // intent above carries the Stripe refund id for exactly that.
+  return updated ? { status: "refunded", order: updated } : { status: "failed" };
 }
 
 export type ResendInvoiceOutcome =

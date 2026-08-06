@@ -171,6 +171,8 @@ export async function startBookingCheckout(
         : null
     : null;
 
+  const totalCents = amountPerDiverCents * input.bookingIds.length + gearTotalCents;
+
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
     existing?.status === "pending" &&
@@ -178,7 +180,32 @@ export async function startBookingCheckout(
     (!existing.expiresAt || existing.expiresAt > nowDate()) &&
     (await checkoutCoversExactly(db, input.shopId, existing.id, input.bookingIds))
   ) {
-    return { ok: true, checkout: existing, reused: true };
+    // …and only if the diver would still be charged what it was minted for
+    // (PAY-L2). Stripe holds a session's amounts for its whole life, so a
+    // reprice, a new deposit policy, a currency switch, changed gear or a code
+    // the diver has only just entered all leave this row quoting a figure the
+    // shop is no longer asking for.
+    if (
+      stillQuotesCurrentCharge(existing, {
+        amountPerDiverCents,
+        totalCents,
+        isDeposit: charge.isDeposit,
+        currency,
+        appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
+        promoResolved: input.promotionCode !== undefined,
+      })
+    ) {
+      return { ok: true, checkout: existing, reused: true };
+    }
+    // Retire it before minting the replacement, and unconditionally — a Stripe
+    // failure below must not leave the stale figure payable as a consolation
+    // prize; it is retired precisely *because* its figure is wrong, and an
+    // outage does not make it right. Local only, like every other retirement on
+    // this path (`rescheduleBooking`, src/db/bookings.ts): the hosted session
+    // stays genuinely completable at Stripe until its own longer expiry, and
+    // what actually closes that loophole is `markCheckoutPaidBySessionId`
+    // refusing to settle a checkout whose local status is no longer `pending`.
+    await retireStaleCheckout(db, existing);
   }
 
   // Durable evidence this attempt exists, written and committed before
@@ -268,7 +295,7 @@ export async function startBookingCheckout(
           // (docs ADR 20260731-shop-currency).
           currency,
           amountPerDiverCents,
-          totalCents: amountPerDiverCents * input.bookingIds.length + gearTotalCents,
+          totalCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
           // At most one source is ever recorded (the table's
@@ -302,6 +329,157 @@ export async function startBookingCheckout(
     // future callers check.
     await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
   }
+}
+
+/** What a fresh attempt right now would charge, for comparison against a stored session. */
+type CurrentCharge = {
+  amountPerDiverCents: number;
+  totalCents: number;
+  isDeposit: boolean;
+  currency: string;
+  /** The percent this attempt would hand Stripe, or null for no discount. */
+  appliedDiscountPercent: number | null;
+  /**
+   * Whether this caller resolved a promotion at all — *not* whether one
+   * applied. See the one-directional rule in {@link stillQuotesCurrentCharge}.
+   */
+  promoResolved: boolean;
+};
+
+/**
+ * Whether a stored pending session still quotes what the diver would be charged
+ * now (PAY-L2).
+ *
+ * A `booking_checkouts` row is evidence of what the diver was asked for at the
+ * moment it was minted, and Stripe holds those amounts for the whole life of
+ * the hosted session — completing it a week later charges the old figure, not
+ * today's. So every input that moves the figure is compared:
+ *
+ * - `amountPerDiverCents` and `isDeposit` — one `checkoutCharge` answer, two
+ *   columns. They move separately: a trip repriced from $180 to $210 changes the
+ *   first, and a deposit policy arriving on a $180 trip changes both *and* the
+ *   meaning of the charge (part now, balance later), which the hosted page says
+ *   out loud.
+ * - `totalCents` — party size and this diver's priced gear, which the trip fee
+ *   alone cannot see.
+ * - `currency` — 18000 of one currency's minor unit is not 18000 of another's
+ *   (docs ADR 20260731-shop-currency).
+ *
+ * **The promotion comparison is deliberately one-directional.** A caller that
+ * resolved a code (`promotionCode` present) is compared strictly: a session
+ * minted at a different percent, or at none, no longer matches. A caller that
+ * resolved *nothing* is not evidence the discount went away — `payForBooking`
+ * and the ready page's Pay button (`src/app/s/[shopSlug]/trips/[id]/actions.ts`,
+ * `src/app/ready/[token]/actions.ts`) never resolve a code at all, because a
+ * diver returning to a session they already hold has typed nothing new. Treating
+ * that silence as "the promo is gone" would retire every discounted session on
+ * the diver's way back to it and re-mint at full price, which is this ticket's
+ * own harm pointed the other way. Whether a code is still *live* is Stripe's
+ * question, not ours: the discount is attached to the session it already
+ * created, and this layer never re-litigates it.
+ */
+function stillQuotesCurrentCharge(existing: BookingCheckout, current: CurrentCharge): boolean {
+  if (!quotesCurrentTripCharge(existing, current)) return false;
+  if (existing.totalCents !== current.totalCents) return false;
+  if (!current.promoResolved) return true;
+  return existing.appliedDiscountPercent === current.appliedDiscountPercent;
+}
+
+/**
+ * The part of {@link stillQuotesCurrentCharge} that depends on nothing but the
+ * trip and the shop — so it can also be answered for a lone stored row, with no
+ * caller-supplied party, gear, or code to compare against (see
+ * {@link retirePendingCheckoutIfRepriced}).
+ */
+function quotesCurrentTripCharge(
+  existing: BookingCheckout,
+  current: Pick<CurrentCharge, "amountPerDiverCents" | "isDeposit" | "currency">,
+): boolean {
+  return (
+    existing.amountPerDiverCents === current.amountPerDiverCents &&
+    existing.isDeposit === current.isDeposit &&
+    existing.currency === current.currency
+  );
+}
+
+/**
+ * The same staleness rule (PAY-L2) applied to the *other* way a pending session
+ * is handed back: the confirmation panel's "Finish paying", which links
+ * `booking_checkouts.checkout_url` straight to Stripe rather than going through
+ * `startBookingCheckout` (`src/app/s/[shopSlug]/trips/[id]/page.tsx`). Fixing
+ * only the reuse branch above would leave the most-travelled path still handing
+ * over the old figure.
+ *
+ * Compares only what a lone row can be compared on — the trip's own charge and
+ * the shop's currency. The party is whatever this row already covers, the gear
+ * is this diver's own recorded selection, and the panel resolves no promotion
+ * code, so none of those three is a change anyone made.
+ *
+ * Returns the row to keep using, or the retired one. Retired is not a dead end
+ * for the diver: with no live pending checkout the panel falls through to its
+ * "Pay now" form, which mints a fresh session at today's price through
+ * `startBookingCheckout` — so the figure they see on Stripe's hosted page is
+ * the one the shop is actually asking for.
+ */
+export async function retirePendingCheckoutIfRepriced(
+  db: AppDb,
+  shopId: string,
+  existing: BookingCheckout,
+): Promise<BookingCheckout> {
+  if (existing.status !== "pending") return existing;
+
+  const [tripRow] = await db
+    .select({ trip: trips, course: courses })
+    .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .where(and(eq(trips.id, existing.tripId), eq(trips.shopId, shopId)))
+    .limit(1);
+  // No trip, or a trip that no longer prices at all: nothing to compare
+  // against, and inventing a mismatch out of missing data would retire a
+  // perfectly good session. Leave it exactly as it is.
+  if (!tripRow) return existing;
+  const charge = checkoutCharge(tripRow.trip, tripRow.course);
+  if (charge === null) return existing;
+
+  const currency = await getShopCurrency(db, shopId);
+  if (
+    quotesCurrentTripCharge(existing, {
+      amountPerDiverCents: charge.amountCents,
+      isDeposit: charge.isDeposit,
+      currency,
+    })
+  ) {
+    return existing;
+  }
+  await retireStaleCheckout(db, existing);
+  return { ...existing, status: "expired" };
+}
+
+/**
+ * Retire a pending session whose figure no longer matches, so nothing can hand
+ * it back and no later completion can attribute its stale price to these seats.
+ *
+ * `pending → expired` is the existing terminal for "this local checkout is no
+ * longer payable" — the same one `rescheduleBooking` and
+ * `markCheckoutPaymentFailedBySessionId` write. Scoped to `pending` so a
+ * completion that landed between the read above and this write is never
+ * demoted: money that already moved outranks a stale quote.
+ *
+ * Deliberately touches no `booking_payments` row and no booking. The seats were
+ * committed before checkout ever ran (docs ADR 20260721-checkout-at-booking) and
+ * this is a quote being withdrawn, not a payment being reversed.
+ */
+async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promise<void> {
+  await db
+    .update(bookingCheckouts)
+    .set({ status: "expired" })
+    .where(and(eq(bookingCheckouts.id, existing.id), eq(bookingCheckouts.status, "pending")));
+  log("checkout.retired_stale_quote", "info", {
+    shopId: existing.shopId,
+    checkoutId: existing.id,
+    stripeSessionId: existing.stripeSessionId,
+    quotedTotalCents: existing.totalCents,
+  });
 }
 
 /** The most recent checkout linked to any of these bookings. */

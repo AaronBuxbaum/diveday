@@ -1,6 +1,11 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { publishManifestEvent } from "@/db/manifest-events";
+import {
+  MAX_MANIFEST_SUBSCRIBERS,
+  manifestSubscriberCount,
+  publishManifestEvent,
+  subscribeManifestEvents,
+} from "@/db/manifest-events";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { seededShopContext } from "@/test/db";
 
@@ -216,6 +221,89 @@ describe("GET /api/trips/[id]/manifest-events", () => {
       await pump;
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  /**
+   * OPS-8 / ADR 20260806-manifest-listen-connection-ceiling. Every viewer on an
+   * instance shares one dispatch loop and one Neon direct connection, so an
+   * unbounded subscriber count is a cost every *other* viewer pays. The refusal
+   * has to be a valid, immediately-ended event stream: `EventSource` treats a
+   * closed stream as a reconnect and a non-200 as a permanent failure it never
+   * retries, so an error status would cost that tab its push channel for the
+   * life of the page rather than for a minute.
+   */
+  it("turns a viewer away at the instance ceiling, as a reconnect rather than an error", async () => {
+    const { db, shop, trip } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const release = Array.from({ length: MAX_MANIFEST_SUBSCRIBERS }, () =>
+      subscribeManifestEvents(shop.id, trip.id, () => {}),
+    );
+    try {
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toBe("text/event-stream");
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("expected a streamed body");
+      const first = await reader.read();
+      // A long hint, not the 2s one an ordinary stream opens with: hammering
+      // an instance that is already at its ceiling helps nobody.
+      expect(new TextDecoder().decode(first.value)).toBe("retry: 60000\n\n");
+      expect((await reader.read()).done).toBe(true);
+
+      // The refused viewer must not have taken a slot on the way out — a
+      // refusal that still subscribed would ratchet the ceiling permanently
+      // shut on a warm instance.
+      expect(manifestSubscriberCount()).toBe(MAX_MANIFEST_SUBSCRIBERS);
+
+      const logged = warn.mock.calls.map((call) => JSON.parse(String(call[0])));
+      expect(logged).toEqual([
+        expect.objectContaining({
+          event: "manifest_events.stream_at_capacity",
+          level: "warn",
+          subscribers: MAX_MANIFEST_SUBSCRIBERS,
+          refused: 1,
+        }),
+      ]);
+
+      // Every turned-away viewer comes back a minute later to be turned away
+      // again, so the line is damped and carries the count instead.
+      const second = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      await second.body?.getReader().cancel();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      for (const stop of release) stop();
+      warn.mockRestore();
+    }
+  });
+
+  it("admits a viewer while the instance is one below its ceiling", async () => {
+    const { db, shop, trip } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const release = Array.from({ length: MAX_MANIFEST_SUBSCRIBERS - 1 }, () =>
+      subscribeManifestEvents(shop.id, trip.id, () => {}),
+    );
+    try {
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("expected a streamed body");
+      expect(new TextDecoder().decode((await reader.read()).value)).toBe("retry: 2000\n\n");
+      expect(manifestSubscriberCount()).toBe(MAX_MANIFEST_SUBSCRIBERS);
+      await reader.cancel();
+    } finally {
+      for (const stop of release) stop();
     }
   });
 

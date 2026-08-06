@@ -564,7 +564,7 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
     const { db, shop, bookingId, order } = await orderScenario();
     await deliver(invoicePaid("evt_x1", "in_1", 22_000));
     const refunded = await refundOrder(db, shop.id, order.id, invoicing());
-    expect(refunded?.status).toBe("refunded");
+    expect(refunded.status).toBe("refunded");
     const terminal = await orderTerminal(db, shop.id, order.id, bookingId);
     expect(terminal.orderStatus).toBe("refunded");
     expect(terminal.paymentStatus).toBe("refunded");

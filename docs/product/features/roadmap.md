@@ -231,18 +231,18 @@ ADR rather than letting this become an unbounded second backlog.
    session with nobody on the supervision ratio and move seeded bookings, staffing and Today across
    the whole demo. The rule is asserted by a monotonicity test meanwhile; what is missing is a
    visible example (review 20260802, DOM-M7).
-4. **A real-Postgres CI job.** Everything runs on PGlite today, which cannot exhibit the races the
-   schema is designed against: the `FOR UPDATE` oversell guard in `src/db/bookings.ts` is dead code
-   under test, and committed `drizzle/` migrations first meet a real server during the production
-   deploy. A service-container job should apply the migrations from empty *and* from the previous
-   release's schema, then run the booking/payments/payment-operations suites with genuinely
-   concurrent connections — two transactions racing for the last seat, asserting exactly one wins.
-   Nightly or gated on `src/db/**`; the spend choice is HD-19 in the
-   [2026-08-02 review](../assessments/comprehensive-review-20260802.md#human-decision-register).
-   Carried out of that review (TEST-2 / DATA-L1 / OPS-2) as the highest-value enablement item open —
-   and now the **only** open engineering finding that review left, everything else in it being a
-   human decision. The migration set it would exercise grew on 2026-08-03 by five migrations —
-   two tables, six indexes and three enum types.
+4. **A real-Postgres CI job — shipped 2026-08-06.** A `postgres:16` service-container job applies
+   `drizzle/` from empty *and* from the previous release's schema, and races two genuinely concurrent
+   connections for the last seat; the `FOR UPDATE` oversell guard is no longer dead code under test
+   (remove the lock and a one-seat trip sells two). Gated on `src/db/**`/`drizzle/**` plus a nightly
+   run, which answers HD-19's spend question by not spending on every PR. See
+   [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md) and
+   [shipped.md](../shipped.md). **This was the last open engineering finding the
+   [2026-08-02 review](../assessments/comprehensive-review-20260802.md) left**; what remains in that
+   review is human decisions only.
+   What it still does not rehearse, deliberately: the migrations meet an *empty* database, so lock
+   duration and backfill runtime on a table with production's row count are still found in
+   production.
 
 ### P2 — when parallelism or scale proves the need
 

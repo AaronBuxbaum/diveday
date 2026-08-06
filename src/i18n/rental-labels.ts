@@ -1,4 +1,5 @@
 import type { RentalFitLine, RentalItemKind } from "@/lib/dive-prep";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { RentableItemKind, ShopCatalogKind } from "@/lib/rentals";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -57,7 +58,7 @@ export function statedSizesText(
   const parts = items.map((item) =>
     t("shared.rentalFit.itemWithSize", { item: rentalItemLabel(t, item.kind), size: item.size }),
   );
-  return new Intl.ListFormat(locale, { style: "long", type: "unit" }).format(parts);
+  return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
 }
 
 /**
@@ -88,7 +89,7 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
           ? t("shared.rentalFit.itemWithSize", { item: label, size: item.size })
           : label;
       });
-      return new Intl.ListFormat(locale, { style: "long", type: "unit" }).format(parts);
+      return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
     }
   }
 }

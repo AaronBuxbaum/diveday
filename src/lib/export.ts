@@ -7,6 +7,7 @@
  */
 
 import { strToU8, zipSync } from "fflate";
+import { cachedFormatter } from "./intl-cache";
 import { isManagedBlobUrl } from "./storage";
 
 /** Everything a CSV cell can hold. Dates serialize as ISO 8601 UTC. */
@@ -138,7 +139,7 @@ export function buildCsv(header: string[], rows: CsvValue[][]): string {
 
 /** "2026-07-22" in the shop's own timezone — the date a human would say it is. */
 export function exportDateStamp(now: Date, timezone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  return cachedFormatter("dt", Intl.DateTimeFormat, "en-CA", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

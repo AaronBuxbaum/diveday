@@ -13,6 +13,8 @@
  * which is why the stored value feeds Stripe unchanged.
  */
 
+import { cachedFormatter } from "./intl-cache";
+
 /**
  * Currencies a shop may choose. Deliberately a curated list rather than all of
  * ISO 4217: it is the picker's contents, and every entry is somewhere dive
@@ -79,7 +81,7 @@ export function toShopCurrency(value: string | null | undefined): ShopCurrency {
  * unknown currency, which is also the right guess).
  */
 export function currencyFractionDigits(currency: string): number {
-  const { maximumFractionDigits } = new Intl.NumberFormat("en-US", {
+  const { maximumFractionDigits } = cachedFormatter("num", Intl.NumberFormat, "en-US", {
     style: "currency",
     currency: currency.toUpperCase(),
   }).resolvedOptions();
@@ -138,7 +140,7 @@ export function maxPriceMajor(currency: string): number {
 export function currencySymbol(currency: string, locale = "en-US"): string {
   const code = currency.toUpperCase();
   return (
-    new Intl.NumberFormat(locale, {
+    cachedFormatter("num", Intl.NumberFormat, locale, {
       style: "currency",
       currency: code,
       currencyDisplay: "narrowSymbol",

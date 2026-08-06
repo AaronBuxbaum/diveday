@@ -1,8 +1,13 @@
 import { getDb } from "@/db/client";
-import { subscribeManifestEvents } from "@/db/manifest-events";
+import {
+  MAX_MANIFEST_SUBSCRIBERS,
+  manifestSubscriberCount,
+  subscribeManifestEvents,
+} from "@/db/manifest-events";
 import { getTripWithBooked } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { log } from "@/lib/log";
 
 // Node runtime, not Edge: the shared LISTEN client (src/db/manifest-events.ts)
 // needs the `pg` driver. See ADR 20260726-manifest-push-refresh. Cache
@@ -51,6 +56,50 @@ const HEARTBEAT_MS = 25_000;
 const RETRY_MS = 2_000;
 
 /**
+ * The reconnect delay handed to a viewer this instance had to turn away
+ * (ADR 20260806-manifest-listen-connection-ceiling).
+ *
+ * Long, because the refusal is not this viewer's fault and hammering the
+ * instance that is already at its ceiling helps nobody; short enough that a
+ * device regains push within a minute of capacity freeing, which is well
+ * inside the five-minute poll it falls back to meanwhile. A refusal is served
+ * as a *valid, immediately-ended* event stream rather than an error status on
+ * purpose: `EventSource` treats a closed stream as a reconnect (honouring this
+ * hint) and a non-200 as a permanent failure it never retries — the second
+ * would cost that tab its push channel for the life of the page.
+ */
+const AT_CAPACITY_RETRY_MS = 60_000;
+
+/**
+ * Minimum gap between two "at capacity" log lines from one instance, for the
+ * same reason `reportStoreFailure` in `src/lib/rate-limit.ts` damps its own:
+ * the line fires exactly when the instance is already under the load that
+ * produced it, and every turned-away viewer comes back every
+ * {@link AT_CAPACITY_RETRY_MS} to be turned away again. Undamped that is one
+ * line per refused viewer per minute, forever, which buries the event in its
+ * own repetition. `refused` on the line carries the count since the last one,
+ * so the rate is still legible.
+ */
+const AT_CAPACITY_LOG_INTERVAL_MS = 60_000;
+
+const atCapacity = { lastLoggedAt: Number.NEGATIVE_INFINITY, refused: 0 };
+
+/**
+ * One damped line per instance that is turning viewers away — the only signal
+ * {@link MAX_MANIFEST_SUBSCRIBERS} produces, since a refusal is otherwise a
+ * perfectly ordinary 200. See docs/engineering/realtime-manifest-events-runbook.md.
+ */
+function logAtCapacity(tripId: string, subscribers: number): void {
+  atCapacity.refused += 1;
+  const now = Date.now();
+  if (now - atCapacity.lastLoggedAt < AT_CAPACITY_LOG_INTERVAL_MS) return;
+  const refused = atCapacity.refused;
+  atCapacity.refused = 0;
+  atCapacity.lastLoggedAt = now;
+  log("manifest_events.stream_at_capacity", "warn", { tripId, subscribers, refused });
+}
+
+/**
  * Push "this trip's roll call changed" to the offline manifest manager, so it
  * refreshes without waiting for its interval. Staff-session-gated the same
  * way the manifest page itself is, plus the same shop-ownership check
@@ -84,6 +133,30 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           stop();
         }
       };
+      // The instance-level ceiling, checked before subscribing (both
+      // statements are synchronous, so nothing can slip in between). Turning a
+      // viewer away costs it push until it reconnects; *not* turning it away
+      // costs every viewer on this instance, because they all share one
+      // dispatch loop and one direct Postgres connection.
+      //
+      // A refused viewer degrades to a bound, not to silence.
+      // `OfflineManifestManager`'s five-minute poll, its online/visibility
+      // triggers, and Web Push all run independently of this stream, and each
+      // poll re-saves the offline snapshot — so the snapshot's age stays under
+      // 5 minutes, which is a third of the 15 minutes
+      // (`OFFLINE_MANIFEST_CURRENT_MS`) the freshness pill is allowed to call
+      // "current". The pill is computed from that age, never from whether a
+      // stream is up, so it cannot claim a freshness the refusal took away.
+      if (manifestSubscriberCount() >= MAX_MANIFEST_SUBSCRIBERS) {
+        logAtCapacity(tripId, manifestSubscriberCount());
+        send(`retry: ${AT_CAPACITY_RETRY_MS}\n\n`);
+        try {
+          controller.close();
+        } catch {
+          // Already gone — nothing to retire, since nothing was registered.
+        }
+        return;
+      }
       const unsubscribe = subscribeManifestEvents(session.user.shopId, tripId, () => {
         send("event: manifest-changed\ndata: {}\n\n");
       });

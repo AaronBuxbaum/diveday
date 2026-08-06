@@ -219,8 +219,10 @@ export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInp
     // ordering (CR-015). Locking the shop row (rather than the existing
     // waiver_templates rows) also correctly serializes a shop's very first
     // template, when a row lock on the target table would have nothing yet
-    // to hold. PGlite is single-connection so tests can't exhibit the race —
-    // the lock is for production Postgres.
+    // to hold. The unit suite runs on PGlite, which is single-connection and
+    // cannot exhibit the race; the real-Postgres CI job is where a lock like
+    // this one is provable (see `src/db/bookings.postgres.test.ts` for the
+    // pattern — this particular lock does not yet have its own such test).
     await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
     const existing = await tx
       .select({ version: waiverTemplates.version })

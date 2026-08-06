@@ -1,15 +1,29 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkRateLimit,
   inMemoryRateLimitStore,
+  RATE_LIMITS,
+  type RateLimitConfig,
   type RateLimitStore,
   rateLimitKey,
   rateLimitStoreFromEnvironment,
   upstashRateLimitStore,
 } from "./rate-limit";
 
+/**
+ * One stable mock instance across `vi.resetModules()`, so a freshly imported
+ * copy of the module under test still reports into the same spy. The fail-open
+ * reporter imports Sentry lazily (see its docblock), which `vi.mock` intercepts
+ * exactly as it does a static import.
+ */
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock("@sentry/nextjs", () => sentry);
+
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 const config = { capacity: 3, refillPerMs: 1 / 1000 }; // 3 burst, 1 token/sec refill
@@ -64,6 +78,16 @@ describe("checkRateLimit — cross-key isolation", () => {
 });
 
 describe("checkRateLimit — fail-open", () => {
+  // The catch reports before it allows (see the suite below); these two cases
+  // are about the return value, so the report is silenced rather than asserted.
+  let logged: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    logged.mockRestore();
+  });
+
   it("allows the request when the store throws instead of propagating the error", async () => {
     const throwingStore: RateLimitStore = {
       take() {
@@ -82,6 +106,164 @@ describe("checkRateLimit — fail-open", () => {
     };
     const result = await checkRateLimit("k", config, 0, throwingStore);
     expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+  });
+});
+
+/**
+ * OPS-7: failing open is the policy, failing *silently* was the bug — a store
+ * outage leaves every public write boundary in the app unprotected, and the
+ * only way anyone found out was by noticing the abuse.
+ *
+ * The reporter damps itself to one report per minute per process and carries
+ * the suppressed count, so these tests need a pristine module per case:
+ * `vi.resetModules()` re-imports the module (and with it a fresh damper) while
+ * the hoisted Sentry mock above stays the same object.
+ */
+describe("checkRateLimit — fail-open is observable", () => {
+  const alwaysThrows: RateLimitStore = {
+    take() {
+      throw new TypeError("fetch failed");
+    },
+  };
+
+  async function freshLimiter() {
+    vi.resetModules();
+    const { checkRateLimit: check } = await import("./rate-limit");
+    return check;
+  }
+
+  let logged: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    sentry.captureException.mockClear();
+    logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logged.mockRestore();
+  });
+
+  function loggedEvents(): Array<Record<string, unknown>> {
+    return logged.mock.calls.map((call: unknown[]) => JSON.parse(String(call[0])));
+  }
+
+  it("still allows the request, and says so in the log and in Sentry", async () => {
+    const check = await freshLimiter();
+    const result = await check("k", config, 1_000, alwaysThrows);
+
+    expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+    expect(loggedEvents()).toEqual([
+      expect.objectContaining({
+        event: "rate_limit.store_failed",
+        level: "error",
+        store: "injected",
+        error: "TypeError",
+        swallowed: 1,
+      }),
+    ]);
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(sentry.captureException.mock.calls[0]?.[0]).toBeInstanceOf(TypeError);
+  });
+
+  it("never puts the key in the log line — it is not provably a hash", async () => {
+    const check = await freshLimiter();
+    // A call site passing an un-hashed key is exactly what must not leak.
+    await check("diver@example.test", config, 1_000, alwaysThrows);
+
+    expect(JSON.stringify(loggedEvents())).not.toContain("diver@example.test");
+  });
+
+  it("reports once per burst rather than once per request, and carries the suppressed count", async () => {
+    const check = await freshLimiter();
+    // Every public write boundary shares this seam, so a store outage means
+    // one failure per request until it ends. Undamped, that is the whole
+    // Sentry quota.
+    for (let i = 0; i < 50; i++) await check("k", config, 1_000 + i, alwaysThrows);
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(loggedEvents()).toHaveLength(1);
+
+    // A minute later the incident is still worth a line — and the 49 failures
+    // that went unreported are counted in it, so the rate survives the damping.
+    await check("k", config, 1_000 + 60_000, alwaysThrows);
+    expect(loggedEvents()[1]).toMatchObject({ swallowed: 50 });
+    expect(sentry.captureException).toHaveBeenCalledTimes(2);
+  });
+
+  it("tags which store failed, so an Upstash incident is not confused with a bug in this file", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    // Stubbed *before* the re-import, because the module picks its default
+    // store — and that store captures its `fetch` — at load. A unit test must
+    // not depend on a real DNS failure to produce the outage it is asserting
+    // about: that would be a network round trip in `pnpm test`, and it would
+    // pass for a reason (an unreachable host) other than the one under test.
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("fetch failed")));
+    vi.resetModules();
+    const { checkRateLimit: check } = await import("./rate-limit");
+    // No `store` argument: this exercises the module's *own* default store,
+    // which is the only way the `upstash` tag can be reached at all.
+    await check("k", config, 2_000);
+
+    expect(loggedEvents()[0]).toMatchObject({ store: "upstash" });
+    expect(sentry.captureException.mock.calls[0]?.[1]).toMatchObject({
+      tags: { rate_limit_store: "upstash" },
+    });
+  });
+
+  it("still allows the request when the reporter itself throws", async () => {
+    const check = await freshLimiter();
+    // Observability must never become the outage the fail-open policy exists
+    // to prevent.
+    sentry.captureException.mockImplementationOnce(() => {
+      throw new Error("Sentry is down too");
+    });
+    await expect(check("k", config, 3_000, alwaysThrows)).resolves.toEqual({
+      allowed: true,
+      retryAfterMs: 0,
+    });
+  });
+});
+
+/**
+ * The runbook drifted from the code once already (OPS-7: it promised 30/hour
+ * for `capabilityAction` for a fortnight after a security review raised it to
+ * 60), and a stale number in a runbook is worse than no number — it is read
+ * during an incident and believed.
+ *
+ * This is a format check, not prose parsing: the runbook writes every figure as
+ * `` `RATE_LIMITS.name` (capacity/window) ``, and this reads back exactly that
+ * pattern wherever it appears. Anything else in the document is ignored.
+ */
+describe("rate-limiting runbook", () => {
+  const runbook = readFileSync(
+    path.join(process.cwd(), "docs/engineering/rate-limiting-runbook.md"),
+    "utf8",
+  );
+  const documented = /`RATE_LIMITS\.([A-Za-z]+)`\s+\((\d+)\/(hour|15min)\)/g;
+
+  /** The window a config's refill rate encodes, as the runbook spells it. */
+  function policyText(config: RateLimitConfig): string {
+    const windowMs = Math.round(config.capacity / config.refillPerMs);
+    if (windowMs === 60 * 60 * 1000) return `${config.capacity}/hour`;
+    if (windowMs === 15 * 60 * 1000) return `${config.capacity}/15min`;
+    throw new Error(`RATE_LIMITS uses a window the runbook has no spelling for: ${windowMs}ms`);
+  }
+
+  it("states the same figure the code enforces, everywhere it states one", () => {
+    const stated = [...runbook.matchAll(documented)];
+    expect(stated.length).toBeGreaterThan(0);
+    for (const [, name, capacity, window] of stated) {
+      const config = RATE_LIMITS[name as keyof typeof RATE_LIMITS];
+      expect(config, `runbook names RATE_LIMITS.${name}, which does not exist`).toBeDefined();
+      expect(`${capacity}/${window}`, `runbook figure for RATE_LIMITS.${name}`).toBe(
+        policyText(config),
+      );
+    }
+  });
+
+  it("documents every policy, so a new limit cannot ship undocumented", () => {
+    const stated = new Set([...runbook.matchAll(documented)].map(([, name]) => name));
+    expect([...Object.keys(RATE_LIMITS)].filter((name) => !stated.has(name))).toEqual([]);
   });
 });
 

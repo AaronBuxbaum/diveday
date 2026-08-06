@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getRecapPageData } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { verifyRecapToken } from "@/lib/recap-links";
 
@@ -96,7 +97,7 @@ export default async function RecapOpenGraphImage({
   const siteNames = sites.map((s) => s.name);
   const siteLine =
     siteNames.length > 0
-      ? new Intl.ListFormat(shop.defaultLocale, { type: "conjunction" }).format(siteNames)
+      ? cachedListFormat(shop.defaultLocale, { type: "conjunction" }).format(siteNames)
       : null;
 
   return new ImageResponse(

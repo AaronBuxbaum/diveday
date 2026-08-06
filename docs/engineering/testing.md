@@ -7,6 +7,7 @@
 | Unit | Vitest | colocated `src/**/*.test.ts(x)` | domain logic: cert gating, capacity, pricing, formatting |
 | Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
 | Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
+| Real Postgres | Vitest + a service container | `src/db/*.postgres.test.ts` | the committed `drizzle/` migrations apply to a genuine server, and the `FOR UPDATE` guards actually hold under two concurrent connections — see [below](#the-real-postgres-suites) |
 | E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
 | Visual | reg-suit + S3 | `e2e/visual.spec.ts`, `.reg/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md) |
 
@@ -78,6 +79,97 @@ the shortest seeded future departure.
 
 Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
 IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.
+
+## The real-Postgres suites
+
+PGlite is the right default for everything above, but it is **single-connection**, and it is not the
+engine production runs. Two claims are therefore unprovable on it, and both were live gaps:
+
+- **The migrations had never met a real server before the production deploy did.** PGlite satisfies
+  `CREATE EXTENSION pg_trgm` out-of-band, with a wasm extension loaded in JavaScript before any
+  migration runs — so `drizzle/` could contain Postgres-invalid SQL and the whole suite stays green.
+- **No `FOR UPDATE` in `src/db/` had ever been contended.** Two transactions cannot sit in the same
+  critical section on one connection, so the oversell guard in `createBookingRecord` and the
+  serialization in `withBookingPaymentLock` could both be deleted without a single test failing.
+  `src/db/money-replay.test.ts` states the same limitation from the money side.
+
+The `src/db/*.postgres.test.ts` suites close those — all opt-in, all skipped unless a server is
+named, and all picked up by that glob rather than by a list anyone has to remember to update:
+
+| File | Proves |
+| --- | --- |
+| `migrations.postgres.test.ts` | `drizzle/` applies from empty, *and* on top of the previous release's schema, *and* both land on an identical schema (read from `information_schema`/`pg_constraint`, not from Drizzle's model) |
+| `bookings.postgres.test.ts` | Two — and five — genuinely concurrent transactions racing for the last seat sell exactly the seats that exist |
+| `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
+| `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
+
+A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
+`@/test/postgres` and CI runs it. Do not add one outside that glob — it would skip in the unit shards
+for want of `DIVEDAY_TEST_POSTGRES_URL` and never run anywhere else.
+
+### Reading a race test correctly
+
+These use `holdRowLock` + `waitForLockWaiters` from `src/test/postgres.ts`. A third connection takes
+the contested row's lock first; the contenders are started and the test waits until Postgres itself
+reports them all parked on it before the gate is released. Without that, "fire two promises and
+assert one won" passes for a sequential run exactly as it does for a contended one.
+
+**The gate establishes simultaneity; it does not detect the guard.** This is worth stating plainly
+because the intuitive reading is wrong: a contender blocks on the gate whether or not the code under
+test locks anything, because its `INSERT` takes a `KEY SHARE` lock on the referenced row during the
+foreign-key check, and that already conflicts with the gate's `FOR UPDATE`. What catches a missing
+guard is always the **outcome** assertion — the seat count, the event chain.
+
+That is measured, not assumed. Deleting the `.for("update")` in `createBookingRecord` and rerunning:
+`waitForLockWaiters` still passes, and the one-seat trip sells **2** seats while the two-seat trip
+sells **5**. Deleting it in `withBookingPaymentLock`: both payment events come back claiming no
+predecessor — a forked trail. Anyone tempted to simplify these tests should re-run that experiment
+first.
+
+For the same reason, **never order a race test's rows by a column that does not order the writes**.
+`booking_payment_events.id` is `defaultRandom()`, `occurred_at` comes from the frozen clock and is
+identical across contenders, and `created_at`'s `now()` is transaction-*start* time — the same
+instant for two contenders released from one gate. An earlier draft of the payments test sorted by
+`id` and passed about half the time. Assert the invariant (follow `previous_status` to rebuild the
+chain), not an incidental storage order.
+
+### Running the real-Postgres suites locally
+
+One environment variable is the whole switch. It is deliberately **not** `DATABASE_URL` — that is
+what `getDb()` reads, and `vitest.config.ts` and `src/test/global-setup.ts` both pin it to `""` so no
+test can reach a real database by accident. Reusing it would point every unrelated test in the run at
+the server.
+
+```bash
+docker run --rm -d --name diveday-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16
+
+DIVEDAY_TEST_POSTGRES_URL=postgres://postgres:postgres@localhost:5432/postgres \
+  pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts
+```
+
+Any Postgres 16 reachable by URL works — a local `initdb`/`pg_ctl` cluster is fine, and the account
+needs `CREATEDB` because each test creates and drops its own scratch database. Run it against a
+server holding anything you care about and it will happily create databases there; point it at a
+throwaway.
+
+With the variable unset, `describePostgres` registers a skipped suite: no connection attempted, no
+service required, `pnpm check` and CI's four unit shards completely unaffected. If these ever *fail*
+rather than skip on a plain `pnpm test`, that is a bug in the harness, not a missing server.
+
+The second migration test needs real git history (it reconstructs the previous release's `drizzle/`
+tree via `scripts/previous-release-migrations.mjs`) and **throws rather than skips** when it cannot
+resolve a base commit — deliberately, so a too-shallow clone cannot quietly turn it into a test that
+proves nothing. On a shallow local clone, `git fetch --unshallow`.
+
+### In CI
+
+The `real-postgres` job in `.github/workflows/ci.yml` runs them all against a `postgres:16` service
+container. It is gated two ways: on any PR touching `src/db/**`, `drizzle/**`, or the harness, and on
+a nightly `schedule:` regardless of the diff — because what invalidates the proof usually arrives
+from another branch. Every pre-existing job in that workflow carries
+`if: github.event_name != 'schedule'` so the nightly runs this job and nothing else; those guards are
+load-bearing. What the job does *not* prove — anything involving production data volumes — is in
+[deploy-and-migrations-runbook.md](deploy-and-migrations-runbook.md#what-ci-rehearses-and-what-it-still-doesnt).
 
 `vitest.config.ts` sets `pool: "threads"` (Vitest 4 otherwise defaults to `forks`, one child process
 per test file): reusing one process across files skips Node's startup and the module-graph re-import

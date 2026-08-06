@@ -80,6 +80,13 @@ const NOTICE_KEYS: Record<
   // Payments.
   refunded: { form: "payments", tone: "success", key: "divers.notices.refunded" },
   "refund-failed": { form: "payments", tone: "danger", key: "divers.notices.refundFailed" },
+  // A second tap while the first refund is still at Stripe. Refused locally
+  // (PAY-L3) — "wait, don't press again", not "it failed".
+  "refund-in-progress": {
+    form: "payments",
+    tone: "warning",
+    key: "divers.notices.refundInProgress",
+  },
   "demo-disabled": { form: "payments", tone: "warning", key: "divers.notices.demoDisabled" },
   "not-authorized-refund": {
     form: "payments",

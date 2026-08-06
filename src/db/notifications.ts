@@ -2,6 +2,11 @@ import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql }
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
+  DAILY_TICK_INTERVAL_MS,
+  dailyPassesWithin,
+  nextDailyTickAtOrAfter,
+} from "@/lib/cron-schedule";
+import {
   type Notification,
   type NotificationDelivery,
   type NotificationProvider,
@@ -25,27 +30,80 @@ import {
 } from "./schema";
 
 const RETRY_QUEUE_LIMIT = 100;
-const RETRY_QUEUE_MAX_ATTEMPTS = 8;
+
+/**
+ * How long a transient send failure keeps being retried before it is parked
+ * for a human.
+ *
+ * Stated in wall-clock days rather than as an attempt count, because the two
+ * are not interchangeable here and confusing them is what OPS-6 found. The
+ * previous bound — a bare `8` — was sized for the 30s → 1h ladder below and
+ * meant "give up after about two hours". Nothing drains this queue except the
+ * daily `/api/cron/reminders` tick, so under the schedule that actually ships
+ * the same 8 attempts meant "give up after eight days": a waiver email that
+ * SES refused on Monday would still be quietly re-offered the following
+ * Tuesday, long after the trip it was for had sailed.
+ *
+ * Three days is a deliberate figure, not the old one re-derived. A diver-
+ * facing message that has not gone out after three daily passes does not need
+ * a fourth silent attempt; it needs the staff-visible parked-failure surface,
+ * while the trip it concerns is still ahead of the shop. Widen this if a real
+ * provider outage ever outlasts it — and widen it here, in days, so the code
+ * keeps saying how long it actually waits.
+ */
+const RETRY_WINDOW_MS = 3 * DAILY_TICK_INTERVAL_MS;
+
+/** Derived, never hand-tuned: one attempt per drain pass inside the window. */
+const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
 
 /** Use the environment-configured SES provider by default; tests may inject a fake. */
 export function notificationProviderForDb(provider?: NotificationProvider): NotificationProvider {
   return provider ?? notificationProviderFromEnvironment();
 }
 
-function retryDueAt(
-  delivery: Extract<NotificationDelivery, { status: "failed" }>,
-  attempts: number,
-) {
-  const fallback = Math.min(60 * 60 * 1_000, 30_000 * 2 ** Math.max(0, attempts - 1));
-  const providerDelay = delivery.retryAfterMs ?? fallback;
-  return new Date(nowDate().getTime() + Math.max(1_000, providerDelay));
+/**
+ * When a failed send becomes eligible again.
+ *
+ * There used to be an exponential ladder here — 30s, doubling, capped at an
+ * hour — and it described a system that does not exist. Nothing polls this
+ * queue; the only thing that reads `next_attempt_at` is the daily
+ * `/api/cron/reminders` pass, so every rung below a day rounded to the same
+ * place and the ladder's only observable effect was to make the code look
+ * more responsive than it is (OPS-6).
+ *
+ * What is real: a retry happens on the next daily pass. A provider that asks
+ * for longer (SES/SNS `Retry-After`, a throttle telling us to come back in six
+ * hours — or in three days) is still obeyed, by snapping forward to the first
+ * pass at or after the delay it named, never by retrying sooner than it
+ * allowed. `attempts` no longer participates: spacing successive attempts
+ * further apart is meaningless when the floor between any two of them is
+ * already a day, and pretending otherwise is what produced an eight-day tail.
+ */
+function retryDueAt(delivery: Extract<NotificationDelivery, { status: "failed" }>) {
+  const providerDelay = Math.max(0, delivery.retryAfterMs ?? 0);
+  return nextDailyTickAtOrAfter(new Date(nowDate().getTime() + providerDelay));
 }
 
+/**
+ * Persist a retryable failure for the next daily pass.
+ *
+ * `notification_send_queue.shop_id` is a non-null FK, so this queue is
+ * structurally tenant-scoped and a notification with no shop cannot be stored
+ * in it. `usage_ceiling_alert` — a platform-level cost warning about the
+ * deployment's own Vercel/Neon bill — is the one such kind
+ * (ADR 20260806-provider-usage-guardrails), and it deliberately reaches the
+ * provider through `notify()` rather than `sendNotification`, so it should
+ * never arrive here at all. The guard is a belt-and-braces refusal rather than
+ * a code path anyone exercises: inventing a shop id to satisfy the column
+ * would attach a platform alert to an arbitrary tenant's row and put it in
+ * that tenant's export.
+ */
 async function queueRetry(
   db: AppDb,
   input: Notification,
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
 ) {
+  if (!("shopId" in input)) return;
   await db
     .insert(notificationSendQueue)
     .values({
@@ -53,7 +111,7 @@ async function queueRetry(
       idempotencyKey: notificationIdempotencyKey(input),
       payload: input,
       status: "queued",
-      nextAttemptAt: retryDueAt(delivery, 1),
+      nextAttemptAt: retryDueAt(delivery),
       httpStatus: delivery.httpStatus ?? null,
       errorCode: delivery.errorCode ?? null,
       lastError: delivery.detail ?? null,
@@ -266,7 +324,7 @@ export async function drainNotificationRetries(
         .set({
           status: "queued",
           lockedUntil: null,
-          nextAttemptAt: retryDueAt(delivery, claimed.attempts),
+          nextAttemptAt: retryDueAt(delivery),
           httpStatus: delivery.httpStatus ?? null,
           errorCode: delivery.errorCode ?? null,
           lastError: delivery.detail ?? null,

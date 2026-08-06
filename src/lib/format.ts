@@ -3,39 +3,18 @@
  * display dates to divers, so keep every user-facing date/time format here.
  */
 
-import { minorToMajor } from "./money";
-
 /**
- * Every `Intl.*Format` constructor here is called on essentially every
- * render (AGENTS.md requires locale-negotiated formatting for every date,
- * time, and money figure app-wide), and constructing one is meaningfully
- * more expensive than reusing an existing instance's `.format()` — the
- * constructor does locale-data lookup and pattern compilation, work a
- * stateless formatter never needs to repeat. Caching by (constructor,
- * locale, options) is the standard fix. The cache is unbounded, but its key
- * space isn't: it's bounded by the shop locales and timezones this app
- * actually sees, not by render count.
+ * Every `Intl.*Format` constructor here is called on essentially every render
+ * (AGENTS.md requires locale-negotiated formatting for every date, time, and
+ * money figure app-wide), and constructing one is meaningfully more expensive
+ * than reusing an existing instance's `.format()`.
+ *
+ * The cache that fixes that now lives in `./intl-cache`, shared with the other
+ * modules that were still paying the constructor on every call — see the
+ * reasoning there.
  */
-const formatterCache = new Map<
-  string,
-  Intl.DateTimeFormat | Intl.NumberFormat | Intl.RelativeTimeFormat
->();
-
-function cachedFormatter<
-  T extends Intl.DateTimeFormat | Intl.NumberFormat | Intl.RelativeTimeFormat,
->(
-  tag: string,
-  Ctor: new (locale: string | undefined, options?: object) => T,
-  locale: string | undefined,
-  options?: object,
-): T {
-  const key = `${tag}|${locale}|${JSON.stringify(options)}`;
-  const cached = formatterCache.get(key);
-  if (cached) return cached as T;
-  const formatter = new Ctor(locale, options);
-  formatterCache.set(key, formatter);
-  return formatter;
-}
+import { cachedFormatter } from "./intl-cache";
+import { minorToMajor } from "./money";
 
 /**
  * True for a real IANA timezone name — the only thing an app-wide "store UTC
