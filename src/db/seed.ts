@@ -70,16 +70,18 @@ import { seedBookings } from "./seed-bookings";
 import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
-import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
+import { seedMedicalReview } from "./seed-medical-review";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOrders } from "./seed-orders";
+import { seedPromos } from "./seed-promos";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
@@ -492,11 +494,15 @@ export async function seedDemoSchedule(
     benwood,
     french,
   });
-  const { bookingRows, wreck, waiverTemplate } = await seedBookings(db, shopId, {
-    customers,
-    tripRows,
-    pinRecapBooking,
-  });
+  const { bookingRows, wreck, waiverTemplate, promoRedemptionBooking } = await seedBookings(
+    db,
+    shopId,
+    {
+      customers,
+      tripRows,
+      pinRecapBooking,
+    },
+  );
 
   await seedMoreTrips(db, shopId, {
     customers,
@@ -508,45 +514,7 @@ export async function seedDemoSchedule(
     waiverTemplate,
   });
 
-  // Two shop-wide promo codes, so the staff page and the diver-facing promo
-  // box both have something real behind them. The Stripe ids are fabricated —
-  // the demo never connects an account — the same convention the seeded orders
-  // and tips already use.
-  await db
-    .insert(shopPromoCodes)
-    .values([
-      {
-        shopId,
-        code: "REEF10",
-        description: "Standing returning-diver discount",
-        discountPercent: 10,
-        scope: "all" as const,
-        status: "active" as const,
-        stripeCouponId: "coupon_demo_reef10",
-        stripePromotionCodeId: "promo_demo_reef10",
-        createdAt: at(-30, 9),
-      },
-      {
-        shopId,
-        code: "OPENWATER25",
-        description: "Course push — expired, kept as history",
-        discountPercent: 25,
-        scope: "courses" as const,
-        status: "active" as const,
-        maxRedemptions: 20,
-        expiresAt: at(-1, 12),
-        stripeCouponId: "coupon_demo_ow25",
-        stripePromotionCodeId: "promo_demo_ow25",
-        createdAt: at(-45, 9),
-      },
-    ])
-    // `resetDemoSchedule` clears the shop's codes just before calling back in
-    // here, so this normally inserts into an empty table and restores both to
-    // their seeded state (status included — a spec that switched REEF10 off
-    // must not hand that off to the next spec; issue #330). The conflict clause
-    // stays as a belt-and-braces guard for any caller that re-seeds a shop
-    // whose codes are still present: the (shop, code) index is unique.
-    .onConflictDoNothing();
+  await seedPromos(db, shopId, promoRedemptionBooking);
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows);
   await seedRentalFit(db, shopId, customers);
@@ -611,6 +579,12 @@ export async function seedDemoSchedule(
     // allows an undefined divemaster even though the demo cast always has one).
     pairedByPersonId: divemasterId ?? instructor.id,
   });
+
+  // A synthetic, status-only medical-review hold on a future departure gives
+  // the demo and staff training a real fail-closed waiver path without storing
+  // any health answers. It remains unresolved every time the demo resets; the
+  // policy/legal decision behind production medical handling is still H-01–H-03.
+  await seedMedicalReview(db, shopId, waiverTemplate, tripRows);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated

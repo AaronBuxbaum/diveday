@@ -307,5 +307,12 @@ export async function seedBookings(
     });
   if (upcomingWaiverRows.length > 0) await db.insert(waiverRecords).values(upcomingWaiverRows);
 
-  return { bookingRows: bookingRows_, wreck, waiverTemplate };
+  return {
+    bookingRows: bookingRows_,
+    wreck,
+    waiverTemplate,
+    // A fully paid booking, available to the promo scenario so its seeded
+    // redemption agrees with the booking's payment state.
+    promoRedemptionBooking: paidBooking ?? bookingRows_[0],
+  };
 }

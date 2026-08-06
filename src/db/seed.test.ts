@@ -16,13 +16,19 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  shopPromoRedemptions,
   shopStripeAccounts,
   shops,
   tips,
   userAccounts,
 } from "./schema";
 import { resetDemoSchedule, seedIfEmpty } from "./seed";
-import { createShopPromoCode, getShopPromoByCode, setShopPromoEnabled } from "./shop-promos";
+import {
+  createShopPromoCode,
+  getShopPromoByCode,
+  listShopPromoCodes,
+  setShopPromoEnabled,
+} from "./shop-promos";
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -231,7 +237,7 @@ describe("resetDemoSchedule", () => {
     expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(seededHistory.length);
   });
 
-  it("returns the seeded promo code to its live state, so a spec that switched it off doesn't leak that (#330)", async () => {
+  it("restores the seeded promo and its completed redemption, so a spec cannot leak promo state (#330)", async () => {
     // Codes were exempted from this reset for a long time as "shop config".
     // But `setShopPromoEnabled` is a one-click staff action, so a spec that
     // switches REEF10 off leaves the next spec in the same worker with a
@@ -241,6 +247,16 @@ describe("resetDemoSchedule", () => {
     const seeded = await getShopPromoByCode(db, shop.id, "REEF10");
     if (!seeded) throw new Error("seeded REEF10 promo code missing");
     expect(seeded.status).toBe("active");
+    expect(
+      (await listShopPromoCodes(db, shop.id)).promos.find((promo) => promo.code === "REEF10")
+        ?.timesRedeemed,
+    ).toBe(1);
+    expect(
+      await db
+        .select()
+        .from(shopPromoRedemptions)
+        .where(eq(shopPromoRedemptions.promoCodeId, seeded.id)),
+    ).toHaveLength(1);
 
     expect(await setShopPromoEnabled(db, shop.id, seeded.id, false)).toBe(true);
     expect((await getShopPromoByCode(db, shop.id, "REEF10"))?.status).toBe("disabled");
@@ -273,6 +289,10 @@ describe("resetDemoSchedule", () => {
     expect(after?.discountPercent).toBe(seeded.discountPercent);
     expect(after?.scope).toBe(seeded.scope);
     expect(after?.description).toBe(seeded.description);
+    expect(
+      (await listShopPromoCodes(db, shop.id)).promos.find((promo) => promo.code === "REEF10")
+        ?.timesRedeemed,
+    ).toBe(1);
     // The other seeded code comes back too, and the test-minted one does not.
     expect(await getShopPromoByCode(db, shop.id, "OPENWATER25")).not.toBeNull();
     expect(await getShopPromoByCode(db, shop.id, "LEAKED20")).toBeNull();
@@ -419,7 +439,10 @@ describe("resetDemoSchedule", () => {
       trips.map((t) => ({ title: t.title, booked: t.booked, capacity: t.capacity })),
     );
     expect(
-      await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.shopId, shop.id)),
+      await db
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.stripeSessionId, `cs_test_${outcome.bookingId}`)),
     ).toHaveLength(0);
     expect(
       await db

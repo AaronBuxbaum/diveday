@@ -229,13 +229,25 @@ export const test = base.extend<
               `.${role}-session-${workerInfo.parallelIndex}.json`,
             );
             const context = await browser.newContext({ baseURL: workerBaseURL });
-            const page = await context.newPage();
-            await signInAs(page, DEV_STAFF_LOGINS[role]);
-            await context.storageState({ path: statePath });
-            await context.close();
-            return statePath;
+            try {
+              const page = await context.newPage();
+              await signInAs(page, DEV_STAFF_LOGINS[role]);
+              await context.storageState({ path: statePath });
+              return statePath;
+            } finally {
+              await context.close();
+            }
           })();
           cache.set(role, cached);
+          // A transient storage-state write failure (for example, another
+          // Playwright run clearing the shared output directory) must not turn
+          // into a permanent worker-wide failure. Keep a successful session,
+          // but evict this exact rejected promise so the next staff test can
+          // sign in again. The identity check prevents an older failure from
+          // deleting a retry that has already replaced it.
+          void cached.catch(() => {
+            if (cache.get(role) === cached) cache.delete(role);
+          });
         }
         return cached;
       };
