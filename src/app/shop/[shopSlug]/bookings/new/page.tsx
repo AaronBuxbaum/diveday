@@ -128,7 +128,17 @@ export default async function NewBookingPage({
               options={trips.map((trip) => ({
                 id: trip.id,
                 href: `/shop/${shopSlug}/bookings/new/${trip.id}`,
-                label: `${trip.title} · ${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+                // Kept as JSX, not a template literal: the browser shapes text
+                // per DOM text node, so collapsing these three expressions and
+                // their separators into one string re-kerns across what were
+                // node boundaries and moves glyphs by a fraction of a pixel.
+                // Invisible to a reader, but a real visual-regression diff.
+                label: (
+                  <>
+                    {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+                    {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                  </>
+                ),
                 meta: t("bookings.new.seatsLeft", { count: spotsRemaining(trip) }),
               }))}
             />

@@ -120,6 +120,7 @@ export function SeatDiverPanel({
         <form action={seatNewDiverAction.bind(null, surface, shopSlug)} className="mt-4">
           <input type="hidden" name="tripId" value={tripId} />
           <PersonFieldTrio
+            as="div"
             email={SEAT_SURFACES[surface].email}
             nameLabel={copy.nameLabel}
             emailLabel={copy.emailLabel}

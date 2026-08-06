@@ -150,6 +150,7 @@ export function AddDiverSection({
           {/* Ignored by the wait-list action, which is bound to its trip. */}
           <input type="hidden" name="tripId" value={tripId} />
           <PersonFieldTrio
+            as="div"
             // The roster keeps asking for an email — a diver added here is
             // usually being set up for a waiver and a confirmation. Read from
             // the surface table rather than restated, so this form and the

@@ -16,20 +16,22 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
  * Renders the `FieldGrid` itself so callers cannot drift on the column count;
  * `as="form"` lets a caller with nothing to nest the grid in be the form, and
  * `children` lands inside the grid for that caller's `FieldActions` row.
+ *
+ * `as` discriminates the props: only the `as="form"` arm accepts a form's own
+ * attributes, so `action` (or `method`, or `onSubmit`) cannot be handed to a
+ * component that is about to render a `<div>` and drop it. `FieldGrid` below
+ * takes the looser shape — one prop bag for all three of its tags — which is
+ * why the narrowing is worth stating here, at the call sites, rather than
+ * assumed from it.
+ *
+ * `as` is **required on both arms**, which is what makes the union bite. With
+ * an optional `as?: "div"` the narrowing is decorative: TypeScript's
+ * excess-property check on a union admits any property present in *some*
+ * member, so `<PersonFieldTrio action={…} />` with no `as` at all still
+ * compiles clean against the div arm. Verified both ways before this was
+ * written down.
  */
-export function PersonFieldTrio({
-  email,
-  nameLabel,
-  emailLabel,
-  phoneLabel,
-  optionalHint,
-  emailMaxLength = 200,
-  phoneMaxLength = 30,
-  className = "",
-  as = "div",
-  children,
-  ...rest
-}: {
+type PersonFieldTrioProps = {
   email: "required" | "optional";
   nameLabel: string;
   emailLabel: string;
@@ -45,9 +47,25 @@ export function PersonFieldTrio({
   emailMaxLength?: number;
   phoneMaxLength?: number;
   className?: string;
-  as?: "div" | "form";
   children?: ReactNode;
-} & Omit<ComponentPropsWithoutRef<"form">, "className" | "children">) {
+} & (
+  | ({ as: "form" } & Omit<ComponentPropsWithoutRef<"form">, "className" | "children">)
+  | { as: "div" }
+);
+
+export function PersonFieldTrio({
+  email,
+  nameLabel,
+  emailLabel,
+  phoneLabel,
+  optionalHint,
+  emailMaxLength = 200,
+  phoneMaxLength = 30,
+  className = "",
+  as,
+  children,
+  ...rest
+}: PersonFieldTrioProps) {
   return (
     <FieldGrid columns={3} className={className} as={as} {...rest}>
       <Field label={nameLabel}>
