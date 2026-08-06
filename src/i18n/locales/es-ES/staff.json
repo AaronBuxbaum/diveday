@@ -1976,7 +1976,9 @@
         "money": "Dinero",
         "dataIntegrations": "Datos e integraciones"
       },
-      "backToSettings": "Volver a configuración",
+      "subNav": {
+        "ariaLabel": "Secciones de configuración"
+      },
       "whatsapp": {
         "heading": "WhatsApp",
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",

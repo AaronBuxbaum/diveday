@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { getShopById } from "@/db/shops";
@@ -53,19 +51,11 @@ export default async function DataExportPage() {
         title={t("settings.export.title")}
         description={t("settings.export.description")}
         actions={
-          <>
-            <Link
-              href={`/shop/${session.user.shopSlug}/settings`}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              {t("settings.main.backToSettings")}
-            </Link>
-            <DownloadExportButton
-              href={`/shop/${session.user.shopSlug}/settings/export/download`}
-              idleLabel={t("settings.export.downloadButton.idle")}
-              acknowledgedLabel={t("settings.export.downloadButton.acknowledged")}
-            />
-          </>
+          <DownloadExportButton
+            href={`/shop/${session.user.shopSlug}/settings/export/download`}
+            idleLabel={t("settings.export.downloadButton.idle")}
+            acknowledgedLabel={t("settings.export.downloadButton.acknowledged")}
+          />
         }
       />
 

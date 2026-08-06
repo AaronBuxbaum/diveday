@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import {
@@ -118,14 +116,6 @@ export default async function CalendarSubscriptionsPage() {
         eyebrow={t("calendar.eyebrow")}
         title={t("calendar.title")}
         description={t("calendar.description")}
-        actions={
-          <Link
-            href={`/shop/${session.user.shopSlug}/settings`}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {t("settings.main.backToSettings")}
-          </Link>
-        }
       />
 
       <p className="mb-6 text-sm text-muted">{t("calendar.refreshNote")}</p>
