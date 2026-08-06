@@ -1,5 +1,77 @@
+import { readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { redactBreadcrumb, redactCapabilityUrl, redactEvent } from "./observability";
+import {
+  CAPABILITY_ROUTE_PREFIXES,
+  redactBreadcrumb,
+  redactCapabilityUrl,
+  redactEvent,
+} from "./observability";
+
+const APP_DIR = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Every `[token]` route directory under `src/app`, as `{ prefix, depth }`.
+ *
+ * `redactCapabilityUrl` only ever inspects the *first* path segment, so a
+ * capability route nested any deeper than `src/app/<prefix>/[token]` would be
+ * silently unredactable — the depth is returned so the test below can fail on
+ * that rather than quietly pass.
+ */
+function tokenRoutesOnDisk(
+  dir = APP_DIR,
+  trail: string[] = [],
+): { prefix: string; depth: number }[] {
+  const found: { prefix: string; depth: number }[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === "[token]") {
+      found.push({ prefix: trail[0] ?? "", depth: trail.length });
+      continue;
+    }
+    found.push(...tokenRoutesOnDisk(join(dir, entry.name), [...trail, entry.name]));
+  }
+  return found;
+}
+
+/**
+ * The guard that would have caught `/unsubscribe/[token]`.
+ *
+ * A capability route is created by adding a directory, and nothing about that
+ * act reminds anyone to come here — which is exactly how the unsubscribe token
+ * reached Analytics, Speed Insights and Sentry in the clear. Anchoring the
+ * assertion to the filesystem means the next one fails this test on the commit
+ * that creates it, instead of on the review that happens to look.
+ */
+describe("CAPABILITY_ROUTE_PREFIXES", () => {
+  const onDisk = tokenRoutesOnDisk();
+
+  it("covers every [token] route directory under src/app", () => {
+    expect([...new Set(onDisk.map((r) => r.prefix))].sort()).toEqual(
+      [...CAPABILITY_ROUTE_PREFIXES].sort(),
+    );
+  });
+
+  it("finds every [token] route at a depth the first-segment check can reach", () => {
+    expect(onDisk.filter((r) => r.depth !== 1)).toEqual([]);
+  });
+
+  it.each([...CAPABILITY_ROUTE_PREFIXES])("redacts /%s/<token>", (prefix) => {
+    expect(redactCapabilityUrl(`/${prefix}/abc123.def456`)).toBe(`/${prefix}/[token]`);
+  });
+
+  it.each([...CAPABILITY_ROUTE_PREFIXES])("redacts a URL-encoded /%s/<token>", (prefix) => {
+    const encoded = prefix.replace(/-/g, "%2D");
+    expect(redactCapabilityUrl(`/${encoded}/abc123.def456`)).toBe(`/${prefix}/[token]`);
+  });
+
+  it.each([...CAPABILITY_ROUTE_PREFIXES])("redacts an absolute /%s/<token> URL", (prefix) => {
+    expect(redactCapabilityUrl(`https://diveday.app/${prefix}/abc123.def456`)).toBe(
+      `/${prefix}/[token]`,
+    );
+  });
+});
 
 describe("redactCapabilityUrl", () => {
   it("redacts a waiver token path", () => {

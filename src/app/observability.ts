@@ -1,8 +1,15 @@
 /**
  * Bearer-capability routes whose path segment after the prefix is a
  * replayable credential, never an identifier safe to leave in telemetry.
+ *
+ * Exported for `observability.test.ts`, which asserts this list against the
+ * `src/app/<prefix>/[token]` directories actually on disk. Keeping the two in
+ * agreement by review alone is what let `/unsubscribe/[token]` ship
+ * unredacted — it was the tenth such route and had never been added here — so
+ * the filesystem, not this array and not a prose list in a runbook, is the
+ * source of truth a new capability route has to survive.
  */
-const CAPABILITY_ROUTE_PREFIXES = [
+export const CAPABILITY_ROUTE_PREFIXES = [
   "waivers",
   "ready",
   "recap",
