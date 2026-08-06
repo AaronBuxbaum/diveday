@@ -1,3 +1,4 @@
+import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { auth } from "@/lib/auth";
@@ -41,7 +42,11 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  *
  * Same staff gate and same session-derived shop scope as the roster route: the
  * answer is derived from `session.user.shopId`, never from anything the caller
- * sends, so there is no parameter to point at another tenant.
+ * sends, so there is no parameter to point at another tenant. "Same gate" is
+ * meant literally — the two handlers' gates are byte-identical on purpose, and
+ * the disclosure here being smaller is not a reason to let them drift. A reader
+ * comparing them must not have to work out which of two near-identical checks
+ * is the strict one.
  *
  * The slug is read from the database rather than taken from
  * `session.user.shopSlug`, which is carried on the session token and can be
@@ -52,12 +57,38 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  */
 export async function GET() {
   const session = await auth();
+  // A pre-filter, not the gate. Deliberately ahead of any database work so a
+  // caller with no session — or a token that never claimed a staff role — is
+  // refused without costing a connection (there is a test asserting `getDb` is
+  // never reached on this path). The roles it reads are whatever the JWT was
+  // stamped with at sign-in, which is exactly why it cannot be the last word.
   if (!session?.user || !isStaff(session.user.roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
   }
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return Response.json({ error: "not_found" }, { status: 404, headers: NO_STORE });
+
+  // The gate that decides: live roles, re-read on every request. No `maxAge` is
+  // set on the session (src/lib/auth.config.ts), so NextAuth's 30-day default
+  // applies — a staffer removed from this shop this morning still carries
+  // `captain` in their token for a month, and `/api/**` is outside the edge gate
+  // (src/proxy.ts), so this handler is the only wall. `loadActiveStaffRoles`
+  // exists for that window (ADR 20260724-role-authorization): it is null for a
+  // deleted person, a disabled account, or someone who was never this shop's,
+  // and the roles it does return are the `person_roles` of right now.
+  //
+  // After the shop lookup rather than before, and the order is load-bearing:
+  // `loadActiveStaffRoles` is shop-scoped, so a session pointing at a shop row
+  // that no longer exists finds no person and would answer 401 where the shell
+  // is owed a 404 — "the tenant cannot be established" is a different fact from
+  // "you are no longer their staff", and only one of them is about the caller.
+  // Nothing has been said to the caller yet either way; the two refusals are one
+  // primary-key row read apart.
+  const roles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
+  if (!roles || !isStaff(roles)) {
+    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
+  }
 
   // Only the slug is serialized. The row carries the whole shop record and the
   // purge needs one field of it, so everything else stops here rather than
