@@ -102,6 +102,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `bookings.postgres.test.ts` | Two — and five — genuinely concurrent transactions racing for the last seat sell exactly the seats that exist |
 | `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
+| `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
 `@/test/postgres` and CI runs it. Do not add one outside that glob — it would skip in the unit shards
@@ -132,6 +133,55 @@ identical across contenders, and `created_at`'s `now()` is transaction-*start* t
 instant for two contenders released from one gate. An earlier draft of the payments test sorted by
 `id` and passed about half the time. Assert the invariant (follow `previous_status` to rebuild the
 chain), not an incidental storage order.
+
+**A fake that returns instantly is not a stand-in for a network round trip, and the difference is a
+flake.** `refunds.postgres.test.ts` asserts the losing taps are refused with `in_progress` while the
+winner is away at Stripe. In production that call takes hundreds of milliseconds and the losers
+certainly answer inside it; against a fake provider that resolved on the next microtask the winner
+came straight back, asked for the order row again to write `status = 'refunded'`, and could be
+granted that lock ahead of losers still queued — which then read a refunded order and answered
+`not_paid`. Correct behaviour, different refusal, red test:
+`in_progress, not_paid, not_paid, not_paid, refunded` turned up once in fifteen full-suite runs. The
+fix is `tapsMeetingAtStripe`, which holds the winner inside the provider until every other tap has
+answered, so the scenario the test describes is the scenario it runs. It counts a tap that *reaches*
+the provider as having arrived, not only one that answered — otherwise deleting the guard (all five
+claim, all five reach Stripe, none can answer) would deadlock and report a timeout instead of the
+five idempotency keys that are the real evidence.
+
+### The teardown may not drop a database out from under a live connection
+
+`await pool.end()` does **not** mean the server-side connections are gone. pg-pool's shutdown removes
+each idle client from its own bookkeeping synchronously and then calls the asynchronous
+`client.end()` without waiting for it, so the promise resolves once a Terminate message has been
+*queued* — measured on pg-pool 3.14.0, seven pools opened, queried and ended together left a live
+backend behind in **153 of 200** iterations.
+
+The teardown in `src/test/postgres.ts` used to follow that straight into
+`DROP DATABASE … WITH (FORCE)`, which terminates whatever is still attached — so it was racing the
+graceful disconnects it had itself just started. When the drop won, the surviving client took
+`FATAL 57P01 terminating connection due to administrator command` with no query in flight, pg
+re-emitted it as an unhandled `'error'` event on its pool, and the job died reporting
+`Tests 9 passed (9)` and `Errors 1 error` in the same summary (observed on f476e58). Every assertion
+in the suites had already passed; nothing they check could have caught it.
+
+Teardown now waits for `pg_stat_activity` to report the scratch database empty and then drops it
+without `FORCE`, so there is nothing left to terminate. `FORCE` survives only on the path where the
+wait times out — a connection that never drained is a real leak, so that path drops the database
+anyway (no orphans on the server) and then **fails the test** naming it. Two rules follow for anyone
+touching the harness:
+
+- **Every pool it creates gets an `error` listener.** A `pg.Pool` without one turns any death of an
+  idle client into an uncaught exception that kills the worker; the harness collects them instead and
+  reports them against the test that caused them. Collected, never swallowed.
+- **A `holdRowLock` gate is released even if the test never releases it.** Its transaction otherwise
+  never commits, its client never returns to the pool, and `pool.end()` — which *does* wait for
+  checked-out clients — waits forever, so an ordinary assertion failure is reported as a teardown
+  timeout. The safety release is an `onTestFinished` registered inside `holdRowLock`; Vitest runs
+  those in reverse registration order, so it always runs before the teardown that closes its pool.
+
+`postgres-harness.postgres.test.ts` holds both to account, and does it by arranging the race rather
+than waiting for it: a race that fires on a small fraction of runs proves nothing when it does not
+fire.
 
 ### Running the real-Postgres suites locally
 

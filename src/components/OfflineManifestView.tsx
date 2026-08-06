@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -29,14 +29,18 @@ import {
   rollCallLabel,
 } from "@/lib/manifests";
 import {
+  acknowledgeDiscardedOfflineRecords,
   appendOfflineRollCall,
+  type DiscardedOfflineRecord,
   listOfflineManifests,
   loadOfflineManifest,
   OfflineManifestError,
   purgeOfflineManifestsExceptShop,
+  readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
+  fetchOfflineManifestShopSlug,
   isOfflineManifestExpired,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
@@ -53,42 +57,6 @@ import {
  */
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
-}
-
-const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
-
-/**
- * Server-verified "who is this browser signed in as", the same way
- * `OfflineManifestAutoSave` learns it — never a client-supplied value, never a
- * slug read off a snapshot this device already holds. Null whenever the answer
- * cannot be established (offline, signed out, a request that failed): every
- * caller treats null as "do nothing", because guessing the tenant is the one
- * mistake worth more than the work it would unblock.
- */
-async function fetchCurrentShopSlug(): Promise<string | null> {
-  if (!navigator.onLine) return null;
-  // `navigator.onLine` says a radio is on, not that anything answers. On a
-  // marina connection the request can hang indefinitely, and everything
-  // downstream of this — the purge, and the reconcile of a captain's queued
-  // roll call — would hang with it. Give up and let the next trigger (reconnect,
-  // or the next visit) try again. An explicit controller rather than
-  // `AbortSignal.timeout`, matching `fetchExportPhotos`: the static helper is
-  // absent under jsdom, so using it would have made this function return null
-  // in every component test and silently disable the reconcile it guards.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
-  try {
-    const response = await fetch("/api/offline-manifests/upcoming", {
-      credentials: "same-origin",
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    return ((await response.json()) as { shop: { slug: string } }).shop.slug;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 /**
@@ -113,6 +81,90 @@ function offlineManifestTranslator() {
   return { t: staffTranslator(resolved), locale: resolved };
 }
 
+/**
+ * The saved copy this view is showing on `?trip=<id>`, and what happened to it.
+ *
+ * A reducer, and not three `useState`s, for one reason: **"the store says this
+ * record is gone" and "whose record was it" are answered in different places
+ * and can arrive in either order**, and the wrong answer to the second one is a
+ * disclosure. The purge round below learns the first from an async callback,
+ * which cannot see React state; the second can only be read from state. Before
+ * this, the round bridged that gap by reading a ref mirroring `envelope`,
+ * written from an effect — and a mirror written from an effect lags its own
+ * commit, so the round's `null` read did not *defer* the repaint, it skipped it:
+ *
+ * - Between a commit and its passive effects the mirror is stale. The purge's
+ *   read landed there often enough to be a measured CI flake.
+ * - Worse on a real tablet, where the tenant lookup is a warm request and the
+ *   store is a cold IndexedDB open plus an AES-GCM decrypt: an entire purge
+ *   round — delete included — can finish before `?trip=<id>`'s opening read has
+ *   resolved at all. Nothing has painted, so the mirror is honestly `null`, and
+ *   the read already in flight then paints the record the purge just deleted.
+ *   Another shop's divers, emergency contacts and readiness blockers, on a
+ *   tablet signed in as someone else, with Board buttons that can only throw —
+ *   the F5 disclosure the repaint exists to end, restored one microtask later.
+ *
+ * Both orderings are the same defect, and a reducer removes it rather than
+ * narrowing it: whichever half arrives second is applied to the half already
+ * held, in one transition, against the state React actually has. The invariant
+ * it keeps is the whole point — **once `goneUnderTenant` is set, `envelope` is
+ * `null` and stays `null`** — so no read that was in flight when the record was
+ * deleted can put it back on screen.
+ *
+ * That latch is per **mount**, and safely so: this shell is one trip per mount.
+ * The list links to `?trip=<id>` with a plain `<a href>`, and `manifest-sw.js`
+ * replays a cached *document*, so both are full loads — `tripId` never changes
+ * under a live mount. The `checkpoint` state below already banks the same
+ * assumption in its `useState` initialiser. A client-side navigation between
+ * two trips would need this state reset with it, exactly as it would need that.
+ */
+type SavedCopyState = {
+  /** The decrypted copy on screen. Cleared the moment the store says it is gone. */
+  envelope: OfflineManifestEnvelope | null;
+  /**
+   * The shop signed in on this device when a purge round positively answered
+   * "gone" for this trip. Also the latch that keeps a late read out.
+   */
+  goneUnderTenant: string | null;
+  /**
+   * Whose copy vanished: `true` for another shop's, `false` for this shop's own
+   * record aging out, `null` for nothing lost — a `?trip=` this device simply
+   * never saved reaches the plain empty state, not an accusation.
+   */
+  removedForOtherShop: boolean | null;
+};
+
+type SavedCopyAction =
+  | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
+  | { type: "gone"; tenant: string };
+
+function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
+  switch (action.type) {
+    case "loaded":
+      if (state.goneUnderTenant === null) return { ...state, envelope: action.envelope };
+      // The store already answered "gone" for this trip, and this read was
+      // issued before it did. It is the only thing that can say whose copy was
+      // lost, so it names the loss — and is never shown.
+      return {
+        ...state,
+        envelope: null,
+        removedForOtherShop:
+          action.envelope === null
+            ? state.removedForOtherShop
+            : action.envelope.snapshot.shop.slug !== state.goneUnderTenant,
+      };
+    case "gone":
+      return {
+        envelope: null,
+        goneUnderTenant: action.tenant,
+        removedForOtherShop:
+          state.envelope === null
+            ? state.removedForOtherShop
+            : state.envelope.snapshot.shop.slug !== action.tenant,
+      };
+  }
+}
+
 export function OfflineManifestView() {
   // Memoized so `reconcile`/`reconcileList` below (and the effect that reruns
   // whenever they change) stay referentially stable across renders — the
@@ -128,7 +180,11 @@ export function OfflineManifestView() {
     [t],
   );
   const searchParams = useSearchParams();
-  const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
+  const [{ envelope, removedForOtherShop }, dispatchSaved] = useReducer(savedCopyReducer, {
+    envelope: null,
+    goneUnderTenant: null,
+    removedForOtherShop: null,
+  });
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
@@ -172,6 +228,14 @@ export function OfflineManifestView() {
   //    branch is chosen by an ordinary client render instead of by error
   //    recovery.
   const [storeRead, setStoreRead] = useState(false);
+  /**
+   * Unsynced roll call this device threw away at the retention ceiling
+   * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than
+   * handed over by whatever triggered the delete: it usually happens where
+   * there is no screen — the service worker's push refresh, the staff layout's
+   * auto-save — so this surface is the first place a human can be told.
+   */
+  const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
@@ -197,15 +261,32 @@ export function OfflineManifestView() {
   const tenantSlugRef = useRef<string | null>(null);
   /**
    * The in-flight lookup, so the purge effect and the branch effect below share
-   * one request instead of racing two on every mount and every reconnect. This
-   * endpoint returns the shop's whole 48-hour roster to answer a one-word
-   * question, so a duplicate is not free (security review, 2026-08-06).
+   * one request instead of racing two on every mount and every reconnect
+   * (security review, 2026-08-06). The endpoint is now identity-only rather
+   * than the whole 48-hour roster (review 20260802, action item 12), so a
+   * duplicate costs far less than it did — but the dedupe stays: on a marina
+   * connection each of these can sit for the full ten-second timeout, and two
+   * of them can disagree, which would have the purge and the reconcile pass
+   * acting on two different answers to "which shop is this".
+   *
+   * The lookup itself now lives in `src/lib/offline-manifests.ts`
+   * (`fetchOfflineManifestShopSlug`), shared with the service worker's own
+   * flush pass — it asks the same tenant question for the same reason and must
+   * not answer it differently (security review, 2026-08-06).
    */
   const tenantLookupRef = useRef<Promise<string | null> | null>(null);
 
+  const refreshDiscarded = useCallback(() => {
+    readDiscardedOfflineRecords()
+      .then(setDiscarded)
+      // Best-effort by design: a device whose storage cannot be read has
+      // bigger problems, and both branches below already say so on their own.
+      .catch(() => {});
+  }, []);
+
   const resolveTenant = useCallback(async (): Promise<string | null> => {
     if (tenantSlugRef.current) return tenantSlugRef.current;
-    tenantLookupRef.current ??= fetchCurrentShopSlug().finally(() => {
+    tenantLookupRef.current ??= fetchOfflineManifestShopSlug().finally(() => {
       tenantLookupRef.current = null;
     });
     const slug = await tenantLookupRef.current;
@@ -231,7 +312,7 @@ export function OfflineManifestView() {
     try {
       const next = await syncOfflineManifest(tripId);
       if (!next) return;
-      setEnvelope(next);
+      dispatchSaved({ type: "loaded", envelope: next });
       const rejected = next.events.filter((event) => event.syncStatus === "rejected").length;
       const pending = next.events.filter((event) => event.syncStatus === "pending").length;
       setMessage(
@@ -355,11 +436,58 @@ export function OfflineManifestView() {
       if (cancelled) return;
       // Re-read so a record the purge removed stops being displayed in this
       // round rather than at the next visit.
-      listOfflineManifests()
-        .then((saved) => {
-          if (!cancelled) setList((current) => (current === null ? current : saved));
-        })
-        .catch(() => {});
+      //
+      // **Both branches repaint, and the trip branch says why** (security
+      // review, 2026-08-06, F5). This used to re-read only the list — the
+      // `current === null ? current : saved` guard below is what confined it to
+      // that branch — so on `?trip=<id>` the component kept rendering the
+      // in-memory envelope of a record that no longer existed, and every Board
+      // / Not-boarded button then raised `OfflineManifestError("unavailable")`:
+      // a roster that looks fine at the dock, with dead buttons and a refusal
+      // that explains nothing.
+      //
+      // The asymmetry was deliberate once — blanking the screen a captain is
+      // actively reading is its own harm, which is why only the list, where a
+      // vanished row costs a link rather than the working surface, repainted.
+      // It does not survive what the record actually is. The cross-shop purge
+      // can only delete a record belonging to a *different* shop than the
+      // session this tablet now holds, so what stays on screen is another
+      // shop's diver names, emergency contacts and readiness/medical blockers,
+      // rendered with no session behind them — the exact exposure the purge
+      // exists to end. And nothing on it can be acted on any more: a roster
+      // that cannot record is worse than no roster, because it reads as a head
+      // count being kept. Keeping it up would trade an ongoing disclosure for a
+      // convenience the buttons can no longer deliver.
+      //
+      // So it repaints — but never to a bare "nothing saved on this phone",
+      // which is the one thing the captain already knows is wrong. The empty
+      // state names the cause: a different shop is signed in on this tablet.
+      // Two things it will not do: blank on a *failed* read (only a store that
+      // positively answers "gone" repaints), and blank a record that survived
+      // the purge because it still holds unsynced evidence.
+      //
+      // All this round reports is what it found: gone, under this tenant. It
+      // deliberately does not decide whether anything was *lost*, or what to
+      // say about it — that needs the record this view is showing, and an
+      // async callback cannot see React state. It used to bridge that with a
+      // ref mirroring `envelope`, which lags its own commit and made the
+      // repaint droppable in two different orderings; `savedCopyReducer` now
+      // joins the two halves in whichever order they arrive. Read its doc
+      // before changing this line.
+      if (tripId) {
+        const held = await loadOfflineManifest(tripId).catch(() => undefined);
+        if (!cancelled && held === null) dispatchSaved({ type: "gone", tenant: slug });
+      } else {
+        await listOfflineManifests()
+          .then((saved) => {
+            if (!cancelled) setList((current) => (current === null ? current : saved));
+          })
+          .catch(() => {});
+      }
+      // A purge round is also when the store is most likely to have hit the
+      // retention ceiling and thrown unsynced roll call away, so ask what was
+      // lost right after it rather than only at mount.
+      if (!cancelled) refreshDiscarded();
     };
     void purge();
     window.addEventListener("online", purge);
@@ -367,7 +495,10 @@ export function OfflineManifestView() {
       cancelled = true;
       window.removeEventListener("online", purge);
     };
-  }, [resolveTenant]);
+    // No `t` any more: this round reports a fact and picks no words, so a
+    // translator identity can no longer cancel a repaint mid-flight by
+    // re-running the effect underneath it.
+  }, [refreshDiscarded, resolveTenant, tripId]);
 
   useEffect(() => {
     if (!tripId) {
@@ -397,14 +528,20 @@ export function OfflineManifestView() {
           // Settled either way: a device whose storage can't be opened at all
           // has still been *looked at*, and the error message it lands on says
           // more than an "opening…" state that never ends.
-          .finally(() => setStoreRead(true));
+          .finally(() => {
+            setStoreRead(true);
+            // The read above is itself a moment the retention ceiling can fire
+            // (it decrypts every record), so ask what it discarded — not only
+            // after a purge round.
+            refreshDiscarded();
+          });
       void refreshList();
       window.addEventListener("online", refreshList);
       return () => window.removeEventListener("online", refreshList);
     }
     loadOfflineManifest(tripId)
       .then((saved) => {
-        setEnvelope(saved);
+        dispatchSaved({ type: "loaded", envelope: saved });
         // The requested checkpoint's shape was checked before the trip's
         // planned-dive count was known; re-validate against it now so a
         // stale or out-of-range checkpoint (from an edited URL, or a trip
@@ -425,10 +562,24 @@ export function OfflineManifestView() {
         if (saved && navigator.onLine) void reconcile();
       })
       .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")))
-      .finally(() => setStoreRead(true));
+      .finally(() => {
+        setStoreRead(true);
+        refreshDiscarded();
+      });
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, reconcileList, resolveTenant, tripId, t]);
+  }, [reconcile, reconcileList, refreshDiscarded, resolveTenant, tripId, t]);
+
+  const acknowledgeDiscarded = () => {
+    // Cleared on screen first: the button must feel instant on a boat, and if
+    // the write behind it fails the notice simply comes back on the next open,
+    // which is the right direction for something that reports lost evidence.
+    setDiscarded([]);
+    void acknowledgeDiscardedOfflineRecords().catch(() => {});
+  };
+  const discardNotice = (
+    <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
+  );
 
   // Before the store has been read — which includes every server render, since
   // the effect above only runs in the browser — say what is actually true and
@@ -456,6 +607,7 @@ export function OfflineManifestView() {
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <OfflineShellVersionBanner copy={shellVersionCopy} />
+        {discardNotice}
         <ShopPageHeader
           eyebrow={t("shared.offlineManifest.list.eyebrow")}
           title={
@@ -542,15 +694,38 @@ export function OfflineManifestView() {
     );
   }
 
+  // `envelope` is null for two different reasons and this branch covers both,
+  // because `savedCopyReducer` makes them the same state: nothing has been
+  // loaded, or the store said this trip's copy is gone. The second cannot be
+  // undone by a read that was already in flight (see the reducer), so there is
+  // no ordering in which a roster reaches the screen after its record has been
+  // deleted — including for a single commit.
   if (!envelope) {
+    // "Nothing saved on this phone yet" is a claim about this device having
+    // never held a copy. When the cross-shop purge has just taken one away
+    // mid-read (see the purge effect), that sentence is the one thing the
+    // captain already knows is false — so this branch names the real cause
+    // instead, and offers the only advice that is true for a record belonging
+    // to someone else's shop. `removedForOtherShop === null` means nothing was
+    // lost at all: a `?trip=` this device simply never saved, which is exactly
+    // what the plain empty state is for.
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        {discardNotice}
         <ShopPageHeader
           eyebrow={t("shared.offlineManifest.single.eyebrow")}
-          title={t("shared.offlineManifest.single.emptyHeading")}
+          title={
+            removedForOtherShop
+              ? t("shared.offlineManifest.single.removedOtherShopHeading")
+              : t("shared.offlineManifest.single.emptyHeading")
+          }
           meta={
             <p className="text-muted" role="status">
-              {message}
+              {removedForOtherShop === null
+                ? message
+                : removedForOtherShop
+                  ? t("shared.offlineManifest.single.removedOtherShopMessage")
+                  : t("shared.offlineManifest.reconcile.noneForTrip")}
             </p>
           }
         />
@@ -562,7 +737,9 @@ export function OfflineManifestView() {
             ⛵
           </div>
           <p className="mx-auto mt-4 max-w-md text-muted">
-            {t("shared.offlineManifest.single.emptyHint")}
+            {removedForOtherShop
+              ? t("shared.offlineManifest.single.removedOtherShopHint")
+              : t("shared.offlineManifest.single.emptyHint")}
           </p>
         </div>
       </main>
@@ -676,7 +853,7 @@ export function OfflineManifestView() {
         status,
         note: note.trim() || null,
       });
-      setEnvelope(next);
+      dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
       // Task 73: a typed note must not silently ride along on the next tap
       // for this diver (e.g. tapping "Not boarded" again later re-sends a
@@ -715,6 +892,7 @@ export function OfflineManifestView() {
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <AmbientGlareDetector />
       <OfflineShellVersionBanner copy={shellVersionCopy} />
+      {discardNotice}
       <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
       <div className="border-b border-border pb-6">
         <ShopPageHeader
@@ -1208,6 +1386,65 @@ export function OfflineManifestView() {
         }}
       />
     </main>
+  );
+}
+
+/**
+ * What this device threw away at the retention ceiling
+ * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`, security review 2026-08-06 F3): roll
+ * call a crew member recorded offline that never reached DiveDay, on a saved
+ * copy too old to keep. Deleting that silently would be its own harm — it is
+ * unsynced evidence of who came back from a dive — so the store writes the loss
+ * down and this says it out loud.
+ *
+ * Rendered on every branch of the shell, not only the one that happened to
+ * trigger the delete: the delete usually happens with no page open at all (the
+ * service worker's push refresh, the staff layout's auto-save), so "wherever a
+ * human next looks" is the only delivery that works. It carries the shop and
+ * trip so the loss is actionable, and no diver, contact or booking id — the
+ * notice must not re-retain the roster the discard removed.
+ *
+ * Danger-toned and dismissed by hand rather than on display: this is the one
+ * thing on this surface that cannot be recovered by reconnecting, and a captain
+ * who was ashore that day should still find it waiting.
+ */
+function DiscardedRecordsNotice({
+  t,
+  records,
+  onAcknowledge,
+}: {
+  t: StaffTranslator;
+  records: DiscardedOfflineRecord[];
+  onAcknowledge: () => void;
+}) {
+  if (records.length === 0) return null;
+  const lostEvents = records.reduce((sum, record) => sum + record.pendingEvents, 0);
+  return (
+    <section
+      role="alert"
+      className="mb-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6"
+    >
+      <p className="font-bold text-danger">{t("shared.offlineManifest.discarded.heading")}</p>
+      <p className="mt-1">{t("shared.offlineManifest.discarded.body", { count: lostEvents })}</p>
+      <ul className="mt-2 space-y-1 text-sm font-semibold">
+        {records.map((record) => (
+          <li key={`${record.tripId}:${record.discardedAt}`}>
+            {t("shared.offlineManifest.discarded.item", {
+              shop: record.shopName,
+              trip: record.tripTitle,
+              count: record.pendingEvents,
+            })}
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onAcknowledge}
+        className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+      >
+        {t("shared.offlineManifest.discarded.acknowledge")}
+      </button>
+    </section>
   );
 }
 

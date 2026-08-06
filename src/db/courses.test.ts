@@ -891,8 +891,7 @@ const emptyContent = {
   overview: null,
   heroImageUrl: null,
   heroImageAlt: null,
-  imageUrls: [],
-  imageAlts: [],
+  galleryPhotos: [],
   durationText: null,
   groupSizeText: null,
   prerequisiteNote: null,
@@ -1094,6 +1093,73 @@ describe("course content and public pages (in-memory PGlite)", () => {
       minimumCertificationLevel: "open_water",
     });
     expect(saved?.faqs).toEqual([{ question: "Do I need a computer?", answer: "We rent one." }]);
+  });
+
+  it("stores each gallery caption on the photo it belongs to, and reads it back paired", async () => {
+    // DATA-L4: captions used to live in a second jsonb array lined up by
+    // position, so nothing in the round trip could tell a shifted caption from
+    // a correct one. Now the pairing survives the database because it *is* the
+    // row — a caption cannot arrive under a different photo than it left under.
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      galleryPhotos: [
+        { url: "/a.jpg", alt: "Fitting a mask" },
+        // A blank caption is "no caption yet", and it stays attached to its own
+        // photo rather than pulling the next one up a slot.
+        { url: "/b.jpg", alt: "" },
+        { url: "/c.jpg", alt: "Surfacing at the mooring" },
+      ],
+    });
+
+    expect((await getCourseBySlug(db, shop.id, course.slug))?.galleryPhotos).toEqual([
+      { url: "/a.jpg", alt: "Fitting a mask" },
+      { url: "/b.jpg", alt: "" },
+      { url: "/c.jpg", alt: "Surfacing at the mooring" },
+    ]);
+  });
+
+  it("keeps the superseded columns in step for one release, so a rollback reads true captions", async () => {
+    // Expand/contract: `image_urls`/`image_alts` are still there and still
+    // written until the contract release drops them, so an Instant Rollback to
+    // the previous deployment shows the captions the shop actually saved rather
+    // than whatever was true before this one
+    // (docs/engineering/deploy-and-migrations-runbook.md).
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      galleryPhotos: [
+        { url: "/a.jpg", alt: "Fitting a mask" },
+        { url: "/b.jpg", alt: "" },
+      ],
+    });
+
+    const [row] = await db
+      .select({ imageUrls: courses.imageUrls, imageAlts: courses.imageAlts })
+      .from(courses)
+      .where(eq(courses.id, course.id));
+    expect(row?.imageUrls).toEqual(["/a.jpg", "/b.jpg"]);
+    expect(row?.imageAlts).toEqual(["Fitting a mask", ""]);
+  });
+
+  it("clears the gallery to an empty list rather than a null", async () => {
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, {
+      shopId: shop.id,
+      title: "Cavern Diver",
+      galleryPhotos: [{ url: "/a.jpg", alt: "Fitting a mask" }],
+    });
+    if (!course) throw new Error("course not created");
+
+    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, galleryPhotos: [] });
+
+    expect((await getCourseBySlug(db, shop.id, course.slug))?.galleryPhotos).toEqual([]);
   });
 
   it("hides a course from scheduling without deleting it — staff can still find and reshow it", async () => {

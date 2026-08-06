@@ -6,7 +6,7 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestPayload } from "@/lib/offline-manifests";
+import { offlineManifestPayloads, offlineManifestShopSlug } from "@/lib/offline-manifests";
 
 // Matches the single-trip auto-save cadence (OfflineManifestManager) — see
 // ADR 20260726-shopwide-offline-manifest-priming. No UI: this mounts on every
@@ -51,23 +51,42 @@ export function OfflineManifestAutoSave() {
           credentials: "same-origin",
         });
         if (!response.ok) return;
-        const body = (await response.json()) as {
-          shop: { slug: string };
-          payloads: OfflineManifestPayload[];
-        };
+        // **Parsed, not cast.** This used to be
+        // `(await response.json()) as OfflineManifestUpcomingResponse`, which
+        // is an assertion about a body nobody checked: `{}` satisfies it, and
+        // `body.shop.slug` then reads `undefined` without throwing on the way
+        // past — handing the device-wide delete pass a slug that matches no
+        // saved record, which is to say every one of them (security review,
+        // 2026-08-06). The store now refuses that at its own chokepoint; this
+        // side stops producing it, the same way the offline shell already
+        // parsed the identity response.
+        const body: unknown = await response.json();
         // Server-verified "who am I signed in as" — never a client-supplied
         // value — so a device that just switched shops (a shared boat tablet,
         // a freelance captain, a reassigned device) stops holding the
-        // previous shop's cached rosters the moment this runs. See ADR
-        // 20260726-shopwide-offline-manifest-priming. Deliberately not
-        // caught here: if the purge itself fails, saving this shop's trips
-        // anyway would leave both shops' rosters readable side by side in
-        // the device-wide list — fail the whole round (the outer catch
+        // previous shop's cached rosters the moment this runs. Read from this
+        // response rather than from `/api/offline-manifests/identity`: that
+        // route exists for the offline shell, which wants the tenant and
+        // nothing else (review 20260802, action item 12), whereas this caller
+        // is already here for the board and a second request would be a second
+        // round trip for a string it is being handed. See ADR
+        // 20260726-shopwide-offline-manifest-priming.
+        const shopSlug = offlineManifestShopSlug(body);
+        // No tenant, no round. Saving without a purge is the cross-tenant
+        // failure this whole sequence exists to prevent, and it is exactly
+        // what a malformed body used to buy: the purge silently matched
+        // nothing (or everything), then the board was written in anyway.
+        if (!shopSlug) return;
+        // Deliberately not caught: if the purge itself fails, saving this
+        // shop's trips anyway would leave both shops' rosters readable side by
+        // side in the device-wide list — fail the whole round (the outer catch
         // below) and let the next trigger retry the purge first, rather than
         // fail open on a cross-tenant boundary.
-        await purgeOfflineManifestsExceptShop(body.shop.slug);
+        await purgeOfflineManifestsExceptShop(shopSlug);
         await Promise.all(
-          body.payloads.map((payload) => saveOfflineManifest(payload).catch(() => {})),
+          offlineManifestPayloads(body).map((payload) =>
+            saveOfflineManifest(payload).catch(() => {}),
+          ),
         );
       } catch {
         // Best-effort — see module comment.

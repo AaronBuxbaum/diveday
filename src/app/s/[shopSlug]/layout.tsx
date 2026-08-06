@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DemoBanner } from "@/components/DemoBanner";
+import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
@@ -15,7 +16,7 @@ import { getShopBySlug } from "@/db/shops";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { requestLanguageFallback, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
@@ -113,6 +114,13 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
   const locale = await requestLocale(shop?.defaultLocale);
   const t = diverTranslator(locale);
   const showBanner = !isEmbed && (shop?.isDemo ?? false);
+  // "You asked for a language we don't have" — the acknowledgement that used to
+  // be missing entirely (review finding I18N-L1). Null whenever the visitor's
+  // `Accept-Language` matched a bundle, or carried no preference at all, so the
+  // ordinary render is untouched. Gated on `!isEmbed` like every other band in
+  // this component: an embed is framed by the shop's own site, which has already
+  // told the visitor whose page they are on (ADR 20260726-schedule-embed).
+  const languageFallback = isEmbed ? null : await requestLanguageFallback(locale);
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
   // captain only appear when this shop actually seeded someone in that role.
@@ -230,6 +238,11 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
           navAriaLabel={t("shopChrome.navAriaLabel")}
           navItems={navItems}
         />
+      ) : null}
+      {/* Below the header on purpose: the shop's own identity is what a diver
+          came for, and this line is about the words underneath it. */}
+      {languageFallback && shop ? (
+        <LanguageFallbackNotice fallback={languageFallback} shopName={shop.name} t={t} />
       ) : null}
     </>
   );

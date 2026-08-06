@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
-import { CourseHero } from "./CourseSections";
+import { CourseGallery, CourseHero } from "./CourseSections";
 
 /**
  * The course hero's price is a *list* price, so it follows `shops.currency` —
@@ -22,8 +22,7 @@ function course(overrides: Partial<Course> = {}): Course {
     overview: null,
     heroImageUrl: null,
     heroImageAlt: null,
-    imageUrls: [],
-    imageAlts: [],
+    galleryPhotos: [],
     durationText: null,
     groupSizeText: null,
     minimumAge: null,
@@ -91,5 +90,56 @@ describe("CourseHero price currency (task 35)", () => {
     );
 
     expect(screen.getByText(/\$480\b/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * A caption belongs to the photo it was written for, and there is no longer a
+ * shape in which it can slide onto a neighbour: the gallery is one object per
+ * photo rather than the `imageUrls`/`imageAlts` pair it replaced, where a
+ * length mismatch silently shifted every caption after it (DATA-L4, review
+ * 20260802). This is the surface that defect was invisible on — the words only
+ * a screen reader hears.
+ */
+describe("CourseGallery captions (DATA-L4)", () => {
+  it("gives each photo the caption written for it", () => {
+    render(
+      <CourseGallery
+        photos={[
+          { url: "/a.jpg", alt: "Fitting a mask in the shallows" },
+          { url: "/b.jpg", alt: "Surfacing at the mooring line" },
+        ]}
+        title="Open Water Diver"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByAltText("Fitting a mask in the shallows")).toBeInTheDocument();
+    expect(screen.getByAltText("Surfacing at the mooring line")).toBeInTheDocument();
+  });
+
+  it("falls back to a generated caption for an uncaptioned photo without borrowing its neighbour's", () => {
+    // The old shape's failure mode: an early blank pulled every later caption
+    // up a slot, so this photo would have read "Surfacing at the mooring line".
+    render(
+      <CourseGallery
+        photos={[
+          { url: "/a.jpg", alt: "" },
+          { url: "/b.jpg", alt: "Surfacing at the mooring line" },
+        ]}
+        title="Open Water Diver"
+        t={t}
+      />,
+    );
+
+    // The hero photo claims "photo 1", so the gallery starts at 2.
+    expect(screen.getByAltText("Open Water Diver — photo 2")).toBeInTheDocument();
+    expect(screen.getByAltText("Surfacing at the mooring line")).toBeInTheDocument();
+  });
+
+  it("renders nothing at all when the shop has published no gallery", () => {
+    const { container } = render(<CourseGallery photos={[]} title="Open Water Diver" t={t} />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -190,6 +190,16 @@ test.describe("as owner", () => {
   async function setSeededCodeLive(page: Page, live: boolean) {
     await page.goto("/shop/blue-mantis/promos");
     const row = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
+    // Wait for the row before counting anything on it. `count()` is the one
+    // locator method that does *not* auto-wait — it answers about the DOM as it
+    // stands right now — so asking it straight after `goto`, while the list is
+    // still behind its own `loading.tsx`, reliably answers 0. That skips the
+    // setup click, leaves REEF10 in whatever state the previous test left it,
+    // and the unconditional assertion below then waits 8s for a badge that was
+    // never going to change. Green on a quiet box, and the CI failure it
+    // produces reads as "element(s) not found" rather than "the click never
+    // happened".
+    await expect(row).toBeVisible();
     const target = row.getByRole("button", { name: live ? "Switch on" : "Switch off" });
     if ((await target.count()) > 0) {
       await target.click();

@@ -98,6 +98,25 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
 export type CourseFaq = { question: string; answer: string };
 
 /**
+ * One gallery photo and the caption that belongs to *it*.
+ *
+ * Deliberately one object per photo rather than the `image_urls` / `image_alts`
+ * pair this replaced: two arrays whose correspondence was positional and
+ * unenforced, so a single drifted row silently captioned every photo after it
+ * with the previous photo's words — plausible on screen, wrong for exactly the
+ * reader alt text exists for (DATA-L4, review 20260802). A caption cannot
+ * outlive or slide past its photo when it is a field of it.
+ *
+ * `alt` is "" when the shop has not written one; the renderer falls back to the
+ * generated "{title} — photo {n}" caption (`resolveImageAlt`). It is never null
+ * — the empty string *is* "no caption yet", one representation rather than two.
+ */
+export type CourseGalleryPhoto = {
+  url: string;
+  alt: string;
+};
+
+/**
  * The marketing surface of a course: everything a diver reads before booking,
  * and nothing an operation depends on. Prices, the cert gate, and scheduling
  * live on the course row itself because they carry operational weight; these
@@ -110,9 +129,8 @@ export type CourseContent = {
   heroImageUrl: string | null;
   /** Staff-authored alt text for the hero photo; blank falls back to a generated caption. */
   heroImageAlt: string | null;
-  imageUrls: string[];
-  /** Parallel to `imageUrls` — same length and order, "" where no caption was given. */
-  imageAlts: string[];
+  /** The gallery, each photo carrying its own caption — never two parallel arrays (DATA-L4). */
+  galleryPhotos: CourseGalleryPhoto[];
   durationText: string | null;
   groupSizeText: string | null;
   minimumAge: number | null;

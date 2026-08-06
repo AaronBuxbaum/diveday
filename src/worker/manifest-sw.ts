@@ -2,10 +2,15 @@
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import {
   listOfflineManifests,
+  purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  fetchOfflineManifestShopSlug,
+  offlineManifestPayloads,
+  offlineManifestShopSlug,
+} from "@/lib/offline-manifests";
 
 /**
  * The offline manifest's service worker.
@@ -181,17 +186,16 @@ self.addEventListener("message", (event) => {
  * available. The server side coalesces to at most one push per device per
  * minute, and only near departure, which is what keeps that from being noise.
  *
- * **This worker does not write the offline snapshot.** It could — the store's
- * AES-GCM key is a non-extractable CryptoKey in IndexedDB, readable from any
- * same-origin context including this one. It does not because this file is
- * static and outside the Next build (see SHELL_VERSION above), so writing
- * snapshots here would mean a second implementation of the envelope format,
- * AAD, versioning and locking, kept in lockstep by hand. Two implementations of
- * an encrypted safety-critical record is a worse failure than the gap it
- * closes. Instead: tell any live client, and let the one real implementation
- * (saveOfflineManifest) do the write. A locked phone therefore gets the
- * notification and refreshes when the captain opens it — a human in the loop at
- * departure, which is defensible, and on iOS the only thing available at all.
+ * **The snapshot is written here, but never by a second implementation.** This
+ * file used to be hand-written static JavaScript outside the Next build, so
+ * writing an encrypted record from it would have meant a duplicate of the
+ * envelope format, AAD, versioning and locking kept in lockstep by hand — a
+ * worse failure than the gap it closed, which is why the worker could only wake
+ * a page and hope. It is compiled now (see the file docblock), so it calls the
+ * one real implementation, `saveOfflineManifest`, and inherits every rule that
+ * comes with it — including the cross-shop purge that must run first on a
+ * shared boat tablet (`refreshSavedManifests` below). Live clients are still
+ * told either way, so a visible page refreshes itself without a tap.
  *
  * Words arrive in the payload already translated. This file cannot reach the
  * message bundles, and no user-facing English may live outside src/i18n.
@@ -219,8 +223,33 @@ async function refreshSavedManifests(): Promise<void> {
       headers: { accept: "application/json" },
     });
     if (!response.ok) return;
-    const body = (await response.json()) as { manifests?: OfflineManifestPayload[] };
-    for (const payload of body.manifests ?? []) {
+    // `payloads`, not `manifests`. The route answers `{ shop, payloads }`;
+    // `manifests` is the key *inside* each payload, and reading it here meant
+    // this loop always ran zero times — a locked phone got the notification and
+    // a snapshot exactly as stale as before, which is the gap this function was
+    // added to close. Both keys are read through parsers that destructure the
+    // route's own declared response type, so the next rename is a
+    // `tsc --noEmit -p src/worker` failure rather than a silent no-op at sea,
+    // and a body of the wrong shape is `null`/`[]` rather than a cast that
+    // believes whatever it is told. The one caller that wants only `shop` asks
+    // `/api/offline-manifests/identity` instead; this one is here for the board.
+    const body: unknown = await response.json();
+    // **Purge before saving, exactly as `OfflineManifestAutoSave` does.** This
+    // response already carries the server-verified tenant at zero extra cost,
+    // and without acting on it a worker-only refresh — a push landing with no
+    // page open, which is the whole reason this function exists — writes shop
+    // B's entire 48-hour board in beside shop A's resident records on a shared
+    // boat tablet, and nothing on the device ever removes them (security
+    // review, 2026-08-06). No tenant, no round: saving without a purge is the
+    // cross-tenant failure this sequence exists to prevent.
+    const shopSlug = offlineManifestShopSlug(body);
+    if (!shopSlug) return;
+    // Uncaught on purpose: a purge that throws falls to this function's own
+    // catch below, which abandons the round before anything is written — the
+    // same fail-closed order the page-side auto-save keeps, rather than
+    // leaving both shops' rosters readable side by side.
+    await purgeOfflineManifestsExceptShop(shopSlug);
+    for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
       await saveOfflineManifest(payload).catch(() => undefined);
@@ -344,11 +373,52 @@ async function flushPendingRollCall(): Promise<void> {
   // store's own reader, so the worker discovers what to flush exactly the way
   // the page would.
   const envelopes = await listOfflineManifests();
-  const tripIds = envelopes
-    .map((envelope) => envelope.snapshot.manifests[0]?.trip.id)
-    .filter((id): id is string => Boolean(id));
+  // Only records with something to send, which is also what lets a device with
+  // nothing queued skip the tenant lookup below entirely — a push on a quiet
+  // phone must not cost a round trip. `syncOfflineManifest` would return early
+  // on these anyway; the filter is here so "is there anything to flush?" is
+  // answered before "who are we?", not after.
+  const pending = envelopes.filter((envelope) =>
+    envelope.events.some((event) => event.syncStatus === "pending"),
+  );
+  if (pending.length === 0) return;
+
+  // **Whose events are these?** Resolved once, from the server, before
+  // anything is submitted — the same rule and the same reason
+  // `OfflineManifestView.reconcileList` applies on the page side, and it
+  // belongs here at least as much, because here there is nobody to tell when
+  // it goes wrong (security review, 2026-08-06).
+  //
+  // Traced end to end, the version of this loop that flushed every envelope on
+  // the device destroyed evidence: `purgeOfflineManifestsExceptShop` keeps a
+  // *foreign* shop's record alive precisely while it still holds a `pending`
+  // event; submitting that event under whatever shop is currently signed in
+  // gets it scoped to `session.user.shopId` by the sync route and returned
+  // `rejected` for a tenant mismatch rather than a real domain refusal;
+  // `syncOfflineManifest` writes `syncStatus: "rejected"`; and a rejected event
+  // is no longer pending, so the very next purge deletes the record outright.
+  // Shop A's captain records roll call offshore, the tablet is handed to shop
+  // B, a push arrives with no page open, and the only record of who came back
+  // aboard is gone — silently, because a service worker has no screen.
+  const shopSlug = await fetchOfflineManifestShopSlug();
+  if (!shopSlug) {
+    // Offline, signed out, a 404, a body of the wrong shape: reconcile
+    // *nothing* rather than guess. Thrown rather than returned so the browser
+    // keeps the sync tag and tries again later — the events are still on the
+    // device and this flush did not happen, which is exactly what the tag is
+    // for. The push path swallows it (`.catch`), so a locked phone is
+    // unaffected either way.
+    throw new Error("manifest sync tenant unknown");
+  }
+
   let failed = false;
-  for (const tripId of tripIds) {
+  for (const envelope of pending) {
+    // A record belonging to some other shop is left exactly where it is:
+    // untouched, still pending, still the only copy of that boarding record,
+    // waiting for its own shop's session to come back to this device.
+    if (envelope.snapshot.shop.slug !== shopSlug) continue;
+    const tripId = envelope.snapshot.manifests[0]?.trip.id;
+    if (!tripId) continue;
     // One at a time, for the same IndexedDB-lock reason as the save loop.
     try {
       await syncOfflineManifest(tripId);
@@ -357,7 +427,9 @@ async function flushPendingRollCall(): Promise<void> {
     }
   }
   // Throwing asks the browser to keep the tag and retry. Swallowing it would
-  // silently abandon events that are still on the device.
+  // silently abandon events that are still on the device. A skipped
+  // foreign-shop record is not a failure — nothing about it will ever succeed
+  // under this session, so retrying the tag for it would spin forever.
   if (failed) throw new Error("manifest sync incomplete");
 }
 

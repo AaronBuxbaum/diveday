@@ -1,8 +1,15 @@
 /**
  * Bearer-capability routes whose path segment after the prefix is a
  * replayable credential, never an identifier safe to leave in telemetry.
+ *
+ * Exported for `observability.test.ts`, which asserts this list against the
+ * `src/app/<prefix>/[token]` directories actually on disk. Keeping the two in
+ * agreement by review alone is what let `/unsubscribe/[token]` ship
+ * unredacted — it was the tenth such route and had never been added here — so
+ * the filesystem, not this array and not a prose list in a runbook, is the
+ * source of truth a new capability route has to survive.
  */
-const CAPABILITY_ROUTE_PREFIXES = [
+export const CAPABILITY_ROUTE_PREFIXES = [
   "waivers",
   "ready",
   "recap",
@@ -26,6 +33,15 @@ const CAPABILITY_ROUTE_PREFIXES = [
   // URL unattended for as long as the subscription exists, so one leaked copy
   // in telemetry replays the whole shop's schedule indefinitely.
   "calendar",
+  // Email unsubscribe tokens (`last_minute_list_unsubscribe_tokens` and
+  // `person_courtesy_email_unsubscribe_tokens`, both resolved by
+  // /unsubscribe/[token]). Found missing by the OPS-L1 review: the tenth
+  // capability route, and the only one this list had never covered. The
+  // capability it grants is the narrowest of the set — stop these emails, and
+  // the page reveals only a shop name — but neither table carries an
+  // `expires_at` or a `revoked_at`, so an exposed token works forever, which
+  // is a longer life than anything else here.
+  "unsubscribe",
 ] as const;
 
 /**
@@ -55,7 +71,7 @@ function decodeSegment(segment: string): string {
  * Rewrites any `CAPABILITY_ROUTE_PREFIXES` path — `/waivers/<token>`,
  * `/ready/<token>`, `/recap/<token>`, `/verify/<token>`,
  * `/reset-password/<token>`, `/invite/<token>`, `/claim/<token>`,
- * `/calendar/<token>` (and any
+ * `/calendar/<token>`, `/unsubscribe/<token>` (and any
  * URL-encoded variant of those prefixes) — to its template form, and
  * redacts any `CAPABILITY_QUERY_PARAMS` value on *any* path, so
  * Analytics/Speed Insights never receive a raw capability regardless of
