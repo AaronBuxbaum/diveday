@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
+import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -193,9 +194,7 @@ export default async function OrdersIndexPage({
               {t("orders.index.newOrder")}
             </Link>
           ) : (
-            <Link href={`/shop/${shopSlug}/settings#money`} className={buttonClass()}>
-              {t("shared.payments.connect")}
-            </Link>
+            <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
           )
         }
       />
@@ -312,12 +311,11 @@ export default async function OrdersIndexPage({
               {t("orders.index.newOrder")}
             </Link>
           ) : (
-            <Link
-              href={`/shop/${shopSlug}/settings#money`}
-              className={buttonClass({ className: "mt-4" })}
-            >
-              {t("shared.payments.connect")}
-            </Link>
+            <PaymentsConnectCta
+              shopSlug={shopSlug}
+              label={t("shared.payments.connect")}
+              className="mt-4"
+            />
           )}
         </EmptyState>
       ) : (
