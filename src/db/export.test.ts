@@ -305,16 +305,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
-  courses: [
-    "shop_id",
-    // Superseded by `gallery_photos`, which the bundle does carry. Still on the
-    // table for one release because the previous deployment reads them
-    // (expand/contract — see the column docblocks in schema.ts); exporting both
-    // shapes would put the same gallery in the bundle twice and invite an
-    // importer to pick the wrong one. Delete these two lines with the columns.
-    "image_urls",
-    "image_alts",
-  ],
+  courses: ["shop_id"],
 };
 
 function table(

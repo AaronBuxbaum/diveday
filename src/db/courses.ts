@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
-import type { CourseContent, CourseGalleryPhoto } from "@/lib/courses";
+import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -30,26 +30,6 @@ export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
 export type CourseContentPatch = Omit<CourseContent, "minimumAge">;
 
 /**
- * The `image_urls`/`image_alts` pair `gallery_photos` replaced, still written
- * for exactly one release.
- *
- * Nothing reads them: this is the expand/contract deploy rule
- * (docs/engineering/deploy-and-migrations-runbook.md). Migrations run inside
- * the production build while the *previous* release is still serving course
- * pages off the two old columns, so they cannot be dropped in the same deploy
- * that stops reading them — and while they are still there, an Instant Rollback
- * should land on the captions a shop actually saved rather than on whatever was
- * true before this release. The contract release drops the columns and deletes
- * this function.
- */
-function legacyGalleryColumns(photos: CourseGalleryPhoto[]) {
-  return {
-    imageUrls: photos.map((photo) => photo.url),
-    imageAlts: photos.map((photo) => photo.alt),
-  };
-}
-
-/**
  * The catalog owns the reusable admission baseline. A particular session
  * inherits it when scheduled; later course edits never silently rewrite an
  * already-published session's readiness requirements.
@@ -72,7 +52,6 @@ export async function createCourse(db: AppDb, input: NewCourse) {
       heroImageUrl: input.heroImageUrl ?? null,
       heroImageAlt: input.heroImageAlt ?? null,
       galleryPhotos: input.galleryPhotos ?? [],
-      ...legacyGalleryColumns(input.galleryPhotos ?? []),
       durationText: input.durationText ?? null,
       groupSizeText: input.groupSizeText ?? null,
       minimumAge: input.minimumAge ?? null,
@@ -321,7 +300,6 @@ export async function updateCourseContent(
       heroImageUrl: input.heroImageUrl?.trim() || null,
       heroImageAlt: input.heroImageAlt?.trim() || null,
       galleryPhotos: input.galleryPhotos,
-      ...legacyGalleryColumns(input.galleryPhotos),
       durationText: input.durationText?.trim() || null,
       groupSizeText: input.groupSizeText?.trim() || null,
       prerequisiteNote: input.prerequisiteNote?.trim() || null,
