@@ -818,6 +818,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule", scheme);
       });
 
+      // The unsupported-language band (I18N-L1). Every other capture in this
+      // file runs under the fleet's default locale, so nothing here has ever
+      // rendered this surface — and a shop cannot reproduce it on its own
+      // machine either, which is exactly why it wants a baseline. `de-DE` is a
+      // language DiveDay carries no bundle for, so `unsupportedLanguage()`
+      // answers and the band appears under the shop header.
+      test.describe("unsupported language", () => {
+        test.use({ locale: "de-DE" });
+
+        test(`the schedule's language-fallback band renders true to the design (${scheme})`, async ({
+          page,
+        }) => {
+          await page.goto("/s/blue-mantis");
+          await publicReefCard(page).getByRole("link").waitFor();
+          await capture(page, "schedule-language-fallback", scheme);
+        });
+      });
+
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
       // no ShopPageHeader chrome, tighter padding — what a shop's own website
       // actually shows inside the iframe.

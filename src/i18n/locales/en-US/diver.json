@@ -32,11 +32,13 @@
   "shopChrome": {
     "skipToContent": "Skip to main content",
     "navAriaLabel": "Shop pages",
-    "footerLine": "{shop} · Powered by DiveDay"
+    "footerLine": "{shop} · Powered by DiveDay",
+    "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in."
   },
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
+    "timesInZone": "All times below are local to {shop} ({zone}).",
     "diverDescription": "Find your next day on the water, see what to expect, and reserve your spot.",
     "noTrips": "No trips on the books yet",
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
@@ -325,7 +327,10 @@
       "ssi": "SSI (Scuba Schools International)",
       "naui": "NAUI (National Association of Underwater Instructors)",
       "sdi": "SDI (Scuba Diving International)",
-      "tdi": "TDI (Technical Diving International)"
+      "tdi": "TDI (Technical Diving International)",
+      "cmas": "CMAS (World Underwater Federation)",
+      "raid": "RAID (Rebreather Association of International Divers)",
+      "gue": "GUE (Global Underwater Explorers)"
     },
     "seeDates": "See dates",
     "askAboutDates": "Ask about dates",

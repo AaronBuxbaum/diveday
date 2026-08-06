@@ -3,7 +3,12 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
-import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
+import {
+  formatDateTimeTz,
+  formatMoneyCents,
+  formatShortDate,
+  formatTimeRangeTz,
+} from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip } from "./types";
@@ -38,9 +43,17 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
         title={trip.title}
         meta={
           <>
+            {/* The one line on the one page where a diver decides to buy a
+                seat, so it names the clock it is on: `formatTimeRangeTz` rather
+                than the bare `formatTimeRange` the schedule list uses (review
+                finding I18N-L2). A booker two timezones away reading "7:30 AM –
+                11:00 AM" here has nothing else to tell them whose morning that
+                is, and the confirmation they get afterwards has said "EDT" all
+                along — which made this the one step of the flow that could
+                disagree with the two around it. */}
             <p className="text-lg text-muted">
               {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-              {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
             </p>
             {trip.course ? (
               <p className="mt-2 text-sm font-medium text-primary">
