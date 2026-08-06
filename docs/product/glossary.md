@@ -449,6 +449,12 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+- **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
+  left with: divers plus crew, one number, no distinction between who paid and who works. It is
+  printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
+  **static** fact about the departure — how many the trip carries, how many crew it names — never a
+  live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
+  correct itself. The screen answers the live question, in the checkpoint panel.
 - **Incident-ready export** — the print-optimized document a shop hands to authorities or insurers
   after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
   complete append-only roll-call timeline (corrections included), certification evidence as held,

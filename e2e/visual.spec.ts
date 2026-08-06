@@ -1516,12 +1516,16 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on the signed-in CTA itself, not the page heading: the heading
         // renders in the static shell, so it proves nothing about the
         // session-aware nav having streamed in over MarketingNavFallback.
-        // Scoped to the banner because the footer grew its own "Go to shop"
-        // link when the marketing footer was aligned with the nav (#394), and
-        // that one is a different element streaming in from a different
-        // server component — waiting on it would let the header still be
-        // showing its fallback at capture time, which is the one thing this
-        // frame exists to catch.
+        // Scoped to the banner because the footer grew its own session-aware
+        // "Go to shop" link when it was aligned with the nav (#394). That one
+        // streams in from a different server component, so waiting on whichever
+        // resolved first would let the header still be showing its fallback at
+        // capture time — the one thing this frame exists to catch.
+        //
+        // By landmark role rather than by the nav's accessible name: that name
+        // is `t("nav.mainNavigation")`, a message-bundle string, so matching on
+        // its English text would couple this spec to one locale. `banner` is
+        // the `<header>` the nav sits in and carries no copy.
         await page.getByRole("banner").getByRole("link", { name: "Go to shop" }).waitFor();
         await capture(page, "marketing-nav-signed-in", scheme);
       });
@@ -1843,6 +1847,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the empty offline manifest renders true to the design (${scheme})`, async ({
         page,
       }) => {
+        // The shop-wide primer (OfflineManifestAutoSave) starts a fetch →
+        // purge → save-all round on every staff page mount, and its parallel
+        // saves can land *after* the deleteDatabase below finishes — the
+        // store quietly refills and the empty heading never renders (caught
+        // as a 164s timeout on CI shard 2, run 31075399016). Cut the race at
+        // the harness boundary: with the upcoming-manifests feed blocked
+        // from the first navigation, no round ever writes, and the delete
+        // stays as defence against any other writer.
+        await page.route("**/api/offline-manifests/upcoming", (route) => route.abort());
         await openReefTrip(page);
         const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
         await page.evaluate(

@@ -176,6 +176,39 @@ describe("OfflineManifestManager", () => {
     expect(syncOfflineManifest).toHaveBeenCalledTimes(3);
   });
 
+  // A rejected event is a tap somebody made on a deck that never entered the
+  // safety trail. It used to be one more sentence inside the offline card at
+  // the very foot of the page, which is the least likely place on this page
+  // for anyone to read it (dive-domain review, DD4).
+  it("raises a rejected roll-call event as an alert over the page, not a line in the card", async () => {
+    setOnline(true);
+    const withRejection = envelope([
+      {
+        clientEventId: "event-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: new Date().toISOString(),
+        tripId: TRIP_ID,
+        bookingId: "22222222-2222-2222-2222-222222222222",
+        checkpoint: "departure",
+        status: "boarded",
+        note: null,
+        occurredAt: new Date().toISOString(),
+        syncStatus: "rejected",
+      },
+    ]);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(withRejection);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(withRejection);
+
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(copy.reconcileRejectedOne);
+    // Pinned over the page rather than sitting inside the card it came from.
+    expect(alert.closest("section")).toBeNull();
+  });
+
   // Task 76: the "Saved …" timestamp used to call the bare `toLocaleString()`
   // (the JS runtime's default locale, no shop timezone) — the one date on
   // this whole surface that ignored both the negotiated staff locale and
