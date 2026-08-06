@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
-  META_TEMPLATE_LANGUAGES,
   metaLanguageCode,
   templateParameter,
   whatsAppProvider,
@@ -76,7 +75,6 @@ describe("metaLanguageCode", () => {
   it("maps diver locales onto Meta's underscore codes", () => {
     expect(metaLanguageCode("en-US")).toBe("en_US");
     expect(metaLanguageCode("es-ES")).toBe("es_ES");
-    expect(META_TEMPLATE_LANGUAGES).toEqual(["en_US", "es_ES"]);
   });
 });
 

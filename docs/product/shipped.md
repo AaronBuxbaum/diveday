@@ -1190,7 +1190,7 @@ archived.
   publishes its own; visibility stays crew-entered
   ([automated-marine-outlook](../architecture/decisions/20260718-automated-marine-outlook.md)).
 - **Notifications** — booking confirmation, waiver link, and wait-list invite through one `notify()`
-  (email) seam; an AWS SNS `notifySms()` seam adds courtesy SMS, used today by the scheduled
+  (email) seam; an AWS SNS `SmsProvider` seam adds courtesy SMS, used today by the scheduled
   7-day/24-hour pre-trip reminders. All degrade to `not_configured` until their env is set
   ([sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md),
   [scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md)).

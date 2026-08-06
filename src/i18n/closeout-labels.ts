@@ -1,9 +1,4 @@
-import type {
-  CloseoutDepartureStatus,
-  CloseoutShape,
-  CloseoutSnapshotDeparture,
-  LeftoverDecision,
-} from "@/lib/closeout";
+import type { CloseoutDepartureStatus, CloseoutShape, LeftoverDecision } from "@/lib/closeout";
 import type { RollCallGapReason } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -78,14 +73,6 @@ export function closeoutDepartureDetailText(
     default:
       return t("closeout.departures.detail.allHome", { booked: departure.booked });
   }
-}
-
-/** A recorded snapshot departure's line — status word plus its gap sentence. */
-export function closeoutRecordedDepartureText(
-  t: StaffTranslator,
-  departure: CloseoutSnapshotDeparture,
-): string {
-  return t(CLOSEOUT_STATUS_KEYS[departure.status]);
 }
 
 /** The recorded decision's word on a snapshot leftover. */

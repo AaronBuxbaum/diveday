@@ -674,23 +674,3 @@ export async function bookingConfirmationAndWaiverEmailsSent(
   const sent = new Set(rows.map((row) => row.kind));
   return sent.has("booking_confirmation") && sent.has("waiver_request");
 }
-
-/** The full attempt trail for one booking/purpose, oldest first. */
-export async function listDeliveryAttempts(
-  db: AppDb,
-  shopId: string,
-  bookingId: string,
-  kind: TrackedNotificationKind,
-) {
-  return db
-    .select()
-    .from(notificationDeliveryAttempts)
-    .where(
-      and(
-        eq(notificationDeliveryAttempts.shopId, shopId),
-        eq(notificationDeliveryAttempts.bookingId, bookingId),
-        eq(notificationDeliveryAttempts.kind, kind),
-      ),
-    )
-    .orderBy(asc(notificationDeliveryAttempts.attemptedAt));
-}

@@ -27,16 +27,6 @@ export async function getShopById(db: AppDb, id: string) {
   return shop ?? null;
 }
 
-/** Sets which diver medical questionnaire the shop's waivers present. */
-export async function setShopJurisdiction(db: AppDb, shopId: string, jurisdiction: "rstc" | "uk") {
-  const [shop] = await db
-    .update(shops)
-    .set({ jurisdiction })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
 /** Replaces the shop-wide diver packing checklist after route-level validation. */
 export async function setShopPackingList(db: AppDb, shopId: string, packingList: string[]) {
   const [shop] = await db

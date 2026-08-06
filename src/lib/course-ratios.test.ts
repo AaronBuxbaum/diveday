@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   type CourseCrewGapCourse,
   courseCrewGap,
+  courseRatioCapacity,
   courseRatioKind,
   courseRatioRule,
   courseSeatCapacity,
   DSD_RATIO,
   ENTRY_LEVEL_COURSE_RATIO,
-  entryLevelCourseCapacity,
   INTRO_COURSE_RATIO,
 } from "./course-ratios";
 
@@ -39,36 +39,36 @@ const ssiIntro: CourseCrewGapCourse = {
   isIntroCourse: true,
 };
 
-describe("entryLevelCourseCapacity", () => {
+describe("courseRatioCapacity", () => {
   it("seats nobody with no instructor, regardless of assistants", () => {
-    expect(entryLevelCourseCapacity(0, 3)).toBe(0);
-    expect(entryLevelCourseCapacity(0, 3, true)).toBe(0);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 0, 3)).toBe(0);
+    expect(courseRatioCapacity(INTRO_COURSE_RATIO, 0, 3)).toBe(0);
   });
 
   it("is 8 per solo instructor with no certified assistant (PADI base ratio)", () => {
-    expect(entryLevelCourseCapacity(1, 0)).toBe(8);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 1, 0)).toBe(8);
   });
 
   it("adds 2 per certified assistant up to the 12 ceiling", () => {
-    expect(entryLevelCourseCapacity(1, 1)).toBe(10);
-    expect(entryLevelCourseCapacity(1, 2)).toBe(12);
-    expect(entryLevelCourseCapacity(1, 3)).toBe(12); // capped, not 14
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 1, 1)).toBe(10);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 1, 2)).toBe(12);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 1, 3)).toBe(12); // capped, not 14
   });
 
   it("scales the base ratio across multiple instructors", () => {
-    expect(entryLevelCourseCapacity(2, 0)).toBe(16);
-    expect(entryLevelCourseCapacity(2, 1)).toBe(18);
-    expect(entryLevelCourseCapacity(2, 2)).toBe(20);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 2, 0)).toBe(16);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 2, 1)).toBe(18);
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 2, 2)).toBe(20);
   });
 
   it("never exceeds the per-instructor ceiling even with excess assistants", () => {
-    expect(entryLevelCourseCapacity(2, 10)).toBe(24); // 2 * 12
+    expect(courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, 2, 10)).toBe(24); // 2 * 12
   });
 
   it("is the tighter 2-per-instructor DSD open-water ratio, uncredited by assistants", () => {
-    expect(entryLevelCourseCapacity(1, 0, true)).toBe(2);
-    expect(entryLevelCourseCapacity(1, 5, true)).toBe(2); // no published DSD assistant bonus
-    expect(entryLevelCourseCapacity(2, 0, true)).toBe(4);
+    expect(courseRatioCapacity(INTRO_COURSE_RATIO, 1, 0)).toBe(2);
+    expect(courseRatioCapacity(INTRO_COURSE_RATIO, 1, 5)).toBe(2); // no published DSD assistant bonus
+    expect(courseRatioCapacity(INTRO_COURSE_RATIO, 2, 0)).toBe(4);
   });
 });
 

@@ -511,18 +511,21 @@ export async function sendDueRecaps(
   const alreadySent = new Set(delivered.map((d) => d.bookingId));
 
   // The sites dived, per trip, so each recap email can name the day. Fetched
-  // once per distinct trip in the run rather than per booking.
+  // once per distinct trip in the run rather than per booking, and all trips
+  // resolved together rather than one round trip at a time.
   const siteNamesByTrip = new Map<string, string[]>();
-  for (const tripId of new Set(rows.map((r) => r.trip.id))) {
-    const shopId = rows.find((r) => r.trip.id === tripId)?.shop.id;
-    if (!shopId) continue;
-    const dives = await listTripDives(db, shopId, tripId);
-    const names: string[] = [];
-    for (const { diveSite } of dives) {
-      if (diveSite && !names.includes(diveSite.name)) names.push(diveSite.name);
-    }
-    siteNamesByTrip.set(tripId, names);
-  }
+  await Promise.all(
+    [...new Set(rows.map((r) => r.trip.id))].map(async (tripId) => {
+      const shopId = rows.find((r) => r.trip.id === tripId)?.shop.id;
+      if (!shopId) return;
+      const dives = await listTripDives(db, shopId, tripId);
+      const names: string[] = [];
+      for (const { diveSite } of dives) {
+        if (diveSite && !names.includes(diveSite.name)) names.push(diveSite.name);
+      }
+      siteNamesByTrip.set(tripId, names);
+    }),
+  );
 
   const emailWork: Array<{
     bookingId: string;

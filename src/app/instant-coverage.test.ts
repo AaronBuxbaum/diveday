@@ -85,7 +85,11 @@ describe("instant navigation", () => {
       const where = relative(file);
 
       // A page that only redirects never paints, so it has nothing to be
-      // instant about — `blockers/page.tsx` is the whole of this category.
+      // instant about. Permanent-redirect stubs are Route Handlers now — under
+      // `cacheComponents` a page-based redirect answers 200 with the hop in
+      // the streamed payload (ADR 20260806-one-trip-create-form) — so this
+      // category is usually empty, but the carve-out stays for the momentary
+      // redirect a page can still legitimately throw.
       if (/\b(permanentRedirect|redirect)\(/.test(source) && !source.includes("return (")) continue;
 
       if (!/export const instant\s*=\s*true/.test(source)) {

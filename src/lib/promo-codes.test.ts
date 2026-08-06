@@ -8,7 +8,6 @@ import {
   type PromoScope,
   promoScopeCovers,
   promoWindowState,
-  suggestPromoCode,
 } from "./promo-codes";
 
 const NOON = new Date("2026-07-29T12:00:00.000Z");
@@ -126,17 +125,5 @@ describe("discountedAmountCents", () => {
   it("handles the ends of the range without going negative", () => {
     expect(discountedAmountCents(13000, 100)).toBe(0);
     expect(discountedAmountCents(0, 50)).toBe(0);
-  });
-});
-
-describe("suggestPromoCode", () => {
-  it("suggests a normalized, typeable code", () => {
-    const code = suggestPromoCode();
-    expect(normalizePromoCode(code)).toBe(code);
-    expect(code.startsWith("DIVE-")).toBe(true);
-  });
-
-  it("does not suggest the same code twice in a row", () => {
-    expect(suggestPromoCode()).not.toBe(suggestPromoCode());
   });
 });

@@ -128,6 +128,10 @@ test("a certification past its refresher-due date reads as refresher due, not ce
 test("a diver types their card in from the readiness page, and staff verify it there", async ({
   page,
 }) => {
+  // Three full journeys in one flow: staff creates the trip, a signed-out
+  // diver books it and files their card from the readiness page, then staff
+  // sign back in and verify it — two sign-in/out round trips plus a public
+  // booking, each a multi-navigation sequence of its own.
   test.setTimeout(90_000);
   const cardNumber = `SELF-${e2eNow().getTime()}`;
   const title = `Self Cert Run ${e2eNow().getTime()}`;

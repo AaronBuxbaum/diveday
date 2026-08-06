@@ -4,7 +4,6 @@ import {
   effectiveCrewRoles,
   groupCrewAssignments,
   inWaterCrewRole,
-  isTripCrewRole,
   TRIP_CREW_ROLES,
 } from "./crew-roles";
 
@@ -163,16 +162,5 @@ describe("effectiveCrewRoles", () => {
       "divemaster",
       "captain",
     ]);
-  });
-});
-
-describe("isTripCrewRole", () => {
-  it("accepts only the four jobs a boat has", () => {
-    for (const role of TRIP_CREW_ROLES) expect(isTripCrewRole(role)).toBe(true);
-    // Standing facts about a person, never a job on a sailing.
-    expect(isTripCrewRole("owner")).toBe(false);
-    expect(isTripCrewRole("manager")).toBe(false);
-    expect(isTripCrewRole("diver")).toBe(false);
-    expect(isTripCrewRole("")).toBe(false);
   });
 });

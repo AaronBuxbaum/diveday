@@ -1,21 +1,30 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { listCourseInquiriesForShop, recordCourseInquiry } from "./course-inquiries";
+import { recordCourseInquiry } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { createDiver } from "./divers";
 import { courseInquiries, people, shops } from "./schema";
-
-const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
 async function inquiryContext() {
   const { db, shop } = await seededShopContext();
   const course = await getCourseBySlug(db, shop.id, "open-water-diver");
   if (!course) throw new Error("demo Open Water Diver course missing");
   return { db, shop, course };
+}
+
+/** The newest inquiry row for one course, read straight off the table. */
+async function latestInquiryForCourse(db: AppDb, shopId: string, courseId: string) {
+  const [row] = await db
+    .select()
+    .from(courseInquiries)
+    .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.courseId, courseId)))
+    .orderBy(desc(courseInquiries.createdAt))
+    .limit(1);
+  return row;
 }
 
 describe("recordCourseInquiry", () => {
@@ -35,7 +44,7 @@ describe("recordCourseInquiry", () => {
     });
 
     expect(record.id).toBeTruthy();
-    const [row] = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row).toMatchObject({
       id: record.id,
       courseId: course.id,
@@ -58,7 +67,7 @@ describe("recordCourseInquiry", () => {
       experienceLevel: "never",
     });
 
-    const [row] = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row.id).toBe(record.id);
     expect(row.name).toBeNull();
     expect(row.email).toBeNull();
@@ -78,7 +87,7 @@ describe("recordCourseInquiry", () => {
       name: "   ",
       experienceLevel: "certified",
     });
-    const [row] = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row.id).toBe(record.id);
     expect(row.name).toBeNull();
   });
@@ -94,7 +103,7 @@ describe("recordCourseInquiry", () => {
       experienceLevel: "never",
       preferredDate: "2026-08-12",
     });
-    const [row] = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row.preferredDate).toBe("2026-08-12");
   });
 
@@ -106,7 +115,7 @@ describe("recordCourseInquiry", () => {
       experienceLevel: "never",
       preferredDate: "2020-01-01",
     });
-    const [row] = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row.preferredDate).toBe("2020-01-01");
   });
 
@@ -230,54 +239,5 @@ describe("recordCourseInquiry", () => {
       });
       expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
     });
-  });
-});
-
-describe("listCourseInquiriesForShop", () => {
-  it("is shop-scoped — another shop's inquiries never leak into the list", async () => {
-    const { db, shop, course } = await inquiryContext();
-    await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: course.id,
-      experienceLevel: "never",
-    });
-    const otherShopRows = await listCourseInquiriesForShop(db, OTHER_SHOP_ID);
-    expect(otherShopRows).toEqual([]);
-  });
-
-  it("orders newest first and can scope to one course", async () => {
-    const { db, shop, course } = await inquiryContext();
-    const dsd = await getCourseBySlug(db, shop.id, "discover-scuba-diving");
-    if (!dsd) throw new Error("demo Discover Scuba Diving course missing");
-
-    const first = await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: course.id,
-      experienceLevel: "never",
-      name: "First Asker",
-    });
-    const second = await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: course.id,
-      experienceLevel: "tried",
-      name: "Second Asker",
-    });
-    const dsdRow = await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: dsd.id,
-      experienceLevel: "never",
-      name: "DSD Asker",
-    });
-
-    const owRows = await listCourseInquiriesForShop(db, shop.id, { courseId: course.id });
-    // Newest first, scoped to this course only — the DSD inquiry never appears.
-    // Asserted as a prefix rather than as the whole list: the demo seed carries
-    // its own Open Water lead (src/db/seed-course-inquiries.ts), dated days
-    // earlier, so it sorts *behind* these two and its presence is itself part of
-    // what "newest first" means here.
-    const ids = owRows.map((row) => row.id);
-    expect(ids.slice(0, 2)).toEqual([second.id, first.id]);
-    expect(ids).not.toContain(dsdRow.id);
-    expect(owRows.every((row) => row.courseId === course.id)).toBe(true);
   });
 });

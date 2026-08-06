@@ -74,7 +74,7 @@ const SUPERSEDED_RELEASES: { body: string; createdAt: () => Date }[] = [
 ];
 
 /** What version the demo shop's current release ends up on. */
-export const DEMO_WAIVER_TEMPLATE_VERSION = SUPERSEDED_RELEASES.length + 1;
+const DEMO_WAIVER_TEMPLATE_VERSION = SUPERSEDED_RELEASES.length + 1;
 
 /** When the current release was last edited — the date the template page prints. */
 const CURRENT_RELEASE_SAVED_AT = () => at(-16, 11);

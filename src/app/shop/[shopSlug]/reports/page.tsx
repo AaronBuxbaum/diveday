@@ -212,7 +212,28 @@ export default async function ReportsPage({
   // real rather than querying the year 1. A shop with no trips at all floors at
   // the current month; a shop whose only trips are still ahead floors there too
   // (`clampMonth` needs min <= max, and "earliest" can be in the future).
-  const earliestTripStart = await earliestReportedTripStart(db, shop.id);
+  //
+  // The month floor, the ops-panel lists, and the erase gate don't depend on
+  // one another — resolve them together instead of serially. The panel is
+  // readable behind the reports gate (owner *or* manager), but both of its
+  // buttons are owner-only: a retry fires a destructive call at the shop's
+  // Stripe account, and a discharge signs an attestation that a diver's data
+  // is gone from the processor. The actions enforce that themselves and
+  // return silently on refusal — this is the house rule that a control the
+  // user will be bounced from is not shown at all (src/lib/authz.ts).
+  const [
+    earliestTripStart,
+    stuckPaymentOperations,
+    pendingMediaDeletions,
+    owedProcessorErasures,
+    canErase,
+  ] = await Promise.all([
+    earliestReportedTripStart(db, shop.id),
+    listStuckPaymentOperations(db, shop.id),
+    listPendingMediaDeletions(db, shop.id),
+    listOwedProcessorErasures(db, shop.id),
+    canPersonErasePersonalData(db, shop.id, session.user.personId),
+  ]);
   const earliestWall = earliestTripStart ? utcToWallTime(earliestTripStart, tz) : null;
   const earliestTripMonth: MonthRef = earliestWall
     ? { year: earliestWall.year, month: earliestWall.month }
@@ -238,16 +259,6 @@ export default async function ReportsPage({
   const lastDayOfMonth = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
   const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}`;
 
-  const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
-  const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
-  const owedProcessorErasures = await listOwedProcessorErasures(db, shop.id);
-  // The panel is readable behind the reports gate (owner *or* manager), but both
-  // of its buttons are owner-only: a retry fires a destructive call at the
-  // shop's Stripe account, and a discharge signs an attestation that a diver's
-  // data is gone from the processor. The actions enforce that themselves and
-  // return silently on refusal — this is the house rule that a control the user
-  // will be bounced from is not shown at all (src/lib/authz.ts).
-  const canErase = await canPersonErasePersonalData(db, shop.id, session.user.personId);
   const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
   const dischargeProcessorErasure = dischargeProcessorErasureAction.bind(null, shopSlug);
   const retryProcessorErasure = retryProcessorErasureAction.bind(null, shopSlug);

@@ -47,6 +47,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
@@ -130,9 +131,10 @@ const requirementsSchema = z.object({
  * so every door owes the same consequences.
  */
 const addDiverSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
-  email: z.email().max(200),
-  phone: z.string().trim().max(30).optional(),
+  // Shared diver person-field bounds (src/lib/person-fields.ts).
+  fullName: diverNameSchema,
+  email: diverEmailSchema,
+  phone: diverPhoneSchema.optional(),
 });
 
 function parseAddDiver(formData: FormData) {

@@ -1,15 +1,13 @@
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
-import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type { SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
   combineSiteRequirements,
-  higherCertificationLevel,
   unavailableReadiness,
-  validVerifiedCertification,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
@@ -32,7 +30,6 @@ import {
   getCurrentWaiverTemplate,
   listSignedWaiversByPerson,
   listTripsWaiverStatuses,
-  listTripWaiverStatuses,
 } from "./waivers";
 
 export async function getTripRequirements(db: DbExecutor, shopId: string, tripId: string) {
@@ -297,49 +294,6 @@ export async function restoreCertification(
   return Boolean(row);
 }
 
-export async function listShopCertifications(db: AppDb, shopId: string) {
-  return db
-    .select({ certification: certifications, person: people })
-    .from(certifications)
-    .innerJoin(people, eq(people.id, certifications.personId))
-    .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)))
-    .orderBy(asc(people.fullName), asc(certifications.createdAt));
-}
-
-/**
- * The highest level on a diver's *verified, unexpired* cards, or null when they
- * hold none the shop has checked.
- *
- * Deliberately ignores pending and expired cards: a suggestion of what to learn
- * next should be built on the same evidence the boarding gate trusts, or the
- * two surfaces will tell a diver different stories about where they stand.
- */
-export async function highestVerifiedCertificationLevel(
-  db: DbExecutor,
-  shopId: string,
-  personId: string,
-  timezone: string,
-  now = nowDate(),
-): Promise<CertificationLevel | null> {
-  const rows = await db
-    .select()
-    .from(certifications)
-    .where(
-      and(
-        eq(certifications.shopId, shopId),
-        eq(certifications.personId, personId),
-        isNull(certifications.deletedAt),
-      ),
-    );
-  const todayLocal = calendarDateInTimezone(now, timezone);
-  let highest: CertificationLevel | null = null;
-  for (const certification of rows) {
-    if (!validVerifiedCertification(certification, todayLocal)) continue;
-    highest = higherCertificationLevel(highest, certification.level);
-  }
-  return highest;
-}
-
 export type NewSpecialtyCertification = {
   shopId: string;
   personId: string;
@@ -525,159 +479,54 @@ export async function restoreSpecialtyCertification(
   return Boolean(row);
 }
 
-export async function listShopSpecialtyCertifications(db: AppDb, shopId: string) {
-  return db
-    .select({ certification: specialtyCertifications, person: people })
-    .from(specialtyCertifications)
-    .innerJoin(people, eq(people.id, specialtyCertifications.personId))
-    .where(
-      and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
-    )
-    .orderBy(asc(people.fullName), asc(specialtyCertifications.createdAt));
-}
-
-/** The exact same result drives staff rosters today and diver/manifest views later. */
+/**
+ * The exact same result drives staff rosters today and diver/manifest views
+ * later. The single-trip form of `listTripsReadiness`: it delegates the whole
+ * evidence pipeline to the batched implementation and adds only the depth
+ * advisory (H-08), which the roster and manifest read but the multi-trip
+ * surfaces don't. One pipeline, not two — a readiness input added to a
+ * separate single-trip copy and not the batch (or vice versa) would let Today
+ * and the trip roster disagree about who is blocked.
+ */
 export async function listTripReadiness(
   db: DbExecutor,
   shopId: string,
   tripId: string,
   now: Date = nowDate(),
 ) {
-  const [
-    requirement,
-    siteRequirement,
-    waiverRows,
-    currentTemplate,
-    shopRow,
-    courseRow,
-    tripMaxDepthMeters,
-  ] = await Promise.all([
-    getTripRequirements(db, shopId, tripId),
-    getTripSiteRequirement(db, shopId, tripId),
-    listTripWaiverStatuses(db, shopId, tripId),
-    getCurrentWaiverTemplate(db, shopId),
+  const [rows, shopRow, tripMaxDepthMeters, tripRow] = await Promise.all([
+    listTripsReadiness(db, shopId, [tripId], now),
     db
       .select({ timezone: shops.timezone, depthUnit: shops.depthUnit })
       .from(shops)
       .where(eq(shops.id, shopId))
       .limit(1),
-    // The course's stated minimum age and the day this session runs — age is
-    // measured on the course date, not today (H-08).
+    getTripMaxDepthMeters(db, shopId, tripId),
     db
-      .select({ startsAt: trips.startsAt, minimumAge: courses.minimumAge })
+      .select({ startsAt: trips.startsAt })
       .from(trips)
-      .leftJoin(courses, eq(courses.id, trips.courseId))
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .limit(1),
-    getTripMaxDepthMeters(db, shopId, tripId),
   ]);
   const [shop] = shopRow;
   if (!shop) throw new Error(`listTripReadiness: shop ${shopId} not found`);
   const timezone = shop.timezone;
   const depthUnit = shop.depthUnit;
-  const courseMinimumAge = courseRow[0]?.minimumAge ?? null;
-  // The trip's own shop-local calendar date. `courses` is left-joined, so this
-  // is set for every trip, not only course sessions — the minimum-age gate reads
-  // it as "the course date", while age, birthdays, and junior depth bands read
-  // it as "the day they are in the water". Same date, three questions.
-  const tripDate = courseRow[0]?.startsAt
-    ? calendarDateInTimezone(courseRow[0].startsAt, timezone)
+  // The trip's shop-local calendar date: the junior depth band is measured on
+  // the day the diver is in the water, not today.
+  const tripDate = tripRow[0]?.startsAt
+    ? calendarDateInTimezone(tripRow[0].startsAt, timezone)
     : null;
-  const courseDate = tripDate;
   // Card validity is asked about *today* (is this card expired right now?),
   // which is a different question from the trip date the junior band is
   // measured on — a card expiring next week is valid today and invalid on a
   // trip a fortnight out.
   const todayLocal = calendarDateInTimezone(now, timezone);
-  const bookingIds = waiverRows.map((row) => row.booking.id);
-  const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
-  const personIds = waiverRows.map((row) => row.person.id);
-  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
-    personIds.length === 0
-      ? [[], [], [], new Map<string, never[]>()]
-      : await Promise.all([
-          db
-            .select()
-            .from(certifications)
-            .where(
-              and(
-                eq(certifications.shopId, shopId),
-                inArray(certifications.personId, personIds),
-                isNull(certifications.deletedAt),
-              ),
-            ),
-          db
-            .select()
-            .from(specialtyCertifications)
-            .where(
-              and(
-                eq(specialtyCertifications.shopId, shopId),
-                inArray(specialtyCertifications.personId, personIds),
-                isNull(specialtyCertifications.deletedAt),
-              ),
-            ),
-          db
-            .select()
-            .from(nitroxCertifications)
-            .where(
-              and(
-                eq(nitroxCertifications.shopId, shopId),
-                inArray(nitroxCertifications.personId, personIds),
-                isNull(nitroxCertifications.deletedAt),
-              ),
-            ),
-          listSignedWaiversByPerson(db, shopId, personIds),
-        ]);
-  const currentTemplateVersion = currentTemplate?.version ?? null;
-  const certificationsByPerson = new Map<string, typeof certificationRows>();
-  for (const certification of certificationRows) {
-    const current = certificationsByPerson.get(certification.personId) ?? [];
-    current.push(certification);
-    certificationsByPerson.set(certification.personId, current);
-  }
-  const specialtiesByPerson = new Map<string, typeof specialtyRows>();
-  for (const specialty of specialtyRows) {
-    const current = specialtiesByPerson.get(specialty.personId) ?? [];
-    current.push(specialty);
-    specialtiesByPerson.set(specialty.personId, current);
-  }
-  const nitroxByPerson = new Map<string, typeof nitroxRows>();
-  for (const card of nitroxRows) {
-    const current = nitroxByPerson.get(card.personId) ?? [];
-    current.push(card);
-    nitroxByPerson.set(card.personId, current);
-  }
 
-  return waiverRows.map((row) => {
-    // Sign-once: a diver's own signed/in-review record wins; otherwise a current
-    // completed release from any of their bookings carries over. This is the one
-    // place the rule is applied, so readiness, the roster, the Today queue, the
-    // manifest, and the fail-closed boarding gate all agree.
-    const effectiveWaiver = effectiveWaiverForBooking({
-      bookingWaiver: row.waiver,
-      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
-      currentTemplateVersion,
-      now,
-    });
-    const readiness = calculateReadiness({
-      requirement,
-      siteRequirement,
-      waiver: effectiveWaiver,
-      certifications: certificationsByPerson.get(row.person.id) ?? [],
-      specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
-      nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-      paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
-      identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
-      courseMinimumAge,
-      courseDate,
-      dateOfBirth: row.person.dateOfBirth,
-      now,
-      timezone,
-    });
-
+  return rows.map((row) => {
     const depthLimit = diverDepthLimit(
-      certificationsByPerson.get(row.person.id) ?? [],
-      specialtiesByPerson.get(row.person.id) ?? [],
+      row.certifications,
+      row.specialtyCertifications,
       todayLocal,
       row.person.dateOfBirth,
       tripDate,
@@ -690,21 +539,10 @@ export async function listTripReadiness(
     // exactly where a redundant warning actually exists.
     const certificationBlocked =
       depthLimit.basis === "no_card" &&
-      readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification");
+      row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification");
 
     return {
       ...row,
-      /** The booking's own current record (where the link was issued). */
-      bookingWaiver: row.waiver,
-      /** The record that actually governs readiness after the sign-once rule. */
-      waiver: effectiveWaiver,
-      requirement,
-      siteRequirement,
-      certifications: certificationsByPerson.get(row.person.id) ?? [],
-      specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
-      nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
-      paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
-      paymentProvider: paymentByBooking.get(row.booking.id)?.provider ?? null,
       /**
        * Whether the deepest site on this trip goes past what this diver's card
        * (and junior age band) is trained for — H-08, decided as a **warning,
@@ -716,7 +554,6 @@ export async function listTripReadiness(
       depthAdvisory: certificationBlocked
         ? ({ status: "unknown" } as const)
         : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
-      readiness,
     };
   });
 }

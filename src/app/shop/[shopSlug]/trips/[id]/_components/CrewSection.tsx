@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { controlClass } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
+import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
 import type { StaffList } from "./types";
 
@@ -32,13 +33,6 @@ export type CrewSectionCopy = {
   roleUnspecified: string;
   roleOptions: Record<TripCrewRole, string>;
 };
-
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
-}
 
 /**
  * Day-of crew editing for one trip. Assign/unassign is per-person

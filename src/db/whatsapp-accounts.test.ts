@@ -9,7 +9,6 @@ import {
   markShopWhatsAppVerified,
   shopIdForWhatsAppWaba,
   whatsAppProviderForAccount,
-  whatsAppProviderForShop,
   whatsAppProvidersForShops,
 } from "./whatsapp-accounts";
 
@@ -144,44 +143,7 @@ describe("disconnectShopWhatsAppAccount", () => {
   });
 });
 
-describe("whatsAppProviderForShop", () => {
-  it("builds a sender that posts to the shop's own phone number id", async () => {
-    const { db, shop } = await seededShopContext();
-    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
-    const fetchImpl = okFetch();
-
-    const provider = await whatsAppProviderForShop(db, shop.id, { key, fetchImpl });
-    const delivery = await provider?.send({
-      to: "+13055551234",
-      body: "Reef Runner departs Saturday.",
-      shopName: shop.name,
-    });
-
-    expect(delivery).toEqual({ status: "sent", providerMessageId: "wamid.OK" });
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toContain("/1234567890/messages");
-    expect(init.headers.Authorization).toBe("Bearer EAAG-shop-access-token");
-  });
-
-  it("returns null for a shop that has not connected WhatsApp", async () => {
-    const { db, shop } = await seededShopContext();
-    expect(await whatsAppProviderForShop(db, shop.id, { key })).toBeNull();
-  });
-
-  it("returns null rather than throwing when the key no longer opens the row", async () => {
-    const { db, shop } = await seededShopContext();
-    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
-
-    expect(await whatsAppProviderForShop(db, shop.id, { key: randomBytes(32) })).toBeNull();
-  });
-
-  it("returns null when no encryption key is configured at all", async () => {
-    const { db, shop } = await seededShopContext();
-    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
-
-    expect(await whatsAppProviderForShop(db, shop.id, { key: null })).toBeNull();
-  });
-
+describe("getShopWhatsAppAccount", () => {
   it("never hands the caller the plaintext token back", async () => {
     const { db, shop } = await seededShopContext();
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
@@ -208,6 +170,31 @@ describe("shopIdForWhatsAppWaba", () => {
 });
 
 describe("whatsAppProvidersForShops", () => {
+  it("builds a sender that posts to the shop's own phone number id", async () => {
+    const { db, shop } = await seededShopContext();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
+    const fetchImpl = okFetch();
+
+    const senders = await whatsAppProvidersForShops(db, [shop.id], { key, fetchImpl });
+    const delivery = await senders.get(shop.id)?.send({
+      to: "+13055551234",
+      body: "Reef Runner departs Saturday.",
+      shopName: shop.name,
+    });
+
+    expect(delivery).toEqual({ status: "sent", providerMessageId: "wamid.OK" });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toContain("/1234567890/messages");
+    expect(init.headers.Authorization).toBe("Bearer EAAG-shop-access-token");
+  });
+
+  it("omits a shop when no encryption key is configured at all", async () => {
+    const { db, shop } = await seededShopContext();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
+
+    expect((await whatsAppProvidersForShops(db, [shop.id], { key: null })).size).toBe(0);
+  });
+
   it("resolves many shops in one pass, omitting those with no connection", async () => {
     const { db, shop } = await seededShopContext();
     const other = await seededShopContext();

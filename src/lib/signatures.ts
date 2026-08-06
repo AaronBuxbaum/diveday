@@ -1,9 +1,10 @@
 import { nowDate } from "./clock";
+
 /**
  * The provider seam for signature capture. V1 keeps the evidence local and
  * deterministic; a vendor adapter must normalize into this shape (ADR 20260718).
  */
-export type SignatureCaptureInput = {
+type SignatureCaptureInput = {
   signerName: string;
   agreed: boolean;
   signedAt?: Date;
@@ -16,16 +17,16 @@ export type SignatureCaptureInput = {
  * column and every currency/display rule keyed on method, so it is declared
  * here alongside the two real providers.
  */
-export type SignatureMethod = "typed_consent" | "in_person_attested" | "imported";
+type SignatureMethod = "typed_consent" | "in_person_attested" | "imported";
 
-export type SignatureEvidence = {
+type SignatureEvidence = {
   method: SignatureMethod;
   signerName: string;
   consentedAt: Date;
   signedAt: Date;
 };
 
-export interface SignatureProvider {
+interface SignatureProvider {
   capture(input: SignatureCaptureInput): SignatureEvidence | null;
 }
 

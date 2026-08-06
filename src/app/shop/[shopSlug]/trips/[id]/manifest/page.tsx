@@ -84,14 +84,22 @@ export default async function TripManifestPage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
-  const completeManifests = await getTripManifests(db, shop.id, tripId);
+  // The manifest rows, the raw team membership, and the export gate don't
+  // depend on one another — resolve them together instead of serially.
+  const [completeManifests, buddyTeamsList, canExportIncidentRecord] = await Promise.all([
+    getTripManifests(db, shop.id, tripId),
+    // Raw membership rows, cancelled members included: the teams panel must show
+    // a team whose seat was cancelled (it still blocks re-teaming the survivors
+    // until dissolved), while the manifest derivation already dropped that
+    // member from every row's team (ADR 20260804-buddy-teams).
+    listTripBuddyTeams(db, shop.id, tripId),
+    // The incident-ready export hands over the whole departure as evidence, so
+    // it is owner-only (src/lib/authz.ts). Hide the door rather than offering a
+    // link that 404s — the page re-checks the same gate itself.
+    canPersonExportIncidentRecord(db, shop.id, session.user.personId),
+  ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  // Raw membership rows, cancelled members included: the teams panel must show
-  // a team whose seat was cancelled (it still blocks re-teaming the survivors
-  // until dissolved), while the manifest derivation above already dropped that
-  // member from every row's team (ADR 20260804-buddy-teams).
-  const buddyTeamsList = await listTripBuddyTeams(db, shop.id, tripId);
 
   const plannedDives = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDives);
@@ -108,14 +116,6 @@ export default async function TripManifestPage({
   // a divemaster still in the water.
   const completeness = manifest.completeness;
   const rollCallComplete = completeness.complete;
-  // The incident-ready export hands over the whole departure as evidence, so
-  // it is owner-only (src/lib/authz.ts). Hide the door rather than offering a
-  // link that 404s — the page re-checks the same gate itself.
-  const canExportIncidentRecord = await canPersonExportIncidentRecord(
-    db,
-    shop.id,
-    session.user.personId,
-  );
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.

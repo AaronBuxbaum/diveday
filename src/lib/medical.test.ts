@@ -3,7 +3,6 @@ import {
   applicableMedicalQuestions,
   calculateMedicalResult,
   emptyMedicalAnswers,
-  findQuestionnaire,
   findQuestionnaireVersion,
   flaggedMedicalPrompts,
   medicalProgress,
@@ -79,11 +78,6 @@ describe("medical questionnaires", () => {
         responses: { not_a_real_question: true },
       }),
     ).toBe(true);
-  });
-
-  it("looks up the questionnaire a stored answer was captured against", () => {
-    expect(findQuestionnaire("rstc")).toBe(RSTC_QUESTIONNAIRE);
-    expect(findQuestionnaire("nope")).toBeNull();
   });
 });
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { fill } from "@/i18n/fill";
 
 type DiveOption = { id: string; name: string };
 type InitialDive = {
@@ -29,13 +30,6 @@ export type TripDiveFieldsCopy = {
   detailsPlaceholder: string;
   footerNote: string;
 };
-
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
-}
 
 export function TripDiveFields({
   diveSites,

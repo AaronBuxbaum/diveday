@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
+import { fill } from "@/i18n/fill";
 import { nowDate } from "@/lib/clock";
 
 /** Every word this client component renders, resolved on the server — see the
@@ -24,11 +25,6 @@ export type WaitlistInviteCopy = {
   emailSubject: string;
   emailBody: string;
 };
-
-/** Local, non-imported — never a translator crossing the server/client boundary. */
-function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
-}
 
 function relativeTime(copy: WaitlistInviteCopy, from: Date, now = nowDate()): string {
   const mins = Math.max(0, Math.round((now.getTime() - from.getTime()) / 60000));

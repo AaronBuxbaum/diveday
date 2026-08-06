@@ -46,6 +46,18 @@ class MockAmbientLightSensor implements EventTarget {
   }
 }
 
+/** Pushes one lux reading through the mocked sensor, as the hardware would. */
+function emitReading(lux: number) {
+  act(() => {
+    if (MockAmbientLightSensor.mockInstance) {
+      MockAmbientLightSensor.mockInstance.illuminance = lux;
+    }
+    for (const cb of MockAmbientLightSensor.listeners.reading || []) {
+      cb();
+    }
+  });
+}
+
 afterEach(() => {
   cleanup();
   document.documentElement.classList.remove("glare-mode");
@@ -62,29 +74,21 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
-  it("adds glare-mode class when custom event is dispatched with high lux in auto mode", () => {
+  it("adds glare-mode class on a high sensor reading in auto mode, and drops it on a low one", () => {
+    vi.stubGlobal("AmbientLightSensor", MockAmbientLightSensor);
+
     render(<AmbientGlareDetector />);
 
-    act(() => {
-      const event = new CustomEvent("diveday:set-lux", {
-        detail: { lux: GLARE_LUX_THRESHOLD + 1000 },
-      });
-      window.dispatchEvent(event);
-    });
-
+    emitReading(GLARE_LUX_THRESHOLD + 1000);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
 
-    act(() => {
-      const eventLow = new CustomEvent("diveday:set-lux", {
-        detail: { lux: GLARE_LUX_THRESHOLD - 1000 },
-      });
-      window.dispatchEvent(eventLow);
-    });
-
+    emitReading(GLARE_LUX_THRESHOLD - 1000);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
   it("forces glare-mode to be disabled in standard mode override", () => {
+    vi.stubGlobal("AmbientLightSensor", MockAmbientLightSensor);
+
     render(
       <>
         <AmbientGlareDetector />
@@ -100,15 +104,10 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
     expect(screen.getByRole("radio", { name: "Land mode" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Auto" })).not.toBeChecked();
 
-    // Dispatch high lux event
-    act(() => {
-      const event = new CustomEvent("diveday:set-lux", {
-        detail: { lux: GLARE_LUX_THRESHOLD + 5000 },
-      });
-      window.dispatchEvent(event);
-    });
+    // A bright reading arrives from the sensor…
+    emitReading(GLARE_LUX_THRESHOLD + 5000);
 
-    // Should remain disabled due to the Land mode override
+    // …but glare-mode stays off: the Land mode override wins.
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
@@ -153,27 +152,11 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
     expect(MockAmbientLightSensor.mockInstance?.start).toHaveBeenCalled();
 
     // Trigger high lux reading
-    act(() => {
-      if (MockAmbientLightSensor.mockInstance) {
-        MockAmbientLightSensor.mockInstance.illuminance = GLARE_LUX_THRESHOLD + 2000;
-      }
-      for (const cb of MockAmbientLightSensor.listeners.reading || []) {
-        cb();
-      }
-    });
-
+    emitReading(GLARE_LUX_THRESHOLD + 2000);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
 
     // Trigger low lux reading
-    act(() => {
-      if (MockAmbientLightSensor.mockInstance) {
-        MockAmbientLightSensor.mockInstance.illuminance = GLARE_LUX_THRESHOLD - 2000;
-      }
-      for (const cb of MockAmbientLightSensor.listeners.reading || []) {
-        cb();
-      }
-    });
-
+    emitReading(GLARE_LUX_THRESHOLD - 2000);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 });

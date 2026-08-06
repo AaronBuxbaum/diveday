@@ -219,10 +219,6 @@ export const COST_CEILINGS: readonly CostCeiling[] = [
   },
 ];
 
-export function ceilingById(id: string): CostCeiling | undefined {
-  return COST_CEILINGS.find((ceiling) => ceiling.id === id);
-}
-
 /**
  * One reading of one metric.
  *

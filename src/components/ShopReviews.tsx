@@ -32,6 +32,7 @@ export function ShopReviews({
     average: aggregate.average.toFixed(1),
     count: aggregate.count,
   });
+  const roundedAverage = Math.round(aggregate.average);
 
   return (
     <section aria-labelledby="shop-reviews" className="mt-10">
@@ -40,7 +41,10 @@ export function ShopReviews({
           {t("reviews.sectionTitle")}
         </h2>
         <p className="flex items-center gap-2 text-sm text-muted">
-          <StarRating rating={Math.round(aggregate.average)} />
+          <StarRating
+            rating={roundedAverage}
+            label={t("reviews.ratingOption", { rating: roundedAverage })}
+          />
           <span className="tabular-nums">{summary}</span>
         </p>
       </div>
@@ -49,12 +53,16 @@ export function ShopReviews({
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {reviews.map((review) => (
             <li key={review.id} className="rounded-2xl border border-border bg-surface p-5">
-              <StarRating rating={review.rating} className="text-sm" />
+              <StarRating
+                rating={review.rating}
+                label={t("reviews.ratingOption", { rating: review.rating })}
+                className="text-sm"
+              />
               {review.comment ? (
                 <p className="mt-2 text-base text-pretty">{review.comment}</p>
               ) : null}
               <p className="mt-3 text-sm text-muted">
-                {review.reviewer} · {review.tripTitle} ·{" "}
+                {review.reviewer || t("reviews.anonymousReviewer")} · {review.tripTitle} ·{" "}
                 {formatShortDate(review.divedAt, locale, timezone)}
               </p>
             </li>

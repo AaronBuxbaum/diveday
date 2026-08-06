@@ -309,14 +309,10 @@
       "description": "Payment status, orders, and refunds stay with the diver so the next action is easy to find.",
       "newPayment": "New payment",
       "noPaymentsYet": "No payments yet — they'll appear here once this diver books a trip or you raise an order.",
-      "bookingPaymentSuffix": " · booking payment",
-      "paymentStatusText": "Payment: {status}",
-      "paymentNotRecorded": "Payment: not recorded",
       "openPayment": "Open payment",
       "createOrder": "Create order",
       "noOrder": "No order",
       "shopPaymentFallback": "Shop payment",
-      "noTripAttached": " · no trip attached",
       "refund": "Refund",
       "refunding": "Refunding…",
       "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here.",
@@ -541,8 +537,7 @@
       "faqLabel": "FAQ",
       "faqPlaceholder": "Is equipment included?\nYes — mask, fins, wetsuit, BCD, regulator, and tanks.\n\nDo I need to be a strong swimmer?\nYou need to be comfortable in the water.",
       "savePage": "Save course page",
-      "saving": "Saving…",
-      "optionalHint": "(optional)"
+      "saving": "Saving…"
     },
     "dayByDay": {
       "dayLabel": "Day {number}",
@@ -823,7 +818,6 @@
       "restoreFailed": "Couldn't restore that code. Create it again below."
     },
     "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — codes are created on your own Stripe account, not DiveDay's.",
-    "settingsLink": "Settings",
     "scope": {
       "all": "Trips and courses",
       "trips": "Trips only",
@@ -1021,6 +1015,7 @@
     "emptyReviewLinkBody": "There is nothing to switch on here — a review arrives when a diver opens their recap. What is yours to set is where a happy one goes next.",
     "emptyReviewLinkAction": "Set your review link",
     "ratingOnly": "Rating only — no words to review.",
+    "rating": "{rating} out of 5 stars",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
     "publish": "Publish",
@@ -3286,7 +3281,6 @@
     }
   },
   "backup": {
-    "eyebrow": "Settings",
     "title": "Backups",
     "description": "Every week, a full copy of your shop's records lands in storage you own. If you ever leave — or DiveDay ever disappears — the copy is already yours.",
     "notice": {

@@ -8,13 +8,15 @@ import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { claimPartySeat } from "@/db/seat-claims";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
 const claimSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
-  email: z.email().max(200),
-  phone: z.string().trim().max(30).optional(),
+  // Shared diver person-field bounds (src/lib/person-fields.ts).
+  fullName: diverNameSchema,
+  email: diverEmailSchema,
+  phone: diverPhoneSchema.optional(),
 });
 
 /**

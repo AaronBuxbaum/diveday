@@ -117,9 +117,6 @@ importers:
       constructs:
         specifier: ^10.8.1
         version: 10.8.1
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0

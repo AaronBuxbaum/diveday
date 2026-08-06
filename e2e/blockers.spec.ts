@@ -85,6 +85,17 @@ test("a stale page link clamps back into the queue instead of showing nothing", 
 test("the old /blockers URL still works, and keeps the page it was deep-linked to", async ({
   page,
 }) => {
+  // A real 308 at the request level, not a 200 whose hop resolves inside the
+  // streamed payload — a Route Handler, because under `cacheComponents` a
+  // page-based `permanentRedirect()` answers 200 and only a browser follows
+  // it; a bookmark manager, a crawler, and a `curl` do not (ADR
+  // 20260806-one-trip-create-form).
+  const direct = await page.request.get("/shop/blue-mantis/blockers?page=2", {
+    maxRedirects: 0,
+  });
+  expect(direct.status()).toBe(308);
+  expect(direct.headers().location).toBe("/shop/blue-mantis?view=departures&page=2");
+
   // The route folded into Today; the links already out in the world did not.
   // A bare bookmark lands on the by-departure view.
   await page.goto("/shop/blue-mantis/blockers");

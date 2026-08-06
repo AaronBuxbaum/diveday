@@ -56,6 +56,8 @@ export {
   upcomingScheduleStats,
   upcomingStaffSchedule,
   upcomingTripsForCalendar,
+  // Unbounded whole-schedule read kept ONLY as a test fixture — never call it
+  // from product code (see its docstring in trips-queries.ts).
   upcomingTripsWithCounts,
 } from "./trips-queries";
 export {
