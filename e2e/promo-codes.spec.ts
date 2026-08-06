@@ -65,6 +65,7 @@ test.describe("as owner", () => {
     const standing = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
     await expect(standing.getByText("10% off")).toBeVisible();
     await expect(standing.getByText("Trips and courses")).toBeVisible();
+    await expect(standing.getByText("Redeemed 1 time")).toBeVisible();
     // The success-tone Badge prepends a decorative aria-hidden glyph
     // (Badge.tsx toneGlyph), so the element's own text is "✓ Live", not
     // "Live" alone — and a bare substring match also picks up the "live
