@@ -549,6 +549,12 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
  * owner-only `canPersonErasePersonalData` they always had. Each re-checks
  * server-side and returns silently on refusal rather than trusting the page
  * that rendered the form.
+ *
+ * They call the predicates directly rather than through `settingsBlock` above:
+ * that helper hands back a `?notice=not_authorized` redirect target, which is
+ * the right answer for a card the page renders for everyone and wrong for a
+ * panel it renders for nobody who would be refused. A hand-made post here gets
+ * silence, not an explanation of a control that was never on screen.
  * -------------------------------------------------------------------------- */
 
 /**
