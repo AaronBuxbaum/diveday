@@ -29,6 +29,12 @@ export function KindChip({
    * counts kinds rather than listing rows. It has to live in the chip: set
    * beside one, a bare number is bound to its label by a gap alone, and at
    * 390px a wrapped row of them reads as a list of unrelated digits.
+   *
+   * Only a positive count renders. A chip *is* a kind that turned up, so a
+   * "· 0" would contradict its own presence — `TomorrowGlance.byKind`
+   * (src/lib/closeout.ts) tallies rows it actually has and so never emits one,
+   * and a future caller that computes its counts differently gets a chip with
+   * no tally rather than a chip arguing with itself.
    */
   count?: number;
   t: StaffTranslator;
@@ -39,7 +45,7 @@ export function KindChip({
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
     >
       {t(ACTION_KIND_KEYS[kind])}
-      {count === undefined ? null : (
+      {count === undefined || !Number.isFinite(count) || count <= 0 ? null : (
         <>
           <span aria-hidden="true" className="font-normal opacity-60">
             ·
