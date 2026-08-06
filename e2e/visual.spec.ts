@@ -1619,6 +1619,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the empty offline manifest renders true to the design (${scheme})`, async ({
         page,
       }) => {
+        // The shop-wide primer (OfflineManifestAutoSave) starts a fetch →
+        // purge → save-all round on every staff page mount, and its parallel
+        // saves can land *after* the deleteDatabase below finishes — the
+        // store quietly refills and the empty heading never renders (caught
+        // as a 164s timeout on CI shard 2, run 31075399016). Cut the race at
+        // the harness boundary: with the upcoming-manifests feed blocked
+        // from the first navigation, no round ever writes, and the delete
+        // stays as defence against any other writer.
+        await page.route("**/api/offline-manifests/upcoming", (route) => route.abort());
         await openReefTrip(page);
         const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
         await page.evaluate(
