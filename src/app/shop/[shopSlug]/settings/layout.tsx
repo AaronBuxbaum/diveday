@@ -4,6 +4,12 @@ import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { SettingsSubNav, type SettingsSubNavCopy } from "./_components/SettingsSubNav";
+import {
+  SETTINGS_DESTINATIONS,
+  SETTINGS_GROUPS,
+  type SettingsDestinationId,
+  type SettingsGroupId,
+} from "./settings-destinations";
 
 export const instant = true;
 
@@ -56,20 +62,20 @@ async function SettingsSubNavLoader({ params }: { params: Promise<{ shopSlug: st
   // negotiation as every other staff surface (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
+  // Labels come from `settings-destinations.ts`'s one registry — every group
+  // and every destination — so a group added or a subpage regrouped there
+  // shows up here with no separate edit.
+  const groupLabels = Object.fromEntries(
+    SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]),
+  ) as Record<SettingsGroupId, string>;
+  const destinationLabels = Object.fromEntries(
+    SETTINGS_DESTINATIONS.map((destination) => [destination.id, t(destination.titleKey)]),
+  ) as Record<SettingsDestinationId, string>;
   const copy: SettingsSubNavCopy = {
     ariaLabel: t("settings.main.subNav.ariaLabel"),
     hub: t("settings.main.title"),
-    groups: {
-      yourShop: t("settings.main.groups.yourShop"),
-      dataIntegrations: t("settings.main.groups.dataIntegrations"),
-    },
-    team: t("settings.team.title"),
-    embed: t("settings.embed.title"),
-    calendar: t("calendar.title"),
-    whatsapp: t("whatsapp.title"),
-    backup: t("backup.title"),
-    import: t("settings.import.title"),
-    export: t("settings.export.title"),
+    groupLabels,
+    destinationLabels,
   };
   return <SettingsSubNav shopSlug={shopSlug} copy={copy} />;
 }

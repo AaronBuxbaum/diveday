@@ -2,16 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  SETTINGS_DESTINATIONS,
+  SETTINGS_GROUPS,
+  type SettingsDestinationId,
+  type SettingsGroupId,
+} from "../settings-destinations";
 
 /**
  * The settings surface's sub-nav (surface-consolidation task T3): a Settings
  * hub plus its seven full-page surfaces (Team, Website embed, Calendar
  * subscriptions, WhatsApp, Backups, Import, Export), each of which used to
  * hand-roll its own "Back to settings" button and had no way to move
- * sideways to a sibling surface. Grouped to mirror the hub's own group
- * order (`SETTINGS_GROUPS` in `SettingsPage.tsx`) — "Your shop" then
- * "Data & integrations"; nothing here currently lives under "Money", so that
- * group has no row.
+ * sideways to a sibling surface. Grouping and order come from
+ * `settings-destinations.ts` — the same registry `SettingsPage.tsx`'s hub
+ * groups derive from — so the two can never disagree about which group a
+ * surface belongs to.
  *
  * Reads the active item from the pathname, matching `WaiversSubNav.tsx`'s and
  * `PublicShopNav.tsx`'s pattern, so it can live in the shared layout without
@@ -20,17 +26,8 @@ import { usePathname } from "next/navigation";
 export type SettingsSubNavCopy = {
   ariaLabel: string;
   hub: string;
-  groups: {
-    yourShop: string;
-    dataIntegrations: string;
-  };
-  team: string;
-  embed: string;
-  calendar: string;
-  whatsapp: string;
-  backup: string;
-  import: string;
-  export: string;
+  groupLabels: Record<SettingsGroupId, string>;
+  destinationLabels: Record<SettingsDestinationId, string>;
 };
 
 interface SettingsNavItem {
@@ -77,19 +74,25 @@ export function SettingsSubNav({
   const pathname = usePathname();
 
   const hubItem: SettingsNavItem = { key: "hub", href: root, label: copy.hub };
-  const yourShopItems: SettingsNavItem[] = [
-    { key: "team", href: `${root}/team`, label: copy.team },
-  ];
-  const dataItems: SettingsNavItem[] = [
-    { key: "embed", href: `${root}/embed`, label: copy.embed },
-    { key: "calendar", href: `${root}/calendar`, label: copy.calendar },
-    { key: "whatsapp", href: `${root}/whatsapp`, label: copy.whatsapp },
-    { key: "backup", href: `${root}/backup`, label: copy.backup },
-    { key: "import", href: `${root}/import`, label: copy.import },
-    { key: "export", href: `${root}/export`, label: copy.export },
-  ];
 
-  const current = activeSettingsNavKey(pathname, [hubItem, ...yourShopItems, ...dataItems]);
+  // Groups in `SETTINGS_GROUPS`' own order, each carrying the destinations
+  // registered under it (also in registry order); a group with no
+  // destination today (Money) renders no row.
+  const groupRows = SETTINGS_GROUPS.map((group) => ({
+    group,
+    items: SETTINGS_DESTINATIONS.filter((destination) => destination.groupId === group.id).map(
+      (destination): SettingsNavItem => ({
+        key: destination.id,
+        href: `${root}/${destination.path}`,
+        label: copy.destinationLabels[destination.id],
+      }),
+    ),
+  })).filter((row) => row.items.length > 0);
+
+  const current = activeSettingsNavKey(pathname, [
+    hubItem,
+    ...groupRows.flatMap((row) => row.items),
+  ]);
 
   const renderItem = (item: SettingsNavItem) => {
     const active = item.key === current;
@@ -115,18 +118,14 @@ export function SettingsSubNav({
       className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 print:hidden ${className}`}
     >
       <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="px-1 text-xs font-semibold tracking-wide text-muted uppercase">
-          {copy.groups.yourShop}
-        </span>
-        {yourShopItems.map(renderItem)}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="px-1 text-xs font-semibold tracking-wide text-muted uppercase">
-          {copy.groups.dataIntegrations}
-        </span>
-        {dataItems.map(renderItem)}
-      </div>
+      {groupRows.map(({ group, items }) => (
+        <div key={group.id} className="flex flex-wrap items-center gap-2">
+          <span className="px-1 text-xs font-semibold tracking-wide text-muted uppercase">
+            {copy.groupLabels[group.id]}
+          </span>
+          {items.map(renderItem)}
+        </div>
+      ))}
     </nav>
   );
 }
