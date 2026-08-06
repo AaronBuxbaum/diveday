@@ -394,9 +394,22 @@ export function failedPhotoDeletionDetailText(
   });
 }
 
-/** The ops-alert rows' action label when there's no trip to point at instead. */
-export function openReportsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openReports");
+/**
+ * A stuck payment operation's action label when there's no trip to point at
+ * instead — the Orders index, which carries the reconciliation panel these rows
+ * mirror. (It used to say "Reports"; the queue moved when the monthly report
+ * became only a report.)
+ */
+export function openOrdersActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openOrders");
+}
+
+/**
+ * A stuck photo-deletion's action label — Settings' "Data & integrations"
+ * group, where the retry button for it now lives.
+ */
+export function openDataSettingsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openDataSettings");
 }
 
 export function openPrepListActionText(t: StaffTranslator): string {

@@ -3,14 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import { canPersonErasePersonalData } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { listPendingMediaDeletions } from "@/db/media-deletions";
-import { listStuckPaymentOperations } from "@/db/payment-operations";
-import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import {
   canPersonViewShopReports,
   earliestReportedTripStart,
@@ -19,7 +14,7 @@ import {
 } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   addMonths,
   clampMonth,
@@ -36,11 +31,6 @@ import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import {
-  dischargeProcessorErasureAction,
-  retryMediaDeletionAction,
-  retryProcessorErasureAction,
-} from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -50,32 +40,6 @@ import {
 // another `/shop` page, where that shell is already mounted and this
 // segment's `loading.tsx` is what paints. See ADR 20260804-instant-navigation.
 export const instant = true;
-
-const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
-  checkout_session: "reports.operationKind.checkout_session",
-  invoice: "reports.operationKind.invoice",
-  refund: "reports.operationKind.refund",
-};
-
-const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
-  course_photo: "reports.mediaKind.course_photo",
-  recap_photo: "reports.mediaKind.recap_photo",
-  // Queued by diver erasure (ADR 20260802-diver-data-erasure). Without an entry
-  // here the lookup falls through to the raw enum value, so a stuck deletion
-  // would read "certification_card" on the owner's reports panel.
-  certification_card: "reports.mediaKind.certification_card",
-  waiver_document: "reports.mediaKind.waiver_document",
-};
-
-/**
- * Which record at the processor is still owed an erasure, present for the same
- * reason MEDIA_KIND_KEYS is: without it the lookup falls through to the raw
- * enum value and the panel reads "stripe_invoice_snapshot".
- */
-const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
-  stripe_customer: "reports.processorErasureTarget.stripe_customer",
-  stripe_invoice_snapshot: "reports.processorErasureTarget.stripe_invoice_snapshot",
-};
 
 export const metadata: Metadata = {
   title: "Reports — DiveDay",
@@ -167,6 +131,15 @@ function ShareBar({ ratio, label }: { ratio: number | null; label: string }) {
  * holds: bookings, revenue collected, seat fill, and waiver completion, anchored
  * to the trips that departed in the chosen month (ADR 20260723-owner-reporting).
  * Owner/manager only: revenue is not for the daily crew.
+ *
+ * A report and nothing else. Three back-office queues used to hang off the
+ * bottom of this page — unconfirmed Stripe operations, stored files a delete
+ * never finished, erasures still owed at the processor — which made a third of
+ * "how did the month go" into a to-do list about something else entirely. Each
+ * moved to the surface that owns its object: payments to the Orders index,
+ * both deletion queues to Settings' "Data & integrations" group. Nothing on
+ * this page is actionable now except the month you are looking at and the
+ * revenue card's jump into Orders.
  */
 export default async function ReportsPage({
   params,
@@ -238,19 +211,6 @@ export default async function ReportsPage({
   const lastDayOfMonth = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
   const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}`;
 
-  const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
-  const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
-  const owedProcessorErasures = await listOwedProcessorErasures(db, shop.id);
-  // The panel is readable behind the reports gate (owner *or* manager), but both
-  // of its buttons are owner-only: a retry fires a destructive call at the
-  // shop's Stripe account, and a discharge signs an attestation that a diver's
-  // data is gone from the processor. The actions enforce that themselves and
-  // return silently on refusal — this is the house rule that a control the user
-  // will be bounced from is not shown at all (src/lib/authz.ts).
-  const canErase = await canPersonErasePersonalData(db, shop.id, session.user.personId);
-  const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
-  const dischargeProcessorErasure = dischargeProcessorErasureAction.bind(null, shopSlug);
-  const retryProcessorErasure = retryProcessorErasureAction.bind(null, shopSlug);
   // Totals see every trip in the month (summarizeMonth's fill rate and waiver
   // completion would quietly go wrong if this were page-limited); the table
   // below gets its own bounded, cursor-paginated slice.
@@ -521,144 +481,6 @@ export default async function ReportsPage({
           </section>
         </>
       )}
-
-      {/*
-        The compliance chores. They used to sit above the month's numbers, which
-        put up to three unbounded lists between an owner and the one thing they
-        opened this page for. They are below the report now, and danger-toned
-        rather than folded away: stuck money and an owed erasure are legal and
-        financial obligations, not notifications to dismiss.
-      */}
-      {stuckPaymentOperations.length > 0 ? (
-        <section aria-label={t("reports.paymentOps.sectionLabel")} className="mt-10">
-          <ShopNotice tone="danger" role="status">
-            <p className="font-medium">
-              {t("reports.paymentOps.heading", { count: stuckPaymentOperations.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.paymentOps.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
-                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
-                  {tripTitle ? <span>· {tripTitle}</span> : null}
-                  {personName ? <span>· {personName}</span> : null}
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.paymentOps.started", {
-                      date: formatShortDate(intent.startedAt, locale, tz),
-                    })}
-                    {intent.stripeObjectId
-                      ? ` · ${t("reports.paymentOps.stripeId", { id: intent.stripeObjectId })}`
-                      : ""}
-                  </span>
-                  {tripId ? (
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-                      className="font-medium text-primary underline underline-offset-2"
-                    >
-                      {t("reports.paymentOps.openTrip")}
-                    </Link>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {pendingMediaDeletions.length > 0 ? (
-        <section aria-label={t("reports.mediaDeletions.sectionLabel")} className="mt-8">
-          <ShopNotice tone="danger" role="status">
-            <p className="font-medium">
-              {t("reports.mediaDeletions.heading", { count: pendingMediaDeletions.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.mediaDeletions.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {pendingMediaDeletions.map((attempt) => (
-                <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.mediaDeletions.queued", {
-                      date: formatShortDate(attempt.createdAt, locale, tz),
-                    })}
-                    {attempt.lastError ? ` · ${attempt.lastError}` : ""}
-                  </span>
-                  <form action={retryMediaDeletion}>
-                    <input type="hidden" name="attemptId" value={attempt.id} />
-                    <SubmitButton
-                      pendingLabel={t("reports.mediaDeletions.retrying")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("reports.mediaDeletions.retry")}
-                    </SubmitButton>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {/*
-        Erasures that are done here but not yet done at Stripe
-        (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
-        offers what can actually act on each: a customer delete DiveDay makes
-        itself gets "Retry" (the nightly tick also retries it), while an invoice
-        snapshot has no API behind it at all and can only be closed by an owner
-        attesting they filed Stripe's data-deletion request. The panel shows the
-        `cus_…`/`in_…` handle and nothing else — the diver's identity is exactly
-        what erasure already removed here.
-      */}
-      {owedProcessorErasures.length > 0 ? (
-        <section aria-label={t("reports.processorErasures.sectionLabel")} className="mt-8">
-          <ShopNotice tone="danger" role="status">
-            <p className="font-medium">
-              {t("reports.processorErasures.heading", { count: owedProcessorErasures.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.processorErasures.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {owedProcessorErasures.map((obligation) => (
-                <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium">
-                    {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
-                  </span>
-                  <span className="font-mono">{obligation.externalId}</span>
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.processorErasures.raised", {
-                      date: formatShortDate(obligation.createdAt, locale, tz),
-                    })}
-                    {obligation.lastError ? ` · ${obligation.lastError}` : ""}
-                  </span>
-                  {canErase && obligation.target === "stripe_customer" ? (
-                    <form action={retryProcessorErasure}>
-                      <input type="hidden" name="obligationId" value={obligation.id} />
-                      <SubmitButton
-                        pendingLabel={t("reports.processorErasures.retrying")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("reports.processorErasures.retry")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                  {canErase ? (
-                    <form action={dischargeProcessorErasure}>
-                      <input type="hidden" name="obligationId" value={obligation.id} />
-                      <SubmitButton
-                        pendingLabel={t("reports.processorErasures.discharging")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("reports.processorErasures.discharge")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
     </main>
   );
 }

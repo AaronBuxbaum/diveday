@@ -1,9 +1,16 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
+import {
+  canPersonErasePersonalData,
+  canPersonManagePaymentSettings,
+  canPersonManageShopSettings,
+} from "@/db/authz";
 import { getDb } from "@/db/client";
+import { retryMediaDeletion } from "@/db/media-deletions";
+import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
 import {
   getShopById,
   setShopAddress,
@@ -520,4 +527,84 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
   return awsAddressLookupProvider(config).suggest(query);
+}
+
+/* -------------------------------------------------------------------------- *
+ * Data-compliance queues (the "Data & integrations" group)
+ *
+ * Two jobs the shop still owes on data it promised to remove: a stored file a
+ * provider delete never got rid of (CR-012) and an erasure that didn't land at
+ * Stripe (ADR 20260803-processor-erasure-obligations). They lived at the bottom
+ * of the monthly report until the report became only a report; "what happened
+ * to data we said we'd delete?" is the Data group's question, and this page is
+ * where it is now asked.
+ *
+ * The gates are unchanged in substance. The media retry moved from the reports
+ * gate to the settings gate — the same `isOwnerOrManager` role set, so nobody
+ * gained or lost the button — and both processor-erasure actions keep the
+ * owner-only `canPersonErasePersonalData` they always had. Each re-checks
+ * server-side and returns silently on refusal rather than trusting the page
+ * that rendered the form.
+ * -------------------------------------------------------------------------- */
+
+/**
+ * The "Retry" for a stuck provider delete (CR-012) — same owner/manager weight
+ * as every other control on this page, so a crew member can't reach it by
+ * posting directly to the action.
+ */
+export async function retryMediaDeletionAction(shopSlug: string, formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) return;
+  const attemptId = String(formData.get("attemptId") ?? "");
+  if (!attemptId) return;
+  await retryMediaDeletion(db, session.user.shopId, attemptId);
+  revalidatePath(`/shop/${shopSlug}/settings`);
+}
+
+/**
+ * Re-attempt a Stripe customer delete erasure could not land
+ * (ADR 20260803-processor-erasure-obligations) — the manual companion to the
+ * nightly retry, for an owner who has just fixed whatever was broken (a
+ * reconnected Stripe account, an outage that has passed) and does not want to
+ * wait for the next tick.
+ *
+ * Same erasure gate as the attestation below: this makes a destructive call
+ * against the shop's Stripe account, so it is not a settings-reader's button.
+ */
+export async function retryProcessorErasureAction(shopSlug: string, formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
+  const obligationId = String(formData.get("obligationId") ?? "");
+  if (!obligationId) return;
+  await retryProcessorErasure(db, session.user.shopId, obligationId);
+  revalidatePath(`/shop/${shopSlug}/settings`);
+}
+
+/**
+ * Mark a processor-side erasure done (ADR 20260803-processor-erasure-obligations).
+ *
+ * This is the *only* way an invoice-snapshot obligation ever closes: no API
+ * reaches the name and email Stripe copied onto a finalized invoice, so an
+ * owner attests they filed Stripe's data-deletion request.
+ *
+ * Gated on `canPersonErasePersonalData`, not on the settings gate the panel is
+ * *read* behind: this is an attestation that a diver's data is gone from
+ * Stripe, and only the role that could order the erasure may declare it
+ * finished. A manager who can read the panel sees the outstanding work and
+ * cannot sign it off.
+ */
+export async function dischargeProcessorErasureAction(shopSlug: string, formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
+  const obligationId = String(formData.get("obligationId") ?? "");
+  if (!obligationId) return;
+  await dischargeProcessorErasure(db, {
+    shopId: session.user.shopId,
+    obligationId,
+    actorPersonId: session.user.personId,
+  });
+  revalidatePath(`/shop/${shopSlug}/settings`);
 }

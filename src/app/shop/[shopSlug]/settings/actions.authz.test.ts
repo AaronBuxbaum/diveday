@@ -1,5 +1,7 @@
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { mediaDeletionAttempts, personRoles, processorErasureObligations } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { seededShopContext } from "@/test/db";
 import {
@@ -39,6 +41,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const {
+  dischargeProcessorErasureAction,
+  retryMediaDeletionAction,
+  retryProcessorErasureAction,
   saveAddressAction,
   saveDockCallAction,
   savePackingAction,
@@ -209,5 +214,120 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=dock_saved&saved=dockCall`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
+  });
+});
+
+/**
+ * The two data-compliance queues moved here from the monthly report, and with
+ * them three actions. These refuse by *returning*, not redirecting — the panel
+ * that renders their forms is already hidden from anyone who would be refused,
+ * so a refusal here is a hand-made post and gets no explanation, only nothing.
+ * Which is exactly why each test reads the stored row afterwards: "no redirect
+ * happened" would be equally true of a gate that silently let the write land.
+ */
+async function queueStuckDeletion(db: AppDb, shopId: string): Promise<string> {
+  const [row] = await db
+    .insert(mediaDeletionAttempts)
+    .values({
+      shopId,
+      kind: "recap_photo",
+      url: "https://blob.example/recap.jpg",
+      status: "failed",
+      lastError: "provider said no",
+    })
+    .returning({ id: mediaDeletionAttempts.id });
+  return row.id;
+}
+
+async function oweErasure(db: AppDb, shopId: string, personId: string): Promise<string> {
+  const [row] = await db
+    .insert(processorErasureObligations)
+    .values({
+      shopId,
+      // Provenance only — the row this points at is already anonymized.
+      personId,
+      target: "stripe_invoice_snapshot",
+      externalId: "in_test",
+      stripeAccountId: "acct_test",
+      status: "owed",
+    })
+    .returning({ id: processorErasureObligations.id });
+  return row.id;
+}
+
+function withId(field: string, id: string) {
+  const form = new FormData();
+  form.set(field, id);
+  return form;
+}
+
+async function deletionStatus(db: AppDb, id: string) {
+  const [row] = await db
+    .select()
+    .from(mediaDeletionAttempts)
+    .where(eq(mediaDeletionAttempts.id, id));
+  return row?.status;
+}
+
+async function erasureStatus(db: AppDb, shopId: string, id: string) {
+  const [row] = await db
+    .select()
+    .from(processorErasureObligations)
+    .where(
+      and(eq(processorErasureObligations.id, id), eq(processorErasureObligations.shopId, shopId)),
+    );
+  return row?.status;
+}
+
+describe("the data-compliance queue actions", () => {
+  it("refuses a captain's photo-deletion retry", async () => {
+    // The gate that moved: it was `canPersonViewShopReports`, it is now this
+    // page's `canPersonManageShopSettings`. Same `isOwnerOrManager` role set,
+    // so a captain was refused before and must still be.
+    const { db, shop, captain } = await context();
+    const attemptId = await queueStuckDeletion(db, shop.id);
+    signIn(shop, captain);
+
+    await retryMediaDeletionAction(shop.slug, withId("attemptId", attemptId));
+
+    // Untouched: a permitted retry resolves the row one way or the other.
+    expect(await deletionStatus(db, attemptId)).toBe("failed");
+  });
+
+  it("refuses a manager's erasure retry and discharge — owner-only, and that did not move", async () => {
+    // The gate that deliberately did *not* move: discharging attests a diver's
+    // data is gone from Stripe (ADR 20260803-processor-erasure-obligations).
+    // The seed's manager is also the owner, so the owner role comes off first.
+    const { db, shop, owner } = await context();
+    const obligationId = await oweErasure(db, shop.id, owner);
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, owner), eq(personRoles.role, "owner")));
+    signIn(shop, owner);
+
+    await retryProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
+    await dischargeProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
+
+    expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
+  });
+
+  it("lets an owner discharge an invoice snapshot — the only way that debt ever closes", async () => {
+    const { db, shop, owner } = await context();
+    const obligationId = await oweErasure(db, shop.id, owner);
+    signIn(shop, owner);
+
+    await dischargeProcessorErasureAction(shop.slug, withId("obligationId", obligationId));
+
+    expect(await erasureStatus(db, shop.id, obligationId)).toBe("discharged");
+  });
+
+  it("ignores a submission with no id rather than acting on a blank one", async () => {
+    const { db, shop, owner } = await context();
+    const obligationId = await oweErasure(db, shop.id, owner);
+    signIn(shop, owner);
+
+    await dischargeProcessorErasureAction(shop.slug, new FormData());
+
+    expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
   });
 });

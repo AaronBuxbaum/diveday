@@ -1,8 +1,10 @@
+import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { JumpNav } from "@/components/JumpNav";
 import type { AppDb } from "@/db/client";
+import { mediaDeletionAttempts, personRoles, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
@@ -114,8 +116,46 @@ function selectNamesIn(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
-async function renderSettings(role: Role) {
+/** Every `aria-label` anywhere in a tree — how each queue panel names itself. */
+function ariaLabelsIn(node: unknown, found: string[] = []): string[] {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) ariaLabelsIn(child, found);
+    return found;
+  }
+  if ("props" in node) {
+    const element = node as ReactElement<{ "aria-label"?: unknown; children?: unknown }>;
+    const label = element.props?.["aria-label"];
+    if (typeof label === "string") found.push(label);
+    ariaLabelsIn(element.props?.children, found);
+  }
+  return found;
+}
+
+/** Every `name` on a hidden input anywhere in a tree — which rows offered a control. */
+function hiddenInputNamesIn(node: unknown, found: string[] = []): string[] {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) hiddenInputNamesIn(child, found);
+    return found;
+  }
+  if ("type" in node && "props" in node) {
+    const element = node as ReactElement<{ type?: unknown; name?: unknown; children?: unknown }>;
+    if (
+      element.type === "input" &&
+      element.props?.type === "hidden" &&
+      typeof element.props?.name === "string"
+    ) {
+      found.push(element.props.name);
+    }
+    hiddenInputNamesIn(element.props?.children, found);
+  }
+  return found;
+}
+
+async function renderSettings(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
   const { db, session } = await sessionFor(role);
+  if (seed) await seed(db, session);
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);
   return SettingsPage({
@@ -198,5 +238,113 @@ describe("the units card", () => {
     expect(names).toContain("depthUnit");
     expect(names).toContain("temperatureUnit");
     expect(names).toContain("currency");
+  });
+});
+
+/*
+ * The two data-compliance queues that moved here from the monthly report:
+ * stored files a provider delete never finished, and erasures that never landed
+ * at Stripe. What is worth pinning down is exactly what moved with them — the
+ * rendering condition (non-empty, never an empty table) and the owner-only
+ * split on the erasure buttons.
+ */
+const MEDIA_PANEL = "Photos that didn't finish deleting";
+const ERASURE_PANEL = "Erasures not finished at Stripe";
+
+async function queueStuckDeletion(db: AppDb, session: Session) {
+  await db.insert(mediaDeletionAttempts).values({
+    shopId: session.user.shopId,
+    kind: "recap_photo",
+    url: "https://blob.example/recap.jpg",
+    status: "failed",
+    lastError: "provider said no",
+  });
+}
+
+/**
+ * The seed's only manager is also the owner (`src/db/seed-cast.ts`), so a
+ * plain `renderSettings("manager")` would prove nothing about the owner-only
+ * half of this panel. Dropping the `owner` role row leaves a genuine
+ * manager — and every gate that matters here is checked against the database,
+ * not the session's role list, so the demotion is what the page sees.
+ */
+async function demoteToManager(db: AppDb, session: Session) {
+  await db
+    .delete(personRoles)
+    .where(and(eq(personRoles.personId, session.user.personId), eq(personRoles.role, "owner")));
+}
+
+async function oweErasure(
+  db: AppDb,
+  session: Session,
+  target: "stripe_customer" | "stripe_invoice_snapshot",
+) {
+  await db.insert(processorErasureObligations).values({
+    shopId: session.user.shopId,
+    // Provenance only — the row this points at is already anonymized.
+    personId: session.user.personId,
+    target,
+    externalId: target === "stripe_customer" ? "cus_test" : "in_test",
+    stripeAccountId: "acct_test",
+    status: "owed",
+  });
+}
+
+describe("the data-compliance queues in the Data group", () => {
+  it("renders neither panel when the shop owes nothing", async () => {
+    // The calm state, and the whole reason these could move off a page nobody
+    // opens daily: an empty queue is *nothing on screen*, not an empty table.
+    const labels = ariaLabelsIn(await renderSettings("owner"));
+    expect(labels).not.toContain(MEDIA_PANEL);
+    expect(labels).not.toContain(ERASURE_PANEL);
+  });
+
+  it("shows a stuck photo deletion with a retry, to an owner", async () => {
+    const element = await renderSettings("owner", queueStuckDeletion);
+    expect(ariaLabelsIn(element)).toContain(MEDIA_PANEL);
+    expect(hiddenInputNamesIn(element)).toContain("attemptId");
+  });
+
+  it("shows a stuck photo deletion to a manager too — same owner/manager gate as before", async () => {
+    // The read gate moved from `canPersonViewShopReports` to this page's
+    // `canPersonManageShopSettings`. Both are `isOwnerOrManager`, so a manager
+    // must still see the queue *and* still get the retry, which is gated the
+    // same way (./actions.authz.test.ts proves the action itself).
+    const element = await renderSettings("manager", async (db, session) => {
+      await demoteToManager(db, session);
+      await queueStuckDeletion(db, session);
+    });
+    expect(ariaLabelsIn(element)).toContain(MEDIA_PANEL);
+    expect(hiddenInputNamesIn(element)).toContain("attemptId");
+  });
+
+  it("shows an owed erasure, and offers an owner both retry and discharge", async () => {
+    const element = await renderSettings("owner", (db, session) =>
+      oweErasure(db, session, "stripe_customer"),
+    );
+    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
+    // Two forms, both carrying the obligation id: retry and mark-done.
+    expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(2);
+  });
+
+  it("offers an invoice snapshot only the attestation — no API can discharge it", async () => {
+    const element = await renderSettings("owner", (db, session) =>
+      oweErasure(db, session, "stripe_invoice_snapshot"),
+    );
+    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
+    expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(1);
+  });
+
+  it("shows a manager the owed erasure but no button to close it", async () => {
+    // The gate that did *not* move: discharging is an attestation that a
+    // diver's data is gone from Stripe, and stays owner-only
+    // (ADR 20260803-processor-erasure-obligations). A manager reads the debt
+    // and cannot sign it off.
+    const element = await renderSettings("manager", async (db, session) => {
+      await demoteToManager(db, session);
+      await oweErasure(db, session, "stripe_customer");
+    });
+    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
+    expect(hiddenInputNamesIn(element)).not.toContain("obligationId");
   });
 });
