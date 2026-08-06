@@ -237,12 +237,12 @@ test.describe("as owner", () => {
    * surface (ADR 20260803-public-shop-namespace).
    */
   async function pricedTripAsVisitor(page: Page, title: string) {
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(6));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("11:30");
-    await page.getByLabel("Capacity").fill("6");
+    await page.getByLabel("Seats").fill("6");
     await page.getByLabel(/Price per diver/).fill("120");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();

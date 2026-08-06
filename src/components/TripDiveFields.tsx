@@ -42,16 +42,37 @@ export function TripDiveFields({
   initialCount = 2,
   initialDives = [],
   copy,
+  disabled = false,
+  onCountChange,
+  onFirstDiveSiteChange,
 }: {
   diveSites: DiveOption[];
   initialCount?: number;
   initialDives?: InitialDive[];
   copy: TripDiveFieldsCopy;
+  /**
+   * Renders every control inert *and out of the form's submission*. A caller
+   * that keeps this block mounted while it is off screen (the schedule board's
+   * add panel, which hides rather than unmounts so nothing typed is lost)
+   * relies on that: a disabled control submits nothing, so its `plannedDives`
+   * cannot collide with a caller's own.
+   */
+  disabled?: boolean;
+  /** Fires when the dive count changes, for a caller mirroring it elsewhere. */
+  onCountChange?: (count: number) => void;
+  /** Fires when dive one's site changes, likewise. */
+  onFirstDiveSiteChange?: (diveSiteId: string) => void;
 }) {
   const [count, setCount] = useState(Math.min(4, Math.max(1, initialCount)));
 
   return (
-    <section className="rounded-2xl border border-border bg-surface-sunken/45 p-4 sm:p-5">
+    <section
+      // `hidden` rather than unmounted, when a caller asks: React drops the
+      // state of an unmounted subtree, and these are a staff member's typed
+      // dive plans.
+      hidden={disabled}
+      className="rounded-2xl border border-border bg-surface-sunken/45 p-4 sm:p-5"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-semibold">{copy.heading}</h2>
@@ -66,7 +87,12 @@ export function TripDiveFields({
             <select
               name="plannedDives"
               value={count}
-              onChange={(event) => setCount(Number(event.target.value))}
+              disabled={disabled}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                setCount(next);
+                onCountChange?.(next);
+              }}
               className={controlClass}
             >
               {[1, 2, 3, 4].map((value) => (
@@ -84,7 +110,11 @@ export function TripDiveFields({
           const initial = initialDives[index];
           const number = index + 1;
           return (
-            <fieldset key={number} className="rounded-xl border border-border bg-surface p-4">
+            <fieldset
+              key={number}
+              disabled={disabled}
+              className="rounded-xl border border-border bg-surface p-4"
+            >
               <legend className="px-1 text-sm font-semibold text-primary">
                 {fill(copy.diveLegend, { number })}
               </legend>
@@ -105,6 +135,11 @@ export function TripDiveFields({
                   <select
                     name={`dive-${number}-siteId`}
                     defaultValue={initial?.diveSiteId ?? ""}
+                    onChange={
+                      number === 1
+                        ? (event) => onFirstDiveSiteChange?.(event.target.value)
+                        : undefined
+                    }
                     className={controlClass}
                   >
                     <option value="">{copy.noSiteChosen}</option>

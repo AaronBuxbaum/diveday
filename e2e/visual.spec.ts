@@ -1470,7 +1470,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The first (and only-ever-first) departure, dated off the frozen
         // clock so the card and queue rows render pixel-identically per run.
-        await page.goto(`/shop/${unique}/trips/new`);
+        await page.goto(`/shop/${unique}/schedule/board?add=1`);
         const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);
@@ -1634,8 +1634,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder", scheme);
       });
 
-      // The whole add-a-departure form, which the board only ever shows as a
-      // button — every field a departure is born with, price included.
+      // The add-a-departure form as a shop meets it all week: the quick path,
+      // which the board only ever shows as a button — every field a departure
+      // is born with, price included, with the rare half collapsed behind
+      // "More options".
       test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "The board" }).waitFor();
@@ -1646,6 +1648,23 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
         await capture(page, "schedule-builder-add", scheme);
+      });
+
+      // The same panel at full depth — everything `/trips/new` used to be, now
+      // disclosed inline (ADR 20260806-one-trip-create-form). This is the tall
+      // one, and the only baseline that can catch the expanded form's own
+      // rhythm: the dive-plan block, the two bordered fieldsets, and the single
+      // submit that still ends it.
+      test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByRole("heading", { name: "The board" }).waitFor();
+        await page.getByRole("button", { name: "Fewer options" }).waitFor();
+        await page
+          .locator('select[name="courseId"] option[disabled]')
+          .waitFor({ state: "detached" });
+        await capture(page, "schedule-builder-add-full", scheme);
       });
 
       // The blow-out confirm — the one deliberate step between the captain's

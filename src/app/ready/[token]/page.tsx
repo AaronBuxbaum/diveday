@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { DiveBriefingsSection } from "@/app/s/[shopSlug]/trips/[id]/_components/DiveBriefingsSection";
+import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
-import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
@@ -15,11 +16,19 @@ import {
   verifyBookingCapability,
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { certificationAgency, certificationLevel } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
+import { getShopBySlug } from "@/db/shops";
+import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import {
+  DIVER_CERTIFICATION_AGENCY_KEYS,
+  DIVER_CERTIFICATION_LEVEL_KEYS,
+} from "@/i18n/readiness-labels";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
@@ -29,6 +38,7 @@ import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } fro
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import type { ReadinessBlockerCode } from "@/lib/readiness";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -41,6 +51,7 @@ import {
   cancelMyBookingAction,
   payFromReady,
   rescheduleMyBookingAction,
+  saveCertificationFromReady,
   saveEmergencyContactFromReady,
   saveFitFromReady,
   signWaiverFromReady,
@@ -124,6 +135,100 @@ function Notice({ title, text }: { title: string; text: string }) {
   );
 }
 
+/**
+ * Which cert blockers a diver can actually answer by typing their card in.
+ *
+ * `certification_pending` is deliberately absent: that card is already on file
+ * and waiting on a staff review, so offering the form again would only invite a
+ * duplicate the unique index refuses. The three here all mean the shop is
+ * holding nothing usable.
+ */
+const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
+  "certification_missing",
+  "certification_expired",
+  "certification_insufficient",
+]);
+
+/**
+ * The diver's own card, typed in.
+ *
+ * **Capture, never clearance.** The card lands `pending` and a staff review is
+ * what makes it count toward readiness (`src/db/readiness.ts`), so nothing here
+ * can clear the diver's own gate — which is why it can be offered behind a
+ * bearer link at all. The copy says so plainly rather than implying the row is
+ * settled.
+ *
+ * Before this, the checklist named "we still need your certification card" and
+ * offered no way to answer it, so the card arrived as a photo in a reply-to
+ * email or not until the dock (2026-08-06 review).
+ */
+function CertificationEntry({ token, t }: { token: string; t: DiverTranslator }) {
+  return (
+    <form
+      action={saveCertificationFromReady.bind(null, token)}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
+    >
+      <div>
+        <h4 className="text-base font-semibold">{t("ready.certHeading")}</h4>
+        <p className="mt-1 text-sm text-muted">{t("ready.certBody")}</p>
+      </div>
+      <FieldGrid columns={2}>
+        <Field label={t("ready.certAgency")}>
+          <select name="agency" required defaultValue="" className={controlClass}>
+            <option value="" disabled>
+              {t("ready.certChoose")}
+            </option>
+            {certificationAgency.enumValues.map((agency) => (
+              <option key={agency} value={agency}>
+                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("ready.certLevel")}>
+          <select name="level" required defaultValue="" className={controlClass}>
+            <option value="" disabled>
+              {t("ready.certChoose")}
+            </option>
+            {certificationLevel.enumValues.map((level) => (
+              <option key={level} value={level}>
+                {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("ready.certNumber")}>
+          <input
+            name="identifier"
+            required
+            minLength={2}
+            maxLength={60}
+            autoComplete="off"
+            // A card number is printed in caps and read off plastic at arm's
+            // length; a phone keyboard's own autocorrect is nothing but a
+            // source of wrong digits here.
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            className={controlClass}
+          />
+        </Field>
+        <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
+          <input name="expiresAt" type="date" className={controlClass} />
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("ready.certSubmitting")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("ready.certSubmit")}
+        </SubmitButton>
+      </div>
+    </form>
+  );
+}
+
 /** The action a checklist item enables on this page, if any. */
 function itemAction(
   item: DiverChecklistItem,
@@ -144,6 +249,9 @@ function itemAction(
         </SubmitButton>
       </form>
     );
+  }
+  if (item.code && CERT_ENTRY_CODES.has(item.code)) {
+    return <CertificationEntry token={token} t={t} />;
   }
   if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) {
     return (
@@ -189,6 +297,14 @@ const READY_NOTICES: Record<
   // Landing here fresh off a successful seat claim (docs ADR
   // 20260804-seat-claim-links) — the one moment to say whose page this now is.
   "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },
+  // A card the diver typed in. "Added", never "verified": a staff review is
+  // what makes it count, and the copy says so rather than implying the
+  // checklist row has cleared.
+  "saved-cert": { tone: "success", key: "ready.certSaved" },
+  // The number is already on file here — most often their own card, entered
+  // twice. Nothing to fix, so this is neutral rather than an error.
+  "saved-cert-known": { tone: "neutral", key: "ready.certKnown" },
+  "error-cert": { tone: "danger", key: "ready.certInvalid" },
 };
 
 /**
@@ -500,6 +616,39 @@ export default async function DiverReadinessPage({
       : null,
   }));
 
+  // The trip itself, as the public trip page reads it.
+  //
+  // This page used to carry a five-line header and a thumbnail strip of site
+  // names, so a diver who arrived here from the confirmation email — the link
+  // the shop actually sends the night before — could not see which site each
+  // tank was on, or what to put in the bag, without going and finding the
+  // public trip page (2026-08-06 review). Its own sections stay what they were:
+  // this adds the two the page had no answer for at all, and drops the site
+  // *peek*, which the briefings below say properly.
+  //
+  // Read here in the page, not in a layout: `instant = true` holds because
+  // every one of these sits inside this segment's own `loading.tsx` boundary
+  // (ADR 20260804-instant-navigation).
+  // One round trip, not two: the trip reads are scoped by `shop.id`, which the
+  // verified capability already resolved, so none of them has to wait on the
+  // shop row `PackingSection` needs for its units and rental catalogue.
+  const [fullShop, fullTrip, tripDives] = await Promise.all([
+    getShopBySlug(db, shop.slug),
+    getTripWithBooked(db, shop.id, data.trip.id),
+    listTripDives(db, shop.id, data.trip.id),
+  ]);
+  const briefingExtras = await listDiveSiteBriefingExtras(
+    db,
+    shop.id,
+    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
+  );
+  const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
+    dive,
+    diveSite,
+    creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+    moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
+  }));
+
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const rescheduleBlockedKey =
     data.rescheduleBlocked && data.rescheduleBlocked !== "booking_closed"
@@ -585,12 +734,6 @@ export default async function DiverReadinessPage({
             </p>
           </section>
         )}
-
-        <DiveSitesPeek
-          sites={data.sites}
-          heading={t("ready.scheduledSites")}
-          subheading={t("ready.sitesPeek")}
-        />
 
         {ready ? null : (
           <div className="mt-6">
@@ -824,6 +967,23 @@ export default async function DiverReadinessPage({
             ) : null}
           </section>
         )}
+
+        {/* What the day actually is: what to bring, and what each tank dives.
+            Below the checklist and the gear form, because this page's job is
+            still "what's left before you sail" — this is what a diver reads
+            once that is settled, and it is what they used to have to leave the
+            page to find. */}
+        {fullShop && fullTrip ? (
+          <>
+            <PackingSection
+              shop={fullShop}
+              trip={fullTrip}
+              rentalFit={data.rentalFit}
+              locale={locale}
+            />
+            <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
+          </>
+        ) : null}
 
         <ShopCard
           name={detail.shop.name}

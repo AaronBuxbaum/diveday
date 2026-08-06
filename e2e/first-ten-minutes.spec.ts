@@ -60,10 +60,11 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
   await page.getByRole("link", { name: "Schedule a trip" }).click();
 
-  // ── Screen 3: the trip form — four required fields, everything else has a
-  // default or is optional ─────────────────────────────────────────────────
-  await page.waitForURL(new RegExp(`/shop/${unique}/trips/new$`));
-  arrive("trips/new");
+  // ── Screen 3: the board's add panel — four required fields, everything
+  // else has a default, is optional, or is behind "More options" (ADR
+  // 20260806-one-trip-create-form) ─────────────────────────────────────────
+  await page.waitForURL(new RegExp(`/shop/${unique}/schedule/board\\?add=1$`));
+  arrive("schedule board (add a departure)");
   const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
@@ -125,21 +126,26 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
     .toISOString()
     .slice(0, 10);
   const schedule = async (title: string, start: string, end: string) => {
-    await page.goto(`/shop/${unique}/trips/new`);
+    await page.goto(`/shop/${unique}/schedule/board?add=1`);
     await page.locator('input[name="title"]').fill(title);
     await page.locator('input[name="date"]').fill(tomorrow);
     await page.locator('input[name="startTime"]').fill(start);
     await page.locator('input[name="endTime"]').fill(end);
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
   };
 
+  // The first departure ever is the one time creating a trip leaves the board:
+  // it is the moment the shop became bookable, and the share card that says so
+  // lives on Today (ADR 20260806-one-trip-create-form).
   await schedule("First Ever", "08:00", "12:30");
+  await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
   await expect(page.getByRole("heading", { name: /your shop is bookable/ })).toBeVisible();
 
-  // A shop's second trip is routine, not a milestone — the plain notice is
-  // enough, and repeating the celebration would teach owners to ignore it.
+  // A shop's second trip is routine, not a milestone — it stays on the board it
+  // was built on, named in the notice, and repeating the celebration would
+  // teach owners to ignore it.
   await schedule("Afternoon Drift", "14:00", "17:00");
-  await expect(page.getByText("“Afternoon Drift” is on the board. 🤙")).toBeVisible();
+  await page.waitForURL(new RegExp(`/shop/${unique}/schedule/board\\?builder=added`));
+  await expect(page.getByText("“Afternoon Drift” is on the board.")).toBeVisible();
   await expect(page.getByRole("heading", { name: /your shop is bookable/ })).toHaveCount(0);
 });

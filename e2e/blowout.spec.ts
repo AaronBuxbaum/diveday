@@ -87,7 +87,9 @@ test.describe("weather blow-out cascade", () => {
     await page.getByLabel("Returns").fill("12:00");
     await page.getByLabel("Seats").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText("It’s on the board.");
+    // Named, so a staffer adding several departures in a row can read which one
+    // landed (ADR 20260806-one-trip-create-form).
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
     await openTripFromBoard(page, title);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();

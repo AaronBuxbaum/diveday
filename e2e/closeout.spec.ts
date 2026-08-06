@@ -68,6 +68,31 @@ test.describe("end-of-day close-out", () => {
     ).toBeVisible();
   });
 
+  test("Today holds back the close-out handoff while a boat is still out", async ({ page }) => {
+    // The other half of the handoff (`lastBoatIsIn`, src/lib/today.ts): the
+    // shop home offers the close-out only once every one of today's departures
+    // is back at the dock. The fleet's clock is frozen at 09:30 shop-local with
+    // boats still out, so this pins the *restraint* — a predicate that
+    // regressed to "always true" would put an evening card on a morning
+    // screen, which is the failure this card must never have.
+    //
+    // The positive case cannot be exercised here: the frozen instant is a
+    // process-wide env var (DIVEDAY_CLOCK) shared by the server, the seed, and
+    // the browser, so a spec cannot move the server to an evening. Its four
+    // branches are covered in src/lib/today.test.ts instead. See the PR body.
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The last boat is in" })).toHaveCount(0);
+
+    // Absent from the page is not absent from the app: the close-out is still
+    // one navigation away, which is what makes the card a suggestion.
+    await page.goto("/shop/blue-mantis/close-out");
+    await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();
+  });
+
   test("closing again appends another record instead of editing the first", async ({ page }) => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/close-out");

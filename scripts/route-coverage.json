@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
@@ -256,23 +256,30 @@
       "blowout.spec.ts",
       "booking.spec.ts",
       "check-in.spec.ts",
+      "courses.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "dive-sites.spec.ts",
       "divers.spec.ts",
+      "first-ten-minutes.spec.ts",
+      "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "manifest.spec.ts",
       "nitrox.spec.ts",
       "promo-codes.spec.ts",
+      "readiness.spec.ts",
       "refunds.spec.ts",
       "role-permissions.spec.ts",
       "schedule-builder.spec.ts",
+      "schedule-embed.spec.ts",
       "schedule-trip.spec.ts",
+      "self-service-reschedule.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
+      "trips.spec.ts",
       "waivers.spec.ts"
     ],
-    "visual": ["schedule-builder", "schedule-builder-add"]
+    "visual": ["schedule-builder", "schedule-builder-add", "schedule-builder-add-full"]
   },
   "/shop/[shopSlug]/settings": {
     "e2e": [
@@ -391,30 +398,6 @@
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
     "visual": ["prep", "prep-no-nitrox"]
-  },
-  "/shop/[shopSlug]/trips/new": {
-    "e2e": [
-      "a11y.spec.ts",
-      "add-diver.spec.ts",
-      "booking.spec.ts",
-      "check-in.spec.ts",
-      "courses.spec.ts",
-      "dive-sites.spec.ts",
-      "divers.spec.ts",
-      "first-ten-minutes.spec.ts",
-      "gear-fit-and-age.spec.ts",
-      "import.spec.ts",
-      "readiness.spec.ts",
-      "refunds.spec.ts",
-      "role-permissions.spec.ts",
-      "schedule-embed.spec.ts",
-      "schedule-trip.spec.ts",
-      "self-service-reschedule.spec.ts",
-      "trip-admission.spec.ts",
-      "trip-series.spec.ts",
-      "trips.spec.ts"
-    ],
-    "visual": []
   },
   "/shop/[shopSlug]/waivers": {
     "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],

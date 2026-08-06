@@ -228,13 +228,13 @@ export default async function CoursesPage({
                 {st("courses.list.edit")}
               </Link>
               {/* The catalog's whole point is that a course gets taught. This
-                  hands the existing new-trip form (`?course=` preselects the
-                  course and shapes the title) the one fact staff would
-                  otherwise re-pick from a dropdown — never a second
+                  hands the board's add panel (`?course=` opens it with the
+                  course preselected and shapes the title) the one fact staff
+                  would otherwise re-pick from a dropdown — never a second
                   trip-creation path of its own. */}
               {canSchedule ? (
                 <Link
-                  href={`/shop/${shopSlug}/trips/new?course=${course.id}`}
+                  href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
                   className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
                 >
                   <CalendarPlusIcon />

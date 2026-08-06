@@ -20,6 +20,15 @@ import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
  * language but scrolls away, so a phone keeps diver rows on screen instead of
  * giving a third of the viewport to a sentence that repeats the number above
  * it. Nothing that says a person is unaccounted for is allowed to scroll off.
+ *
+ * **Both halves are returned as siblings, not wrapped in one `<section>`.** A
+ * `position: sticky` element is pinned only while its own containing block is
+ * on screen, and a wrapper around just these two blocks is barely taller than
+ * the card itself — so the panel used to unstick and scroll away the moment
+ * the first few diver rows went past, which is the opposite of what a captain
+ * working down a roster needs. Returned flat, the containing block is the
+ * page's own column, and the card stays pinned for the whole roll call. Keep
+ * it that way: re-introducing a wrapper here silently un-pins the panel again.
  */
 export function SummaryPanel({
   checkpoint,
@@ -122,12 +131,13 @@ export function SummaryPanel({
               ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
               : t("trips.manifest.allAccountedFor");
   return (
-    <section aria-labelledby="roll-call-progress-heading" className="mt-4 print:hidden">
-      <div
+    <>
+      <section
+        aria-labelledby="roll-call-progress-heading"
         className={
           rollCallComplete
-            ? "rise-in sticky top-20 z-10 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur"
-            : "sticky top-20 z-10 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur"
+            ? "rise-in sticky top-20 z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
+            : "sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
         }
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -202,12 +212,12 @@ export function SummaryPanel({
             {t("trips.manifest.buddySeparatedLine", { count: separatedTeams })}
           </p>
         ) : null}
-      </div>
+      </section>
       {/* The prose half, immediately below the pinned card and in the same
           visual language — it may scroll away. Nothing here is an emergency:
           the closing line when it is calm, and what being blocked means at
           *this* checkpoint. */}
-      <div className="px-4 pt-2">
+      <div className="px-4 pt-2 print:hidden">
         {/* The line that says whether this checkpoint is closed. It used to go
             quiet at `awaiting === 0` — every diver counted, nothing said about
             the crew. Now it names what is still open. */}
@@ -231,6 +241,6 @@ export function SummaryPanel({
           </p>
         ) : null}
       </div>
-    </section>
+    </>
   );
 }

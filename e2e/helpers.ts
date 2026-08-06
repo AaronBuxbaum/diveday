@@ -111,20 +111,22 @@ export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep
 }
 
 /**
- * Put a departure on the board through the real staff form
- * (`/shop/<slug>/trips/new`), the way ~30 specs need one of their own rather
- * than sharing a seeded charter another worker may be mutating.
+ * Put a departure on the board through the real staff form — the schedule
+ * board's own add panel, opened at full depth (`?add=full`), which is the only
+ * trip-creation form there is (ADR 20260806-one-trip-create-form). ~30 specs
+ * need a departure of their own rather than sharing a seeded charter another
+ * worker may be mutating.
  *
  * Only the four fields the form actually requires are positional-ish; the
- * rest are opt-in because the form defaults them (capacity, price, and the
- * free-cancellation window are all optional on the page too). `course` is
- * applied *first* on purpose: picking a course re-renders the form around the
+ * rest are opt-in because the panel defaults them (seats, price, and the
+ * free-cancellation window are all optional on it too). `course` is applied
+ * *first* on purpose: picking a course re-renders the form around the
  * selection, so a title filled before it would be thrown away.
  *
- * Settling on the created banner rather than the URL is deliberate — creating
- * a trip redirects to the shop home with `?created=<title>`, which
- * `FlashParams` strips again shortly after mount, so the banner (which names
- * the trip) is the stable signal that the write landed.
+ * Settling on the notice rather than the URL is deliberate — the notice names
+ * the departure that just landed, which is the stable signal that the write
+ * went through wherever the action decided to land (the board normally, the
+ * shop home for a shop's very first departure ever).
  */
 export async function createTrip(
   page: Page,
@@ -140,16 +142,23 @@ export async function createTrip(
     cancellationWindowHours?: number;
   },
 ): Promise<void> {
-  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/trips/new`);
+  // Always the full depth (`?add=full`), even for a caller that only fills the
+  // four required fields: this helper stands in for "a shop scheduled a trip"
+  // across ~30 specs, and the disclosed form is the superset — a spec that later
+  // wants a deposit or a cancellation window must not have to know which depth
+  // the helper happened to open.
+  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board?add=full`);
   if (options.course !== undefined) {
-    await page.getByLabel("Course").selectOption({ label: options.course });
+    // By name, not label: board rows carry aria-labels naming their departure,
+    // which a label match would sweep up alongside the panel's own select.
+    await page.locator('select[name="courseId"]').selectOption({ label: options.course });
   }
-  await page.getByLabel("Title").fill(options.title);
+  await page.getByLabel("What is it").fill(options.title);
   await page.getByLabel("Date").fill(options.date);
   await page.getByLabel("Departs").fill(options.departsAt);
   await page.getByLabel("Returns").fill(options.returnsAt);
   if (options.capacity !== undefined) {
-    await page.getByLabel("Capacity").fill(String(options.capacity));
+    await page.getByLabel("Seats").fill(String(options.capacity));
   }
   if (options.price !== undefined) {
     await page.getByLabel(/Price per diver/).fill(String(options.price));
