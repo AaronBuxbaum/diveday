@@ -215,6 +215,27 @@ so CI will not catch a new contrast regression for you. Everything else measured
 `--focus-ring` clears WCAG 1.4.11's 3:1 in all four palettes (worst case 4.66:1). New surfaces are
 still held to the full bar; the exceptions are a documented backlog, not a lowered standard.
 
+## The holistic pass (run it before any checklist)
+
+Every design review starts holistic, before the itemized criteria — a surface can pass every
+mechanical check and still be a pile of well-formed cards with no point of view. Answer, in
+writing, one sentence each:
+
+- What is this surface's **one idea**? If you can't say it, the surface doesn't know either.
+- What **question does its user arrive with**, and is the answer already on screen — or behind a
+  click the app didn't need to charge (principle 9)?
+- Which **controls could dissolve** into the objects they act on — a row's own tap, a
+  hover-revealed control, an in-place edit with undo, a good default — instead of standing as
+  buttons?
+- **Remove until it breaks**: what would you take away first? A control or border nobody would
+  miss is a finding.
+- For a significant **new** surface: does the composition fit this content's own shape, or is it
+  the default card stack (principle 10)? If the default, sketch one alternative in prose — what
+  moves where, what it buys — and either adopt it or say why the default genuinely serves better.
+
+The same pass applies, in prose form, to persuasion surfaces and collateral: a marketing page has
+one argument and a scrolls-until-answered count; a one-pager has one ask.
+
 ## Review checklist
 
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)

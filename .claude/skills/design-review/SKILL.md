@@ -22,19 +22,11 @@ or an action the screen could have carried.
    reviewed this way until you add one (see `e2e-and-visual`); for a first look at such a surface,
    `node scripts/screenshot.mjs <path>` against a running dev server captures the same
    light/dark × phone/desktop matrix without a spec.
-3. **Holistic pass first** (principles 9–10) — before the checklist, answer for each captured
-   surface, in writing:
-   - What is this screen's one idea, in a sentence? If you can't say it, the screen doesn't
-     know either.
-   - What question does its user arrive with, and is the answer already on screen — or behind a
-     click the app didn't need to charge?
-   - Which controls could dissolve into the objects they act on (row tap, hover-revealed
-     control, in-place edit with undo) instead of standing as buttons?
-   - Apply remove-until-it-breaks: name what you'd take away first. A control or border nobody
-     would miss is a finding.
-   - For a **new** significant surface: does the composition fit this content's own shape, or is
-     it the default card stack? If the default, sketch one alternative in prose (what moves
-     where, what it buys) and either adopt it or say why the default genuinely serves better.
+3. **Holistic pass first** — before the checklist, run "The holistic pass" from
+   `docs/design/principles.md` for each captured surface, answering its questions in writing
+   (the one idea, the arriving question, dissolvable controls, remove-until-it-breaks, and — for
+   a new significant surface — the composition sketch). The canonical question list lives there,
+   not here, so it can't drift between this skill and the `design-critic` agent.
 4. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)

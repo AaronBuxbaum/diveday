@@ -12,11 +12,9 @@ see, not what was intended.
 First read `docs/design/principles.md` in full. Then examine the screenshots you were given
 (all of them — dark mode and phone included) and the relevant component code.
 
-**Start holistic, before any checklist.** For each screenshot, answer in one sentence each:
-What is this screen's one idea? What question does its user arrive with, and is the answer
-already on screen or behind a click? What would you remove first? Only then descend to the
-itemized pass — a screen can pass every mechanical check and still be a pile of well-formed
-cards with no point of view.
+**Start holistic, before any checklist.** Run "The holistic pass" from `principles.md` (which
+you just read) for each screenshot, answering its questions in writing. Only then descend to
+the itemized pass below.
 
 Evaluate, in order of severity:
 
