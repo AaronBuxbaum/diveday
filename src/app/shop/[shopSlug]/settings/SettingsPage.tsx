@@ -464,16 +464,9 @@ export default async function SettingsPage({
             the picker read its own schedule in US Eastern forever.
 
             Every "Save" submit on this page renders `secondary`, not the
-            default primary — a deliberate narrowing of design principle #8's
-            "a page with several independent sections can have several
-            primaries." That carve-out fits a page of two or three genuinely
-            separate workflows; this hub is nine-plus reversible preference
-            forms with no single most-urgent one, so nine solid teal buttons
-            down one continuous scroll read as nine equally loud demands
-            rather than nine calm options (principle #3). The one control here
-            that keeps full primary weight is the Stripe "Connect"/"Reconnect"
-            CTA below — unlike a Save, it *is* the one thing a shop with no
-            payment account is on this page to do. */}
+            default primary — this is a settings hub (docs/design/forms-and-
+            controls.md, "Settings hubs are the one place..."), so only the
+            Stripe "Connect"/"Reconnect" CTA below keeps primary weight. */}
         <section className="mb-6 rounded-lg border border-border bg-surface p-6">
           <CardHeading
             t={t}

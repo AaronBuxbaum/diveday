@@ -43,6 +43,15 @@ import { utcToWallTime } from "./zoned";
 /** How soon the work has to be done, derived from the departure it belongs to. */
 export type TodayUrgency = "imminent" | "now" | "soon" | "later";
 
+/**
+ * Band order, soonest first — the one place it's written down. Every grouping
+ * function across both work-queue views (`groupActions` below,
+ * `groupBlockerTrips` in `src/lib/blockers.ts`) buckets over this same array,
+ * so the two views can never render the bands in a different order or drop
+ * one without the other noticing.
+ */
+export const URGENCY_ORDER: readonly TodayUrgency[] = ["imminent", "now", "soon", "later"];
+
 const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
 
 /** The next boat out — close enough that "later today" isn't precise enough. */
@@ -513,12 +522,10 @@ export type TodayActionGroup = {
 /** Only groups with work are returned; an empty heading is noise. */
 export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[] {
   const sorted = sortActions(actions);
-  return (["imminent", "now", "soon", "later"] as const)
-    .map((urgency) => ({
-      urgency,
-      actions: sorted.filter((action) => action.urgency === urgency),
-    }))
-    .filter((group) => group.actions.length > 0);
+  return URGENCY_ORDER.map((urgency) => ({
+    urgency,
+    actions: sorted.filter((action) => action.urgency === urgency),
+  })).filter((group) => group.actions.length > 0);
 }
 
 /**

@@ -1,7 +1,13 @@
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { blockerActionLabelText, pointingLabelText } from "@/i18n/today-labels";
 import type { ReadinessBlocker } from "./readiness";
-import { BLOCKER_ACTIONS, isWaiverCode, primaryBlocker, type TodayUrgency } from "./today";
+import {
+  BLOCKER_ACTIONS,
+  isWaiverCode,
+  primaryBlocker,
+  type TodayUrgency,
+  URGENCY_ORDER,
+} from "./today";
 
 /**
  * The blocker queue is the front desk's whole day as one list: every diver who
@@ -126,18 +132,17 @@ export type BlockerQueueTrip = {
 export type BlockerTripGroup = { urgency: TodayUrgency; trips: BlockerQueueTrip[] };
 
 /**
- * Buckets an already-chronological page of trips into urgency bands, in fixed
- * band order — never sorts, since the incoming page is already time-ordered
- * and a departure's relative order inside its own band must survive. Only
- * bands with a trip in them are returned; an empty heading is noise.
+ * Buckets an already-chronological page of trips into urgency bands, walking
+ * the shared `URGENCY_ORDER` rather than a copy of it — never sorts, since
+ * the incoming page is already time-ordered and a departure's relative order
+ * inside its own band must survive. Only bands with a trip in them are
+ * returned; an empty heading is noise.
  */
 export function groupBlockerTrips(trips: readonly BlockerQueueTrip[]): BlockerTripGroup[] {
-  return (["imminent", "now", "soon", "later"] as const)
-    .map((urgency) => ({
-      urgency,
-      trips: trips.filter((trip) => trip.urgency === urgency),
-    }))
-    .filter((group) => group.trips.length > 0);
+  return URGENCY_ORDER.map((urgency) => ({
+    urgency,
+    trips: trips.filter((trip) => trip.urgency === urgency),
+  })).filter((group) => group.trips.length > 0);
 }
 
 /**
