@@ -2,8 +2,9 @@
 
 The four things the founder carries into Phase 1: the leave-behind, the list of who to call, the
 script for the first call, and the run sheet for the boat day. Written 2026-08-02 against the
-Phase-0 state, for review action item 24 in
-[assessments/comprehensive-review-20260802.md](../assessments/comprehensive-review-20260802.md).
+Phase-0 state, for review action item 24 in the archived
+[comprehensive-review-20260802.md](../archive/comprehensive-review-20260802.md) — now tracked as
+[human-decisions.md](../human-decisions.md) H-31/H-32.
 
 Everything in here is **preparation**. Not one line of it can be completed by an agent: the calls,
 the entity, the attorney, and the boat day are the founder's, and this kit exists only so that the

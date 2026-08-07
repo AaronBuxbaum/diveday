@@ -5,7 +5,7 @@
 
 Refines [20260724-per-visitor-demo-shops](20260724-per-visitor-demo-shops.md), which introduced the
 bypass this ADR contains. Closes lens finding ARCH-8 in
-[comprehensive-review-20260802](../../product/assessments/comprehensive-review-20260802.md).
+[comprehensive-review-20260802](../../product/archive/comprehensive-review-20260802.md).
 
 ## Context
 

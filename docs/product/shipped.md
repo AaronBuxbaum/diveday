@@ -286,7 +286,7 @@ the organizer's party as before. Pay-your-own-share stays out of scope. See
 
 ## The 2026-08-02 review's last buildable residues (delivered 2026-08-06)
 
-The tail of the [2026-08-02 review](assessments/comprehensive-review-20260802.md): the residues
+The tail of the [2026-08-02 review](archive/comprehensive-review-20260802.md): the residues
 that were still an agent's to close, plus the half of OPS-4 the owner unblocked by creating the
 mailbox. What this did *not* touch is now the whole rest of that document — every remaining row is
 a human decision or a conversation with a real shop.
@@ -359,7 +359,7 @@ that did not exist.
 
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
-The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)
+The Medium and Low engineering items the [2026-08-02 review](archive/comprehensive-review-20260802.md)
 still carried below its top findings. What it did *not* touch: MKT-F5 and MKT-F10, the two live
 claims-policy violations at P0-1, which are owner decisions under HD-25 and not an agent's to close.
 
@@ -498,7 +498,7 @@ was floating point from the start. See the
 [amendment to 20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md#amendment-2026-08-03--the-temperature-unit-is-a-sibling-setting-not-a-reading-of-this-one).
 ## The 2026-08-02 review: payments, data, and crew residuals delivered (2026-08-03)
 
-The six findings the [2026-08-02 review](assessments/comprehensive-review-20260802.md) still carried
+The six findings the [2026-08-02 review](archive/comprehensive-review-20260802.md) still carried
 in its top ten after the first delivery below — **PAY-M1, PAY-M3, DATA-M1/M2, the two DATA-H1
 engineering residuals, DOM-M3 and the DOM-H1 residue**. With these the review has **no open code
 finding left**: everything that survives in it is a human decision, a human action, or a claim only
@@ -620,7 +620,7 @@ rediscovered:
 ## The 2026-08-02 comprehensive review: fourteen top findings delivered (2026-08-02)
 
 All fourteen rows of "the findings that matter most" in the
-[2026-08-02 ten-lens review](assessments/comprehensive-review-20260802.md) — three Criticals and
+[2026-08-02 ten-lens review](archive/comprehensive-review-20260802.md) — three Criticals and
 eleven Highs — plus two further queue items and a set of defects the required reviews found in the
 new work. The assessment has been pruned to what remains open; what is still open is **not** listed
 here. Owner decisions taken before the work started: refunds return what was actually paid with gear

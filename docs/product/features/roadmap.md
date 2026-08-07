@@ -165,6 +165,12 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 - Retrying a `stripe_invoice_snapshot` erasure obligation, if Stripe ever exposes an API that clears
   a finalized invoice's identity snapshot —
   [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
+- A free-text companion field for `certification_agency`'s `other` value. CMAS, RAID, GUE and BSAC
+  now have their own enum values (2026-08-06), but a diver holding an IANTD, SEI, ANDI, ACUC, PSAI or
+  NASE card still records as bare "Other agency" with nowhere to write which one — confirm the list
+  with a `dive-domain-expert` review before widening a safety-adjacent enum further, or add the
+  free-text companion instead of another enum value. Carried out of the archived
+  [2026-08-02 review](../archive/comprehensive-review-20260802.md), DOM-L1.
 
 ## Accessibility contrast fixes (blocked on a color-guide decision)
 
@@ -234,11 +240,14 @@ ADR rather than letting this become an unbounded second backlog.
    `drizzle/` from empty *and* from the previous release's schema, and races two genuinely concurrent
    connections for the last seat; the `FOR UPDATE` oversell guard is no longer dead code under test
    (remove the lock and a one-seat trip sells two). Gated on `src/db/**`/`drizzle/**` plus a nightly
-   run, which answers HD-19's spend question by not spending on every PR. See
+   run rather than per-PR — [H-38](../human-decisions.md#decision-register) asks the owner to bless
+   that cadence rather than change it. See
    [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md) and
-   [shipped.md](../shipped.md). **This was the last open engineering finding the
-   [2026-08-02 review](../assessments/comprehensive-review-20260802.md) left**; what remains in that
-   review is human decisions only.
+   [shipped.md](../shipped.md). The [2026-08-02 review](../archive/comprehensive-review-20260802.md)
+   this closed the last of its *original* engineering queue for is fully dissolved and archived as of
+   2026-08-07 — its two small leftover buildable items (dropping two Stripe invoice URLs from the
+   export contract, and DOM-L1's agency companion field above) and its full human-decision register
+   moved into [human-decisions.md](../human-decisions.md) as H-31 through H-44.
    What it still does not rehearse, deliberately: the migrations meet an *empty* database, so lock
    duration and backfill runtime on a table with production's row count are still found in
    production.
@@ -253,7 +262,7 @@ ADR rather than letting this become an unbounded second backlog.
    reads.
 4. Add automated PR scope/collision warnings based on changed paths and declared ownership.
 5. **Make the remaining prose invariants executable.** Carried out of the
-   [2026-08-02 review](../assessments/comprehensive-review-20260802.md#2-architecture--code-quality)'s
+   [2026-08-02 review](../archive/comprehensive-review-20260802.md#2-architecture--code-quality)'s
    recurring theme that only ratcheted rules hold. Shipped 2026-08-04: ARCH-2
    (`check-architecture.mjs` now sees bare side-effect imports, holds `src/i18n`/`src/components`
    to the layer direction, and ratchets pre-existing debt in `scripts/architecture-baseline.json`),
@@ -262,7 +271,8 @@ ADR rather than letting this become an unbounded second backlog.
    had closed both documented failure modes for `src/app` on 2026-08-03; it now also traces
    `useTranslations()` consumers under `src/components` through their importing pages). Still
    open: a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
-   stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4, HD-20).
+   stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4,
+   [H-39](../human-decisions.md#decision-register)).
 
 (Feature-folder boundaries were P2 and are now settled — see
 [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)

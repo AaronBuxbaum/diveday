@@ -6,7 +6,7 @@ built for actually exists, and whether the problems the product solves are probl
 That job is unusual enough to state plainly. Every persona DiveDay has been designed and reviewed
 against is synthetic — [personas.md](../personas.md) is a written frame, and the 165-task persona
 walkthrough was an evaluation of the product's own assumptions, not of a shop. The
-[review](../assessments/comprehensive-review-20260802.md) records zero customer contact in the
+[review](../archive/comprehensive-review-20260802.md) records zero customer contact in the
 entire history of the project. So the product may be excellent against an imagined buyer, and one
 real conversation is worth more than another review pass.
 

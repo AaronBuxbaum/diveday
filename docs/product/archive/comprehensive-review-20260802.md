@@ -1,5 +1,18 @@
 # Comprehensive review — 2026-08-02
 
+> ## 📦 Archived — fully dissolved 2026-08-07
+>
+> Every engineering finding this review ever raised has shipped, across five reconciliation passes.
+> What survived the fifth pass — two Criticals with no engineering path, one live claims-policy
+> violation still gated on the V-02 field test, the full human-decision register, and the two small
+> items that turned out still genuinely open — is dissolved into the durable docs: the register is
+> now [human-decisions.md](../human-decisions.md)'s **H-31 through H-44**, and the agency free-text
+> companion field (DOM-L1) is a bullet in
+> [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs). This file holds no
+> open work of its own any longer — retained below for the rationale behind each finding, not as a
+> plan. See the fifth-pass note at the end of the reconciliation history immediately below, and
+> [human-decisions.md](../human-decisions.md)'s 2026-08-07 change-history row for what moved where.
+
 > A whole-app review — concept, product, and codebase — run 2026-08-02 through ten independent
 > lenses, each investigated by a separate reviewer against the code as it stands (commit
 > `be15104`): product strategy, architecture, security, dive-domain safety, data model, payments,
@@ -34,6 +47,29 @@
 >
 > What follows is only what is still open, re-verified against the working tree; where a finding
 > shipped *partly*, the residue survives and says which part.
+>
+> **Fifth pass, 2026-08-07 — dissolved and archived.** The fourth-pass bullet above named six
+> residues; it did not name the other **eighteen** findings that shipped the same day in two more
+> `shipped.md` sections —
+> [data, i18n and telemetry](../shipped.md#the-2026-08-02-reviews-data-i18n-and-telemetry-residue-delivered-2026-08-06)
+> and
+> [operations, testing and payments](../shipped.md#the-2026-08-02-reviews-operations-testing-and-payments-residue-delivered-2026-08-06)
+> — so the "What to build while those wait" list below and three engineering halves inside "who can
+> close it" kept naming work that no longer existed. Re-verified in the code, not taken from either
+> list: **DATA-L4, DATA-L5, DATA-L6, PAY-L2, PAY-L3, TEST-M2, I18N-L1, I18N-L2, I18N-L3, OPS-L1, and
+> the new offline-identity-endpoint finding** are shipped and gone from every list below; **SEC-D1's
+> and OPS-7's engineering half** (the fail-open catch now logs and captures to Sentry) and **OPS-9's
+> Vercel/Neon guardrails** are shipped, leaving only their owner-spend halves (Upstash provisioning;
+> naming a second alert-inbox human) open. **MKT-F5 is closed, not merely buildable** —
+> `migration-guides.ts`'s cutover copy no longer claims an install base; it now reads as advice and
+> shipped importer behavior only. **ARCH-6 is answered** — `src/features/backup-export/` is a real
+> second feature-module adopter, shipped 2026-08-04, so HD-22 needed no new decision row. What
+> survived this pass — PROD-C1/C2 (human-external), MKT-F10 (gated on V-02), DOM-L1's residual
+> companion-field gap, the live Stripe-invoice-URL export finding (new, found reviewing the
+> 2026-08-06 export work), and the full human-decision register — is dissolved into
+> [human-decisions.md](../human-decisions.md) as **H-31 through H-44** and one bullet in
+> [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs). This document is
+> archived rather than reconciled a sixth time: it has nothing further to reconcile.
 
 ## Verdict
 
@@ -47,8 +83,9 @@ runbook, a health endpoint and a real alert mailbox where there was none.
 
 **Every row that survives in the queue is one an agent cannot close.** Two are Critical and
 human-external. One is a live claim the owner must retract or authorize — its sibling, MKT-F5's
-fabricated usage proof, is checkably false whichever way the ruling goes and is now on the buildable
-list instead. One waits on a colour-guide decision, one on a spend decision, several on counsel, and
+fabricated usage proof, was checkably false whichever way the ruling went, and **closed 2026-08-07**:
+`migration-guides.ts` no longer makes an install-base claim. One waits on a colour-guide decision, one
+on a spend decision, several on counsel, and
 the sharpest two wait on a dive shop that has never been contacted. **This review is finished as an
 engineering input**: re-reading the queue will not produce another task.
 
@@ -68,12 +105,13 @@ and never refuses the un-carded stranger who is likeliest to buy the wrong boat.
 narrowed, not closed, and it left four decisions behind (H-27–H-30). That is the pattern theme 5
 predicts, working: the review of the fix found more than the fix did.
 
-The launch critical path is unchanged and is now **day 10 of the 30-day list** in
-[rollout.md](../rollout.md), with **four of its seven items showing no closed gate row** and a fifth
-naming no gate row to close (`pnpm gates`, run 2026-08-03: 32 gate rows — 16 open, 1 deferred, 15
-closed; H-03, H-09, H-12 and H-18 unmoved for 10 days). The product has still never had a recorded
-conversation with a dive shop. The gap has not narrowed — it has been *measured*, which is not the
-same thing, and two days of engineering later it is measured at exactly the same number.
+The launch critical path is unchanged in kind, and by 2026-08-07 is **day 14 of the 30-day list** in
+[rollout.md](../rollout.md), with **four of its seven items still showing no closed gate row** and a
+fifth (DEMA) naming no gate row to close (`pnpm gates`, run 2026-08-07: 36 gate rows — 20 open, 1
+deferred, 15 closed; H-03 and H-18 the oldest, unmoved for 14 days — H-09 and H-12 have since moved).
+The product has still never had a recorded conversation with a dive shop. The gap has not narrowed —
+it has been *measured*, which is not the same thing, and five days of engineering later it is measured
+at a larger number of gate rows (H-27–H-30 registered in between), not a smaller one.
 
 ## Cross-cutting themes
 
@@ -95,32 +133,36 @@ would have found — and theme 5 is new.
    alerts, clearing two `TODO(owner)` blocks, telling the runbook the truth — took under an hour.
    The mailbox had been blocking since 2026-08-02. Every other row on this list is the same shape:
    small owner action, engineering already written or trivially writable behind it.
-2. **What has a ratchet holds; what has only prose drifts** — still true, with one fewer exception.
-   Visual regression now posts a per-PR report and a neutral check (owner's choice: *warn loudly,
-   never block* —
+2. **What has a ratchet holds; what has only prose drifts** — still true, with three fewer exceptions
+   than when this theme was written. Visual regression now posts a per-PR report and a neutral check
+   (owner's choice: *warn loudly, never block* —
    [20260802-visual-diff-pr-comment](../../architecture/decisions/20260802-visual-diff-pr-comment.md)),
    so "account for every pixel" has evidence attached even though it still cannot fail a merge.
-   The rest is unchanged: ADR-0004 tokens have no check (I18N-4), the lib↔db contract is unchecked
-   and already violated (ARCH-1), `check-architecture.mjs` has a side-effect-import blind spot
-   (ARCH-2), the `DiverIntlProvider` footgun is tribal knowledge (I18N-2), "revisit at GA" triggers
-   live only in ADR text (ARCH-4). An invariant that isn't executable is a suggestion.
-3. **Claims outrun the gates that authorize them** — the theme the original review only half-saw,
-   and the one surviving finding that is neither Critical nor waiting on an outside professional:
-   the owner can close it this afternoon by choosing. `migration-guides.ts` still tells
-   buyers how "shops actually make the switch" and what "most shops" do, with zero customers
-   (MKT-F5); and `marketing.ts:43` publishes the offline-roll-call claim that
-   [rollout.md](../rollout.md) line 102 embargoes until V-02 passes (MKT-F10). Two live violations of
-   the claims policy, one against the repo's own written embargo, are the sharpest form of theme 1: a
-   promise made on the strength of a field test that has not happened. Note what the crew work did
-   *not* change here — naming crew in the roll call made the offline gap **wider**, not narrower,
-   because crew roll call is online-only.
-4. **PGlite hides what production will do** — unchanged, and now the largest untouched class and the
-   only one still in the top findings. The `FOR UPDATE` oversell guard is still dead code under test
-   (TEST-2, DATA-L1); LISTEN/NOTIFY ceilings are still prod-only (OPS-8). OPS-2's *documentation*
-   half shipped, but no CI job applies `drizzle/` to a real server, so production is still the first
-   one they meet — and the 2026-08-03 work added five migrations to the set that will meet it: two
-   tables, six indexes and three enum types. One real-Postgres CI job retires most of this class;
-   the only thing standing in front of it is a spend decision (HD-19).
+   **ARCH-2, I18N-4 and the I18N-2 residue shipped 2026-08-04** (`pnpm check:architecture` now sees
+   bare side-effect imports and ratchets pre-existing debt; `pnpm check:tokens` fails raw hex and
+   palette-scale classes; `provider-coverage.test.ts` now traces `src/components` consumers too — see
+   [roadmap P2](../features/roadmap.md#p2--when-parallelism-or-scale-proves-the-need)) — this theme's
+   text below was never updated to say so. What is still unchecked: the lib↔db contract, unchecked
+   and already violated (ARCH-1, [H-40](../human-decisions.md)); "revisit at GA" triggers that live
+   only in ADR text (ARCH-4, [H-39](../human-decisions.md)). An invariant that isn't executable is a
+   suggestion.
+3. **Claims outrun the gates that authorize them** — the theme the original review only half-saw.
+   **MKT-F5 closed 2026-08-07:** `migration-guides.ts` no longer tells buyers how "shops actually
+   make the switch" or names what "most shops" do; the cutover copy now reads as advice and shipped
+   importer behavior only. **MKT-F10 is the one surviving violation**, and it is the sharpest form of
+   theme 1: `marketing.ts`'s claim keys still resolve (via `marketing.features.diveDay.item5`) to the
+   offline-roll-call claim that [rollout.md](../rollout.md) line 102 embargoes until V-02 passes — a
+   promise made on the strength of a field test that has not happened, and the repo's own written
+   embargo, not just policy. Note what the crew work did *not* change here — naming crew in the roll
+   call made the offline gap **wider**, not narrower, because crew roll call is online-only.
+4. **PGlite hides what production will do** — narrowed, not closed, and no longer in the top
+   findings. The `FOR UPDATE` oversell guard is no longer dead code under test: a real-Postgres CI job
+   shipped 2026-08-06, gated on `src/db/**`/`drizzle/**` plus nightly (its cadence — nightly and
+   path-gated rather than per-PR — is [human-decisions.md](../human-decisions.md) H-38, not a
+   blocker). What PGlite still hides: DATA-L1 (lock ordering is consistent but unenforced under
+   single-connection PGlite) and OPS-8's LISTEN/NOTIFY ceiling remain prod-only-observable, and the
+   real-Postgres job rehearses migrations against an *empty* database, so lock duration and backfill
+   runtime at production row counts are still found in production, not CI.
 5. **A fix's residue is now recorded in its ADR rather than found by the next review.** Every
    2026-08-03 slice states in its own *Consequences* what it deliberately did not do — crew roll call
    is not recordable offline, the departure board stays assign-only, unassign-then-reassign drops a
@@ -134,283 +176,53 @@ would have found — and theme 5 is new.
 ## The findings that matter most
 
 Nothing on this list is an engineering task. Each row names the human decision or the human action
-that is the actual blocker. Three of them already have their code written down and waiting for the
-decision that releases it: the two contrast fixes in
-[roadmap §contrast](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
-the real-Postgres CI job in
-[roadmap's enablement backlog](../features/roadmap.md#p1--next), and the `CUTOVER_SECTION` rewrite in
-the buildable list below.
+that is the actual blocker. **Superseded 2026-08-07 by [human-decisions.md](../human-decisions.md)'s
+H-31 through H-44** — the table below is the fifth-pass-verified snapshot at closure, kept for
+rationale; for current status read the register, not this table.
 
 | # | ID | Sev | Finding | Where |
 | --- | --- | --- | --- | --- |
-| 1 | PROD-C1 | Critical | Launch critical path unmoved and now measured: **day 10 of rollout.md's 30-day list, 4 of its 7 items with no closed gate row** (attorney H-01–H-03, Resend sender + H-09 consent, V-01/V-02/V-04, the design-partner one-pager), a 5th (DEMA) naming no gate row at all. 32 gate rows — 16 open, 1 deferred, 15 closed; the oldest open — H-03, H-09, H-12, H-18 — have not moved in 10 days. `pnpm gates` reports this on demand; nothing it reports is an agent's to close | `pnpm gates`, [rollout.md](../rollout.md), [human-decisions.md](../human-decisions.md) |
-| 2 | PROD-C2 | Critical | Zero recorded customer contact, ever. Personas are synthetic; the 165-task persona review was AI evaluating AI against AI. Untouched by any engineering to date, and untouchable by any | — |
-| 3 | MKT-F5 / MKT-F10 | High | Two live claims-policy violations, and they are **not the same kind of problem**. MKT-F5 — `migration-guides.ts` saying "here's how shops actually make the switch" and "most shops review, fix a handful of rows, and import for real in one sitting" — is fabricated usage proof with zero customers, checkably false whichever way HD-25 rules, so the rewrite needs no decision and is buildable today. MKT-F10 does need the owner: the offline roll-call claim is **published** against rollout.md's own written embargo ("Until V-02 passes, no marketing claim about offline roll call"), and the 2026-08-03 crew work widened the gap, since per-person crew roll call is online-only. Either the boat day happens or the claim comes down | `src/lib/migration-guides.ts:183,203`; `src/lib/marketing.ts:43` vs `rollout.md:102` |
-| 4 | I18N-1 (residue) | High | **The WCAG-AA claim is still not true, and the scan is still blind to it.** Only the focus ring shipped (2.21:1 → 4.66:1 light, and it turned out `boat-mode` and `glare-mode` light were failing too — the roadmap had assumed they passed). The two token darkenings — tinted status-banner text (4.38/4.39:1) and placeholders (3.35:1) — remain deferred pending the colour-guide decision, and `e2e/a11y.spec.ts` still runs `.disableRules(["color-contrast"])` | `e2e/a11y.spec.ts:38-41`, [roadmap §contrast](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision) |
-| 5 | TEST-2 / OPS-2 (residue) | High | No real Postgres anywhere in CI. The `FOR UPDATE` oversell guard cannot execute under PGlite, so the repo's most safety-critical concurrency control is untested; and `drizzle/` migrations still first meet a real server during the production deploy, even though the expand/contract rule and rollback procedure are now written down. The 2026-08-03 work added five migrations to the set that will meet it: two tables, six indexes and three enum types | `src/db/bookings.ts`, `.github/workflows/ci.yml`, `scripts/vercel-build.mjs` |
-| 6 | DATA-H1 (gate) | High | The erasure mechanism is complete — local scrub, Stripe customer deletion, and a tracked obligation for the invoice snapshot no API reaches — but its ADR is deliberately **Proposed, not Accepted**. HD-10/HD-11 (counsel on erasure vs signed evidence, and retention windows) decide when it may point at a real diver. Nothing an agent does moves this | [20260802-diver-data-erasure](../../architecture/decisions/20260802-diver-data-erasure.md) |
-| 7 | DOM-H1 (gate) | Medium-High | Both crew mechanisms now exist — a per-checkpoint count *and* a per-person roll call naming every rostered crew member. HD-7 is therefore no longer "which do we build" but "which does the launch jurisdiction **require**", which is a legal question and is unanswered | [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md) |
+| 1 | PROD-C1 | Critical | Launch critical path unmoved: as of 2026-08-07, day 14 of rollout.md's 30-day list, 4 of its 7 items with no closed gate row (attorney H-01–H-03, Resend sender + H-09 consent, V-01/V-02/V-04, the design-partner one-pager), a 5th (DEMA, H-33) naming no gate row at all. `pnpm gates` (2026-08-07): 36 gate rows — 20 open, 1 deferred, 15 closed; the oldest open — H-03 and H-18 — unmoved for 14 days. `pnpm gates` reports this on demand; nothing it reports is an agent's to close | `pnpm gates`, [rollout.md](../rollout.md), [human-decisions.md](../human-decisions.md) H-31/H-32/H-33 |
+| 2 | PROD-C2 | Critical | Zero recorded customer contact, ever. Personas are synthetic; the 165-task persona review was AI evaluating AI against AI. Untouched by any engineering to date, and untouchable by any | [human-decisions.md](../human-decisions.md) H-31 |
+| 3 | MKT-F10 | High | The offline roll-call claim is **published** against rollout.md's own written embargo ("Until V-02 passes, no marketing claim about offline roll call"), and the 2026-08-03 crew work widened the gap, since per-person crew roll call is online-only. Either the boat day happens or the claim comes down. (MKT-F5, its original sibling finding, closed 2026-08-07: `migration-guides.ts`'s cutover copy no longer claims an install base.) | `src/i18n/locales/en-US/diver.json`'s `marketing.features.diveDay.item5` vs `rollout.md:102`; tracked under V-02 |
+| 4 | I18N-1 (residue) | High | **The WCAG-AA claim is still not true, and the scan is still blind to it.** Only the focus ring shipped (2.21:1 → 4.66:1 light, and it turned out `boat-mode` and `glare-mode` light were failing too — the roadmap had assumed they passed). The two token darkenings — tinted status-banner text (4.38/4.39:1) and placeholders (3.35:1) — remain deferred pending the colour-guide decision, and `e2e/a11y.spec.ts` still runs `.disableRules(["color-contrast"])` | `e2e/a11y.spec.ts:38-41`, [human-decisions.md](../human-decisions.md) H-37 |
+| 5 | ~~TEST-2 / OPS-2~~ | — | **Closed 2026-08-06.** A real-Postgres CI job now applies `drizzle/` from empty and from the previous release's schema and exercises the `FOR UPDATE` oversell guard under genuine contention. See [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md). Its cadence (nightly + path-gated, not per-PR) is [human-decisions.md](../human-decisions.md) H-38 | — |
+| 6 | DATA-H1 (gate) | High | The erasure mechanism is complete — local scrub, Stripe customer deletion, and a tracked obligation for the invoice snapshot no API reaches — but its ADR is deliberately **Proposed, not Accepted**. Counsel on erasure vs. signed evidence and retention windows (H-02) decides when it may point at a real diver; who files Stripe's own deletion request and on what cadence is [human-decisions.md](../human-decisions.md) H-36. Nothing an agent does moves this | [20260802-diver-data-erasure](../../architecture/decisions/20260802-diver-data-erasure.md) |
+| 7 | DOM-H1 (gate) | Medium-High | Both crew mechanisms now exist — a per-checkpoint count *and* a per-person roll call naming every rostered crew member. The question is no longer "which do we build" but "which does the launch jurisdiction **require**", a legal question tracked as [human-decisions.md](../human-decisions.md) H-35 | [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md) |
 
 Sections below hold the full per-lens findings, including everything Medium and Low.
 
-## What is left, by who can close it
+## What is left, dissolved 2026-08-07
 
-Nothing below is an engineering task, and that is not a figure of speech: as of 2026-08-06 this
-document's buildable content is zero. The rows are grouped by **who can close them**, because the
-only thing that distinguishes them now is which human is required. Two already have their code
-written and waiting on nothing else: the two contrast fixes in
-[roadmap §contrast](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision)
-and the real-Postgres CI job in
-[roadmap's enablement backlog](../features/roadmap.md#p1--next). A decision is the whole cost of
-each.
+The three sections this heading used to introduce — "What is left, by who can close it," "What to
+build while those wait," and the "Human decision register" — are gone from this file. Verifying each
+row against the working tree found most of the second list already shipped and unrecorded here (see
+the fifth-pass note above), and everything that remained genuinely open is now tracked at its durable
+home instead of duplicated in an archived assessment:
 
-### Only a real dive shop can supply this
-
-Not a decision the owner can make at a desk — these need a shop, a boat, or a buyer on a phone.
-They are first because they are the only rows on this list that no amount of thinking closes.
-
-1. **(PROD-C2, Critical)** Talk to a dive shop. Any dive shop. The product has never had a recorded
-   conversation with one, so every persona, every workflow assumption, and the 165-task persona
-   review are AI evaluating AI against AI. This is the row that makes every other row's priority a
-   guess.
-2. **(PROD-C1 / HD-2, Critical)** Name the first three pilot shops. The recruiting kit exists —
-   one-pager, call list template, first-call script, V-02 run sheet — and the call list ships with
-   **no rows** on purpose. If shops cannot be named this week, recruiting outranks everything below
-   it, including legal.
-3. **(V-02, and MKT-F10 behind it)** Get on a boat with the offline manifest. It is
-   differentiator #2, it is unproven, and until it passes, [rollout.md](../rollout.md) line 102
-   embargoes the marketing claim that `src/lib/marketing.ts:43` is publishing today. The 2026-08-03
-   crew work made the claim *less* true, not more: a checkpoint now also needs a per-person crew
-   result and crew roll call does not record offline. **Either the boat day happens or the claim
-   comes down** — the repo contradicting itself in public is the one option that is not available
-   (HD-25).
-4. **(PROD-M3)** Decide the DEMA posture. It has no gate row at all, so `pnpm gates` can only print
-   "NO GATE ROW" against a deadline the docs acknowledge and the behaviour ignores.
-
-### Only counsel or a licensed professional can answer this
-
-5. **(H-01–H-03)** Book the attorney: waiver language, medical questions, typed-consent standard,
-   evidence retention. Unmoved for ten days as of the third pass, and every day of that is a day
-   the pilot cannot start.
-6. **(DATA-H1 gate, HD-10/HD-11)** Erasure vs signed evidence, and the retention numbers. The
-   mechanism is complete — local scrub, Stripe customer deletion, a tracked obligation for the
-   invoice snapshot no API reaches — and its ADR sits at **Proposed** on purpose. Its retention half
-   is now one edit: the numbers live in `RETENTION_DAYS` (`src/lib/retention.ts`). A second question
-   rides along: **who files Stripe's data-deletion request, and on what cadence**, since that
-   obligation closes only on a human attestation and is never auto-retried.
-7. **(DOM-H1, HD-7, safety)** Which crew head count does the launch jurisdiction require — the
-   per-checkpoint count, the per-person roll call, or both? **Both mechanisms ship.** The real
-   question underneath is whether a wet boat should be made to do both.
-8. **(DOM-M6 residue, H-27–H-30, safety)** The booking-time cert gate shipped and its mandatory
-   `dive-domain-expert` review found it **inverted relative to risk**: it refuses the carded regular
-   the shop already knows, and never refuses the un-carded stranger likeliest to buy the wrong boat.
-   The trip's requirement now sits above the public booking form, which removes most of the harm.
-   What is left is the attestation half, and it is four decisions, not a task.
-9. **(HD-6 residual)** The Rescue Diver scenario-supervision figure, which nothing currently
-   enforces. **(DOM-M2 residue)** Whether the cited PADI 8/+2/12 entry-level figure should apply to
-   a non-PADI Open Water course — an SSI Open Water session with twenty students is capped only by
-   the boat today.
-
-### Only the owner can decide or spend
-
-10. **(HD-17)** The colour-guide decision. Still the highest-leverage two-day decision in the
-    register: it blocks the two remaining WCAG contrast fixes (light-mode `--success` at 4.38:1,
-    `--warning` at 4.39:1, placeholders at 3.35:1), and until they land `e2e/a11y.spec.ts` keeps
-    running with `color-contrast` disabled and **no claim of WCAG AA conformance in this repo is
-    true**. The code is written; only the palette is not chosen.
-11. **(HD-19)** Real-Postgres CI spend: nightly, per-PR on `src/db/**`, or not at all. Behind it
-    sits TEST-2/OPS-2 — the `FOR UPDATE` oversell guard is dead code under test, and `drizzle/`
-    migrations still first meet a real server during a production deploy. The migration set grew by
-    five on 2026-08-03.
-12. **(OPS-4 residue, owner)** Stand up the external uptime monitor on `/api/health` and the public
-    schedule, plus the status page. The mailbox half closed 2026-08-06 and every alert path now
-    terminates in a real inbox — but every one of those paths runs *inside* DiveDay's own
-    infrastructure, so the outage that takes the app down takes the alerting with it. Nothing
-    watches from outside.
-13. **(SEC-D1/OPS-7)** Provision Upstash so sign-in/password-reset rate limits are global rather
-    than per-instance. The two engineering halves beside it are **buildable now** and listed below.
-14. **(OPS-9, HD-23)** Cost guardrails cover the smallest bill (AWS). Vercel, Neon, and Resend —
-    the last with a hard 1,000/month free cap and no metering — have none. Same row: name the second
-    human, or record solo-operator risk as accepted.
-15. **(HD-5)** An explicit engineering scope rule until Phase 0 exits. The evidence got stronger
-    again on 2026-08-06: this review's entire engineering backlog is now closed, four days after a
-    pass that closed the rest of it, while the gate rows have not moved. Writing the rule down beats
-    arguing it per-PR.
-16. **(HD-21, HD-22, HD-20, HD-8, HD-14, HD-15, HD-16, HD-25)** The remaining register: the lib/db
-    layer contract, whether feature modules get a second adopter or get shelved, the pre-release-
-    stack GA migration budget, whether DiveDay is the nitrox fill log of record, whether to surface
-    the payment-history trail now that it is written, abandoned-checkout seat holds, platform
-    economics, and the remaining marketing calls. Each is a paragraph of owner thought, not a
-    sprint.
-
-### Watch, do not act
-
-17. **(TEST-3)** The offline storage-eviction e2e flake is **not proven fixed.** Its investigation
-    removed a real product bug — the shell asserted "nothing saved on this phone" before it had
-    opened the store, and the service worker replayed one cached document per offline reload, so the
-    page became correct only through React's hydration-error recovery — and that timing dependence
-    is a plausible cause. It was never reproduced. Treat a recurrence as unexplained, not as new.
-
-## What to build while those wait
-
-**Read this section as a holding pattern, not a plan.** Nothing in it is on the launch critical
-path, none of it closes a row above, and picking it up instead of making a phone call is theme 1
-happening again. It exists so that engineering time which is going to be spent anyway lands on
-something a real shop would eventually have hit, rather than on new surface area the sole human then
-has to stand behind. Ordered by how much a first pilot would regret its absence.
-
-1. **Stop exporting live Stripe invoice pages (new, from this branch's security review).**
-   `orders.csv` carries `hosted_invoice_url` and `invoice_pdf_url` — unauthenticated, long-lived,
-   publicly reachable Stripe-hosted pages rendering a diver's name, email, address and line items.
-   The codebase already knows they are sensitive: `anonymize.ts` nulls both on erasure, with exactly
-   that reasoning. So a leaked export bundle is not only data at rest, it is a folder of live links
-   to named divers' billing pages, and the README's "Not included" list says nothing about it. This
-   predates the 2026-08-06 export work and was found while reviewing it. `stripe_invoice_id` alone
-   is enough to reconcile against the shop's own Stripe account, so dropping the two URL columns
-   costs a leaving shop nothing — but it *is* a change to a published export contract, so it wants
-   a deliberate decision rather than a quiet edit. Top of this list because it is the only row here
-   with a real-world downside if left.
-2. **Rewrite `CUTOVER_SECTION` (MKT-F5).** `src/lib/migration-guides.ts:183,203` tells buyers "here's
-   how shops actually make the switch" and "most shops review, fix a handful of rows, and import for
-   real in one sitting" — an install base that does not exist. HD-25 asks whether that *counts* as a
-   claims-policy violation; the rewrite does not need the ruling, because the sentences are
-   checkably false either way. Advice and shipped importer behaviour only. This is the single
-   highest-value buildable item in the document and it is a copy edit.
-3. **Give `checkRateLimit`'s fail-open catch a voice (SEC-D1/OPS-7).** `src/lib/rate-limit.ts:242`
-   is a bare `catch { allowed: true }`: a store outage silently disables sign-in rate limiting with
-   zero signal. Log it and capture to Sentry. Independent of the Upstash spend decision, and while
-   you are there, fix the runbook's stale 30/hour figures (the code says 60).
-4. **Close the money-path Lows (PAY-L2, PAY-L3).** A reused pending checkout does not re-verify the
-   current price or deposit policy, so a price change between attempt and completion is charged at
-   the stale figure; and `refundOrder` relies on Stripe rejecting an over-refund rather than taking
-   a local lock. Both are small, both are the class of bug a first pilot finds with real money.
-5. **Harden the migration path short of a real-Postgres job (DATA-L5).** Migrations run inside the
-   Vercel build with no destructive-DDL guard. A guard that refuses a `DROP`/`ALTER … TYPE` without
-   an explicit acknowledgement is cheap, needs no CI spend, and is the half of HD-19's problem that
-   does not wait on HD-19.
-6. **Pin Stripe contract fixtures to an API version (TEST-M2).** Stripe is tested only to the seam —
-   injected fetchers and seeded fakes — so a provider-side shape change is invisible until
-   production. Fixtures recorded against a named version turn that into a test failure.
-7. **Index the ILIKE search arms (DATA-L6).** Orders and courses filter with `ILIKE` and no trigram
-   index. Invisible on a demo shop, linear on a real one.
-8. **Fix the jsonb parallel arrays on `courses.imageUrls`/`imageAlts` (DATA-L4).** Two arrays whose
-   correspondence is positional and unenforced; one row's drift silently mis-captions a course page.
-9. **Close the i18n/a11y Lows (I18N-L1–L3).** A diver whose language the product does not carry gets
-   no signal at all (there is no switcher, by design); trip times are unlabelled with a timezone for
-   a cross-timezone booker; the keyboard/a11y scan's breadth still lags the "every important
-   surface" bar even at sixteen surfaces.
-10. **Add the agencies the enum omits (DOM-L1).** CMAS, RAID and GUE are absent, which quietly means
-   a diver holding one cannot be recorded honestly. Flagged as a separate backlog item by
-   [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md);
-   confirm the list with the domain reviewer before widening a safety-adjacent enum.
-11. **Document the capability-URL residual in Vercel access logs (OPS-L1).** Redaction covers
-    Sentry, Analytics and Speed Insights; the platform's own access logs still retain the raw URLs,
-    and that is currently written down nowhere.
-12. **Give the offline shell a tenant-identity endpoint of its own (new, same review).** It learns
-    one string — which shop this browser is signed in as, for the cross-shop purge — by calling
-    `GET /api/offline-manifests/upcoming`, which answers with the shop's entire 48-hour roster:
-    diver names, emergency contacts, readiness blockers. The 2026-08-06 work deduplicated the
-    request to one per round, but the shape is still wrong, and the route sets no `Cache-Control:
-    no-store`. A `{ shop: { slug } }` response (or `?identityOnly=1`) is a small change with a real
-    data-minimization win on the one surface that runs on a shared boat tablet.
-
-Two more are already sequenced elsewhere and should be planned from there, not from here: the
-remaining prose invariants (ARCH-2/ARCH-4/I18N-4 — theme 2) in
-[roadmap.md's P2 backlog](../features/roadmap.md#p2--when-parallelism-or-scale-proves-the-need),
-and the per-page `<Suspense>` restructure behind ARCH-7's 46 undeletable `instant = false`
-declarations, which is a safety-gated per-page job rather than a sweep
-([20260803-instant-opt-out-placement](../../architecture/decisions/20260803-instant-opt-out-placement.md)).
-
-
-## Human decision register
-
-Grouped; each blocks the listed action items. The register in
-[human-decisions.md](../human-decisions.md) is the durable home for whichever of these the owner
-accepts. HD numbers are stable and are never reused: HD-3, HD-4, HD-9, HD-12, HD-13 and HD-18 have
-been answered and are **removed** rather than renumbered, and HD-6 survives only as the one half of
-its ask that is still outstanding. HD-7 and HD-11 survive with their *asks* rewritten: the
-engineering they were blocking has shipped, so what is left in each is only the decision. See H-25, H-26, the H-08 and H-06 amendments, and
-[20260802-visual-diff-pr-comment](../../architecture/decisions/20260802-visual-diff-pr-comment.md).
-
-**Launch and business (the sharpest questions first):**
-- **HD-1.** Have the three long-lead clocks started — attorney (H-01–H-03), Stripe platform
-  application, AWS SNS SMS compliance, entity (H-18)? If not, what starts them this week, and which
-  Phase 1 slip is being accepted in writing? Day 10 of 30, four of seven items unstarted.
-- **HD-2.** Who are the first three pilot shops, *by name*? The recruiting kit exists now — the
-  one-pager, the call list template, the first-call script, the V-02 run sheet — and the call list
-  deliberately ships with **no rows**. If shops can't be named today, recruiting outranks everything
-  above, including legal.
-- **HD-5.** An explicit engineering scope rule until Phase 0 exits. The review's own evidence got
-  stronger again: the response to a review that said "stop building" was 144 files, and the response
-  to *that* was 82 more. It did close the review's entire engineering backlog — which is the
-  strongest version of both arguments, and exactly why the rule needs writing down rather than
-  arguing per-PR.
-
-**Safety and domain (need professional/legal input):**
-- **HD-6 (residual).** The DSD figure is settled (H-08, 2026-08-02). Still outstanding from the same
-  ask: the **Rescue Diver scenario-supervision figure**, which nothing currently enforces.
-- **HD-7 (open).** Crew-in-roll-call: does the launch jurisdiction require the head count to cover
-  crew *per person*, or does the per-checkpoint count satisfy it? **Both mechanisms now ship**, so
-  this is no longer a build question — it is whether a wet boat should be made to do both. → *Only counsel or a licensed professional can answer this*, row 7.
-- **HD-8 (H-11 amendment).** Is DiveDay the nitrox fill log of record or explicitly not? The current
-  H-11 wording overstates the product. → the human decision register below.
-- **HD-10 (H-17 revisit, with counsel).** Imported waiver acceptance currently trusts a prior shop's
-  medical clearance sight-unseen; present to the H-01 attorney as a package with the H-20/H-23
-  verified-on-import choices. Also gates the erasure row (*Only counsel…*, row 6).
-
-**Data, money, and legal posture:**
-- **HD-11.** Erasure vs signed evidence: the mechanism is built — local scrub, Stripe customer
-  deletion, and a tracked obligation for the invoice snapshot no API reaches — and its ADR sits at
-  **Proposed** on purpose. Anonymize-and-keep (what shipped), hard-delete after a liability window,
-  or refuse — and the retention windows for webhook/notification/token trails. A second question
-  arrived with the obligation ledger: **who files Stripe's data-deletion request, and on what
-  cadence**, since that obligation closes only on a human attestation and is never auto-retried.
-  Blocks the erasure row (*Only counsel…*, row 6). **Its retention half narrowed 2026-08-03:** the pruning *mechanism* now ships, so all
-  that is left is the numbers. They live in one place — `RETENTION_DAYS` in `src/lib/retention.ts`
-  ([20260803-append-only-retention](../../architecture/decisions/20260803-append-only-retention.md)) —
-  and changing one is a one-line edit, not a project. The `stripe_webhook_events` window is the one
-  with a floor rather than a preference: those rows are the chronological evidence
-  `hasNewerAccountUpdate` reads, so a test fails if it is shortened toward Stripe's own retry
-  horizon.
-- **HD-14 (rewritten).** Payment history ledger: **the local append-only trail is built** —
-  `booking_payment_events`, written inside `setBookingPayment` in the same transaction as every
-  mutation ([20260803-booking-payment-events](../../architecture/decisions/20260803-booking-payment-events.md)).
-  So the question is no longer whether to build it but whether to keep it and whether to surface it:
-  nothing reads the trail yet, deliberately, because history cannot be added retroactively but a
-  screen can.
-- **HD-15.** Abandoned checkout = seats held forever: confirm book-now-pay-later, or define an
-  auto-release window.
-- **HD-16.** Platform economics: confirm monetization stays subscription-only (no `application_fee`
-  mechanics exist; retrofitting touches every provider seam).
-
-**Process and platform:**
-- **HD-17.** The colour-guide decision blocking the two remaining WCAG contrast fixes — still the
-  highest-leverage two-day decision in the register, and the reason the repo cannot claim WCAG AA.
-  → *Only the owner can decide or spend*, row 10.
-- **HD-19.** Real-Postgres CI spend: nightly, per-PR on `src/db/**`, or not at all. → *Only the owner can decide or spend*, row 11. The
-  migration set it would exercise grew on 2026-08-03 by five migrations — two tables, six indexes
-  and three enum types.
-- **HD-20.** GA migration budget for the pre-release stack (Next preview, next-auth beta, drizzle
-  rc, TS 7): one scheduled hardening sprint or opportunistic — and is pre-release-major the default
-  posture for a SaaS taking real payments? → the human decision register below.
-- **HD-21.** The lib/db layer contract: bless the status quo (one layer, pure/IO naming) and fix
-  overview.md's "framework-free" claim, or enforce lib→db type-only imports. Either; the ambiguity
-  is the only bad option.
-- **HD-22.** Feature modules: name the second adopter (reviews; trips series/crew) or shelve the
-  pattern.
-- **HD-23.** Who is the second human? Every alert path terminates at one person — in a real mailbox
-  since 2026-08-06, but still one person, and still nothing watching from outside. Name a backup or
-  record solo-operator risk as accepted. Vercel Pro (hourly crons, SSE limits, spend caps) approved when real shops onboard?
-  Resend→SES cutover trigger decided before it's needed mid-incident?
-- **HD-24.** Sign-in rate limiting fail-open vs fail-closed on store outage (documented tradeoff,
-  re-confirm for production). Its offline-manifest half is **narrower since 2026-08-06**: the
-  cross-shop purge now also runs on offline-shell load, so the residency window on a shared device
-  is the gap between shops rather than the gap until someone opens a `/shop/**` page. The tradeoff
-  itself is unchanged — a device that never comes online keeps what it holds, because a purge needs
-  a server-verified tenant and guessing one would delete a captain's working copy.
-- **HD-25.** Remaining marketing calls: renaming "Try the staff app" (MKT-F4); whether "most shops…"
-  counts as a claims-policy violation (MKT-F5); **whether the published offline roll-call claim or
-  the V-02 embargo gives way** (MKT-F10); Twitter-card policy.
+- **The full human-decision register, including every HD item this review ever raised**, is
+  [human-decisions.md](../human-decisions.md)'s Decision register, rows **H-31 through H-44**. Each
+  new row names its originating finding (PROD-C1, PROD-C2, PROD-M3, HD-6/DOM-M2, HD-7, HD-11, HD-17,
+  HD-19, HD-20, HD-21, HD-23, HD-5, HD-25, and the live Stripe-invoice-URL export finding) so the
+  provenance is one click from the live row.
+- **The two contrast fixes** (I18N-1 residue) are written and waiting in
+  [roadmap §contrast](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
+  gated on H-37.
+- **The real-Postgres CI job** shipped 2026-08-06 —
+  [roadmap's enablement backlog](../features/roadmap.md#p1--next) — with its cadence question as
+  H-38.
+- **DOM-L1's agency free-text companion field**, the one item from the old "what to build" list that
+  is still open and still buildable, is a bullet in
+  [roadmap's smaller follow-ons](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs).
+- **Everything else the old "what to build" list named** — the rate-limit fail-open log voice
+  (SEC-D1/OPS-7), the two payment-quote/refund-lock findings (PAY-L2/L3), the destructive-migration
+  guard (DATA-L5), the Stripe fixture version pin (TEST-M2), the trigram indexes (DATA-L6), the
+  `courses` gallery-photo jsonb fix (DATA-L4), the i18n/a11y lows (I18N-L1–L3), the cost-guardrail
+  registry (OPS-9), the capability-URL access-log writeup (OPS-L1), and the offline shell's
+  tenant-identity endpoint — **shipped 2026-08-06** and is recorded in
+  [shipped.md](../shipped.md#the-2026-08-02-reviews-data-i18n-and-telemetry-residue-delivered-2026-08-06)
+  and
+  [shipped.md](../shipped.md#the-2026-08-02-reviews-operations-testing-and-payments-residue-delivered-2026-08-06).
 
 ---
 
@@ -471,14 +283,18 @@ unusual standard; 130+ ADRs with honest supersession records, including one deli
 - **ARCH-1 (Medium).** The documented layer model doesn't match reality: overview.md calls `src/lib`
   "framework-free" but `lib/auth.ts` imports next-auth and `getDb`; `src/db` imports `src/lib` in ~80
   files; the lib↔db direction is unchecked either way; `src/i18n` floats under no layer rule at all.
-- **ARCH-2 (Medium).** `check-architecture.mjs`'s `importPattern` misses bare side-effect imports
-  (`import "@/app/x"`).
+- **ARCH-2 (Medium). Closed 2026-08-04.** `check-architecture.mjs`'s `importPattern` now sees bare
+  side-effect imports (`import "@/app/x"`), holds `src/i18n`/`src/components` to the layer direction,
+  and ratchets pre-existing debt in `scripts/architecture-baseline.json`.
 - **ARCH-4 (Medium).** The entire critical path (framework, auth, ORM, compiler) is pre-GA
   simultaneously (Next 16.3 preview, next-auth 5 beta, drizzle 1.0-rc, TS 7); ADR-justified, but the
   "move promptly at GA" triggers exist only as prose. reg-suit 0.14.x is a low-activity-upstream risk
-  (acknowledged).
-- **ARCH-6 (Low).** Feature-module pattern has one adopter and every post-ADR feature went flat; one
-  more all-flat month and it's decorative.
+  (acknowledged). → [human-decisions.md](../human-decisions.md) H-39.
+- **ARCH-6 (Low). Answered 2026-08-04.** `src/features/backup-export/` shipped as a genuine second
+  adopter of the feature-module pattern (its own `index.ts`/README, per
+  [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)),
+  alongside `calendar-sync`. HD-22's "name the second adopter or shelve the pattern" needed no new
+  decision row.
 
 ## 3. Security & privacy
 
@@ -521,7 +337,7 @@ optimism; minors' ages purged from crew phones.
   member their own subject, with `missing_crew`/`crew_uncounted` reaching Today and the schedule
   board on the same terms a diver's gap does. Nothing engineering-side is left. What is left is
   **HD-7** — whether the launch jurisdiction requires per-person coverage, and whether requiring
-  both mechanisms is more taps than a wet boat will take. → *Only counsel or a licensed professional can answer this*, row 7.
+  both mechanisms is more taps than a wet boat will take. → [human-decisions.md](../human-decisions.md) H-35.
 - **DOM-H1 (recorded residues).** Deliberate, and stated in
   [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md)
   and [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md)
@@ -538,7 +354,7 @@ optimism; minors' ages purged from crew phones.
 - **DOM-M2 (residue, Medium).** The intro/DSD cap is agency-agnostic and the glossary documents the
   carve-out, so the SSI-Try-Scuba hole is closed. The cited PADI 8/+2/12 entry-level figure is still
   PADI-only by deliberate choice (`course-ratios.ts:167`), so a non-PADI Open Water session carries
-  no ratio cap. Recorded, not drifted — but still a gap. → *Only counsel or a licensed professional can answer this*, row 9.
+  no ratio cap. Recorded, not drifted — but still a gap. → [human-decisions.md](../human-decisions.md) H-34.
 - **DOM-M5 (Medium, addressed 2026-08-05).** The former "RSTC" questionnaire was an 8-question
   paraphrase of the 10-box form and referred every yes. The waiver now models the published
   2026-01-01 UHMS/DMSC form, including conditional Boxes A-G and its direct-referral questions;
@@ -572,7 +388,7 @@ optimism; minors' ages purged from crew phones.
   a mirror of the enum; BSAC was deliberately **not** added to it. The PADI-only ratio scope is
   itself unchanged and still recorded — widening the enum widens who that applies to without
   changing the rule.
-  → *What to build while those wait*, row 10. (DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.)
+  The companion field is a buildable bullet in [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs); DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.
 
 ## 5. Data model & persistence
 
@@ -591,7 +407,7 @@ they serve; real pagination; consistent soft-delete/append-only patterns.
   ([20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md)).
   `course_inquiries` gained a `person_id` resolved at capture time by **exact email match** against
   a live diver of the shop, never from a phone and never back-filled. What survives is the human
-  gate: the ADR is still **Proposed** pending HD-10/HD-11. → *Only counsel or a licensed professional can answer this*, row 6.
+  gate: the ADR is still **Proposed** pending H-02 (retention) and [human-decisions.md](../human-decisions.md) H-36 (who files Stripe's own deletion request).
 - **DATA-H1 (recorded residues).** The invoice-snapshot obligation has **no API behind it and is
   never auto-retried** — it closes only when an owner attests they filed Stripe's data-deletion
   request, so an erasure with an undischarged obligation is genuinely incomplete and any promise
@@ -620,7 +436,7 @@ they serve; real pagination; consistent soft-delete/append-only patterns.
   (`default('usd')` on money columns — DATA-L3 — is gone, and **DATA-A10 closed 2026-08-06**: the
   bundle gained seven files, and the two families that stayed out — `day_closeouts` and
   `processor_erasure_obligations` — now say why in the bundle README and on the export page rather
-  than only in a test comment.) → *What to build while those wait*, rows 5, 7 and 8.
+  than only in a test comment.)
 
 ## 6. Payments & money
 
@@ -652,9 +468,10 @@ both-halves clock freeze, external HTTP blocked); `retries: 0` with root-caused 
 ~2,000 lines of guardrail scripts with deliberately no prose-triggerable escape hatch.
 
 **Findings.**
-- **TEST-2 (High).** The `FOR UPDATE` oversell guard is dead code under test and no real Postgres
-  runs anywhere in CI — the migration-apply path and the concurrency guard are both unexercised.
-  → *Only the owner can decide or spend*, row 11.
+- **TEST-2 (High). Closed 2026-08-06.** A real-Postgres CI job now exercises both the migration-apply
+  path and the `FOR UPDATE` oversell guard under genuine contention. See
+  [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md); its
+  cadence is [human-decisions.md](../human-decisions.md) H-38.
 - **TEST-3 (Medium, new).** The offline storage-eviction e2e flake is unproven. Its investigation
   removed a real product bug (the shell asserted an empty phone before reading the store; every
   offline reload completed only via React hydration-error recovery), which is a plausible cause —
@@ -690,7 +507,7 @@ both-halves clock freeze, external HTTP blocked); `retries: 0` with root-caused 
   mega-tests all closed 2026-08-03: the scan covers sixteen surfaces with a keyboard-only traversal
   beside it, one booking flow renders under `Accept-Language: es`, and `visual.spec.ts` is 162
   per-surface tests rather than 27 tours, so one diff no longer blinds its siblings. `color-contrast`
-  is still excluded — see *Only the owner can decide or spend*, row 10.)
+  is still excluded — see [human-decisions.md](../human-decisions.md) H-37.)
 
 ## 8. i18n, UX & accessibility
 
@@ -706,9 +523,9 @@ engineering (correct focus trap, live regions, boat/glare modes, 44px floor stru
   `bg-success/10` computes 4.38:1 and `--warning` 4.39:1 against a 4.5:1 requirement, and
   placeholders sit at 3.35:1 on white / 3.07:1 on `--surface-sunken`. The axe scan still disables
   `color-contrast`, so CI cannot see either. **No claim of WCAG AA conformance is true today.**
-  Blocked only on HD-17. → *Only the owner can decide or spend*, row 10.
-- **I18N-4 (Medium).** ADR-0004 has no automated enforcement (currently held by review alone;
-  spot-check clean).
+  Blocked only on H-37 in [human-decisions.md](../human-decisions.md).
+- **I18N-4 (Medium). Closed 2026-08-04.** `pnpm check:tokens` now fails raw hex and palette-scale
+  classes, ratcheted in `scripts/tokens-baseline.json` — ADR-0004 is enforced, not just reviewed.
 - **I18N-L1..L3 (Low). Closed 2026-08-06.** The negotiation now answers a third question about the
   same header — `unsupportedLanguage()` reports the highest-quality `Accept-Language` tag no bundle
   exists for, distinct from both "what do I render" and "what may I remember" — and the public shop
@@ -734,15 +551,18 @@ pretense; onboard preserves fields on bounce and signs the owner straight in; SE
 complete.
 
 **Findings.**
-- **MKT-F5 (High).** "most shops review… and import in one sitting" and "here's how shops actually
-  make the switch" fabricate an install base — a claims-policy brush with zero customers.
-  → the buildable list below.
-- **MKT-F10 (High, new).** `src/lib/marketing.ts:43` publishes "Save the manifest to a phone and roll
-  call keeps working with no signal" while [rollout.md](../rollout.md) line 102 states "Until V-02
-  passes, no marketing claim about offline roll call". Either the embargo is stale or the claim
+- **MKT-F5 (High). Closed 2026-08-07.** "most shops review… and import in one sitting" and "here's
+  how shops actually make the switch" had fabricated an install base — a claims-policy brush with
+  zero customers. `migration-guides.ts`'s CUTOVER_SECTION now reads as advice and shipped importer
+  behavior only (`src/i18n/locales/en-US/diver.json`'s `marketing.guides.shared.cutover.*`); no
+  install-base language remains in any locale.
+- **MKT-F10 (High).** `marketing.features.diveDay.item5` (`src/i18n/locales/*/diver.json`, resolved
+  through `src/lib/marketing.ts`'s key registry) still publishes "Save the manifest to a phone and
+  roll call keeps working with no signal" while [rollout.md](../rollout.md) line 102 states "Until
+  V-02 passes, no marketing claim about offline roll call". Either the embargo is stale or the claim
   shipped early; the repo currently contradicts itself in public — and the 2026-08-03 crew work
   widened the gap, since a checkpoint now also needs a per-person crew result and crew roll call is
-  online-only. → *Only a real dive shop can supply this*, row 3, and HD-25.
+  online-only. → tracked under V-02 in [human-decisions.md](../human-decisions.md).
 
 ## 10. Operations & production readiness
 
@@ -760,7 +580,7 @@ migrations, and incident response; fail-closed cron auth.
   watches from outside.** Every path above runs inside DiveDay's own infrastructure, so the outage
   that takes the app down takes the alerting with it; the external uptime monitor on `/api/health`
   and the public schedule, and the status page beside them, are still unprovisioned.
-  → *Only the owner can decide or spend*, row 12.
+  → [human-decisions.md](../human-decisions.md) H-04 (external monitor) and H-41 (second human).
 - **OPS-2 (residue, High). Closed 2026-08-06.** A `postgres:16` service-container job now applies
   `drizzle/` from empty and from the previous release's schema, and races two real connections for
   the last seat; the `FOR UPDATE` guard fails the job when removed. Gated on `src/db/**`/`drizzle/**`
@@ -899,3 +719,18 @@ findings still sitting in the lens reports, which were never promoted into the q
 explicitly labelled a holding pattern: it exists because theme 1 predicts the engineering will
 happen anyway, and it is better aimed at findings a real shop would eventually hit than at new
 surface area.
+
+**Reconciliation, 2026-08-07 (fifth pass) — dissolved and archived.** No new engineering shipped
+against this review since the fourth pass; what the fifth pass found instead was that the holding
+pattern the fourth pass assembled had already emptied out the same day it was written; `shipped.md`
+gained two more sections dated 2026-08-06 that this document never cross-checked against. Verifying
+every remaining claim line-by-line against the working tree closed ten of the twelve "what to build"
+items, the engineering halves of three "who can close it" rows, MKT-F5, ARCH-2, I18N-4, and ARCH-6 —
+each corrected in place above rather than silently deleted, so the gap between what this document
+said and what the code did stays visible rather than vanishing into an edit. What survived — two
+human-external Criticals, one live claims-policy violation gated on V-02, the full human-decision
+register, and two genuinely still-open small items — is dissolved into
+[human-decisions.md](../human-decisions.md) (H-31 through H-44) and
+[roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs) (DOM-L1's companion
+field). This document is archived rather than reconciled again: everything it could still say has a
+more current home now.

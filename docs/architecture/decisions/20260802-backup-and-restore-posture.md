@@ -9,7 +9,7 @@ Production data lives in one Neon Postgres project (`aws-us-east-1`, see
 [20260718-vercel-neon-hosting](20260718-vercel-neon-hosting.md)) and one Vercel Blob store. Nothing
 about backup or recovery had ever been written down: no stated point-in-time-recovery window, no
 copy of the data anywhere DiveDay controls, no restore ever rehearsed. That is the OPS-1 finding in
-[the 2026-08-02 review](../../product/assessments/comprehensive-review-20260802.md), and it is worse
+[the 2026-08-02 review](../../product/archive/comprehensive-review-20260802.md), and it is worse
 than a generic gap because `waiver_records` is legal evidence whose working retention default is
 "indefinite" ([H-02](../../product/human-decisions.md)): the one dataset we are least able to
 re-create is the one with the longest obligation attached to it.
