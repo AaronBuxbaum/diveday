@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { ScrollToHash } from "@/components/ScrollToHash";
@@ -233,7 +234,9 @@ export function RosterSection({
   const filterChipHref = (filter: RosterFilter) =>
     `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
   const filterChipClass = (active: boolean) =>
-    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+    // min-h-11: these chips are this tab's primary navigation, tapped
+    // one-handed on a moving boat — the 44px dock-test floor applies.
+    `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
       active
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
@@ -364,90 +367,98 @@ export function RosterSection({
             // training, which an instructor may well have already planned around
             // (H-08). It sits apart from the blocker list for that reason.
             const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
-            return (
-              <li
-                key={booking.id}
-                // Today's queue deep-links straight to the diver it is about;
-                // scroll-mt keeps the row clear of the sticky shop header.
-                id={`booking-${booking.id}`}
-                className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    {/* Joins the bulk selection above via shared client state
+            // A settled diver — ready, waiver signed, contact on file, nothing
+            // advisory — has no work left on this tab, so the card collapses to
+            // its header line and the detail waits behind a disclosure: detail
+            // at the moment it's needed, not on every row (design principle 9).
+            // Any open question keeps the whole card expanded.
+            const settled =
+              readiness?.status === "ready" &&
+              waiverStatus === "complete" &&
+              !identityUnconfirmed &&
+              hasEmergencyContact &&
+              depth?.status !== "exceeds";
+            const headerLeft = (
+              <div className="flex min-w-0 items-start gap-3">
+                {/* Joins the bulk selection above via shared client state
                         (`BulkWaiverSelectionProvider`), not form association —
                         only sendable divers get one. */}
-                    {waiverControl.action ? (
-                      // A bare checkbox has a ~16px hit area — too small for wet or gloved
-                      // fingers (design/principles.md #2). The wrapping <label> covers only
-                      // the checkbox itself (the diver name below is a separate, sibling
-                      // <Link>, untouched by this), so a tap anywhere in the 44px box
-                      // forwards to the input — a plain wrapper <span> would not.
-                      <BulkWaiverCheckbox
-                        bookingId={booking.id}
-                        ariaLabel={t("trips.roster.selectToSendWaiverAriaLabel", {
-                          name: person.fullName,
-                        })}
-                        labelClassName="flex min-h-11 min-w-11 shrink-0 items-center justify-center"
-                        className="size-4 shrink-0"
-                      />
-                    ) : null}
-                    <div className="min-w-0">
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${person.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {person.fullName}
-                      </Link>
-                      <p className="text-sm text-muted">
-                        {person.email ?? t("trips.roster.noEmailOnFile")}
-                      </p>
-                      {age !== null ? (
-                        <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-                          <span className="tabular-nums">
-                            {t("trips.roster.ageYears", { age })}
-                          </span>
-                          {/* Text, never colour alone — this is read in sunlight
+                {waiverControl.action ? (
+                  // A bare checkbox has a ~16px hit area — too small for wet or gloved
+                  // fingers (design/principles.md #2). The wrapping <label> covers only
+                  // the checkbox itself (the diver name below is a separate, sibling
+                  // <Link>, untouched by this), so a tap anywhere in the 44px box
+                  // forwards to the input — a plain wrapper <span> would not.
+                  <BulkWaiverCheckbox
+                    bookingId={booking.id}
+                    ariaLabel={t("trips.roster.selectToSendWaiverAriaLabel", {
+                      name: person.fullName,
+                    })}
+                    labelClassName="flex min-h-11 min-w-11 shrink-0 items-center justify-center"
+                    className="size-4 shrink-0"
+                  />
+                ) : null}
+                <div className="min-w-0">
+                  {/* A real target, not a 21px text line: inside the collapsed
+                      row's <summary> this link sits against another clickable
+                      surface, so it needs its own clear hit area (WCAG 2.5.8's
+                      24px floor; the dock test asks for 44). */}
+                  <Link
+                    href={`/shop/${shopSlug}/divers/${person.id}`}
+                    className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+                  >
+                    {person.fullName}
+                  </Link>
+                  <p className="text-sm text-muted">
+                    {person.email ?? t("trips.roster.noEmailOnFile")}
+                  </p>
+                  {age !== null ? (
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+                      <span className="tabular-nums">{t("trips.roster.ageYears", { age })}</span>
+                      {/* Text, never colour alone — this is read in sunlight
                               on a moving boat (design/principles.md #2). */}
-                          {minor ? (
-                            <Badge tone="warning" size="sm">
-                              {t("trips.roster.minorBadge")}
-                            </Badge>
-                          ) : null}
-                          {/* The cake carries the meaning; the words are just
-                              when. `sr-only` keeps that legible to a screen
-                              reader, which would otherwise hear "in 2d" alone. */}
-                          {birthday ? (
-                            <Badge tone="primary" size="sm">
-                              <span aria-hidden="true">🎂</span>
-                              <span className="sr-only">{t("shared.birthday.label")}</span>
-                              <span className="ms-1">{birthdayText(t, birthday)}</span>
-                            </Badge>
-                          ) : null}
-                        </p>
+                      {minor ? (
+                        <Badge tone="warning" size="sm">
+                          {t("trips.roster.minorBadge")}
+                        </Badge>
                       ) : null}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    {/* Arrived at the counter — display only, the same pill the
-                        manifest shows. The roster carried neither checked-in
-                        nor boarded state, so the one screen staff work a trip
-                        from was the one screen that couldn't tell them who had
-                        already walked in. It reads existing booking state and
-                        gates nothing. */}
-                    {booking.status === "checked_in" ? (
-                      <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
-                    ) : null}
-                    {/* One readiness vocabulary, one tone per state
+                      {/* The cake carries the meaning; the words are just
+                              when. `sr-only` keeps that legible to a screen
+                              reader, which would otherwise hear "in 2 days" alone. */}
+                      {birthday ? (
+                        <Badge tone="primary" size="sm">
+                          <span aria-hidden="true">🎂</span>
+                          <span className="sr-only">{t("shared.birthday.label")}</span>
+                          <span className="ms-1">{birthdayText(t, birthday)}</span>
+                        </Badge>
+                      ) : null}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            );
+            // Arrived at the counter — display only, the same pill the
+            // manifest shows. It reads existing booking state and gates
+            // nothing.
+            const checkedInPill =
+              booking.status === "checked_in" ? (
+                <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
+              ) : null;
+            const headerBadges = (
+              <>
+                {checkedInPill}
+                {/* One readiness vocabulary, one tone per state
                         (src/i18n/readiness-labels.ts): this badge said "Needs
                         attention" about the diver the manifest called "Blocked". */}
-                    {readiness ? (
-                      <Badge tone={readinessStatusTone(readiness.status)}>
-                        {readinessStatusText(t, readiness.status)}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </div>
+                {readiness ? (
+                  <Badge tone={readinessStatusTone(readiness.status)}>
+                    {readinessStatusText(t, readiness.status)}
+                  </Badge>
+                ) : null}
+              </>
+            );
+            const detail = (
+              <>
                 {booking.groupPreference ? (
                   <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
                     <span className="font-semibold text-foreground">
@@ -591,7 +602,7 @@ export function RosterSection({
                         {currentWaiver ? (
                           <Link
                             href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
-                            className="mt-2 inline-block text-xs font-semibold underline"
+                            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
                           >
                             {t("trips.roster.viewSignedRecord")}
                           </Link>
@@ -704,24 +715,21 @@ export function RosterSection({
                       copy={paymentStatusCopy}
                     />
                   ) : null}
-                  <Link
-                    href={
-                      paymentsConnected
-                        ? `/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`
-                        : `/shop/${shopSlug}/settings#money`
-                    }
-                    className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    {paymentsConnected
-                      ? t("trips.roster.createOrder")
-                      : t("shared.payments.connect")}
-                  </Link>
-                  <Link
-                    href={`/shop/${shopSlug}/orders?personId=${person.id}`}
-                    className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("trips.roster.viewOrders")}
-                  </Link>
+                  {/* One orders door per card, and only when the shop can take
+                      money at all: "Connect payments" is a shop-level fact that
+                      used to repeat on every diver (principle 9 — Settings and
+                      the Orders index own that door), and "View orders" sat
+                      beside "Create order" doing half the same job (principle
+                      8 — the orders index reachable from the diver record
+                      already lists them). */}
+                  {paymentsConnected ? (
+                    <Link
+                      href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                      className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
+                    >
+                      {t("trips.roster.createOrder")}
+                    </Link>
+                  ) : null}
                   {/* A cancel inside the shop's refund window fires an automatic
                       Stripe refund that the Undo banner can't claw back — a real
                       send of money, not a purely reversible edit — so this gets a
@@ -766,7 +774,7 @@ export function RosterSection({
                               reversible edit, not a real send (principle 7). */}
                           <SubmitButton
                             pendingLabel={t("trips.roster.deletingEllipsis")}
-                            className="rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+                            className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-danger/10"
                           >
                             {t("trips.roster.delete")}
                           </SubmitButton>
@@ -799,6 +807,82 @@ export function RosterSection({
                     </form>
                   </div>
                 </details>
+              </>
+            );
+            return (
+              <li
+                key={booking.id}
+                // Today's queue deep-links straight to the diver it is about;
+                // scroll-mt keeps the row clear of the sticky shop header.
+                id={`booking-${booking.id}`}
+                className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
+              >
+                {settled ? (
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      {headerLeft}
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        {checkedInPill}
+                        {/* Quiet text, not the green Badge: on a good morning
+                            every row here is settled, and a success pill
+                            repeated down the list is the exact noise this
+                            collapse exists to remove (principle 9). The glyph
+                            stays — never color (or its absence) alone. */}
+                        <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
+                          <span aria-hidden="true">✓</span>
+                          {readinessStatusText(t, "ready")}
+                        </span>
+                      </div>
+                    </div>
+                    {/* The disclosure toggle is its own <summary> below the
+                        header rather than wrapping it: a summary is itself
+                        interactive, so the diver-name link inside it would be
+                        an interactive element nested in another (axe
+                        nested-interactive). Deep links (Today, the manifest's
+                        "Resolve blockers") land mid-page at one diver;
+                        AutoOpenDetails opens this when the hash names the row,
+                        so a collapsed card never swallows what the link
+                        promised. */}
+                    <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group -mt-2">
+                      <summary
+                        // Ten of these in a list all read "Details" alone; the
+                        // accessible name says whose (same pattern as the
+                        // roster's other per-row controls).
+                        aria-label={t("trips.roster.detailsSummaryLabel", {
+                          name: person.fullName,
+                        })}
+                        className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
+                      >
+                        {t("trips.roster.detailsSummary")}
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          aria-hidden="true"
+                          className="size-4 transition-transform duration-200 group-open:rotate-180"
+                        >
+                          <path
+                            d="m6 8 4 4 4-4"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </summary>
+                      {detail}
+                    </AutoOpenDetails>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      {headerLeft}
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        {headerBadges}
+                      </div>
+                    </div>
+                    {detail}
+                  </>
+                )}
               </li>
             );
           })}

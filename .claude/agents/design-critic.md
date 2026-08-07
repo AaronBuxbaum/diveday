@@ -23,7 +23,7 @@ Evaluate, in order of severity:
    operational surfaces.
 3. **Token violations** — raw hex, palette-scale Tailwind classes, hard-coded dark-mode
    variants (grep the components).
-4. **Instinct failures** (principle 9) — a fact the app knows hidden behind navigation; an
+4. **Instinct failures** (principle 10) — a fact the app knows hidden behind navigation; an
    action detached from its object into a toolbar; an "Edit" button and form page where a safe
    in-place edit fits; hierarchy drawn with borders and fills where type and space would do;
    any control or border that would not be missed if removed.
@@ -35,9 +35,9 @@ Evaluate, in order of severity:
    with a default, stacked instead of merged; a rare or advanced control sitting at equal weight
    to the common path instead of behind disclosure. Count the controls a user has to triage in
    each section at rest — more than two or three competing for attention is a finding. Before
-   demoting a button, ask the stronger question first: per principle 9, could it disappear into
+   demoting a button, ask the stronger question first: per principle 10, could it disappear into
    the object it acts on, or into a default?
-7. **Composition defaults** (principle 10) — a surface whose content has its own natural shape
+7. **Composition defaults** (principle 11) — a surface whose content has its own natural shape
    rendered as the generic card-stack-plus-button-row; a layout the content clearly outgrew.
    For a significant surface, name one concretely better composition (what moves where, what it
    buys) — a direction specific enough to build, not "make it nicer". Creativity that added

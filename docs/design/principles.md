@@ -159,7 +159,35 @@ of same-weight buttons is the user doing triage work that the design should have
   for attention is a finding. The fix is a merge, a demotion, or a disclosure — never a new
   wrapper that makes three buttons look tidier.
 
-## 9. The surface is the interface
+## 9. Say a shared fact once
+
+A fact shared by every row belongs to the group, not the rows — repetition at equal weight is
+noise pretending to be information. Row ink is reserved for what *differs* between rows; when a
+column or badge would render the same value on nearly every row, that value either moves up to a
+group header, or disappears until it has something to say.
+
+- **Group what repeats.** A queue of people on the same boat states the boat — title, time,
+  progress — once, in a group header; each row is just the person (the counter check-in works
+  this way). A list that would repeat a warning per row states it once above the list.
+- **"None" is not a status.** A column whose usual value is "None", "—", or an all-clear badge is
+  the absence of information formatted as information. Render attention markers only on the rows
+  that need attention; an empty cell says "nothing to see" better than a word does.
+- **Don't say what the control already says.** A "Ready" badge beside an enabled "Check in"
+  button states the same fact twice; the affordance is the status. Badges mark the exceptional
+  state (Blocked), not the expected one.
+- **Counts are facts, not alerts.** A per-row count that merely differs (cards on file, seats
+  sold) is quiet muted text, not a pill — pills and badges are spent on the rows that need a
+  staffer, so that when one appears it means something.
+- **Collapse the settled row.** In a working list where each row can carry open work (the trip
+  roster), a row with nothing left to do collapses to its header behind a labeled disclosure —
+  detail at the moment it's needed, not on every row — while any open question keeps the row
+  fully expanded. A deep link into a collapsed row must open it (`AutoOpenDetails`), so the
+  collapse can never swallow what a link promised.
+
+The test: read a list top to bottom and cross out every word that repeats an earlier row. What
+survives is the list; what's crossed out belongs to a header or nothing.
+
+## 10. The surface is the interface
 
 The cleanest screen is not the one with the fewest pixels — it's the one where the user never has
 to *look for* anything. Content leads; chrome defers. Concretely:
@@ -183,7 +211,7 @@ to *look for* anything. Content leads; chrome defers. Concretely:
 - **Remove until it breaks.** The test for every control and border on a finished surface: take
   it away — if the screen still works, it was noise. What survives is what the screen is.
 
-## 10. Creative within the system
+## 11. Creative within the system
 
 The tokens and primitives are a vocabulary, not a template. A default stack of bordered cards
 with a button row is the *fallback* composition, never the target — a surface whose content has
@@ -192,7 +220,7 @@ designed for that shape. Creativity here is judged by one measure: does it make 
 instinctive — clearer hierarchy, fewer controls, answers closer to the questions? Novelty that
 adds chrome or asks the user to learn a new grammar fails this principle even when it looks
 striking. When designing a significant new surface, sketch at least two compositions before
-building, and keep the one that survives principle 9's remove-until-it-breaks test. Bespoke
+building, and keep the one that survives principle 10's remove-until-it-breaks test. Bespoke
 composition never exempts a surface from the mechanics: tokens, the form/button primitives, the
 dock test, and one-primary all still apply.
 
@@ -223,14 +251,14 @@ writing, one sentence each:
 
 - What is this surface's **one idea**? If you can't say it, the surface doesn't know either.
 - What **question does its user arrive with**, and is the answer already on screen — or behind a
-  click the app didn't need to charge (principle 9)?
+  click the app didn't need to charge (principle 10)?
 - Which **controls could dissolve** into the objects they act on — a row's own tap, a
   hover-revealed control, an in-place edit with undo, a good default — instead of standing as
   buttons?
 - **Remove until it breaks**: what would you take away first? A control or border nobody would
   miss is a finding.
 - For a significant **new** surface: does the composition fit this content's own shape, or is it
-  the default card stack (principle 10)? If the default, sketch one alternative in prose — what
+  the default card stack (principle 11)? If the default, sketch one alternative in prose — what
   moves where, what it buys — and either adopt it or say why the default genuinely serves better.
 
 The same pass applies, in prose form, to persuasion surfaces and collateral: a marketing page has
@@ -253,6 +281,9 @@ one argument and a scrolls-until-answered count; a one-pager has one ask.
       row of same-weight buttons
 - [ ] Empty-state pattern matches terminal-vs-section (bespoke emoji pattern for a whole empty
       page, shared `EmptyState` for an empty section within a populated page)
+- [ ] No fact repeats at equal weight down a list: shared facts sit in a group header, "None"
+      columns and all-clear badges are absent rather than rendered, and a badge marks only the
+      exceptional state
 - [ ] The screen carries the answers its users come for — no click to fetch a fact the app
       already knows
 - [ ] Actions sit on the objects they affect, not in a detached toolbar; frequent small edits

@@ -28,10 +28,19 @@ export function AutoOpenDetails({
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
-    if (window.location.hash === `#${openOnHash}`) {
-      const details = ref.current;
-      if (details) details.open = true;
-    }
+    const sync = () => {
+      if (window.location.hash === `#${openOnHash}`) {
+        const details = ref.current;
+        if (details) details.open = true;
+      }
+    };
+    sync();
+    // A client navigation that changes only the hash on an already-mounted
+    // list (Today → #booking-A, back, Today → #booking-B) re-runs no mount
+    // effect, so listen for the change too — otherwise the second deep link's
+    // target stays collapsed.
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, [openOnHash]);
 
   return (

@@ -38,7 +38,7 @@ the same PR.
 
 Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped
 things, `<Field>`/`<FieldGrid>` for forms — but inside those mechanics, compose for the argument
-(`docs/design/principles.md` §9–10): before building a new page or section, state its one idea in
+(`docs/design/principles.md` §10–11): before building a new page or section, state its one idea in
 a sentence and sketch at least two compositions in prose, picking the one shaped by the content —
 the hero-plus-card-stack is the fallback, not the target. Surface the facts a buyer predictably
 wants (price, what's included, how leaving works) where the question arises rather than behind a

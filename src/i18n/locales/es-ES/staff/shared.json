@@ -64,8 +64,8 @@
   "birthday": {
     "label": "Cumpleaños",
     "today": "hoy",
-    "soon": "en {days} d",
-    "recent": "hace {days} d"
+    "soon": "en {days, plural, one {# día} other {# días}}",
+    "recent": "hace {days, plural, one {# día} other {# días}}"
   },
   "printButton": {
     "label": "Imprimir / guardar PDF"

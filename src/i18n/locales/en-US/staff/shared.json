@@ -64,8 +64,8 @@
   "birthday": {
     "label": "Birthday",
     "today": "today",
-    "soon": "in {days}d",
-    "recent": "{days}d ago"
+    "soon": "in {days, plural, one {# day} other {# days}}",
+    "recent": "{days, plural, one {# day} other {# days}} ago"
   },
   "printButton": {
     "label": "Print / save PDF"

@@ -147,10 +147,13 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
       "No orders yet — connect payments and the front desk can send its first order from here.",
     ),
   ).toBeVisible();
-  // Header and empty state both offer it; the empty state's is the last one.
+  // One door, once: while the unfiltered list is empty the header stands
+  // down, so the empty state's action is the only Connect payments on screen
+  // (docs/design/principles.md #8 — two identical primaries for one action
+  // is triage work the layout should have done).
   const connect = page.getByRole("link", { name: "Connect payments" });
-  await expect(connect).toHaveCount(2);
-  await connect.last().click();
+  await expect(connect).toHaveCount(1);
+  await connect.click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#money$`));
 });
 

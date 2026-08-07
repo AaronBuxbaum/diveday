@@ -35,7 +35,7 @@ output is always a draft artifact he reviews and sends himself.
 ## Shape of a draft
 
 A leave-behind or pitch note is a surface like any other, and the same holistic bar applies
-(`docs/design/principles.md` §9–10, in prose form): one argument per artifact, stated in the
+(`docs/design/principles.md` §10–11, in prose form): one argument per artifact, stated in the
 first lines — the founder's reader decides in the first ten seconds whether to keep reading;
 answer the questions the reader predictably arrives with (what does it cost, what happens if I
 leave, what do you want from me) where they arise instead of making them hunt; end on **one**

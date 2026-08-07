@@ -74,7 +74,7 @@ export function CelebrationsSection({
 /**
  * Sort key: today first, then nearest upcoming, then most recently past. The
  * crew reads the top line and acts on it, so "today" must never sit below
- * "6d ago".
+ * "6 days ago".
  */
 function calloutDays(callout: BirthdayCallout): number {
   if (callout.status === "today") return 0;

@@ -25,7 +25,7 @@ the workflow for applying it.
    campaign. Apply the strictest relevant claims and safety rules.
 2. Reuse the current identity. Do not invent a new color, font, logo treatment, or personality
    trait merely to make one item feel distinctive. Creativity lives in composition, not in new
-   ingredients (`docs/design/principles.md` §10): within the fixed palette, type, and mark, a
+   ingredients (`docs/design/principles.md` §11): within the fixed palette, type, and mark, a
    piece may — and for a significant piece should — get a bespoke layout shaped by its content,
    judged by whether it makes the piece clearer and more instinctive, never by novelty alone.
 3. Make the outcome concrete. The default voice is a competent divemaster: warm, plain, brief,

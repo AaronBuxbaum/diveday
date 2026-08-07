@@ -53,10 +53,8 @@ const copy = {
   cardCountOther: t("divers.list.cardCountOther"),
   pendingReviewText: t("divers.list.pendingReviewText"),
   toConfirmText: t("divers.list.toConfirmText"),
-  noneText: t("divers.list.noneText"),
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
   tableHeaderCards: t("divers.list.tableHeaderCards"),
-  tableHeaderAttention: t("divers.list.tableHeaderAttention"),
 };
 
 function renderList({

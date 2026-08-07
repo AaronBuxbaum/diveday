@@ -22,7 +22,7 @@ here — say so and propose a shipped-only alternative instead.
 
 Then read the page(s) under review and, if relevant, the components/data they render from
 (`src/lib/marketing.ts`, `src/lib/migration-guides.ts`, `src/components/MarketingSections.tsx`).
-Skim `docs/design/principles.md` §9–10 ("the surface is the interface", "creative within the
+Skim `docs/design/principles.md` §10–11 ("the surface is the interface", "creative within the
 system") — persuasion surfaces are held to the same bar: the page hands the reader the answer
 where the question arises, and its composition is shaped by its argument, not a template.
 

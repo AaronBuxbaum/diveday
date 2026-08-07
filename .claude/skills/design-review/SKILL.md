@@ -49,7 +49,7 @@ or an action the screen could have carried.
    primary is not sufficient on its own; a read-only section or a chooser of peer secondary
    actions needs no primary at all — more than two or three controls of any weight competing for
    attention in one section is also a finding on its own; the fix is the same set of moves.
-   Before reaching for a demotion, ask principle 9's stronger question first: can the control
+   Before reaching for a demotion, ask principle 10's stronger question first: can the control
    dissolve entirely — into the object it acts on, an in-place edit, or a good default? The
    best button count is the one where nothing had to be demoted because nothing was stacked. See
    [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).

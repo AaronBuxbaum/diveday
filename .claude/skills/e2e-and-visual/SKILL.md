@@ -25,6 +25,37 @@ The tests run a production Next server backed by in-memory PGlite. The browser c
 
 Do not mask clock-derived content or moving UI. Freeze the clock at the harness boundary instead. If a capture is unstable, identify and remove the source of nondeterminism: use the seeded Blue Mantis data, stable labels, deterministic ordering, and explicit readiness waits. Use `DIVEDAY_CLOCK=2026-07-21T13:30:00.000Z` for the committed baseline instant.
 
+## The renderer wedge: every renderer-dependent wait is driver-bounded
+
+Chromium's renderer occasionally stops answering entirely on CI — not slow, *gone*: it won't
+return even a trivial `page.evaluate(() => true)`. It is non-deterministic, unattributed after
+multiple investigations (fa51f893, the 20260804 bound, run 31147282309), strikes arbitrary pages
+(the landing page inside the first capture's first wait, `/pricing`, a diver record), and
+vanishes on same-commit reruns. Treat it as browser infrastructure, not something to root-cause
+in app or spec code — the probe verdict "wedged, not slow" in the log *is* the diagnosis.
+
+The harness discipline that contains it, which any new capture code must keep:
+
+- **No renderer-dependent call may rely on Playwright's own timeouts.** Page-side bounds
+  (`setTimeout`, `requestAnimationFrame` races) cannot fire in a renderer that stopped running
+  the page, and `page.evaluate` has no timeout of its own. Worse, `page.screenshot`'s `timeout:`
+  option bounds only the preparation, not the protocol call — measured on run 31147282309, a
+  screenshot with `timeout: 15_000` hung 95+ seconds until the test's own ceiling killed it. So
+  every such call goes through a driver-side `Promise.race` bound: `withRendererBound` for
+  evaluates, `screenshotOrGiveUp` for screenshots. A new screenshot call site in
+  `e2e/visual.spec.ts` must use `screenshotOrGiveUp`, never bare `page.screenshot`.
+- **On a stall, probe before blaming.** Both helpers ask the page `evaluate(() => true)` with a
+  5s bound and word their message by the answer: alive means our wait leaked (investigate);
+  "wedged, not slow" means the known wedge.
+- **The literal phrase `wedged, not slow` is load-bearing.** ci.yml's visual job greps the
+  capture log for it: a failed capture step carrying that verdict gets exactly one
+  `--last-failed` rerun, because a proven-wedged browser is the one failure a rerun cannot mask.
+  Any failure without the verdict stays red on the first attempt — this is not a retry policy,
+  and `retries: 0` remains the suite's contract. Reword the phrase and the gate silently dies.
+- **Why containment matters this much:** one wedged capture fails its shard, a failed shard
+  uploads no screenshots, `visual-report` then compares nothing — and on main publishes no
+  baseline, blinding visual regression repo-wide until a human re-runs the shard.
+
 ## Fast iteration
 
 `pnpm e2e` always rebuilds first. While iterating on one spec, build once with `pnpm e2e:build`,
