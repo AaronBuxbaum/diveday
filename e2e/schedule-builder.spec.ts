@@ -36,9 +36,13 @@ test.describe("schedule builder", () => {
     // Unique title so every assertion targets this spec's own departure rather
     // than a seeded one. (Isolation itself comes from the per-test demo reset.)
     const title = `Builder Trip ${e2eNow().getTime()}`;
+    // All three days sit well inside the board's first keyset page
+    // (SCHEDULE_PAGE_SIZE trips) even with the seeded departures ahead of
+    // them — the spec asserts both copies are on screen at once, which a
+    // copy landing on page 2 would fail.
     const addDay = daysFromNow(3);
     const moveDay = daysFromNow(5);
-    const copyDay = daysFromNow(9);
+    const copyDay = daysFromNow(4);
 
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();

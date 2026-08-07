@@ -134,7 +134,14 @@ export async function listTripIdsInOfflineManifestWindow(
   return rows.map((row) => row.id);
 }
 
-export const SCHEDULE_PAGE_SIZE = 20;
+/**
+ * One keyset page of the schedule, on the diver agenda and the staff board
+ * alike. Two weeks of a busy shop's diving, roughly — small enough that both
+ * pages read in a couple of screens and the "Show later departures" pager
+ * does its job, instead of a 20-row window tall enough that the pager was
+ * nearly decorative (the pages screenshotted at ~5,000px).
+ */
+export const SCHEDULE_PAGE_SIZE = 14;
 
 /**
  * What "an upcoming departure a page may show" means, in one place.

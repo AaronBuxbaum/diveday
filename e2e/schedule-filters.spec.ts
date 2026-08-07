@@ -10,16 +10,25 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   // own per-day lists and any other list on the page.
   const list = page.locator("form + ul");
   await expect(list.getByRole("listitem")).not.toHaveCount(0);
-  const unfilteredCount = await list.getByRole("listitem").count();
+  // The unfiltered page mixes both kinds — the seeded reef charter is the
+  // fun dive the course filter must remove. (Not a count comparison: both
+  // views can fill a whole keyset page, and a full page filtered against a
+  // full page proves nothing.)
+  await expect(
+    list.getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
+  ).toHaveCount(1);
 
-  // Course-only: every visible row now names a course session.
+  // Course-only: every visible row now names a course session, and the fun
+  // dives are gone.
   await page.getByLabel("Trip type").selectOption("course");
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page).toHaveURL(/tripType=course/);
   const courseRows = list.getByRole("listitem");
   await expect(courseRows).not.toHaveCount(0);
+  await expect(
+    list.getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
+  ).toHaveCount(0);
   const courseCount = await courseRows.count();
-  expect(courseCount).toBeLessThan(unfilteredCount);
   for (let i = 0; i < courseCount; i++) {
     await expect(courseRows.nth(i).getByText("Course session ·")).toBeVisible();
   }
