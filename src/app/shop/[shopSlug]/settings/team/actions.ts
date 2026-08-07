@@ -71,7 +71,12 @@ async function sendInviteEmail(input: {
   const issued = await issueAccountToken(await getDb(), {
     userAccountId: input.userAccountId,
     purpose: "invite",
-  }).catch(() => null);
+  }).catch((error: unknown) => {
+    // Without this line the invite silently never sends and the inviter has
+    // no way to know — the page already told them it did.
+    console.error("sendInviteEmail: invite token failed", error);
+    return null;
+  });
   if (!issued) return;
   after(async () => {
     await sendNotification(await getDb(), {

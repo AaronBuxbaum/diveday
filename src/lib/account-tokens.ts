@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { DAY_MS, HOUR_MS } from "@/lib/clock";
 
 /**
  * Bearer tokens proving control of a user account's own address — one shape
@@ -12,17 +13,17 @@ import { createHash, randomBytes } from "node:crypto";
 export type AccountTokenPurpose = "email_verification" | "password_reset" | "invite";
 
 /** Low stakes — only confirms the address works, so a generous window. */
-export const EMAIL_VERIFICATION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+export const EMAIL_VERIFICATION_TTL_MS = 3 * DAY_MS;
 
 /** A live credential over account takeover, so kept short — industry norm. */
-export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+export const PASSWORD_RESET_TTL_MS = HOUR_MS;
 
 /**
  * A new hire may not open their inbox the day they're invited, so this is
  * more generous than email verification, but still a hard expiry rather than
  * a link that works forever.
  */
-export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const INVITE_TTL_MS = 7 * DAY_MS;
 
 export function ttlForAccountTokenPurpose(purpose: AccountTokenPurpose): number {
   if (purpose === "email_verification") return EMAIL_VERIFICATION_TTL_MS;

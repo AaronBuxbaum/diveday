@@ -16,10 +16,12 @@
  * its start, so day two of a course weekend is inside it.
  */
 
+import { HOUR_MS } from "@/lib/clock";
+
 /** Push from six hours ahead of departure — the morning of, not the week before. */
-export const WINDOW_BEFORE_MS = 6 * 60 * 60 * 1000;
+export const WINDOW_BEFORE_MS = 6 * HOUR_MS;
 /** …until twelve hours after the trip ends, so a late-running day still reaches the boat. */
-export const WINDOW_AFTER_MS = 12 * 60 * 60 * 1000;
+export const WINDOW_AFTER_MS = 12 * HOUR_MS;
 
 export interface PushWindowTrip {
   startsAt: Date;

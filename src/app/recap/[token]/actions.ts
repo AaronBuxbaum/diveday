@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -10,6 +9,7 @@ import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { majorToMinor } from "@/lib/money";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { verifyRecapToken } from "@/lib/recap-links";
@@ -124,8 +124,7 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   }
 
   if (added > 0) {
-    revalidatePath(back);
-    redirect(`${back}?photo=added`);
+    revalidateAndRedirect(back, `${back}?photo=added`);
   }
   if (unconfigured) redirect(`${back}?photo=unconfigured`);
   if (hitCancelled) redirect(`${back}?photo=cancelled`);
@@ -254,6 +253,5 @@ export async function submitReviewAction(token: string, formData: FormData) {
   }
   if (!outcome?.ok) redirect(`${back}?review=error`);
 
-  revalidatePath(back);
-  redirect(`${back}?review=${outcome.published ? "published" : "pending"}`);
+  revalidateAndRedirect(back, `${back}?review=${outcome.published ? "published" : "pending"}`);
 }

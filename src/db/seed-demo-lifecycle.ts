@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
-import { nowMs } from "@/lib/clock";
+import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
@@ -65,7 +65,6 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-import { DAY_MS } from "./seed-clock";
 
 /**
  * The life and death of a minted demo shop.

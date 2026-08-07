@@ -74,7 +74,7 @@ export async function seedFrontDesk(
       );
     }
 
-    const [promo] = await db
+    await db
       .insert(tripLastMinutePromos)
       .values({
         shopId,
@@ -89,9 +89,7 @@ export async function seedFrontDesk(
         createdByPersonId: null,
         createdAt: nextCreatedAt(),
       })
-      .onConflictDoNothing()
-      .returning({ id: tripLastMinutePromos.id });
-    void promo;
+      .onConflictDoNothing();
 
     const booking = bookingRows.find((row) => row.tripId === wreckId);
     if (booking) {

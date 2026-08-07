@@ -305,7 +305,11 @@ async function noteDiscardedRecord(
       transaction.objectStore(KEY_STORE).put(next, DISCARD_NOTICE_KEY);
       await transactionDone(transaction);
     });
-  } catch {
+  } catch (error) {
+    // Deliberately not rethrown — see the docblock above: the deletion must
+    // win over its own footnote. But leave a trace, or a device that can
+    // never write the notice looks identical to one with nothing to say.
+    console.error("Failed to record discarded offline-manifest notice", error);
     return;
   }
 }
@@ -376,7 +380,18 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         key,
         record.ciphertext,
       );
-      envelope = JSON.parse(new TextDecoder().decode(plaintext)) as OfflineManifestEnvelope;
+      const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+      // Decrypting proves the bytes are ours, not that their shape is current:
+      // a record written by an older build can drift. Reject it into the same
+      // cleanup path as an unreadable one instead of returning a lying cast.
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        !Array.isArray((parsed as { snapshot?: { manifests?: unknown } }).snapshot?.manifests)
+      ) {
+        throw new Error("Stored offline-manifest envelope has an unrecognized shape");
+      }
+      envelope = parsed as OfflineManifestEnvelope;
     } catch (error) {
       // Nothing recoverable from ciphertext this key can't open — if it's
       // also past its retention window, clean it up now rather than leaving

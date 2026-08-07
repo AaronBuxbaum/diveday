@@ -3,13 +3,12 @@ import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/operational-window";
 import type { ReadinessResult } from "@/lib/readiness";
+import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, trips } from "./schema";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type CheckInQueueRow = {
   bookingId: string;
@@ -53,7 +52,7 @@ export async function listCheckInQueue(
     ? or(
         ilike(people.fullName, `%${query}%`),
         ilike(people.email, `%${query}%`),
-        UUID_RE.test(query) ? eq(bookings.id, query) : undefined,
+        isUuid(query) ? eq(bookings.id, query) : undefined,
       )
     : undefined;
   const rows = await db

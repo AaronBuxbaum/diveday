@@ -38,7 +38,9 @@ export function MilestoneHaptics({ total, boarded }: { total: number; boarded: n
               navigator.vibrate(20);
             }
           } catch (err) {
-            console.error("Vibration failed:", err);
+            // A haptic is decoration — worth a trace, never an error-level
+            // alarm nobody can act on.
+            console.warn("Vibration failed:", err);
           }
         }
       }

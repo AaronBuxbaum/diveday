@@ -3,7 +3,7 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
@@ -42,7 +42,6 @@ import { bookings, notificationDeliveries, people, shops, trips } from "./schema
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
-const HOUR_MS = 60 * 60 * 1000;
 
 /**
  * The subset of these people who have dived with the shop before — anyone with a

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AddressLookupResult } from "@/lib/address-lookup";
@@ -82,13 +82,20 @@ describe("the address card with no geocoder configured", () => {
 });
 
 describe("the address card with a geocoder", () => {
-  it("does not spend a request on a query too short to mean anything", async () => {
-    const user = userEvent.setup();
-    renderFields();
-    await user.type(screen.getByRole("combobox"), "10");
-    // Past the debounce, and still nothing sent.
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    expect(suggest).not.toHaveBeenCalled();
+  it("does not spend a request on a query too short to mean anything", () => {
+    // On the component's own clock, not a wall-clock sleep tuned to beat the
+    // debounce — a lengthened debounce must fail this test, not outrun it.
+    vi.useFakeTimers();
+    try {
+      renderFields();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "10" } });
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(suggest).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("fills all five boxes from the picked place", async () => {
@@ -147,21 +154,33 @@ describe("the address card with a geocoder", () => {
    * states apart.
    */
   it("does not re-ask the same question, however many times the typist pauses", async () => {
-    const user = userEvent.setup();
-    suggest.mockResolvedValue({ status: "ok", suggestions: [KEY_LARGO] });
-    renderFields();
-    const combobox = screen.getByRole("combobox");
+    // Fake timers for the same reason as the too-short test above: the
+    // assertion is "the debounce elapsed and nothing fired", which a real
+    // sleep can only approximate.
+    vi.useFakeTimers();
+    try {
+      suggest.mockResolvedValue({ status: "ok", suggestions: [KEY_LARGO] });
+      renderFields();
+      const combobox = screen.getByRole("combobox");
 
-    await user.type(combobox, "102 Ocean");
-    await screen.findByText(KEY_LARGO.label);
-    expect(suggest).toHaveBeenCalledTimes(1);
+      fireEvent.change(combobox, { target: { value: "102 Ocean" } });
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(screen.getByText(KEY_LARGO.label)).toBeInTheDocument();
+      expect(suggest).toHaveBeenCalledTimes(1);
 
-    // A character typed and taken straight back out again lands on the same
-    // query — the second pause must cost nothing.
-    await user.type(combobox, "s");
-    await user.keyboard("{Backspace}");
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(suggest).toHaveBeenCalledTimes(1);
+      // A character typed and taken straight back out again lands on the same
+      // query — the second pause must cost nothing.
+      fireEvent.change(combobox, { target: { value: "102 Oceans" } });
+      fireEvent.change(combobox, { target: { value: "102 Ocean" } });
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(suggest).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("says the lookup is resting, not broken, when the hour's budget is spent", async () => {

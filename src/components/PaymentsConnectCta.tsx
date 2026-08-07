@@ -6,10 +6,9 @@ import { buttonClass } from "@/components/ui/button";
 /**
  * The one door every "connect payments first" fallback opens —
  * `/shop/<slug>/settings#money`, the anchor the Stripe Connect card on
- * Settings owns. Kept here so the URL lives in one place rather than typed
- * out again at each call site that gates on `canAcceptPayments`.
+ * Settings owns. Kept beside the two CTAs below, which are its only callers.
  */
-export function paymentsConnectHref(shopSlug: string): string {
+function paymentsConnectHref(shopSlug: string): string {
   return `/shop/${shopSlug}/settings#money`;
 }
 

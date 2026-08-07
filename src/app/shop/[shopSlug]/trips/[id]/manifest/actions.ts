@@ -22,8 +22,10 @@ import {
 import { getTripWithBooked } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
 import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
+import { UUID_SOURCE } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -168,10 +170,7 @@ const crewRollCallSchema = z.object({
 // this is the outer of two layers, not the only one.
 const memberTokenSchema = z
   .string()
-  .regex(
-    /^(?:diver|crew):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    "member token",
-  );
+  .regex(new RegExp(`^(?:diver|crew):${UUID_SOURCE}$`, "i"), "member token");
 
 function parseMemberToken(token: string): BuddyTeamMemberInput {
   const [kind, id] = token.split(":");
@@ -393,8 +392,7 @@ export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: 
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(ctx));
-  redirect(back);
+  revalidateAndRedirect(manifestPath(ctx), back);
 }
 
 /** Add one more person to a team that already stands. */
@@ -412,8 +410,7 @@ export async function addBuddyTeamMemberAction(ctx: ManifestActionContext, formD
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(ctx));
-  redirect(back);
+  revalidateAndRedirect(manifestPath(ctx), back);
 }
 
 /**
@@ -436,8 +433,7 @@ export async function removeBuddyTeamMemberAction(ctx: ManifestActionContext, fo
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
-  revalidatePath(manifestPath(ctx));
-  redirect(back);
+  revalidateAndRedirect(manifestPath(ctx), back);
 }
 
 /** Dissolve a team — the explicit act re-forming always goes through. */
@@ -454,6 +450,5 @@ export async function dissolveBuddyTeamAction(ctx: ManifestActionContext, formDa
     recordedByPersonId: staff.user.personId,
   });
   if (!outcome.ok) redirect(`${back}&buddyError=generic`);
-  revalidatePath(manifestPath(ctx));
-  redirect(back);
+  revalidateAndRedirect(manifestPath(ctx), back);
 }

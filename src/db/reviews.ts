@@ -8,6 +8,7 @@ import {
   reviewAggregate,
   reviewerDisplayName,
 } from "@/lib/reviews";
+import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
 import { bookings, people, tripReviews, trips } from "./schema";
@@ -320,8 +321,6 @@ export async function setReviewPublished(
  */
 export const MAX_BULK_PUBLISH = 100;
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Publish several reviews at once — the moderation queue's "tick a few, then
  * publish". Shop-scoped and publish-only by design: releasing is additive and
@@ -341,9 +340,7 @@ export async function setReviewsPublished(
   // Ids arrive from a submitted form, so anything not shaped like a uuid is
   // dropped here rather than handed to Postgres, where it is a type error and
   // a 500 rather than the "nothing matched" this returns.
-  const ids = [...new Set(reviewIds)]
-    .filter((id) => UUID_PATTERN.test(id))
-    .slice(0, MAX_BULK_PUBLISH);
+  const ids = [...new Set(reviewIds)].filter((id) => isUuid(id)).slice(0, MAX_BULK_PUBLISH);
   if (ids.length === 0) return 0;
   const now = nowDate();
   const updated = await db

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordInPersonWaiver } from "@/db/waivers";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
 export async function checkInAction(shopSlug: string, formData: FormData) {
@@ -18,10 +19,13 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     bookingId,
     recordedByPersonId: session.user.personId,
   });
-  revalidatePath(back);
   if (outcome.ok) {
-    redirect(`${back}?notice=${outcome.duplicate ? "already_checked_in" : "checked_in"}`);
+    revalidateAndRedirect(
+      back,
+      `${back}?notice=${outcome.duplicate ? "already_checked_in" : "checked_in"}`,
+    );
   }
+  revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
   // straight to their guest row instead of just naming the problem.
   if (outcome.reason === "not_ready" && outcome.tripId) {
@@ -52,8 +56,8 @@ export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: 
     recordedByPersonId: session.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });
-  revalidatePath(back);
-  redirect(
+  revalidateAndRedirect(
+    back,
     `${back}?notice=${
       outcome.ok
         ? "waiver_in_person"

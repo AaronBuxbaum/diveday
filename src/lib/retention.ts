@@ -17,6 +17,8 @@
  * in the codebase has to move.
  */
 
+import { DAY_MS } from "@/lib/clock";
+
 /**
  * How long Stripe itself keeps retrying a webhook delivery in live mode
  * (Stripe retries with exponential backoff for up to three days). Named here
@@ -120,8 +122,6 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
  * function ceiling and is killed halfway.
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The instant before which rows of `table` are eligible for deletion. */
 export function retentionCutoff(table: RetainedTable, now: Date): Date {

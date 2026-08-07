@@ -7,6 +7,8 @@
  * timer lives in the app itself.
  */
 
+import { HOUR_MS } from "@/lib/clock";
+
 /** The cadence kinds, kept in sync with the `notification_kind` enum. */
 export type ReminderKind = "trip_reminder_7d" | "trip_reminder_24h";
 
@@ -27,8 +29,6 @@ export const MAX_REMINDER_LEAD_HOURS = TRIP_REMINDER_CADENCES.reduce(
   (max, c) => Math.max(max, c.hoursBefore),
   0,
 );
-
-const HOUR_MS = 60 * 60 * 1000;
 
 export type DueReminderInput = {
   startsAt: Date;

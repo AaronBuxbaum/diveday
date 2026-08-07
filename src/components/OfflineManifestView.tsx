@@ -483,6 +483,8 @@ export function OfflineManifestView() {
           .then((saved) => {
             if (!cancelled) setList((current) => (current === null ? current : saved));
           })
+          // A failed refresh keeps the list we already rendered — stale beats
+          // blank on a dock tablet; the next purge round retries anyway.
           .catch(() => {});
       }
       // A purge round is also when the store is most likely to have hit the

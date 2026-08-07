@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
@@ -406,7 +406,6 @@ export async function setTripRecapShoutout(
   return Boolean(trip);
 }
 
-const HOUR_MS = 60 * 60 * 1000;
 /**
  * How far back a run looks for departed trips. A daily cron catches a trip on
  * the next run after it ends; 48h leaves a full missed-run of slack, and the

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { WaiverSendCopy } from "@/app/actions/waiver-send-types";
-import { WaiverSendControl } from "@/components/today/WaiverSendControl";
+import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 
 /**
  * Lifts the roster's "tick a few divers, then send" selection into shared

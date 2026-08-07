@@ -192,9 +192,13 @@ test.describe("the old /shop public URLs", () => {
       "/shop/blue-mantis/courses/open-water-diver/edit",
     ]) {
       const response = await request.get(path, { maxRedirects: 0 });
-      // Signed out, so each is Auth.js's own sign-in redirect — never a 308
-      // into the public namespace.
-      expect(response.status()).not.toBe(308);
+      // Signed out, so each is Auth.js's own sign-in redirect (`pages.signIn`
+      // in src/lib/auth.config.ts) — never the 308 into the public namespace,
+      // and not a 500 or a served page either, which `not.toBe(308)` alone
+      // would have waved through.
+      expect(response.status(), `${path} must bounce to sign-in`).toBeGreaterThanOrEqual(302);
+      expect(response.status()).toBeLessThanOrEqual(307);
+      expect(response.headers().location).toContain("/sign-in");
     }
   });
 

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { switchDemoRoleAction } from "@/app/actions/demo";
 import { DemoBanner } from "@/components/DemoBanner";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -188,6 +189,7 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
       <SkipLink href="#public-shop-main-content" label={t("shopChrome.skipToContent")} />
       {showBanner && shop ? (
         <DemoBanner
+          switchRole={switchDemoRoleAction}
           currentRole={currentRole}
           currentName={session?.user?.name}
           shopSlug={shopSlug}

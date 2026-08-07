@@ -39,8 +39,7 @@
  * unchanged, and so is everything in this module.
  */
 
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
+import { DAY_MS, HOUR_MS } from "@/lib/clock";
 
 /**
  * How far ahead every readiness surface looks. A working week: long enough that
