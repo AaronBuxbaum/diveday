@@ -178,6 +178,11 @@ group header, or disappears until it has something to say.
 - **Counts are facts, not alerts.** A per-row count that merely differs (cards on file, seats
   sold) is quiet muted text, not a pill — pills and badges are spent on the rows that need a
   staffer, so that when one appears it means something.
+- **Collapse the settled row.** In a working list where each row can carry open work (the trip
+  roster), a row with nothing left to do collapses to its header behind a labeled disclosure —
+  detail at the moment it's needed, not on every row — while any open question keeps the row
+  fully expanded. A deep link into a collapsed row must open it (`AutoOpenDetails`), so the
+  collapse can never swallow what a link promised.
 
 The test: read a list top to bottom and cross out every word that repeats an earlier row. What
 survives is the list; what's crossed out belongs to a header or nothing.

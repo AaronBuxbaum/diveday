@@ -82,7 +82,7 @@ test.describe("staff", () => {
     // The seeded minor's birthday is two days out, so both surfaces fire. The
     // copy is the cake plus the timing — no age, no sentence.
     await expect(page.getByRole("heading", { name: /Celebrations/ })).toBeVisible();
-    await expect(page.getByText("in 2d").first()).toBeVisible();
+    await expect(page.getByText("in 2 days").first()).toBeVisible();
   });
 
   test("the manifest carries age and the minor flag to the crew's boarding list", async ({
