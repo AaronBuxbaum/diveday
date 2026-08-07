@@ -1,0 +1,22 @@
+{
+  "new": {
+    "eyebrow": "Reservas",
+    "title": "Añadir una reserva",
+    "description": "Sienta a un buceador en cualquier salida próxima — elige el barco y luego al buceador.",
+    "backToBoard": "Volver al tablero",
+    "tripHeading": "¿Qué salida?",
+    "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
+    "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
+    "tripEmptyAction": "Abrir el calendario",
+    "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
+    "changeTrip": "¿No es esta? Elige otra salida.",
+    "addToTrip": "Añadir a la salida",
+    "addPersonAriaLabel": "Añadir a {name} a esta salida",
+    "handEntryDescription": "El correo es opcional — con el nombre basta para guardar la plaza y el resto puede llegar después.",
+    "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
+    "backToPicker": "Volver a la lista de salidas",
+    "pagination": {
+      "total": "{count, plural, one {# salida} other {# salidas}}"
+    }
+  }
+}

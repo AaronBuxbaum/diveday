@@ -1,0 +1,54 @@
+{
+  "eyebrow": "Ajustes",
+  "title": "Suscripciones de calendario",
+  "description": "Lleva tus salidas de DiveDay al calendario que ya usas. La suscripción es de solo lectura: DiveDay nunca lee ni modifica nada de tu calendario.",
+  "refreshNote": "Tu calendario decide con qué frecuencia vuelve a leer el feed: normalmente en unas horas, no al instante. Para un cambio del mismo día, DiveDay manda.",
+  "scope": {
+    "assignments": {
+      "name": "Mis salidas",
+      "detail": "Todas las salidas en las que trabajas como tripulación, instructor o patrón."
+    },
+    "shopTrips": {
+      "name": "Todas las salidas del centro",
+      "detail": "Todas las salidas programadas del centro, las tripule quien las tripule."
+    }
+  },
+  "status": {
+    "none": "Todavía sin suscripción.",
+    "active": "Suscrito el {issued}.",
+    "lastRead": "Tu calendario lo leyó por última vez {when}.",
+    "neverRead": "Ningún calendario lo ha leído todavía: pega el enlace en uno para terminar."
+  },
+  "actions": {
+    "create": "Crear enlace de suscripción",
+    "creating": "Creando…",
+    "rotate": "Sustituir enlace",
+    "rotating": "Sustituyendo…",
+    "turnOff": "Desactivar",
+    "turningOff": "Desactivando…",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar: selecciónalo a mano",
+    "confirmRotate": "¿Sustituir este enlace? Cualquier calendario que siga usando el anterior dejará de actualizarse.",
+    "confirmRotateButton": "Sí, sustituir el enlace",
+    "confirmTurnOff": "¿Desactivar esta suscripción? El enlace dejará de funcionar de inmediato.",
+    "confirmTurnOffButton": "Sí, desactivarla",
+    "cancel": "Mejor no"
+  },
+  "newLink": {
+    "heading": "Tu enlace de suscripción",
+    "shownOnce": "Cópialo ahora: por seguridad solo se muestra una vez. Si lo pierdes, sustituye el enlace para obtener uno nuevo.",
+    "webcalLabel": "Apple Calendar y Outlook",
+    "httpsLabel": "Google Calendar y los demás",
+    "webcalHint": "Abre tu aplicación de calendario y se suscribe.",
+    "httpsHint": "Pégalo en “Otros calendarios → Desde URL”."
+  },
+  "warning": {
+    "rotate": "Al sustituir el enlace, el anterior deja de funcionar de inmediato. Cualquier calendario que siga usándolo dejará de actualizarse en silencio hasta que pegues el nuevo.",
+    "shared": "Cualquiera que tenga este enlace puede ver estas salidas sin iniciar sesión. Trátalo como una contraseña."
+  },
+  "notice": {
+    "denied": "No tienes acceso a ese ámbito de calendario."
+  },
+  "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días."
+}

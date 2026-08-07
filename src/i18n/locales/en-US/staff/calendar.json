@@ -1,0 +1,54 @@
+{
+  "eyebrow": "Settings",
+  "title": "Calendar subscriptions",
+  "description": "Put your DiveDay departures on the calendar you already use. Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
+  "refreshNote": "Your calendar decides how often it re-reads the feed — usually within a few hours, not instantly. Treat DiveDay as the source of truth for a same-day change.",
+  "scope": {
+    "assignments": {
+      "name": "My departures",
+      "detail": "Every trip you are assigned to crew, teach, or captain."
+    },
+    "shopTrips": {
+      "name": "All shop departures",
+      "detail": "Every scheduled departure at this shop, whoever is crewing it."
+    }
+  },
+  "status": {
+    "none": "Not subscribed yet.",
+    "active": "Subscribed {issued}.",
+    "lastRead": "Your calendar last read it {when}.",
+    "neverRead": "No calendar has read it yet — paste the link into one to finish."
+  },
+  "actions": {
+    "create": "Create subscription link",
+    "creating": "Creating…",
+    "rotate": "Replace link",
+    "rotating": "Replacing…",
+    "turnOff": "Turn off",
+    "turningOff": "Turning off…",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy — select it manually",
+    "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
+    "confirmRotateButton": "Yes, replace the link",
+    "confirmTurnOff": "Turn off this subscription? The link stops working immediately.",
+    "confirmTurnOffButton": "Yes, turn it off",
+    "cancel": "Never mind"
+  },
+  "newLink": {
+    "heading": "Your subscription link",
+    "shownOnce": "Copy this now — for your security it is shown once. If you lose it, replace the link to get a new one.",
+    "webcalLabel": "Apple Calendar and Outlook",
+    "httpsLabel": "Google Calendar and everything else",
+    "webcalHint": "Opens your calendar app and subscribes.",
+    "httpsHint": "Paste under \"Other calendars → From URL\"."
+  },
+  "warning": {
+    "rotate": "Replacing the link stops the old one working right away. Any calendar still using it will quietly stop updating until you paste the new link in.",
+    "shared": "Anyone with this link can read these departures without signing in. Treat it like a password."
+  },
+  "notice": {
+    "denied": "You do not have access to that calendar scope."
+  },
+  "coverage": "Covers departures from {past} days ago through {future} days ahead."
+}

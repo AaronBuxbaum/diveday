@@ -37,7 +37,7 @@ import { type WaiverState, waiverState } from "./waivers";
  * review was required — never why.
  *
  * Codes, not sentences, throughout — the route picks the words from
- * `staff.json` (`incidentExport.*`). Every instant is an ISO-8601 UTC string;
+ * the staff bundle (`staff/incidentExport.json`). Every instant is an ISO-8601 UTC string;
  * the route formats it for the reader's locale in the shop's timezone.
  */
 

@@ -1,0 +1,47 @@
+{
+  "eyebrow": "Reseñas",
+  "title": "Lo que dicen los buceadores",
+  "description": "Cada reseña aquí se dejó a través del enlace de resumen posterior a la salida del propio buceador, así que todas vienen de alguien que estuvo en el barco. Una valoración sola se publica de inmediato; cualquiera con palabras espera tu revisión.",
+  "viewPublicPage": "Ver página pública",
+  "notice": {
+    "published": "Reseña publicada en tu página de calendario.",
+    "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
+    "hiddenToast": "Reseña oculta.",
+    "publishedMany": "{count, plural, one {# reseña publicada} other {# reseñas publicadas}} en tu página de calendario.",
+    "noneSelected": "Marca primero las reseñas que quieres publicar.",
+    "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
+  },
+  "overviewLabel": "Resumen de valoraciones",
+  "publicRating": "Valoración pública",
+  "noneYet": "Nada publicado todavía",
+  "fromPublished": "De tus reseñas publicadas",
+  "published": "Publicado",
+  "publishedDetail": "Se muestra en tu página de calendario",
+  "waitingOnYou": "Esperando tu revisión",
+  "waitingDetail": "Reseñas con palabras por leer",
+  "thisMonthStat": "Este mes: media de {rating}★ de {count, plural, one {# reseña} other {# reseñas}}",
+  "standout": "✦ Reseña destacada",
+  "emptyHeading": "Todavía no hay reseñas",
+  "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
+  "emptyWaitingHeading": "Nada esperando tu revisión",
+  "emptyWaitingDetail": "Ya se ha leído toda reseña con palabras. Las nuevas aparecerán aquí en cuanto un buceador deje una.",
+  "emptyReviewLinkBody": "Aquí no hay nada que activar: una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
+  "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
+  "ratingOnly": "Solo valoración — sin palabras que revisar.",
+  "rating": "{rating} sobre 5 estrellas",
+  "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
+  "hide": "Ocultar",
+  "publish": "Publicar",
+  "publishSelected": "Publicar seleccionadas",
+  "tickThenPublish": "Marca las que quieras publicar y luego",
+  "selectToPublishAriaLabel": "Seleccionar la reseña de {name} para publicarla",
+  "saving": "Guardando…",
+  "filterLabel": "Filtrar reseñas",
+  "filter": {
+    "all": "Todas las reseñas",
+    "waiting": "Esperando tu revisión"
+  },
+  "pagination": {
+    "total": "{count, plural, one {# reseña} other {# reseñas}}"
+  }
+}

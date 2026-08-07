@@ -1,0 +1,105 @@
+{
+  "closeOut": {
+    "heading": "The last boat is in",
+    "body": "Every departure today is back at the dock. One pass through the close-out — how each boat ended, what is still open, what tomorrow opens with — and you can go home.",
+    "action": "Close out the day"
+  },
+  "createdNotice": {
+    "single": "“{title}” is on the board. 🤙",
+    "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
+  },
+  "firstBookable": {
+    "heading": "“{title}” is on the board — your shop is bookable. 🎉",
+    "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable. 🎉",
+    "body": "This link is your public schedule — the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+    "linkLabel": "Your booking link",
+    "viewAsDiver": "See it the way your divers will"
+  },
+  "demoReset": "Demo data reset — fresh boat, clean slate. 🤿",
+  "emailResent": "Confirmation email re-sent.",
+  "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
+  "crewingBoat": "You’re crewing the {time} {title}.",
+  "noDeparturesHeading": "No boats out today",
+  "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
+  "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
+  "scheduleTrip": "Schedule a trip",
+  "notice": {
+    "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
+    "exportNotAuthorized": "Data export is limited to owners and managers.",
+    "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers.",
+    "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
+    "teamNotAuthorized": "Team management is limited to owners and managers.",
+    "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+    "backupNotAuthorized": "Only an owner or manager can change backup settings.",
+    "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
+    "promosNotAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
+  },
+  "orientation": {
+    "heading": "New here? A few pointers for your role.",
+    "subtitle": "This only shows once — dismiss it any time.",
+    "tryLabel": "Try:",
+    "dismiss": "Got it",
+    "roles": {
+      "owner": {
+        "title": "You're steering the whole shop",
+        "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
+        "tryThis": "Open Board to see this week's departures."
+      },
+      "manager": {
+        "title": "Keeping the shop running day to day",
+        "desc": "Today surfaces what needs attention first; the rest of the shop's admin lives under More in the nav.",
+        "tryThis": "Check Reviews for feedback waiting on you."
+      },
+      "instructor": {
+        "title": "Teaching and certifying divers",
+        "desc": "Divers holds every diver's certification cards and specialty history.",
+        "tryThis": "Open Divers to check a certification card before class."
+      },
+      "divemaster": {
+        "title": "Getting divers ready to board",
+        "desc": "Not ready lists everyone who can't board yet, with the one tap that fixes each one.",
+        "tryThis": "Open Not ready to see who still needs prep."
+      },
+      "captain": {
+        "title": "Running the boat",
+        "desc": "The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
+        "tryThis": "Open today's manifest to see who's on the boat."
+      },
+      "crew": {
+        "title": "Checking divers in as they arrive",
+        "desc": "Check-in shows who's arrived, who's still missing paperwork, and what to do about it.",
+        "tryThis": "Open Check-in to check divers in as they arrive."
+      }
+    }
+  },
+  "firstRun": {
+    "heading": "Get your shop ready",
+    "subtitle": "Five steps and divers can start booking.",
+    "contactTitle": "Add your contact details",
+    "contactBody": "Phone and email so divers — and DiveDay — can reach you.",
+    "contactAction": "Add contact details",
+    "contactDone": "Contact details on file.",
+    "siteTitle": "Add your first dive site",
+    "siteBody": "The place you’ll pin your trips to.",
+    "siteAction": "Add a dive site",
+    "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",
+    "tripTitle": "Schedule your first trip",
+    "tripBody": "Put a departure on the board — divers can’t book until one exists.",
+    "tripAction": "Schedule a trip",
+    "scheduleTitle": "Share your public schedule",
+    "scheduleBody": "The page divers actually book from — paste it on your website or socials.",
+    "scheduleCopy": "Copy link",
+    "scheduleCopied": "Copied",
+    "scheduleCopyFailed": "Couldn’t copy — select the link above instead.",
+    "stripeTitle": "Connect Stripe (optional)",
+    "stripeBody": "Take payment online. Skip this and collect payment at the counter instead.",
+    "stripeAction": "Connect Stripe",
+    "stripeDone": "Stripe connected.",
+    "doneBadge": "Done"
+  },
+  "queueView": {
+    "label": "How to read the queue",
+    "byUrgency": "By urgency",
+    "byDeparture": "By departure"
+  }
+}

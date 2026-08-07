@@ -1,0 +1,138 @@
+{
+  "new": {
+    "eyebrow": "Recepción",
+    "title": "Nuevo pedido",
+    "cancel": "Cancelar",
+    "notice": {
+      "invalid": "Elige un cliente y al menos una línea con un importe.",
+      "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",
+      "stripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
+      "fallback": "No se pudo crear ese pedido."
+    },
+    "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
+    "courseNote": "Las líneas de instrucción y e-learning del curso vienen rellenas de tu catálogo. Un pedido, dos líneas: borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
+    "noPriceNote": "Esta salida no tiene precio, así que la línea de la salida está en blanco — añade uno en la página de la salida para saltarte este paso la próxima vez.",
+    "priceNote": "La línea de la salida viene rellena con el precio de esta salida.",
+    "customerLabel": "Cliente",
+    "chooseCustomer": "Elige un cliente",
+    "noteLabel": "Nota del pedido",
+    "noteHint": "(opcional)",
+    "notePlaceholder": "p. ej. Salida de dos inmersiones + equipo de alquiler",
+    "lineItemsLegend": "Líneas del pedido",
+    "lineItemKindAria": "Tipo de la línea {number}",
+    "lineItemDescriptionPlaceholder": "Descripción",
+    "quantityLabel": "Cantidad",
+    "unitPriceLabel": "Precio unitario (USD)",
+    "unitPricePlaceholder": "$0.00",
+    "sending": "Enviando…",
+    "submit": "Crear y enviar factura",
+    "kind": {
+      "trip_fee": "Tarifa de la salida",
+      "course_fee": "Tarifa del curso",
+      "e_learning_fee": "Tarifa de e-learning",
+      "rental": "Alquiler",
+      "nitrox": "Nitrox (por inmersión)",
+      "deposit": "Depósito",
+      "merchandise": "Merchandising",
+      "other": "Otro"
+    }
+  },
+  "detail": {
+    "eyebrow": "Recepción",
+    "fallbackDescription": "Pedido",
+    "backToDiver": "Volver al buceador",
+    "backToOrders": "Volver a pedidos",
+    "raisedOn": "Emitido el {date}",
+    "createdBy": "por {name}",
+    "status": {
+      "open": "Abierto — pendiente de pago",
+      "paid": "Pagado",
+      "void": "Anulado",
+      "uncollectible": "Incobrable",
+      "refunded": "Reembolsado"
+    },
+    "kind": {
+      "trip_fee": "Tarifa de la salida",
+      "course_fee": "Tarifa del curso",
+      "rental": "Alquiler",
+      "nitrox": "Nitrox",
+      "deposit": "Depósito",
+      "merchandise": "Merchandising",
+      "other": "Otro"
+    },
+    "openInvoice": "Abrir la factura para pagar",
+    "openInvoiceHint": "— comparte este enlace con el cliente si el correo de Stripe no le llegó.",
+    "demoActionHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que esta acción está desactivada.",
+    "refreshStatus": "Actualizar estado",
+    "refreshing": "Actualizando…",
+    "voidOrder": "Anular pedido",
+    "voiding": "Anulando…",
+    "refundPayment": "Reembolsar pago",
+    "refunding": "Reembolsando…",
+    "notice": {
+      "refreshed": "Estado actualizado desde Stripe.",
+      "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
+      "voided": "Pedido anulado.",
+      "voidFailed": "No se pudo anular este pedido — puede que ya esté pagado o anulado.",
+      "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
+      "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
+      "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
+      "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
+      "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
+      "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
+    }
+  },
+  "index": {
+    "eyebrow": "Recepción",
+    "title": "Pedidos",
+    "description": "Todos los pedidos que ha enviado el centro, de todos los buceadores y salidas.",
+    "newOrder": "Nuevo pedido",
+    "notice": {
+      "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores.",
+      "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes — pide a uno de ellos que le facture a este buceador."
+    },
+    "filters": {
+      "statusLabel": "Estado",
+      "statusAll": "Todos los estados",
+      "diverLabel": "Buceador",
+      "diverPlaceholder": "Buscar por nombre",
+      "fromLabel": "Desde",
+      "toLabel": "Hasta",
+      "apply": "Aplicar filtros",
+      "clear": "Borrar filtros"
+    },
+    "filteredByDiver": "Mostrando los pedidos de {name}.",
+    "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
+    "emptyFiltered": "Ningún pedido coincide con estos filtros.",
+    "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
+    "table": {
+      "diver": "Buceador",
+      "trip": "Salida",
+      "status": "Estado",
+      "date": "Fecha",
+      "amount": "Importe"
+    },
+    "pagination": {
+      "total": "{count, plural, one {# pedido} other {# pedidos}}"
+    },
+    "range": {
+      "recentNote": "Mostrando los últimos {days} días. Los pedidos anteriores siguen aquí.",
+      "showAll": "Mostrar todos los pedidos",
+      "allNote": "Mostrando todos los pedidos que ha emitido el centro.",
+      "showRecent": "Volver a los últimos {days} días"
+    },
+    "paymentOps": {
+      "sectionLabel": "Pagos que necesitan revisión",
+      "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
+      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
+      "started": "iniciado {date}",
+      "stripeId": "Stripe: {id}",
+      "openTrip": "Abrir salida",
+      "kind": {
+        "checkout_session": "Pago",
+        "invoice": "Factura",
+        "refund": "Reembolso"
+      }
+    }
+  }
+}

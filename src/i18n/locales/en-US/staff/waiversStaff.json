@@ -1,0 +1,44 @@
+{
+  "eyebrow": "Settings",
+  "title": "Waiver template",
+  "description": "Every diver signs this one release. Edit it to fit your shop.",
+  "banner": {
+    "savedNew": "Saved as a new version.",
+    "savedFirst": "Your waiver is saved. Every future edit is kept as a new version.",
+    "invalid": "That didn't save. The release needs to be at least a few sentences long."
+  },
+  "fieldLabel": "Release text",
+  "placeholder": "Write the release the diver will read and sign.",
+  "pendingLabel": "Saving…",
+  "saveNewVersion": "Save new version",
+  "saveWaiver": "Save waiver",
+  "releaseTextHeading": "Release text",
+  "releaseDescription": {
+    "current": "This is the release every new link sends. Saving replaces it for new links — waivers already signed keep the exact text they were signed against.",
+    "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
+  },
+  "versionInfo": "Version {version} · saved {date}",
+  "tabs": {
+    "ariaLabel": "Waiver sections",
+    "template": "Template",
+    "signatures": "Signatures"
+  },
+  "signatures": {
+    "eyebrow": "Settings",
+    "title": "Signatures",
+    "description": "Every signed release on file for this shop — who signed, which trip, and any medical follow-up. Signed waivers are tamper-evident — if a record has been altered, we flag it.",
+    "signedRecordHeading": "Signed record",
+    "heading": "Signed records",
+    "noSignedRecords": "No signed records yet.",
+    "noSignatureDate": "No signature date",
+    "noTrip": "Imported record",
+    "integrityValid": "Integrity verified",
+    "integrityInvalid": "Integrity mismatch",
+    "integrityUnsealed": "Unsealed legacy record",
+    "medicalFlag": "Medical follow-up flagged",
+    "viewFlaggedAnswers": "View flagged answers",
+    "pagination": {
+      "total": "{count, plural, one {# record} other {# records}}"
+    }
+  }
+}

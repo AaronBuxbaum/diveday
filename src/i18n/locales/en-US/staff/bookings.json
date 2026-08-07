@@ -1,0 +1,22 @@
+{
+  "new": {
+    "eyebrow": "Bookings",
+    "title": "Add a booking",
+    "description": "Seat a diver on any upcoming departure — pick the boat, then the diver.",
+    "backToBoard": "Back to the board",
+    "tripHeading": "Which departure?",
+    "fullExcluded": "Full departures are left out of this list. Change a boat's seats, or put another departure on that day, from the board.",
+    "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
+    "tripEmptyAction": "Open the schedule",
+    "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
+    "changeTrip": "Not this one? Pick a different departure.",
+    "addToTrip": "Add to trip",
+    "addPersonAriaLabel": "Add {name} to this departure",
+    "handEntryDescription": "Email is optional — a name is enough to hold the seat, and the rest can follow.",
+    "noticeInvalid": "Enter a name to add a diver — email and phone are optional here.",
+    "backToPicker": "Back to the departure list",
+    "pagination": {
+      "total": "{count, plural, one {# departure} other {# departures}}"
+    }
+  }
+}

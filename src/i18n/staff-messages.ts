@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
-import enUS from "./locales/en-US/staff.json";
-import esES from "./locales/es-ES/staff.json";
+import enUS from "./locales/en-US/staff";
+import esES from "./locales/es-ES/staff";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
 /**

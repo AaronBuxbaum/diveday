@@ -25,9 +25,9 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
  * domain-strings-common notes on a domain function rendered on both a staff
  * and a diver page) — `SettingsPage.tsx`/`RentalFit.tsx` resolve the same
- * codes against staff.json (`src/i18n/rental-labels.ts`). This is the
+ * codes against the staff bundle (`src/i18n/rental-labels.ts`). This is the
  * diver-facing counterpart, kept local rather than shared with that staff
- * resolver so a diver's client bundle never pulls in staff.json.
+ * resolver so a diver's client bundle never pulls in the staff bundle.
  */
 export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   bcd: "rental.itemLabels.bcd",

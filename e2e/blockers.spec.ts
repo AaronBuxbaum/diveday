@@ -164,7 +164,7 @@ test("the one-tap waiver send on the by-departure view reports success inline", 
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
 
   // The tap posts the shared server action in place — the outcome renders
-  // inline (translated copy from staff.json, not a hardcoded English string)
+  // inline (translated copy from the staff bundle, not a hardcoded English string)
   // instead of navigating away or leaving the tap looking like a no-op. The
   // demo shop has no email provider configured, so the fallback-link path is
   // what actually renders here — a private link staff copy and hand over.

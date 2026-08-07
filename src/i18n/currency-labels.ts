@@ -6,7 +6,7 @@ import { currencySymbol, SHOP_CURRENCIES, type ShopCurrency } from "@/lib/money"
  *
  * These come from `Intl.DisplayNames` rather than the message bundles on
  * purpose: CLDR already ships every currency name in every locale DiveDay
- * carries, so hand-translating twenty-odd of them into `staff.json` would be
+ * carries, so hand-translating twenty-odd of them into the staff bundle would be
  * copying a translation table into a file people then have to keep in sync.
  * The same reasoning `src/i18n/rental-labels.ts` applies to domain codes —
  * resolve labels in `src/i18n/`, never in `src/lib`/`src/db`.

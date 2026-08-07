@@ -1,0 +1,56 @@
+{
+  "eyebrow": "Operations",
+  "title": "Staffing",
+  "description": "Who is working when, and what each person is qualified to teach or crew. Assign the crew for a boat on Today.",
+  "window": {
+    "from": "From",
+    "through": "Through",
+    "show": "Show window"
+  },
+  "working": {
+    "heading": "Who is working",
+    "managerOnly": "Shift changes require owner or manager",
+    "notScheduled": "Not scheduled in this window.",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "crewingHeading": "Crewing",
+    "crewingEmpty": "Not on any trip's crew in this window.",
+    "rosterEmptyHeading": "No crew on the books yet",
+    "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
+    "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
+    "rosterEmptyAction": "Invite your crew"
+  },
+  "capability": {
+    "teach": "Can teach",
+    "crew": "Can crew",
+    "captain": "Captain"
+  },
+  "addShift": {
+    "heading": "Add a working shift",
+    "detail": "A shift says when someone is available. Assign the actual crew on each trip separately.",
+    "person": "Staff member",
+    "choosePerson": "Choose a person",
+    "date": "Date",
+    "starts": "Starts",
+    "ends": "Ends",
+    "note": "Note",
+    "noteHint": "(optional)",
+    "notePlaceholder": "Dock, classroom, boat 2",
+    "submit": "Add shift",
+    "saving": "Saving…"
+  },
+  "crewGaps": {
+    "needCrew": "{count, plural, one {# departure in this window still needs crew.} other {# departures in this window still need crew.}}",
+    "allCrewed": "Every departure in this window has its crew.",
+    "noDepartures": "No departures scheduled in this window.",
+    "action": "Assign crew on Today"
+  },
+  "notice": {
+    "shiftSaved": "Shift saved.",
+    "shiftDeleted": "Shift removed.",
+    "overlap": "That person already has an overlapping shift.",
+    "staffNotFound": "That staff member is no longer on this shop's team.",
+    "invalid": "Check the shift date and times, then try again.",
+    "notAuthorized": "Only owners and managers can change shifts."
+  }
+}

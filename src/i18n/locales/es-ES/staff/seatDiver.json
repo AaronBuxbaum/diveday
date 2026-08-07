@@ -1,0 +1,18 @@
+{
+  "findHeading": "Buscar un buceador que ya conste",
+  "findLabel": "Busca por nombre, correo o teléfono",
+  "findPlaceholder": "Empieza a escribir un nombre…",
+  "search": "Buscar",
+  "searching": "Buscando…",
+  "noMatches": "Sin coincidencias para “{query}” en los registros del centro.",
+  "noEmailOnFile": "Sin correo registrado",
+  "adding": "Añadiendo…",
+  "handEntryHeading": "Buceador nuevo",
+  "nameLabel": "Nombre completo",
+  "emailLabel": "Correo",
+  "phoneLabel": "Teléfono",
+  "optionalHint": "(opcional)",
+  "noMatchesHeading": "Nadie registrado con ese nombre",
+  "noMatchesAction": "Introdúcelo a mano",
+  "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados"
+}

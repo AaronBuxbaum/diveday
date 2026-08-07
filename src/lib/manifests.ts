@@ -417,7 +417,7 @@ export function crewRollCallCounts(
 
 /**
  * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
- * words from each locale's `staff.json`.
+ * words from each locale's staff bundle.
  *
  * - `no_divers` — nothing to count; an empty roster never reads complete.
  * - `divers_not_back_aboard` — a human recorded at least one diver as not back
