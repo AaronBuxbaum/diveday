@@ -257,6 +257,20 @@ const RENDERER_PROBE_MS = 5_000;
  * navigation. Naming it puts it back inside the derivation.
  */
 const SCREENSHOT_TIMEOUT_MS = 15_000;
+/**
+ * The driver-side bound around each screenshot, because the option above is
+ * provably not one on a wedged renderer. Measured on CI run 31147282309
+ * (2026-08-07, visual shard 1): both `paintWholeDocument` waits stalled, the
+ * probe said "wedged, not slow", and the subsequent `page.screenshot` — with
+ * `timeout: 15_000` passed — then sat for 95+ seconds until the *test's* 164s
+ * ceiling killed it. Playwright's screenshot timeout bounds the preparation
+ * work (waiting for fonts, disabling animations), not the protocol call that
+ * needs the renderer to answer, so a renderer that has stopped answering
+ * hangs it indefinitely. Same shape as the `page.evaluate` story on
+ * `PAGE_SIDE_BUDGET_MS` above: the outermost wait Playwright leaves unbounded
+ * gets the bound here instead, in `screenshotOrGiveUp`.
+ */
+const SCREENSHOT_GIVE_UP_MS = SCREENSHOT_TIMEOUT_MS + PROTOCOL_SLACK_MS;
 
 /**
  * The per-test ceiling for a plain navigate-and-shoot surface.
@@ -303,9 +317,10 @@ const SCREENSHOT_TIMEOUT_MS = 15_000;
  */
 const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
 /**
- * The bounded waits `paintWholeDocument` runs, each of which pays one
- * `RENDERER_PROBE_MS` diagnostic on the path that has already given up: the
- * scroll-through/image settle, and the font settle.
+ * The bounded waits that each pay one `RENDERER_PROBE_MS` diagnostic on the
+ * path that has already given up: `paintWholeDocument`'s scroll-through/image
+ * settle and font settle, plus `screenshotOrGiveUp`'s probe on a screenshot
+ * that never returned.
  *
  * This is *per viewport*, and that is the correction. The ceiling below is
  * documented as the sum of the work it bounds, but the overhead term used to
@@ -324,27 +339,29 @@ const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
  * wedge was observed on three consecutive runs of one branch — `/pricing`
  * (light, shard 1), a diver's record (dark, shard 3), the schedule board
  * (dark, shard 3) — and re-running the *same commit* came back clean, so it is
- * non-deterministic and unattributed. `main`'s four runs either side of those
- * carried no wedge warning at all, which is the opposite of what
+ * non-deterministic and unattributed (a fourth sighting, the landing page on
+ * run 31147282309, wedged inside the first capture's first wait — before any
+ * flow ran — so it is not accumulated state either). `main`'s four runs either
+ * side of those carried no wedge warning at all, which is the opposite of what
  * 20260804's bound (fa51f893) recorded at the time it was written; whatever
  * makes a renderer stop answering here comes and goes.
  *
- * What is still true is fa51f893's goal, and it is still unmet: a wedge costs
- * the whole test rather than one shot, because `page.screenshot` cannot return
- * on a renderer that has stopped answering, and a failed shard uploads no
- * screenshots — so one stuck page still costs the run every other surface's
- * comparison. Closing that means giving up on the surface once the probe says
- * "wedged" instead of spending the budget on operations that cannot complete.
- * Deliberately not done here: it changes what a wedge *produces* (a missing
- * shot rather than a failed shard), and that is a call for whoever owns this
- * harness, not a drive-by in a UI branch.
+ * fa51f893's goal — a wedge must not cost the run every other surface's
+ * comparison — is now met in two halves. Here: `screenshotOrGiveUp` bounds the
+ * one call that still hung unbounded on a wedged renderer, so the test fails
+ * in seconds with an error naming the wedge instead of burning this whole
+ * ceiling. In ci.yml's visual job: a failed capture step whose log carries the
+ * probe's "wedged, not slow" verdict reruns only the failed captures once —
+ * the probe is what earns that rerun, by proving the failure was the browser
+ * refusing to answer rather than anything a rerun could mask. Any failure
+ * *without* that verdict stays red on the first attempt, exactly as before.
  */
-const STALL_PROBES_PER_VIEWPORT = 2;
+const STALL_PROBES_PER_VIEWPORT = 3;
 const STALL_PROBE_BUDGET_MS = RENDERER_PROBE_MS * STALL_PROBES_PER_VIEWPORT * VIEWPORTS.length;
 /** The viewport resizes and the navigation that preceded them. */
 const CAPTURE_OVERHEAD_MS = 10_000;
 const SURFACE_TIMEOUT_MS =
-  (PAINT_BUDGET_MS + SCREENSHOT_TIMEOUT_MS) * VIEWPORTS.length +
+  (PAINT_BUDGET_MS + SCREENSHOT_GIVE_UP_MS) * VIEWPORTS.length +
   STALL_PROBE_BUDGET_MS +
   CAPTURE_OVERHEAD_MS;
 
@@ -418,6 +435,10 @@ async function withRendererBound<T>(
       ),
     new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
   ]);
+  // The exact phrase "wedged, not slow" is load-bearing: ci.yml's visual job
+  // greps the capture log for it to decide whether a failed shard earned its
+  // one-shot rerun of the failed captures. Reword it here (or in
+  // `screenshotOrGiveUp`) and that gate silently stops firing.
   console.warn(
     `visual: ${what} did not return within ${budgetMs}ms at ${page.url()} — the shot may contain ` +
       "an unpainted band; check the diff for a blank stripe. The renderer " +
@@ -599,25 +620,75 @@ async function paintWholeDocument(page: Page) {
   );
 }
 
-async function capture(page: Page, name: string, scheme: "light" | "dark") {
-  const baseViewport = page.viewportSize();
-  for (const viewport of VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    await paintWholeDocument(page);
-    await page.screenshot({
-      path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
+/**
+ * `page.screenshot`, raced against `SCREENSHOT_GIVE_UP_MS` on the driver side —
+ * see that constant for the measured incident proving the call's own `timeout`
+ * option does not fire on a renderer that has stopped answering. A shot that
+ * never returns gets the same alive-probe `withRendererBound` runs, so the
+ * thrown error says which half is broken: "wedged, not slow" is the verdict
+ * ci.yml's visual job reads to earn a one-shot rerun of the failed captures.
+ */
+async function screenshotOrGiveUp(page: Page, path: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Folded to a value for the same reason as `withRendererBound`: the losing
+  // arm must not surface later as an unhandled rejection at context teardown.
+  const shot = page
+    .screenshot({
+      path,
       fullPage: true,
       // Finish every finite CSS animation/transition and pin infinite ones to
-      // their first frame before the shot. `paintWholeDocument` above settles
+      // their first frame before the shot. `paintWholeDocument` settles
       // layout, fonts, and image decode; this settles *time*. A hover lift, a
       // toast slide-in, or the schedule's skeleton shimmer caught mid-curve is
       // a different image on every run, and the diff it produces looks exactly
       // like faint antialiasing noise around the moving element.
       animations: "disabled",
       // Playwright's own default here is 30s, which nothing in this file chose
-      // and `SURFACE_TIMEOUT_MS` never costed. Named so the ceiling can see it.
+      // and `SURFACE_TIMEOUT_MS` never costed. Named so the ceiling can see
+      // it. Bounds the preparation only — the give-up race below is what
+      // actually caps the call.
       timeout: SCREENSHOT_TIMEOUT_MS,
-    });
+    })
+    .then(
+      () => ({ state: "done" as const }),
+      (error: unknown) => ({ state: "failed" as const, error }),
+    );
+  const outcome = await Promise.race([
+    shot,
+    new Promise<{ state: "hung" }>((resolve) => {
+      timer = setTimeout(() => resolve({ state: "hung" }), SCREENSHOT_GIVE_UP_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (outcome.state === "failed") throw outcome.error;
+  if (outcome.state === "done") return;
+
+  const responsive = await Promise.race([
+    page
+      .evaluate(() => true)
+      .then(
+        () => true,
+        () => false,
+      ),
+    new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
+  ]);
+  throw new Error(
+    `visual: page.screenshot did not return within ${SCREENSHOT_GIVE_UP_MS}ms at ${page.url()} ` +
+      `(${path}). The renderer ` +
+      (responsive
+        ? "answered a trivial evaluate, so the page is alive and the screenshot itself is stuck — " +
+          "investigate; this is not the known wedge."
+        : "did not answer a trivial evaluate, so it is wedged, not slow — the known, " +
+          "unattributed Chromium wedge (see the debug skill's visual-capture section)."),
+  );
+}
+
+async function capture(page: Page, name: string, scheme: "light" | "dark") {
+  const baseViewport = page.viewportSize();
+  for (const viewport of VIEWPORTS) {
+    await page.setViewportSize(viewport);
+    await paintWholeDocument(page);
+    await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
   }
   // capture() runs mid-flow (navigation and clicks continue after it), so
   // restore the base viewport the test was using before resizing for each
@@ -654,12 +725,7 @@ async function capturePrint(page: Page, name: string) {
   await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
   // After the media switch, so the bands rasterized are the print layout's.
   await paintWholeDocument(page);
-  await page.screenshot({
-    path: `e2e/screenshots/${name}-print.png`,
-    fullPage: true,
-    animations: "disabled",
-    timeout: SCREENSHOT_TIMEOUT_MS,
-  });
+  await screenshotOrGiveUp(page, `e2e/screenshots/${name}-print.png`);
   await page.emulateMedia({ media: "screen" });
 }
 
