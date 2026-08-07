@@ -165,8 +165,14 @@ export default async function CheckInPage({
           />
         }
         actions={
-          <Link href={`/shop/${shopSlug}/check-in/walk-in`} className={buttonClass()}>
-            {t("checkIn.walkIn.title")}
+          // Secondary, and a verb: the page's one primary weight belongs to the
+          // queue's own "Check in" buttons — the common path — not to the rare
+          // walk-in door at the top (design principle 8).
+          <Link
+            href={`/shop/${shopSlug}/check-in/walk-in`}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("checkIn.walkInAction")}
           </Link>
         }
       />
@@ -248,8 +254,19 @@ export default async function CheckInPage({
             )}
           </EmptyState>
         ) : cleared ? (
-          <div className="rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
+          // The counter's finish line is an earned moment (design principle 3):
+          // the `rise-in` entrance is the confirmation-panel motion, and the
+          // door onward is Today — where the day continues once nobody is
+          // waiting at the desk.
+          <div className="rise-in rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
             <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("checkIn.clearedBody")}</p>
+            <Link
+              href={`/shop/${shopSlug}`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("checkIn.clearedAction")}
+            </Link>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
@@ -268,9 +285,12 @@ export default async function CheckInPage({
                   <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <div className="min-w-0">
                       <h3 id={`departure-${departure.tripId}`} className="font-semibold">
+                        {/* Primary ink, not hover-revealed: on a phone there is
+                            no hover, and this is the door to the boat's
+                            manifest. */}
                         <Link
                           href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
-                          className="hover:text-primary hover:underline"
+                          className="text-primary hover:underline"
                         >
                           {first.tripTitle}
                         </Link>
@@ -354,7 +374,13 @@ export default async function CheckInPage({
                                   <input type="hidden" name="bookingId" value={row.bookingId} />
                                   <button
                                     type="submit"
-                                    className={buttonClass({ className: "whitespace-nowrap" })}
+                                    // `cta` for the 16px label: this verb is
+                                    // tapped through doorway glare all morning
+                                    // (dock test, design principle 2).
+                                    className={buttonClass({
+                                      size: "cta",
+                                      className: "whitespace-nowrap",
+                                    })}
                                     aria-label={t("checkIn.checkInAriaLabel", {
                                       name: row.personName,
                                     })}

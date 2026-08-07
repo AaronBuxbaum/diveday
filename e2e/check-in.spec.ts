@@ -41,7 +41,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
   await page.goto("/shop/blue-mantis/check-in");
-  await page.getByRole("link", { name: "Walk-in" }).click();
+  await page.getByRole("link", { name: "Add a walk-in" }).click();
   await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
 
   const tripSection = page.locator("section").filter({ hasText: "Which boat?" });

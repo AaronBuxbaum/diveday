@@ -261,7 +261,7 @@ export function DiverList({
    */
   const showViews = divers.length > 0 || narrowed;
   const chipClass = (active: boolean) =>
-    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+    `inline-flex min-h-11 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
       active
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
@@ -487,8 +487,12 @@ export function DiverList({
                           appears beside it only when this person actually
                           needs a staffer (design principle 9). */}
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* The column header already says "Cards" — repeating
+                            the unit on every row is the residue principle 9
+                            clears. The phone cards keep the full phrase; they
+                            have no header to carry it. */}
                         <span className="whitespace-nowrap text-muted tabular-nums">
-                          {cardCountText(cardCount(diver))}
+                          {cardCount(diver)}
                         </span>
                         {pendingCount(diver) > 0 ? (
                           <Badge tone="warning">
