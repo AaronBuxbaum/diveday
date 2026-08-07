@@ -155,13 +155,15 @@ export const areas = {
       "docs/design/principles.md",
     ],
     code: [
+      // The gate, the mix validation, and the MOD derivation all live in
+      // src/db/nitrox.ts — there is no src/lib/nitrox.ts; the prep list reads
+      // the results through src/lib/dive-prep.ts.
       "src/db/schema.ts",
       "src/db/nitrox.ts",
-      "src/db/nitrox.test.ts",
-      "src/lib/nitrox.ts",
+      "src/lib/dive-prep.ts",
       "src/app/shop/[shopSlug]/trips/[id]/prep",
     ],
-    tests: ["src/lib/nitrox.test.ts", "src/db/nitrox.test.ts", "e2e"],
+    tests: ["src/db/nitrox.test.ts", "src/lib/dive-prep.test.ts", "e2e/nitrox.spec.ts"],
     invariants: [
       "Only a verified nitrox card lets a diver receive an EANx fill; the gate is enforced at write time.",
       "Only a valid recreational EANx mix (22–40% O2) is accepted; out-of-band values fail closed.",
@@ -170,9 +172,9 @@ export const areas = {
       "Nitrox is a safety-critical surface — it needs a dive-domain-expert review (V-05).",
     ],
     validate: [
-      "pnpm test src/lib/nitrox.test.ts src/db/nitrox.test.ts --reporter=dot",
+      "pnpm test src/db/nitrox.test.ts src/lib/dive-prep.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e --reporter=line",
+      "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
   courses: {
@@ -463,7 +465,6 @@ export const areas = {
       "src/lib/notifications/whatsapp-events.test.ts",
       "src/lib/notifications/sms-events.test.ts",
       "src/lib/notifications/courtesy.test.ts",
-      "src/lib/notifications/events.test.ts",
       "src/lib/notifications/ses-events.test.ts",
       "src/lib/notifications/sns.test.ts",
       "src/lib/secret-box.test.ts",

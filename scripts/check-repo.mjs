@@ -27,6 +27,7 @@ const checks = [
   ["docs", "check-doc-links.mjs"],
   ["agents", "check-agents.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
+  ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["text", "check-source-text.mjs"],
   ["locale", "check-locale.mjs"],
