@@ -123,6 +123,48 @@ accumulate forever); `src/app/api/test/reset/reclaim.test.ts` is the guard. Befo
 box, confirm the port you are measuring is not still held by an *earlier* probe's server — a stale
 listener silently answers on the pre-fix build and reports its own bloated curve as the new one.
 
+## A race is fixed by naming what you wait for
+
+`pnpm check:e2e-hygiene` refuses sleeps, `networkidle`, and retry shims in `e2e/` because every
+one of them has already been tried here and failed the same way — by moving the race instead of
+closing it:
+
+- The offline-fallback assertion was "fixed" three times, each fix re-anchoring the same race one
+  layer down (error text → interstitial DOM → an interstitial that is empty on CI), before the
+  version that asserted **what the page shows when the work is done**.
+- `findTripOnBoard` retried its crawl 3× under a written justification ("a sibling worker shifts
+  pagination") that was impossible — each worker owns an isolated database. The real race was a
+  client navigation landing on the segment's linkless `loading.tsx` skeleton; the fix was waiting
+  for a link that exists only on the destination page and never in the skeleton.
+
+The pattern behind both fixes: pick an element that **exists only after** the awaited work
+completed — the destination page's own content, never absence-of-spinner, never elapsed time —
+and let an auto-retrying `expect(locator)` wait for it. Under streaming SSR and `cacheComponents`,
+"the page navigated" and "the page's content exists" are separate events; a `loading.tsx` skeleton
+answers the first while failing the second, which is why URL- and time-based waits race and
+content waits don't.
+
+## A failure only CI can reproduce
+
+The OG-image socket failure took seven probe commits in 90 minutes because each probe asked one
+question. When a failure has no local reproduction, spend the first commit making the failure
+*legible* rather than guessing at fixes:
+
+1. **Cut the run down to the failing test** (temporarily edit the CI matrix/spec filter) so each
+   probe answers in minutes, not a full-suite cycle.
+2. **Let the server speak**: capture the app server's stderr into the job log (this is how the
+   libvips failure finally named itself). An assertion message describes the symptom; the process
+   that failed knows the cause.
+3. **Ask about the environment in batches, not one flag at a time** — fonts, `VIPSHOME`, missing
+   binaries, what a library reports it can decode. One probe commit that prints all of them beats
+   four that each print one.
+4. **Mark probe commits `TEMPORARY:` and remove them before merge** — the branch history may keep
+   them; `main` must not.
+5. Remember what CI is that local isn't: Linux glyph rasterization (see `visual-triage`), a
+   four-core runner running two workers × (browser + `next start`) — deliberate oversubscription,
+   per `ci.yml` — a UTC clock, and fresh servers per shard (so a locally-reproducible tail failure
+   is the *reused*-server trap above, not CI's problem).
+
 ## Where evidence lives
 
 | Symptom | Look at |
@@ -171,3 +213,11 @@ their own, so there's nothing left over to leak into the next session.
 
 Report failures verbatim. If you couldn't verify something (denied permission, CI didn't run),
 say so explicitly — never describe partial work as done.
+
+A written justification is a claim, and claims here get checked: a 2026-08-06 review found three
+shipped workarounds whose comments confidently explained mechanisms that were false ("a sibling
+test's parallel worker", "a permanent redirect" that measured as a 200). Before committing a
+comment that explains *why* a workaround is needed, verify the mechanism it names against the
+harness or the code (`e2e/servers.ts` for worker isolation, an actual `curl -i` for a status
+code). If you can't verify it, write "unverified hypothesis" — a wrong explanation with a
+confident voice costs the next session far more than an honest gap.

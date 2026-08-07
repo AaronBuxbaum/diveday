@@ -84,13 +84,23 @@ for (const file of agentFiles) {
     problems.push(`.claude/skills/README.md: reviewer agent "${agentName}" is not mentioned`);
 }
 
-// 4. task:context areas point at docs that exist (code/tests may be planned; docs may not).
+// 4. task:context areas point at files that exist — docs, code, and tests alike.
+// `code`/`tests` used to be allowed to be "planned", which made a renamed-away
+// module indistinguishable from an intended one: the nitrox area pointed
+// sessions at a src/lib/nitrox.ts that never existed. An area entry is a claim
+// about where the work lives; add the path when the file does exist.
 for (const [areaName, area] of Object.entries(areas)) {
-  for (const doc of area.docs) {
-    try {
-      await access(path.join(ROOT, doc));
-    } catch {
-      problems.push(`task-context area "${areaName}": doc ${doc} does not exist`);
+  for (const [kind, items] of [
+    ["doc", area.docs],
+    ["code", area.code],
+    ["test", area.tests],
+  ]) {
+    for (const item of items ?? []) {
+      try {
+        await access(path.join(ROOT, item));
+      } catch {
+        problems.push(`task-context area "${areaName}": ${kind} path ${item} does not exist`);
+      }
     }
   }
 }
@@ -113,6 +123,56 @@ for (const token of routePathTokens) {
   } catch {
     problems.push(`AGENTS.md: route-map path "${token}" does not exist`);
   }
+}
+
+// 6. The permission allowlist references real things. A dead entry is worse
+// than a missing one: it advertises a tool that doesn't exist (sessions go
+// looking for scripts/screenshot.mjs) or silently grants nothing (a pnpm
+// script that was renamed away prompts on every use instead of never).
+const settings = JSON.parse(await readFile(path.join(ROOT, ".claude/settings.json"), "utf8"));
+const pnpmBuiltins = new Set(["install", "add", "remove", "run", "exec", "dlx", "why", "outdated"]);
+const packageScripts = new Set(
+  Object.keys(JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8")).scripts ?? {}),
+);
+for (const entry of settings.permissions?.allow ?? []) {
+  const bash = entry.match(/^Bash\((.+)\)$/)?.[1];
+  if (!bash) continue;
+  const scriptFile = bash.match(/^node (scripts\/[\w./-]+?)(?::\*)?$/)?.[1];
+  if (scriptFile) {
+    try {
+      await access(path.join(ROOT, scriptFile));
+    } catch {
+      problems.push(`.claude/settings.json: allow entry "${entry}" — ${scriptFile} does not exist`);
+    }
+  }
+  const pnpmTarget = bash.match(/^pnpm ([\w:.-]+?)(?::\*)?(?: .*)?$/)?.[1];
+  if (pnpmTarget && !pnpmBuiltins.has(pnpmTarget) && !packageScripts.has(pnpmTarget)) {
+    problems.push(
+      `.claude/settings.json: allow entry "${entry}" — package.json has no "${pnpmTarget}" script`,
+    );
+  }
+}
+
+// 7. Every guard on disk actually runs. A scripts/check-*.mjs that check-repo.mjs
+// doesn't spawn is a ratchet nobody turns — it would pass review as "checked"
+// while never executing in `pnpm check`.
+const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
+const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
+  (file) =>
+    file.startsWith("check-") &&
+    file.endsWith(".mjs") &&
+    !file.endsWith(".test.mjs") &&
+    file !== "check-repo.mjs" &&
+    // Opt-in / env-shaped checks that check-repo runs are listed in its own
+    // `checks` table; the only standing exception is the e2e build probe,
+    // which needs a completed `pnpm e2e:build` to have anything to inspect.
+    file !== "check-e2e-build.mjs",
+);
+for (const file of checkScripts) {
+  if (!checkRepoSource.includes(`"${file}"`))
+    problems.push(
+      `scripts/check-repo.mjs: ${file} exists but is never spawned — wire it into the checks table or it will never run`,
+    );
 }
 
 if (problems.length > 0) {

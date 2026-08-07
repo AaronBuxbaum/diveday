@@ -16,7 +16,6 @@
       "mcp__Claude_Code_Remote__:*",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
-      "Bash(pnpm format)",
       "Bash(pnpm typecheck)",
       "Bash(pnpm test)",
       "Bash(pnpm test:watch)",

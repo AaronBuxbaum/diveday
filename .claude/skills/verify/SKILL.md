@@ -44,6 +44,12 @@ see the `debug` skill's **Long-running background processes** section for why a 
 real problems (stale-server corruption, and sessions getting stuck waiting on a readiness signal
 that a leftover process will never emit).
 
+For a surface with no visual-spec capture group yet, or a quick mid-iteration look while a dev
+server is already running, use `node scripts/screenshot.mjs <path> [--dark] [--as owner]` — it
+captures the light/dark × phone/desktop matrix into `screenshots/` (gitignored) and signs in
+through the seeded dev credentials for `/shop/**` paths. Never hand-write a throwaway driver for
+this; the script exists so scratch `.shots*.mjs` files stop reaching the index.
+
 ## 4. Behavior changed: exercise it
 
 For domain logic with no UI yet, drive it directly (a scratch script or `vitest run` on the new

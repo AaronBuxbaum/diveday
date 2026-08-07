@@ -17,7 +17,9 @@ Delight is this product's differentiator — this review is where that stops bei
    ```
    Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored) — every capture is written at
    both the phone and desktop widths in `VIEWPORTS`. A surface with no capture group can't be
-   reviewed this way until you add one (see `e2e-and-visual`).
+   reviewed this way until you add one (see `e2e-and-visual`); for a first look at such a surface,
+   `node scripts/screenshot.mjs <path>` against a running dev server captures the same
+   light/dark × phone/desktop matrix without a spec.
 3. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)

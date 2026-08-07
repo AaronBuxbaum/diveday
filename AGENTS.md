@@ -30,8 +30,9 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, Intl-cache, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, destructive-migration, and agent-layer (skills/index/task-context) safeguards. The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard) |
+| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, Intl-cache, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, destructive-migration, e2e-hygiene, and agent-layer (skills/index/task-context) safeguards. The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard) |
 | `pnpm check:intl-cache` | every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the call site. Constructing one costs ~12x reusing it (measured) and this app formats on essentially every render, so the constructor is a per-render tax that shows up as CI e2e flake under load. Regressed twice before it was checked — most recently as an `Intl.PluralRules` per interpolated message. `Intl.Locale` is exempt: a parsed locale value, not a compiled formatter |
+| `pnpm check:e2e-hygiene` | no timing guesses in `e2e/`: `waitForTimeout` sleeps, `networkidle` waits, spec-level `retries:`, and hand-rolled retry loops are refused unless the line carries `diveday:allow-e2e-hygiene <rule>: <why>` naming the mechanism that makes it deterministic. The suite runs `retries: 0` so a flake fails loudly and gets root-caused; every one of these shapes converts a deterministic failure into an intermittent pass instead — the exact class a 2026-08-06 review stripped back out of the tree after their written justifications proved false. The fix for a race is always waiting for what the destination page itself renders (see the **debug** skill) |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm check:copy` | find hard-coded user-facing copy in `src/app`/`src/components`; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm check:domain-strings` | find English sentences returned from `src/lib`/`src/db` (the `.message`/`_LABELS` leak — ADR 20260731-domain-layer-copy-leaks); same `--report <path>` / `--write` / `--absorb` as `check:copy` |
@@ -49,6 +50,7 @@ adapters and must not introduce unique requirements.
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
+| `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` server — light/dark × phone/desktop PNGs into `screenshots/` (gitignored), with automatic dev-credential sign-in for `/shop/**`. The kept tool that replaces the throwaway `.shots*.mjs` drivers sessions used to write; review-grade captures still come from a filtered visual-spec run (see the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners — on macOS nearly everything reads as changed; triage from the CI report) |
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
@@ -113,7 +115,8 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **i18n-copy**,
-**design-review**, **brand-voice**, **schema-change**, **debug**, **e2e-and-visual**, **visual-triage**, **adr**,
+**design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
+**e2e-and-visual**, **visual-triage**, **adr**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical

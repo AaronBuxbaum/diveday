@@ -63,8 +63,11 @@ next-env.d.ts
 /.claude/worktrees/
 
 # throwaway screenshot drivers an agent writes to look at a page it just
-# changed; the review is the point, the script is not worth keeping
+# changed; the review is the point, the script is not worth keeping.
+# scripts/screenshot.mjs is the kept tool that makes writing one unnecessary;
+# its output lands here.
 /.shots*.mjs
+/screenshots/
 
 # Built by scripts/build-service-worker.mjs from src/worker/manifest-sw.ts.
 public/manifest-sw.js

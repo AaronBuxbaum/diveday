@@ -34,6 +34,7 @@
     "check:docs": "node scripts/check-doc-links.mjs",
     "check:agents": "node scripts/check-agents.mjs",
     "check:e2e-fixtures": "node scripts/check-e2e-fixtures.mjs",
+    "check:e2e-hygiene": "node scripts/check-e2e-hygiene.mjs",
     "check:route-coverage": "node scripts/check-route-coverage.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:locale": "node scripts/check-locale.mjs",

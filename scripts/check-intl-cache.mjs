@@ -23,7 +23,8 @@ import process from "node:process";
  * `Intl.ListFormat` inside a `.map()`. The second round swept those up — and
  * new code merged in the same week reintroduced it again in `src/i18n/fill.ts`
  * (an `Intl.PluralRules` per interpolated message, the hottest site in the
- * app). A review-only rule does not survive that; a check does.
+ * app). A review-only rule does not survive that; a check does. The decision
+ * record is docs/architecture/decisions/20260807-intl-formatter-cache.md.
  *
  * Scope is every guarded source root, tests excluded: a test constructing a
  * formatter directly is usually asserting *about* `Intl` itself, and paying a

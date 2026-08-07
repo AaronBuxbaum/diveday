@@ -18,6 +18,7 @@ under the same sync duties (docs/README.md).
 | `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
+| `instant-navigation` | Adding or restructuring any page or layout; a `blocking-prerender-*` build failure; redirect or client-navigation surprises under Next 16's `cacheComponents` |
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright functional flows and visual specs |
 | `visual-triage` | Whenever Playwright reports a visual difference — decide which reference changes are expected and explain or fix the rest |
 | `i18n-copy` | Writing or editing any on-screen wording; a red `pnpm check:copy`; extracting a file off the copy baseline |

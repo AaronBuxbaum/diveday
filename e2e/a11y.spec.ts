@@ -54,6 +54,7 @@ async function expectNoA11yViolations(page: Page) {
   // scan that follows a server action's redirect. Settling first and asserting
   // the title last makes the title the final gate before `analyze()`, so the
   // document axe reads is the one the assertion actually checked.
+  // diveday:allow-e2e-hygiene networkidle: axe scans the whole settled document, so there is no single element to wait for; the title assertion below is the deterministic final gate (see the comment above, CI run 30887575971)
   await page.waitForLoadState("networkidle");
   await expect(page).toHaveTitle(/.+/);
   const results = await new AxeBuilder({ page })
