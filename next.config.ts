@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "pg", "sharp"],
   cacheComponents: true,
   images: {
+    // The e2e build serves every photo's original bytes instead of running
+    // them through the optimizer. Sharp's lossy re-encodes are not
+    // bit-reproducible between runs (threaded encoders), so an optimized
+    // photo diffs by a few channel values on every CI run — which made the
+    // course-page captures a permanent visual-regression coin flip while the
+    // layout never moved. Same principle as DIVEDAY_CLOCK: freeze the
+    // nondeterminism at the harness boundary, change nothing in production.
+    unoptimized: isE2EBuild,
     // Every photo this app stores (certification cards, course media, recap
     // photos, dive-site briefings) lands in Vercel Blob behind a per-store
     // subdomain of this suffix (`BLOB_PUBLIC_HOSTNAME_SUFFIX`,
