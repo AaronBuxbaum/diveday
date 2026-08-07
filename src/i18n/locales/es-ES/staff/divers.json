@@ -141,10 +141,8 @@
     "cardCountOther": "{count} tarjetas",
     "pendingReviewText": "{count} pendiente de revisión",
     "toConfirmText": "{count} por confirmar",
-    "noneText": "Ninguno",
     "tableHeaderPerson": "Persona",
     "tableHeaderCards": "Tarjetas",
-    "tableHeaderAttention": "Atención",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
     }

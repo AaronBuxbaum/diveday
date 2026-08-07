@@ -159,6 +159,29 @@ of same-weight buttons is the user doing triage work that the design should have
   for attention is a finding. The fix is a merge, a demotion, or a disclosure — never a new
   wrapper that makes three buttons look tidier.
 
+## 9. Say a shared fact once
+
+A fact shared by every row belongs to the group, not the rows — repetition at equal weight is
+noise pretending to be information. Row ink is reserved for what *differs* between rows; when a
+column or badge would render the same value on nearly every row, that value either moves up to a
+group header, or disappears until it has something to say.
+
+- **Group what repeats.** A queue of people on the same boat states the boat — title, time,
+  progress — once, in a group header; each row is just the person (the counter check-in works
+  this way). A list that would repeat a warning per row states it once above the list.
+- **"None" is not a status.** A column whose usual value is "None", "—", or an all-clear badge is
+  the absence of information formatted as information. Render attention markers only on the rows
+  that need attention; an empty cell says "nothing to see" better than a word does.
+- **Don't say what the control already says.** A "Ready" badge beside an enabled "Check in"
+  button states the same fact twice; the affordance is the status. Badges mark the exceptional
+  state (Blocked), not the expected one.
+- **Counts are facts, not alerts.** A per-row count that merely differs (cards on file, seats
+  sold) is quiet muted text, not a pill — pills and badges are spent on the rows that need a
+  staffer, so that when one appears it means something.
+
+The test: read a list top to bottom and cross out every word that repeats an earlier row. What
+survives is the list; what's crossed out belongs to a header or nothing.
+
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
@@ -195,3 +218,6 @@ still held to the full bar; the exceptions are a documented backlog, not a lower
       row of same-weight buttons
 - [ ] Empty-state pattern matches terminal-vs-section (bespoke emoji pattern for a whole empty
       page, shared `EmptyState` for an empty section within a populated page)
+- [ ] No fact repeats at equal weight down a list: shared facts sit in a group header, "None"
+      columns and all-clear badges are absent rather than rendered, and a badge marks only the
+      exceptional state
