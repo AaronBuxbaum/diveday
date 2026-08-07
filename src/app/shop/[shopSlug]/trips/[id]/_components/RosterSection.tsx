@@ -399,9 +399,13 @@ export function RosterSection({
                   />
                 ) : null}
                 <div className="min-w-0">
+                  {/* A real target, not a 21px text line: inside the collapsed
+                      row's <summary> this link sits against another clickable
+                      surface, so it needs its own clear hit area (WCAG 2.5.8's
+                      24px floor; the dock test asks for 44). */}
                   <Link
                     href={`/shop/${shopSlug}/divers/${person.id}`}
-                    className="font-medium text-primary hover:underline"
+                    className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
                   >
                     {person.fullName}
                   </Link>
@@ -814,45 +818,52 @@ export function RosterSection({
                 className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
               >
                 {settled ? (
-                  // Deep links (Today, the manifest's "Resolve blockers") land
-                  // mid-page at one diver; AutoOpenDetails opens the disclosure
-                  // when the hash names this row, so a collapsed card never
-                  // swallows the thing the link promised.
-                  <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group">
-                    <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-start justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       {headerLeft}
-                      <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         {checkedInPill}
                         {/* Quiet text, not the green Badge: on a good morning
                             every row here is settled, and a success pill
                             repeated down the list is the exact noise this
                             collapse exists to remove (principle 9). The glyph
                             stays — never color (or its absence) alone. */}
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-muted">
+                        <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
                           <span aria-hidden="true">✓</span>
                           {readinessStatusText(t, "ready")}
                         </span>
-                        <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted transition-colors group-hover:text-foreground">
-                          {t("trips.roster.detailsSummary")}
-                          <svg
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            stroke="currentColor"
-                            aria-hidden="true"
-                            className="size-4 transition-transform duration-200 group-open:rotate-180"
-                          >
-                            <path
-                              d="m6 8 4 4 4-4"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      </span>
-                    </summary>
-                    {detail}
-                  </AutoOpenDetails>
+                      </div>
+                    </div>
+                    {/* The disclosure toggle is its own <summary> below the
+                        header rather than wrapping it: a summary is itself
+                        interactive, so the diver-name link inside it would be
+                        an interactive element nested in another (axe
+                        nested-interactive). Deep links (Today, the manifest's
+                        "Resolve blockers") land mid-page at one diver;
+                        AutoOpenDetails opens this when the hash names the row,
+                        so a collapsed card never swallows what the link
+                        promised. */}
+                    <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group -mt-2">
+                      <summary className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+                        {t("trips.roster.detailsSummary")}
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          aria-hidden="true"
+                          className="size-4 transition-transform duration-200 group-open:rotate-180"
+                        >
+                          <path
+                            d="m6 8 4 4 4-4"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </summary>
+                      {detail}
+                    </AutoOpenDetails>
+                  </>
                 ) : (
                   <>
                     <div className="flex flex-wrap items-start justify-between gap-3">
