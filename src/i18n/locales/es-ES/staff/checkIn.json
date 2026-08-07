@@ -21,6 +21,7 @@
   "boardedBadge": "Embarcado",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
+  "departureProgress": "{checkedIn} de {total} registrados",
   "search": {
     "label": "Escanear o buscar buceador",
     "hint": "Un lector de códigos de barras puede escribir aquí un ID de reserva.",

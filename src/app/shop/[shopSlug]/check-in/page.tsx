@@ -125,6 +125,17 @@ export default async function CheckInPage({
   // else still pending elsewhere.
   const cleared = !query && allDiversCheckedIn(queue);
 
+  // One departure, said once. The queue arrives ordered by departure then
+  // name, so grouping is a single pass — and the group header is where the
+  // trip's title, time, and "4 of 9 checked in" progress live, leaving each
+  // row only what differs about the person (design principle 9).
+  const departures: { tripId: string; first: (typeof queue)[number]; rows: typeof queue }[] = [];
+  for (const row of queue) {
+    const last = departures.at(-1);
+    if (last && last.tripId === row.tripId) last.rows.push(row);
+    else departures.push({ tripId: row.tripId, first: row, rows: [row] });
+  }
+
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -241,120 +252,158 @@ export default async function CheckInPage({
             <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {queue.map((row) => {
-              const ready = row.readiness.status === "ready";
-              const checkedIn = row.bookingStatus === "checked_in";
-              const fix = ready
-                ? null
-                : blockerFixFor(
-                    row.readiness.blockers,
-                    {
-                      shopSlug,
-                      tripId: row.tripId,
-                      personId: row.personId,
-                      bookingId: row.bookingId,
-                      fullName: row.personName,
-                    },
-                    t,
-                  );
+          <div className="flex flex-col gap-6">
+            {departures.map((departure) => {
+              const { first } = departure;
+              const checkedInCount = departure.rows.filter(
+                (row) => row.bookingStatus === "checked_in",
+              ).length;
+              const allAboard = checkedInCount === departure.rows.length;
               return (
-                <article
-                  key={row.bookingId}
-                  data-testid={`check-in-card-${row.bookingId}`}
-                  className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
+                <section
+                  key={departure.tripId}
+                  aria-labelledby={`departure-${departure.tripId}`}
+                  className="rounded-2xl border border-border bg-surface shadow-sm"
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <h3 id={`departure-${departure.tripId}`} className="font-semibold">
                         <Link
-                          href={`/shop/${shopSlug}/divers/${row.personId}`}
-                          className="text-lg font-semibold hover:text-primary hover:underline"
+                          href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
+                          className="hover:text-primary hover:underline"
                         >
-                          {row.personName}
+                          {first.tripTitle}
                         </Link>
-                        {checkedIn ? (
-                          <Badge tone="success">{t("checkIn.checkedInBadge")}</Badge>
-                        ) : null}
-                        {/* The check-in queue's own description promises this
-                            split — check-in is arrival, boarding is confirmed
-                            on the manifest — but the queue never actually
-                            showed it (task 149, UX persona lens 17). */}
-                        {row.boarded ? (
-                          <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
-                        ) : null}
-                      </div>
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${row.tripId}/manifest`}
-                        className="mt-1 block text-sm font-medium text-primary hover:underline"
-                      >
-                        {row.tripTitle}
-                      </Link>
-                      <p className="mt-1 text-sm text-muted">
-                        {formatShortDate(row.startsAt, locale, shop.timezone)} ·{" "}
-                        {formatTimeRange(row.startsAt, row.endsAt, locale, shop.timezone)}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-muted">
+                        {formatShortDate(first.startsAt, locale, shop.timezone)} ·{" "}
+                        {formatTimeRange(first.startsAt, first.endsAt, locale, shop.timezone)}
                       </p>
-                      {row.email ? (
-                        <p className="mt-1 truncate text-xs text-muted">{row.email}</p>
-                      ) : null}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {/* The one readiness vocabulary and the one tone per
-                          state (src/i18n/readiness-labels.ts). This badge used
-                          to say "Needs attention" in warning while the manifest
-                          said "Blocked" in danger about the very same diver. */}
-                      <Badge tone={readinessStatusTone(row.readiness.status)}>
-                        {readinessStatusText(t, row.readiness.status)}
-                      </Badge>
-                      {checkedIn ? null : ready ? (
-                        <form action={checkInAction.bind(null, shopSlug)}>
-                          <input type="hidden" name="bookingId" value={row.bookingId} />
-                          <button
-                            type="submit"
-                            className={buttonClass({ className: "whitespace-nowrap" })}
-                            aria-label={t("checkIn.checkInAriaLabel", { name: row.personName })}
-                          >
-                            {t("checkIn.checkInButton")}
-                          </button>
-                        </form>
-                      ) : null}
-                    </div>
+                    {/* Not color alone: the count itself says how far along the
+                        boat is; the success ink only underlines a finished one. */}
+                    <p
+                      className={`text-sm font-medium tabular-nums ${allAboard ? "text-success" : "text-muted"}`}
+                    >
+                      {t("checkIn.departureProgress", {
+                        checkedIn: checkedInCount,
+                        total: departure.rows.length,
+                      })}
+                    </p>
+                  </header>
+                  <div className="divide-y divide-border">
+                    {departure.rows.map((row) => {
+                      const ready = row.readiness.status === "ready";
+                      const checkedIn = row.bookingStatus === "checked_in";
+                      const fix = ready
+                        ? null
+                        : blockerFixFor(
+                            row.readiness.blockers,
+                            {
+                              shopSlug,
+                              tripId: row.tripId,
+                              personId: row.personId,
+                              bookingId: row.bookingId,
+                              fullName: row.personName,
+                            },
+                            t,
+                          );
+                      return (
+                        <article
+                          key={row.bookingId}
+                          data-testid={`check-in-card-${row.bookingId}`}
+                          className="px-4 py-3 sm:px-5"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Link
+                                  href={`/shop/${shopSlug}/divers/${row.personId}`}
+                                  className="font-semibold hover:text-primary hover:underline"
+                                >
+                                  {row.personName}
+                                </Link>
+                                {checkedIn ? (
+                                  <Badge tone="success">{t("checkIn.checkedInBadge")}</Badge>
+                                ) : null}
+                                {/* The check-in queue's own description promises this
+                                    split — check-in is arrival, boarding is confirmed
+                                    on the manifest — but the queue never actually
+                                    showed it (task 149, UX persona lens 17). */}
+                                {row.boarded ? (
+                                  <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
+                                ) : null}
+                              </div>
+                              {row.email ? (
+                                <p className="mt-0.5 truncate text-sm text-muted">{row.email}</p>
+                              ) : null}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              {/* A ready row's whole state is the button — a "Ready"
+                                  badge beside "Check in" said the same thing twice.
+                                  Blocked keeps the one readiness vocabulary and tone
+                                  (src/i18n/readiness-labels.ts), because for a blocked
+                                  diver the badge is the state. */}
+                              {!ready ? (
+                                <Badge tone={readinessStatusTone(row.readiness.status)}>
+                                  {readinessStatusText(t, row.readiness.status)}
+                                </Badge>
+                              ) : null}
+                              {checkedIn ? null : ready ? (
+                                <form action={checkInAction.bind(null, shopSlug)}>
+                                  <input type="hidden" name="bookingId" value={row.bookingId} />
+                                  <button
+                                    type="submit"
+                                    className={buttonClass({ className: "whitespace-nowrap" })}
+                                    aria-label={t("checkIn.checkInAriaLabel", {
+                                      name: row.personName,
+                                    })}
+                                  >
+                                    {t("checkIn.checkInButton")}
+                                  </button>
+                                </form>
+                              ) : null}
+                            </div>
+                          </div>
+                          {/* The one blocked-diver presentation, shared with the
+                              by-departure view (src/components/today/BlockedDiverRow.tsx).
+                              It shows *every* blocker: this card used to stop at three
+                              and count the rest, on the one surface where the diver is
+                              standing in front of the staffer asking what else is
+                              needed. */}
+                          {!ready ? (
+                            <BlockedDiverRow
+                              layout="below"
+                              shopSlug={shopSlug}
+                              surface="check_in"
+                              waiverCopy={waiverSendCopy(t)}
+                              blockers={row.readiness.blockers}
+                              fix={fix}
+                              t={t}
+                              extra={
+                                // A diver at the counter with a signed paper release in
+                                // hand: record it here rather than sending them (and the
+                                // staffer) off to the trip's guest list for the one
+                                // control that clears this blocker. Offered on the same
+                                // condition the roster uses — a waiver still to come —
+                                // and kept under the primary "send the link" action,
+                                // because attesting to paper is the fallback.
+                                fix?.sendsWaiver ? (
+                                  <PaperWaiverControl
+                                    action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
+                                    bookingId={row.bookingId}
+                                    t={t}
+                                    className="mt-2"
+                                  />
+                                ) : null
+                              }
+                            />
+                          ) : null}
+                        </article>
+                      );
+                    })}
                   </div>
-                  {/* The one blocked-diver presentation, shared with the
-                      by-departure view (src/components/today/BlockedDiverRow.tsx).
-                      It shows *every* blocker: this card used to stop at three
-                      and count the rest, on the one surface where the diver is
-                      standing in front of the staffer asking what else is
-                      needed. */}
-                  {!ready ? (
-                    <BlockedDiverRow
-                      layout="below"
-                      shopSlug={shopSlug}
-                      surface="check_in"
-                      waiverCopy={waiverSendCopy(t)}
-                      blockers={row.readiness.blockers}
-                      fix={fix}
-                      t={t}
-                      extra={
-                        // A diver at the counter with a signed paper release in
-                        // hand: record it here rather than sending them (and the
-                        // staffer) off to the trip's guest list for the one
-                        // control that clears this blocker. Offered on the same
-                        // condition the roster uses — a waiver still to come —
-                        // and kept under the primary "send the link" action,
-                        // because attesting to paper is the fallback.
-                        fix?.sendsWaiver ? (
-                          <PaperWaiverControl
-                            action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
-                            bookingId={row.bookingId}
-                            t={t}
-                            className="mt-2"
-                          />
-                        ) : null
-                      }
-                    />
-                  ) : null}
-                </article>
+                </section>
               );
             })}
           </div>

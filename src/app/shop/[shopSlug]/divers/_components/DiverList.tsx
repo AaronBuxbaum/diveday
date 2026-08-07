@@ -54,10 +54,8 @@ export interface DiverListCopy {
   cardCountOther: string;
   pendingReviewText: string;
   toConfirmText: string;
-  noneText: string;
   tableHeaderPerson: string;
   tableHeaderCards: string;
-  tableHeaderAttention: string;
 }
 
 function initials(fullName: string): string {
@@ -403,9 +401,12 @@ export function DiverList({
                     </span>
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <Badge tone="primary" className="whitespace-nowrap">
+                    {/* The count is roster fact, not an alert — muted ink, not a
+                        pill. Badges below appear only when a row actually needs
+                        a staffer (design principle 9). */}
+                    <span className="whitespace-nowrap text-muted tabular-nums">
                       {cardCountText(cardCount(diver))}
-                    </Badge>
+                    </span>
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">
                         {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -444,9 +445,6 @@ export function DiverList({
                   <th scope="col" className="px-4 py-3 font-medium">
                     {copy.tableHeaderCards}
                   </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderAttention}
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -483,12 +481,15 @@ export function DiverList({
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <Badge tone="primary" className="whitespace-nowrap">
-                        {cardCountText(cardCount(diver))}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex flex-wrap gap-2">
+                      {/* One quiet cell instead of a pill column plus an
+                          Attention column that said "None" on nearly every
+                          row: the count is muted roster fact, and a badge
+                          appears beside it only when this person actually
+                          needs a staffer (design principle 9). */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="whitespace-nowrap text-muted tabular-nums">
+                          {cardCountText(cardCount(diver))}
+                        </span>
                         {pendingCount(diver) > 0 ? (
                           <Badge tone="warning">
                             {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -498,11 +499,6 @@ export function DiverList({
                           <Badge tone="neutral">
                             {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                           </Badge>
-                        ) : null}
-                        {pendingCount(diver) === 0 &&
-                        confirmCount(diver) === 0 &&
-                        filter !== "removed" ? (
-                          <span className="text-muted">{copy.noneText}</span>
                         ) : null}
                         {filter === "removed" && restoreAction ? (
                           <RestoreRow

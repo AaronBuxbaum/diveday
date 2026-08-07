@@ -21,6 +21,7 @@
   "boardedBadge": "Boarded",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
+  "departureProgress": "{checkedIn} of {total} checked in",
   "search": {
     "label": "Scan or search diver",
     "hint": "A barcode scanner can type a booking ID here.",
