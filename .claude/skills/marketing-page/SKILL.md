@@ -37,7 +37,13 @@ the same PR.
 | Nav / footer | `src/components/MarketingNav.tsx`, `src/components/MarketingFooter.tsx` |
 
 Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped
-things, `<Field>`/`<FieldGrid>` for forms.
+things, `<Field>`/`<FieldGrid>` for forms — but inside those mechanics, compose for the argument
+(`docs/design/principles.md` §9–10): before building a new page or section, state its one idea in
+a sentence and sketch at least two compositions in prose, picking the one shaped by the content —
+the hero-plus-card-stack is the fallback, not the target. Surface the facts a buyer predictably
+wants (price, what's included, how leaving works) where the question arises rather than behind a
+click, and keep one primary CTA per screen — before adding a button, ask whether the layout could
+make it unnecessary.
 
 ## Copy checklist (apply to every changed sentence)
 

@@ -5,7 +5,9 @@ description: Review UI against the delight-first design principles using screens
 
 # Design review
 
-Delight is this product's differentiator — this review is where that stops being a slogan.
+Delight is this product's differentiator — this review is where that stops being a slogan. The
+bar is Apple-grade clarity: content leads, chrome defers, and the user never hunts for an answer
+or an action the screen could have carried.
 
 ## Procedure
 
@@ -20,16 +22,29 @@ Delight is this product's differentiator — this review is where that stops bei
    reviewed this way until you add one (see `e2e-and-visual`); for a first look at such a surface,
    `node scripts/screenshot.mjs <path>` against a running dev server captures the same
    light/dark × phone/desktop matrix without a spec.
-3. **Read each PNG** and evaluate against the checklist. Look hardest at:
+3. **Holistic pass first** (principles 9–10) — before the checklist, answer for each captured
+   surface, in writing:
+   - What is this screen's one idea, in a sentence? If you can't say it, the screen doesn't
+     know either.
+   - What question does its user arrive with, and is the answer already on screen — or behind a
+     click the app didn't need to charge?
+   - Which controls could dissolve into the objects they act on (row tap, hover-revealed
+     control, in-place edit with undo) instead of standing as buttons?
+   - Apply remove-until-it-breaks: name what you'd take away first. A control or border nobody
+     would miss is a finding.
+   - For a **new** significant surface: does the composition fit this content's own shape, or is
+     it the default card stack? If the default, sketch one alternative in prose (what moves
+     where, what it buys) and either adopt it or say why the default genuinely serves better.
+4. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)
    - loading/empty/error states — navigate to them, don't assume
-4. Check alignment at a width where captions wrap — the two failures that screenshots make obvious
+5. Check alignment at a width where captions wrap — the two failures that screenshots make obvious
    and diffs hide (see `docs/design/forms-and-controls.md`): fields in a row share one control
    baseline, and every button-shaped thing has its label centered in its target. Both come free
    from `<Field>`/`<FieldGrid>` and `buttonClass()`; a surface that fails one is usually a surface
    that hand-rolled the classes.
-5. Count the controls that actually render together in a given state (principle 8 — fewer
+6. Count the controls that actually render together in a given state (principle 8 — fewer
    controls, one obvious action) — from the screenshot or the rendered branch, not a source-level
    grep of `buttonClass()` call sites: mutually exclusive branches (a ternary showing one button
    or the other depending on state) don't stack into two, and a single call site mapped over a
@@ -41,14 +56,17 @@ Delight is this product's differentiator — this review is where that stops bei
    action with a default, or move a rare action behind disclosure. Separately — having at most one
    primary is not sufficient on its own; a read-only section or a chooser of peer secondary
    actions needs no primary at all — more than two or three controls of any weight competing for
-   attention in one section is also a finding on its own; the fix is the same set of moves. See
+   attention in one section is also a finding on its own; the fix is the same set of moves.
+   Before reaching for a demotion, ask principle 9's stronger question first: can the control
+   dissolve entirely — into the object it acts on, an in-place edit, or a good default? The
+   best button count is the one where nothing had to be demoted because nothing was stacked. See
    [forms-and-controls.md § Action rows](../../../docs/design/forms-and-controls.md#action-rows-one-primary-not-many).
-6. Grep the changed files for token violations:
+7. Grep the changed files for token violations:
    ```bash
    git diff main --unified=0 | grep -nE '#[0-9a-fA-F]{3,8}|-(red|blue|cyan|teal|zinc|gray|slate|orange|amber)-[0-9]'
    ```
    Raw hex or palette-scale classes in components are findings (ADR-0004).
-7. Grep the changed files for implementation jargon leaking into user-facing strings
+8. Grep the changed files for implementation jargon leaking into user-facing strings
    (principles §4 — "never surface the implementation"):
    ```bash
    git diff main --unified=0 -- 'src/app' 'src/components' 'src/lib' \
@@ -57,8 +75,9 @@ Delight is this product's differentiator — this review is where that stops bei
    Hits inside JSX text, string literals shown to users, or `aria-` labels are findings; hits in
    identifiers, imports, or comments are fine. The fix is the human translation ("saved on this
    phone", "DiveDay double-checks it when you're back in service"), never a vaguer claim.
-8. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
-   the screenshot paths.
+9. For a second, unbiased pass on significant surfaces, launch the `design-critic` agent with
+   the screenshot paths. It opens with the same holistic questions — expect it to challenge the
+   composition, not just the checklist.
 
 ## Output
 
