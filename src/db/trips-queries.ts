@@ -506,40 +506,6 @@ export async function upcomingScheduleRange(
   };
 }
 
-/**
- * The diver calendar's month of trips, bounded to the shop-local month so the
- * grid stays complete no matter how the list below it is paged.
- */
-export async function upcomingTripsForCalendar(
-  db: AppDb,
-  shopId: string,
-  monthStartUtc: Date,
-  monthEndUtc: Date,
-  now: Date = nowDate(),
-): Promise<{ id: string; title: string; startsAt: Date; capacity: number; booked: number }[]> {
-  const from = monthStartUtc > now ? monthStartUtc : now;
-  return db
-    .select({
-      id: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      booked: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gte(trips.startsAt, from),
-        lt(trips.startsAt, monthEndUtc),
-      ),
-    )
-    .groupBy(trips.id)
-    .orderBy(asc(trips.startsAt));
-}
-
 export type StaffScheduleDay = {
   dayNumber: number;
   startsAt: Date;

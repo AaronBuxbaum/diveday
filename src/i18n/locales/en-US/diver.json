@@ -43,7 +43,7 @@
     "noTrips": "No trips on the books yet",
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
     "noTripsPublic": "Check back soon — or call the shop and we’ll find you a boat.",
-    "noTripsMonth": "No trips this month — try another month on the calendar above.",
+    "noTripsMonth": "No trips this month — try another month.",
     "filters": {
       "tripType": "Trip type",
       "allTrips": "All trips",
@@ -65,12 +65,10 @@
     "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
     "diveCount": "{count, plural, other {# dives}}",
     "tripCardLabel": "{when} · {trip} · {capacity}",
-    "calendarLabel": "Dive schedule calendar",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "calendarDive": "{time} dive",
-    "calendarDiveFull": "{time} dive (full)",
     "tripListLabel": "Upcoming trips",
+    "monthNav": "Browse by month",
     "spotsLeftUrgent": "{count, plural, one {Only # spot left} other {Only # spots left}}",
     "nextDeparture": {
       "eyebrow": "Next boat out",

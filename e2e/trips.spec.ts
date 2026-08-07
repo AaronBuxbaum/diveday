@@ -1,7 +1,7 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
-test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
+test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
 }) => {
   await page.goto("/s/blue-mantis");
@@ -25,23 +25,20 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   await expect(page.getByText(/reserve your spot/i)).toBeVisible();
 
-  // The month calendar shows scheduled dives alongside the list.
-  const calendar = page.getByRole("region", { name: "Dive schedule calendar" });
-  await expect(calendar).toBeVisible();
-  // The calendar defaults to the current month, and the server clock is frozen
-  // (E2E_FROZEN_CLOCK), so the heading's year is whatever year that instant
-  // falls in — read it from the same source rather than the real wall clock,
-  // which would diverge once real time passes the frozen year.
+  // The month rail names the month in view and steps the list a month at a
+  // time — what the old full month grid did for a diver, in one quiet row.
+  // A labeled region, not a `<nav>` landmark — the embed promises zero
+  // navigation landmarks inside the iframe (e2e/schedule-embed.spec.ts).
+  const monthNav = page.getByRole("region", { name: "Browse by month" });
+  await expect(monthNav).toBeVisible();
+  // The rail defaults to the first upcoming departure's month, and the server
+  // clock is frozen (E2E_FROZEN_CLOCK), so its label's year is whatever year
+  // that instant falls in — read it from the same source rather than the real
+  // wall clock, which would diverge once real time passes the frozen year.
   const currentYear = e2eNow().getUTCFullYear();
-  await expect(
-    calendar.getByRole("heading", { name: new RegExp(`\\b${currentYear}\\b`) }),
-  ).toBeVisible();
-  // Each dive is a link into its trip page (labelled by start time so it
-  // doesn't collide with the titled cards in the list below).
-  await expect(calendar.getByRole("link", { name: /\bdive\b/ }).first()).toBeVisible();
-  await expect(
-    calendar.locator('a[href*="/trips/"]').filter({ visible: true }).first(),
-  ).toBeVisible();
+  await expect(monthNav.getByText(new RegExp(`\\b${currentYear}\\b`))).toBeVisible();
+  // The seed schedules departures into next month, so the rail offers it.
+  await expect(monthNav.getByRole("link", { name: "Next month" })).toBeVisible();
 
   // The card names *every* site the departure visits, not just dive one's.
   // Reading `trips.dive_site_id` here is what made a two-site day look like

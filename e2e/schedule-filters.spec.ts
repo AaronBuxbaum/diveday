@@ -58,8 +58,8 @@ test("paging and month arrows keep the filters a diver applied", async ({ page }
     /hasSpace=1/,
   );
 
-  // The calendar's month arrows re-render the same page (the list below the
-  // grid is bounded by the filters), so they carry the whole view as well.
+  // The month rail's arrows re-render the same page (the list is bounded by
+  // the filters), so they carry the whole view as well.
   await page.goto("/s/blue-mantis?hasSpace=1&tripType=fun_dive");
   const nextMonth = page.getByRole("link", { name: "Next month" });
   await expect(nextMonth).toHaveAttribute("href", /hasSpace=1/);

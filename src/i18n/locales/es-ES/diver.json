@@ -43,7 +43,7 @@
     "noTrips": "Todavía no hay salidas programadas",
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
     "noTripsPublic": "Vuelve pronto — o llámanos y te buscamos un barco.",
-    "noTripsMonth": "No hay salidas este mes — prueba otro mes en el calendario de arriba.",
+    "noTripsMonth": "No hay salidas este mes — prueba otro mes.",
     "filters": {
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",
@@ -65,12 +65,10 @@
     "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
     "diveCount": "{count, plural, other {# inmersiones}}",
     "tripCardLabel": "{when} · {trip} · {capacity}",
-    "calendarLabel": "Calendario de salidas",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "calendarDive": "inmersión de las {time}",
-    "calendarDiveFull": "inmersión de las {time} (completa)",
     "tripListLabel": "Próximas salidas",
+    "monthNav": "Explorar por mes",
     "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
     "nextDeparture": {
       "eyebrow": "Próxima salida",
