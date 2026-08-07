@@ -139,6 +139,63 @@ describe("TodayQueue urgency groups", () => {
   });
 });
 
+describe("TodayQueue horizon folding (visual weight follows urgency)", () => {
+  function renderQueue(actions: TodayAction[]) {
+    return render(
+      <TodayQueue
+        actions={actions}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        timezone="America/New_York"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+  }
+
+  it("folds 'Next 3 days' and 'This week' behind their headings while today still has work", () => {
+    const { container } = renderQueue([
+      action({ id: "a1", urgency: "now" }),
+      action({ id: "a2", urgency: "soon" }),
+      action({ id: "a3", urgency: "later" }),
+    ]);
+
+    // Today's group renders in full — no disclosure between a staffer and the
+    // morning's blockers.
+    expect(screen.getByText("Before today’s boats").closest("details")).toBeNull();
+    // The horizon groups are folded to heading + count, closed by default.
+    const folds = container.querySelectorAll("details");
+    expect(folds).toHaveLength(2);
+    for (const fold of folds) {
+      expect(fold.open).toBe(false);
+    }
+    expect(screen.getByText("Next 3 days").closest("details")).not.toBeNull();
+    expect(screen.getByText("This week").closest("details")).not.toBeNull();
+  });
+
+  it("keeps the queue's first group open even when it is a horizon group", () => {
+    const { container } = renderQueue([
+      action({ id: "a1", urgency: "soon" }),
+      action({ id: "a2", urgency: "later" }),
+    ]);
+
+    // A clear morning leads with the next real work, not two folded bands.
+    expect(screen.getByText("Next 3 days").closest("details")).toBeNull();
+    expect(container.querySelectorAll("details")).toHaveLength(1);
+    expect(screen.getByText("This week").closest("details")).not.toBeNull();
+  });
+
+  it("keeps every row reachable — folding hides, it never drops", () => {
+    renderQueue([
+      action({ id: "a1", urgency: "now", subject: "Ana" }),
+      action({ id: "a2", urgency: "later", subject: "Ben" }),
+    ]);
+
+    // Ben's row is in the DOM behind the fold, one native toggle away.
+    expect(screen.getByText("Ben")).toBeInTheDocument();
+  });
+});
+
 describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
   it("chips the row as a roll call in the danger tone and points at the open checkpoint", () => {
     const { container } = render(

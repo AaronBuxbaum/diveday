@@ -217,9 +217,9 @@ export function TodayQueue({
         </p>
       ) : null}
       <div className="mt-5 flex flex-col gap-8">
-        {groups.map((group) => (
-          <div key={group.urgency}>
-            <div className="flex items-baseline justify-between gap-3">
+        {groups.map((group, index) => {
+          const header = (
+            <div className="flex w-full items-baseline justify-between gap-3">
               <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
                 {t(URGENCY_KEYS[group.urgency])}
               </h3>
@@ -227,6 +227,8 @@ export function TodayQueue({
                 {t("shared.today.todayQueue.itemsCount", { count: group.actions.length })}
               </span>
             </div>
+          );
+          const rows = (
             <ul className="mt-3 flex flex-col gap-3">
               {group.actions.map((action) => (
                 <ActionRow
@@ -243,8 +245,44 @@ export function TodayQueue({
                 />
               ))}
             </ul>
-          </div>
-        ))}
+          );
+          // Visual weight follows urgency; horizon folds. Work a boat could
+          // still be waiting on ("imminent"/"now") always renders in full,
+          // but "Next 3 days" and "This week" arrive folded to their heading
+          // and count — the load is stated honestly without 30 same-weight
+          // cards pulling attention off this morning's blockers (design
+          // principles #3 and #8). The queue's *first* group stays open
+          // whatever its horizon: an empty morning must lead with the next
+          // real work, not two folded bands and a shrug. Native disclosure,
+          // deliberately — no state to manage, keyboard and screen-reader
+          // semantics for free, and a full-page render (or JS failure)
+          // degrades to the folded summary still being one tap from its rows.
+          const folded = index > 0 && (group.urgency === "soon" || group.urgency === "later");
+          if (!folded) {
+            return (
+              <div key={group.urgency}>
+                {header}
+                {rows}
+              </div>
+            );
+          }
+          return (
+            <details key={group.urgency} className="group/fold">
+              <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+                {/* Which way this goes, before you press it — decorative, the
+                    native disclosure semantics carry the state. */}
+                <span
+                  aria-hidden="true"
+                  className="inline-block text-xs text-muted transition-transform duration-200 group-open/fold:rotate-90"
+                >
+                  ▸
+                </span>
+                {header}
+              </summary>
+              {rows}
+            </details>
+          );
+        })}
       </div>
     </section>
   );
