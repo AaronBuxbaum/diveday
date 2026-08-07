@@ -3,6 +3,7 @@ import { pointingLabelText } from "@/i18n/today-labels";
 import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
+import { urgencyFor } from "@/lib/today";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
 import { pagedUpcomingTripsWithCounts } from "./trips";
@@ -146,6 +147,7 @@ export async function getBlockerQueue(
       booked: trip.booked,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
       divers,
+      urgency: urgencyFor(trip.startsAt, now),
     });
   }
 
