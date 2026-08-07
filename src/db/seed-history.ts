@@ -1,3 +1,4 @@
+import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import type { DbExecutor } from "./client";
 import {
@@ -16,7 +17,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, DAY_MS, nextCreatedAt } from "./seed-clock";
+import { at, nextCreatedAt } from "./seed-clock";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 /**

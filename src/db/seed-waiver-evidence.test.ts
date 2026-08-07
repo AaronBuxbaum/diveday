@@ -1,10 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { DAY_MS, nowMs } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
-import { DAY_MS } from "./seed-clock";
 import { listWaiverIntegrityAudit } from "./waivers";
 
 /**

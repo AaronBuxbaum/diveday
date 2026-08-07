@@ -49,9 +49,18 @@ function PreserveFormScrollEffects() {
     const saved = sessionStorage.getItem(storageKey);
     if (!saved) return;
     sessionStorage.removeItem(storageKey);
-    const position = JSON.parse(saved) as { pathname?: string; y?: number };
-    if (position.pathname === pathname && typeof position.y === "number") {
-      requestAnimationFrame(() => window.scrollTo({ top: position.y, behavior: "instant" }));
+    // Parsed, not cast: sessionStorage is outside our control (an old tab, an
+    // extension), and a throw here would take the whole shell's render with it.
+    let position: unknown;
+    try {
+      position = JSON.parse(saved);
+    } catch {
+      return;
+    }
+    if (typeof position !== "object" || position === null) return;
+    const { pathname: savedPathname, y } = position as { pathname?: unknown; y?: unknown };
+    if (savedPathname === pathname && typeof y === "number") {
+      requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
     }
   }, [pathname, searchParams]);
 

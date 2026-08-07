@@ -243,7 +243,12 @@ export async function onboardAction(formData: FormData) {
         const issued = await issueAccountToken(db, {
           userAccountId: accountId,
           purpose: "email_verification",
-        }).catch(() => null);
+        }).catch((error: unknown) => {
+          // Degrades to "welcome sent, verification never arrives" — say so,
+          // or the only trace is a diver who cannot verify.
+          console.error("onboardAction: email-verification token failed", error);
+          return null;
+        });
         await sendNotification(db, {
           kind: "welcome",
           userAccountId: accountId,

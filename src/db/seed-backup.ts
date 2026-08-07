@@ -1,7 +1,7 @@
-import { nowMs } from "@/lib/clock";
+import { DAY_MS, nowMs } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { shopBackupDeliveries, shopBackupDestinations } from "./schema";
-import { at, DAY_MS } from "./seed-clock";
+import { at } from "./seed-clock";
 
 /**
  * The demo shop's backup story (ADR 20260804-shop-owned-backup-export): a

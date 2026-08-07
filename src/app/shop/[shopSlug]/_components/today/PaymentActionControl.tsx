@@ -3,9 +3,9 @@
 import { useActionState } from "react";
 import { IDLE_INVOICE_RESEND_STATE } from "@/app/actions/invoice-resend-types";
 import { resendInvoiceAction } from "@/app/actions/invoices";
+import { ActionResultNotice } from "@/app/shop/[shopSlug]/_components/today/ActionResultNotice";
 import { Copyable } from "@/components/Copyable";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ActionResultNotice } from "@/components/today/ActionResultNotice";
 import { buttonClass } from "@/components/ui/button";
 
 export type PaymentActionCopy = {

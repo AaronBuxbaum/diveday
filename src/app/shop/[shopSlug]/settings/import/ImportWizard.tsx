@@ -106,7 +106,7 @@ type ImportWizardCopy = {
  * "{name, plural, one {…} other {…}}" with "#" standing for the plural value,
  * matching the ICU syntax `staffTranslator` already resolves server-side.
  */
-function fill(template: string, values: Record<string, string | number>): string {
+function fill(template: string, values: Record<string, string | number | undefined>): string {
   return template.replace(
     /\{(\w+)(?:,\s*plural,\s*((?:\w+\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*)+))?\}/g,
     (match, name: string, pluralBranches: string | undefined) => {
@@ -213,10 +213,7 @@ export function ImportWizard({
       {prepared?.fatal ? (
         <div className="mt-4">
           <ShopNotice tone="danger" role="alert">
-            {fill(
-              copy.errors[prepared.fatal.code],
-              (prepared.fatal.params ?? {}) as unknown as Record<string, string | number>,
-            )}
+            {fill(copy.errors[prepared.fatal.code], prepared.fatal.params ?? {})}
           </ShopNotice>
         </div>
       ) : null}
@@ -385,10 +382,7 @@ export function ImportWizard({
                               key={`${issue.code}-${index}`}
                               className={`text-xs ${issueTone[issue.level]}`}
                             >
-                              {fill(
-                                copy.issues[issue.code],
-                                (issue.params ?? {}) as unknown as Record<string, string | number>,
-                              )}
+                              {fill(copy.issues[issue.code], issue.params ?? {})}
                             </li>
                           ))}
                         </ul>
@@ -411,10 +405,7 @@ export function ImportWizard({
           {state.status === "error" ? (
             <div className="mt-4">
               <ShopNotice tone="danger" role="alert">
-                {fill(
-                  copy.errors[state.code],
-                  (state.params ?? {}) as unknown as Record<string, string | number>,
-                )}
+                {fill(copy.errors[state.code], state.params ?? {})}
               </ShopNotice>
             </div>
           ) : null}

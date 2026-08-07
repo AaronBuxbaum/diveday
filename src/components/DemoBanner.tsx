@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { switchDemoRoleAction } from "@/app/actions/demo";
 import { buttonClass } from "@/components/ui/button";
 
 /** One role card's full content, resolved server-side (icon/name are data, the rest is translated copy). */
@@ -49,6 +48,12 @@ interface DemoBannerProps {
   currentEmail?: string | null;
   /** Shared plaintext sign-in password for any minted demo (src/lib/credentials.ts). */
   demoPassword?: string;
+  /**
+   * The switch-role server action, passed down by the layout. Shared components
+   * never import from `src/app` (pnpm check:architecture) — the route that owns
+   * the surface hands its actions in as props.
+   */
+  switchRole: (roleId: string, shopSlug: string) => Promise<void>;
 }
 
 export function DemoBanner({
@@ -60,6 +65,7 @@ export function DemoBanner({
   isMintedDemo = false,
   currentEmail,
   demoPassword,
+  switchRole,
 }: DemoBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -74,7 +80,7 @@ export function DemoBanner({
     setSwitchFailed(false);
     startTransition(async () => {
       try {
-        await switchDemoRoleAction(roleId, shopSlug);
+        await switchRole(roleId, shopSlug);
       } catch (err) {
         console.error("Failed to switch demo role:", err);
         // The panel has already closed by now — say so in the banner itself,

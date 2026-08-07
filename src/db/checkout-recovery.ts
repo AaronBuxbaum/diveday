@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { toDiverLocale } from "@/i18n/settings";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "./checkouts";
@@ -16,7 +16,6 @@ import {
   trips,
 } from "./schema";
 
-const HOUR_MS = 60 * 60 * 1000;
 /** One cron tick's worth of work — keeps a growing backlog from starving the other jobs on the same daily run. */
 const BATCH_LIMIT = 200;
 

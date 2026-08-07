@@ -1,4 +1,5 @@
 import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
+import { isUuid } from "@/lib/uuid";
 import { authSecret } from "./auth.config";
 import { nowMs } from "./clock";
 
@@ -37,8 +38,6 @@ function sign(payload: string): string {
   return createHmac("sha256", recapSecret()).update(payload).digest("base64url");
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /** `<base64url("recap:"+bookingId+":"+issuedAtSeconds)>.<sig>` — opaque, stable, self-verifying, and self-expiring. */
 export function signRecapToken(bookingId: string): string {
   const issuedAtSeconds = Math.floor(nowMs() / 1000);
@@ -72,7 +71,7 @@ export function verifyRecapToken(token: string): string | null {
   const issuedAtSeconds = Number(rest.slice(lastColon + 1));
   if (!Number.isFinite(issuedAtSeconds)) return null;
   if (nowMs() - issuedAtSeconds * 1000 > RECAP_TOKEN_MAX_AGE_MS) return null;
-  return UUID_RE.test(bookingId) ? bookingId : null;
+  return isUuid(bookingId) ? bookingId : null;
 }
 
 /** The absolute-path recap link for a booking, ready to hand to a diver. */

@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { publishManifestEvent } from "./manifest-events";
@@ -80,13 +81,6 @@ function sortMembers<T extends { fullName: string }>(members: T[], key: (m: T) =
   return [...members].sort((a, b) =>
     a.fullName === b.fullName ? key(a).localeCompare(key(b)) : a.fullName.localeCompare(b.fullName),
   );
-}
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** A real uuid, not "36 characters of hex and hyphens" — see `resolveMembers`. */
-function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value);
 }
 
 /**

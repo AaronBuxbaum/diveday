@@ -29,6 +29,15 @@
  * dependency-injecting time where a test needs to control it precisely.
  */
 
+/**
+ * Duration constants, defined once beside the clock they offset. Before these,
+ * `HOUR_MS`/`DAY_MS` were re-derived privately in a dozen modules — identical
+ * every time, and one drifted copy away from a subtle scheduling bug.
+ */
+export const MINUTE_MS = 60 * 1000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
+
 /** Parse `DIVEDAY_CLOCK` into a millisecond instant, or null to use the live clock. */
 function frozenMs(): number | null {
   const raw = process.env.DIVEDAY_CLOCK;

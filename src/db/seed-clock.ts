@@ -1,4 +1,4 @@
-import { nowDate, nowMs } from "@/lib/clock";
+import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /**
@@ -15,8 +15,6 @@ import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
  * whole seed, so the strictly-increasing stamps it hands out are unique across
  * every scenario module, not just within one.
  */
-
-export const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const DEMO_SHOP_TIMEZONE = "America/New_York";
 

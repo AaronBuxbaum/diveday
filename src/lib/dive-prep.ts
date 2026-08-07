@@ -17,10 +17,9 @@
  *     counted.
  */
 
+import { DAY_MS } from "@/lib/clock";
 import { nowDate } from "./clock";
 import { rentalFitCompleteness, type SizedRentalKind } from "./rentals";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type RentalItemKind =
   | "bcd"

@@ -256,6 +256,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
+      // Not the `private, no-store` the JSON GETs use: this is an SSE stream,
+      // where `no-cache, no-transform` is the standard trio-member — no-store
+      // adds nothing to a response that never completes, and no-transform is
+      // what stops a proxy buffering the event flush.
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",

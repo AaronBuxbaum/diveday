@@ -7,9 +7,10 @@
  * does the sending/dedup (docs ADR 20260726-abandoned-checkout-recovery).
  */
 
+import { HOUR_MS } from "@/lib/clock";
+
 /** How long a checkout sits unpaid before it's worth a recovery nudge. */
 export const RECOVERY_DELAY_HOURS = 2;
-const HOUR_MS = 60 * 60 * 1000;
 
 export type RecoveryCheckout = {
   status: "pending" | "completed" | "expired";

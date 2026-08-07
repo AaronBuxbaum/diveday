@@ -673,7 +673,9 @@ test("the manifest offers a per-device push opt-in without asking for permission
  * arrival and then stopped helping the moment anyone scrolled.
  */
 test("the active-checkpoint panel stays pinned for the whole roll call", async ({ page }) => {
-  test.setTimeout(60_000);
+  // Three full page loads (board → trip → Manifest tab) against the 15s
+  // single-load default; no writes, so nothing like the 90s roll-call budget.
+  test.setTimeout(30_000);
   // A phone: the panel matters most where the roster is many screens long.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -696,7 +698,9 @@ test("the active-checkpoint panel stays pinned for the whole roll call", async (
 test("resolving a blocker from the manifest lands on that diver, under the blocked filter", async ({
   page,
 }) => {
-  test.setTimeout(60_000);
+  // Board → trip → Manifest tab → resolve-link navigation: four loads on the
+  // 15s single-load default, still read-only.
+  test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");

@@ -3,8 +3,8 @@
 import { useActionState } from "react";
 import { IDLE_RESEND_STATE } from "@/app/actions/notification-resend-types";
 import { resendConfirmationAction } from "@/app/actions/notifications";
+import { ActionResultNotice } from "@/app/shop/[shopSlug]/_components/today/ActionResultNotice";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ActionResultNotice } from "@/components/today/ActionResultNotice";
 import { buttonClass } from "@/components/ui/button";
 
 export type ResendConfirmationCopy = {

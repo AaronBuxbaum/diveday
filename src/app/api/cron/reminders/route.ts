@@ -8,11 +8,10 @@ import { retryPendingProcessorErasures } from "@/db/processor-erasure";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
+import { DAY_MS } from "@/lib/clock";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Seven scans run one after another, several of which can send email/SMS through a

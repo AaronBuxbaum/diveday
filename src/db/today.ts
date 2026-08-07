@@ -24,7 +24,7 @@ import {
   ungatedNitroxDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
@@ -65,8 +65,6 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { listStaff } from "./trips";
-
-const HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Today's boat: the trip id staff would check in for right now, or null on a

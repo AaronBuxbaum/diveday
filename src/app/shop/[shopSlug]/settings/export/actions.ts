@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
@@ -13,6 +12,7 @@ import {
 } from "@/features/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { requireStaffSession } from "@/lib/session";
 
@@ -76,8 +76,7 @@ async function backupContext(): Promise<{
 }
 
 function done(path: string, notice: Notice, reason?: string): never {
-  revalidatePath(path);
-  redirect(`${path}?notice=${notice}${reason ? `&reason=${reason}` : ""}`);
+  revalidateAndRedirect(path, `${path}?notice=${notice}${reason ? `&reason=${reason}` : ""}`);
 }
 
 export async function saveBackupDestinationAction(formData: FormData): Promise<void> {

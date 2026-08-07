@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { switchDemoRoleAction } from "@/app/actions/demo";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -174,6 +175,7 @@ export default async function ShopLayout({
       <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
       {showBanner && demoT ? (
         <DemoBanner
+          switchRole={switchDemoRoleAction}
           currentRole={currentRole}
           currentName={session?.user?.name}
           shopSlug={shopSlug}

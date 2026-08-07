@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { WaiverSendControl } from "@/components/today/WaiverSendControl";
+import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

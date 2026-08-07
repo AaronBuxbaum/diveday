@@ -1,7 +1,4 @@
 "use server";
-
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageMessagingSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -16,6 +13,7 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
   metaLanguageCode,
@@ -87,8 +85,7 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
 }
 
 function done(path: string, notice: Notice): never {
-  revalidatePath(path);
-  redirect(`${path}?notice=${notice}`);
+  revalidateAndRedirect(path, `${path}?notice=${notice}`);
 }
 
 /**
