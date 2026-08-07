@@ -12,6 +12,17 @@ function control(page: Page, verb: string, title: string) {
   return page.getByRole("button", { name: new RegExp(`^${verb} ${title},`) });
 }
 
+/** Each row's actions sit behind one "⋯" disclosure (design principles #8). */
+function rowActions(page: Page, title: string) {
+  return page.getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) });
+}
+
+/** Opens the row's action list, then chooses one of Move / Copy / Remove. */
+async function chooseRowAction(page: Page, verb: string, title: string) {
+  await rowActions(page, title).first().click();
+  await control(page, verb, title).first().click();
+}
+
 test.describe("schedule builder", () => {
   test("staff add, move, copy, and remove a departure without leaving the board", async ({
     page,
@@ -25,9 +36,13 @@ test.describe("schedule builder", () => {
     // Unique title so every assertion targets this spec's own departure rather
     // than a seeded one. (Isolation itself comes from the per-test demo reset.)
     const title = `Builder Trip ${e2eNow().getTime()}`;
+    // All three days sit well inside the board's first keyset page
+    // (SCHEDULE_PAGE_SIZE trips) even with the seeded departures ahead of
+    // them — the spec asserts both copies are on screen at once, which a
+    // copy landing on page 2 would fail.
     const addDay = daysFromNow(3);
     const moveDay = daysFromNow(5);
-    const copyDay = daysFromNow(9);
+    const copyDay = daysFromNow(4);
 
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
@@ -52,7 +67,7 @@ test.describe("schedule builder", () => {
     await expect(row.getByText("No price set")).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.
-    await control(page, "Move", title).click();
+    await chooseRowAction(page, "Move", title);
     await page.getByLabel("New date").fill(moveDay);
     await page.getByLabel("New departure time").fill("07:15");
     await page.getByRole("button", { name: "Move it" }).click();
@@ -63,7 +78,7 @@ test.describe("schedule builder", () => {
     ).toBeVisible();
 
     // Copy — a second departure, same shape, nobody on it.
-    await control(page, "Copy", title).click();
+    await chooseRowAction(page, "Copy", title);
     await page.getByLabel("Copy to").fill(copyDay);
     await page.getByRole("button", { name: "Copy it" }).click();
     await expect(page.getByRole("status")).toContainText("Copied");
@@ -73,7 +88,7 @@ test.describe("schedule builder", () => {
     // Move and Copy use; both copies come back off the board.
     for (let remaining = 2; remaining > 0; remaining -= 1) {
       const row = page.getByRole("listitem").filter({ hasText: title }).first();
-      await control(page, "Remove", title).first().click();
+      await chooseRowAction(page, "Remove", title);
       await row.getByRole("button", { name: "Yes, remove the trip" }).click();
       await expect(page.getByRole("status")).toContainText("Taken off the board.");
       await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(
@@ -124,13 +139,18 @@ test.describe("schedule builder", () => {
     await expect(page.getByLabel("What is it")).not.toBeVisible();
     await expect(addToggle).toBeFocused();
 
-    // Same contract for a row's Move panel.
-    const moveToggle = control(page, "Move", "Two-Tank Reef — Molasses & French");
-    await moveToggle.click();
+    // Same contract for a row's Move panel — reached through the "⋯" action
+    // list, which itself focuses its first action on open and hands focus
+    // back to the trigger when the panel is cancelled.
+    const trigger = rowActions(page, "Two-Tank Reef — Molasses & French").first();
+    await trigger.click();
+    const moveItem = control(page, "Move", "Two-Tank Reef — Molasses & French");
+    await expect(moveItem).toBeFocused();
+    await moveItem.click();
     await expect(page.getByLabel("New date")).toBeFocused();
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByLabel("New date")).not.toBeVisible();
-    await expect(moveToggle).toBeFocused();
+    await expect(trigger).toBeFocused();
   });
 
   test("a departure divers have booked refuses to be deleted and says why", async ({ page }) => {
@@ -142,6 +162,7 @@ test.describe("schedule builder", () => {
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .first();
     await expect(booked).toBeVisible();
+    await booked.getByRole("button", { name: /^Move, copy, or remove / }).click();
     await booked.getByRole("button", { name: /^Remove / }).click();
     await booked.getByRole("button", { name: "Yes, remove the trip" }).click();
 
@@ -162,6 +183,7 @@ test.describe("schedule builder, as the daily crew", () => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Add a departure", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Move, copy, or remove / })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move / })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Remove / })).toHaveCount(0);
   });

@@ -32,6 +32,12 @@ const variants = {
   secondary: "border border-border bg-surface text-primary hover:bg-surface-sunken",
   ghost: "text-muted hover:bg-surface-sunken hover:text-foreground",
   danger: "border border-danger/40 text-danger hover:bg-danger/10",
+  /**
+   * A destructive choice sitting among quiet siblings — a disclosed action
+   * list's "Remove" next to ghost-weight items. The bordered `danger` shouts
+   * inside a small menu; this keeps the warning hue without the box.
+   */
+  "danger-ghost": "text-danger hover:bg-danger/10",
   "danger-solid": "bg-danger text-primary-foreground hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
   link: "text-primary hover:underline",

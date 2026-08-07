@@ -48,6 +48,7 @@
     "rollCallOpen": "Roll call · {count} not counted",
     "rollCallOpenAria": "Finish the dive {dive} roll call for {ref}",
     "rollCallOpenNote": "Back at the dock with the dive {dive} roll call still open.",
+    "rowActionsAria": "Move, copy, or remove {ref}",
     "move": "Move",
     "moveAria": "Move {ref}",
     "copy": "Copy",

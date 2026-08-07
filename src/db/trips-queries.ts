@@ -134,7 +134,14 @@ export async function listTripIdsInOfflineManifestWindow(
   return rows.map((row) => row.id);
 }
 
-export const SCHEDULE_PAGE_SIZE = 20;
+/**
+ * One keyset page of the schedule, on the diver agenda and the staff board
+ * alike. Two weeks of a busy shop's diving, roughly — small enough that both
+ * pages read in a couple of screens and the "Show later departures" pager
+ * does its job, instead of a 20-row window tall enough that the pager was
+ * nearly decorative (the pages screenshotted at ~5,000px).
+ */
+export const SCHEDULE_PAGE_SIZE = 14;
 
 /**
  * What "an upcoming departure a page may show" means, in one place.
@@ -504,40 +511,6 @@ export async function upcomingScheduleRange(
     first: range?.first ? new Date(range.first) : null,
     last: range?.last ? new Date(range.last) : null,
   };
-}
-
-/**
- * The diver calendar's month of trips, bounded to the shop-local month so the
- * grid stays complete no matter how the list below it is paged.
- */
-export async function upcomingTripsForCalendar(
-  db: AppDb,
-  shopId: string,
-  monthStartUtc: Date,
-  monthEndUtc: Date,
-  now: Date = nowDate(),
-): Promise<{ id: string; title: string; startsAt: Date; capacity: number; booked: number }[]> {
-  const from = monthStartUtc > now ? monthStartUtc : now;
-  return db
-    .select({
-      id: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      booked: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gte(trips.startsAt, from),
-        lt(trips.startsAt, monthEndUtc),
-      ),
-    )
-    .groupBy(trips.id)
-    .orderBy(asc(trips.startsAt));
 }
 
 export type StaffScheduleDay = {

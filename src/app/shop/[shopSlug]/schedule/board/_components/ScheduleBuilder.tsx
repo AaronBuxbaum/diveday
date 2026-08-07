@@ -117,6 +117,7 @@ export type BuilderCopy = {
   rollCallOpen: string;
   rollCallOpenAria: string;
   rollCallOpenNote: string;
+  rowActionsAria: string;
   move: string;
   moveAria: string;
   copy: string;
@@ -633,9 +634,10 @@ function AddPanel({
 /**
  * The staff schedule board, as a builder rather than a list.
  *
- * Departures sit under the shop-local day they sail on, and each row carries its
- * own controls: slide it to another day or time, copy it forward, or take it
- * back off the board. "Add a departure" opens under whichever day header the
+ * Departures sit under the shop-local day they sail on, and each row's actions —
+ * slide it to another day or time, copy it forward, take it back off the board —
+ * sit behind one quiet "⋯" disclosure per row, so the board at rest is the
+ * schedule, not a grid of buttons. "Add a departure" opens under whichever day header the
  * staff member pressed it on, pre-dated to that day, so putting a second boat on
  * Thursday is one click and a title rather than a trip through a full form.
  *
@@ -709,6 +711,35 @@ export function ScheduleBuilder({
     setOpen(null);
     toggleRefs.current[key]?.focus();
   };
+
+  // A row's "⋯" action list is the one open-able thing here that isn't a form:
+  // it should dismiss the way any disclosed menu does — Escape hands focus back
+  // to the trigger, a click anywhere else simply closes it (focus stays where
+  // the person clicked). Forms keep their explicit Cancel instead — half-typed
+  // work must never be swallowed by a stray click — so both listeners exist
+  // only while a menu is open.
+  useEffect(() => {
+    if (!open?.startsWith("menu:")) return;
+    const menuKey = open;
+    const tripId = open.slice("menu:".length);
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest(`[data-row-menu="${CSS.escape(tripId)}"]`))
+        return;
+      setOpen(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(null);
+      toggleRefs.current[menuKey]?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
@@ -944,50 +975,83 @@ export function ScheduleBuilder({
                             for a departure that has already sailed, and a
                             returned row is only here to have its head count
                             closed — so it gets the badge and nothing that would
-                            bounce. */}
+                            bounce. The three actions sit behind one quiet "⋯"
+                            control rather than three always-on buttons: a board
+                            of twenty rows used to render sixty same-weight
+                            buttons — a red Remove on every one — for actions a
+                            staffer takes on one row at a time (design
+                            principles #8, "collapse the rare path"). The
+                            content is the row; the controls appear when asked. */}
                         {canConfigure && !trip.rollCallOpen ? (
-                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                          <div data-row-menu={trip.id} className="relative shrink-0">
                             <button
                               type="button"
-                              ref={registerToggle(`move:${trip.id}`)}
-                              onClick={() => toggle(`move:${trip.id}`)}
-                              aria-expanded={open === `move:${trip.id}`}
-                              aria-label={fill(copy.moveAria, { ref })}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                              ref={registerToggle(`menu:${trip.id}`)}
+                              onClick={() => toggle(`menu:${trip.id}`)}
+                              aria-expanded={open === `menu:${trip.id}`}
+                              aria-label={fill(copy.rowActionsAria, { ref })}
+                              className={buttonClass({
+                                variant: "ghost",
+                                size: "sm",
+                                className: "min-w-11",
+                              })}
                             >
-                              {copy.move}
+                              {/* Decorative — the aria-label above names what
+                                  this discloses, per row, uniquely. */}
+                              <span aria-hidden="true" className="tracking-wider">
+                                ⋯
+                              </span>
                             </button>
-                            <button
-                              type="button"
-                              ref={registerToggle(`copy:${trip.id}`)}
-                              onClick={() => toggle(`copy:${trip.id}`)}
-                              aria-expanded={open === `copy:${trip.id}`}
-                              aria-label={fill(copy.copyAria, { ref })}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {copy.copy}
-                            </button>
-                            {/* Remove opens a panel like Move and Copy do,
-                                rather than swapping itself for an
-                                `InlineConfirm` message card in place. That card
-                                is built to be a block of its own, and inside
-                                this inline button cluster it inflated into a
-                                bordered box wedged between the badges and the
-                                row's edge — every other row on the board
-                                shifted around it while the staffer read the
-                                sentence. It is still two deliberate steps: this
-                                trigger submits nothing, and the panel below
-                                holds the only real submit. */}
-                            <button
-                              type="button"
-                              ref={registerToggle(`remove:${trip.id}`)}
-                              onClick={() => toggle(`remove:${trip.id}`)}
-                              aria-expanded={open === `remove:${trip.id}`}
-                              aria-label={fill(copy.removeAria, { ref })}
-                              className={buttonClass({ variant: "danger", size: "sm" })}
-                            >
-                              {copy.remove}
-                            </button>
+                            {open === `menu:${trip.id}` ? (
+                              <div className="absolute top-full right-0 z-20 mt-1 flex w-max min-w-36 flex-col rounded-xl border border-border bg-surface p-1 shadow-lg animate-scale-in">
+                                <button
+                                  type="button"
+                                  ref={focusOnMount}
+                                  onClick={() => toggle(`move:${trip.id}`)}
+                                  aria-label={fill(copy.moveAria, { ref })}
+                                  className={buttonClass({
+                                    variant: "ghost",
+                                    size: "sm",
+                                    className: "w-full justify-start",
+                                  })}
+                                >
+                                  {copy.move}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(`copy:${trip.id}`)}
+                                  aria-label={fill(copy.copyAria, { ref })}
+                                  className={buttonClass({
+                                    variant: "ghost",
+                                    size: "sm",
+                                    className: "w-full justify-start",
+                                  })}
+                                >
+                                  {copy.copy}
+                                </button>
+                                {/* Remove opens a panel like Move and Copy do,
+                                    rather than swapping itself for an
+                                    `InlineConfirm` message card in place. That
+                                    card is built to be a block of its own, and
+                                    wedged inline it shoved every row beneath it
+                                    around while the staffer read the sentence.
+                                    It is still two deliberate steps: this item
+                                    submits nothing, and the panel below holds
+                                    the only real submit. */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(`remove:${trip.id}`)}
+                                  aria-label={fill(copy.removeAria, { ref })}
+                                  className={buttonClass({
+                                    variant: "danger-ghost",
+                                    size: "sm",
+                                    className: "w-full justify-start",
+                                  })}
+                                >
+                                  {copy.remove}
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -1011,7 +1075,7 @@ export function ScheduleBuilder({
                           </SubmitButton>
                           <button
                             type="button"
-                            onClick={() => closePanel(`remove:${trip.id}`)}
+                            onClick={() => closePanel(`menu:${trip.id}`)}
                             className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
                             {copy.removeCancel}
@@ -1060,7 +1124,7 @@ export function ScheduleBuilder({
                           </SubmitButton>
                           <button
                             type="button"
-                            onClick={() => closePanel(`move:${trip.id}`)}
+                            onClick={() => closePanel(`menu:${trip.id}`)}
                             className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
                             {copy.cancel}
@@ -1102,7 +1166,7 @@ export function ScheduleBuilder({
                           </SubmitButton>
                           <button
                             type="button"
-                            onClick={() => closePanel(`copy:${trip.id}`)}
+                            onClick={() => closePanel(`menu:${trip.id}`)}
                             className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
                             {copy.cancel}

@@ -26,22 +26,19 @@ test.describe("staff", () => {
 
     // A visitor books it from the public schedule — no account.
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    // Scoped to the trip list itself: a day with more than one departure
-    // also renders a same-titled <li> in the month calendar
-    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
-    // resolve to both.
+    // Scoped to the trip list itself, the page's one stable anchor for
+    // departures — day rules and other lists on the page never carry a
+    // trip's title.
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    // Wait for the navigation itself, not just for the title to be on screen.
-    // The schedule page renders a trip's "N spots left" badge twice — once in
-    // the "Upcoming trips" list and once in the month calendar
-    // (src/app/s/[shopSlug]/page.tsx) — and it carries the same heading text
-    // this click came from, so every assertion below can pass its *visibility*
-    // check against the page we just left. The badge assertion is the one that
+    // Wait for the navigation itself, not just for the title to be on screen —
+    // the schedule page carries the same heading text this click came from, so
+    // an assertion below could otherwise pass its *visibility* check against
+    // the page we just left. The badge assertion is the one that
     // notices, as a strict-mode violation on two identical spans, and only when
     // the machine is slow enough for the assertion to win the race. Same hazard
     // the list locator above is scoped against, one step later in the flow.
@@ -312,10 +309,9 @@ test.describe("as owner", () => {
 
     // A different name on the same inbox books trip B — reuses Nora's record.
     await page.goto("/s/blue-mantis");
-    // Scoped to the trip list itself: a day with more than one departure also
-    // renders a same-titled <li> in the month calendar
-    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
-    // resolve to both.
+    // Scoped to the trip list itself, the page's one stable anchor for
+    // departures — day rules and other lists on the page never carry a
+    // trip's title.
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")

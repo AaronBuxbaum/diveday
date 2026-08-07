@@ -49,10 +49,9 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // is what a signed-out visitor gets.
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");
-  // Scoped to the trip list itself: an unrelated trip sharing this one's
-  // calendar day also renders a same-titled <li> in the month calendar
-  // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
-  // resolve to both.
+  // Scoped to the trip list itself, the page's one stable anchor for
+  // departures — day rules and other lists on the page never carry a
+  // trip's title.
   const card = page
     .getByRole("list", { name: "Upcoming trips" })
     .locator("li")

@@ -1,27 +1,18 @@
 /**
- * Month-grid math for the schedule calendar. Pure and framework-free: it turns
- * a year+month into the six-week grid a calendar renders, plus the previous /
- * next month keys for navigation. Trip placement is done by the caller with the
- * shop-timezone helpers in `zoned.ts` (a trip's day is its wall-clock date in
- * the shop timezone), so this file stays free of DB and timezone concerns and
- * is exhaustively unit-testable.
+ * Month math for month-keyed pages (the public schedule's month rail, the
+ * monthly report). Pure and framework-free: a month is a `{year, month}` ref
+ * with a stable `?month=` key, plus arithmetic and a localized heading. Trip
+ * placement onto days is done by the caller with the shop-timezone helpers in
+ * `zoned.ts` (a trip's day is its wall-clock date in the shop timezone), so
+ * this file stays free of DB and timezone concerns and is exhaustively
+ * unit-testable. The six-week grid builder that used to live here left with
+ * the month-grid calendar it rendered — the public schedule now reads as a
+ * day-grouped agenda instead of a grid of mostly-empty cells.
  */
 
 import { cachedFormatter } from "./intl-cache";
 
 export type MonthRef = { year: number; month: number }; // month is 1-12
-
-export type CalendarDay = {
-  year: number;
-  month: number; // 1-12
-  day: number;
-  /** "YYYY-MM-DD" — matches `toDateInputValue`, used to join trips onto days. */
-  iso: string;
-  /** False for the leading/trailing days that spill in from adjacent months. */
-  inMonth: boolean;
-  /** 0 = Sunday … 6 = Saturday. */
-  weekday: number;
-};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -70,58 +61,11 @@ export function clampMonth(ref: MonthRef, min?: MonthRef | null, max?: MonthRef 
   return ref;
 }
 
-/** "July 2026" for the calendar heading. */
+/** "July 2026" for the month rail and report headings. */
 export function monthLabel(ref: MonthRef, locale = "en-US"): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(ref.year, ref.month - 1, 1)));
-}
-
-/**
- * The locale's first day of the week, as 0 (Sunday) … 6 (Saturday) — matching
- * `CalendarDay.weekday`. TypeScript's ambient types declare
- * `Intl.Locale.prototype.getWeekInfo()` unconditionally, but it isn't in
- * every runtime's ICU build yet; where it's actually missing, every locale
- * renders Sunday-first rather than hand-maintaining a per-locale table only
- * one engineer would ever check.
- */
-export function weekStartsOn(locale: string): number {
-  const loc = new Intl.Locale(locale);
-  if (typeof loc.getWeekInfo !== "function") return 0;
-  return loc.getWeekInfo().firstDay % 7;
-}
-
-/**
- * The six-week (42-day) grid for a month, including the spill-in days from
- * the neighbouring months so every week is full. `firstDay` is 0 (Sunday) …
- * 6 (Saturday) — see `weekStartsOn`. Uses UTC date arithmetic purely for
- * calendar counting — never for wall-clock conversion.
- */
-export function buildCalendarWeeks(ref: MonthRef, firstDay = 0): CalendarDay[][] {
-  const firstOfMonth = Date.UTC(ref.year, ref.month - 1, 1);
-  const startWeekday = (new Date(firstOfMonth).getUTCDay() - firstDay + 7) % 7;
-  const gridStart = firstOfMonth - startWeekday * 86_400_000;
-
-  const weeks: CalendarDay[][] = [];
-  for (let week = 0; week < 6; week++) {
-    const days: CalendarDay[] = [];
-    for (let dow = 0; dow < 7; dow++) {
-      const d = new Date(gridStart + (week * 7 + dow) * 86_400_000);
-      const year = d.getUTCFullYear();
-      const month = d.getUTCMonth() + 1;
-      const day = d.getUTCDate();
-      days.push({
-        year,
-        month,
-        day,
-        iso: isoDate(year, month, day),
-        inMonth: month === ref.month && year === ref.year,
-        weekday: d.getUTCDay(),
-      });
-    }
-    weeks.push(days);
-  }
-  return weeks;
 }

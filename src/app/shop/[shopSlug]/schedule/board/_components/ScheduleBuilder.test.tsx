@@ -45,6 +45,7 @@ const COPY: BuilderCopy = {
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
+  rowActionsAria: "Move, copy, or remove {ref}",
   move: "Move",
   moveAria: "Move {ref}",
   copy: "Copy",
@@ -430,7 +431,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     expect(toggle).toHaveFocus();
   });
 
-  it("moves focus into the move panel's date field on open, and back to the Move toggle on cancel", async () => {
+  it("moves focus into the move panel's date field on open, and back to the row's actions control on cancel", async () => {
     const days: BuilderDay[] = [
       { dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [baseTrip()] },
     ];
@@ -450,13 +451,102 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
       />,
     );
 
-    const moveToggle = screen.getByRole("button", { name: /^Move Two-Tank Reef/ });
-    await userEvent.click(moveToggle);
+    const trigger = screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ });
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
     expect(screen.getByLabelText(COPY.newDate)).toHaveFocus();
 
+    // The Move item lives inside the now-closed menu, so Cancel hands focus to
+    // the control that is actually still on screen: the row's "⋯" trigger.
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByLabelText(COPY.newDate)).not.toBeInTheDocument();
-    expect(moveToggle).toHaveFocus();
+    expect(trigger).toHaveFocus();
+  });
+});
+
+describe("ScheduleBuilder row actions disclosure (design principles #8)", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      trips: [baseTrip(), baseTrip({ id: "trip-2", title: "Night Dive" })],
+    },
+  ];
+
+  function renderBoard() {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+  }
+
+  it("keeps the board quiet at rest: no per-verb buttons until a row is asked", () => {
+    renderBoard();
+
+    expect(screen.getAllByRole("button", { name: /^Move, copy, or remove / })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /^Move Two-Tank/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Copy / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
+  });
+
+  it("opens the list with focus on its first action, and Escape hands focus back", async () => {
+    renderBoard();
+
+    const trigger = screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ });
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    const move = screen.getByRole("button", { name: /^Move Two-Tank Reef/ });
+    expect(move).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("dismisses on a click anywhere else, and only one row's list is ever open", async () => {
+    renderBoard();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    );
+    expect(screen.getByRole("button", { name: /^Move Two-Tank Reef/ })).toBeInTheDocument();
+
+    // Opening the other row's list closes this one — same exclusivity the
+    // panels already have.
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
+    );
+    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /^Move Night Dive/ })).toBeInTheDocument();
+
+    // A stray click on the page is a dismissal, never swallowed work — the
+    // list holds no typed state.
+    await userEvent.click(screen.getByRole("heading", { name: "The board" }));
+    expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull();
+  });
+
+  it("choosing an action closes the list and opens that action's panel", async () => {
+    renderBoard();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Copy Two-Tank Reef/ }));
+
+    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    expect(screen.getByLabelText(COPY.copyTo)).toHaveFocus();
   });
 });
 
@@ -524,10 +614,9 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     renderBoard(returnedDay(null), { remove });
 
     const row = screen.getByRole("listitem");
-    const trigger = within(row).getByRole("button", { name: /^Remove / });
-    await userEvent.click(trigger);
+    await userEvent.click(within(row).getByRole("button", { name: /^Move, copy, or remove / }));
+    await userEvent.click(within(row).getByRole("button", { name: /^Remove / }));
 
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
     const panel = within(row).getByRole("alert");
     expect(panel).toHaveTextContent("Take “Two-Tank Reef” off the board for good?");
     // Arming submits nothing at all.
@@ -538,9 +627,10 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it("hides move/copy/remove on a returned row, which those mutations all refuse", () => {
+  it("hides the actions control on a returned row, whose mutations all refuse", () => {
     renderBoard(returnedDay({ diveNumber: 1, uncounted: 2 }));
 
+    expect(screen.queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Copy / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
@@ -551,7 +641,9 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
 
     expect(screen.queryByText(/not counted/)).toBeNull();
     expect(screen.queryByText(/roll call still open/)).toBeNull();
-    expect(screen.getByRole("button", { name: /^Move Two-Tank Reef/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    ).toBeInTheDocument();
   });
 });
 

@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
-import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -19,22 +18,12 @@ import {
   pagedUpcomingTripsWithCounts,
   tripDiveSiteSummaries,
   upcomingScheduleRange,
-  upcomingTripsForCalendar,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
-import {
-  addMonths,
-  buildCalendarWeeks,
-  type CalendarDay,
-  type MonthRef,
-  monthKey,
-  monthLabel,
-  parseMonthKey,
-  weekStartsOn,
-} from "@/lib/calendar";
+import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -88,9 +77,9 @@ export async function generateMetadata({
 }
 
 /**
- * The public, canonical, embeddable dive schedule — calendar, trip list,
- * reviews, and the last-minute-deal signup, and the root of a shop's diver
- * namespace. Every visitor sees this exact page, signed in or not: the staff
+ * The public, canonical, embeddable dive schedule — a day-grouped agenda of
+ * upcoming departures with a month rail above it, reviews, and the
+ * last-minute-deal signup, and the root of a shop's diver namespace. Every visitor sees this exact page, signed in or not: the staff
  * operations board (KPI tiles, add/move/copy/remove) lives at
  * `/shop/[shopSlug]/schedule/board` instead (Lens 17 — this route used to be
  * four products crammed onto one, including a staff branch that could never
@@ -148,9 +137,9 @@ export default async function SchedulePage({
     notFound();
   }
 
-  // The page is served in pieces: the list is one keyset page, the calendar
-  // comes from a bounded month query — nothing loads every trip at once, so a
-  // shop with hundreds of departures on the books stays quick.
+  // The page is served in pieces: the list is one keyset page — nothing loads
+  // every trip at once, so a shop with hundreds of departures on the books
+  // stays quick.
   const tz = shop.timezone;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
@@ -170,10 +159,9 @@ export default async function SchedulePage({
     return { monthStart, monthEnd };
   };
 
-  // When the diver has explicitly paged the calendar to a month, bound the
-  // trip list below it to that same month so the two surfaces can't disagree
-  // — the previous behavior kept the list on "next N trips from now"
-  // regardless of which month the calendar had paged to.
+  // When the diver has explicitly paged to a month on the rail, bound the
+  // trip list to that month — the label above the list and the list itself
+  // must never disagree.
   const explicitMonth = parseMonthKey(month);
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
@@ -209,16 +197,20 @@ export default async function SchedulePage({
   // trip is no longer necessarily the shop's actual next departure.
   const nextDeparture = !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
 
-  // Diver-facing month calendar: place the month's dives on their shop-local
-  // day (storage is UTC; the diver thinks in the shop's wall clock), and page
-  // through the months that actually have dives on the books.
+  // The month rail: one row of "where am I / step a month" instead of the
+  // full month grid this page used to open with. The grid duplicated every
+  // departure already listed below it (once as an unreadable chip on a phone),
+  // spent the whole first screen on empty cells, and stacked a second
+  // navigation system on top of the list's own pager — a shop-operator's
+  // month-planning view imposed on a diver who thinks in "this weekend."
+  // What the grid actually did for a diver — jump the list to a month —
+  // survives here as the same `?month=` links with the same accessible names.
   const ordinal = (ref: MonthRef) => ref.year * 12 + (ref.month - 1);
   const monthOf = (date: Date): MonthRef => {
     const wall = utcToWallTime(date, tz);
     return { year: wall.year, month: wall.month };
   };
   const todayWall = utcToWallTime(now, tz);
-  const todayIso = toDateInputValue(todayWall);
   const firstTripMonth = range.first ? monthOf(range.first) : null;
   const lastTripMonth = range.last ? monthOf(range.last) : null;
   const currentMonth: MonthRef = explicitMonth ??
@@ -229,14 +221,6 @@ export default async function SchedulePage({
     firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
-
-  // The month grid's own trip lookup (`upcomingTripsForCalendar`) is a
-  // second, genuinely sequential query — it can't start until `currentMonth`
-  // is known above — so it moves into <ScheduleCalendarSection> below and
-  // streams in behind the shell and trip list instead of blocking them.
-  // Only the (cheap, synchronous) month boundary math happens here.
-  const { monthStart: calendarMonthStart, monthEnd: calendarMonthEnd } =
-    listMonthBounds ?? monthBoundsUtc(currentMonth);
 
   // Structured data describes the canonical standalone page only — see
   // generateMetadata above. The graph's `aggregateRating` and `review` items
@@ -317,31 +301,37 @@ export default async function SchedulePage({
         </Link>
       ) : null}
 
-      {hasUpcoming ? (
-        // The month grid's own query is the one genuinely sequential fetch
-        // on this page (it depends on `currentMonth`, computed above) — a
-        // Suspense boundary lets the trip list below stream in without
-        // waiting on it (docs task 119 follow-up: streaming the schedule).
-        <Suspense fallback={<ScheduleCalendarSkeleton />}>
-          <ScheduleCalendarSection
-            db={db}
-            shopId={shop.id}
-            shopSlug={shopSlug}
-            monthStart={calendarMonthStart}
-            monthEnd={calendarMonthEnd}
-            now={now}
-            tz={tz}
-            locale={locale}
-            t={t}
-            label={monthLabel(currentMonth)}
-            weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
-            todayIso={todayIso}
-            prevMonthKey={prevMonthKey}
-            nextMonthKey={nextMonthKey}
-            embed={isEmbed}
-            filterSuffix={filterSuffix}
-          />
-        </Suspense>
+      {hasUpcoming && (prevMonthKey || nextMonthKey || explicitMonth) ? (
+        // A labeled region rather than a `<nav>` landmark, matching the month
+        // grid it replaced: the embed widget promises "no page chrome" as
+        // literally zero navigation landmarks inside the iframe
+        // (e2e/schedule-embed.spec.ts), and two month arrows don't merit one.
+        <section
+          aria-label={t("schedule.monthNav")}
+          className="mb-4 flex flex-wrap items-center justify-between gap-3"
+        >
+          <p className="text-base font-semibold">{monthLabel(currentMonth, locale)}</p>
+          <div className="flex items-center gap-1">
+            {prevMonthKey ? (
+              <Link
+                href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+                aria-label={t("schedule.previousMonth")}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "min-w-11" })}
+              >
+                <span aria-hidden="true">‹</span>
+              </Link>
+            ) : null}
+            {nextMonthKey ? (
+              <Link
+                href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+                aria-label={t("schedule.nextMonth")}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "min-w-11" })}
+              >
+                <span aria-hidden="true">›</span>
+              </Link>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
       {hasUpcoming ? (
@@ -401,7 +391,14 @@ export default async function SchedulePage({
             // sharing that shape stays as it was, so a long list doesn't
             // repeat the same aside a dozen times.
             let twoTankHintShown = false;
-            return upcoming.map((trip) => {
+            // The list reads as an agenda: one quiet day rule per shop-local
+            // day, cards beneath it carrying only their time. Presentational
+            // (`role="presentation"` + `aria-hidden`) because each card's own
+            // stretched-link label already speaks its full date and time — a
+            // screen reader loses nothing, and the announced item count stays
+            // the number of bookable departures.
+            let lastDayIso: string | null = null;
+            const tripCard = (trip: (typeof upcoming)[number]) => {
               const full = isFull(trip);
               const capacityLabelValue = capacityLabel(trip);
               // Low inventory (1-2 spots) gets its own worded badge, matching
@@ -444,14 +441,14 @@ export default async function SchedulePage({
                         capacity: capacityText,
                       })}
                     />
-                    {/* Wide enough for a formatted range, and `whitespace-nowrap`
-                        so it never breaks at the ordinary space before AM/PM and
-                        strands "PM" on its own line. */}
+                    {/* The date lives on the day rule above, so the card
+                        carries only its time — wide enough for a formatted
+                        range, and `whitespace-nowrap` so it never breaks at
+                        the ordinary space before AM/PM and strands "PM" on
+                        its own line. (The stretched link's aria-label keeps
+                        the full date for screen readers.) */}
                     <div className="shrink-0 sm:w-36">
-                      <p className="font-medium">
-                        {formatShortDate(trip.startsAt, locale, shop.timezone)}
-                      </p>
-                      <p className="text-sm whitespace-nowrap text-muted">
+                      <p className="text-sm font-medium tabular-nums whitespace-nowrap">
                         {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                       </p>
                     </div>
@@ -525,11 +522,30 @@ export default async function SchedulePage({
                   </div>
                 </li>
               );
+            };
+            return upcoming.flatMap((trip) => {
+              const dayIso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
+              const dayRule =
+                dayIso === lastDayIso ? null : (
+                  <li
+                    key={`day-${dayIso}`}
+                    role="presentation"
+                    aria-hidden="true"
+                    className="mt-3 flex items-center gap-3 first:mt-0"
+                  >
+                    <span className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
+                      {formatShortDate(trip.startsAt, locale, shop.timezone)}
+                    </span>
+                    <span className="h-px flex-1 bg-border" />
+                  </li>
+                );
+              lastDayIso = dayIso;
+              return dayRule ? [dayRule, tripCard(trip)] : [tripCard(trip)];
             });
           })()}
         </ul>
       )}
-      {nextCursor || after ? (
+      {nextCursor || after || explicitMonth ? (
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {(() => {
             const backStack = decodeCursorStack(back);
@@ -564,10 +580,17 @@ export default async function SchedulePage({
               {t("schedule.showLater")}
             </Link>
           ) : null}
-          {after ? (
+          {after || explicitMonth ? (
             <Link
               href={(() => {
-                const query = withViewParams(new URLSearchParams()).toString();
+                // The whole point of this link is "start from the shop's next
+                // departure", so it keeps the filters but deliberately drops
+                // both the cursor and any month bound.
+                const params = new URLSearchParams();
+                if (isEmbed) params.set("embed", "1");
+                if (hasSpaceFilter) params.set("hasSpace", "1");
+                if (tripTypeFilter) params.set("tripType", tripTypeFilter);
+                const query = params.toString();
                 return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
               })()}
               className="text-sm font-medium text-primary hover:underline"
@@ -630,99 +653,6 @@ export default async function SchedulePage({
         </p>
       ) : null}
     </main>
-  );
-}
-
-/**
- * The month grid's own trip lookup, isolated behind its `<Suspense>` boundary
- * above so a shop with a slow month query never holds up the shell or the
- * trip list rendered ahead of it.
- */
-async function ScheduleCalendarSection({
-  db,
-  shopId,
-  shopSlug,
-  monthStart,
-  monthEnd,
-  now,
-  tz,
-  locale,
-  t,
-  label,
-  weeks,
-  todayIso,
-  prevMonthKey,
-  nextMonthKey,
-  embed,
-  filterSuffix,
-}: {
-  db: AppDb;
-  shopId: string;
-  shopSlug: string;
-  monthStart: Date;
-  monthEnd: Date;
-  now: Date;
-  tz: string;
-  locale: string;
-  t: DiverTranslator;
-  label: string;
-  weeks: CalendarDay[][];
-  todayIso: string;
-  prevMonthKey: string | null;
-  nextMonthKey: string | null;
-  embed: boolean;
-  filterSuffix: string;
-}) {
-  const monthTrips = await upcomingTripsForCalendar(db, shopId, monthStart, monthEnd, now);
-  const tripsByDay = new Map<string, CalendarTrip[]>();
-  for (const trip of monthTrips) {
-    const iso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
-    const list = tripsByDay.get(iso) ?? [];
-    list.push({
-      id: trip.id,
-      title: trip.title,
-      time: formatTime(trip.startsAt, locale, tz),
-      full: isFull(trip),
-    });
-    tripsByDay.set(iso, list);
-  }
-  return (
-    <ScheduleCalendar
-      shopSlug={shopSlug}
-      label={label}
-      weeks={weeks}
-      todayIso={todayIso}
-      tripsByDay={tripsByDay}
-      locale={locale}
-      t={t}
-      prevMonthKey={prevMonthKey}
-      nextMonthKey={nextMonthKey}
-      embed={embed}
-      filterSuffix={filterSuffix}
-    />
-  );
-}
-
-/** Shaped like `ScheduleCalendar`'s header + 7x5 day grid (design principle 1). */
-function ScheduleCalendarSkeleton() {
-  return (
-    <section
-      aria-hidden="true"
-      className="mb-8 animate-pulse rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-    >
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="h-6 w-32 rounded bg-surface-sunken" />
-        <div className="flex items-center gap-2">
-          <div className="size-11 rounded-lg bg-surface-sunken" />
-          <div className="size-11 rounded-lg bg-surface-sunken" />
-        </div>
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: 35 }, (_, i) => i).map((cell) => (
-          <div key={cell} className="min-h-16 rounded-lg bg-surface-sunken/60 sm:min-h-24" />
-        ))}
-      </div>
-    </section>
   );
 }
 

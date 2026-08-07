@@ -88,10 +88,9 @@ test.describe("staff", () => {
     // out, then sign back in to finish the staff-side edits below.
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");
-    // Scoped to the trip list itself: a day with more than one departure
-    // also renders a same-titled <li> in the month calendar
-    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
-    // resolve to both.
+    // Scoped to the trip list itself, the page's one stable anchor for
+    // departures — day rules and other lists on the page never carry a
+    // trip's title.
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
