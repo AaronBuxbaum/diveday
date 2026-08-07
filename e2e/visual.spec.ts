@@ -394,6 +394,25 @@ const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
 
 /**
+ * The is-the-renderer-alive question both stall paths ask before assigning
+ * blame: can the page answer a trivial evaluate within `RENDERER_PROBE_MS`?
+ * `true` means the page is alive and our own wait is what leaked; `false` is
+ * the "wedged, not slow" verdict. One helper so `withRendererBound` and
+ * `screenshotOrGiveUp` can never drift in how they measure it.
+ */
+async function probeRenderer(page: Page): Promise<boolean> {
+  return Promise.race([
+    page
+      .evaluate(() => true)
+      .then(
+        () => true,
+        () => false,
+      ),
+    new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
+  ]);
+}
+
+/**
  * Await a page-side pass, but never further than `budgetMs` — see the note on
  * `PAINT_STALL_MS`. A pass that overruns is reported and the caller carries on
  * with `degraded`; a pass that *throws* still throws, because an evaluate that
@@ -426,15 +445,7 @@ async function withRendererBound<T>(
   if (outcome.state === "done") return outcome.value;
 
   const probeStart = Date.now();
-  const responsive = await Promise.race([
-    page
-      .evaluate(() => true)
-      .then(
-        () => true,
-        () => false,
-      ),
-    new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
-  ]);
+  const responsive = await probeRenderer(page);
   // The exact phrase "wedged, not slow" is load-bearing: ci.yml's visual job
   // greps the capture log for it to decide whether a failed shard earned its
   // one-shot rerun of the failed captures. Reword it here (or in
@@ -663,15 +674,7 @@ async function screenshotOrGiveUp(page: Page, path: string) {
   if (outcome.state === "failed") throw outcome.error;
   if (outcome.state === "done") return;
 
-  const responsive = await Promise.race([
-    page
-      .evaluate(() => true)
-      .then(
-        () => true,
-        () => false,
-      ),
-    new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
-  ]);
+  const responsive = await probeRenderer(page);
   throw new Error(
     `visual: page.screenshot did not return within ${SCREENSHOT_GIVE_UP_MS}ms at ${page.url()} ` +
       `(${path}). The renderer ` +

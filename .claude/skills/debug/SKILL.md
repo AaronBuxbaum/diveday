@@ -166,7 +166,7 @@ bucket the run — each bucket has a different owner and several need no work:
 - **`reg-suit visual regression` red with "No visual baseline published"** — a consequence,
   not a cause: some visual shard failed, so main published no snapshot. Fix the shard's
   failure; a green re-run publishes the baseline.
-- **A real spec failure** — only now is it yours to root-case with the loop above. Check
+- **A real spec failure** — only now is it yours to root-cause with the loop above. Check
   first (Parallel work rule) that no open PR already owns the same spec.
 
 Two spec flakes from that sweep are already fixed on main — trip-admission's alert-locator
