@@ -187,6 +187,43 @@ group header, or disappears until it has something to say.
 The test: read a list top to bottom and cross out every word that repeats an earlier row. What
 survives is the list; what's crossed out belongs to a header or nothing.
 
+## 10. The surface is the interface
+
+The cleanest screen is not the one with the fewest pixels — it's the one where the user never has
+to *look for* anything. Content leads; chrome defers. Concretely:
+
+- **Show the answer, not a door to it.** If the app already knows the datum a user came for
+  (seats left, next departure, who's still blocked), render it where the question arises —
+  inline, on the row, on the tab — instead of behind a click. Navigation is for changing
+  subject, not for fetching a fact the screen could have carried.
+- **Actions ride on their objects.** An action belongs on the thing it affects — the row's own
+  tap, a control revealed on hover/focus, the natural next step at the end of the card — not in
+  a toolbar of detached buttons the user must map back to targets. A screen that needs a legend
+  to connect its buttons to its content has the buttons in the wrong place.
+- **Edit in place where safe.** A value a staffer corrects often (a note, a count, a name)
+  invites editing where it's displayed, saving on blur/enter with undo (principle 7), rather
+  than an "Edit" button that swaps the page for a form. Full forms are for creation and for
+  changes with real consequences — not for every touch.
+- **Hierarchy by type and space before boxes and buttons.** Reach for type scale, weight, muted
+  ink, whitespace, and alignment first; borders, fills, and buttons are the *last* tools, not
+  the first. When tempted to add a control or a card, first ask whether layout could make it
+  unnecessary.
+- **Remove until it breaks.** The test for every control and border on a finished surface: take
+  it away — if the screen still works, it was noise. What survives is what the screen is.
+
+## 11. Creative within the system
+
+The tokens and primitives are a vocabulary, not a template. A default stack of bordered cards
+with a button row is the *fallback* composition, never the target — a surface whose content has
+its own shape (a day's schedule, a boat's manifest, a diver's history) deserves a composition
+designed for that shape. Creativity here is judged by one measure: does it make the surface more
+instinctive — clearer hierarchy, fewer controls, answers closer to the questions? Novelty that
+adds chrome or asks the user to learn a new grammar fails this principle even when it looks
+striking. When designing a significant new surface, sketch at least two compositions before
+building, and keep the one that survives principle 10's remove-until-it-breaks test. Bespoke
+composition never exempts a surface from the mechanics: tokens, the form/button primitives, the
+dock test, and one-primary all still apply.
+
 ## Tokens (the mechanics)
 
 Defined in `src/app/globals.css`, bound to Tailwind — see
@@ -205,6 +242,27 @@ and until they land the axe scan in `e2e/a11y.spec.ts` keeps its `color-contrast
 so CI will not catch a new contrast regression for you. Everything else measured clears AA, and
 `--focus-ring` clears WCAG 1.4.11's 3:1 in all four palettes (worst case 4.66:1). New surfaces are
 still held to the full bar; the exceptions are a documented backlog, not a lowered standard.
+
+## The holistic pass (run it before any checklist)
+
+Every design review starts holistic, before the itemized criteria — a surface can pass every
+mechanical check and still be a pile of well-formed cards with no point of view. Answer, in
+writing, one sentence each:
+
+- What is this surface's **one idea**? If you can't say it, the surface doesn't know either.
+- What **question does its user arrive with**, and is the answer already on screen — or behind a
+  click the app didn't need to charge (principle 10)?
+- Which **controls could dissolve** into the objects they act on — a row's own tap, a
+  hover-revealed control, an in-place edit with undo, a good default — instead of standing as
+  buttons?
+- **Remove until it breaks**: what would you take away first? A control or border nobody would
+  miss is a finding.
+- For a significant **new** surface: does the composition fit this content's own shape, or is it
+  the default card stack (principle 11)? If the default, sketch one alternative in prose — what
+  moves where, what it buys — and either adopt it or say why the default genuinely serves better.
+
+The same pass applies, in prose form, to persuasion surfaces and collateral: a marketing page has
+one argument and a scrolls-until-answered count; a one-pager has one ask.
 
 ## Review checklist
 
@@ -226,3 +284,11 @@ still held to the full bar; the exceptions are a documented backlog, not a lower
 - [ ] No fact repeats at equal weight down a list: shared facts sit in a group header, "None"
       columns and all-clear badges are absent rather than rendered, and a badge marks only the
       exceptional state
+- [ ] The screen carries the answers its users come for — no click to fetch a fact the app
+      already knows
+- [ ] Actions sit on the objects they affect, not in a detached toolbar; frequent small edits
+      happen in place where safe
+- [ ] Hierarchy is carried by type, weight, and space before borders, fills, and buttons; every
+      remaining control and border survives the remove-until-it-breaks test
+- [ ] A significant new surface got at least two sketched compositions, and the shipped one is
+      shaped by its content, not the default card stack

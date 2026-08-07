@@ -24,7 +24,10 @@ the workflow for applying it.
 1. Classify the artifact: product copy, public marketing, internal collateral, merch, or a proposed
    campaign. Apply the strictest relevant claims and safety rules.
 2. Reuse the current identity. Do not invent a new color, font, logo treatment, or personality
-   trait merely to make one item feel distinctive.
+   trait merely to make one item feel distinctive. Creativity lives in composition, not in new
+   ingredients (`docs/design/principles.md` §11): within the fixed palette, type, and mark, a
+   piece may — and for a significant piece should — get a bespoke layout shaped by its content,
+   judged by whether it makes the piece clearer and more instinctive, never by novelty alone.
 3. Make the outcome concrete. The default voice is a competent divemaster: warm, plain, brief,
    and exact when safety or money is involved.
 4. For merch or vendor work, provide the ground color, imprint colors, type treatment, placement,

@@ -32,6 +32,17 @@ output is always a draft artifact he reviews and sends himself.
    terms are actually authorized to promise today (founding price, two-year lock, founder-direct
    same-day support) versus still open (contract/intake flow, billing cadence, taxes/fees).
 
+## Shape of a draft
+
+A leave-behind or pitch note is a surface like any other, and the same holistic bar applies
+(`docs/design/principles.md` §10–11, in prose form): one argument per artifact, stated in the
+first lines — the founder's reader decides in the first ten seconds whether to keep reading;
+answer the questions the reader predictably arrives with (what does it cost, what happens if I
+leave, what do you want from me) where they arise instead of making them hunt; end on **one**
+clear ask, never a menu of asks; and cut until removing the next line would lose the argument.
+A one-pager that needs its sections explained is a template filled in, not a draft worth
+handing over.
+
 ## Claims policy, applied to private collateral
 
 Everything in `marketing-page`'s claims policy applies here, plus:
