@@ -341,6 +341,7 @@
     "removeBookingConfirmButton": "Yes, remove booking",
     "privateStaffNotes": "Private staff notes ({count})",
     "detailsSummary": "Details",
+    "detailsSummaryLabel": "Details for {name}",
     "noteDeletedToast": "Private note deleted.",
     "deletingEllipsis": "…",
     "delete": "Delete",

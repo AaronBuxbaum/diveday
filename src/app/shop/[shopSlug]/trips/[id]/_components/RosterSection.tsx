@@ -844,7 +844,15 @@ export function RosterSection({
                         so a collapsed card never swallows what the link
                         promised. */}
                     <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group -mt-2">
-                      <summary className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+                      <summary
+                        // Ten of these in a list all read "Details" alone; the
+                        // accessible name says whose (same pattern as the
+                        // roster's other per-row controls).
+                        aria-label={t("trips.roster.detailsSummaryLabel", {
+                          name: person.fullName,
+                        })}
+                        className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
+                      >
                         {t("trips.roster.detailsSummary")}
                         <svg
                           viewBox="0 0 20 20"

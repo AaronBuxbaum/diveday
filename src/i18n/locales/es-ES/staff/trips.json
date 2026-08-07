@@ -341,6 +341,7 @@
     "removeBookingConfirmButton": "Sí, eliminar reserva",
     "privateStaffNotes": "Notas privadas del personal ({count})",
     "detailsSummary": "Detalles",
+    "detailsSummaryLabel": "Detalles de {name}",
     "noteDeletedToast": "Nota privada eliminada.",
     "deletingEllipsis": "…",
     "delete": "Eliminar",
