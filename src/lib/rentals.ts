@@ -59,7 +59,7 @@ export type RentableItem = {
 /**
  * `kind` is the only code a caller needs — this file returns codes, never
  * rendered words. A staff surface resolves a word through
- * `src/i18n/rental-labels.ts`'s `rentableItemLabel` (staff.json); the diver
+ * `src/i18n/rental-labels.ts`'s `rentableItemLabel` (staff bundle); the diver
  * rental-fit form (`RentalFitForm.tsx`, the only diver-facing caller of this
  * list) resolves its own words against diver.json, since a shared label here
  * would tie one bundle to the other (see the domain-strings-common notes on a

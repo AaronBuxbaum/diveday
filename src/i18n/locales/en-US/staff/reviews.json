@@ -1,0 +1,47 @@
+{
+  "eyebrow": "Reviews",
+  "title": "What divers said",
+  "description": "Every review here was left through a diver's own post-trip recap link, so all of them came from someone who was on the boat. A rating on its own publishes straight away; anything with words waits for you.",
+  "viewPublicPage": "View public page",
+  "notice": {
+    "published": "Review published to your schedule page.",
+    "hidden": "Review hidden — it no longer counts toward your rating.",
+    "hiddenToast": "Review hidden.",
+    "publishedMany": "{count, plural, one {# review published} other {# reviews published}} to your schedule page.",
+    "noneSelected": "Tick the reviews you want to publish first.",
+    "error": "That review couldn't be updated. Try again."
+  },
+  "overviewLabel": "Rating overview",
+  "publicRating": "Public rating",
+  "noneYet": "Nothing published yet",
+  "fromPublished": "From your published reviews",
+  "published": "Published",
+  "publishedDetail": "Shown on your schedule page",
+  "waitingOnYou": "Waiting on you",
+  "waitingDetail": "Reviews with words to read",
+  "thisMonthStat": "This month: {rating}★ average from {count, plural, one {# review} other {# reviews}}",
+  "standout": "✦ Standout review",
+  "emptyHeading": "No reviews yet",
+  "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
+  "emptyWaitingHeading": "Nothing waiting on you",
+  "emptyWaitingDetail": "Every review with words has been read. New ones land here as soon as a diver leaves one.",
+  "emptyReviewLinkBody": "There is nothing to switch on here — a review arrives when a diver opens their recap. What is yours to set is where a happy one goes next.",
+  "emptyReviewLinkAction": "Set your review link",
+  "ratingOnly": "Rating only — no words to review.",
+  "rating": "{rating} out of 5 stars",
+  "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
+  "hide": "Hide",
+  "publish": "Publish",
+  "publishSelected": "Publish selected",
+  "tickThenPublish": "Tick the ones to publish, then",
+  "selectToPublishAriaLabel": "Select {name}'s review to publish",
+  "saving": "Saving…",
+  "filterLabel": "Filter reviews",
+  "filter": {
+    "all": "All reviews",
+    "waiting": "Waiting on you"
+  },
+  "pagination": {
+    "total": "{count, plural, one {# review} other {# reviews}}"
+  }
+}

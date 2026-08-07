@@ -1,0 +1,50 @@
+{
+  "eyebrow": "Propietario",
+  "title": "Cómo va tu mes",
+  "description": {
+    "thisMonth": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes — hasta ahora.",
+    "future": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes.",
+    "past": "Reservas, ingresos, ocupación y hojas de exención de las salidas que zarparon."
+  },
+  "soFar": "hasta ahora",
+  "chooseMonth": "Elegir mes",
+  "previousMonth": "Mes anterior",
+  "nextMonth": "Mes siguiente",
+  "currentMonthTitle": "Estás viendo el mes actual",
+  "earliestMonthTitle": "Este es tu primer mes con salidas",
+  "monthPicker": {
+    "label": "Ir a un mes",
+    "go": "Ir"
+  },
+  "numbersLabel": "Los números de este mes",
+  "metrics": {
+    "revenueLabel": "Ingresos cobrados",
+    "revenueDetail": "Pagos y depósitos cobrados en las salidas de este mes",
+    "bookingsLabel": "Reservas",
+    "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
+    "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",
+    "seatFillLabel": "Ocupación",
+    "seatFillDetail": "{booked} de {offered} plazas · {count, plural, one {# barco completo} other {# barcos completos}}",
+    "waiversLabel": "Hojas de exención firmadas",
+    "waiversOutstanding": "quedan {count} por recoger",
+    "waiversAllIn": "Toda la documentación está en regla",
+    "revenueViewOrders": "Ver pedidos",
+    "tipsLabel": "Propinas",
+    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina en las salidas de este mes} other {# propinas en las salidas de este mes}} · 100 % para el centro"
+  },
+  "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
+  "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
+  "tripsThisMonth": "Salidas de este mes",
+  "table": {
+    "trip": "Salida",
+    "seats": "Plazas",
+    "fill": "Ocupación",
+    "waivers": "Exenciones"
+  },
+  "seatsMobile": "{booked}/{capacity} plazas",
+  "fillLabel": "{booked} de {capacity} plazas reservadas",
+  "waiversRowLabel": "{complete} de {total} hojas de exención firmadas",
+  "pagination": {
+    "total": "{count, plural, one {# salida} other {# salidas}}"
+  }
+}

@@ -1,0 +1,624 @@
+{
+  "operationalWindow": {
+    "note": "The next {days} days of departures — the same window Today and Check-in both read.",
+    "arrivalsLens": "Counter mode narrows it to arrivals from {lookback} hours ago through the next {ahead} hours.",
+    "pivotsLabel": "The same window, seen another way"
+  },
+  "skipToContent": "Skip to main content",
+  "publicPreview": {
+    "youWorkHere": "You work here — this is the page divers see.",
+    "openTheBoard": "Open the board"
+  },
+  "imageInput": {
+    "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
+    "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
+    "tooBigSuffix": ": that's over {maxMb} MB — try a smaller photo."
+  },
+  "paperWaiver": {
+    "markSignedOnPaper": "Mark signed on paper",
+    "medicalAttestationLabel": "I have this diver's signed release on file and have reviewed their medical questionnaire — no answer needs physician sign-off.",
+    "recording": "Recording…",
+    "recordPaperSignature": "Record paper signature"
+  },
+  "waiverSend": {
+    "sending": "Sending…",
+    "copied": "Copied",
+    "copyLink": "Copy link",
+    "copyFailed": "Couldn’t copy — select the link above instead.",
+    "reasonNoEmailOne": "No email on file",
+    "reasonNoEmailOther": "{count} have no email on file",
+    "reasonFailedOne": "Email could not be delivered",
+    "reasonFailedOther": "Email could not be delivered to {count}",
+    "reasonTestRecipientOne": "This test email address can’t receive mail",
+    "reasonTestRecipientOther": "{count} test email addresses can’t receive mail",
+    "reasonUnconfigured": "DiveDay can’t send email from this deployment yet",
+    "reasonNoAppOrigin": "This deployment has no public web address set, so a link can’t be built",
+    "sharePrivateLinkOne": "this private link",
+    "sharePrivateLinkOther": "these private links",
+    "sent": "Waiver sent to {names}.",
+    "alreadyDoneOne": "{names} already has a signed waiver — nothing reissued.",
+    "alreadyDoneOther": "{names} already have a signed waiver — nothing reissued.",
+    "errors": "Couldn’t send to {names} — open the roster to check the booking.",
+    "confirmResend": "Yes, resend",
+    "neverMind": "Never mind",
+    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection."
+  },
+  "connectivity": {
+    "online": "Online",
+    "onlineTitle": "This device is online.",
+    "offlineTitle": "This device has no connection right now.",
+    "offlineWithCopy": "No signal · device copy"
+  },
+  "capacity": {
+    "full": "Full",
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+  },
+  "depth": {
+    "meters": "m",
+    "feet": "ft"
+  },
+  "temperature": {
+    "celsius": "°C",
+    "fahrenheit": "°F"
+  },
+  "birthday": {
+    "label": "Birthday",
+    "today": "today",
+    "soon": "in {days}d",
+    "recent": "{days}d ago"
+  },
+  "printButton": {
+    "label": "Print / save PDF"
+  },
+  "rollCallNote": {
+    "optionalNote": "Optional note",
+    "message": {
+      "manualOnly": "Saved on this device — added to the roll-call record when you set a status.",
+      "saving": "Saving…",
+      "saved": "Saved to this roll-call record.",
+      "queued": "Saved on this device — will send when you’re back online.",
+      "error": "Couldn’t save to the record — still saved on this device. Try again.",
+      "idle": "Saves automatically — on this device and to the roll-call record."
+    },
+    "statusPill": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "queued": "Queued offline",
+      "error": "Sync error"
+    },
+    "notePlaceholder": "Late to the boat, medical question, kit issue…"
+  },
+  "commandPalette": {
+    "search": "Search",
+    "dialogAriaLabel": "Quick search",
+    "comboboxAriaLabel": "Search divers, trips, and pages",
+    "placeholder": "Search divers, trips, or jump to a page…",
+    "emptyShort": "Type to search people and trips, or jump to a page.",
+    "emptyNoMatches": "No matches. Try a name, email, or trip title.",
+    "groupDivers": "Divers",
+    "groupTrips": "Trips",
+    "groupDiveSites": "Dive sites",
+    "groupCourses": "Courses",
+    "groupOrders": "Orders",
+    "groupGoTo": "Go to",
+    "goToBoarding": "Boarding — today's boat",
+    "goToOfflineRollCall": "Open offline roll call"
+  },
+  "keyboardShortcuts": {
+    "buttonAriaLabel": "Keyboard shortcuts",
+    "buttonTitle": "Keyboard shortcuts (press ?)",
+    "dialogAriaLabel": "Keyboard shortcuts",
+    "closeAriaLabel": "Close",
+    "heading": "Keyboard shortcuts",
+    "paletteLabel": "Search divers, trips, and pages",
+    "helpLabel": "Show this help",
+    "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the board.",
+    "goToLabel": "Go to {page}"
+  },
+  "tripAdmission": {
+    "level": "This charter requires {level}. This diver's highest card on file is {held}. If they hold a {level} card, add it to their record — otherwise book them onto a trip at their level, or into the {level} course.",
+    "levelNoCard": "This charter requires {level}, and nothing on this diver's record reaches it. Add their {level} card if they hold one — otherwise book them onto a trip at their level, or into the {level} course.",
+    "cards": "{count, plural, one {This charter requires a {list} card. There's none on this diver's record.} other {This charter requires {list} cards. None of them are on this diver's record.}}",
+    "nitrox": "Nitrox",
+    "generic": "This diver's cards on file don't reach what this trip and its dive sites require."
+  },
+  "readiness": {
+    "certificationLevels": {
+      "openWater": "Open Water",
+      "advancedOpenWater": "Advanced Open Water",
+      "rescue": "Rescue Diver",
+      "divemaster": "Divemaster",
+      "instructor": "Instructor"
+    },
+    "specialties": {
+      "deep": "Deep",
+      "wreck": "Wreck",
+      "night": "Night",
+      "drysuit": "Drysuit"
+    },
+    "status": {
+      "ready": "Ready",
+      "blocked": "Blocked"
+    },
+    "blockers": {
+      "requirementsNotConfigured": "Trip requirements have not been configured yet.",
+      "identityUnconfirmed": "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
+      "waiverNotSent": "Waiver has not been sent.",
+      "waiverPending": "Waiver is waiting for the diver’s signature.",
+      "waiverExpired": "Waiver link expired; issue a fresh link.",
+      "medicalReview": "A medical answer needs staff follow-up.",
+      "certificationMissing": "No certification is on file for this trip.",
+      "certificationPending": "Certification is waiting for staff verification.",
+      "certificationExpired": "Certification on file is past its refresher-due date.",
+      "certificationInsufficient": "{level} or higher is required for this trip.",
+      "specialtyMissing": "{specialty} specialty is required; no card is on file.",
+      "specialtyPending": "{specialty} specialty card is waiting for staff verification.",
+      "specialtyExpired": "{specialty} specialty card on file is past its refresher-due date.",
+      "specialtyImportUnconfirmed": "{specialty} specialty card came across in an import — a staffer needs to confirm it before this dive.",
+      "nitroxMissing": "Nitrox certification is required; no card is on file.",
+      "nitroxPending": "Nitrox card is waiting for staff verification.",
+      "underMinimumAge": "Under this course’s minimum age: {age} on the course date, and it requires {minimumAge}. Check the date of birth on file before boarding.",
+      "paymentDue": "Payment is outstanding for this trip.",
+      "paymentRefunded": "Payment was refunded; collect payment before boarding.",
+      "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked."
+    }
+  },
+  "shopNav": {
+    "home": "DiveDay home",
+    "signOut": "Sign out",
+    "signOutConfirm": "Sign out? Confirm",
+    "signOutPending": "Signing out…"
+  },
+  "shopNavLinks": {
+    "primaryNavAriaLabel": "Primary",
+    "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
+    "badgeReviews": "{count, plural, one {# review waiting} other {# reviews waiting}}",
+    "more": "More",
+    "groupDaily": "Run the shop",
+    "groupSetup": "Set up",
+    "today": "Today",
+    "checkIn": "Check-in",
+    "closeOut": "Close-out",
+    "walkIn": "Walk-in",
+    "blockers": "Not ready",
+    "divers": "Divers",
+    "board": "Board",
+    "addBooking": "Add a booking",
+    "staffing": "Staffing",
+    "diveSites": "Dive sites",
+    "courses": "Courses",
+    "reviews": "Reviews",
+    "orders": "Orders",
+    "waivers": "Waivers",
+    "reports": "Reports",
+    "promoCodes": "Promo codes",
+    "settings": "Settings",
+    "team": "Team",
+    "calendarFeed": "Calendar subscription"
+  },
+  "subSurfaceRipple": {
+    "iconTitle": "Roll call complete icon",
+    "message": "Roll call complete"
+  },
+  "waterLocker": {
+    "rainAlt": "Rain",
+    "heading": "Screen locked — water detected",
+    "body": "We're ignoring random taps from water on the screen. Hold to unlock once it's dry.",
+    "holdLine1": "HOLD",
+    "holdLine2": "2s",
+    "unlockingProgress": "Unlocking... {percent}%",
+    "holdToUnlock": "Hold button to unlock",
+    "disableToggleLabel": "Disable spray guard on this device"
+  },
+  "undoToast": {
+    "pendingLabel": "Undoing…",
+    "undo": "Undo"
+  },
+  "today": {
+    "departureBoard": {
+      "crewingBadge": "You’re crewing",
+      "courseSession": "Course session · {title}",
+      "bookedOfCapacity": "{booked} of {capacity} booked",
+      "boarding": "Boarding",
+      "openGuests": "Open guests",
+      "crewDropZoneAria": "Crew assignments drop zone",
+      "assignCrewMemberAria": "Assign crew member to {title}",
+      "assignedCrewHeading": "Assigned crew",
+      "assignCrewOption": "Assign crew…",
+      "assignCrewLabel": "Assign crew",
+      "assignFailed": "That didn’t save — recheck your connection or try again.",
+      "unassignAria": "Unassign {name}",
+      "noCrewAssigned": "No crew assigned yet.",
+      "countBoarded": "Boarded",
+      "blockedWarningOne": "{count} diver cannot board yet — they are in the list below.",
+      "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",
+      "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
+      "everyoneAboard": "Everyone’s aboard.",
+      "clearToBoard": "Everyone booked on this trip is clear to board.",
+      "sailingToday": "Sailing today",
+      "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
+      "dragStaffLabel": "Or drag a name onto a boat:"
+    },
+    "todayQueue": {
+      "emptyHeading": "Nothing is waiting on you",
+      "emptyBody": "Every diver booked in the next week has their waiver, cards, and payment in order.",
+      "emptyAction": "View the schedule",
+      "needsYouHeading": "Needs you",
+      "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.",
+      "boatsClear": "Today's boats are all clear 🤙",
+      "itemsCount": "{count, plural, one {# item} other {# items}}"
+    },
+    "resendConfirmation": {
+      "resending": "Resending…",
+      "confirmationResent": "Confirmation resent.",
+      "errors": {
+        "invalid": "That booking could not be found — open the trip to check it.",
+        "noEmail": "No email on file — add one from the roster, then resend.",
+        "notConfigured": "Email isn’t configured for this shop yet.",
+        "failed": "Still couldn’t deliver it — open the trip to check the booking."
+      }
+    },
+    "paymentAction": {
+      "copyLink": "Copy payment link",
+      "linkCopied": "Link copied.",
+      "copyFailed": "Couldn’t copy — copy it from the invoice instead.",
+      "resendInvoice": "Resend invoice",
+      "resending": "Resending…",
+      "invoiceResent": "Invoice resent.",
+      "errors": {
+        "notFound": "That order could not be found — open the trip to check it.",
+        "notOpen": "This order is no longer open — open the trip to check its status.",
+        "notConfigured": "Payments aren’t connected for this shop yet.",
+        "failed": "Still couldn’t resend it — open the trip to check the order."
+      }
+    },
+    "yourSessions": {
+      "heading": "Your sessions",
+      "subtitle": "The classes you teach this week, with where each student stands.",
+      "studentsCount": "{count, plural, one {# student} other {# students}}",
+      "readyCount": "{count} ready",
+      "blockedCount": "{count} blocked",
+      "openRoster": "Open roster"
+    },
+    "urgency": {
+      "imminent": "Next 3 hours",
+      "now": "Before today’s boats",
+      "soon": "Next 3 days",
+      "later": "This week"
+    },
+    "actionKind": {
+      "rollCallMissingDiver": "Missing diver",
+      "rollCallUnfinished": "Roll call",
+      "rollCallMissingCrew": "Missing crew",
+      "rollCallCrewUnfinished": "Crew roll call",
+      "rollCallDepartureOpen": "Dock count",
+      "rollCallNotStarted": "No roll call",
+      "medicalReview": "Medical",
+      "readinessUnavailable": "Readiness",
+      "identity": "Identity",
+      "certification": "Cards",
+      "requirements": "Setup",
+      "waiver": "Waiver",
+      "instructorMissing": "Crew",
+      "nitroxGate": "Nitrox",
+      "divePrep": "Prep",
+      "payment": "Payment",
+      "emailDelivery": "Email",
+      "waitlistSeat": "Wait list",
+      "lastMinuteFill": "Fill seats",
+      "emergencyContact": "Contact",
+      "stuckPaymentOperation": "Stripe",
+      "failedPhotoDeletion": "Cleanup"
+    },
+    "blockerAction": {
+      "setRequirements": "Set requirements",
+      "confirmIdentity": "Confirm identity",
+      "checkDateOfBirth": "Check date of birth",
+      "sendWaiver": "Send waiver",
+      "nudgeWaiver": "Nudge waiver",
+      "reissueWaiver": "Reissue waiver",
+      "reviewMedical": "Review medical",
+      "addCard": "Add card",
+      "verifyCard": "Verify card",
+      "updateCard": "Update card",
+      "reviewCard": "Review card",
+      "addSpecialty": "Add specialty",
+      "verifySpecialty": "Verify specialty",
+      "updateSpecialty": "Update specialty",
+      "confirmSpecialty": "Confirm specialty",
+      "addNitroxCard": "Add nitrox card",
+      "verifyNitroxCard": "Verify nitrox card",
+      "takePayment": "Take payment",
+      "checkReadiness": "Check readiness"
+    },
+    "blockerGroup": {
+      "setRequirements": "Set requirements",
+      "confirmIdentities": "Confirm identities",
+      "checkDatesOfBirth": "Check dates of birth",
+      "sendWaivers": "Send waivers",
+      "nudgeWaivers": "Nudge waivers",
+      "reissueWaivers": "Reissue waivers",
+      "reviewMedicals": "Review medicals",
+      "reviewCards": "Review cards",
+      "verifyCards": "Verify cards",
+      "updateCards": "Update cards",
+      "reviewSpecialties": "Review specialties",
+      "verifySpecialties": "Verify specialties",
+      "updateSpecialties": "Update specialties",
+      "confirmImportedSpecialties": "Confirm imported specialties",
+      "reviewNitroxCards": "Review nitrox cards",
+      "verifyNitroxCards": "Verify nitrox cards",
+      "takePayments": "Take payments",
+      "checkReadiness": "Check readiness"
+    },
+    "pointingLabel": {
+      "trip": "Open roster",
+      "diver": "Open {name}’s record"
+    },
+    "nameList": {
+      "all": "{leading} and {last}",
+      "overflow": "{leading} and {rest, plural, one {# other} other {# others}}"
+    },
+    "subject": {
+      "diverGroup": "{count, plural, one {# diver} other {# divers}}"
+    },
+    "blockerDetail": {
+      "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",
+      "group": "{detail} {names}."
+    },
+    "detail": {
+      "missingDiver": "Somebody on this boat was marked not back aboard after dive {dive} — {uncounted, plural, one {# of {total} divers who went in} other {# of {total} divers who went in}} has not been counted back since. Find them first, then close the count.",
+      "missingDiverStale": "This trip's dive {dive} count was never closed: {uncounted, plural, one {# of {total} divers was} other {# of {total} divers were}} marked not back aboard and never accounted for afterwards. Too old to settle on the dock — reconstruct it from the trip's manifest and write down what happened.",
+      "openRollCall": "This boat is back and the dive {dive} roll call was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result recorded. Account for everyone before you leave the dock.",
+      "openRollCallUnderway": "This boat is still out and the dive {dive} count was started and left half-done — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while the boat is still on the site.",
+      "openRollCallStale": "This trip's dive {dive} roll call was never closed — {uncounted, plural, one {# of {total} divers still has} other {# of {total} divers still have}} no result. Too old to settle on the dock — reconstruct it from the trip's manifest.",
+      "missingCrew": "A crew member on this boat was marked not back aboard after dive {dive} — {uncounted, plural, one {# of {total} crew who went in} other {# of {total} crew who went in}} has not been counted back since. Find them first, then close the count.",
+      "missingCrewStale": "This trip's dive {dive} crew count was never closed: {uncounted, plural, one {# of {total} crew was} other {# of {total} crew were}} marked not back aboard and never accounted for afterwards. Too old to settle on the dock — reconstruct it from the trip's manifest and write down what happened.",
+      "openCrewRollCall": "This boat is back and the dive {dive} crew count was never finished — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result recorded. Account for everyone before you leave the dock.",
+      "openCrewRollCallUnderway": "This boat is still out and the dive {dive} crew count was started and left half-done — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reach the boat now, while it is still on the site.",
+      "openCrewRollCallStale": "This trip's dive {dive} crew count was never closed — {uncounted, plural, one {# of {total} crew still has} other {# of {total} crew still have}} no result. Too old to settle on the dock — reconstruct it from the trip's manifest.",
+      "departureCountOpen": "The dock count on this boat was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. Missing paperwork, not a diver in the water: settle it so the next boat's count starts from a real list.",
+      "noRollCall": "No roll call was run on this trip at all — {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is simply empty.",
+      "missingFit": "{count, plural, one {# diver is} other {# divers are}} missing rental sizes, so the prep list is incomplete.",
+      "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
+      "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
+      "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
+      "overRatioIntro": "{booked} booked on this intro session, but the assigned crew only covers {capacity} — PADI's published Discover Scuba ratio of {perInstructor} per instructor for the open-water dive, which a certified assistant does not raise. Only another instructor adds seats.",
+      "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
+      "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
+      "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
+      "emailNotConfigured": {
+        "waiver": "Their waiver link never sent — email is not configured.",
+        "confirmation": "Their booking confirmation never sent — email is not configured."
+      },
+      "emailFailed": {
+        "waiver": "Their waiver link could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}.",
+        "confirmation": "Their booking confirmation could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}."
+      }
+    },
+    "actionLabel": {
+      "openRollCall": "Open roll call",
+      "openPrepList": "Open prep list",
+      "openTrip": "Open trip",
+      "openGuests": "Open guests",
+      "inviteFromWaitlist": "Invite from wait list",
+      "resendWaiverLink": "Resend waiver link",
+      "resendConfirmation": "Resend confirmation",
+      "openOrders": "Review in Orders",
+      "openDataSettings": "Review in Settings"
+    },
+    "summary": {
+      "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
+      "clear": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}} — and nothing is waiting on you.",
+      "urgent": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {urgent, plural, =1 {1 job to clear before they sail.} other {# jobs to clear before they sail.}}",
+      "ahead": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. Nothing is urgent; {jobs, plural, =1 {1 job to work ahead.} other {# jobs to work ahead.}}"
+    },
+    "greeting": {
+      "morning": "Good morning, {name} ☕",
+      "afternoon": "Good afternoon, {name} ☀️",
+      "evening": "Good evening, {name} 🌙",
+      "night": "Good night, {name} 🌌"
+    },
+    "seasonalBriefing": {
+      "summer": "Enjoy the surface interval — grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",
+      "autumn": "Enjoy the surface interval — grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we'll see you on the next boat.",
+      "winter": "Enjoy the surface interval — warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we'll see you on the next boat.",
+      "spring": "Enjoy the surface interval — catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we'll see you on the next boat."
+    },
+    "opsAlert": {
+      "operationKind": {
+        "checkoutSession": "Checkout",
+        "invoice": "Invoice",
+        "refund": "Refund"
+      },
+      "mediaKind": {
+        "coursePhoto": "Course photo",
+        "recapPhoto": "Recap photo",
+        "certificationCard": "Card photo",
+        "waiverDocument": "Waiver document"
+      },
+      "stuckDetail": {
+        "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",
+        "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
+      },
+      "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
+    }
+  },
+  "tripDiveFields": {
+    "heading": "Dive plan",
+    "description": "Add the details you know. Leaving a dive blank is okay — divers will still see a clear {tripShape} plan.",
+    "twoTankTrip": "two-tank trip",
+    "diveCountTrip": "{count}-dive trip",
+    "numberOfDivesLabel": "Number of dives",
+    "diveOptionOne": "{count} dive",
+    "diveOptionOther": "{count} dives",
+    "diveLegend": "Dive {number}",
+    "nameLabel": "Name",
+    "optionalHint": "(optional)",
+    "namePlaceholderFirst": "Molasses Reef",
+    "namePlaceholderOther": "Second tank · site TBD",
+    "diveSiteLabel": "Dive site",
+    "noSiteChosen": "No site chosen yet",
+    "diverFacingDetailsLabel": "Diver-facing details",
+    "detailsPlaceholder": "What divers should know about this part of the trip.",
+    "footerNote": "Choosing a site brings its saved notes — map, landmarks, and field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock; the trip description and conditions below stay shared across the whole boat day."
+  },
+  "offlineManifest": {
+    "freshnessCopy": {
+      "current": "This copy is current",
+      "aging": "This copy is a little old",
+      "stale": "This copy is old"
+    },
+    "freshnessPill": {
+      "current": "Fresh copy",
+      "aging": "Aging copy",
+      "stale": "Stale copy"
+    },
+    "loadingMessage": "Opening the manifest saved on this device…",
+    "openingHeading": "Opening this device's saved copy",
+    "reconcile": {
+      "reachError": "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
+      "pendingRejectedSingle": "{count, plural, one {# change needs a look — open the live manifest to sort it out.} other {# changes need a look — open the live manifest to sort it out.}}",
+      "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
+      "allCaughtUp": "Everything's sent.",
+      "listLoadError": "This device couldn't open its saved manifests. Save a fresh copy while you have signal.",
+      "singleLoadError": "This device couldn't open its saved manifest. Save a fresh copy while you have signal.",
+      "savedCount": "{count, plural, one {# saved manifest} other {# saved manifests}} on this device.",
+      "noneSavedYet": "Nothing saved on this device yet.",
+      "listPendingRejected": "{count, plural, one {# change needs a look — open that trip to sort it out.} other {# changes need a look — open that trip to sort it out.}}",
+      "listAllCaughtUp": "Everything's sent across these trips.",
+      "ready": "The manifest saved on this device is ready.",
+      "noneForTrip": "There's no current saved manifest for this trip on this device."
+    },
+    "list": {
+      "eyebrow": "Offline manifests",
+      "headingWithTrips": "Saved on this device",
+      "headingEmpty": "Nothing saved on this device yet",
+      "diverCount": "{count, plural, one {# diver} other {# divers}}",
+      "expiredViewOnly": "Expired — view only",
+      "emptyHint": "While you still have signal, open any shop page — DiveDay keeps this device's copy of the next two days' trips current on its own, so roll call works all the way out to the site."
+    },
+    "single": {
+      "eyebrow": "Offline manifest",
+      "emptyHeading": "Nothing saved on this phone yet",
+      "emptyHint": "While you still have signal, open the trip's live manifest — it keeps this device's copy current on its own, so roll call works all the way out to the site.",
+      "removedOtherShopHeading": "That saved copy has been removed",
+      "removedOtherShopMessage": "A different shop is signed in on this tablet.",
+      "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop's own live manifest.",
+      "skipLink": "Skip to offline roll call",
+      "savedAt": "Saved {when}",
+      "expiredBanner": "This saved copy has expired and can't be used to board divers. Any change still waiting to send below will keep trying, but new roll call must be recorded on the live manifest.",
+      "freshnessBanner": "{freshnessNote}. Readiness reflects that moment — we'll re-check everything once you're back in signal.",
+      "pendingRejectedCounts": "{pending} waiting to send · {rejected} need a look",
+      "checkpointNavAria": "Roll-call checkpoint",
+      "statsDivers": "Divers",
+      "statsBoarded": "Boarded",
+      "statsAwaiting": "Awaiting",
+      "rollCallCompleteHeading": "Roll call complete ✦",
+      "checkpointRollCallHeading": "{checkpoint} roll call",
+      "allAboard": "Every diver has a result — everyone's aboard.",
+      "someNotBoarded": "Every diver has a result — {count} marked not boarded. Confirm they're accounted for before moving on.",
+      "crewHeading": "Crew aboard",
+      "crewAllAccountedFor": "{assigned, plural, one {# crew member, accounted for.} other {All # crew accounted for.}}",
+      "crewNoneAssigned": "No crew are assigned to this trip. Crew are added on the trip's own crew list, so this checkpoint stays open until you're back in signal.",
+      "crewNoneAboard": "Every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Crew are added on the trip's own crew list, so this checkpoint stays open until you're back in signal.",
+      "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
+      "crewReadOnlyHere": "The crew half of the roll call is recorded on the live manifest — it can’t be tapped from this saved copy.",
+      "buddyReadOnlyHere": "Buddy teams are shown as saved. Whether anyone on a team is back aboard lives on the live roll call — this copy doesn't track it.",
+      "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Crew are called on the live manifest, so this checkpoint stays open until you’re back in service.",
+      "readyBadge": "Ready when saved",
+      "blockedBadge": "Blocked when saved",
+      "statePendingSuffix": "· waiting to send",
+      "emergencyContact": "Emergency contact",
+      "notOnFile": "Not on file",
+      "rentalFit": "Rental fit",
+      "nitroxRequestedSuffix": "· Nitrox requested",
+      "addNoteSummary": "Add a note to this roll-call record",
+      "optionalNote": "Optional note",
+      "notePlaceholder": "Late to the boat, medical question, kit issue…",
+      "noteHint": "The note travels with this roll-call record.",
+      "saving": "Saving…",
+      "boardedDone": "Boarded ✓",
+      "markBoarded": "Mark boarded",
+      "notBoardedDone": "Not boarded ✓",
+      "markNotBoarded": "Mark not boarded",
+      "notBackAboardActive": "Not back aboard",
+      "markNotBackAboard": "Mark not back aboard",
+      "openLiveManifest": "Open live manifest",
+      "record": {
+        "expiredCannotRecord": "This saved copy has expired — open the live manifest to record roll call.",
+        "expiredRecordOnLive": "Expired — record on the live manifest",
+        "saved": "Saved on this phone — it'll send when you're back in service.",
+        "genericError": "That change couldn't be saved on this device — try it again.",
+        "notAllowed": "This diver isn't ready to board yet — clear what's outstanding on the live manifest first.",
+        "unavailable": "This saved copy isn't available anymore — open the live manifest to record roll call."
+      }
+    },
+    "shellVersion": {
+      "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",
+      "updateBanner": "A newer version of DiveDay is ready.",
+      "refreshButton": "Refresh now"
+    },
+    "discarded": {
+      "heading": "Roll call that never sent has been removed",
+      "body": "{count, plural, one {# roll-call change} other {# roll-call changes}} recorded on this device never reached DiveDay. The saved copy each one belonged to is long past the date a manifest may stay on a device, so it was removed from here. If any of these trips still needs that record, it has to be re-entered on the live manifest.",
+      "item": "{shop} · {trip} — {count, plural, one {# change lost} other {# changes lost}}",
+      "acknowledge": "Got it"
+    }
+  },
+  "boatMode": {
+    "modeLabel": "Boat mode",
+    "labelAuto": "Auto",
+    "labelLand": "Land mode",
+    "labelBoat": "Boat mode"
+  },
+  "rentalFit": {
+    "itemLabels": {
+      "bcd": "BCD",
+      "regulator": "Regulator",
+      "wetsuit": "Wetsuit",
+      "boots": "Boots",
+      "maskFins": "Mask & fins",
+      "weights": "Weights",
+      "diveComputer": "Dive computer",
+      "gopro": "GoPro"
+    },
+    "nitroxFillsLabel": "Nitrox fills",
+    "itemWithSize": "{item} {size}",
+    "notRecorded": "No fit on file — not asked yet",
+    "ownKit": "Own kit",
+    "needsStaffFit": "Needs staff fit at check-in",
+    "needsStaffFitWithNote": "Needs staff fit — {note}"
+  },
+  "rollCallCheckpoint": {
+    "departure": "Before departure",
+    "afterDive": "After dive {n}"
+  },
+  "rollCallState": {
+    "awaiting": "Awaiting roll call",
+    "boarded": "Boarded",
+    "notBoarded": "Not boarded",
+    "notBoardedCarried": "Not boarded · carried",
+    "notBackAboard": "Not back aboard"
+  },
+  "buddyTeam": {
+    "with": "Buddy team: {names}",
+    "separatedDock": "Someone not aboard",
+    "separatedAfterDive": "Someone unaccounted for"
+  },
+  "payments": {
+    "connect": "Connect payments"
+  },
+  "pager": {
+    "label": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "position": "Page {page} of {pageCount}"
+  },
+  "waiverStatus": {
+    "none": "Not signed",
+    "current": "Signed",
+    "expired": "Needs signing again",
+    "medicalReview": "Medical review"
+  }
+}

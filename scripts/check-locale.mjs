@@ -36,13 +36,19 @@ const DEFAULT_LOCALE = "en-US";
 
 /**
  * Every message bundle, with the floor below which the bundle is presumed
- * broken rather than merely small. `staff.json` starts small on purpose — it
- * holds only the surfaces migrated off inline English so far, and
- * `pnpm check:copy` is what drives that number up.
+ * broken rather than merely small. The staff bundle's floor is historical —
+ * it started at one key while surfaces migrated off inline English; the
+ * migration finished, and `pnpm check:copy` keeps it finished.
  */
 const BUNDLES = [
   { file: "diver.json", minimumKeys: 40 },
-  { file: "staff.json", minimumKeys: 1 },
+  // The staff bundle is a directory, one namespace per file, composed by its
+  // index.ts (ADR 20260807-per-area-staff-bundles). The single staff.json it
+  // replaces was the repo's top merge-conflict magnet — every parallel branch
+  // adds staff copy, and one 3,500-line file put every addition in the way of
+  // every other. Reading it here means merging the files exactly the way
+  // index.ts does: filename = namespace key.
+  { dir: "staff", minimumKeys: 1 },
 ];
 
 /**
@@ -147,14 +153,58 @@ const locales = (await readdir(path.join(ROOT, LOCALES_DIR), { withFileTypes: tr
 if (!locales.includes(DEFAULT_LOCALE)) {
   violations.push(`${LOCALES_DIR}: no ${DEFAULT_LOCALE} bundle`);
 } else {
-  for (const { file, minimumKeys } of BUNDLES) {
-    const read = async (locale) =>
-      flatten(JSON.parse(await readFile(path.join(ROOT, LOCALES_DIR, locale, file), "utf8")));
+  for (const { file, dir, minimumKeys } of BUNDLES) {
+    const label = file ?? `${dir}/`;
+    const namespaceFiles = async (locale) =>
+      (await readdir(path.join(ROOT, LOCALES_DIR, locale, dir)))
+        .filter((name) => name.endsWith(".json"))
+        .sort();
+    const read = async (locale) => {
+      if (file) {
+        return flatten(
+          JSON.parse(await readFile(path.join(ROOT, LOCALES_DIR, locale, file), "utf8")),
+        );
+      }
+      const merged = {};
+      for (const name of await namespaceFiles(locale)) {
+        merged[name.replace(/\.json$/, "")] = JSON.parse(
+          await readFile(path.join(ROOT, LOCALES_DIR, locale, dir, name), "utf8"),
+        );
+      }
+      return flatten(merged);
+    };
+
+    if (dir) {
+      // Directory-bundle integrity: the same namespace files in every locale,
+      // and every file actually composed by each locale's index.ts — an
+      // orphaned <namespace>.json would otherwise sit unshipped forever while
+      // reading as "translated".
+      const referenceFiles = await namespaceFiles(DEFAULT_LOCALE);
+      for (const locale of locales.filter((name) => name !== DEFAULT_LOCALE)) {
+        const files = await namespaceFiles(locale);
+        for (const name of referenceFiles.filter((n) => !files.includes(n)))
+          violations.push(`${locale}/${dir}: missing namespace file ${name}`);
+        for (const name of files.filter((n) => !referenceFiles.includes(n)))
+          violations.push(
+            `${locale}/${dir}: stray namespace file ${name} not in ${DEFAULT_LOCALE}`,
+          );
+      }
+      for (const locale of locales) {
+        const index = await readFile(path.join(ROOT, LOCALES_DIR, locale, dir, "index.ts"), "utf8");
+        for (const name of await namespaceFiles(locale)) {
+          if (!index.includes(`"./${name}"`))
+            violations.push(
+              `${locale}/${dir}/index.ts: ${name} exists but is never imported — the namespace would silently not ship`,
+            );
+        }
+      }
+    }
+
     const reference = await read(DEFAULT_LOCALE);
     const referenceKeys = Object.keys(reference);
     if (referenceKeys.length < minimumKeys) {
       violations.push(
-        `${LOCALES_DIR}/${DEFAULT_LOCALE}/${file}: only ${referenceKeys.length} messages — expected at least ${minimumKeys}`,
+        `${LOCALES_DIR}/${DEFAULT_LOCALE}/${label}: only ${referenceKeys.length} messages — expected at least ${minimumKeys}`,
       );
     }
 
@@ -162,18 +212,18 @@ if (!locales.includes(DEFAULT_LOCALE)) {
       const bundle = await read(locale);
       for (const key of referenceKeys) {
         if (!bundle[key]?.trim()) {
-          violations.push(`${locale}/${file}: missing "${key}"`);
+          violations.push(`${locale}/${label}: missing "${key}"`);
           continue;
         }
         const expected = placeholders(reference[key]).join(",");
         const actual = placeholders(bundle[key]).join(",");
         if (expected !== actual) {
-          violations.push(`${locale}/${file}: "${key}" uses [${actual}], expected [${expected}]`);
+          violations.push(`${locale}/${label}: "${key}" uses [${actual}], expected [${expected}]`);
         }
       }
       for (const key of Object.keys(bundle)) {
         if (!(key in reference))
-          violations.push(`${locale}/${file}: stray "${key}" not in ${DEFAULT_LOCALE}`);
+          violations.push(`${locale}/${label}: stray "${key}" not in ${DEFAULT_LOCALE}`);
       }
     }
   }
@@ -182,11 +232,11 @@ if (!locales.includes(DEFAULT_LOCALE)) {
 if (violations.length > 0) {
   console.error(`Localization violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
   console.error(
-    "Pages format for the negotiated request locale and read copy from src/i18n/locales/<locale>/ (diver.json, staff.json); every message needs every locale.",
+    "Pages format for the negotiated request locale and read copy from src/i18n/locales/<locale>/ (diver.json, staff/<namespace>.json); every message needs every locale.",
   );
   process.exit(1);
 }
 
 console.log(
-  `locale: no compiled-in locales, and ${BUNDLES.map((b) => b.file).join(" + ")} are fully translated`,
+  `locale: no compiled-in locales, and ${BUNDLES.map((b) => b.file ?? `${b.dir}/`).join(" + ")} are fully translated`,
 );

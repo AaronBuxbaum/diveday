@@ -1,0 +1,18 @@
+{
+  "findHeading": "Find a returning diver",
+  "findLabel": "Search by name, email, or phone",
+  "findPlaceholder": "Start typing a name…",
+  "search": "Search",
+  "searching": "Searching…",
+  "noMatches": "No matches for “{query}” in the shop's records.",
+  "noEmailOnFile": "No email on file",
+  "adding": "Adding…",
+  "handEntryHeading": "New diver",
+  "nameLabel": "Full name",
+  "emailLabel": "Email",
+  "phoneLabel": "Phone",
+  "optionalHint": "(optional)",
+  "noMatchesHeading": "Nobody on file by that name",
+  "noMatchesAction": "Enter them by hand",
+  "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked"
+}

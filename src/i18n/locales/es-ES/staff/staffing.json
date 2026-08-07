@@ -1,0 +1,56 @@
+{
+  "eyebrow": "Operaciones",
+  "title": "Personal",
+  "description": "Quién trabaja y cuándo, y qué está cualificado para enseñar o tripular cada persona. La tripulación de cada salida se asigna en Hoy.",
+  "window": {
+    "from": "Desde",
+    "through": "Hasta",
+    "show": "Mostrar periodo"
+  },
+  "working": {
+    "heading": "Quién trabaja",
+    "managerOnly": "Cambiar turnos requiere ser propietario o gerente",
+    "notScheduled": "Sin turnos en este periodo.",
+    "remove": "Quitar",
+    "removing": "Quitando…",
+    "crewingHeading": "Tripulación",
+    "crewingEmpty": "No forma parte de la tripulación de ninguna salida en este periodo.",
+    "rosterEmptyHeading": "Todavía no hay tripulación registrada",
+    "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
+    "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo — pídele a alguno que lo ponga en marcha.",
+    "rosterEmptyAction": "Invitar a tu tripulación"
+  },
+  "capability": {
+    "teach": "Puede enseñar",
+    "crew": "Puede tripular",
+    "captain": "Patrón"
+  },
+  "addShift": {
+    "heading": "Añadir un turno de trabajo",
+    "detail": "Un turno indica cuándo alguien está disponible. La tripulación real de cada salida se asigna aparte.",
+    "person": "Miembro del personal",
+    "choosePerson": "Elige una persona",
+    "date": "Fecha",
+    "starts": "Empieza",
+    "ends": "Termina",
+    "note": "Nota",
+    "noteHint": "(opcional)",
+    "notePlaceholder": "Muelle, aula, barco 2",
+    "submit": "Añadir turno",
+    "saving": "Guardando…"
+  },
+  "crewGaps": {
+    "needCrew": "{count, plural, one {# salida de este periodo sigue sin tripulación suficiente.} other {# salidas de este periodo siguen sin tripulación suficiente.}}",
+    "allCrewed": "Todas las salidas de este periodo tienen su tripulación.",
+    "noDepartures": "No hay salidas programadas en este periodo.",
+    "action": "Asignar tripulación en Hoy"
+  },
+  "notice": {
+    "shiftSaved": "Turno guardado.",
+    "shiftDeleted": "Turno eliminado.",
+    "overlap": "Esa persona ya tiene un turno solapado.",
+    "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
+    "invalid": "Revisa la fecha y las horas del turno e inténtalo de nuevo.",
+    "notAuthorized": "Solo los propietarios y gerentes pueden cambiar turnos."
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "new": {
+    "eyebrow": "Front desk",
+    "title": "New order",
+    "cancel": "Cancel",
+    "notice": {
+      "invalid": "Pick a customer and at least one line item with an amount.",
+      "notConnected": "Connect a Stripe account in Shop settings before creating an order.",
+      "stripeFailed": "Stripe couldn't create that invoice. Try again in a moment.",
+      "fallback": "That order couldn't be created."
+    },
+    "linkedTo": "Linked to {personName}'s booking on {tripTitle} ({date}).",
+    "courseNote": "The course's instruction and e-learning lines are pre-filled from your catalog. One order, two lines: clear the e-learning line if this student already completed it elsewhere.",
+    "noPriceNote": "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time.",
+    "priceNote": "The trip fee below is pre-filled from this trip's price.",
+    "customerLabel": "Customer",
+    "chooseCustomer": "Choose a customer",
+    "noteLabel": "Order note",
+    "noteHint": "(optional)",
+    "notePlaceholder": "e.g. Two-tank reef trip + rental set",
+    "lineItemsLegend": "Line items",
+    "lineItemKindAria": "Line item {number} kind",
+    "lineItemDescriptionPlaceholder": "Description",
+    "quantityLabel": "Quantity",
+    "unitPriceLabel": "Unit price (USD)",
+    "unitPricePlaceholder": "$0.00",
+    "sending": "Sending…",
+    "submit": "Create and send invoice",
+    "kind": {
+      "trip_fee": "Trip fee",
+      "course_fee": "Course fee",
+      "e_learning_fee": "e-Learning fee",
+      "rental": "Rental",
+      "nitrox": "Nitrox (per dive)",
+      "deposit": "Deposit",
+      "merchandise": "Merchandise",
+      "other": "Other"
+    }
+  },
+  "detail": {
+    "eyebrow": "Front desk",
+    "fallbackDescription": "Order",
+    "backToDiver": "Back to diver",
+    "backToOrders": "Back to orders",
+    "raisedOn": "Raised {date}",
+    "createdBy": "by {name}",
+    "status": {
+      "open": "Open — awaiting payment",
+      "paid": "Paid",
+      "void": "Void",
+      "uncollectible": "Uncollectible",
+      "refunded": "Refunded"
+    },
+    "kind": {
+      "trip_fee": "Trip fee",
+      "course_fee": "Course fee",
+      "rental": "Rental",
+      "nitrox": "Nitrox",
+      "deposit": "Deposit",
+      "merchandise": "Merchandise",
+      "other": "Other"
+    },
+    "openInvoice": "Open the payable invoice",
+    "openInvoiceHint": "— share this link with the customer if Stripe's email didn't reach them.",
+    "demoActionHint": "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.",
+    "refreshStatus": "Refresh status",
+    "refreshing": "Refreshing…",
+    "voidOrder": "Void order",
+    "voiding": "Voiding…",
+    "refundPayment": "Refund payment",
+    "refunding": "Refunding…",
+    "notice": {
+      "refreshed": "Status refreshed from Stripe.",
+      "refreshFailed": "Couldn't reach Stripe to refresh this order.",
+      "voided": "Order voided.",
+      "voidFailed": "Couldn't void this order — it may already be paid or void.",
+      "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
+      "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
+      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
+      "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
+      "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
+      "fallback": "Something changed on this order — the details below are current."
+    }
+  },
+  "index": {
+    "eyebrow": "Front desk",
+    "title": "Orders",
+    "description": "Every order the shop has sent, across every diver and trip.",
+    "newOrder": "New order",
+    "notice": {
+      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers.",
+      "notAuthorized": "Sending an invoice is limited to owners and managers — ask one of them to bill this diver."
+    },
+    "filters": {
+      "statusLabel": "Status",
+      "statusAll": "All statuses",
+      "diverLabel": "Diver",
+      "diverPlaceholder": "Search by name",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "apply": "Apply filters",
+      "clear": "Clear filters"
+    },
+    "filteredByDiver": "Showing orders for {name}.",
+    "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
+    "emptyFiltered": "No orders match these filters.",
+    "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first order from here.",
+    "table": {
+      "diver": "Diver",
+      "trip": "Trip",
+      "status": "Status",
+      "date": "Date",
+      "amount": "Amount"
+    },
+    "pagination": {
+      "total": "{count, plural, one {# order} other {# orders}}"
+    },
+    "range": {
+      "recentNote": "Showing the last {days} days. Older orders are still here.",
+      "showAll": "Show every order",
+      "allNote": "Showing every order the shop has ever raised.",
+      "showRecent": "Back to the last {days} days"
+    },
+    "paymentOps": {
+      "sectionLabel": "Payments that need a check",
+      "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
+      "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
+      "started": "started {date}",
+      "stripeId": "Stripe: {id}",
+      "openTrip": "Open trip",
+      "kind": {
+        "checkout_session": "Checkout",
+        "invoice": "Invoice",
+        "refund": "Refund"
+      }
+    }
+  }
+}

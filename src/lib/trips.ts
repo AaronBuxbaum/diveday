@@ -20,7 +20,7 @@ export function isFull(trip: TripCapacity): boolean {
 /**
  * A code, not a sentence (ADR 20260731-domain-layer-copy-leaks) — the domain
  * layer never picks the words. Callers render it through the `fallback.full`
- * / `fallback.spotsLeft` bundle keys (diver.json and staff.json both carry
+ * / `fallback.spotsLeft` bundle keys (the diver and staff bundles both carry
  * them), which is what actually pluralizes and translates "3 spots left".
  */
 export type CapacityLabel = { kind: "full" } | { kind: "left"; remaining: number };

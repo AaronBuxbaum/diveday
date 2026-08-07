@@ -1,0 +1,105 @@
+{
+  "closeOut": {
+    "heading": "El último barco ya está en puerto",
+    "body": "Todas las salidas de hoy han vuelto al muelle. Un repaso en el cierre del día — cómo terminó cada barco, qué sigue abierto y con qué abre mañana — y a casa.",
+    "action": "Cerrar el día"
+  },
+  "createdNotice": {
+    "single": "“{title}” ya está en el calendario. 🤙",
+    "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+  },
+  "firstBookable": {
+    "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas. 🎉",
+    "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas. 🎉",
+    "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+    "linkLabel": "Tu enlace de reservas",
+    "viewAsDiver": "Míralo como lo verán tus buceadores"
+  },
+  "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
+  "emailResent": "Correo de confirmación reenviado.",
+  "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
+  "crewingBoat": "Estás en la tripulación del {title} de las {time}.",
+  "noDeparturesHeading": "Hoy no sale ningún barco",
+  "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
+  "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
+  "scheduleTrip": "Programar una salida",
+  "notice": {
+    "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
+    "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
+    "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes.",
+    "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
+    "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
+    "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
+    "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
+    "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
+    "promosNotAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
+  },
+  "orientation": {
+    "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
+    "subtitle": "Esto solo se muestra una vez — puedes descartarlo cuando quieras.",
+    "tryLabel": "Prueba:",
+    "dismiss": "Entendido",
+    "roles": {
+      "owner": {
+        "title": "Estás al mando de todo el centro",
+        "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
+        "tryThis": "Abre Tablero para ver las salidas de esta semana."
+      },
+      "manager": {
+        "title": "Manteniendo el centro en marcha día a día",
+        "desc": "Hoy muestra lo que necesita atención primero; el resto de la administración del centro está en Más, en el menú.",
+        "tryThis": "Revisa Reseñas para ver los comentarios pendientes."
+      },
+      "instructor": {
+        "title": "Enseñando y certificando buceadores",
+        "desc": "Buceadores guarda las tarjetas de certificación y el historial de especialidades de cada uno.",
+        "tryThis": "Abre Buceadores para revisar una tarjeta de certificación antes de clase."
+      },
+      "divemaster": {
+        "title": "Preparando a los buceadores para embarcar",
+        "desc": "No listos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+        "tryThis": "Abre No listos para ver quién todavía necesita preparación."
+      },
+      "captain": {
+        "title": "Dirigiendo el barco",
+        "desc": "El manifiesto es tu pase de embarque y lista de pasajeros, pensado para manos mojadas y señal débil.",
+        "tryThis": "Abre el manifiesto de hoy para ver quién va en el barco."
+      },
+      "crew": {
+        "title": "Registrando a los buceadores a su llegada",
+        "desc": "Check-in muestra quién ha llegado, a quién le falta papeleo y qué hacer al respecto.",
+        "tryThis": "Abre Check-in para registrar a los buceadores a su llegada."
+      }
+    }
+  },
+  "firstRun": {
+    "heading": "Prepara tu centro",
+    "subtitle": "Cinco pasos y los buceadores podrán empezar a reservar.",
+    "contactTitle": "Añade tus datos de contacto",
+    "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
+    "contactAction": "Añadir datos de contacto",
+    "contactDone": "Datos de contacto guardados.",
+    "siteTitle": "Añade tu primer sitio de buceo",
+    "siteBody": "El lugar al que asignarás tus salidas.",
+    "siteAction": "Añadir un sitio de buceo",
+    "siteDone": "{count, plural, one {# sitio de buceo añadido.} other {# sitios de buceo añadidos.}}",
+    "tripTitle": "Programa tu primera salida",
+    "tripBody": "Pon una salida en el calendario — los buceadores no pueden reservar hasta que exista una.",
+    "tripAction": "Programar una salida",
+    "scheduleTitle": "Comparte tu calendario público",
+    "scheduleBody": "La página desde la que reservan de verdad los buceadores — pégala en tu web o redes sociales.",
+    "scheduleCopy": "Copiar enlace",
+    "scheduleCopied": "Copiado",
+    "scheduleCopyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
+    "stripeTitle": "Conecta Stripe (opcional)",
+    "stripeBody": "Cobra en línea. Sáltate esto y cobra en el mostrador en su lugar.",
+    "stripeAction": "Conectar Stripe",
+    "stripeDone": "Stripe conectado.",
+    "doneBadge": "Hecho"
+  },
+  "queueView": {
+    "label": "Cómo leer la lista",
+    "byUrgency": "Por urgencia",
+    "byDeparture": "Por salida"
+  }
+}

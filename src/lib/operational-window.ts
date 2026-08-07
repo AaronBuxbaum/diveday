@@ -32,7 +32,7 @@
  * Reports is deliberately *not* here. A calendar month is genuinely its job.
  *
  * Codes and numbers only — the sentence that discloses the window lives in
- * `staff.json` under `shared.operationalWindow`, parameterised from the
+ * the staff bundle under `shared.operationalWindow`, parameterised from the
  * constants below so the words can never drift from the query. It now names two
  * *pages* rather than three, because Not ready became Today's by-departure view
  * (ADR 20260803-not-ready-is-a-view); the three *lenses* on the window are

@@ -1,6 +1,6 @@
 # es-ES — terminology and register
 
-The Spanish bundles in this folder (`diver.json`, `staff.json`) are one voice, not two, and they are
+The Spanish bundles in this folder (`diver.json`, `staff/<namespace>.json`) are one voice, not two, and they are
 written for a **mostly Latin American** audience. This file records the choices a 2026-08-03 sweep
 made (review finding I18N-5) so the next translator does not re-litigate them string by string.
 

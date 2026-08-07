@@ -10,7 +10,7 @@ Every word a person reads comes from `src/i18n/locales/<locale>/*.json`. Two bun
 | Bundle | Surface | Translator | Client components |
 | --- | --- | --- | --- |
 | `diver.json` | public schedule, trip, course, `/waivers`, `/ready`, `/recap` | `diverTranslator(locale)` | yes — under `<DiverIntlProvider>`, via `useTranslations()` |
-| `staff.json` | `/shop/**` | `staffTranslator(locale)` | **no** — pass words in as props |
+| `staff/<namespace>.json` | `/shop/**` | `staffTranslator(locale)` | **no** — pass words in as props |
 
 Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisions/20260729-diver-copy-localization.md),
 [20260730-staff-copy-localization](../../../docs/architecture/decisions/20260730-staff-copy-localization.md),

@@ -1,0 +1,50 @@
+{
+  "eyebrow": "Owner",
+  "title": "How's your month",
+  "description": {
+    "thisMonth": "Bookings, revenue, seat fill, and waivers for this month's trips — so far.",
+    "future": "Bookings, revenue, seat fill, and waivers for this month's trips.",
+    "past": "Bookings, revenue, seat fill, and waivers for the trips that sailed."
+  },
+  "soFar": "so far",
+  "chooseMonth": "Choose month",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "currentMonthTitle": "You're viewing the current month",
+  "earliestMonthTitle": "This is your first month with departures",
+  "monthPicker": {
+    "label": "Jump to a month",
+    "go": "Go"
+  },
+  "numbersLabel": "This month's numbers",
+  "metrics": {
+    "revenueLabel": "Revenue collected",
+    "revenueDetail": "Payments and deposits taken on this month's trips",
+    "bookingsLabel": "Bookings",
+    "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
+    "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",
+    "seatFillLabel": "Seat fill",
+    "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
+    "waiversLabel": "Waivers signed",
+    "waiversOutstanding": "{count} still to collect",
+    "waiversAllIn": "Everyone's paperwork is in",
+    "revenueViewOrders": "View orders",
+    "tipsLabel": "Tips",
+    "tipsDetail": "{count, plural, =0 {No tips left on this month's trips} one {# tip left on this month's trips} other {# tips left on this month's trips}} · 100% to the shop"
+  },
+  "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
+  "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
+  "tripsThisMonth": "Trips this month",
+  "table": {
+    "trip": "Trip",
+    "seats": "Seats",
+    "fill": "Fill",
+    "waivers": "Waivers"
+  },
+  "seatsMobile": "{booked}/{capacity} seats",
+  "fillLabel": "{booked} of {capacity} seats booked",
+  "waiversRowLabel": "{complete} of {total} waivers signed",
+  "pagination": {
+    "total": "{count, plural, one {# trip} other {# trips}}"
+  }
+}

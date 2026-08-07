@@ -10,7 +10,7 @@ import type { RentalFit, Shop, Trip } from "./types";
  * `packingConfidence` returns codes, not prose (src/lib/diver-planning.ts) —
  * these maps are where each one becomes a word in the diver bundle. Its own
  * namespace: `RentableItemKind` is also the code `src/lib/dive-prep.ts` (the
- * staff-side rental prep list) resolves against `staff.json` — the English
+ * staff-side rental prep list) resolves against the staff bundle — the English
  * words happen to match, but the two bundles stay independent on purpose.
  */
 const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
