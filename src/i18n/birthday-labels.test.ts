@@ -9,13 +9,15 @@ describe("birthdayText", () => {
     expect(birthdayText(t, { status: "today" })).toBe("today");
   });
 
-  it("counts forward", () => {
-    expect(birthdayText(t, { status: "soon", inDays: 1 })).toBe("in 1d");
-    expect(birthdayText(t, { status: "soon", inDays: 7 })).toBe("in 7d");
+  it("counts forward in whole words, singular and plural", () => {
+    // "in 1d" read as robot shorthand (and "3d" as three-dimensional at a
+    // glance) — a divemaster says "in 3 days" (design principle 4).
+    expect(birthdayText(t, { status: "soon", inDays: 1 })).toBe("in 1 day");
+    expect(birthdayText(t, { status: "soon", inDays: 7 })).toBe("in 7 days");
   });
 
   it("counts back", () => {
-    expect(birthdayText(t, { status: "recent", daysAgo: 2 })).toBe("2d ago");
+    expect(birthdayText(t, { status: "recent", daysAgo: 2 })).toBe("2 days ago");
   });
 
   it("is timing only — the 🎂 beside it carries the meaning", () => {
@@ -26,7 +28,7 @@ describe("birthdayText", () => {
       birthdayText(t, { status: "soon", inDays: 3 }),
       birthdayText(t, { status: "recent", daysAgo: 3 }),
     ]) {
-      expect(text.length).toBeLessThanOrEqual(8);
+      expect(text.length).toBeLessThanOrEqual(10);
       expect(text).not.toMatch(/turns|birthday/i);
     }
   });

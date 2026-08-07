@@ -44,9 +44,16 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
   refunded: "orders.detail.status.refunded",
 };
 
+/**
+ * Paid deliberately has no entry: on this index it is the expected state of
+ * nearly every row, and a success pill repeated down the whole column is
+ * noise pretending to be information (design principle 9). Paid renders as
+ * quiet muted text; a badge appears only on the statuses that need a
+ * staffer's eye.
+ */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  paid: "success",
   open: "primary",
+  refunded: "warning",
 };
 
 /**
@@ -221,7 +228,10 @@ export default async function OrdersIndexPage({
         title={t("orders.index.title")}
         description={t("orders.index.description")}
         actions={
-          paymentsConnected ? (
+          // While the unfiltered list is empty, the empty state below holds
+          // this same door — two identical primaries for one action is triage
+          // work the layout should do (principle 8), so the header stands down.
+          rows.length === 0 && !hasFilters ? undefined : paymentsConnected ? (
             <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
               {t("orders.index.newOrder")}
             </Link>
@@ -313,7 +323,9 @@ export default async function OrdersIndexPage({
           <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
         </Field>
         <FieldActions>
-          <button type="submit" className={buttonClass({ size: "sm" })}>
+          {/* Secondary weight: a filter form is never the page's one obvious
+              action — that stays with the header's New order (principle 8). */}
+          <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
             {t("orders.index.filters.apply")}
           </button>
           {hasFilters ? (
@@ -394,7 +406,9 @@ export default async function OrdersIndexPage({
           )}
         </EmptyState>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        // overflow-x-auto, never overflow-hidden: a clipped Amount column on a
+        // phone silently swallowed the one figure this index exists to show.
+        <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
@@ -404,7 +418,9 @@ export default async function OrdersIndexPage({
                 <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
                   {t("orders.index.table.trip")}
                 </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
+                {/* Below sm the status folds under the diver's name (only when
+                    exceptional), so Date and Amount stay on screen at 390px. */}
+                <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
                   {t("orders.index.table.status")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
@@ -416,37 +432,48 @@ export default async function OrdersIndexPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {rows.map((row) => (
-                <tr key={row.order.id}>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/shop/${shopSlug}/orders/${row.order.id}`}
-                      className="font-medium text-foreground hover:text-primary hover:underline"
-                    >
-                      {row.person.fullName}
-                    </Link>
-                    <div className="text-xs text-muted sm:hidden">
-                      {row.trip?.title ?? row.order.description ?? ""}
-                    </div>
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted sm:table-cell">
-                    {row.trip?.title ?? row.order.description ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
+              {rows.map((row) => {
+                // Paid is the expected state and renders as quiet muted text;
+                // only the exceptional statuses earn a badge (principle 9).
+                const statusBadge =
+                  row.order.status === "paid" ? null : (
                     <Badge tone={STATUS_TONES[row.order.status] ?? "neutral"}>
                       {STATUS_KEYS[row.order.status]
                         ? t(STATUS_KEYS[row.order.status])
                         : row.order.status}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-muted tabular-nums">
-                    {formatShortDate(row.order.createdAt, locale, shop.timezone)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
-                  </td>
-                </tr>
-              ))}
+                  );
+                return (
+                  <tr key={row.order.id}>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/shop/${shopSlug}/orders/${row.order.id}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {row.person.fullName}
+                      </Link>
+                      <div className="text-xs text-muted sm:hidden">
+                        {row.trip?.title ?? row.order.description ?? ""}
+                      </div>
+                      {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
+                    </td>
+                    <td className="hidden px-4 py-3 text-muted sm:table-cell">
+                      {row.trip?.title ?? row.order.description ?? "—"}
+                    </td>
+                    <td className="hidden px-4 py-3 sm:table-cell">
+                      {statusBadge ?? (
+                        <span className="text-sm text-muted">{t(STATUS_KEYS.paid)}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-muted tabular-nums">
+                      {formatShortDate(row.order.createdAt, locale, shop.timezone)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
