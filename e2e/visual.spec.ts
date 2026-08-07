@@ -956,6 +956,14 @@ for (const scheme of ["light", "dark"] as const) {
       // skeptical owner reads before typing a password.
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/onboard");
+        // This route owns a loading.tsx, and `goto` resolves on the document
+        // load event while the body is still streaming — a bare capture here
+        // once shot the skeleton and published it as the baseline
+        // (onboard-light-vw-390, caught only when the next PR's correct
+        // render diffed against it). The page's own <h1> is the readiness
+        // proof: every page renders one, no skeleton does. Same wait on every
+        // capture below whose route owns a loading.tsx.
+        await page.locator("h1").first().waitFor();
         await capture(page, "onboard", scheme);
       });
 
@@ -976,6 +984,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the forgot-password page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/forgot-password");
+        // Streams behind a loading.tsx — wait for the page's h1 (see the
+        // onboard capture above).
+        await page.locator("h1").first().waitFor();
         await capture(page, "forgot-password", scheme);
       });
 
@@ -986,6 +997,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/verify/not-a-real-token");
+        // Streams behind a loading.tsx — wait for the page's h1 (see the
+        // onboard capture above).
+        await page.locator("h1").first().waitFor();
         await capture(page, "verify-invalid", scheme);
       });
 
@@ -993,6 +1007,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/reset-password/not-a-real-token");
+        // Streams behind a loading.tsx — wait for the page's h1 (see the
+        // onboard capture above).
+        await page.locator("h1").first().waitFor();
         await capture(page, "reset-password-invalid", scheme);
       });
 
@@ -1000,6 +1017,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/unsubscribe/not-a-real-token");
+        // Streams behind a loading.tsx — wait for the page's h1 (see the
+        // onboard capture above).
+        await page.locator("h1").first().waitFor();
         await capture(page, "unsubscribe-invalid", scheme);
       });
 
