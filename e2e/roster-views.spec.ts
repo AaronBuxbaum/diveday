@@ -102,15 +102,21 @@ test("the roster narrows to today's divers and to whoever needs a staffer", asyn
   await expect(flagged.getByText(/pending review|to confirm/)).toBeVisible();
 
   // And nobody settled is in it. Asserted over the whole page rather than
-  // against one more hard-coded seed index: the "Attention" cell reads "None"
-  // for a diver with nothing waiting, so a single "None" anywhere in this view
-  // is a diver the WHERE clause should have dropped.
+  // against one more hard-coded seed index: an attention badge is the only
+  // marker a row carries — the "None" placeholder is gone (design principle
+  // 9) — so in this view every row must wear one; a bare row is a diver the
+  // WHERE clause should have dropped.
   await search.fill("");
   await expect(page).toHaveURL(/\/divers\?filter=needs_attention$/);
-  await expect(page.getByRole("cell", { name: "None", exact: true })).toHaveCount(0);
+  const tableRows = page.locator("tbody tr");
+  await expect(tableRows.first()).toBeVisible();
+  const flaggedRows = tableRows.filter({ hasText: /pending review|to confirm/ });
+  await expect(flaggedRows).toHaveCount(await tableRows.count());
 
-  // ...and the check above is not vacuous: the unfiltered roster is full of them.
+  // ...and the check above is not vacuous: the unfiltered roster is full of
+  // settled divers, whose rows carry no badge at all.
   await views.getByRole("link", { name: "All divers" }).click();
   await expect(page).toHaveURL(/\/divers$/);
-  expect(await page.getByRole("cell", { name: "None", exact: true }).count()).toBeGreaterThan(0);
+  await expect(tableRows.first()).toBeVisible();
+  expect(await tableRows.count()).toBeGreaterThan(await flaggedRows.count());
 });
