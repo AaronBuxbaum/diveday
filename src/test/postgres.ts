@@ -256,7 +256,11 @@ export async function postgresTestDb(
     } finally {
       await cleanup.end();
     }
-  });
+    // 30s, not vitest's 10s hook default: DROP DATABASE forces a checkpoint,
+    // and a shared CI runner's disk can stall that alone past the default —
+    // a red run's container log showed checkpoint syncs of 8.5s and 4.8s
+    // back-to-back while this hook was the one timing out.
+  }, 30_000);
 
   const db = connect();
   if (options.migrations !== false) await applyMigrations(db, "drizzle");

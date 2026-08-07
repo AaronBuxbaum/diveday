@@ -213,6 +213,14 @@ export async function findTripOnBoard(
   title: string | RegExp,
 ): Promise<Locator> {
   await page.goto(`/shop/${shopSlug}/schedule/board`);
+  // The same barrier the `?after=` pages get below, but for the first page:
+  // `goto` resolves into the segment's loading.tsx skeleton while the real
+  // list streams in, and `count()` doesn't auto-wait — so a slow stream-in
+  // read as "no cards and no pager" and the loop concluded the board ended
+  // (seen as a one-in-many-runs CI failure hunting a seeded trip). The
+  // overview stat row exists only in the streamed body, whatever the board
+  // holds, so its appearance proves the cards and pager are in the DOM.
+  await page.getByRole("region", { name: "Schedule overview" }).waitFor();
   for (let hops = 0; hops < 15; hops++) {
     const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
     if ((await link.count()) > 0) return link.first();
