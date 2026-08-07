@@ -131,7 +131,11 @@ try {
         // for the document title, the same settled-document signal the a11y
         // spec gates on.
         await page.waitForFunction(() => document.title.length > 0);
-        const slug = target.replaceAll("/", "-").replace(/^-|-$/g, "") || "home";
+        // Filesystem-safe name: drop any query/fragment, then collapse every
+        // non-alphanumeric run to a dash — `/shop/x/today?view=departures`
+        // becomes `shop-x-today` rather than a filename with `?` in it.
+        const [pathOnly] = target.split(/[?#]/, 1);
+        const slug = pathOnly.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "home";
         const file = path.join(out, `${slug}-${colorScheme}-${width}.png`);
         await page.screenshot({ path: file, fullPage: true });
         written.push(file);

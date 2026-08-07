@@ -50,7 +50,7 @@ adapters and must not introduce unique requirements.
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
-| `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` server — light/dark × phone/desktop PNGs into `screenshots/` (gitignored), with automatic dev-credential sign-in for `/shop/**`. The kept tool that replaces the throwaway `.shots*.mjs` drivers sessions used to write; review-grade captures still come from a filtered visual-spec run (see the **verify** skill) |
+| `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` server — light/dark × phone/desktop PNGs into `screenshots/` (gitignored), with automatic dev-credential sign-in for `/shop/**`. The kept tool that replaces the throwaway `.shots*.mjs` drivers that sessions used to hand-write; review-grade captures still come from a filtered visual-spec run (see the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners — on macOS nearly everything reads as changed; triage from the CI report) |
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`). Unlike npm, pnpm
