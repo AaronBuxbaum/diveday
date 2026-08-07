@@ -48,6 +48,7 @@
     "rollCallOpen": "Recuento · {count} sin contar",
     "rollCallOpenAria": "Completar el recuento tras la inmersión {dive} de {ref}",
     "rollCallOpenNote": "De vuelta en el muelle con el recuento tras la inmersión {dive} sin cerrar.",
+    "rowActionsAria": "Mover, copiar o quitar {ref}",
     "move": "Mover",
     "moveAria": "Mover {ref}",
     "copy": "Copiar",

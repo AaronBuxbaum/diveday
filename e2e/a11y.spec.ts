@@ -697,15 +697,22 @@ test.describe("automated accessibility scans of the staff overlays", () => {
   test("the schedule builder's inline panels have no automated a11y violations", async ({
     page,
   }) => {
-    // 2 scans at ~3.5s each.
+    // 3 scans at ~3.5s each.
     test.setTimeout(70_000);
     // The board's *list* is scanned in the static table above. Its actual
-    // interaction — reschedule a departure, mint a copy of one — is a form that
-    // mounts into the row and steals focus into its first field
-    // (ScheduleBuilder.tsx's autofocus panel), which is the half a URL can't
-    // reach.
+    // interaction — reschedule a departure, mint a copy of one — sits behind a
+    // per-row "⋯" disclosure, and each choice is a form that mounts into the
+    // row and steals focus into its first field (ScheduleBuilder.tsx's
+    // autofocus panel) — all of it markup a URL can't reach.
     await page.goto("/shop/blue-mantis/schedule/board");
     await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    const trigger = page.getByRole("button", { name: /^Move, copy, or remove / }).first();
+
+    // The open action list itself — the app's other hand-rolled disclosure.
+    await trigger.click();
+    await expect(page.getByRole("button", { name: /^Move / }).first()).toBeVisible();
+    await expectNoA11yViolations(page);
+
     await page
       .getByRole("button", { name: /^Move / })
       .first()
@@ -714,7 +721,7 @@ test.describe("automated accessibility scans of the staff overlays", () => {
 
     // Copy is a different panel with a different field set, not the same one
     // relabelled — so it gets its own scan rather than a shared one.
-    await page.keyboard.press("Escape");
+    await trigger.click();
     await page
       .getByRole("button", { name: /^Copy / })
       .first()

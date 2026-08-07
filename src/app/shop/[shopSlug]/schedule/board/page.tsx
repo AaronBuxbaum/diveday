@@ -211,6 +211,7 @@ export default async function ScheduleBoardPage({
     rollCallOpen: st("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st("schedule.builder.rollCallOpenAria"),
     rollCallOpenNote: st("schedule.builder.rollCallOpenNote"),
+    rowActionsAria: st("schedule.builder.rowActionsAria"),
     move: st("schedule.builder.move"),
     moveAria: st("schedule.builder.moveAria"),
     copy: st("schedule.builder.copy"),

@@ -1655,7 +1655,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The staff schedule as a builder: departures grouped by day, each row
-      // carrying its own move/copy/remove controls and its crew.
+      // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "The board" }).waitFor();
