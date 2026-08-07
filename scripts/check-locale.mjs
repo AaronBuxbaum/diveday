@@ -190,7 +190,16 @@ if (!locales.includes(DEFAULT_LOCALE)) {
           );
       }
       for (const locale of locales) {
-        const index = await readFile(path.join(ROOT, LOCALES_DIR, locale, dir, "index.ts"), "utf8");
+        // index.ts is part of the contract now, so its absence is a violation
+        // to report alongside the rest, not a crash that hides them.
+        let index;
+        try {
+          index = await readFile(path.join(ROOT, LOCALES_DIR, locale, dir, "index.ts"), "utf8");
+        } catch (error) {
+          if (error?.code !== "ENOENT") throw error;
+          violations.push(`${locale}/${dir}: missing index.ts — nothing composes the bundle`);
+          continue;
+        }
         for (const name of await namespaceFiles(locale)) {
           if (!index.includes(`"./${name}"`))
             violations.push(
