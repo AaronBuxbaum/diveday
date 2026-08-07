@@ -272,8 +272,39 @@ jobs:
       # the S3 baseline runs once, in visual-report below, over every shard's
       # screenshots merged back together; reg-suit has no shard-aware mode of
       # its own to run per shard.
+      # A failed capture whose log carries the harness's renderer probe verdict
+      # ("wedged, not slow" — see e2e/visual.spec.ts's `withRendererBound` and
+      # `screenshotOrGiveUp`) gets exactly one rerun of only the failed
+      # captures. This is deliberately NOT a retry policy, and it must not
+      # widen into one: the suite runs retries: 0 so every flake is
+      # root-caused, and this wedge *has been* — repeatedly (fa51f893, the
+      # 20260804 bound, run 31147282309) — with the same verdict each time: a
+      # non-deterministic Chromium renderer hang that stops answering even a
+      # trivial `evaluate(() => true)`, unattributed to any app or spec code,
+      # arriving on arbitrary pages (the landing page, /pricing, a diver
+      # record) and vanishing on same-commit reruns. The probe is what earns
+      # the rerun: it distinguishes "the browser stopped answering" (rerun —
+      # nothing a rerun could mask) from every app-level failure (no marker →
+      # red on the first attempt, exactly as before). The blast radius
+      # otherwise is out of proportion: one wedged capture fails the shard, a
+      # failed shard uploads no screenshots, visual-report then compares
+      # nothing — and on main, publishes no baseline, blinding visual
+      # regression repo-wide (the "Refuse to miss main's baseline" step below).
+      # `--last-failed` reruns only this shard's failed tests (Playwright's
+      # .last-run.json holds only them), so no --shard on the rerun — resharding
+      # a filtered set could silently drop tests.
       - name: Capture visual regression screenshots
-        run: pnpm exec playwright test e2e/visual.spec.ts --shard=${{ matrix.shard }}/4
+        run: |
+          set -o pipefail
+          if pnpm exec playwright test e2e/visual.spec.ts --shard=${{ matrix.shard }}/4 2>&1 | tee capture.log; then
+            exit 0
+          fi
+          if grep -q "wedged, not slow" capture.log; then
+            echo "::warning title=Renderer wedge detected::The capture failure carries the renderer probe's 'wedged, not slow' verdict (the known unattributed Chromium hang) — rerunning only the failed captures once. If the rerun is green, the run is honest: every surface was captured; the wedge is logged above."
+            pnpm exec playwright test e2e/visual.spec.ts --last-failed
+          else
+            exit 1
+          fi
         env:
           # Same reasoning as the playwright job above: each shard is its own
           # runner, and pinning to 1 worker keeps that shard's own
@@ -340,12 +371,29 @@ jobs:
       # leaves no parent to walk to. Both keys then come back null, every
       # screenshot reads as new rather than compared, and the run dies on "Fail
       # to detect the current branch" — a red job that never looked at a pixel.
-      # Check out the branch by name with full history instead: `head_ref` on a
-      # pull_request, `ref_name` on a push to main.
+      # Check out the branch with full history instead — but by *SHA*, not by
+      # name. This job runs 6-10 minutes after the run starts (it needs every
+      # visual shard), and an auto-merged PR deletes its head branch in that
+      # window; a by-name checkout then dies with "A branch or tag with the
+      # name '…' could not be found", the summary step finds no script on
+      # disk (MODULE_NOT_FOUND), and the run goes red on a PR that already
+      # merged green. Seven runs failed exactly this way over 2026-08-06/07
+      # (31206641034, 31147282309, 31123395013, 31120081666, 31118732846,
+      # 31118383496, 31113162291). The head *commit* outlives the branch —
+      # GitHub keeps it reachable via refs/pull/N/head forever — so fetching
+      # the SHA always works; the step after this puts a local branch name on
+      # it, which is all reg-keygen actually needs.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref_name }}
           fetch-depth: 0
+      # reg-keygen-git-hash-plugin refuses a detached HEAD ("Can't detect
+      # branch name"), so give the checked-out commit its branch name back
+      # locally. `-B` because nothing else owns this name in a fresh workspace,
+      # and the remote branch may no longer exist to track.
+      - name: Name the detached PR head for reg-keygen
+        if: github.event_name == 'pull_request'
+        run: git checkout -B "${GITHUB_HEAD_REF}"
       # reg-keygen-git-hash-plugin's expected-key algorithm only works by
       # triangulating a merge-base against *other* local branches (it's built
       # for topic-branch-vs-trunk, per the checkout comment above) — it has no
