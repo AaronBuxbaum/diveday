@@ -10,7 +10,10 @@
  * from a future migration should still be looked up, and simply not match a
  * row if it isn't one of ours.
  */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** The bare pattern (no anchors), for callers composing a larger regex. */
+export const UUID_SOURCE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+const UUID_PATTERN = new RegExp(`^${UUID_SOURCE}$`, "i");
 
 /** A real uuid, not "36 characters of hex and hyphens". */
 export function isUuid(value: string): boolean {

@@ -25,6 +25,7 @@ import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
+import { UUID_SOURCE } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -169,10 +170,7 @@ const crewRollCallSchema = z.object({
 // this is the outer of two layers, not the only one.
 const memberTokenSchema = z
   .string()
-  .regex(
-    /^(?:diver|crew):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    "member token",
-  );
+  .regex(new RegExp(`^(?:diver|crew):${UUID_SOURCE}$`, "i"), "member token");
 
 function parseMemberToken(token: string): BuddyTeamMemberInput {
   const [kind, id] = token.split(":");

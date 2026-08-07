@@ -1,3 +1,4 @@
+import { DAY_MS } from "@/lib/clock";
 import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 
 /**
@@ -17,9 +18,9 @@ import { createBearerToken, hashBearerToken } from "./bearer-tokens";
  * cannot mint a lifetime credential. It sits far past any real booking lead
  * time, so it never truncates a legitimate one.
  */
-export const CAPABILITY_MAX_TTL_MS = 2 * 365 * 24 * 60 * 60 * 1000;
-export const CAPABILITY_TRIP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
-export const CAPABILITY_MIN_TTL_MS = 24 * 60 * 60 * 1000;
+export const CAPABILITY_MAX_TTL_MS = 2 * 365 * DAY_MS;
+export const CAPABILITY_TRIP_GRACE_MS = 30 * DAY_MS;
+export const CAPABILITY_MIN_TTL_MS = DAY_MS;
 
 export const createCapabilityToken = createBearerToken;
 

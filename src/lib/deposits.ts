@@ -1,3 +1,4 @@
+import { HOUR_MS } from "@/lib/clock";
 import { type CoursePricing, perDiverBookingPriceCents } from "./courses";
 
 /**
@@ -55,7 +56,7 @@ export type CancellationTrip = {
  */
 export function cancellationDeadline(trip: CancellationTrip): Date | null {
   if (trip.cancellationWindowHours === null || trip.cancellationWindowHours <= 0) return null;
-  return new Date(trip.startsAt.getTime() - trip.cancellationWindowHours * 60 * 60 * 1000);
+  return new Date(trip.startsAt.getTime() - trip.cancellationWindowHours * HOUR_MS);
 }
 
 /**

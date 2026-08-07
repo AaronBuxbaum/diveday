@@ -8,6 +8,7 @@ import {
   nameListText,
   pointingLabelText,
 } from "@/i18n/today-labels";
+import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import { utcToWallTime } from "./zoned";
@@ -44,12 +45,11 @@ export type TodayUrgency = "imminent" | "now" | "soon" | "later";
 
 const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
 
-const HOUR = 60 * 60 * 1000;
 /** The next boat out — close enough that "later today" isn't precise enough. */
-const IMMINENT_WINDOW_MS = 3 * HOUR;
+const IMMINENT_WINDOW_MS = 3 * HOUR_MS;
 /** Anything departing inside a day is "get it done today" work. */
-const NOW_WINDOW_MS = 24 * HOUR;
-const SOON_WINDOW_MS = 72 * HOUR;
+const NOW_WINDOW_MS = 24 * HOUR_MS;
+const SOON_WINDOW_MS = 72 * HOUR_MS;
 
 export type TodayActionKind =
   | "roll_call_missing_diver"

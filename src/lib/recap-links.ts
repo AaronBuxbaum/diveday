@@ -1,4 +1,5 @@
 import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
+import { DAY_MS } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import { authSecret } from "./auth.config";
 import { nowMs } from "./clock";
@@ -21,7 +22,7 @@ import { nowMs } from "./clock";
 
 const RECAP_PURPOSE = "recap:";
 /** A diver revisiting a season later should still find their recap working. */
-const RECAP_TOKEN_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+const RECAP_TOKEN_MAX_AGE_MS = 180 * DAY_MS;
 
 function recapSecret(): string {
   const dedicated = process.env.RECAP_LINK_SECRET;

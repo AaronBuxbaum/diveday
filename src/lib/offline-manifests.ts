@@ -1,3 +1,4 @@
+import { MINUTE_MS } from "@/lib/clock";
 import { nowDate } from "./clock";
 import type { TripManifest } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
@@ -58,7 +59,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  */
 export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 
-export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
+export const OFFLINE_MANIFEST_CURRENT_MS = 15 * MINUTE_MS;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 // Unchanged at seven days post-trip (owner decision 2026-07-26, H-05): there's
