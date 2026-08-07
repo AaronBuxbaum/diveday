@@ -37,7 +37,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * never shot, reg-suit reported them as *deleted* items rather than diffs, and
  * a reviewer fixed one wait, pushed, and discovered the next one serially
  * (TEST-5, lens finding TEST-L1..L4 in
- * docs/product/assessments/comprehensive-review-20260802.md).
+ * docs/product/archive/comprehensive-review-20260802.md).
  *
  * So the rule is now: **one surface, one `test()`.** A surface that breaks
  * loses exactly its own four PNGs, every sibling is still shot in the same run,

@@ -171,7 +171,7 @@ enforcement mechanism, informed by the numbers recorded here.
 **What changed.** The `dive-domain-expert` confidence note above — that DSD participants have had
 zero prior water time and that the 8:1 figure was sourced from a PADI marketing blog rather than
 the Instructor Manual — was recorded as a caveat and then not acted on. A review
-([comprehensive-review-20260802](../../product/assessments/comprehensive-review-20260802.md),
+([comprehensive-review-20260802](../../product/archive/comprehensive-review-20260802.md),
 finding DOM-H2) found the consequence: the gate did not merely fail to protect a DSD session, it
 **certified an overloaded one as compliant**. A single instructor with two Divemasters aboard could
 take twelve first-time, uncertified people into open water and the booking gate would say yes.

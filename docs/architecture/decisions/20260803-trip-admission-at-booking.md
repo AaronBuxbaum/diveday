@@ -13,7 +13,7 @@ until boarding.** `calculateReadiness` (src/lib/readiness.ts) composed them and 
 manifest; `createBookingRecord` (src/db/bookings.ts) never looked.
 
 The consequence is the finding recorded as DOM-M6 in
-[comprehensive-review-20260802](../../product/assessments/comprehensive-review-20260802.md): a diver
+[comprehensive-review-20260802](../../product/archive/comprehensive-review-20260802.md): a diver
 whose card this shop has already looked up with the agency and recorded as **Open Water** could book
 the Advanced-only deep wreck, and — because that charter is exactly the kind that carries
 `requires_payment` and a pay-at-booking checkout — **pay in full** for a dive they were never going
