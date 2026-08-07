@@ -165,6 +165,22 @@ const VIEWPORTS = [
  * half-loaded photo with nothing in the log to say so — the diff then reads as
  * an unexplained content change and costs a triage cycle. Like the frame waits,
  * hitting the bound now warns with a count.
+ *
+ * **Correction, found after this shipped.** `course-page-light-vw-390` kept
+ * recurring — twice more, on unrelated PRs that touched no image code — after
+ * the decode loop above was already in place, which the decode theory alone
+ * does not explain. The actual mechanism: sharp's lossy re-encode is not
+ * bit-reproducible between runs (threaded encoders), so every *optimized*
+ * photo differed by a few channel values on every CI run regardless of
+ * timing. `next.config.ts` now sets `images.unoptimized` for the e2e build,
+ * which removes sharp — and the srcset-swap-requires-generation half of the
+ * paragraph above — from the e2e path entirely; that config's comment is the
+ * fix of record. The decode-loop mechanism above is unchanged and still
+ * needed (a plain `<img>` still decodes asynchronously, and production still
+ * runs the optimizer), but crediting it alone for the incident it was
+ * partly-but-not-fully diagnosed from would be the same class of confident,
+ * incomplete-justification mistake the debug skill's honesty rule warns
+ * about — so this correction stays rather than getting quietly folded in.
  */
 /**
  * Every wait below is bounded, because `requestAnimationFrame` is not a promise
