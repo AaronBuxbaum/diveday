@@ -59,6 +59,7 @@ describe("distinctBlockedDivers", () => {
         booked: 2,
         ready: 0,
         divers: [{ personId: "p1" }, { personId: "p2" }] as never,
+        urgency: "now" as const,
       },
       {
         tripId: "b",
@@ -68,6 +69,7 @@ describe("distinctBlockedDivers", () => {
         booked: 1,
         ready: 0,
         divers: [{ personId: "p1" }] as never,
+        urgency: "now" as const,
       },
     ];
     expect(distinctBlockedDivers(trips)).toBe(2);
@@ -83,6 +85,7 @@ describe("annotateAlsoOn", () => {
     booked: personIds.length,
     ready: 0,
     divers: personIds.map((personId) => ({ personId, alsoOn: [] }) as never),
+    urgency: "now",
   });
 
   it("ties a repeat diver's rows together with the other trip titles", () => {

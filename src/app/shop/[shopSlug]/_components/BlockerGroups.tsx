@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { BlockerQueue } from "@/db/blockers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { URGENCY_KEYS } from "@/i18n/today-labels";
 import type { BlockerQueueTrip } from "@/lib/blockers";
-import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
+import { distinctBlockedDivers, groupBlockerTrips, waiverBookingIds } from "@/lib/blockers";
 import { formatDateTimeTz } from "@/lib/format";
 import { BLOCKERS_TRIPS_PER_PAGE, pageOf } from "@/lib/operational-window";
 
@@ -37,6 +38,16 @@ import { BLOCKERS_TRIPS_PER_PAGE, pageOf } from "@/lib/operational-window";
  *   list must never truncate, so the tail is a page away, never dropped;
  * - **the `truncated` disclosure**, for a shop with more departures inside one
  *   week than any triage list should carry.
+ *
+ * One thing this view used to lack that the urgency view always had: a sense
+ * of *how soon*. A page of ten departure cards read identically whether the
+ * first boat left in twenty minutes or next Thursday. Departure cards now
+ * group under the same four urgency bands the other view ranks by
+ * (`groupBlockerTrips`, `src/lib/blockers.ts`), with the same fold rule —
+ * "Next 3 days"/"This week" collapse to a heading and count once something
+ * more pressing has already rendered in full, on the same page. The two
+ * views were always the same evidence sorted two ways; now they also *look*
+ * equally urgent for the same boat.
  */
 
 function DiverRow({
@@ -210,17 +221,68 @@ export function BlockerGroups({
           </Link>
         </EmptyState>
       ) : (
-        <div className="mt-5 flex flex-col gap-5">
-          {visibleTrips.map((trip) => (
-            <TripGroup
-              key={trip.tripId}
-              trip={trip}
-              shopSlug={shopSlug}
-              timeZone={timeZone}
-              locale={locale}
-              t={t}
-            />
-          ))}
+        <div className="mt-5 flex flex-col gap-8">
+          {/* Grouped by the same four urgency bands, in the same words
+              (`URGENCY_KEYS`), as the queue's other view — a departure reads
+              equally urgent whichever lens a staffer is looking through it
+              from. Folding follows the identical rule TodayQueue uses: a boat
+              that could still be waiting at the dock ("imminent"/"now")
+              always renders in full, "Next 3 days" and "This week" fold to
+              heading-and-count, and the *page's* first group stays open
+              whatever its band — a page that opens mid-week must still lead
+              with its nearest real work, not a folded band and a shrug. This
+              groups the page, not the whole queue: pagination already bounds
+              what's on screen (BLOCKERS_TRIPS_PER_PAGE), so a band can
+              legitimately continue under its own heading on the next page. */}
+          {groupBlockerTrips(visibleTrips).map((group, index) => {
+            const header = (
+              <div className="flex w-full items-baseline justify-between gap-3">
+                <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
+                  {t(URGENCY_KEYS[group.urgency])}
+                </h3>
+                <span className="rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
+                  {t("blockers.pagination.total", { count: group.trips.length })}
+                </span>
+              </div>
+            );
+            const rows = (
+              <div className="mt-3 flex flex-col gap-5">
+                {group.trips.map((trip) => (
+                  <TripGroup
+                    key={trip.tripId}
+                    trip={trip}
+                    shopSlug={shopSlug}
+                    timeZone={timeZone}
+                    locale={locale}
+                    t={t}
+                  />
+                ))}
+              </div>
+            );
+            const folded = index > 0 && (group.urgency === "soon" || group.urgency === "later");
+            if (!folded) {
+              return (
+                <div key={group.urgency}>
+                  {header}
+                  {rows}
+                </div>
+              );
+            }
+            return (
+              <details key={group.urgency} className="group/fold">
+                <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block text-xs text-muted transition-transform duration-200 group-open/fold:rotate-90"
+                  >
+                    ▸
+                  </span>
+                  {header}
+                </summary>
+                {rows}
+              </details>
+            );
+          })}
           {/* Above the pager, not below it. This says "the queue itself stops
               short of your week" — a fact about the whole list — and under
               "Page 2 of 4" it read as a footnote to the page you happen to be

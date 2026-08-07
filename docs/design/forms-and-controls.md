@@ -212,6 +212,22 @@ front. A rare or advanced action that can't merge or demote without disappearing
 behind disclosure (a "More" affordance, a details expander) rather than sitting inline at primary
 weight.
 
+### Settings hubs are the one place "several sections, several primaries" doesn't apply
+
+The "several independent sections can have several primaries" carve-out above fits a page built
+from two or three genuinely separate workflows — a trip page's roster tab beside its prep tab, say.
+It does not fit a **settings hub**: a single continuously-scrolling page whose only job is to list
+many independent, fully reversible preference forms, with no section more urgent than any other
+(`SettingsPage.tsx` is the one today — nine "Save" forms from timezone to rental pricing). Nine
+solid teal buttons down one scroll don't read as nine calm, equally-available options; they read as
+nine simultaneous demands, which fights principle #3 ("calm surfaces, earned moments of joy") on a
+page that is, by design, the least urgent place in the app. Every "Save" on a settings hub demotes
+to `secondary` — still a real, focusable, submitting button, just without the shout. A control that
+*is* the one thing a shop is on the page to do — Settings' own Stripe "Connect a payment account"
+CTA when none exists yet — keeps full primary weight, the same way Team's own "Send invite" does on
+its separate page: the rule narrows what counts as "the page's action," it doesn't remove the
+concept.
+
 ## Menus
 
 Dropdown panels are one column, one item per row, `whitespace-nowrap`. A multi-column menu wraps

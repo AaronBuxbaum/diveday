@@ -70,6 +70,12 @@ function trip(overrides: Partial<BlockerQueueTrip> & { tripId: string }): Blocke
     booked: overrides.booked ?? 6,
     ready: overrides.ready ?? 4,
     divers: overrides.divers ?? [diver({ fullName: "Priya Raman" })],
+    // Every existing test below builds trips directly rather than through
+    // `getBlockerQueue`, so they never disagree with real urgency math — one
+    // shared band means grouping never folds anything, which is exactly the
+    // pre-existing, flat-list behavior those tests assert. The fold itself
+    // gets its own describe block, with trips that set this explicitly.
+    urgency: overrides.urgency ?? "now",
   };
 }
 
@@ -384,6 +390,75 @@ describe("pagination", () => {
     expect(
       screen.getByText(t("blockers.blockedCount", { count: trips.length })),
     ).toBeInTheDocument();
+  });
+});
+
+describe("urgency grouping and horizon folding (parity with the urgency queue)", () => {
+  it("groups departures under the same urgency headings the other view uses, unfolded while every band is today's boats", () => {
+    const { container } = renderGroups(
+      queue([
+        trip({ tripId: "trip-1", title: "Morning Reef", urgency: "imminent" }),
+        trip({ tripId: "trip-2", title: "Afternoon Wall", urgency: "now" }),
+      ]),
+    );
+
+    expect(screen.getByText("Next 3 hours")).toBeInTheDocument();
+    expect(screen.getByText("Before today’s boats")).toBeInTheDocument();
+    // Neither band is folded — no <details> at all — and both departure
+    // cards render in full.
+    expect(container.querySelectorAll("details")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: "Morning Reef" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Afternoon Wall" })).toBeInTheDocument();
+  });
+
+  it("folds 'Next 3 days' and 'This week' behind their headings once today's boats have rendered in full", () => {
+    const { container } = renderGroups(
+      queue([
+        trip({ tripId: "trip-1", title: "Morning Reef", urgency: "now" }),
+        trip({ tripId: "trip-2", title: "Later Wreck", urgency: "soon" }),
+        trip({ tripId: "trip-3", title: "Next Week Course", urgency: "later" }),
+      ]),
+    );
+
+    // Today's own band renders in full, outside any <details>.
+    expect(screen.getByText("Before today’s boats").closest("details")).toBeNull();
+    expect(screen.getByRole("link", { name: "Morning Reef" })).toBeInTheDocument();
+
+    // The two horizon bands are folded, closed by default.
+    const folds = container.querySelectorAll("details");
+    expect(folds).toHaveLength(2);
+    for (const fold of folds) {
+      expect(fold.open).toBe(false);
+    }
+    expect(screen.getByText("Next 3 days").closest("details")).not.toBeNull();
+    expect(screen.getByText("This week").closest("details")).not.toBeNull();
+  });
+
+  it("keeps the page's first group open even when every departure on it is a horizon band", () => {
+    const { container } = renderGroups(
+      queue([
+        trip({ tripId: "trip-1", title: "Later Wreck", urgency: "soon" }),
+        trip({ tripId: "trip-2", title: "Next Week Course", urgency: "later" }),
+      ]),
+    );
+
+    // A page that opens mid-week still leads with its nearest real work.
+    expect(screen.getByText("Next 3 days").closest("details")).toBeNull();
+    expect(screen.getByRole("link", { name: "Later Wreck" })).toBeInTheDocument();
+    expect(container.querySelectorAll("details")).toHaveLength(1);
+    expect(screen.getByText("This week").closest("details")).not.toBeNull();
+  });
+
+  it("keeps a folded departure reachable, never dropped — folding hides, it never drops", () => {
+    renderGroups(
+      queue([
+        trip({ tripId: "trip-1", title: "Morning Reef", urgency: "now" }),
+        trip({ tripId: "trip-2", title: "Next Week Course", urgency: "later" }),
+      ]),
+    );
+
+    // In the DOM behind the fold, one native toggle away.
+    expect(screen.getByText("Next Week Course")).toBeInTheDocument();
   });
 });
 
