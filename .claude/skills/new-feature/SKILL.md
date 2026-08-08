@@ -29,9 +29,13 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
 6. **Verify** — run the `verify` skill. UI work additionally gets the `design-review` skill.
 7. **Document** — update whatever your change invalidated: glossary for new terms, overview
    for structure, roadmap checkbox, ADR index.
-8. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
+8. **File the follow-ups** — the slice you deliberately left for later, the question the build
+   raised, the risk you saw in passing: one file each in `docs/product/follow-ups/` from that
+   folder's `TEMPLATE.md`, each ending in a prompt a fresh session could run. A vertical slice
+   *should* generate these; that is what makes it a slice. List them in the PR description.
+9. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green.
-9. **Close the visual loop** — pushing is not the end of the turn. A UI change that shifts pixels
+10. **Close the visual loop** — pushing is not the end of the turn. A UI change that shifts pixels
    makes the serialized visual job commit regenerated baselines as a separate
    `ci: capture visual baseline diffs` commit when CI can push to the branch. Watch that commit and
    the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
