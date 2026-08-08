@@ -308,7 +308,8 @@
       "lastMinuteFill": "Fill seats",
       "emergencyContact": "Contact",
       "stuckPaymentOperation": "Stripe",
-      "failedPhotoDeletion": "Cleanup"
+      "failedPhotoDeletion": "Cleanup",
+      "reviewsPending": "Reviews"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -406,7 +407,8 @@
       "resendWaiverLink": "Resend waiver link",
       "resendConfirmation": "Resend confirmation",
       "openOrders": "Review in Orders",
-      "openDataSettings": "Review in Settings"
+      "openDataSettings": "Review in Settings",
+      "openReviews": "Open reviews"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -443,6 +445,10 @@
         "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
       },
       "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
+    },
+    "reviewsPending": {
+      "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
+      "detail": "Divers wrote about their trips — publish the good words or quietly hide the rest."
     }
   },
   "tripDiveFields": {

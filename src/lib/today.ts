@@ -82,7 +82,8 @@ export type TodayActionKind =
   | "email_delivery"
   | "emergency_contact"
   | "stuck_payment_operation"
-  | "failed_photo_deletion";
+  | "failed_photo_deletion"
+  | "reviews_pending";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -137,6 +138,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // sink below every per-diver row when severity is what breaks a tie.
   stuck_payment_operation: 20,
   failed_photo_deletion: 21,
+  // Divers said something worth publishing; nothing sails or refunds on it.
+  reviews_pending: 22,
 };
 
 /**
@@ -171,6 +174,7 @@ export const ACTION_KIND_META = {
   emergency_contact: { tone: "neutral" },
   stuck_payment_operation: { tone: "warning" },
   failed_photo_deletion: { tone: "warning" },
+  reviews_pending: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**

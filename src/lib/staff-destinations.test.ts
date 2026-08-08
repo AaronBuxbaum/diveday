@@ -124,31 +124,25 @@ describe("permission gating", () => {
 });
 
 describe("what each consumer derives", () => {
-  it("lays the header out as four primary tabs, then two labelled More groups", () => {
-    // Not ready lost its tab when it became Today's by-departure view: a tab
-    // beside Today that only re-sorts Today's own queue is the duplicate
-    // control design principle 8 rules out. Its badge moved onto Today.
+  it("lays the header out as six tabs and no More menu", () => {
+    // The header holds only places a shop lives in daily (plus gated
+    // Settings); everything demoted keeps its palette row, its shortcut, or a
+    // contextual door on the surface that owns it — Reports from Orders'
+    // header, Dive sites and Waivers from Settings' cards, Close-out from
+    // Today's evening handoff, Reviews as a Today queue row.
     expect(staffNavDestinations("primary", owner).map((d) => d.id)).toEqual([
       "today",
       "checkIn",
       "divers",
       "board",
-    ]);
-    expect(staffNavDestinations("daily", owner).map((d) => d.id)).toEqual([
-      "closeOut",
-      "staffing",
-      "diveSites",
-      "courses",
-      "reviews",
       "orders",
-      "waivers",
-      "reports",
+      "settings",
     ]);
-    // Settings is the whole "Set up" group and therefore the last row in the
-    // menu. Team and Promo codes left the header entirely: both already have a
-    // card on the Settings page, and two doors to one destination is the
-    // duplicate control principle 8 rules out.
-    expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual(["settings"]);
+    // Both "More" groups are deliberately empty: a menu named "More" was the
+    // IA admitting it hadn't decided, and the header no longer renders one
+    // with nothing to hold.
+    expect(staffNavDestinations("daily", owner)).toEqual([]);
+    expect(staffNavDestinations("setup", owner)).toEqual([]);
   });
 
   it("keeps a header destination out of the Settings page's own card list, and back", () => {
@@ -182,9 +176,9 @@ describe("what each consumer derives", () => {
     expect(staffPaletteDestinations(owner).at(-1)?.id).toBe("settings");
   });
 
-  it("puts Orders in the nav, where a daily money surface belongs", () => {
+  it("puts Orders in the header, where a daily money surface belongs", () => {
     const orders = STAFF_DESTINATIONS.find((destination) => destination.id === "orders");
-    expect(orders?.navGroup).toBe("daily");
+    expect(orders?.navGroup).toBe("primary");
     expect(orders?.inPalette).toBe(true);
   });
 
@@ -241,11 +235,13 @@ describe("what each consumer derives", () => {
     expect(board?.alsoMatch).toBe("/trips");
   });
 
-  it("badges only the two counted queues, with the blocked count on Today", () => {
+  it("badges only the blocked count, on Today", () => {
+    // The old Reviews badge became a row on Today's queue when Reviews left
+    // the header — a queue's signal belongs on the page that ranks work, so
+    // the nav carries exactly one number: divers who can't board.
     const badged = STAFF_DESTINATIONS.filter((destination) => destination.badge !== undefined);
     expect(badged.map((destination) => [destination.id, destination.badge])).toEqual([
       ["today", "blockers"],
-      ["reviews", "reviews"],
     ]);
   });
 

@@ -244,6 +244,16 @@
       "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones.",
       "cta": "Gestionar equipo"
     },
+    "diveSites": {
+      "heading": "Puntos de buceo",
+      "description": "La biblioteca de puntos que usa el tablón — profundidades, condiciones y qué ven los buceadores allí.",
+      "cta": "Ver puntos de buceo"
+    },
+    "waivers": {
+      "heading": "Plantilla de exención",
+      "description": "La exención que firma cada buceador, y el registro de quién la ha firmado.",
+      "cta": "Ver exenciones"
+    },
     "promos": {
       "heading": "Códigos promocionales",
       "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites.",

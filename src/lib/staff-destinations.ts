@@ -30,7 +30,7 @@ export type StaffDestinationGates = Record<StaffDestinationGate, boolean>;
  * Pending-work counts a destination can carry as a badge. Computed by whoever
  * renders the nav — a badge here never runs its own query.
  */
-export type StaffDestinationBadge = "reviews" | "blockers";
+export type StaffDestinationBadge = "blockers";
 
 /** Counts for the badge sources above. */
 export type StaffDestinationCounts = Record<StaffDestinationBadge, number>;
@@ -46,17 +46,20 @@ export type StaffDestinationCounts = Record<StaffDestinationBadge, number>;
  * place the shop's readiness vocabulary changed colour on the way to the nav.
  */
 export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "primary" | "danger"> = {
-  reviews: "primary",
   blockers: "danger",
 };
 
 /**
  * Where a destination sits in the header.
  *
- * - `primary` — the four tabs always on screen (Today, Check-in, Divers, Board;
- *   Not ready gave its tab up when it became Today's by-departure view).
- * - `daily` — inside "More": the surfaces a shop touches on an ordinary day.
- * - `setup` — inside "More": the ones it configures once and revisits rarely.
+ * - `primary` — the tabs always on screen (Today, Check-in, Divers, Board,
+ *   Orders, and — gated — Settings). Every one is a place a shop lives in
+ *   daily; everything else earns its reach through the palette, a shortcut,
+ *   or a contextual door on the surface that owns it.
+ * - `daily`/`setup` — inside "More". Both are empty today: the "More" menu
+ *   was the IA admitting it hadn't decided, and the header no longer renders
+ *   it when there is nothing to hold. The groups stay in the type so a future
+ *   destination can earn a menu back deliberately rather than by default.
  *
  * `null` means the destination is real and reachable, but not in the header —
  * it earns its place in the palette instead of one more tab (design
@@ -177,23 +180,29 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // accountability is in the trail rather than a gate. It leads the "Run the
   // shop" group because it is the one destination there that is part of every
   // single working day.
-  { id: "closeOut", suffix: "/close-out", navGroup: "daily", inPalette: true },
-  { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
-  { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },
-  { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
-  { id: "reviews", suffix: "/reviews", navGroup: "daily", inPalette: true, badge: "reviews" },
-  // Money the shop reads daily. It used to be reachable only from Settings'
-  // Money card, the palette, or a deep link.
-  { id: "orders", suffix: "/orders", navGroup: "daily", inPalette: true },
+  // Palette-reached, plus a contextual door where the ritual actually arises:
+  // Today's evening handoff card links here once the last boat is in.
+  { id: "closeOut", suffix: "/close-out", navGroup: null, inPalette: true },
+  { id: "staffing", suffix: "/staffing", navGroup: null, inPalette: true },
+  { id: "diveSites", suffix: "/dive-sites", navGroup: null, inPalette: true },
+  { id: "courses", suffix: "/courses", navGroup: null, inPalette: true },
+  // Its pending-work signal lives on Today's queue now (a `reviews_pending`
+  // row), the same pattern as stuck payments — a queue's badge belongs on the
+  // page that ranks work, not on a nav row.
+  { id: "reviews", suffix: "/reviews", navGroup: null, inPalette: true },
+  // Money the shop reads daily — a primary tab. The monthly report keeps a
+  // door on this page's header (and its palette row) rather than a tab of its
+  // own; it is the same money, summed.
+  { id: "orders", suffix: "/orders", navGroup: "primary", inPalette: true },
   {
     id: "waivers",
     suffix: "/waivers",
-    navGroup: "daily",
+    navGroup: null,
     inPalette: true,
     gate: "waivers",
     shortcut: "w",
   },
-  { id: "reports", suffix: "/reports", navGroup: "daily", inPalette: true, gate: "reports" },
+  { id: "reports", suffix: "/reports", navGroup: null, inPalette: true, gate: "reports" },
   // Promo codes and Team are reachable from Settings' own Money and Your-shop
   // cards, and a destination that lives in two menus at once is the duplicate
   // control principle 8 forbids — the header used to carry both *and* Settings,
@@ -226,7 +235,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   {
     id: "settings",
     suffix: "/settings",
-    navGroup: "setup",
+    navGroup: "primary",
     inPalette: true,
     alsoMatch: "/promos",
     gate: "settings",
