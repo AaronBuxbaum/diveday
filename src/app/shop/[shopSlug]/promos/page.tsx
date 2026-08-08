@@ -22,6 +22,7 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listOutstandingLastMinutePromos } from "@/db/trip-promos";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
@@ -312,8 +313,10 @@ export default async function PromosPage({
           <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
             <input name="expiresAt" type="datetime-local" className={controlClass} />
           </Field>
+          {/* The human zone name, never the raw IANA id — "America/New_York"
+              with its underscore is implementation surfacing (principle 4). */}
           <p className="-mt-2 text-xs text-muted sm:col-span-2">
-            {t("promos.fields.timezoneHint", { timezone })}
+            {t("promos.fields.timezoneHint", { timezone: timeZoneLabel(now, locale, timezone) })}
           </p>
           <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
             <input

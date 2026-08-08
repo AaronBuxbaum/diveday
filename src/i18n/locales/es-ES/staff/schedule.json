@@ -4,17 +4,6 @@
   "boardDescription": "Próximas salidas. Abre una para trabajar su lista de buceadores, su preparación y su manifiesto.",
   "viewPublicPage": "Ver la página pública",
   "scheduleTrip": "Programar una salida",
-  "overview": {
-    "ariaLabel": "Resumen del calendario",
-    "departures": "Salidas",
-    "departuresDetail": "Próximas salidas y sesiones",
-    "booked": "Reservados",
-    "bookedDetail": "Buceadores en todas las salidas",
-    "openSeats": "Plazas libres",
-    "openSeatsDetail": "Disponibles en todo el calendario",
-    "atCapacity": "Al completo",
-    "atCapacityDetail": "Salidas sin plazas libres"
-  },
   "notices": {
     "added": "Ya está en el calendario.",
     "moved": "Movida.",
@@ -31,8 +20,6 @@
     "addedSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}."
   },
   "builder": {
-    "heading": "El calendario",
-    "description": "Añade una salida, muévela a otro día, cópiala hacia delante o quítala. Abre una salida para sus inmersiones, tripulación y lista de buceadores.",
     "ariaLabel": "Constructor del calendario",
     "addDeparture": "Añadir una salida",
     "addDepartureOnDay": "Añadir una salida el {day}",

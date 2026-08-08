@@ -415,10 +415,10 @@
       "ahead": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. Nada es urgente; {jobs, plural, =1 {1 tarea para adelantar.} other {# tareas para adelantar.}}"
     },
     "greeting": {
-      "morning": "Buenos días, {name} ☕",
-      "afternoon": "Buenas tardes, {name} ☀️",
-      "evening": "Buenas noches, {name} 🌙",
-      "night": "Buenas noches, {name} 🌌"
+      "morning": "Buenos días, {name}",
+      "afternoon": "Buenas tardes, {name}",
+      "evening": "Buenas noches, {name}",
+      "night": "Buenas noches, {name}"
     },
     "seasonalBriefing": {
       "summer": "Aprovecha el intervalo de superficie — busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",

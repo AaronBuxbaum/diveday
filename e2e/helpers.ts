@@ -218,9 +218,11 @@ export async function findTripOnBoard(
   // list streams in, and `count()` doesn't auto-wait — so a slow stream-in
   // read as "no cards and no pager" and the loop concluded the board ended
   // (seen as a one-in-many-runs CI failure hunting a seeded trip). The
-  // overview stat row exists only in the streamed body, whatever the board
-  // holds, so its appearance proves the cards and pager are in the DOM.
-  await page.getByRole("region", { name: "Schedule overview" }).waitFor();
+  // builder section exists only in the streamed body, whatever the board
+  // holds, so its appearance proves the cards and pager are in the DOM. (The
+  // old wait target, the "Schedule overview" stat row, left the page with the
+  // KPI tiles.)
+  await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   for (let hops = 0; hops < 15; hops++) {
     const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
     if ((await link.count()) > 0) return link.first();

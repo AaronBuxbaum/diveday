@@ -531,7 +531,7 @@
     "nitroxBlockedDescription": "Planned as air. Verify the Nitrox card on the diver’s record, or tell them at the counter before the boat leaves.",
     "missingSizesHeading": "Sizes still missing",
     "missingSizesDescription": "Every piece these divers take from the shop needs a size against it. Until one is recorded, the packing list below is short by that piece.",
-    "missingSizesNothingOnFile": "— nothing on file; they may be bringing their own kit, but nobody has asked",
+    "missingSizesNobodyAskedLead": "Nobody has asked these divers whether they're bringing their own kit:",
     "missingSizesItems": "— no size for {items}",
     "staffFitHeading": "Fit these divers at check-in",
     "staffFitDescription": "A size they asked for wasn’t available. They still count on the list below, but without a size — start from what they asked for, bring a range around it, and fit them in person rather than packing a substitute.",

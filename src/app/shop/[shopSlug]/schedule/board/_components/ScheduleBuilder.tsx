@@ -100,8 +100,6 @@ type BuilderActions = {
  * a prefix/suffix pair assembled from parts.
  */
 export type BuilderCopy = {
-  heading: string;
-  description: string;
   ariaLabel: string;
   addDeparture: string;
   addDepartureOnDay: string;
@@ -780,28 +778,25 @@ export function ScheduleBuilder({
 
   return (
     <section aria-label={copy.ariaLabel} className="mb-8">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold">{copy.heading}</h2>
-          <p className="mt-1 text-sm text-muted">{copy.description}</p>
-        </div>
-        {canConfigure ? (
+      {/* No heading of its own: the page header directly above already names
+          and describes this surface, and "Board" then "The board" was the same
+          fact twice (principle 9 applies to headings too). Secondary weight
+          always: the page's one primary is "Add a booking" in the header —
+          seating divers is the common job — and the panel this opens ends in
+          its own "Put it on the board" primary (principle 8). */}
+      {canConfigure ? (
+        <div className="mb-3 flex justify-end">
           <button
             type="button"
             ref={registerToggle("add:top")}
             onClick={() => toggle("add:top")}
             aria-expanded={open === "add:top"}
-            // Secondary once open: the panel it reveals ends in "Put it on the
-            // board", and a section carries one primary (design principles #8).
-            className={buttonClass({
-              variant: open === "add:top" ? "secondary" : undefined,
-              className: "rounded-xl",
-            })}
+            className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
           >
             <span aria-hidden="true">+</span> {copy.addDeparture}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* Creating a departure is owner/manager/instructor work (H-14); crew
           still read the board, so it says whose job this is rather than

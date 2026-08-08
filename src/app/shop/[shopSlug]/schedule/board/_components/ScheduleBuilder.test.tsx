@@ -28,8 +28,6 @@ const { usePathname, setMockPathname } = vi.hoisted(() => {
 vi.mock("next/navigation", () => ({ usePathname }));
 
 const COPY: BuilderCopy = {
-  heading: "The board",
-  description: "Add a departure, slide one to another day, copy it forward, or take it off.",
   ariaLabel: "Schedule builder",
   addDeparture: "Add a departure",
   addDepartureOnDay: "Add a departure on {day}",
@@ -604,7 +602,7 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
 
     // A stray click on the page is a dismissal, never swallowed work — the
     // list holds no typed state.
-    await userEvent.click(screen.getByRole("heading", { name: "The board" }));
+    await userEvent.click(screen.getByRole("heading", { name: "Sat, Aug 1" }));
     expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull();
   });
 

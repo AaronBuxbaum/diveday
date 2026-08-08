@@ -234,13 +234,20 @@ export function DiverRollCall({
                           : t("trips.manifest.notOnFile")}
                       </span>
                     </p>
-                    <p>
-                      <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
-                      <span className="mt-0.5 block text-muted">
-                        {rentalFitLineText(t, locale, diver.rentalFit)}
-                        {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
-                      </span>
-                    </p>
+                    {/* Only when there is something to load or a note to read:
+                        "No fit on file — not asked yet" printed on most rows
+                        is the absence of information formatted as information
+                        (principle 9), and Prep owns chasing the gap. A nitrox
+                        request always shows — that's an operational fact. */}
+                    {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
+                      <p>
+                        <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
+                        <span className="mt-0.5 block text-muted">
+                          {rentalFitLineText(t, locale, diver.rentalFit)}
+                          {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
+                        </span>
+                      </p>
+                    ) : null}
                     {diver.medicalWaiver ? (
                       <p>
                         <span className="font-bold">

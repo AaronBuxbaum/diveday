@@ -415,10 +415,10 @@
       "ahead": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. Nothing is urgent; {jobs, plural, =1 {1 job to work ahead.} other {# jobs to work ahead.}}"
     },
     "greeting": {
-      "morning": "Good morning, {name} ☕",
-      "afternoon": "Good afternoon, {name} ☀️",
-      "evening": "Good evening, {name} 🌙",
-      "night": "Good night, {name} 🌌"
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}",
+      "night": "Good night, {name}"
     },
     "seasonalBriefing": {
       "summer": "Enjoy the surface interval — grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",

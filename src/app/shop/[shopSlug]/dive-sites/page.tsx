@@ -190,7 +190,9 @@ export default async function DiveSitesPage({
             />
           </Field>
           <FieldActions>
-            <button type="submit" className={buttonClass({ size: "sm" })}>
+            {/* Secondary: the page's one primary is the header's create
+                action (principle 8). */}
+            <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
               {t("diveSites.list.searchApply")}
             </button>
             {query ? (

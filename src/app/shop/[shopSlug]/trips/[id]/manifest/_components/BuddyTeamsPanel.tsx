@@ -205,38 +205,56 @@ export function BuddyTeamsPanel({
        * no longer restricts us to.
        */}
       {showBuilder ? (
-        <form action={formBuddyTeamAction} className="mt-4">
-          <fieldset className="rounded-lg border border-border bg-surface p-4">
-            <legend className="px-1 text-sm font-semibold">
-              {t("trips.manifest.buddyNewTeamHeading")}
-            </legend>
-            <p className="max-w-prose text-sm text-muted">{t("trips.manifest.buddyNewTeamHint")}</p>
-            {/* The same checkboxes, in the same form — plus drag-one-onto-another
+        // Behind a native disclosure: forming a team happens a handful of
+        // times per departure, but the open checkbox grid used to stand at
+        // full height on every manifest visit — the rare path at permanent
+        // weight (principle 8). The roll call above is the page's job;
+        // the builder opens when asked and costs nothing when it isn't.
+        // A submit that came back refused must not hide its own answer behind
+        // the fold — the disclosure arrives open whenever there is a worded
+        // refusal to read.
+        <details className="group/buddies mt-4" open={builderError ? true : undefined}>
+          <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
+            <span
+              aria-hidden="true"
+              className="inline-block text-xs text-muted transition-transform duration-200 group-open/buddies:rotate-90"
+            >
+              ▸
+            </span>
+            {t("trips.manifest.buddyNewTeamHeading")}
+          </summary>
+          <form action={formBuddyTeamAction} className="mt-2">
+            <fieldset className="rounded-lg border border-border bg-surface p-4">
+              <p className="max-w-prose text-sm text-muted">
+                {t("trips.manifest.buddyNewTeamHint")}
+              </p>
+              {/* The same checkboxes, in the same form — plus drag-one-onto-another
                 for the two-person case, which is what a phone at the dock wants
                 and what ticking boxes is worst at (2026-08-06 review). Ticking
                 three still builds a team of three. */}
-            <BuddyDragGroups
-              groups={[
-                { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
-                { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
-              ].filter((group) => group.options.length > 0)}
-              copy={{
-                hint: t("trips.manifest.buddyDragHint"),
-                holding: t("trips.manifest.buddyDragHolding"),
-                over: t("trips.manifest.buddyDragOver"),
-              }}
-            />
-            {/* The action row is where this form's own answer lands — a
+              <BuddyDragGroups
+                groups={[
+                  { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
+                  { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
+                ].filter((group) => group.options.length > 0)}
+                copy={{
+                  hint: t("trips.manifest.buddyDragHint"),
+                  holding: t("trips.manifest.buddyDragHolding"),
+                  over: t("trips.manifest.buddyDragOver"),
+                }}
+              />
+              {/* The action row is where this form's own answer lands — a
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <button type="submit" className={buttonClass()}>
-                {t("trips.manifest.buddyFormSubmit")}
-              </button>
-              <FormStatus>{builderError}</FormStatus>
-            </div>
-          </fieldset>
-        </form>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button type="submit" className={buttonClass()}>
+                  {t("trips.manifest.buddyFormSubmit")}
+                </button>
+                <FormStatus>{builderError}</FormStatus>
+              </div>
+            </fieldset>
+          </form>
+        </details>
       ) : unteamedDivers.length === 1 && unteamedDivers[0] ? (
         // An odd roster is normal, never an error — say so instead of
         // rendering a builder that can only fail.

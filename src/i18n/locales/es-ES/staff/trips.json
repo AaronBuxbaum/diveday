@@ -531,7 +531,7 @@
     "nitroxBlockedDescription": "Planeado con aire. Verifica la tarjeta de Nitrox en el perfil del buceador, o avísale en el mostrador antes de que zarpe el barco.",
     "missingSizesHeading": "Faltan tallas",
     "missingSizesDescription": "Cada pieza que estos buceadores toman del centro necesita una talla registrada. Hasta que se anote, a la lista de abajo le falta esa pieza.",
-    "missingSizesNothingOnFile": "— nada registrado; puede que traigan su propio equipo, pero nadie se lo ha preguntado",
+    "missingSizesNobodyAskedLead": "Nadie les ha preguntado a estos buceadores si traen su propio equipo:",
     "missingSizesItems": "— sin talla para {items}",
     "staffFitHeading": "Ajustar el equipo a estos buceadores en el check-in",
     "staffFitDescription": "Una talla que pidieron no estaba disponible. Siguen contando en la lista de abajo, pero sin talla — parte de lo que pidieron, trae un rango cercano y ajústales el equipo en persona en lugar de empaquetar un sustituto.",
