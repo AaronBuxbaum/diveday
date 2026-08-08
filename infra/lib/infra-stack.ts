@@ -39,6 +39,11 @@ import {
 const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
+/** Scopes every GitHub Actions OIDC trust condition below (§18) to this repo. */
+const GITHUB_REPO = "aaronbuxbaum/diveday";
+/** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
+const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
+
 // IAM user names as literals, for the destination headings inside the
 // credentials document. `iam.User.userName` is a token there, not a string, so
 // interpolating it would print `${Token[...]}` where a name belongs.
@@ -1504,6 +1509,27 @@ exports.handler = async (event) => {
         note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.",
       },
       {
+        id: "github-actions-cdk-oidc",
+        title: "Authorize GitHub Actions to run cdk diff/deploy",
+        category: "Prerequisites",
+        when: "once, after the first deploy of this stack",
+        why: "The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API, and GitHubActionsCdkDeployRole's trust policy (infra-stack.ts §18) only ever hands an OIDC token to a job that references the infra-deploy GitHub Environment, which nothing but a human clicking through repo Settings can create.",
+        run: [
+          "GitHub -> repo Settings -> Environments -> New environment, named infra-deploy -> add yourself as a required reviewer.",
+          "gh variable set AWS_CDK_DIFF_ROLE_ARN --body <GitHubActionsCdkDiffRoleArn output>",
+          "gh variable set AWS_CDK_DEPLOY_ROLE_ARN --body <GitHubActionsCdkDeployRoleArn output>",
+        ],
+        produces:
+          ".github/workflows/infra.yml's diff job can assume a role on any pull request; its deploy job can only obtain one once a required reviewer approves a run against the infra-deploy environment.",
+        store:
+          "GitHub repo Settings -> Environments (infra-deploy) and Settings -> Secrets and variables -> Actions -> Variables.",
+        verify: [
+          'Open a pull request that touches infra/ and confirm the "cdk synth + diff" check posts a PR comment.',
+          'Actions -> Infra -> Run workflow, command: deploy -- confirm the run stops at "Review pending deployments" until approved.',
+        ],
+        note: "The two values are role identifiers, not secrets -- store them as repository variables, not secrets. A GitHub Actions secret is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read.",
+      },
+      {
         id: "cost-explorer-enabled",
         title: "Enable Cost Explorer",
         category: "Prerequisites",
@@ -1748,6 +1774,7 @@ exports.handler = async (event) => {
       new Set([
         "aws-cli-admin-profile",
         "cdk-bootstrap",
+        "github-actions-cdk-oidc",
         "cost-explorer-enabled",
         // The three non-AWS cost guardrails (ADR
         // 20260806-provider-usage-guardrails). They belong in the short list
@@ -1770,6 +1797,137 @@ exports.handler = async (event) => {
       value:
         "pnpm infra:deploy writes the env files and offers Vercel, GitHub, and SES DNS handoffs interactively. The short manual-actions.md has only account approvals a CLI cannot perform.",
       description: "Post-deploy handoff: run pnpm infra:deploy from a terminal.",
+    });
+
+    // 18. GitHub Actions CI: OIDC federation so .github/workflows/infra.yml can
+    // run `cdk diff`/`cdk deploy` from a workflow instead of only a workstation
+    // (§5's cdk-deployer is explicitly workstation-only -- see its comment).
+    //
+    // Two roles, deliberately not one, because "can see what would change" and
+    // "can make it happen" are different privileges with different attack
+    // surfaces:
+    //
+    //   - GitHubActionsCdkDiffRole trusts any workflow run in this repo (its sub
+    //     condition is a wildcard) and can only create, describe, and discard a
+    //     CloudFormation change set -- never execute one. A PR from any branch
+    //     can assume it.
+    //   - GitHubActionsCdkDeployRole's sub condition names the infra-deploy
+    //     GitHub Environment specifically, so GitHub only mints an OIDC token
+    //     for it once a required reviewer has approved that job (manual action
+    //     "github-actions-cdk-oidc", §17) -- the environment is what turns
+    //     "workflow_dispatch was clicked" into "a human clicked Approve", not
+    //     anything this role's trust policy alone could enforce.
+    //
+    // Neither role can read the credentials secret (§16): both carry the same
+    // explicit Deny as §6's read-only MCP identities, so a change to what
+    // AWS::IAM::Role or the OIDC bootstrap roles can reach can never make a CI
+    // run capable of exfiltrating it. `cdk deploy`'s actual resource writes run
+    // under the bootstrap deploy-role's own permissions (AdministratorAccess by
+    // default -- see §5's note on --cloudformation-execution-policies), not
+    // this role's -- the Deny here bounds what the *caller* can do directly.
+    const githubActionsOidcProvider = new iam.OpenIdConnectProvider(
+      this,
+      "GitHubActionsOidcProvider",
+      {
+        url: "https://token.actions.githubusercontent.com",
+        clientIds: ["sts.amazonaws.com"],
+      },
+    );
+
+    const githubActionsPrincipal = (subCondition: string) =>
+      new iam.FederatedPrincipal(
+        githubActionsOidcProvider.openIdConnectProviderArn,
+        {
+          StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+          StringLike: { "token.actions.githubusercontent.com:sub": subCondition },
+        },
+        "sts:AssumeRoleWithWebIdentity",
+      );
+
+    const cdkStackArn = `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/diveday-infra/*`;
+    const bootstrapVersionParameterArn = `arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/${bootstrapQualifier}/version`;
+    const denyReadingAnySecret = () =>
+      new iam.PolicyStatement({
+        sid: "NeverReadAnySecretValue",
+        effect: iam.Effect.DENY,
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: ["*"],
+      });
+
+    const cdkDiffRole = new iam.Role(this, "GitHubActionsCdkDiffRole", {
+      roleName: "diveday-github-actions-cdk-diff",
+      assumedBy: githubActionsPrincipal(`repo:${GITHUB_REPO}:*`),
+      description:
+        "Assumed by .github/workflows/infra.yml to run `cdk diff` against the deployed stack. Can create and discard a change set; never executes one.",
+      maxSessionDuration: cdk.Duration.hours(1),
+    });
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "DiffAgainstDeployedStack",
+        actions: [
+          "cloudformation:DescribeStacks",
+          "cloudformation:GetTemplate",
+          "cloudformation:CreateChangeSet",
+          "cloudformation:DescribeChangeSet",
+          "cloudformation:DeleteChangeSet",
+          "ssm:GetParameter",
+        ],
+        resources: [cdkStackArn, bootstrapVersionParameterArn],
+      }),
+    );
+    cdkDiffRole.addToPolicy(denyReadingAnySecret());
+
+    const cdkDeployRole = new iam.Role(this, "GitHubActionsCdkDeployRole", {
+      roleName: "diveday-github-actions-cdk-deploy",
+      assumedBy: githubActionsPrincipal(
+        `repo:${GITHUB_REPO}:environment:${GITHUB_DEPLOY_ENVIRONMENT}`,
+      ),
+      description:
+        "Assumed by .github/workflows/infra.yml's deploy job, gated on the infra-deploy GitHub Environment's required reviewer.",
+      maxSessionDuration: cdk.Duration.hours(1),
+    });
+    // Same four ARNs §5's cdk-deployer user holds sts:AssumeRole on -- the
+    // bootstrap roles are what actually carry deploy-time permissions under the
+    // modern CDK synthesizer, so this identity needs nothing broader than they
+    // do.
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AssumeCdkBootstrapRoles",
+        actions: ["sts:AssumeRole"],
+        resources: [
+          bootstrapRoleArn("deploy-role"),
+          bootstrapRoleArn("file-publishing-role"),
+          bootstrapRoleArn("image-publishing-role"),
+          bootstrapRoleArn("lookup-role"),
+        ],
+      }),
+    );
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "DeployTheStack",
+        actions: [
+          "cloudformation:DescribeStacks",
+          "cloudformation:GetTemplate",
+          "cloudformation:CreateChangeSet",
+          "cloudformation:DescribeChangeSet",
+          "cloudformation:ExecuteChangeSet",
+          "cloudformation:DeleteChangeSet",
+          "ssm:GetParameter",
+        ],
+        resources: [cdkStackArn, bootstrapVersionParameterArn],
+      }),
+    );
+    cdkDeployRole.addToPolicy(denyReadingAnySecret());
+
+    new cdk.CfnOutput(this, "GitHubActionsCdkDiffRoleArn", {
+      value: cdkDiffRole.roleArn,
+      description:
+        "role-to-assume for .github/workflows/infra.yml's diff job. Store as the AWS_CDK_DIFF_ROLE_ARN repository variable (manual action, §17).",
+    });
+    new cdk.CfnOutput(this, "GitHubActionsCdkDeployRoleArn", {
+      value: cdkDeployRole.roleArn,
+      description:
+        "role-to-assume for .github/workflows/infra.yml's deploy job. Store as the AWS_CDK_DEPLOY_ROLE_ARN repository variable (manual action, §17).",
     });
   }
 }
