@@ -71,7 +71,7 @@ function isCurrent(pathname: string, href: string, root: string) {
 function isDestinationCurrent(pathname: string, root: string, destination: StaffDestination) {
   return (
     isCurrent(pathname, staffDestinationHref(root, destination), root) ||
-    (destination.alsoMatch ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root) : false)
+    (destination.alsoMatch ?? []).some((prefix) => isCurrent(pathname, `${root}${prefix}`, root))
   );
 }
 
@@ -296,68 +296,74 @@ export function ShopNavLinks({
           );
         })}
       </nav>
-      <details ref={detailsRef} className="relative shrink-0">
-        <summary
-          ref={summaryRef}
-          className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
-        >
-          {copy.more}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-3"
+      {/* No menu over nothing: with every destination either a tab, a palette
+          row, or a contextual door, "More" holds no rows for any role today —
+          a header menu named "More" was the IA admitting it hadn't decided.
+          The machinery stays for the day a destination earns a menu back. */}
+      {daily.length + setup.length === 0 ? null : (
+        <details ref={detailsRef} className="relative shrink-0">
+          <summary
+            ref={summaryRef}
+            className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
           >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </summary>
-        {/* Mobile-only scrim: makes the panel read as modal on a phone (where
+            {copy.more}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-3"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          {/* Mobile-only scrim: makes the panel read as modal on a phone (where
             it covers most of the viewport) and gives a large, obvious tap
             target to dismiss it, on top of the outside-click handler above. */}
-        {moreOpen ? (
-          <button
-            type="button"
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={closeMore}
-            className="fixed inset-0 z-10 cursor-default bg-foreground/20 sm:hidden"
-          />
-        ) : null}
-        {/*
-         * One column, one link per row — a two-column grid wrapped short labels
-         * onto two lines. Two named groups rather than one bare rule: the
-         * divider that used to sit here said "these are different" without ever
-         * saying how, so which half held Reports and which held Promo codes was
-         * a memory test.
-         */}
-        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
-          {daily.length > 0 ? (
-            <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
-              {daily.map(moreLink)}
-            </MoreGroup>
+          {moreOpen ? (
+            <button
+              type="button"
+              aria-hidden="true"
+              tabIndex={-1}
+              onClick={closeMore}
+              className="fixed inset-0 z-10 cursor-default bg-foreground/20 sm:hidden"
+            />
           ) : null}
-          {/* A visible heading over a single row is noise, so the configure-once
+          {/*
+           * One column, one link per row — a two-column grid wrapped short labels
+           * onto two lines. Two named groups rather than one bare rule: the
+           * divider that used to sit here said "these are different" without ever
+           * saying how, so which half held Reports and which held Promo codes was
+           * a memory test.
+           */}
+          <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
+            {daily.length > 0 ? (
+              <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
+                {daily.map(moreLink)}
+              </MoreGroup>
+            ) : null}
+            {/* A visible heading over a single row is noise, so the configure-once
               half wears one only once it is a genuine group. It keeps the same
               accessible name either way — a screen reader still hears which
               half of the menu it is in. */}
-          {setup.length > 1 ? (
-            <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
-              {setup.map(moreLink)}
-            </MoreGroup>
-          ) : setup.length === 1 ? (
-            <ul
-              aria-label={copy.groupSetup}
-              className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
-            >
-              {setup.map(moreLink)}
-            </ul>
-          ) : null}
-        </div>
-      </details>
+            {setup.length > 1 ? (
+              <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
+                {setup.map(moreLink)}
+              </MoreGroup>
+            ) : setup.length === 1 ? (
+              <ul
+                aria-label={copy.groupSetup}
+                className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
+              >
+                {setup.map(moreLink)}
+              </ul>
+            ) : null}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

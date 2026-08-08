@@ -197,7 +197,6 @@ export function ShopNav({
                 blockers: t("shared.shopNavLinks.badgeBlocked", {
                   count: navCounts?.blockers ?? 0,
                 }),
-                reviews: t("shared.shopNavLinks.badgeReviews", { count: navCounts?.reviews ?? 0 }),
               },
             } satisfies ShopNavLinksCopy
           }

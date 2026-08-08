@@ -43,6 +43,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   emergency_contact: "shared.today.actionKind.emergencyContact",
   stuck_payment_operation: "shared.today.actionKind.stuckPaymentOperation",
   failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
+  reviews_pending: "shared.today.actionKind.reviewsPending",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -405,6 +406,19 @@ export function failedPhotoDeletionDetailText(
  * mirror. (It used to say "Reports"; the queue moved when the monthly report
  * became only a report.)
  */
+/** The pending-reviews queue row: how many divers are waiting to be heard. */
+export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
+  return t("shared.today.reviewsPending.subject", { count });
+}
+
+export function reviewsPendingDetailText(t: StaffTranslator): string {
+  return t("shared.today.reviewsPending.detail");
+}
+
+export function openReviewsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openReviews");
+}
+
 export function openOrdersActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openOrders");
 }

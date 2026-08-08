@@ -244,6 +244,16 @@
       "description": "Who works here, what each person is allowed to reach, and where your invitations stand.",
       "cta": "Manage team"
     },
+    "diveSites": {
+      "heading": "Dive sites",
+      "description": "The site library the board picks from — depths, conditions, and what divers see there.",
+      "cta": "Open dive sites"
+    },
+    "waivers": {
+      "heading": "Waiver template",
+      "description": "The release every diver signs, and the log of who has signed it.",
+      "cta": "Open waivers"
+    },
     "promos": {
       "heading": "Promo codes",
       "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",

@@ -87,6 +87,7 @@
     "title": "Pedidos",
     "description": "Todos los pedidos que ha enviado el centro, de todos los buceadores y salidas.",
     "newOrder": "Nuevo pedido",
+    "monthlyReport": "Informe mensual",
     "notice": {
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores.",
       "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes — pide a uno de ellos que le facture a este buceador."

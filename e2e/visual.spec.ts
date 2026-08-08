@@ -1464,18 +1464,19 @@ for (const scheme of ["light", "dark"] as const) {
        * other baseline. A freshly onboarded shop is the real "empty queue"
        * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
        *
-       * **Three captures in one test, deliberately.** `nav-more-menu` is the
-       * same page with the header's "More" panel open, and `settings-trial` is
+       * **Two captures in one test, deliberately.** `settings-trial` is
        * this shop's Settings page — the trial-status card only ever renders
        * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
-       * shop the other settings capture uses) can never show it. All three
+       * shop the other settings capture uses) can never show it. (A third
+       * capture, `nav-more-menu`, retired with the "More" menu itself when
+       * the header became six tabs.) Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. A second test would have to onboard a *second*
        * shop, because `/api/test/reset` reseeds the demo shop and purges
        * minted demo shops but does not delete one created through `/onboard`,
        * so the slug would have to differ — and a different slug is different
        * pixels in every baseline. Splitting here would move a baseline to buy
-       * isolation, which is the wrong trade; the three captures are one
+       * isolation, which is the wrong trade; the captures are one
        * onboarded session anyway. The trial card itself is clock-anchored and
        * deterministic: this shop's `created_at` is the harness's one frozen
        * instant, so "21 days left" and the end date never drift between runs.
@@ -1514,18 +1515,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
         await capture(page, "today-empty", scheme);
 
-        // The "More" menu open — the only way to see its named groups ("Run the
-        // shop", and Settings under "Set up") and the destinations they hold,
-        // since the panel used to separate them with one unlabelled rule. Team
-        // and Promo codes left this menu when Settings became their only door.
-        // Captured here rather
-        // than over the seeded Today: the nav is identical (a fresh owner passes
-        // every gate) and this page is short, so the baseline is the menu rather
-        // than a second copy of a very tall dashboard whose every content change
-        // would diff this image too.
-        await page.locator("header summary").filter({ hasText: "More" }).click();
-        await page.getByRole("list", { name: "Run the shop" }).waitFor();
-        await capture(page, "nav-more-menu", scheme);
+        // The "More" menu capture retired with the menu itself: the header is
+        // six tabs now (every former menu row is a tab, a palette row, or a
+        // contextual door), so there is no panel left to photograph — the
+        // header's own pixels are in every staff capture already.
 
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
@@ -2645,8 +2638,7 @@ for (const scheme of ["light", "dark"] as const) {
        * that has nothing to do with the overlay. The calendar settings page is
        * the shortest read-only staff surface there is (two panels, no seeded
        * rows, nothing minted until a button is pressed), so almost all of each
-       * of these images is the overlay itself. Same reasoning as
-       * `nav-more-menu`, which is captured over a freshly onboarded shop.
+       * of these images is the overlay itself.
        *
        * One test each, and each closes its overlay before finishing: an overlay
        * left open leaks into whatever the same page does next, which is the

@@ -308,7 +308,8 @@
       "lastMinuteFill": "Llenar plazas",
       "emergencyContact": "Contacto",
       "stuckPaymentOperation": "Stripe",
-      "failedPhotoDeletion": "Limpieza"
+      "failedPhotoDeletion": "Limpieza",
+      "reviewsPending": "Reseñas"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -406,7 +407,8 @@
       "resendWaiverLink": "Reenviar enlace de exención",
       "resendConfirmation": "Reenviar confirmación",
       "openOrders": "Revisar en Pedidos",
-      "openDataSettings": "Revisar en Ajustes"
+      "openDataSettings": "Revisar en Ajustes",
+      "openReviews": "Ver reseñas"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
@@ -443,6 +445,10 @@
         "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
       },
       "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}."
+    },
+    "reviewsPending": {
+      "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
+      "detail": "Los buceadores escribieron sobre sus salidas — publica las buenas palabras u oculta el resto con discreción."
     }
   },
   "tripDiveFields": {

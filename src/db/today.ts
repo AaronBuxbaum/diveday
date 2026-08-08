@@ -15,10 +15,13 @@ import {
   openGuestsActionText,
   openOrdersActionText,
   openPrepListActionText,
+  openReviewsActionText,
   openRollCallActionText,
   openTripActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
+  reviewsPendingDetailText,
+  reviewsPendingSubjectText,
   rollCallGapDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
@@ -50,6 +53,7 @@ import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
+import { countReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   nitroxCertifications,
@@ -1363,6 +1367,27 @@ export async function getTodayWork(
         dueAt: null,
       });
     }
+  }
+
+  // Reviews waiting on moderation. This used to be a count badge on a nav row;
+  // when Reviews left the header, the signal moved here — the queue is the one
+  // page that ranks pending work, and a badge on a menu was the only signal in
+  // the app that never said what to do about itself. One row for the whole
+  // queue (never one per review), `later` urgency and `dueAt: null` because
+  // nothing sails or refunds on a review — it informs, it never nags.
+  const reviewsAwaiting = await countReviewsAwaitingModeration(db, shopId);
+  if (reviewsAwaiting > 0) {
+    actions.push({
+      id: "reviews:pending",
+      kind: "reviews_pending",
+      urgency: "later",
+      subject: reviewsPendingSubjectText(t, reviewsAwaiting),
+      context: null,
+      detail: reviewsPendingDetailText(t),
+      actionLabel: openReviewsActionText(t),
+      href: `/shop/${shopSlug}/reviews`,
+      dueAt: null,
+    });
   }
 
   const departures: DepartureSummary[] = todayTrips.map((trip) => {

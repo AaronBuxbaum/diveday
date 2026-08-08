@@ -36,6 +36,7 @@ import {
   canImportShopData,
   canManageMessagingSettings,
   canManageStaffAccounts,
+  canManageWaiverTemplates,
   canViewShopReports,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -395,6 +396,7 @@ export default async function SettingsPage({
   // shown a door that would bounce them (ADR
   // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
   const canManageTeam = canManageStaffAccounts(session.user.roles);
+  const canManageWaivers = canManageWaiverTemplates(session.user.roles);
   const canManagePromos = canViewShopReports(session.user.roles);
   // Trial timing is owner-grade information the same way the monthly report
   // is — the daily crew has no reason to see it, and a demo shop isn't a
@@ -452,6 +454,45 @@ export default async function SettingsPage({
                 className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
                 {t("settings.main.team.cta")}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {/* The two reference libraries the daily surfaces consume — the
+            board's add panel reads the dive-site list, and every waiver a
+            diver signs renders the template. Both left the header nav with
+            the cut to five tabs; an owner's path to them is this page (and
+            the palette), so each gets a door beside the other configure-once
+            work. */}
+        <section className="mb-6 rounded-lg border border-border bg-surface p-6">
+          <CardHeading
+            t={t}
+            heading={t("settings.main.diveSites.heading")}
+            description={t("settings.main.diveSites.description")}
+          />
+          <div className="mt-4">
+            <Link
+              href={`/shop/${shopSlug}/dive-sites`}
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            >
+              {t("settings.main.diveSites.cta")}
+            </Link>
+          </div>
+        </section>
+        {canManageWaivers ? (
+          <section className="mb-6 rounded-lg border border-border bg-surface p-6">
+            <CardHeading
+              t={t}
+              heading={t("settings.main.waivers.heading")}
+              description={t("settings.main.waivers.description")}
+            />
+            <div className="mt-4">
+              <Link
+                href={`/shop/${shopSlug}/waivers`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.waivers.cta")}
               </Link>
             </div>
           </section>
