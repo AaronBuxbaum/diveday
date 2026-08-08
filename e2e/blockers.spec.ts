@@ -156,8 +156,11 @@ test("the one-tap waiver send on the by-departure view reports success inline", 
   // waiver"), so a locator keyed on it would stop matching this row right
   // after the click that's being tested. Priya is blocked on two departures
   // ("fix once" — the same tap clears both), so narrow to the first row.
+  // Scoped to the queue section: the departure board above it now *names* a
+  // lone blocked diver in its caption, so a page-wide `li` search would land
+  // on that card instead of the row with the button.
   const row = page
-    .locator("li")
+    .locator("section[aria-labelledby='queue-heading'] li")
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true })
     .first();

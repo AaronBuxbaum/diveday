@@ -249,6 +249,21 @@ export type TodayAction = {
   subject: string;
   /** Where and when it lands. The reason this is timely. */
   context: string | null;
+  /**
+   * The boat this work hangs off, when there is one. The queue groups rows
+   * under one departure header per boat and drops each row's own copy of the
+   * trip name — a fact shared by every row belongs to the group, not the rows
+   * (design/principles.md #9). `label` is the header line, already composed
+   * with the departure's local time. Rows with no boat (a stuck payment
+   * operation, a media chore) leave this unset and stand alone.
+   */
+  departure?: { tripId: string; label: string };
+  /**
+   * True when `subject` *is* the departure (prep gaps, open seats, crew
+   * gaps) — under a departure header the row leads with its detail, because
+   * repeating the header as the row's subject says the boat twice.
+   */
+  aboutDeparture?: boolean;
   /** What is wrong, in staff language. */
   detail: string;
   /**
@@ -422,6 +437,7 @@ export function diverBlockerAction(
     urgency: urgencyFor(input.startsAt, now),
     subject: input.fullName,
     context: input.tripTitle,
+    departure: { tripId: input.tripId, label: input.tripTitle },
     detail: remaining > 0 ? blockerDetailWithRemainingText(t, blockerText, remaining) : blockerText,
     // Waiver rows send in place, so they keep the verb; a card row only opens
     // the person record, so it points instead of pretending to act.
@@ -477,6 +493,7 @@ export function collapseDiverActions(
       urgency: urgencyFor(first.startsAt, now),
       subject: diverGroupSubjectText(t, rows.length),
       context: first.tripTitle,
+      departure: { tripId: first.tripId, label: first.tripTitle },
       detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameListText(t, names)),
       // A batch waiver send keeps the verb ("Send waivers"); any other grouped
       // fix only opens the roster, the one screen that shows all of them.
@@ -526,6 +543,46 @@ export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[
     urgency,
     actions: sorted.filter((action) => action.urgency === urgency),
   })).filter((group) => group.actions.length > 0);
+}
+
+/**
+ * One urgency band's rows, re-read boat by boat: rows that hang off the same
+ * departure share one `label` header so the trip's name and time are said
+ * once, not once per row (design/principles.md #9). A row with no departure
+ * stands alone (`label: null`). Order is preserved: sub-groups appear where
+ * their first row sorted, and rows keep their order inside one — so severity
+ * still ranks the work within a boat, and boats still read chronologically.
+ */
+export type DepartureActionGroup = {
+  /** Stable per sub-group; the row id when the row stands alone. */
+  key: string;
+  /** The header line — "title · time" — or null for a standalone row. */
+  label: string | null;
+  actions: TodayAction[];
+};
+
+export function groupByDeparture(actions: readonly TodayAction[]): DepartureActionGroup[] {
+  const groups: DepartureActionGroup[] = [];
+  const byTrip = new Map<string, DepartureActionGroup>();
+  for (const action of actions) {
+    if (!action.departure) {
+      groups.push({ key: `solo:${action.id}`, label: null, actions: [action] });
+      continue;
+    }
+    // Keyed by trip *and* label: a boat can owe both a morning departure row
+    // and an evening roll-call row, and those are different moments with
+    // different headers, never one group.
+    const key = `${action.departure.tripId}:${action.departure.label}`;
+    const existing = byTrip.get(key);
+    if (existing) {
+      existing.actions.push(action);
+      continue;
+    }
+    const group = { key, label: action.departure.label, actions: [action] };
+    byTrip.set(key, group);
+    groups.push(group);
+  }
+  return groups;
 }
 
 /**

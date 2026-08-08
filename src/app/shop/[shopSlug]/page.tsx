@@ -25,7 +25,6 @@ import {
   orientationTourHref,
   orientationTourText,
 } from "@/i18n/orientation-labels";
-import { readinessStatusText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
@@ -416,27 +415,23 @@ async function TodayBody({
           bookedOfCapacity: t("shared.today.departureBoard.bookedOfCapacity"),
           boarding: t("shared.today.departureBoard.boarding"),
           openGuests: t("shared.today.departureBoard.openGuests"),
-          crewDropZoneAria: t("shared.today.departureBoard.crewDropZoneAria"),
           assignCrewMemberAria: t("shared.today.departureBoard.assignCrewMemberAria"),
-          assignedCrewHeading: t("shared.today.departureBoard.assignedCrewHeading"),
           assignCrewOption: t("shared.today.departureBoard.assignCrewOption"),
           unassignAria: t("shared.today.departureBoard.unassignAria"),
           noCrewAssigned: t("shared.today.departureBoard.noCrewAssigned"),
+          crewLine: t("shared.today.departureBoard.crewLine"),
+          editCrew: t("shared.today.departureBoard.editCrew"),
           assignCrewLabel: t("shared.today.departureBoard.assignCrewLabel"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
-          // The one readiness vocabulary, not the board's own copy of the two
-          // words (src/i18n/readiness-labels.ts).
-          countReady: readinessStatusText(t, "ready"),
-          countBlocked: readinessStatusText(t, "blocked"),
-          countBoarded: t("shared.today.departureBoard.countBoarded"),
+          boardingSummary: t("shared.today.departureBoard.boardingSummary"),
           blockedWarningOne: t("shared.today.departureBoard.blockedWarningOne"),
           blockedWarningOther: t("shared.today.departureBoard.blockedWarningOther"),
           noneBooked: t("shared.today.departureBoard.noneBooked"),
           everyoneAboard: t("shared.today.departureBoard.everyoneAboard"),
           clearToBoard: t("shared.today.departureBoard.clearToBoard"),
+          blockedWarningNamed: t("shared.today.departureBoard.blockedWarningNamed"),
           sailingToday: t("shared.today.departureBoard.sailingToday"),
           sailingTodaySubtitle: t("shared.today.departureBoard.sailingTodaySubtitle"),
-          dragStaffLabel: t("shared.today.departureBoard.dragStaffLabel"),
         }}
       />
 

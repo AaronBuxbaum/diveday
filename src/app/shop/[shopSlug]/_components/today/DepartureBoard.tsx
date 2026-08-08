@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
@@ -14,17 +14,16 @@ export type DepartureBoardCopy = {
   bookedOfCapacity: string;
   boarding: string;
   openGuests: string;
-  crewDropZoneAria: string;
   assignCrewMemberAria: string;
-  assignedCrewHeading: string;
   assignCrewOption: string;
-  unassignAria: string;
-  noCrewAssigned: string;
   assignCrewLabel: string;
   assignFailed: string;
-  countReady: string;
-  countBlocked: string;
-  countBoarded: string;
+  unassignAria: string;
+  noCrewAssigned: string;
+  crewLine: string;
+  editCrew: string;
+  boardingSummary: string;
+  blockedWarningNamed: string;
   blockedWarningOne: string;
   blockedWarningOther: string;
   noneBooked: string;
@@ -32,64 +31,33 @@ export type DepartureBoardCopy = {
   clearToBoard: string;
   sailingToday: string;
   sailingTodaySubtitle: string;
-  dragStaffLabel: string;
 };
 
 /**
- * The staff pill's drag image.
- *
- * The default one is the browser's own snapshot of the element as it sits on
- * the page, and the pill's fill is translucent (`bg-primary/5`). Lifted out of
- * the page there is nothing behind that tint, so the snapshot is composited
- * onto white — which is the white square that used to follow the name around.
- * Dragging an opaque clone fixes the backdrop without changing how the pill
- * looks at rest: `color-mix` here is the same colour `bg-primary/5` resolves to
- * over the card, just flattened.
- *
- * The clone lives off-screen because `setDragImage` only reads from an element
- * that is actually in the document, and it is torn down on `dragend` — every
- * drag ends in one, cancelled or dropped.
+ * The glance: one bar for "can this boat sail?". Boarded fills from the left,
+ * then divers who are clear to board, then anyone blocked; the unfilled track
+ * is seats still open. Decorative on purpose — the caption beside it carries
+ * every fact in words and numbers, so the bar never has to be read, only
+ * glanced at (principle 6: state is never color alone).
  */
-function makeDragImage(source: HTMLElement, transfer: DataTransfer): HTMLElement {
-  const rect = source.getBoundingClientRect();
-  const ghost = source.cloneNode(true) as HTMLElement;
-  ghost.style.position = "fixed";
-  ghost.style.top = "-1000px";
-  ghost.style.left = "-1000px";
-  ghost.style.width = `${rect.width}px`;
-  ghost.style.height = `${rect.height}px`;
-  ghost.style.background = "color-mix(in srgb, var(--primary) 5%, var(--surface))";
-  ghost.style.pointerEvents = "none";
-  document.body.append(ghost);
-  transfer.setDragImage(ghost, rect.width / 2, rect.height / 2);
-  return ghost;
-}
-
-/**
- * A count that has to be read at a glance in sunlight: big, tabular, and
- * labelled in words so the tone is never the only signal.
- */
-function Count({
-  label,
-  value,
-  tone = "default",
+function BoardingBar({
+  boarded,
+  ready,
+  blocked,
+  capacity,
 }: {
-  label: string;
-  value: number;
-  tone?: "default" | "success" | "danger" | "primary";
+  boarded: number;
+  ready: number;
+  blocked: number;
+  capacity: number;
 }) {
-  const toneClass =
-    tone === "success"
-      ? "text-success"
-      : tone === "danger"
-        ? "text-danger"
-        : tone === "primary"
-          ? "text-primary"
-          : "text-foreground";
+  const total = Math.max(capacity, boarded + ready + blocked, 1);
+  const width = (count: number) => ({ width: `${(count / total) * 100}%` });
   return (
-    <div className="rounded-xl border border-border bg-surface px-3 py-2">
-      <p className="text-xs font-bold tracking-wide text-muted uppercase">{label}</p>
-      <p className={`mt-0.5 text-2xl font-bold tabular-nums ${toneClass}`}>{value}</p>
+    <div aria-hidden="true" className="flex h-2 overflow-hidden rounded-full bg-surface-sunken">
+      {boarded > 0 ? <div style={width(boarded)} className="bg-primary" /> : null}
+      {ready > 0 ? <div style={width(ready)} className="bg-success/70" /> : null}
+      {blocked > 0 ? <div style={width(blocked)} className="bg-danger" /> : null}
     </div>
   );
 }
@@ -116,24 +84,19 @@ function DepartureCard({
   ) => Promise<{ ok: boolean }>;
   copy: DepartureBoardCopy;
 }) {
-  const { blocked, ready, boarded, booked, capacity } = departure;
+  const { blocked, blockedNames, ready, boarded, booked, capacity } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
   const [assignError, setAssignError] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  // dragenter/dragleave fire on every child of the drop zone as the pointer
-  // crosses them, not just the zone boundary — a depth counter is the only
-  // way to know when the pointer has actually left the whole zone.
-  const dragDepthRef = useRef(0);
 
   useEffect(() => {
     setLocalCrew(departure.crew || []);
   }, [departure.crew]);
 
   // Confirm-then-render, not optimistic-then-rollback — same reasoning as
-  // CrewSection.tsx's handleAssign/handleUnassign (this drop zone drives the
+  // CrewSection.tsx's handleAssign/handleUnassign (this editor drives the
   // identical `updateCrewAction`/`course_unstaffed` server gate a staffer
-  // can immediately hit by tapping "Open Guests" on this same card). An
+  // can immediately hit by tapping "Open guests" on this same card). An
   // optimistic update here would show a departure as crewed before the
   // write actually committed.
   const handleAssign = async (staffId: string) => {
@@ -177,8 +140,10 @@ function DepartureCard({
     }
   };
 
+  const crewNames = localCrew.map((c) => c.fullName).join(", ");
+
   return (
-    <li className="rounded-2xl border border-border bg-surface-sunken p-4 shadow-sm sm:p-5">
+    <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
@@ -186,8 +151,9 @@ function DepartureCard({
             {crewed ? <Badge tone="primary">{copy.crewingBadge}</Badge> : null}
           </p>
           <h3 className="mt-0.5 font-semibold">{departure.title}</h3>
+          {/* A fact, not a link — the action color would promise a tap. */}
           {departure.courseTitle ? (
-            <p className="text-sm font-medium text-primary">
+            <p className="text-sm font-medium text-muted">
               {fill(copy.courseSession, { title: departure.courseTitle })}
             </p>
           ) : null}
@@ -216,40 +182,102 @@ function DepartureCard({
         </div>
       </div>
 
-      <section
-        aria-label={copy.crewDropZoneAria}
-        onDragOver={(e) => e.preventDefault()}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          dragDepthRef.current += 1;
-          setIsDragOver(true);
-        }}
-        onDragLeave={() => {
-          dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-          if (dragDepthRef.current === 0) {
-            setIsDragOver(false);
-          }
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          dragDepthRef.current = 0;
-          setIsDragOver(false);
-          const staffId = e.dataTransfer.getData("text/plain");
-          handleAssign(staffId);
-        }}
-        className={`mt-4 rounded-xl border border-dashed p-3 transition-colors hover:border-primary/40 ${
-          isDragOver ? "border-primary bg-primary/5" : "border-border bg-surface"
-        }`}
-      >
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold tracking-wide text-muted uppercase">
-            {copy.assignedCrewHeading}
+      {/* One bar, one caption, one quiet count line — the whole readiness
+          read for this boat. The bar stays decorative because the counts are
+          plain text right under it (principle 6: exact numbers, and state is
+          never carried by hue alone). */}
+      <div className="mt-4">
+        <BoardingBar boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
+        {booked > 0 ? (
+          <p className="mt-2 text-sm text-muted tabular-nums">
+            {fill(copy.boardingSummary, {
+              boarded,
+              ready,
+              blocked,
+              open: Math.max(0, capacity - booked),
+            })}
           </p>
-          {availableStaff.length > 0 ? (
-            // The dropdown is the primary control — it works on a phone, which
-            // drag-and-drop above never will. Its label is visible, not
-            // sr-only, so it reads as the default way to crew a boat rather
-            // than a buried fallback for the drag interaction.
+        ) : null}
+        {blocked > 0 ? (
+          // The most operational sentence on the page — read in glare at the
+          // dock deciding whether the boat leaves — so it holds 16px. One
+          // blocked diver is named outright: the answer, not a door to it.
+          <p className="mt-1.5 text-base font-semibold text-danger">
+            {blocked === 1 && blockedNames[0]
+              ? fill(copy.blockedWarningNamed, { name: blockedNames[0] })
+              : fill(
+                  pluralForm(
+                    blocked,
+                    { one: copy.blockedWarningOne, other: copy.blockedWarningOther },
+                    locale,
+                  ),
+                  { count: blocked },
+                )}
+          </p>
+        ) : booked === 0 ? (
+          <p className="mt-2 text-base text-muted">{copy.noneBooked}</p>
+        ) : boarded === booked ? (
+          // The manifest already celebrates this milestone ("Roll call complete
+          // ✦"); Today watches the same board without ever visiting the
+          // manifest, so it earns the same coral rise-in moment here (principle
+          // 3) instead of readiness copy that's gone stale the moment the boat
+          // is actually full.
+          <p className="rise-in mt-1.5 inline-block rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-base font-semibold">
+            <span aria-hidden="true">🎉 </span>
+            {copy.everyoneAboard}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-base font-medium text-success">{copy.clearToBoard}</p>
+        )}
+      </div>
+
+      {/* Crew is one quiet line — names when assigned, a plain gap note when
+          not. Editing is the rare act (once a day, not once a glance), so the
+          controls live behind the line's own disclosure rather than sitting
+          open on every card (principle 8: collapse the rare path). Native
+          <details>: keyboard, screen-reader, and no-JS behavior for free. */}
+      <details className="group/crew mt-3">
+        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+          <span
+            aria-hidden="true"
+            className="inline-block text-xs text-muted transition-transform duration-200 group-open/crew:rotate-90"
+          >
+            ▸
+          </span>
+          {/* The affordance sits beside its object, not across the card. */}
+          <span className="min-w-0 truncate text-muted">
+            {localCrew.length > 0 ? fill(copy.crewLine, { names: crewNames }) : copy.noCrewAssigned}
+          </span>
+          <span className="shrink-0 font-medium text-primary">{copy.editCrew}</span>
+        </summary>
+        <div className="mt-2 flex flex-col gap-2 pb-1 pl-5">
+          {localCrew.length > 0 ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {localCrew.map((c) => (
+                <li
+                  key={c.id}
+                  onAnimationEnd={() => {
+                    if (c.id === justAddedId) setJustAddedId(null);
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium ${
+                    c.id === justAddedId ? "animate-scale-in" : ""
+                  }`}
+                >
+                  {c.fullName}
+                  <button
+                    type="button"
+                    onClick={() => handleUnassign(c.id)}
+                    className="ml-1 flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold text-muted hover:bg-danger/10 hover:text-danger"
+                    aria-label={fill(copy.unassignAria, { name: c.fullName })}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {availableStaff.filter((staff) => !localCrew.some((crew) => crew.id === staff.id))
+            .length > 0 ? (
             <label className="flex flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
               {copy.assignCrewLabel}
               <select
@@ -273,84 +301,13 @@ function DepartureCard({
               </select>
             </label>
           ) : null}
+          {assignError ? (
+            <p role="alert" className="text-xs font-semibold text-danger">
+              {copy.assignFailed}
+            </p>
+          ) : null}
         </div>
-        {localCrew.length === 0 ? (
-          <p className="mt-2 text-xs text-muted">{copy.noCrewAssigned}</p>
-        ) : (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {localCrew.map((c) => (
-              <span
-                key={c.id}
-                onAnimationEnd={() => {
-                  if (c.id === justAddedId) setJustAddedId(null);
-                }}
-                className={`inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium ${
-                  c.id === justAddedId ? "animate-scale-in" : ""
-                }`}
-              >
-                {c.fullName}
-                <button
-                  type="button"
-                  onClick={() => handleUnassign(c.id)}
-                  className="ml-1 flex min-h-11 min-w-11 items-center justify-center text-muted hover:text-danger font-bold text-xs"
-                  aria-label={fill(copy.unassignAria, { name: c.fullName })}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        {assignError ? (
-          <p role="alert" className="mt-2 text-xs font-semibold text-danger">
-            {copy.assignFailed}
-          </p>
-        ) : null}
-      </section>
-
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <Count label={copy.countReady} value={ready} tone={ready > 0 ? "success" : "default"} />
-        <Count
-          label={copy.countBlocked}
-          value={blocked}
-          tone={blocked > 0 ? "danger" : "default"}
-        />
-        <Count
-          label={copy.countBoarded}
-          value={boarded}
-          tone={boarded > 0 ? "primary" : "default"}
-        />
-      </div>
-      {blocked > 0 ? (
-        <p className="mt-3 text-sm font-semibold text-danger">
-          <span aria-hidden="true">⚠️ </span>
-          {fill(
-            pluralForm(
-              blocked,
-              { one: copy.blockedWarningOne, other: copy.blockedWarningOther },
-              locale,
-            ),
-            { count: blocked },
-          )}
-        </p>
-      ) : booked === 0 ? (
-        <p className="mt-3 text-sm text-muted">{copy.noneBooked}</p>
-      ) : boarded === booked ? (
-        // The manifest already celebrates this milestone ("Roll call complete
-        // ✦"); Today watches the same board without ever visiting the
-        // manifest, so it earns the same coral rise-in moment here (principle
-        // 3) instead of readiness copy that's gone stale the moment the boat
-        // is actually full.
-        <p className="rise-in mt-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold">
-          <span aria-hidden="true">🎉 </span>
-          {copy.everyoneAboard}
-        </p>
-      ) : (
-        <p className="mt-3 text-sm font-semibold text-success">
-          <span aria-hidden="true">✅ </span>
-          {copy.clearToBoard}
-        </p>
-      )}
+      </details>
     </li>
   );
 }
@@ -382,11 +339,6 @@ export function DepartureBoard({
   ) => Promise<{ ok: boolean }>;
   copy: DepartureBoardCopy;
 }) {
-  const dragImage = useRef<HTMLElement | null>(null);
-  const clearDragImage = () => {
-    dragImage.current?.remove();
-    dragImage.current = null;
-  };
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);
   return (
@@ -395,37 +347,6 @@ export function DepartureBoard({
         {copy.sailingToday}
       </h2>
       <p className="mt-1 text-sm text-muted">{copy.sailingTodaySubtitle}</p>
-
-      {/* Desktop only, and deliberately so: dragging a pill is a mouse
-          gesture the HTML drag-and-drop API never fires from a touch, so on a
-          phone this strip was an instruction to do something impossible.
-          `hidden sm:flex` drops the whole affordance — the crew dropdown on
-          each card is the control that works on every device. */}
-      {availableStaff && availableStaff.length > 0 ? (
-        <div className="mt-4 hidden flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex">
-          <span className="text-xs font-bold text-muted uppercase tracking-wider">
-            {copy.dragStaffLabel}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {availableStaff.map((staff) => (
-              <button
-                key={staff.id}
-                type="button"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", staff.id);
-                  clearDragImage();
-                  dragImage.current = makeDragImage(e.currentTarget, e.dataTransfer);
-                }}
-                onDragEnd={clearDragImage}
-                className="min-h-11 cursor-grab rounded-full border border-primary/20 bg-primary/5 px-3 text-xs font-medium text-primary transition-all active:cursor-grabbing hover:bg-primary/10"
-              >
-                {staff.fullName} 👤
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       <ul className="mt-4 flex flex-col gap-3">
         {departures.map((departure) => (

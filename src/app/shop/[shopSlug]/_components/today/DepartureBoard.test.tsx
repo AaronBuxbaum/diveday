@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DepartureSummary } from "@/db/today";
 import { DepartureBoard, type DepartureBoardCopy } from "./DepartureBoard";
 
 afterEach(() => {
@@ -12,143 +13,160 @@ const COPY: DepartureBoardCopy = {
   crewingBadge: "You’re crewing",
   courseSession: "Course session · {title}",
   bookedOfCapacity: "{booked} of {capacity} booked",
-  boarding: "Boarding",
+  boarding: "Board divers",
   openGuests: "Open guests",
-  crewDropZoneAria: "Crew assignments drop zone",
   assignCrewMemberAria: "Assign crew member to {title}",
-  assignedCrewHeading: "Assigned crew",
   assignCrewOption: "Assign crew…",
-  unassignAria: "Unassign {name}",
-  noCrewAssigned: "No crew assigned yet.",
   assignCrewLabel: "Assign crew",
   assignFailed: "That didn’t save — recheck your connection or try again.",
-  countReady: "Ready",
-  countBlocked: "Blocked",
-  countBoarded: "Boarded",
+  unassignAria: "Unassign {name}",
+  noCrewAssigned: "No crew assigned yet.",
+  crewLine: "Crew · {names}",
+  editCrew: "Edit",
+  boardingSummary:
+    "{boarded} aboard · {ready} clear to board · {blocked} blocked · {open} seats open",
+  blockedWarningNamed: "{name} cannot board yet — the fix is in the list below.",
   blockedWarningOne: "{count} diver cannot board yet — they are in the list below.",
   blockedWarningOther: "{count} divers cannot board yet — they are in the list below.",
   noneBooked: "No one’s booked yet — share the trip page and they’ll show up here.",
   everyoneAboard: "Everyone’s aboard.",
-  clearToBoard: "Everyone aboard this trip is clear to board.",
+  clearToBoard: "Everyone booked on this trip is clear to board.",
   sailingToday: "Sailing today",
   sailingTodaySubtitle:
     "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
-  dragStaffLabel: "Drag staff to assign:",
 };
 
-describe("DepartureBoard Drag and Drop Crew Assign", () => {
-  const departures = [
-    {
-      tripId: "trip-1",
-      title: "Morning Reef Dive",
-      startsAt: new Date("2026-07-28T09:00:00Z"),
-      endsAt: new Date("2026-07-28T12:00:00Z"),
-      booked: 4,
-      capacity: 10,
-      ready: 3,
-      blocked: 1,
-      boarded: 2,
-      courseTitle: null,
-      crew: [{ id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] }],
-    },
-  ];
+const availableStaff = [
+  { id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] },
+  { id: "staff-2", fullName: "Sal Moretti", roles: ["captain"] },
+];
 
-  const availableStaff = [
-    { id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] },
-    { id: "staff-2", fullName: "Sal Moretti", roles: ["captain"] },
-  ];
+function departure(overrides: Partial<DepartureSummary> = {}): DepartureSummary {
+  return {
+    tripId: "trip-1",
+    title: "Morning Reef Dive",
+    startsAt: new Date("2026-07-28T09:00:00Z"),
+    endsAt: new Date("2026-07-28T12:00:00Z"),
+    booked: 4,
+    capacity: 10,
+    ready: 3,
+    blocked: 1,
+    blockedNames: [],
+    boarded: 0,
+    courseTitle: null,
+    crew: [{ id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] }],
+    ...overrides,
+  };
+}
 
-  it("renders assigned crew and available staff", () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
+function renderBoard(
+  departures: DepartureSummary[],
+  updateCrewAction: (
+    tripId: string,
+    change: { personId: string; operation: "assign" | "unassign" },
+  ) => Promise<{ ok: boolean }> = vi.fn().mockResolvedValue({ ok: true }),
+) {
+  return render(
+    <DepartureBoard
+      departures={departures}
+      shopSlug="blue-mantis"
+      timeZone="America/New_York"
+      locale="en-US"
+      availableStaff={availableStaff}
+      updateCrewAction={updateCrewAction}
+      copy={COPY}
+    />,
+  );
+}
 
-    expect(screen.getByRole("button", { name: /unassign keiko tanaka/i })).toBeInTheDocument();
-    expect(screen.getByText("Sal Moretti 👤")).toBeInTheDocument();
-    // The dropdown is the primary way to crew a boat — its label must be
-    // visible on the page, not only reachable via aria-label, since
-    // drag-and-drop above it doesn't work on a phone.
-    expect(screen.getByText(COPY.assignCrewLabel)).toBeVisible();
+describe("DepartureBoard readiness caption (one bar, one caption, one count line)", () => {
+  it("names a lone blocked diver outright — the answer, not a door to the list", () => {
+    renderBoard([departure({ blocked: 1, blockedNames: ["Priya Sharma"], ready: 3, boarded: 0 })]);
+    expect(
+      screen.getByText("Priya Sharma cannot board yet — the fix is in the list below."),
+    ).toBeInTheDocument();
+    // The old three-tile stat grid is gone: readiness is one caption now, so
+    // its words must not also render as detached labelled counters.
+    expect(screen.queryByText("Ready")).toBeNull();
+    expect(screen.queryByText("Boarded")).toBeNull();
   });
 
-  /**
-   * The default drag image is the browser's own snapshot of the element, and
-   * the staff pill's fill is translucent — lifted off the page there is
-   * nothing behind that tint, so the snapshot gets composited onto white and
-   * the name drags around inside a white square. The fix is an opaque clone
-   * handed to `setDragImage`, torn down when the drag ends.
-   */
-  it("drags an opaque clone of the staff pill, not the see-through original", async () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
-
-    const pill = screen.getByText("Sal Moretti 👤");
-    const setDragImage = vi.fn();
-    const setData = vi.fn();
-    fireEvent.dragStart(pill, { dataTransfer: { setData, setDragImage } });
-
-    expect(setData).toHaveBeenCalledWith("text/plain", "staff-2");
-    expect(setDragImage).toHaveBeenCalledTimes(1);
-    const ghost = setDragImage.mock.calls[0]?.[0] as HTMLElement;
-    // In the document (setDragImage reads nothing else), off-screen, and with
-    // the tint flattened so the drag has a backdrop of its own.
-    expect(ghost.isConnected).toBe(true);
-    expect(ghost.textContent).toContain("Sal Moretti");
-    expect(ghost.style.background).not.toBe("");
-    expect(ghost.style.left).toBe("-1000px");
-
-    // Every drag ends in a `dragend`, cancelled or dropped — so nothing is left
-    // behind the page after one.
-    fireEvent.dragEnd(pill);
-    expect(ghost.isConnected).toBe(false);
+  it("falls back to the count when several divers are blocked", () => {
+    renderBoard([
+      departure({ blocked: 2, blockedNames: ["Priya Sharma", "Lena Fischer"], ready: 2 }),
+    ]);
+    expect(
+      screen.getByText("2 divers cannot board yet — they are in the list below."),
+    ).toBeInTheDocument();
   });
 
-  it("adds crew on drop once the server confirms, and calls updateCrewAction", async () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
+  it("keeps the exact counts visible in words — the bar stays decorative", () => {
+    renderBoard([departure({ blocked: 1, ready: 3, boarded: 0, booked: 4, capacity: 10 })]);
+    expect(
+      screen.getByText("0 aboard · 3 clear to board · 1 blocked · 6 seats open"),
+    ).toBeInTheDocument();
+  });
+
+  it("says all clear when nobody is blocked", () => {
+    renderBoard([departure({ blocked: 0, ready: 4, boarded: 0 })]);
+    expect(screen.getByText(COPY.clearToBoard)).toBeInTheDocument();
+  });
+
+  it("celebrates the full boat", () => {
+    renderBoard([departure({ blocked: 0, ready: 0, boarded: 4 })]);
+    expect(screen.getByText(COPY.everyoneAboard)).toBeInTheDocument();
+  });
+
+  it("teaches the empty boat instead of rendering zeros", () => {
+    renderBoard([departure({ booked: 0, blocked: 0, ready: 0, boarded: 0 })]);
+    expect(screen.getByText(COPY.noneBooked)).toBeInTheDocument();
+    // An empty boat has no counts worth a line — zeros are not information.
+    expect(screen.queryByText(/aboard ·/)).toBeNull();
+  });
+});
+
+describe("DepartureBoard crew line and disclosure", () => {
+  it("states the crew in one quiet line and keeps the editor behind it", () => {
+    const { container } = renderBoard([departure()]);
+    expect(screen.getByText("Crew · Keiko Tanaka")).toBeInTheDocument();
+    // The editor is a native disclosure, closed at rest — the card's everyday
+    // read is the line, not a form.
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details?.open).toBe(false);
+    expect(screen.getByText("Edit")).toBeInTheDocument();
+  });
+
+  it("names the gap when nobody is assigned", () => {
+    renderBoard([departure({ crew: [] })]);
+    expect(screen.getByText(COPY.noCrewAssigned)).toBeInTheDocument();
+  });
+
+  it("assigns through the select and shows the name only after the server confirms", async () => {
+    let resolveAction: (result: { ok: boolean }) => void = () => {};
+    const updateCrewAction = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveAction = resolve;
+        }),
     );
+    renderBoard([departure()], updateCrewAction);
 
-    const dropZone = screen.getByText("Assigned crew").closest("section");
-    expect(dropZone).not.toBeNull();
-
-    const dropEvent = {
-      preventDefault: vi.fn(),
-      dataTransfer: {
-        getData: vi.fn().mockReturnValue("staff-2"),
-      },
-    };
-
-    if (!dropZone) throw new Error("Drop zone not found");
+    const assign = screen.getByRole("combobox", {
+      name: /assign crew member to morning reef dive/i,
+    });
     await act(async () => {
-      fireEvent.drop(dropZone, dropEvent);
+      fireEvent.change(assign, { target: { value: "staff-2" } });
+    });
+
+    // A staffer reading the board right after the change (or tapping "Open
+    // guests" on this same card) must never see the crew as assigned before
+    // the write that makes it true has actually landed — same reasoning as
+    // CrewSection.tsx's confirm-then-render.
+    expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
+
+    await act(async () => {
+      resolveAction({ ok: true });
     });
 
     expect(screen.getByRole("button", { name: /unassign sal moretti/i })).toBeInTheDocument();
@@ -158,82 +176,9 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
   });
 
-  it("highlights the drop zone on dragenter and clears it on dragleave/drop", async () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
-
-    const dropZone = screen.getByText("Assigned crew").closest("section");
-    if (!dropZone) throw new Error("Drop zone not found");
-
-    // Checked as a class-list token, not a substring, since the zone's
-    // always-on hover affordance is "hover:border-primary/40".
-    expect(dropZone.classList.contains("border-primary")).toBe(false);
-
-    await act(async () => {
-      fireEvent.dragEnter(dropZone);
-    });
-    expect(dropZone.classList.contains("border-primary")).toBe(true);
-    expect(dropZone.classList.contains("bg-primary/5")).toBe(true);
-
-    // A child firing its own dragenter/dragleave as the pointer crosses it
-    // must not drop the highlight — only the depth counter hitting 0 does.
-    // Real drag events enter the new (child) target before leaving the old
-    // (parent) one, so simulate that order: enter child, then leave parent.
-    const heading = screen.getByText(COPY.assignedCrewHeading);
-    await act(async () => {
-      fireEvent.dragEnter(heading);
-    });
-    await act(async () => {
-      fireEvent.dragLeave(dropZone);
-    });
-    expect(dropZone.classList.contains("border-primary")).toBe(true);
-
-    // Now the pointer actually leaves the zone via the child.
-    await act(async () => {
-      fireEvent.dragLeave(heading);
-    });
-    expect(dropZone.classList.contains("border-primary")).toBe(false);
-
-    await act(async () => {
-      fireEvent.dragEnter(dropZone);
-    });
-    expect(dropZone.classList.contains("border-primary")).toBe(true);
-
-    const dropEvent = {
-      preventDefault: vi.fn(),
-      dataTransfer: {
-        getData: vi.fn().mockReturnValue("staff-2"),
-      },
-    };
-    await act(async () => {
-      fireEvent.drop(dropZone, dropEvent);
-    });
-    expect(dropZone.classList.contains("border-primary")).toBe(false);
-  });
-
-  it("offers a keyboard-accessible assignment control", async () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
+  it("says so when the assignment fails, instead of silently reverting", async () => {
+    const updateCrewAction = vi.fn().mockResolvedValue({ ok: false });
+    renderBoard([departure()], updateCrewAction);
 
     const assign = screen.getByRole("combobox", {
       name: /assign crew member to morning reef dive/i,
@@ -242,71 +187,19 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       fireEvent.change(assign, { target: { value: "staff-2" } });
     });
 
-    expect(screen.getByText("Sal Moretti")).toBeInTheDocument();
-    expect(updateCrewAction).toHaveBeenCalledWith("trip-1", {
-      personId: "staff-2",
-      operation: "assign",
-    });
-  });
-
-  it("rolls back crew assignment when updateCrewAction fails", async () => {
-    const updateCrewAction = vi.fn().mockResolvedValue({ ok: false });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
-
-    const dropZone = screen.getByText("Assigned crew").closest("section");
-
-    const dropEvent = {
-      preventDefault: vi.fn(),
-      dataTransfer: {
-        getData: vi.fn().mockReturnValue("staff-2"),
-      },
-    };
-
-    if (!dropZone) throw new Error("Drop zone not found");
-    await act(async () => {
-      fireEvent.drop(dropZone, dropEvent);
-    });
-
     expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
-    // A silent revert reads as "nothing happened" — the rollback must say so.
     expect(screen.getByRole("alert")).toHaveTextContent(COPY.assignFailed);
   });
 
-  it("rolls back crew assignment when updateCrewAction throws", async () => {
+  it("keeps the failure message when the action throws", async () => {
     const updateCrewAction = vi.fn().mockRejectedValue(new Error("network unavailable"));
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
+    renderBoard([departure()], updateCrewAction);
 
-    const dropZone = screen.getByText("Assigned crew").closest("section");
-    const dropEvent = {
-      preventDefault: vi.fn(),
-      dataTransfer: {
-        getData: vi.fn().mockReturnValue("staff-2"),
-      },
-    };
-
-    if (!dropZone) throw new Error("Drop zone not found");
+    const assign = screen.getByRole("combobox", {
+      name: /assign crew member to morning reef dive/i,
+    });
     await act(async () => {
-      fireEvent.drop(dropZone, dropEvent);
+      fireEvent.change(assign, { target: { value: "staff-2" } });
     });
 
     expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
@@ -315,20 +208,9 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
 
   it("removes crew on unassign once the server confirms, and calls updateCrewAction", async () => {
     const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
+    renderBoard([departure()], updateCrewAction);
 
     const unassignButton = screen.getByRole("button", { name: /unassign keiko tanaka/i });
-
     await act(async () => {
       fireEvent.click(unassignButton);
     });
@@ -338,50 +220,5 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       personId: "staff-1",
       operation: "unassign",
     });
-  });
-
-  it("doesn't show a newly assigned crew member until the server confirms the write", async () => {
-    let resolveAction: (result: { ok: boolean }) => void = () => {};
-    const updateCrewAction = vi.fn(
-      () =>
-        new Promise<{ ok: boolean }>((resolve) => {
-          resolveAction = resolve;
-        }),
-    );
-    render(
-      <DepartureBoard
-        departures={departures}
-        shopSlug="blue-mantis"
-        timeZone="America/New_York"
-        locale="en-US"
-        availableStaff={availableStaff}
-        updateCrewAction={updateCrewAction}
-        copy={COPY}
-      />,
-    );
-
-    const dropZone = screen.getByText("Assigned crew").closest("section");
-    if (!dropZone) throw new Error("Drop zone not found");
-    const dropEvent = {
-      preventDefault: vi.fn(),
-      dataTransfer: { getData: vi.fn().mockReturnValue("staff-2") },
-    };
-
-    await act(async () => {
-      fireEvent.drop(dropZone, dropEvent);
-    });
-
-    // A staffer reading the board right after the drop (or tapping "Open
-    // guests" on this same card) must never see the crew as assigned before
-    // the write that makes it true has actually landed — same reasoning as
-    // CrewSection.tsx's confirm-then-render fix, for the identical
-    // updateCrewAction/course_unstaffed gate.
-    expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
-
-    await act(async () => {
-      resolveAction({ ok: true });
-    });
-
-    expect(screen.getByRole("button", { name: /unassign sal moretti/i })).toBeInTheDocument();
   });
 });

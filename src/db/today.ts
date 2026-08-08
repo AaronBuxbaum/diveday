@@ -114,6 +114,13 @@ export type DepartureSummary = {
   capacity: number;
   ready: number;
   blocked: number;
+  /**
+   * Who `blocked` counts, in roster order. The card's caption names a lone
+   * blocked diver outright — the answer, not a door to the list that holds it
+   * (design/principles.md #10) — and falls back to the count once naming
+   * everyone would be a paragraph.
+   */
+  blockedNames: string[];
   boarded: number;
   courseTitle: string | null;
   crew: { id: string; fullName: string; roles: string[] }[];
@@ -1044,6 +1051,13 @@ export async function getTodayWork(
       // bare time would read as "this morning" for a boat that returned last
       // night, which is the case this row exists for.
       context: formatDateTimeTz(gap.endsAt, locale, timeZone),
+      // Its own header even when the same boat has morning work queued: the
+      // return moment is a different moment than the departure.
+      departure: {
+        tripId: gap.tripId,
+        label: `${gap.title} · ${formatDateTimeTz(gap.endsAt, locale, timeZone)}`,
+      },
+      aboutDeparture: true,
       detail: rollCallGapDetailText(t, gap),
       actionLabel: openRollCallActionText(t),
       // Straight to the checkpoint that is open, not the manifest's default
@@ -1056,6 +1070,9 @@ export async function getTodayWork(
   for (const trip of inWindow) {
     const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;
     const when = at(trip.startsAt, timeZone, locale);
+    // Every row this trip contributes shares one departure header in the
+    // queue; the rows themselves then never repeat the boat's name.
+    const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
 
     const blockedDivers = (readinessByTrip.get(trip.id) ?? [])
       .filter((row) => row.readiness.status === "blocked")
@@ -1078,6 +1095,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail: missingFitDetailText(t, withoutFit),
         actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep`,
@@ -1093,6 +1112,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail: ungatedNitroxDetailText(t, ungatedCount),
         actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep`,
@@ -1119,6 +1140,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail:
           crewGap.code === "over_ratio"
             ? // An intro session's cap is PADI's Discover Scuba open-water
@@ -1151,6 +1174,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail: missingContactDetailText(t, withoutContact),
         actionLabel: openGuestsActionText(t),
         href: `${tripHref}/guests`,
@@ -1176,6 +1201,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail: lastMinuteFillDetailText(t, openSeats),
         actionLabel: openTripActionText(t),
         href: `${tripHref}/guests#last-minute-deal`,
@@ -1192,6 +1219,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
+        departure,
+        aboutDeparture: true,
         detail: waitlistSeatDetailText(t, openSeats, waiting),
         // One tap invites the next in line straight from the queue; the href is
         // the no-JS fallback to the trip's wait-list section.
@@ -1221,6 +1250,10 @@ export async function getTodayWork(
       urgency: urgencyFor(issue.trip.startsAt, now),
       subject: issue.person.fullName,
       context: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
+      departure: {
+        tripId: issue.trip.id,
+        label: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
+      },
       detail: emailDeliveryDetailText(t, isWaiver, issue.delivery.status, issue.attempts),
       // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
       // (a fresh link, since the token is never stored); a confirmation retries
@@ -1329,6 +1362,9 @@ export async function getTodayWork(
       capacity: trip.capacity,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
       blocked: rows.filter((row) => row.readiness.status === "blocked").length,
+      blockedNames: rows
+        .filter((row) => row.readiness.status === "blocked")
+        .map((row) => row.person.fullName),
       boarded: boarded.get(trip.id) ?? 0,
       courseTitle: trip.course?.title ?? null,
       crew: crewByTrip.get(trip.id) ?? [],

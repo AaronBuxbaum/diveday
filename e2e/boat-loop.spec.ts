@@ -6,7 +6,7 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // Today's departure card drops staff straight onto the manifest's boarding pass.
-  await page.getByRole("link", { name: "Boarding" }).first().click();
+  await page.getByRole("link", { name: "Board divers" }).first().click();
   await expect(page).toHaveURL(/\/manifest/);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
@@ -43,7 +43,7 @@ test("staff can view or copy a trip's public booking page from its overview", as
 }) => {
   await context.grantPermissions(["clipboard-write", "clipboard-read"]);
   await page.goto("/shop/blue-mantis");
-  await page.getByRole("link", { name: "Boarding" }).first().click();
+  await page.getByRole("link", { name: "Board divers" }).first().click();
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Overview" })

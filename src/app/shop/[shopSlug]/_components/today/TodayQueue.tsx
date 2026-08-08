@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
+import { getSeasonalBriefing, groupActions, groupByDeparture, type TodayAction } from "@/lib/today";
 import { KindChip } from "./KindChip";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
@@ -23,6 +23,7 @@ export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"se
 
 function ActionRow({
   action,
+  grouped = false,
   shopSlug,
   shopName,
   inviteAction,
@@ -33,6 +34,8 @@ function ActionRow({
   t,
 }: {
   action: TodayAction;
+  /** Inside a departure group the header already says the boat — the row must not repeat it. */
+  grouped?: boolean;
   shopSlug: string;
   shopName: string;
   inviteAction: TodayInviteAction;
@@ -42,17 +45,36 @@ function ActionRow({
   paymentCopy: PaymentActionCopy;
   t: StaffTranslator;
 }) {
+  // What the row itself has to say: the person it is about (unless the row is
+  // about the boat, which the group header already names) and what is wrong.
+  const lead = grouped ? (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <KindChip kind={action.kind} t={t} />
+        {action.aboutDeparture ? null : <p className="font-semibold">{action.subject}</p>}
+      </div>
+      <p className="mt-1 text-muted">{action.detail}</p>
+    </div>
+  ) : (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <KindChip kind={action.kind} t={t} />
+        <p className="font-semibold">{action.subject}</p>
+        {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
+      </div>
+      <p className="mt-1.5 text-muted">{action.detail}</p>
+    </div>
+  );
   return (
-    <li className="card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5">
+    <li
+      className={
+        grouped
+          ? "px-4 py-3.5 transition-colors duration-200 sm:px-5"
+          : "card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5"
+      }
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <KindChip kind={action.kind} t={t} />
-            <p className="font-semibold">{action.subject}</p>
-            {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
-          </div>
-          <p className="mt-1.5 text-muted">{action.detail}</p>
-        </div>
+        {lead}
         {action.waiver ? (
           <WaiverSendControl
             shopSlug={shopSlug}
@@ -228,23 +250,60 @@ export function TodayQueue({
               </span>
             </div>
           );
+          // The band's rows, boat by boat: rows that hang off the same
+          // departure share one header card so the trip's name and time are
+          // said once, and each row keeps only what differs — the person, the
+          // problem, the fix (design/principles.md #9). Rows with no boat
+          // stand alone as their own cards.
           const rows = (
-            <ul className="mt-3 flex flex-col gap-3">
-              {group.actions.map((action) => (
-                <ActionRow
-                  key={action.id}
-                  action={action}
-                  shopSlug={shopSlug}
-                  shopName={shopName}
-                  inviteAction={inviteAction}
-                  waiverCopy={waiverCopy}
-                  resendCopy={resendCopy}
-                  inviteCopy={inviteCopy}
-                  paymentCopy={paymentCopy}
-                  t={t}
-                />
-              ))}
-            </ul>
+            <div className="mt-3 flex flex-col gap-3">
+              {groupByDeparture(group.actions).map((departureGroup) =>
+                departureGroup.label === null ? (
+                  <ul key={departureGroup.key} className="flex flex-col gap-3">
+                    {departureGroup.actions.map((action) => (
+                      <ActionRow
+                        key={action.id}
+                        action={action}
+                        shopSlug={shopSlug}
+                        shopName={shopName}
+                        inviteAction={inviteAction}
+                        waiverCopy={waiverCopy}
+                        resendCopy={resendCopy}
+                        inviteCopy={inviteCopy}
+                        paymentCopy={paymentCopy}
+                        t={t}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <section
+                    key={departureGroup.key}
+                    className="card-scale-hint overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-colors duration-200 hover:border-primary/40"
+                  >
+                    <h4 className="border-b border-border bg-surface-sunken px-4 py-2 text-sm font-semibold sm:px-5">
+                      {departureGroup.label}
+                    </h4>
+                    <ul className="divide-y divide-border">
+                      {departureGroup.actions.map((action) => (
+                        <ActionRow
+                          key={action.id}
+                          action={action}
+                          grouped
+                          shopSlug={shopSlug}
+                          shopName={shopName}
+                          inviteAction={inviteAction}
+                          waiverCopy={waiverCopy}
+                          resendCopy={resendCopy}
+                          inviteCopy={inviteCopy}
+                          paymentCopy={paymentCopy}
+                          t={t}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ),
+              )}
+            </div>
           );
           // Visual weight follows urgency; horizon folds. Work a boat could
           // still be waiting on ("imminent"/"now") always renders in full,

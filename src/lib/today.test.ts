@@ -6,6 +6,7 @@ import {
   getSeasonalBriefing,
   getTimeOfDayGreeting,
   groupActions,
+  groupByDeparture,
   lastBoatIsIn,
   leadWithCrewed,
   primaryBlocker,
@@ -364,6 +365,52 @@ describe("groupActions", () => {
 
   it("returns nothing at all for an empty queue", () => {
     expect(groupActions([])).toEqual([]);
+  });
+});
+
+describe("groupByDeparture", () => {
+  const boat = (tripId: string, label: string) => ({ tripId, label });
+
+  it("collects rows that hang off the same boat under one label, said once", () => {
+    const groups = groupByDeparture([
+      action({ id: "a1", departure: boat("t1", "Two-Tank Reef · 9:30 AM") }),
+      action({ id: "a2", departure: boat("t1", "Two-Tank Reef · 9:30 AM") }),
+      action({ id: "a3", departure: boat("t2", "Night Dive · 7:30 PM") }),
+    ]);
+    expect(groups.map((group) => group.label)).toEqual([
+      "Two-Tank Reef · 9:30 AM",
+      "Night Dive · 7:30 PM",
+    ]);
+    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["a1", "a2"]);
+  });
+
+  it("keeps a boat's rows together even when another boat's row sorted between them", () => {
+    // Two boats at the same time interleave by severity in sortActions; the
+    // group still forms where the boat first appeared.
+    const groups = groupByDeparture([
+      action({ id: "a1", departure: boat("t1", "Reef · 9:30 AM") }),
+      action({ id: "b1", departure: boat("t2", "Wreck · 9:30 AM") }),
+      action({ id: "a2", departure: boat("t1", "Reef · 9:30 AM") }),
+    ]);
+    expect(groups.map((group) => group.key)).toHaveLength(2);
+    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["a1", "a2"]);
+  });
+
+  it("leaves a row with no boat standing alone, label-less", () => {
+    const groups = groupByDeparture([
+      action({ id: "chore" }),
+      action({ id: "a1", departure: boat("t1", "Reef · 9:30 AM") }),
+    ]);
+    expect(groups[0]?.label).toBeNull();
+    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["chore"]);
+  });
+
+  it("splits the same trip's different moments — a departure and a returned-boat count — into their own groups", () => {
+    const groups = groupByDeparture([
+      action({ id: "morning", departure: boat("t1", "Reef · 9:30 AM") }),
+      action({ id: "return", departure: boat("t1", "Reef · Jul 20, 1:00 PM EDT") }),
+    ]);
+    expect(groups).toHaveLength(2);
   });
 });
 
