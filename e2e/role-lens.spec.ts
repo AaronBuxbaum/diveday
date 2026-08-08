@@ -15,7 +15,7 @@ test.describe("as captain", () => {
     // The seed assigns the captain to today's charter, so their boat is badged
     // and the greeting names it.
     await expect(page.getByText("You’re crewing", { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Boarding" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Board divers" }).first()).toBeVisible();
   });
 });
 

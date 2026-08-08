@@ -13,8 +13,13 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
  * the drift `ACTION_KIND_META` exists to prevent one level down.
  */
 const CHIP_TONES = {
-  danger: "border-danger/30 bg-danger/10 text-danger",
-  warning: "border-warning/30 bg-warning/10 text-warning",
+  // Toned text on the plain surface, not on a 10% tinted fill: the tint is the
+  // documented sub-AA combination (`--warning` on its own fill reads 4.39:1
+  // against AA's 4.5), and on `bg-surface` both tones clear the bar today
+  // (warning 5.02:1, danger 6.47:1, measured) — the border keeps the chip a
+  // chip.
+  danger: "border-danger/40 bg-surface text-danger",
+  warning: "border-warning/40 bg-surface text-warning",
   neutral: "border-border bg-surface-sunken text-muted",
 } as const;
 

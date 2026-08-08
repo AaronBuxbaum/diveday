@@ -288,6 +288,53 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
   });
 });
 
+describe("TodayQueue departure grouping (say the boat once)", () => {
+  function renderQueue(actions: TodayAction[]) {
+    return render(
+      <TodayQueue
+        actions={actions}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        timezone="America/New_York"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+  }
+
+  it("says a shared departure once, in a group header, never on each row", () => {
+    renderQueue([
+      action({
+        id: "a1",
+        subject: "Priya Sharma",
+        context: "Two-Tank Reef · 9:30 AM",
+        departure: { tripId: "t1", label: "Two-Tank Reef · 9:30 AM" },
+      }),
+      action({
+        id: "a2",
+        subject: "Two-Tank Reef",
+        context: "9:30 AM",
+        detail: "5 divers are missing rental sizes.",
+        departure: { tripId: "t1", label: "Two-Tank Reef · 9:30 AM" },
+        aboutDeparture: true,
+      }),
+    ]);
+
+    // Once: the header. The rows carry only what differs.
+    expect(screen.getAllByText("Two-Tank Reef · 9:30 AM")).toHaveLength(1);
+    expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
+    // A row about the boat itself never repeats the boat's name as a subject.
+    expect(screen.queryByText("Two-Tank Reef")).toBeNull();
+    expect(screen.getByText("5 divers are missing rental sizes.")).toBeInTheDocument();
+  });
+
+  it("keeps a row with no boat as its own standalone card, context intact", () => {
+    renderQueue([action({ id: "chore", subject: "Stripe call unconfirmed", context: "Orders" })]);
+    expect(screen.getByText("Stripe call unconfirmed")).toBeInTheDocument();
+    expect(screen.getByText("Orders")).toBeInTheDocument();
+  });
+});
+
 describe("TodayQueue payment rows", () => {
   it("renders the inline payment control only once a booking is known to be invoiced", () => {
     render(
