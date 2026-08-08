@@ -1870,9 +1870,15 @@ exports.handler = async (event) => {
           "cloudformation:CreateChangeSet",
           "cloudformation:DescribeChangeSet",
           "cloudformation:DeleteChangeSet",
-          "ssm:GetParameter",
         ],
-        resources: [cdkStackArn, bootstrapVersionParameterArn],
+        resources: [cdkStackArn],
+      }),
+    );
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadBootstrapVersion",
+        actions: ["ssm:GetParameter"],
+        resources: [bootstrapVersionParameterArn],
       }),
     );
     cdkDiffRole.addToPolicy(denyReadingAnySecret());
@@ -1912,9 +1918,15 @@ exports.handler = async (event) => {
           "cloudformation:DescribeChangeSet",
           "cloudformation:ExecuteChangeSet",
           "cloudformation:DeleteChangeSet",
-          "ssm:GetParameter",
         ],
-        resources: [cdkStackArn, bootstrapVersionParameterArn],
+        resources: [cdkStackArn],
+      }),
+    );
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadBootstrapVersion",
+        actions: ["ssm:GetParameter"],
+        resources: [bootstrapVersionParameterArn],
       }),
     );
     cdkDeployRole.addToPolicy(denyReadingAnySecret());
