@@ -165,7 +165,7 @@ describe("what each consumer derives", () => {
     // staff surface where nothing in the header reads as current at all —
     // which is exactly what the visual baseline caught. Team needs no entry:
     // `/settings/team` already sits below `/settings`.
-    expect(staffDestination("settings").alsoMatch).toBe("/promos");
+    expect(staffDestination("settings").alsoMatch).toEqual(["/promos", "/dive-sites", "/waivers"]);
     expect(staffDestination("team").suffix.startsWith(staffDestination("settings").suffix)).toBe(
       true,
     );
@@ -232,7 +232,7 @@ describe("what each consumer derives", () => {
   it("keeps a trip's detail page lit on the board tab", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    expect(board?.alsoMatch).toBe("/trips");
+    expect(board?.alsoMatch).toEqual(["/trips", "/staffing"]);
   });
 
   it("badges only the blocked count, on Today", () => {

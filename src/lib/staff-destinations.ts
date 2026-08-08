@@ -116,10 +116,13 @@ export type StaffDestination = {
   /** Second key of the `g`-then-key sequence, when it has one. */
   readonly shortcut?: string;
   /**
-   * A second path prefix that should also read as "you are here" — a detail
-   * view living outside the destination's own subtree.
+   * Further path prefixes that should also read as "you are here" — detail
+   * views and demoted destinations living outside this one's own subtree.
+   * With the header cut to six tabs, every demoted page claims the tab that
+   * owns its door, so no staff surface is left with nothing reading as
+   * current (the promos lesson, generalised).
    */
-  readonly alsoMatch?: string;
+  readonly alsoMatch?: readonly string[];
 };
 
 /**
@@ -136,6 +139,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     inPalette: true,
     badge: "blockers",
     shortcut: "t",
+    // Close-out is Today's evening mirror (ADR 20260804-day-closeout); its
+    // door is Today's handoff card, so its page lights Today.
+    alsoMatch: ["/close-out"],
   },
   { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
   // Not a page any more: Not ready is Today's by-departure *view*, selected by
@@ -163,7 +169,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     navGroup: "primary",
     inPalette: true,
     shortcut: "s",
-    alsoMatch: "/trips",
+    // Trips are the board's detail views; staffing is crew coverage over the
+    // same departure stream, reached from the board's world.
+    alsoMatch: ["/trips", "/staffing"],
   },
   // The global "seat a diver" door. It is an action rather than a place, so it
   // stays out of the header — the board hosts its own button and the palette
@@ -193,7 +201,15 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // Money the shop reads daily — a primary tab. The monthly report keeps a
   // door on this page's header (and its palette row) rather than a tab of its
   // own; it is the same money, summed.
-  { id: "orders", suffix: "/orders", navGroup: "primary", inPalette: true },
+  {
+    id: "orders",
+    suffix: "/orders",
+    navGroup: "primary",
+    inPalette: true,
+    // The monthly report is this page's money, summed — its door is on the
+    // Orders header, so its page lights Orders.
+    alsoMatch: ["/reports"],
+  },
   {
     id: "waivers",
     suffix: "/waivers",
@@ -237,7 +253,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     suffix: "/settings",
     navGroup: "primary",
     inPalette: true,
-    alsoMatch: "/promos",
+    // Every destination whose door is a Settings card lights this tab.
+    alsoMatch: ["/promos", "/dive-sites", "/waivers"],
     gate: "settings",
   },
 ];

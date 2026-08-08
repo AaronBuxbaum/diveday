@@ -71,7 +71,7 @@ function isCurrent(pathname: string, href: string, root: string) {
 function isDestinationCurrent(pathname: string, root: string, destination: StaffDestination) {
   return (
     isCurrent(pathname, staffDestinationHref(root, destination), root) ||
-    (destination.alsoMatch ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root) : false)
+    (destination.alsoMatch ?? []).some((prefix) => isCurrent(pathname, `${root}${prefix}`, root))
   );
 }
 
