@@ -87,6 +87,7 @@
     "title": "Orders",
     "description": "Every order the shop has sent, across every diver and trip.",
     "newOrder": "New order",
+    "monthlyReport": "Monthly report",
     "notice": {
       "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers.",
       "notAuthorized": "Sending an invoice is limited to owners and managers — ask one of them to bill this diver."

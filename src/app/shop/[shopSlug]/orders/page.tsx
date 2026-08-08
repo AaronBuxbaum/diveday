@@ -228,16 +228,30 @@ export default async function OrdersIndexPage({
         title={t("orders.index.title")}
         description={t("orders.index.description")}
         actions={
-          // While the unfiltered list is empty, the empty state below holds
-          // this same door — two identical primaries for one action is triage
-          // work the layout should do (principle 8), so the header stands down.
-          rows.length === 0 && !hasFilters ? undefined : paymentsConnected ? (
-            <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-              {t("orders.index.newOrder")}
-            </Link>
-          ) : (
-            <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
-          )
+          <>
+            {/* The monthly report is this page's money, summed — its door
+                lives here now that Reports left the header nav (it keeps its
+                palette row and gate). */}
+            {canReconcilePayments ? (
+              <Link
+                href={`/shop/${shopSlug}/reports`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("orders.index.monthlyReport")}
+              </Link>
+            ) : null}
+            {/* While the unfiltered list is empty, the empty state below holds
+                this same door — two identical primaries for one action is
+                triage work the layout should do (principle 8), so the header
+                stands down. */}
+            {rows.length === 0 && !hasFilters ? null : paymentsConnected ? (
+              <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+                {t("orders.index.newOrder")}
+              </Link>
+            ) : (
+              <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
+            )}
+          </>
         }
       />
 
