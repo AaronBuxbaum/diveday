@@ -385,6 +385,7 @@
       "overRatio": "{booked} reservados, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
       "overRatioIntro": "{booked} reservados en esta sesión de iniciación, pero la tripulación asignada solo cubre {capacity} — la ratio de Discover Scuba publicada por PADI, de {perInstructor} por instructor para la inmersión en aguas abiertas, que un asistente certificado no aumenta. Solo otro instructor añade plazas.",
       "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
+      "missingContactNamed": "No tiene contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
       "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
       "emailNotConfigured": {

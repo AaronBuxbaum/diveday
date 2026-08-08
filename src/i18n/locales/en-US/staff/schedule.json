@@ -45,6 +45,7 @@
     "crewNobodyYet": "nobody yet",
     "noPriceSet": "No price set",
     "noPriceSetAria": "Set a price for {ref}",
+    "noPriceSetAll": "None of these departures has a price yet — divers already see them on the schedule. Open a departure to set one.",
     "rollCallOpen": "Roll call · {count} not counted",
     "rollCallOpenAria": "Finish the dive {dive} roll call for {ref}",
     "rollCallOpenNote": "Back at the dock with the dive {dive} roll call still open.",

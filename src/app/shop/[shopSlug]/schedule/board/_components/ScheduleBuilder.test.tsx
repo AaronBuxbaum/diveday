@@ -42,6 +42,8 @@ const COPY: BuilderCopy = {
   crewNobodyYet: "nobody yet",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
+  noPriceSetAll:
+    "None of these departures has a price yet — divers already see them on the schedule. Open a departure to set one.",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
@@ -238,6 +240,75 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
     );
 
     expect(screen.queryByText("No price set")).toBeNull();
+  });
+
+  it("collapses the pill into one notice when every departure in the window is unpriced", () => {
+    // A brand-new board (or an imported season) shares the fact on every row —
+    // it moves up to one group-level notice instead of wallpapering the list
+    // (design/principles.md #9).
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        trips: [baseTrip({ id: "t1", priceCents: null }), baseTrip({ id: "t2", priceCents: null })],
+      },
+      {
+        dateIso: "2026-08-02",
+        label: "Sun, Aug 2",
+        trips: [baseTrip({ id: "t3", priceCents: null })],
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+
+    expect(screen.getByText(/None of these departures has a price yet/)).toBeInTheDocument();
+    expect(screen.queryByText("No price set")).toBeNull();
+  });
+
+  it("keeps per-row pills while the fact still distinguishes rows (some priced, some not)", () => {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        trips: [
+          baseTrip({ id: "t1", priceCents: null }),
+          baseTrip({ id: "t2", priceCents: null }),
+          baseTrip({ id: "t3", priceCents: null }),
+          baseTrip({ id: "t4", priceCents: 8500 }),
+        ],
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+
+    expect(screen.getAllByText("No price set")).toHaveLength(3);
+    expect(screen.queryByText(/None of these departures/)).toBeNull();
   });
 });
 

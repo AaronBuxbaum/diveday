@@ -297,6 +297,11 @@ export function missingContactDetailText(t: StaffTranslator, count: number): str
   return t("shared.today.detail.missingContact", { count });
 }
 
+/** The single-diver contact row leads with the diver's name; the detail then carries only the gap. */
+export function missingContactNamedDetailText(t: StaffTranslator): string {
+  return t("shared.today.detail.missingContactNamed");
+}
+
 export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): string {
   return t("shared.today.detail.lastMinuteFill", { seats });
 }

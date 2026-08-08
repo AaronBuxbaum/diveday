@@ -45,6 +45,7 @@
     "crewNobodyYet": "nadie todavía",
     "noPriceSet": "Sin precio definido",
     "noPriceSetAria": "Definir un precio para {ref}",
+    "noPriceSetAll": "Ninguna de estas salidas tiene precio todavía — los buceadores ya las ven en el calendario. Abre una salida para ponerlo.",
     "rollCallOpen": "Recuento · {count} sin contar",
     "rollCallOpenAria": "Completar el recuento tras la inmersión {dive} de {ref}",
     "rollCallOpenNote": "De vuelta en el muelle con el recuento tras la inmersión {dive} sin cerrar.",

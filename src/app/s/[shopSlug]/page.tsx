@@ -7,10 +7,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
-import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { type AppDb, getDb } from "@/db/client";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
@@ -40,6 +38,7 @@ import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
+import { ScheduleFilters } from "./_components/ScheduleFilters";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -283,12 +282,14 @@ export default async function SchedulePage({
             <p className="text-xs font-semibold tracking-wide text-primary uppercase">
               {t("schedule.nextDeparture.eyebrow")}
             </p>
-            <p className="mt-1 truncate text-lg font-semibold">
-              {t("schedule.nextDeparture.title", {
-                when: `${formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} · ${formatTime(nextDeparture.startsAt, locale, shop.timezone)}`,
-                trip: nextDeparture.title,
-              })}
+            {/* Two lines, not one truncated one: on a phone the single line
+                spent itself on the date and cut the trip's name — the one fact
+                this card exists to carry (dock test; principle 10). */}
+            <p className="mt-1 text-sm font-medium text-muted tabular-nums">
+              {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} ·{" "}
+              {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
             </p>
+            <p className="line-clamp-2 text-lg font-semibold">{nextDeparture.title}</p>
           </div>
           <Badge tone="primary" tabularNums className="shrink-0">
             {(() => {
@@ -337,37 +338,23 @@ export default async function SchedulePage({
       {hasUpcoming ? (
         // Server-fed, same house pattern as the roster search in
         // AddDiverSection.tsx: a GET reload carries the filters and the list
-        // below re-renders filtered. No client state, so the list stays
-        // pixel-stable for visual regression.
-        <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
-          {isEmbed ? <input type="hidden" name="embed" value="1" /> : null}
-          {month ? <input type="hidden" name="month" value={month} /> : null}
-          <FieldGrid columns={1} className="min-w-40">
-            <Field label={t("schedule.filters.tripType")}>
-              <select name="tripType" defaultValue={tripTypeFilter ?? ""} className={controlClass}>
-                <option value="">{t("schedule.filters.allTrips")}</option>
-                <option value="fun_dive">{t("schedule.filters.funDive")}</option>
-                <option value="course">{t("schedule.filters.course")}</option>
-              </select>
-            </Field>
-          </FieldGrid>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="hasSpace"
-              value="1"
-              defaultChecked={hasSpaceFilter}
-              className="size-4"
-            />
-            {t("schedule.filters.hasSpace")}
-          </label>
-          <SubmitButton
-            pendingLabel={t("schedule.filters.applying")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("schedule.filters.apply")}
-          </SubmitButton>
-        </form>
+        // below re-renders filtered. Once hydrated, changing a filter submits
+        // itself — the Apply button is the no-JS fallback, not a second step.
+        <ScheduleFilters
+          embed={isEmbed}
+          month={month ?? null}
+          tripTypeFilter={tripTypeFilter ?? null}
+          hasSpaceFilter={hasSpaceFilter}
+          copy={{
+            tripType: t("schedule.filters.tripType"),
+            allTrips: t("schedule.filters.allTrips"),
+            funDive: t("schedule.filters.funDive"),
+            course: t("schedule.filters.course"),
+            hasSpace: t("schedule.filters.hasSpace"),
+            apply: t("schedule.filters.apply"),
+            applying: t("schedule.filters.applying"),
+          }}
+        />
       ) : null}
 
       {!hasUpcoming ? (
@@ -474,8 +461,18 @@ export default async function SchedulePage({
                           <span className="font-normal text-muted">{t("common.perDiver")}</span>
                         </p>
                       ) : null}
-                      {diveSites.sites.length > 0 ? (
-                        <p className="mt-2 text-sm font-medium text-primary">
+                      {/* Muted, not action-colored — a caption, not a link. And
+                          when the title already names every site and there is
+                          no undecided-dive note to carry, the line is the title
+                          restated and stays off the card (principle 9). */}
+                      {diveSites.sites.length > 0 &&
+                      !(
+                        diveSites.undecidedDives === 0 &&
+                        diveSites.sites.every((site) =>
+                          trip.title.toLowerCase().includes(site.name.toLowerCase()),
+                        )
+                      ) ? (
+                        <p className="mt-2 text-sm text-muted">
                           {diveSites.sites.length === 1
                             ? t("schedule.diveSite")
                             : t("schedule.diveSites")}{" "}
@@ -496,28 +493,41 @@ export default async function SchedulePage({
                           ) : null}
                         </p>
                       ) : null}
-                      <p className="mt-2 text-sm text-muted">
-                        {trip.plannedDives === 2 ? (
-                          <>
-                            {t("schedule.twoTank")}
-                            {showTwoTankHint ? (
-                              <span className="block text-xs text-muted/80">
-                                {t("schedule.twoTankHint")}
-                              </span>
-                            ) : null}
-                          </>
-                        ) : (
-                          t("schedule.diveCount", { count: trip.plannedDives })
-                        )}
-                      </p>
+                      {/* The dive plan in words only when the sites line above
+                          isn't already carrying it — a card that lists two
+                          sites (or "1 more dive to be confirmed") has said how
+                          many dives there are, and restating "Two-tank trip"
+                          under every card was the same fact chanted down the
+                          list (design/principles.md #9). */}
+                      {diveSites.sites.length === 0 && !trip.course ? (
+                        <p className="mt-2 text-sm text-muted">
+                          {trip.plannedDives === 2 ? (
+                            <>
+                              {t("schedule.twoTank")}
+                              {showTwoTankHint ? (
+                                // text-muted at text-sm, not the old
+                                // text-xs/80 — that measured 3.49:1, under AA.
+                                <span className="block">{t("schedule.twoTankHint")}</span>
+                              ) : null}
+                            </>
+                          ) : (
+                            t("schedule.diveCount", { count: trip.plannedDives })
+                          )}
+                        </p>
+                      ) : null}
                     </div>
+                    {/* The badge is spent on the states that need a decision
+                        now — full, or nearly — and routine availability reads
+                        as the quiet fact it is (principle 9: counts are facts,
+                        not alerts; a pill on every row means nothing on any). */}
                     <div className="shrink-0">
-                      <Badge
-                        tone={full ? "neutral" : lowInventory ? "warning" : "primary"}
-                        tabularNums
-                      >
-                        {capacityText}
-                      </Badge>
+                      {full || lowInventory ? (
+                        <Badge tone={full ? "neutral" : "warning"} tabularNums>
+                          {capacityText}
+                        </Badge>
+                      ) : (
+                        <p className="text-sm text-muted tabular-nums">{capacityText}</p>
+                      )}
                     </div>
                   </div>
                 </li>

@@ -208,6 +208,7 @@ export default async function ScheduleBoardPage({
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st("schedule.builder.noPriceSetAria"),
+    noPriceSetAll: st("schedule.builder.noPriceSetAll"),
     rollCallOpen: st("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st("schedule.builder.rollCallOpenAria"),
     rollCallOpenNote: st("schedule.builder.rollCallOpenNote"),

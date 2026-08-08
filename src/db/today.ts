@@ -9,6 +9,7 @@ import {
   lastMinuteFillDetailText,
   mediaDeletionKindText,
   missingContactDetailText,
+  missingContactNamedDetailText,
   missingFitDetailText,
   openDataSettingsActionText,
   openGuestsActionText,
@@ -745,11 +746,15 @@ async function missingEmergencyContactByTrip(
   bookingIdsByTrip: Map<string, string[]>,
 ) {
   const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const missing = new Map<string, number>();
+  // Divers, not a bare count: a queue row about one person leads with their
+  // name (design/principles.md #10 — the answer, not a door), so the reader
+  // carries who is missing a contact, and the caller counts from it.
+  const missing = new Map<string, { fullName: string }[]>();
   if (bookingIds.length === 0) return missing;
   const rows = await db
     .select({
       bookingId: bookings.id,
+      fullName: people.fullName,
       contactName: people.emergencyContactName,
       contactPhone: people.emergencyContactPhone,
     })
@@ -758,12 +763,16 @@ async function missingEmergencyContactByTrip(
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
   // A contact is only usable if the crew can dial it: both a name and a phone.
   // A name with no number reads as "on file" but is unreachable in an incident.
-  const without = new Set(
-    rows.filter((row) => !row.contactName || !row.contactPhone).map((row) => row.bookingId),
+  const without = new Map(
+    rows
+      .filter((row) => !row.contactName || !row.contactPhone)
+      .map((row) => [row.bookingId, row.fullName]),
   );
   for (const [tripId, ids] of bookingIdsByTrip) {
-    const count = ids.filter((id) => without.has(id)).length;
-    if (count > 0) missing.set(tripId, count);
+    const divers = ids
+      .filter((id) => without.has(id))
+      .map((id) => ({ fullName: without.get(id) ?? "" }));
+    if (divers.length > 0) missing.set(tripId, divers);
   }
   return missing;
 }
@@ -1166,17 +1175,22 @@ export async function getTodayWork(
     // worth surfacing once a boat is close (within three days). Beyond that it
     // is queue noise a diver still has time to fill in themselves.
     const withoutContact =
-      urgencyFor(trip.startsAt, now) !== "later" ? (missingContact.get(trip.id) ?? 0) : 0;
-    if (withoutContact > 0) {
+      urgencyFor(trip.startsAt, now) !== "later" ? (missingContact.get(trip.id) ?? []) : [];
+    if (withoutContact.length > 0) {
+      // One diver is a row about that person — named, like every other
+      // single-diver row. Several stay one row about the boat.
+      const lone = withoutContact.length === 1 ? withoutContact[0] : undefined;
       actions.push({
         id: `contact:${trip.id}`,
         kind: "emergency_contact",
         urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
+        subject: lone ? lone.fullName : trip.title,
         context: when,
         departure,
-        aboutDeparture: true,
-        detail: missingContactDetailText(t, withoutContact),
+        ...(lone ? {} : { aboutDeparture: true }),
+        detail: lone
+          ? missingContactNamedDetailText(t)
+          : missingContactDetailText(t, withoutContact.length),
         actionLabel: openGuestsActionText(t),
         href: `${tripHref}/guests`,
         dueAt: trip.startsAt,
