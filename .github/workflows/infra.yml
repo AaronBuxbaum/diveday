@@ -1,0 +1,166 @@
+name: Infra
+
+# Two ways in, deliberately kept apart:
+#
+#   - `pull_request`: automatic and read-only. A PR that touches `infra/` gets
+#     `cdk synth` (does the app even build a template) and `cdk diff` (what
+#     would change against the deployed stack) as a check, with the diff
+#     posted as a PR comment. It can create and discard a CloudFormation
+#     change set; it can never execute one.
+#   - `workflow_dispatch`: a human clicking "Run workflow" in the Actions tab,
+#     for running either of those two on demand outside a PR, or for actually
+#     deploying. Deploying additionally requires a required reviewer to
+#     approve the `infra-deploy` GitHub Environment (repo Settings ->
+#     Environments — manual action "github-actions-cdk-oidc" in
+#     docs/engineering/manual-actions.md) before the job can even obtain AWS
+#     credentials: GitHubActionsCdkDeployRole's OIDC trust condition
+#     (infra-stack.ts §18) names that environment specifically, so there is no
+#     token to mint until that approval has happened.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: cdk command to run
+        type: choice
+        options:
+          - diff
+          - deploy
+        default: diff
+
+concurrency:
+  # workflow_dispatch runs (in particular a deploy) must never be cancelled by
+  # a later PR push sharing this workflow's name, so they get a lane keyed to
+  # their own run rather than to a ref.
+  group: infra-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  infra-changed:
+    name: Detect infra changes
+    # Only pull_request needs this gate. A workflow_dispatch run is already an
+    # explicit "do this now" from a human — it should never be silently
+    # skipped because the current branch happens not to touch infra/.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff below reaches back to the base commit, which a depth-1
+          # checkout does not contain.
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # Fail *open*: an unresolvable base is a reason to run the check, not
+          # to skip it silently.
+          if ! git rev-parse --verify -q "${BASE_SHA}^{commit}" > /dev/null 2>&1; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Base commit '${BASE_SHA}' is unresolvable — running the infra check anyway." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- infra cdk.json .github/workflows/infra.yml)
+          if [ -n "${changed_paths}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "Infra surface touched — running cdk synth + diff:"
+              echo '```'
+              echo "${changed_paths}"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No infra changes — cdk synth/diff skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  diff:
+    name: cdk synth + diff
+    needs: infra-changed
+    # A skipped `infra-changed` (every workflow_dispatch run) must not skip
+    # this job by propagation — it has its own condition below, same pattern
+    # ci.yml's real-postgres/visual-report jobs use against their own gates.
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.command == 'diff') || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
+    # any workflow run in this repo — no `environment:` gate here, because
+    # this role can only create and discard a change set, never execute one.
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # No AWS credentials needed for this: the stack does no context lookups
+      # (no Vpc.fromLookup, no StringParameter.valueFromLookup), so `cdk
+      # synth` is a pure local build. Running it before credentials are
+      # configured means a broken template fails the check even when the
+      # AWS_CDK_DIFF_ROLE_ARN variable (manual action "github-actions-cdk-oidc")
+      # has not been set up yet.
+      - run: pnpm exec cdk synth --quiet
+      # aws-actions/configure-aws-credentials reports an empty role-to-assume
+      # as an opaque "Credentials could not be loaded" SDK error, which reads
+      # like a broken workflow rather than an unfinished one-time setup step.
+      # Say the actual cause: the manual action hasn't been done yet.
+      - name: Confirm the diff role ARN is set
+        if: vars.AWS_CDK_DIFF_ROLE_ARN == ''
+        run: |
+          echo "::error::AWS_CDK_DIFF_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDiffRoleArn stack output."
+          exit 1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_CDK_DIFF_ROLE_ARN }}
+          role-session-name: gha-cdk-diff
+      - name: Post the diff to the pull request
+        if: github.event_name == 'pull_request'
+        uses: corymhall/cdk-diff-action@v2
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: cdk diff
+        if: github.event_name == 'workflow_dispatch'
+        run: pnpm exec cdk diff
+
+  deploy:
+    name: cdk deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.command == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The approval gate. GitHub only issues an OIDC token for a job that
+    # references this environment once a required reviewer has approved the
+    # run (repo Settings -> Environments -> infra-deploy) — the click the
+    # first sentence of this file promises. GitHubActionsCdkDeployRole's trust
+    # condition (infra-stack.ts §18) additionally hard-codes this exact
+    # environment name, so a job that omitted this line would have no role to
+    # assume even if it somehow got this far.
+    environment: infra-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Confirm the deploy role ARN is set
+        if: vars.AWS_CDK_DEPLOY_ROLE_ARN == ''
+        run: |
+          echo "::error::AWS_CDK_DEPLOY_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDeployRoleArn stack output."
+          exit 1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-cdk-deploy
+      # Not `pnpm infra:deploy`: that wrapper also reads the diveday/env
+      # secret with an administrator profile to write .env.local/.env.vercel/
+      # .env.github, which is workstation-only by design (infra-stack.ts §5,
+      # §17's credentials-off-dotenv). GitHubActionsCdkDeployRole is denied
+      # secretsmanager:GetSecretValue outright (§18), so that wrapper would
+      # fail here anyway — this runs the deploy CDK itself needs and nothing
+      # past it.
+      - run: pnpm exec cdk deploy DiveDay --require-approval never

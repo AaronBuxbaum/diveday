@@ -30,13 +30,25 @@ this file is the checklist, not the argument.
              aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration
     note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.
 
-[3] Enable Cost Explorer
+[3] Authorize GitHub Actions to run cdk diff/deploy
+    when     once, after the first deploy of this stack
+    why      The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API, and GitHubActionsCdkDeployRole's trust policy (infra-stack.ts §18) only ever hands an OIDC token to a job that references the infra-deploy GitHub Environment, which nothing but a human clicking through repo Settings can create.
+    run      GitHub -> repo Settings -> Environments -> New environment, named infra-deploy -> add yourself as a required reviewer.
+             gh variable set AWS_CDK_DIFF_ROLE_ARN --body <GitHubActionsCdkDiffRoleArn output>
+             gh variable set AWS_CDK_DEPLOY_ROLE_ARN --body <GitHubActionsCdkDeployRoleArn output>
+    produces .github/workflows/infra.yml's diff job can assume a role on any pull request; its deploy job can only obtain one once a required reviewer approves a run against the infra-deploy environment.
+    store    GitHub repo Settings -> Environments (infra-deploy) and Settings -> Secrets and variables -> Actions -> Variables.
+    verify   Open a pull request that touches infra/ and confirm the "cdk synth + diff" check posts a PR comment.
+             Actions -> Infra -> Run workflow, command: deploy -- confirm the run stops at "Review pending deployments" until approved.
+    note     The two values are role identifiers, not secrets -- store them as repository variables, not secrets. A GitHub Actions secret is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read.
+
+[4] Enable Cost Explorer
     when     once per account
     why      The Cost Anomaly Detection monitor (infra-stack.ts §7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.
     run      Billing and Cost Management console -> Cost Explorer -> enable.
     verify   aws ce get-anomaly-monitors --query 'AnomalyMonitors[].MonitorName'
 
-[4] Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles
+[5] Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles
     when     once per provider account, and again after changing plan
     why      AWS Budgets (infra-stack.ts §7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.
     run      Vercel -> Settings -> Billing -> Spend Management: set an amount and an email notification.
@@ -49,7 +61,7 @@ this file is the checklist, not the argument.
 ## Credentials
 
 ```text
-[5] Mint the Vercel and Neon usage read tokens
+[6] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -62,14 +74,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[6] Request SES production access
+[7] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[7] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[8] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -78,7 +90,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[8] Confirm the observability alarm subscription email
+[9] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
@@ -91,7 +103,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[9] Confirm the usage monitor reports numbers and reaches a real inbox
+[10] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'
