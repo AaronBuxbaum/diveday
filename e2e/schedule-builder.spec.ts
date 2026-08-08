@@ -45,7 +45,7 @@ test.describe("schedule builder", () => {
     const copyDay = daysFromNow(4);
 
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
     // Add — the whole departure, from the board.
     await page.getByRole("button", { name: "Add a departure", exact: true }).click();
@@ -61,10 +61,13 @@ test.describe("schedule builder", () => {
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0/8")).toBeVisible();
-    // No price was typed, so the board still says so — the badge is the flag
-    // for a departure that reaches the public page unpriced, and adding the
-    // box did not quietly retire it.
-    await expect(row.getByText("No price set")).toBeVisible();
+    // No price was typed, so the board still says so. Every departure on the
+    // demo board is unpriced, so the flag is the one group-level notice (the
+    // per-row pill collapses when the whole window shares the fact —
+    // design/principles.md #9); the unit suite covers the per-row pill for a
+    // mixed board. Either way, adding the price box did not quietly retire
+    // the flag.
+    await expect(page.getByText(/None of these departures has a price yet/)).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.
     await chooseRowAction(page, "Move", title);
@@ -124,7 +127,7 @@ test.describe("schedule builder", () => {
 
   test("opening and cancelling the add/move panels manages keyboard focus", async ({ page }) => {
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
     // Opening the top "Add a departure" panel moves focus straight into its
     // first field, rather than leaving a keyboard user on the button that
@@ -181,7 +184,7 @@ test.describe("schedule builder, as the daily crew", () => {
     // Trip definition is owner/manager/instructor work (H-14); the crew runs the
     // day from each trip's own page.
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
     await expect(page.getByRole("button", { name: "Add a departure", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move, copy, or remove / })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move / })).toHaveCount(0);

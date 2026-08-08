@@ -385,6 +385,7 @@
       "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
       "overRatioIntro": "{booked} booked on this intro session, but the assigned crew only covers {capacity} — PADI's published Discover Scuba ratio of {perInstructor} per instructor for the open-water dive, which a certified assistant does not raise. Only another instructor adds seats.",
       "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
+      "missingContactNamed": "No emergency contact on file — ask at the counter; it prints on the manifest.",
       "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
       "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
       "emailNotConfigured": {
@@ -414,10 +415,10 @@
       "ahead": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. Nothing is urgent; {jobs, plural, =1 {1 job to work ahead.} other {# jobs to work ahead.}}"
     },
     "greeting": {
-      "morning": "Good morning, {name} ☕",
-      "afternoon": "Good afternoon, {name} ☀️",
-      "evening": "Good evening, {name} 🌙",
-      "night": "Good night, {name} 🌌"
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}",
+      "night": "Good night, {name}"
     },
     "seasonalBriefing": {
       "summer": "Enjoy the surface interval — grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",

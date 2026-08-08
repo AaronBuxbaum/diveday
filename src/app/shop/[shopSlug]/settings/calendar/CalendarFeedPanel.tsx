@@ -49,10 +49,17 @@ export function CalendarFeedPanel({
   view,
   copy,
   subscribed,
+  createVariant = "primary",
 }: {
   view: FeedScopeView;
   copy: CalendarFeedCopy;
   subscribed: boolean;
+  /**
+   * Two panels share this screen, and only one earns primary weight
+   * (principle 8): the personal feed is the common path; the shop-wide feed
+   * renders its create as secondary.
+   */
+  createVariant?: "primary" | "secondary";
 }) {
   // One state for both buttons. Two `useActionState` hooks could not say which
   // of them ran last, so a revoke followed by a create rendered the revoked
@@ -92,7 +99,11 @@ export function CalendarFeedPanel({
                 pendingLabel={copy.rotating}
               />
             ) : (
-              <ActionButton label={copy.create} pendingLabel={copy.creating} variant="primary" />
+              <ActionButton
+                label={copy.create}
+                pendingLabel={copy.creating}
+                variant={createVariant}
+              />
             )}
           </form>
           {live ? (

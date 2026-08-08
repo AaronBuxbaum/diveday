@@ -20,8 +20,10 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
 
   // Course-only: every visible row now names a course session, and the fun
   // dives are gone.
+  // Changing a filter applies itself once hydrated — the Apply button is the
+  // no-JS fallback and leaves the page after hydration.
+  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Trip type").selectOption("course");
-  await page.getByRole("button", { name: "Apply" }).click();
   await expect(page).toHaveURL(/tripType=course/);
   const courseRows = list.getByRole("listitem");
   await expect(courseRows).not.toHaveCount(0);
@@ -40,8 +42,8 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
 
   // Combine with "has space": the seed has a sold-out course session, so this
   // narrows further still.
+  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Has space").check();
-  await page.getByRole("button", { name: "Apply" }).click();
   await expect(page).toHaveURL(/tripType=course/);
   await expect(page).toHaveURL(/hasSpace=1/);
 });

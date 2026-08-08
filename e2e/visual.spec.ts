@@ -1727,7 +1727,7 @@ for (const scheme of ["light", "dark"] as const) {
       // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "The board" }).waitFor();
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await capture(page, "schedule-builder", scheme);
       });
 
@@ -1737,7 +1737,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "More options".
       test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
-        await page.getByRole("heading", { name: "The board" }).waitFor();
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Add a departure", exact: true }).click();
         // Its two selects fetch their options when the panel opens; wait for
         // the placeholder option to go, so the shot is never of "Loading…".
@@ -1756,7 +1756,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/schedule/board?add=full");
-        await page.getByRole("heading", { name: "The board" }).waitFor();
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await page
           .locator('select[name="courseId"] option[disabled]')

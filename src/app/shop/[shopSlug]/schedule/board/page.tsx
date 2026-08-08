@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -15,7 +15,6 @@ import {
   tripCrewByTrip,
   tripScheduleDayCounts,
   upcomingScheduleRange,
-  upcomingScheduleStats,
 } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
@@ -148,20 +147,18 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [range, stats, { trips: upcoming, nextCursor }, canConfigure, openRollCalls] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now),
-      upcomingScheduleStats(db, shop.id, now),
-      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-      canPersonConfigureTrips(db, shop.id, session.user.personId),
-      // Departures that already came back with a head count still open (DOM-H3).
-      // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-      // whose `startsAt` is still ahead of `now` — so this is its own backwards
-      // query, and one batched query for every such boat rather than a per-trip
-      // roll-call lookup. Only on the first page: they belong at the front of
-      // the board, not repeated on top of every later cursor page.
-      after ? [] : openAfterDiveRollCalls(db, shop.id, now),
-    ]);
+  const [range, { trips: upcoming, nextCursor }, canConfigure, openRollCalls] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    // Departures that already came back with a head count still open (DOM-H3).
+    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+    // whose `startsAt` is still ahead of `now` — so this is its own backwards
+    // query, and one batched query for every such boat rather than a per-trip
+    // roll-call lookup. Only on the first page: they belong at the front of
+    // the board, not repeated on top of every later cursor page.
+    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+  ]);
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
@@ -194,8 +191,6 @@ export default async function ScheduleBoardPage({
       }
     : undefined;
   const builderCopy: BuilderCopy = {
-    heading: st("schedule.builder.heading"),
-    description: st("schedule.builder.description"),
     ariaLabel: st("schedule.builder.ariaLabel"),
     addDeparture: st("schedule.builder.addDeparture"),
     addDepartureOnDay: st("schedule.builder.addDepartureOnDay"),
@@ -208,6 +203,7 @@ export default async function ScheduleBoardPage({
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st("schedule.builder.noPriceSetAria"),
+    noPriceSetAll: st("schedule.builder.noPriceSetAll"),
     rollCallOpen: st("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st("schedule.builder.rollCallOpenAria"),
     rollCallOpenNote: st("schedule.builder.rollCallOpenNote"),
@@ -454,34 +450,11 @@ export default async function ScheduleBoardPage({
         }
       />
 
-      <section
-        aria-label={st("schedule.overview.ariaLabel")}
-        className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <ShopStat
-          label={st("schedule.overview.departures")}
-          value={stats.departures}
-          detail={st("schedule.overview.departuresDetail")}
-          tone="primary"
-        />
-        <ShopStat
-          label={st("schedule.overview.booked")}
-          value={stats.booked}
-          detail={st("schedule.overview.bookedDetail")}
-        />
-        <ShopStat
-          label={st("schedule.overview.openSeats")}
-          value={stats.openSeats}
-          detail={st("schedule.overview.openSeatsDetail")}
-          tone="success"
-        />
-        <ShopStat
-          label={st("schedule.overview.atCapacity")}
-          value={stats.atCapacity}
-          detail={st("schedule.overview.atCapacityDetail")}
-        />
-      </section>
-
+      {/* The four-tile overview row is gone on purpose: "Departures 46 /
+          Booked 196" aggregated a horizon nobody acts on as a number, and on
+          a phone it pushed the first departure two screens down. The board
+          rows carry the operational facts (design/principles.md #10:
+          remove until it breaks). */}
       {builderNotice ? (
         <ShopNotice
           tone={builderNotice.tone}

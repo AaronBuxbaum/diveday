@@ -235,29 +235,54 @@ export default async function TripPrepPage({
                 {t("trips.prep.missingSizesHeading")}
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.missingSizesDescription")}</p>
+              {/* Two different situations, said differently: a diver with
+                  *some* sizes on file keeps a row naming exactly what's
+                  missing, while the never-asked share one sentence said once
+                  above their names — the old list repeated "nothing on file;
+                  they may be bringing their own kit…" per row, the same clause
+                  chanted seven times (principle 9). */}
               <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {checklist.diversWithIncompleteFit.map((diver) => (
-                  <li key={diver.personId}>
-                    •{" "}
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                      className="font-medium hover:text-primary hover:underline"
-                    >
-                      {diver.fullName}
-                    </Link>{" "}
-                    <span className="text-muted">
-                      {diver.state === "not_recorded"
-                        ? t("trips.prep.missingSizesNothingOnFile")
-                        : t("trips.prep.missingSizesItems", {
-                            items: cachedListFormat(locale, {
-                              style: "long",
-                              type: "conjunction",
-                            }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
-                          })}
-                    </span>
-                  </li>
-                ))}
+                {checklist.diversWithIncompleteFit
+                  .filter((diver) => diver.state !== "not_recorded")
+                  .map((diver) => (
+                    <li key={diver.personId}>
+                      •{" "}
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                        className="font-medium hover:text-primary hover:underline"
+                      >
+                        {diver.fullName}
+                      </Link>{" "}
+                      <span className="text-muted">
+                        {t("trips.prep.missingSizesItems", {
+                          items: cachedListFormat(locale, {
+                            style: "long",
+                            type: "conjunction",
+                          }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
+                        })}
+                      </span>
+                    </li>
+                  ))}
               </ul>
+              {checklist.diversWithIncompleteFit.some((diver) => diver.state === "not_recorded") ? (
+                <div className="mt-3 text-sm">
+                  <p className="text-muted">{t("trips.prep.missingSizesNobodyAskedLead")}</p>
+                  <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                    {checklist.diversWithIncompleteFit
+                      .filter((diver) => diver.state === "not_recorded")
+                      .map((diver) => (
+                        <li key={diver.personId}>
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                            className="font-medium hover:text-primary hover:underline"
+                          >
+                            {diver.fullName}
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

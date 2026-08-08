@@ -4,17 +4,6 @@
   "boardDescription": "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest.",
   "viewPublicPage": "View public page",
   "scheduleTrip": "Schedule a trip",
-  "overview": {
-    "ariaLabel": "Schedule overview",
-    "departures": "Departures",
-    "departuresDetail": "Upcoming trips and sessions",
-    "booked": "Booked",
-    "bookedDetail": "Divers across all departures",
-    "openSeats": "Open seats",
-    "openSeatsDetail": "Available across the board",
-    "atCapacity": "At capacity",
-    "atCapacityDetail": "Trips with no open seats"
-  },
   "notices": {
     "added": "It’s on the board.",
     "moved": "Moved.",
@@ -31,8 +20,6 @@
     "addedSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled."
   },
   "builder": {
-    "heading": "The board",
-    "description": "Add a departure, slide one to another day, copy it forward, or take it off. Open a trip for its dives, crew, and roster.",
     "ariaLabel": "Schedule builder",
     "addDeparture": "Add a departure",
     "addDepartureOnDay": "Add a departure on {day}",
@@ -45,6 +32,7 @@
     "crewNobodyYet": "nobody yet",
     "noPriceSet": "No price set",
     "noPriceSetAria": "Set a price for {ref}",
+    "noPriceSetAll": "None of these departures has a price yet — divers already see them on the schedule. Open a departure to set one.",
     "rollCallOpen": "Roll call · {count} not counted",
     "rollCallOpenAria": "Finish the dive {dive} roll call for {ref}",
     "rollCallOpenNote": "Back at the dock with the dive {dive} roll call still open.",

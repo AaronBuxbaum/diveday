@@ -240,7 +240,11 @@ export default async function CloseOutPage({
                         {closeoutDepartureDetailText(t, departure, detailTime(departure))}
                       </p>
                     </div>
-                    {departure.gapReason ? (
+                    {/* A boat still out is exactly the row you'd chase — it
+                        gets the manifest door too, not only the rows with a
+                        recorded gap (principle 10: no dead ends on the row
+                        that matters most). */}
+                    {departure.gapReason || departure.status === "still_out" ? (
                       <Link
                         href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=${checkpoint}`}
                         className={buttonClass({ variant: "secondary", className: "shrink-0" })}

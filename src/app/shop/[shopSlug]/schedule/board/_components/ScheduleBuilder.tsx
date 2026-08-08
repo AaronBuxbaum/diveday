@@ -100,8 +100,6 @@ type BuilderActions = {
  * a prefix/suffix pair assembled from parts.
  */
 export type BuilderCopy = {
-  heading: string;
-  description: string;
   ariaLabel: string;
   addDeparture: string;
   addDepartureOnDay: string;
@@ -114,6 +112,7 @@ export type BuilderCopy = {
   crewNobodyYet: string;
   noPriceSet: string;
   noPriceSetAria: string;
+  noPriceSetAll: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   rollCallOpenNote: string;
@@ -684,6 +683,14 @@ export function ScheduleBuilder({
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
+
+  // A shared fact belongs to the group, not the rows (principle 9): when every
+  // departure on the board is unpriced, the per-row pill collapses into one
+  // notice above the list. Three is the floor — below it, a pill per row still
+  // reads as the exception it is.
+  const windowTrips = days.flatMap((day) => day.trips);
+  const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
+  const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
 
   // The add panel's selects, fetched the first time any add panel opens and
@@ -771,28 +778,25 @@ export function ScheduleBuilder({
 
   return (
     <section aria-label={copy.ariaLabel} className="mb-8">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold">{copy.heading}</h2>
-          <p className="mt-1 text-sm text-muted">{copy.description}</p>
-        </div>
-        {canConfigure ? (
+      {/* No heading of its own: the page header directly above already names
+          and describes this surface, and "Board" then "The board" was the same
+          fact twice (principle 9 applies to headings too). Secondary weight
+          always: the page's one primary is "Add a booking" in the header —
+          seating divers is the common job — and the panel this opens ends in
+          its own "Put it on the board" primary (principle 8). */}
+      {canConfigure ? (
+        <div className="mb-3 flex justify-end">
           <button
             type="button"
             ref={registerToggle("add:top")}
             onClick={() => toggle("add:top")}
             aria-expanded={open === "add:top"}
-            // Secondary once open: the panel it reveals ends in "Put it on the
-            // board", and a section carries one primary (design principles #8).
-            className={buttonClass({
-              variant: open === "add:top" ? "secondary" : undefined,
-              className: "rounded-xl",
-            })}
+            className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
           >
             <span aria-hidden="true">+</span> {copy.addDeparture}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* Creating a departure is owner/manager/instructor work (H-14); crew
           still read the board, so it says whose job this is rather than
@@ -818,6 +822,19 @@ export function ScheduleBuilder({
           onAdd={actions.add}
           onCancel={() => closePanel("add:top")}
         />
+      ) : null}
+
+      {/* When *every* departure in the window is unpriced (a brand-new board,
+          an imported season), the per-row pill is the same fact repeated on
+          every line — noise pretending to be information (design/principles.md
+          #9). Said once up here instead; rows keep their pill only while some
+          are priced and some are not, which is when a per-row mark actually
+          distinguishes anything. Three is the floor so one lone unpriced
+          departure keeps its own pill rather than becoming a banner. */}
+      {allUnpriced ? (
+        <p className="mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning">
+          {copy.noPriceSetAll}
+        </p>
       ) : null}
 
       <div className="mt-4 flex flex-col gap-5">
@@ -963,7 +980,7 @@ export function ScheduleBuilder({
                             </Badge>
                           </Link>
                         ) : null}
-                        {trip.priceCents === null ? (
+                        {trip.priceCents === null && !allUnpriced ? (
                           <Link
                             href={`/shop/${shopSlug}/trips/${trip.id}#details`}
                             aria-label={fill(copy.noPriceSetAria, { ref })}

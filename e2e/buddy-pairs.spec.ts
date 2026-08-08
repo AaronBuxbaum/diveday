@@ -35,7 +35,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(trio).toContainText("June Park");
   await expect(trio).toContainText("Keiko Tanaka (crew)");
 
-  // Build a team from two of the free divers.
+  // Build a team from two of the free divers. The builder sits behind its
+  // own disclosure now — forming a team is the rare act on this page.
+  await page.getByText("New buddy team").click();
   await page.getByRole("checkbox", { name: "Omar Haddad" }).check();
   await page.getByRole("checkbox", { name: "Sam Whitfield" }).check();
   await page.getByRole("button", { name: "Form buddy team" }).click();
@@ -120,6 +122,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
 
   // One person is not a team — a single tick is a worded refusal, not a
   // silent no-op.
+  await page.getByText("New buddy team").click();
   await page.getByRole("checkbox", { name: "Omar Haddad" }).check();
   await page.getByRole("button", { name: "Form buddy team" }).click();
   await expect(page.getByText("A buddy team needs at least two people.")).toBeVisible();
@@ -139,6 +142,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   await expect(teamPanel.getByRole("listitem").filter({ hasText: /^Lena Fischer$/ })).toHaveCount(
     0,
   );
+  await page.getByText("New buddy team").click();
   await expect(page.getByRole("checkbox", { name: "Lena Fischer" })).toBeVisible();
   // Same h3-anchored row shape as the first test: Tom's row must not be
   // found via some other row's chip text.
