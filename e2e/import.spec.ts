@@ -152,6 +152,9 @@ test.describe("contact import — specialty cards", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    // The requirements form waits behind its Edit disclosure (summary-first
+    // Overview).
+    await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();
     await expect(page.getByRole("status")).toBeVisible();

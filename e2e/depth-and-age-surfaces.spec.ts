@@ -165,6 +165,10 @@ test.describe("staff", () => {
     // than a hint beside it — a bare "Water temp" is how a 27 meant as °F
     // reaches every diver as an 81°F day.
     await page.goto(tripPath);
+    // The conditions form waits behind its disclosure (summary-first
+    // Overview) — Publish or Edit, depending on whether the seed already
+    // published a prediction for this trip.
+    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page.getByLabel("Water temp °C").fill("27");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
@@ -180,6 +184,8 @@ test.describe("staff", () => {
 
     // 27°C reads back as 81°F — the stored Celsius never moved.
     await page.goto(tripPath);
+    // A prediction is published now, so the disclosure reads "Edit".
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("81");
     await expect(page.getByLabel("Visibility m")).toBeVisible();
 
@@ -189,6 +195,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
     await page.goto(tripPath);
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("76");
   });
 });

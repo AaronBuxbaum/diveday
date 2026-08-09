@@ -122,7 +122,12 @@
     "cancellationWindowDescription": "Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window.",
     "hoursSuffix": "hours",
     "saving": "Saving…",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "edit": "Edit details",
+    "summaryPrice": "{price} per diver",
+    "summaryNoPrice": "No price set — the booking page shows no fare",
+    "summaryDeposit": "{amount} deposit at booking",
+    "summaryCancellation": "{hours}-hour free cancellation window"
   },
   "conditions": {
     "heading": "Crew prediction",
@@ -138,7 +143,12 @@
     "publishing": "Publishing…",
     "publish": "Publish crew prediction",
     "clearing": "Clearing…",
-    "returnToAutomated": "Return to automated outlook"
+    "returnToAutomated": "Return to automated outlook",
+    "editEmpty": "Write a crew prediction",
+    "editPublished": "Edit crew prediction",
+    "summaryPublished": "Crew prediction published:",
+    "holdOnSummary": "Conditions hold is on — new bookings are paused",
+    "publishedAt": "Published {date}"
   },
   "crew": {
     "heading": "Crew",
@@ -161,7 +171,10 @@
     "description": "A short shout-out from the crew, shown on every diver's recap after this trip departs. Leave it blank to send none.",
     "placeholder": "Killer vis today — thanks for diving with us. Come back for the wreck next month!",
     "saving": "Saving…",
-    "save": "Save recap note"
+    "save": "Save recap note",
+    "edit": "Edit note",
+    "write": "Write a note",
+    "emptySummary": "No note yet — recaps go out without one."
   },
   "requirements": {
     "heading": "Readiness requirements",
@@ -188,7 +201,12 @@
     "siteAlsoRequiresCourse": "<strong>{site}</strong> requires {list}. That is the site's own rule for the dive, and continuing education is taught at the sites it certifies people for — so it never blocks enrolment. It still shows on the roster as a readiness blocker for the instructor to work through.",
     "sitesAlsoRequireCourse": "<strong>{site}</strong> require {list}. Those are the sites' own rules for the dives, and continuing education is taught at the sites it certifies people for — so it never blocks enrolment. It still shows on the roster as a readiness blocker for the instructor to work through.",
     "saving": "Saving…",
-    "save": "Save requirements"
+    "save": "Save requirements",
+    "edit": "Edit requirements",
+    "paymentLabel": "Payment:",
+    "specialtiesLabel": "Specialties:",
+    "noSpecialties": "None required",
+    "notConfigured": "Requirements aren't set for this trip — every diver stays blocked until they are."
   },
   "series": {
     "heading": "Repeating series",

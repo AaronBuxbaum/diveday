@@ -137,6 +137,8 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   // shrink the departure back down without deleting and rebuilding it.
   await row.getByRole("link", { name: title, exact: true }).click();
   await expect(page.getByText("3 meeting days · same instructors each day")).toBeVisible();
+  // The details form waits behind its Edit disclosure (summary-first Overview).
+  await page.getByText("Edit details", { exact: true }).click();
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("2 meeting days · same instructors each day")).toBeVisible();
