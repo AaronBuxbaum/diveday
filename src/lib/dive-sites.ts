@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
+import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
 
 const MAX_SITE_IMAGES = 6;
 
@@ -102,12 +103,35 @@ export const diveSiteFormSchema = z.object({
     (value) => (value === "" ? null : value),
     z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
   ),
+  // The route arrives as one JSON string from the editor's hidden input, and
+  // both it and the zoom are normalised by `src/lib/dive-site-route.ts` rather
+  // than described here: they are geometry with clamping and a cap, not a
+  // shape Zod can express without repeating those rules in a second place.
+  // Absent (an older form, a hand-rolled post) reads as "no route", which is
+  // what most sites have.
+  routePoints: z.string().max(4_000).optional(),
+  routeZoom: z.string().max(4).optional(),
+  routeLabel: z.string().trim().max(80).optional(),
+  routeNote: z.string().trim().max(240).optional(),
 });
 
 export type DiveSiteFormFields = z.output<typeof diveSiteFormSchema>;
 
+/** The normalised route half of a parsed submission. */
+export type DiveSiteFormRoute = {
+  points: RoutePoint[];
+  zoom: number;
+  label: string;
+  note: string;
+};
+
 export type DiveSiteFormParse =
-  | { ok: true; fields: DiveSiteFormFields; maxDepthMeters: number | null }
+  | {
+      ok: true;
+      fields: DiveSiteFormFields;
+      maxDepthMeters: number | null;
+      route: DiveSiteFormRoute;
+    }
   | { ok: false; error: DiveSiteFormError };
 
 /**
@@ -133,5 +157,23 @@ export function parseDiveSiteForm(
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
     return { ok: false, error: "depthTooDeep" };
   }
-  return { ok: true, fields: parsed.data, maxDepthMeters };
+  // A route drawn against coordinates the site no longer has is a line over
+  // nothing — the briefing needs the frame to place it in. Dropping the points
+  // rather than refusing the save: the staffer's edit (clearing the
+  // coordinates) is the deliberate act, and it is the route that has stopped
+  // meaning anything, not the submission.
+  const hasCoordinates = forecastLatitude !== "" && forecastLongitude !== "";
+  const routePoints = hasCoordinates ? parseRoutePoints(parsed.data.routePoints) : [];
+  return {
+    ok: true,
+    fields: parsed.data,
+    maxDepthMeters,
+    route: {
+      points: routePoints,
+      zoom: parseRouteZoom(parsed.data.routeZoom),
+      // A label or note with no route to caption is nothing to keep.
+      label: hasRoute(routePoints) ? (parsed.data.routeLabel ?? "") : "",
+      note: hasRoute(routePoints) ? (parsed.data.routeNote ?? "") : "",
+    },
+  };
 }

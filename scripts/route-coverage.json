@@ -177,7 +177,7 @@
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
     "e2e": ["dive-sites.spec.ts"],
-    "visual": []
+    "visual": ["dive-site-edit"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -214,7 +214,7 @@
     ]
   },
   "/shop/[shopSlug]/orders": {
-    "e2e": ["orders-demo.spec.ts", "tenant-isolation.spec.ts"],
+    "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["orders"]
   },
   "/shop/[shopSlug]/orders/[id]": {

@@ -100,6 +100,10 @@ function NavCountBadge({
       tone={STAFF_DESTINATION_BADGE_TONES[badge]}
       size="sm"
       tabularNums
+      // A count, not a status (see `Badge`): the tone and the digit already
+      // say it, and the mark's width is what pushed a six-tab phone header
+      // into a ragged second row.
+      toneMark={false}
       className="ml-1.5 px-1.5 py-0"
     >
       <span aria-hidden="true">{count}</span>
@@ -282,7 +286,21 @@ export function ShopNavLinks({
             <Link
               key={destination.id}
               href={href}
-              className={navClass(active)}
+              // The phone wrap, made deliberate. Six tabs cannot fit one phone
+              // row, so they wrap — and left-aligned at their natural widths
+              // that came out as a full row of four and a stub of two hanging
+              // under the active pill, which is the "breaks line weirdly" of
+              // the report. A 30% basis puts three on a row and `grow` spreads
+              // them flush to both edges, so the two rows read as one block.
+              //
+              // Basis-and-grow rather than an equal-column grid, deliberately:
+              // a flex item never shrinks below its `whitespace-nowrap` label,
+              // so a translation wider than a third of the screen (es-ES
+              // "Configuración") simply takes the next row. The same label in a
+              // fixed grid column would have overflowed the cell and made the
+              // *page* scroll sideways — the bug being fixed on Settings in
+              // this same change.
+              className={`${navClass(active)} max-sm:grow max-sm:basis-[30%] max-sm:justify-center`}
               aria-current={active ? "page" : undefined}
               onClick={closeMore}
             >

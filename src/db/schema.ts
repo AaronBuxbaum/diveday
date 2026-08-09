@@ -655,6 +655,27 @@ export const diveSites = pgTable(
     divePlan: text("dive_plan"),
     landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
     /**
+     * The underwater route, as waypoints a staffer clicked onto the site's
+     * satellite view. Percentages of that view's box (0–100, origin top-left),
+     * never latitude/longitude: the briefing draws them into an SVG overlaid
+     * on the embed at exactly the same `viewBox`, so a percentage is the
+     * coordinate the drawing is actually in. Empty means no route — the
+     * briefing shows the plain satellite frame, which is the ordinary case.
+     *
+     * The frame those percentages refer to is `forecast_latitude` /
+     * `forecast_longitude` at `route_zoom`, which is why the editor never lets
+     * the map be panned: a route saved against a view the viewer cannot
+     * reproduce is a line drawn over the wrong water. See
+     * `src/lib/dive-site-route.ts`.
+     */
+    routePoints: jsonb("route_points").$type<{ x: number; y: number }[]>().notNull().default([]),
+    /** What the route is called on the briefing ("Reef garden loop"). */
+    routeLabel: text("route_label"),
+    /** One line under the label, in the shop's own words. */
+    routeNote: text("route_note"),
+    /** Google Maps zoom the route was drawn at, and must be rendered at. */
+    routeZoom: integer("route_zoom").notNull().default(16),
+    /**
      * The site's inherent cert gate, composed into every trip that visits it
      * (readiness.ts takes the stricter of site and trip). Null means the site
      * imposes no level of its own — never "unknown".

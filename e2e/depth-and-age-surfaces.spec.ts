@@ -59,15 +59,15 @@ test.describe("staff", () => {
     await expect(page.getByText(/Age \d+/).first()).toBeVisible();
 
     // The warning-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "▲ Minor", not
+    // (Badge.tsx toneGlyph), so the element's own text is "⚠️Minor", not
     // "Minor" alone.
-    const minorBadge = page.getByText("▲ Minor").first();
+    const minorBadge = page.getByText("⚠️Minor").first();
     await expect(minorBadge).toBeVisible();
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
     const minorRow = page
-      .locator("li", { has: page.getByText("▲ Minor") })
+      .locator("li", { has: page.getByText("⚠️Minor") })
       .filter({ visible: true })
       .last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
@@ -112,7 +112,7 @@ test.describe("staff", () => {
     // And the diver it is about is still boardable. "Ready", not "Ready to
     // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
     // the roster and the counter share with the manifest.
-    await expect(page.getByText("✓ Ready", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("✅Ready", { exact: true }).first()).toBeVisible();
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
@@ -122,7 +122,7 @@ test.describe("staff", () => {
     await expect(
       page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
     ).toBeVisible();
-    await expect(page.locator("#roll-call-list").getByText("✓ Ready")).toHaveCount(0);
+    await expect(page.locator("#roll-call-list").getByText("✅Ready")).toHaveCount(0);
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

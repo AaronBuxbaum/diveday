@@ -9,6 +9,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
@@ -300,62 +301,68 @@ export default async function OrdersIndexPage({
         </section>
       ) : null}
 
-      <FieldGrid as="form" columns={4} className="rounded-lg border border-border bg-surface p-4">
-        <Field label={t("orders.index.filters.statusLabel")}>
-          <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>
-            <option value="">{t("orders.index.filters.statusAll")}</option>
-            {orderStatus.enumValues.map((value) => (
-              <option key={value} value={value}>
-                {STATUS_KEYS[value] ? t(STATUS_KEYS[value]) : value}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("orders.index.filters.diverLabel")}>
-          {/* Pinned by a `?personId=` link (roster, diver record). The name is
+      {/* `QueryForm`, not the native GET submit this used to be: applying a
+          filter tore the document down and landed the staffer back at the top
+          of the page, above the row they were reading. Same URL, same server
+          render (see `src/components/ui/QueryForm.tsx`). */}
+      <QueryForm className="rounded-lg border border-border bg-surface p-4">
+        <FieldGrid columns={4}>
+          <Field label={t("orders.index.filters.statusLabel")}>
+            <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>
+              <option value="">{t("orders.index.filters.statusAll")}</option>
+              {orderStatus.enumValues.map((value) => (
+                <option key={value} value={value}>
+                  {STATUS_KEYS[value] ? t(STATUS_KEYS[value]) : value}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("orders.index.filters.diverLabel")}>
+            {/* Pinned by a `?personId=` link (roster, diver record). The name is
               shown but not editable, because `personId` wins over a typed one
               — and the id rides along as a hidden field so applying a status or
               a date does not silently throw the staffer back to every diver,
               which is what this form's missing `personId` used to do. */}
-          <input
-            type="text"
-            name={personId ? undefined : "personQuery"}
-            defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
-            placeholder={t("orders.index.filters.diverPlaceholder")}
-            maxLength={120}
-            readOnly={Boolean(personId)}
-            disabled={Boolean(personId)}
-            className={controlClass}
-          />
-        </Field>
-        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
-        {showAll ? <input type="hidden" name="range" value="all" /> : null}
-        <Field label={t("orders.index.filters.fromLabel")}>
-          <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
-        </Field>
-        <Field label={t("orders.index.filters.toLabel")}>
-          <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
-        </Field>
-        <FieldActions>
-          {/* Secondary weight: a filter form is never the page's one obvious
+            <input
+              type="text"
+              name={personId ? undefined : "personQuery"}
+              defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
+              placeholder={t("orders.index.filters.diverPlaceholder")}
+              maxLength={120}
+              readOnly={Boolean(personId)}
+              disabled={Boolean(personId)}
+              className={controlClass}
+            />
+          </Field>
+          {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {showAll ? <input type="hidden" name="range" value="all" /> : null}
+          <Field label={t("orders.index.filters.fromLabel")}>
+            <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
+          </Field>
+          <Field label={t("orders.index.filters.toLabel")}>
+            <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
+          </Field>
+          <FieldActions>
+            {/* Secondary weight: a filter form is never the page's one obvious
               action — that stays with the header's New order (principle 8). */}
-          <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-            {t("orders.index.filters.apply")}
-          </button>
-          {hasFilters ? (
-            <Link
-              href={`/shop/${shopSlug}/orders`}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "text-foreground",
-              })}
-            >
-              {t("orders.index.filters.clear")}
-            </Link>
-          ) : null}
-        </FieldActions>
-      </FieldGrid>
+            <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
+              {t("orders.index.filters.apply")}
+            </button>
+            {hasFilters ? (
+              <Link
+                href={`/shop/${shopSlug}/orders`}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "text-foreground",
+                })}
+              >
+                {t("orders.index.filters.clear")}
+              </Link>
+            ) : null}
+          </FieldActions>
+        </FieldGrid>
+      </QueryForm>
 
       {personId && filteredPersonName ? (
         <p className="mt-4 text-sm text-muted">

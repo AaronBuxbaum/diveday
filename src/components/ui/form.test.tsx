@@ -111,10 +111,10 @@ describe("FormStatus", () => {
 
   it("keeps its tone glyph out of the announced text", () => {
     render(<FormStatus tone="warning">Saved, and two divers no longer qualify.</FormStatus>);
-    // `✕`/`▲` are the colourblind-safe cue, not words — a screen reader that
+    // `❌`/`⚠️` are the colourblind-safe cue, not words — a screen reader that
     // reads them aloud is reading punctuation at someone.
     const status = screen.getByRole("status");
-    expect(status.querySelector("[aria-hidden='true']")?.textContent).toBe("▲");
+    expect(status.querySelector("[aria-hidden='true']")?.textContent).toBe("⚠️");
   });
 
   it("sits inside the form it belongs to", () => {

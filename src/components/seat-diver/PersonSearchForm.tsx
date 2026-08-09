@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 
 /**
  * The one "find a returning diver" box, shared by every staff door that seats
@@ -12,6 +13,11 @@ import { controlClass, Field } from "@/components/ui/form";
  * pixel-stable for visual regression — and the three doors cannot drift apart
  * on `maxLength`, autocomplete, or the button's variant, which is exactly what
  * had happened while each one kept its own copy of this form.
+ *
+ * The reload is a router navigation (`QueryForm`), not a native GET submit: a
+ * staffer mid-list who searched used to be thrown back to the top of the page
+ * by the document tearing down. The URL, the server render and the no-JS
+ * fallback are all unchanged.
  *
  * Words arrive as props: this is shared UI under `src/components`, so it never
  * reads the staff bundle itself (AGENTS.md — staff copy is resolved
@@ -37,7 +43,7 @@ export function PersonSearchForm({
   className?: string;
 }) {
   return (
-    <form method="get" className={`flex flex-wrap items-end gap-2 ${className}`}>
+    <QueryForm className={`flex flex-wrap items-end gap-2 ${className}`}>
       {Object.entries(hiddenFields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
@@ -65,6 +71,6 @@ export function PersonSearchForm({
       <SubmitButton pendingLabel={pendingLabel} className={buttonClass({ variant: "secondary" })}>
         {submitLabel}
       </SubmitButton>
-    </form>
+    </QueryForm>
   );
 }

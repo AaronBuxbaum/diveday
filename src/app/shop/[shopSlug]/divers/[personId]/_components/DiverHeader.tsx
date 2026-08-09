@@ -54,7 +54,7 @@ export function DiverHeader({
                   href={`mailto:${diver.person.email}`}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
                 >
-                  <span aria-hidden="true">✉</span>
+                  <span aria-hidden="true">📧</span>
                   {diver.person.email}
                 </a>
               ) : null}
@@ -63,7 +63,7 @@ export function DiverHeader({
                   href={`tel:${diver.person.phone.replace(/[^\d+]/g, "")}`}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
                 >
-                  <span aria-hidden="true">☎</span>
+                  <span aria-hidden="true">📞</span>
                   {diver.person.phone}
                 </a>
               ) : null}

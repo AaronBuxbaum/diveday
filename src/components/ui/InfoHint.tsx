@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+
+/** Gap between the trigger and the panel, and the panel's margin to the viewport edge. */
+const PANEL_GAP = 8;
+const VIEWPORT_MARGIN = 16;
+/** Matches the `w-72` below — read here so the clamp and the class agree. */
+const PANEL_WIDTH = 288;
 
 /**
  * The "there is more to say, but not on the page" affordance.
@@ -20,12 +26,28 @@ import { useId, useState } from "react";
  *   the trigger's accessible description whether or not anything is hovering —
  *   a screen reader gets the full text on focus without opening anything.
  * - **Tap works.** `:focus-within` alone is unreliable on iOS for a button that
- *   is not a form control, so the trigger also toggles state on click. Hover
- *   stays pure CSS, which is why it costs nothing on a page full of these.
+ *   is not a form control, so the trigger toggles state on click as well.
  * - **The trigger is a `<button type="button">`.** These live inside `<form>`
  *   elements on the settings page; the default `type` is `submit`, so leaving
  *   it off would save the shop's settings every time somebody asked what a
  *   field meant.
+ *
+ * **The panel is `fixed` and placed by measurement, not hung off the trigger.**
+ * It used to be `absolute top-7 left-0 w-72`, which means an 18rem panel
+ * growing rightwards from a 20px marker: on a 390px phone every trigger that
+ * is not at the far left put its panel past the right edge, and an absolutely
+ * positioned box that overflows still counts toward the document's scroll
+ * width *while it is invisible*. Settings' eleven hints between them left the
+ * whole page draggable 165px sideways with nothing out there to see — which is
+ * the reported bug, and it was never a clipped tooltip. A viewport-clamped
+ * `fixed` panel cannot do that at any width (fixed boxes never extend the
+ * scrollable area), so this is the one shape that is correct on a phone and on
+ * a 1440px desktop without a breakpoint guessing which is which.
+ *
+ * The measuring is what costs hover its pure-CSS implementation. That trade is
+ * worth naming: `:hover` cannot tell the panel where the viewport edge is, and
+ * a page full of these listeners is a page full of `getBoundingClientRect` on
+ * pointer-enter — cheap, and only on the hint actually being pointed at.
  */
 export function InfoHint({
   label,
@@ -40,17 +62,68 @@ export function InfoHint({
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Null until the panel has been placed — it renders off-flow and invisible
+  // until then, so a first paint never flashes it at the top-left corner.
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const place = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
+    // Left-aligned to the trigger where there is room, pulled back so the
+    // panel's right edge clears the viewport where there isn't, and never past
+    // the left margin — which is the whole job the old `left-0` could not do.
+    const left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN),
+    );
+    // Below the marker, or above it when the marker is near the bottom of the
+    // screen — a hint on the last card of a long settings page is exactly where
+    // "below" runs out of room.
+    const below = rect.bottom + PANEL_GAP;
+    const estimatedHeight = Math.max(trigger.nextElementSibling?.clientHeight ?? 0, 64);
+    const top =
+      below + estimatedHeight > window.innerHeight - VIEWPORT_MARGIN
+        ? Math.max(VIEWPORT_MARGIN, rect.top - PANEL_GAP - estimatedHeight)
+        : below;
+    setPosition({ left, top });
+  }, []);
+
+  const show = useCallback(() => {
+    place();
+    setOpen(true);
+  }, [place]);
+  const hide = useCallback(() => setOpen(false), []);
+
+  // A `fixed` panel does not travel with the page, so anything that moves the
+  // document under it dismisses it rather than leaving it stranded beside the
+  // wrong control.
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", hide, { passive: true, capture: true });
+    window.addEventListener("resize", hide, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", hide, { capture: true });
+      window.removeEventListener("resize", hide);
+    };
+  }, [open, hide]);
 
   return (
-    <span className={`group relative inline-flex align-middle ${className}`}>
+    <span className={`inline-flex align-middle ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-describedby={id}
         aria-controls={id}
         aria-expanded={open}
-        onClick={() => setOpen((wasOpen) => !wasOpen)}
-        onBlur={() => setOpen(false)}
+        onClick={() => (open ? hide() : show())}
+        onPointerEnter={show}
+        onPointerLeave={hide}
+        onFocus={show}
+        onBlur={hide}
         // No border. The glyph below is already a filled disc, so a ring around
         // it read as a circle drawn around a circle — and beside a heading it
         // looked like a control that had lost its label rather than a marker.
@@ -67,8 +140,9 @@ export function InfoHint({
       <span
         id={id}
         role="note"
-        className={`pointer-events-none absolute top-7 left-0 z-20 w-72 max-w-[min(18rem,80vw)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 ${
-          open ? "visible opacity-100" : "invisible opacity-0"
+        style={position ? { left: position.left, top: position.top } : undefined}
+        className={`pointer-events-none fixed top-0 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity ${
+          open && position ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
         {detail}

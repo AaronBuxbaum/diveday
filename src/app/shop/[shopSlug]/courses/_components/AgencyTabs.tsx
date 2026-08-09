@@ -12,9 +12,14 @@ import Link from "next/link";
  *
  * Server-rendered from `?agency=`, like the shop home's queue switch: each tab
  * is a real link to a real URL, so it bookmarks, opens in a new tab, and needs
- * no JavaScript. The page owns the query shape via `hrefFor` — the tab strip
- * never builds a URL itself, which is what keeps `?page=` from surviving a tab
- * change and stranding a staffer on page 3 of a one-page list.
+ * no JavaScript — and, like that switch, `scroll={false}`
+ * keeps a tab change from throwing a staffer back to the top of the roster.
+ * The page owns the query shape via `hrefFor` — the tab strip never builds a URL
+ * itself, which is what keeps `?page=` from surviving a tab change and
+ * stranding a staffer on page 3 of a one-page list.
+ *
+ * Exactly one agency is on screen at a time; see the note on `tabs` below for
+ * why there is no "All".
  */
 export function AgencyTabs({
   agencies,
@@ -24,21 +29,27 @@ export function AgencyTabs({
 }: {
   /** The agencies present in this shop's catalog, from `courseAgencies`. */
   agencies: string[];
-  /** The selected agency, or null for "All". */
+  /** The selected agency — always one of `agencies`; there is no unfiltered view. */
   current: string | null;
-  hrefFor: (agency: string | null) => string;
-  copy: { label: string; all: string };
+  hrefFor: (agency: string) => string;
+  copy: { label: string };
 }) {
-  // One agency is not a filter — every tab would show the same list, and "All"
-  // beside "PADI" is a choice between two identical answers.
+  // One agency is not a filter — the only tab would show the list that is
+  // already on screen.
   if (agencies.length < 2) return null;
 
-  const tabs: { agency: string | null; label: string }[] = [
-    { agency: null, label: copy.all },
-    // An agency code is shop data (a proper noun), never copy: it is upper-cased
-    // here rather than translated.
-    ...agencies.map((agency) => ({ agency, label: agency.toUpperCase() })),
-  ];
+  // No "All" tab. A shop teaches to one agency's standards at a time: the
+  // roster reads in *progression order*, the order a diver actually moves
+  // through the certifications, and that order only means anything inside one
+  // agency's ladder. "All" interleaved two ladders into a single column where
+  // an Open Water sat next to an Open Water, and staff had to read the row
+  // twice to tell which was which — a list nobody wanted, occupying the tab
+  // every shop lands on first. `agencies` covers the whole catalog between
+  // them (`courses.agency` is non-null), so nothing is unreachable without it.
+  //
+  // An agency code is shop data (a proper noun), never copy: upper-cased here
+  // rather than translated.
+  const tabs = agencies.map((agency) => ({ agency, label: agency.toUpperCase() }));
 
   return (
     <nav
@@ -49,7 +60,7 @@ export function AgencyTabs({
         const active = tab.agency === current;
         return (
           <Link
-            key={tab.agency ?? "all"}
+            key={tab.agency}
             href={hrefFor(tab.agency)}
             scroll={false}
             aria-current={active ? "true" : undefined}

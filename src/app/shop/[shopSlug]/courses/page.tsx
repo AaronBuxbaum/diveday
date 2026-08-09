@@ -90,8 +90,16 @@ function CalendarPlusIcon() {
   );
 }
 
-/** A chain link — shown next to the eye toggle to jump to the course's live preview page. */
-function LinkIcon() {
+/**
+ * An arrow leaving a frame — shown next to the eye toggle to open the course's
+ * live public page.
+ *
+ * Not the chain link this used to be. A chain link is the web's mark for *the
+ * address of this thing*, and beside a "hide/show" toggle staff read it as the
+ * control that copies the URL to send a diver — which is not what it does. An
+ * arrow out of a box is the mark for "this opens the page", which is.
+ */
+function OpenPageIcon() {
   return (
     <svg
       aria-hidden="true"
@@ -103,9 +111,9 @@ function LinkIcon() {
       strokeLinejoin="round"
       className="size-5"
     >
-      <path d="M9 17H7a5 5 0 0 1 0-10h2" />
-      <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
-      <path d="M8 12h8" />
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
     </svg>
   );
 }
@@ -148,10 +156,12 @@ export default async function CoursesPage({
   }
 
   const agencies = await courseAgencies(db, shop.id);
-  // An unknown `?agency=` reads as no filter rather than as an empty catalog:
-  // the value is attacker- (and typo-) supplied, and a roster that silently
-  // shows nothing is indistinguishable from a shop that has no courses.
-  const selectedAgency = agency && agencies.includes(agency) ? agency : null;
+  // An unknown `?agency=` reads as the first agency rather than as an empty
+  // catalog: the value is attacker- (and typo-) supplied, and a roster that
+  // silently shows nothing is indistinguishable from a shop that has no
+  // courses. Null only when the shop has no courses at all — there is no
+  // unfiltered view any more (see `AgencyTabs`).
+  const selectedAgency = agency && agencies.includes(agency) ? agency : (agencies[0] ?? null);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one.
@@ -169,9 +179,12 @@ export default async function CoursesPage({
     const query = new URLSearchParams(params).toString();
     return query ? `${base}?${query}` : base;
   };
-  // A tab change drops `?page=`: page 3 of the whole catalog is rarely page 3
-  // of one agency's half, and landing on an empty page reads as a broken tab.
-  const agencyHref = (target: string | null) => withParams(target ? { agency: target } : {});
+  // A tab change drops `?page=`: page 3 of one agency's ladder is rarely page 3
+  // of another's, and landing on an empty page reads as a broken tab. The
+  // shop's first agency is the default, so its tab keeps the bare URL
+  // canonical.
+  const agencyHref = (target: string) =>
+    withParams(target === agencies[0] ? {} : { agency: target });
   const pageHref = (target: number) =>
     withParams({
       ...(selectedAgency ? { agency: selectedAgency } : {}),
@@ -189,7 +202,7 @@ export default async function CoursesPage({
         agencies={agencies}
         current={selectedAgency}
         hrefFor={agencyHref}
-        copy={{ label: st("courses.list.agencyTabsLabel"), all: st("courses.list.allAgencies") }}
+        copy={{ label: st("courses.list.agencyTabsLabel") }}
       />
 
       {/* Progression order, not alphabetical: the list reads the way a shop
@@ -265,7 +278,7 @@ export default async function CoursesPage({
                 href={publicCoursePath(shop.slug, course.slug)}
                 className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
               >
-                <LinkIcon />
+                <OpenPageIcon />
                 <span className="sr-only">
                   {st("courses.list.previewSrLabel", { title: course.title })}
                 </span>

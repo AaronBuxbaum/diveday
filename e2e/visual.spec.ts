@@ -2597,6 +2597,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "dive-sites-library", scheme);
       });
 
+      // A site's own briefing form, which is where the route a shop draws is
+      // drawn. Captured on a seeded site that already has one, so the frame
+      // holds the map, the curve, and its start/finish dots rather than the
+      // empty state — the thing worth having a baseline of. The satellite
+      // embed is a third-party iframe and renders nothing deterministic in
+      // CI, which is exactly why the overlay is what this watches: the SVG is
+      // ours and is drawn from the row.
+      test(`the dive-site briefing form renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("link", { name: "Molasses Reef" }).first().click();
+        await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+        // The route's own caption box, which only renders once the editor has
+        // mounted and read the coordinate fields beside it.
+        await page.getByLabel("What the route is called").waitFor();
+        await capture(page, "dive-site-edit", scheme);
+      });
+
       // The front desk's invoice builder. It redirects to Divers for a shop
       // that can't take money, so mark the demo shop connected first:
       // /api/test/seed-stripe-account is a pure DB write that never calls

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
-import { JumpNav } from "@/components/JumpNav";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -425,12 +424,6 @@ export default async function SettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         title={t("settings.main.title")}
         description={t("settings.main.description")}
-      />
-
-      <JumpNav
-        ariaLabel={t("settings.main.jump.label")}
-        items={SETTINGS_GROUPS.map((group) => ({ id: group.id, label: t(group.labelKey) }))}
-        className="-mt-2"
       />
 
       {banner && !activeSection ? (

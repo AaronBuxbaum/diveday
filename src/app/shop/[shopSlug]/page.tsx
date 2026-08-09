@@ -128,8 +128,21 @@ export default async function ShopPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["created", "series", "reset", "email", "notice"]} />
       {/* The queue join is the one real wait on this page; a content-shaped
-          fallback keeps a cold nav from reading as a blank hang (principle 1). */}
-      <Suspense key={`${queueView}:${page ?? ""}`} fallback={<TodaySkeleton />}>
+          fallback keeps a cold nav from reading as a blank hang (principle 1).
+
+          **No `key`.** It used to be keyed on `${view}:${page}`, which made
+          every flip of the view switch a *remount*: React threw the whole body
+          away — greeting, departure board, queue and all — painted the
+          skeleton, and then painted the new view. That flash is what "By
+          urgency / By departure causes a full page refresh" was describing, for
+          what is one sort of the same evidence. A keyed boundary that suspends
+          shows its fallback even inside a transition; an unkeyed one does not,
+          so the current view now stays on screen until the next one is ready
+          and the document never loses its height. Measured after the change:
+          flipping the view from a scroll of 900px leaves the viewport at 900px,
+          and `document.scrollHeight` holds steady until the new content lands.
+          The boundary still does its real job on a cold arrival. */}
+      <Suspense fallback={<TodaySkeleton />}>
         <TodayBody
           session={session}
           shopSlug={shopSlug}
