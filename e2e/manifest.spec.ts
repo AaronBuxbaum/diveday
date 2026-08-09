@@ -108,7 +108,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await markNotBoarded.click();
   // WP-6: the card settles in place — the button flips to the confirmed state
   // without a full-page redirect, so the roster position never jumps.
-  await expect(page.getByRole("button", { name: "Not boarded ✓" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Not boarded ☑️" }).first()).toBeVisible();
   await expect
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
@@ -136,7 +136,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   expect(rowTotal).toBe(rosterTotal);
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
-  await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(2);
 });
 
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({
@@ -171,7 +171,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(page.getByText("Fresh copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
   // After a dive the offline copy words this control the same way the live
-  // manifest does — "not back aboard", never a settled "Not boarded ✓" (DOM-H3).
+  // manifest does — "not back aboard", never a settled "Not boarded ☑️" (DOM-H3).
   await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
   await page.getByRole("button", { name: "Mark not back aboard" }).first().click();
   // Two live regions exist here (the action message and the connectivity
@@ -538,7 +538,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   for (let guard = 0; guard < 20; guard += 1) {
     const remaining = await boardButtons.count();
     if (remaining === 0) break;
-    const settled = page.getByRole("button", { name: "Boarded ✓" });
+    const settled = page.getByRole("button", { name: "Boarded ☑️" });
     const settledBefore = await settled.count();
     const next = boardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
@@ -553,14 +553,14 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // Every diver has a result — and the checkpoint is still open, naming why:
   // the crew, by name, are the whole crew half (ADR
   // 20260804-crew-roll-call-is-per-person).
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
   await expect(page.getByText(/crew members still to call/)).toBeVisible();
 
   const crewAboardButtons = page.getByRole("button", { name: "Mark aboard" });
   for (let guard = 0; guard < 6; guard += 1) {
     const remaining = await crewAboardButtons.count();
     if (remaining === 0) break;
-    const settled = page.getByRole("button", { name: "Aboard ✓" });
+    const settled = page.getByRole("button", { name: "Aboard ☑️" });
     const settledBefore = await settled.count();
     const next = crewAboardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
@@ -570,11 +570,11 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(crewAboardButtons).toHaveCount(0);
 
   // Every person aboard named by a human: now it closes.
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toBeVisible();
 
   // DOM-H3. Now a diver does not come back from dive one. After a dive, the
   // control that isn't "Boarded" says so in those words and never settles into
-  // a green-checked "Not boarded ✓", and the closed checkpoint re-opens —
+  // a green-checked "Not boarded ☑️", and the closed checkpoint re-opens —
   // which is what the Today queue is simultaneously alarming about.
   await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
   const markNotBack = page
@@ -592,8 +592,8 @@ test("a checkpoint with every diver counted stays open until the crew are called
       .getByRole("button", { name: "Not back aboard", exact: true })
       .first(),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
 
   // DD1. A stated crew emergency must never be hidden behind a clerical diver
@@ -622,7 +622,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
   await expect(page.getByText(/diver still to call/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({

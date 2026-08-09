@@ -12,20 +12,26 @@ import { expect, signedInAs, test } from "./fixtures";
  * (e2e/role-permissions.spec.ts); what is asserted here is that the doors
  * exist for whoever may walk through them, and are absent — not disabled, not
  * explained — for whoever may not (ADR 20260724-role-gated-surfaces-hide-not-explain).
+ *
+ * The anchors moved. They used to be their own `JumpNav` row ("Jump to a
+ * section") sitting four lines under the settings sub-nav card and repeating
+ * its three group names; the words appear once now, on the sub-nav itself,
+ * where each group name *is* the anchor to its section. Same anchors, same
+ * assertion, one control.
  */
 const SHOP = DEMO_SHOP_SLUG;
 
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("the jump row reaches each group, and Settings opens Team and Promo codes", async ({
+  test("the sub-nav reaches each group, and Settings opens Team and Promo codes", async ({
     page,
   }) => {
     await page.goto(`/shop/${SHOP}/settings`);
 
     // A plain in-page anchor per group: the hash lands, and the heading it
     // names is a real target on the page.
-    const jump = page.getByRole("navigation", { name: "Jump to a section" });
+    const jump = page.getByRole("navigation", { name: "Settings sections" });
     await jump.getByRole("link", { name: "Money" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings#money$`));
     // By id, not by accessible name: the group headings are rendered
@@ -85,6 +91,6 @@ test.describe("as divemaster", () => {
 
     await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
     await expect(page.getByText(/managed by the owner or a manager/i)).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Jump to a section" })).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
   });
 });

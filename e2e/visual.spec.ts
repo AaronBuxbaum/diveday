@@ -2348,7 +2348,7 @@ for (const scheme of ["light", "dark"] as const) {
        * checkpoint that stays open. Nothing in the seed reaches it, and the
        * departure capture above cannot show it, so it gets its own baseline:
        * this is the screen a captain reads when someone is still in the water,
-       * and it used to be pixel-identical to a settled "Not boarded ✓" row.
+       * and it used to be pixel-identical to a settled "Not boarded ☑️" row.
        * Its own test so the roll-call write is contained — the per-test DB
        * reset (e2e/fixtures.ts) puts it back.
        */

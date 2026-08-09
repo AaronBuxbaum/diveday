@@ -104,7 +104,7 @@ test.describe("seat claim links", () => {
       .locator("section", { has: page.getByRole("heading", { name: "Your group’s seats" }) })
       .locator("li")
       .filter({ hasText: "Sam Reyes" });
-    await expect(refreshedRow.getByText("Claimed ✓")).toBeVisible();
+    await expect(refreshedRow.getByText("Claimed ✅")).toBeVisible();
     await expect(refreshedRow.locator("p.font-mono")).toHaveCount(0);
 
     // Staff see the claimant on the roster and the claim on the trail.

@@ -66,7 +66,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const boardOmar = omarRow.getByRole("button", { name: "Mark boarded" });
   await boardOmar.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardOmar.click();
-  await expect(omarRow.getByRole("button", { name: "Boarded ✓" })).toBeVisible();
+  await expect(omarRow.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
   await expect(
     omarRow.getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
   ).toBeVisible();
@@ -84,7 +84,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const boardSam = samRow.getByRole("button", { name: "Mark boarded" });
   await boardSam.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardSam.click();
-  await expect(samRow.getByRole("button", { name: "Boarded ✓" })).toBeVisible();
+  await expect(samRow.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
   await expect(omarRow.getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
   await expect(omarRow.getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
