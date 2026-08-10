@@ -1002,16 +1002,9 @@ export function ScheduleBuilder({
                       </div>
                       {/* The right-hand column: what this departure's state is,
                           then what you can do about it, on one centred line.
-                          `z-10` lifts its own links and the "⋯" menu above the
-                          title's stretched overlay — and while this row's menu
-                          is open, `z-30` lifts the whole column above the
-                          *later* rows' equally-raised columns, whose stacking
-                          contexts would otherwise paint over the dropdown. */}
-                      <div
-                        className={`relative flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end ${
-                          open === `menu:${trip.id}` ? "z-30" : "z-10"
-                        }`}
-                      >
+                          `z-10` lifts its own links and the "⋯" controls above
+                          the title's stretched overlay. */}
+                      <div className="relative z-10 flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                         {/* Counts are facts, not alerts (design/principles.md
                             #9): a routine 5/12 reads as quiet tabular text, the
                             same register the public schedule gives "7 spots
@@ -1071,7 +1064,7 @@ export function ScheduleBuilder({
                             principles #8, "collapse the rare path"). The
                             content is the row; the controls appear when asked. */}
                         {canConfigure && !trip.rollCallOpen ? (
-                          <div data-row-menu={trip.id} className="relative shrink-0">
+                          <div data-row-menu={trip.id} className="flex shrink-0 items-center gap-1">
                             <button
                               type="button"
                               ref={registerToggle(`menu:${trip.id}`)}
@@ -1090,8 +1083,17 @@ export function ScheduleBuilder({
                                 ⋯
                               </span>
                             </button>
+                            {/* The three choices disclose *inline*, unfolding
+                                beside the "⋯" that revealed them, never as a
+                                floating panel. On these borderless rows a
+                                dropdown hung over whatever sat beneath it —
+                                the next day's "+ Add" ended up 18px from
+                                fully covered, an automated-scan WCAG 2.5.8
+                                failure. Inline, nothing can ever be obscured,
+                                and the actions sit beside the row they act on
+                                (design/principles.md #10). */}
                             {open === `menu:${trip.id}` ? (
-                              <div className="absolute top-full right-0 z-20 mt-1 flex w-max min-w-36 flex-col rounded-xl border border-border bg-surface p-1 shadow-lg animate-scale-in">
+                              <div className="flex items-center gap-1 animate-scale-in">
                                 <button
                                   type="button"
                                   ref={focusOnMount}
@@ -1100,7 +1102,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.move}
@@ -1112,7 +1113,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.copy}
@@ -1133,7 +1133,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "danger-ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.remove}
