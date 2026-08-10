@@ -25,7 +25,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // fields, then "More options" for the dive plan (ADR
   // 20260806-one-trip-create-form). No second page to leave for.
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+  await page.getByRole("link", { name: "Add a departure", exact: true }).click();
   await page.getByRole("button", { name: "More options" }).click();
 
   await page.getByLabel("What is it").fill(title);

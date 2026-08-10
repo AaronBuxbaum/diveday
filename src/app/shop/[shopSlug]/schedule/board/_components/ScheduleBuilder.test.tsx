@@ -16,20 +16,27 @@ import {
 // own doc comment). `setMockPathname` simulates a navigation event —
 // including an Activity-preserved show/hide cycle, should
 // `cacheComponents: true` be re-enabled — without a real Next.js router.
-const { usePathname, setMockPathname } = vi.hoisted(() => {
-  let current = "/shop/blue-mantis/schedule/board";
-  return {
-    usePathname: vi.fn(() => current),
-    setMockPathname: (next: string) => {
-      current = next;
-    },
-  };
-});
-vi.mock("next/navigation", () => ({ usePathname }));
+const { usePathname, setMockPathname, useRouter, useSearchParams, routerReplace } = vi.hoisted(
+  () => {
+    let current = "/shop/blue-mantis/schedule/board";
+    const replace = vi.fn();
+    return {
+      usePathname: vi.fn(() => current),
+      setMockPathname: (next: string) => {
+        current = next;
+      },
+      routerReplace: replace,
+      // The top add panel's Cancel clears the `?add` that opened it via
+      // router.replace; the tests only need the calls to exist, not a router.
+      useRouter: vi.fn(() => ({ replace })),
+      useSearchParams: vi.fn(() => new URLSearchParams()),
+    };
+  },
+);
+vi.mock("next/navigation", () => ({ usePathname, useRouter, useSearchParams }));
 
 const COPY: BuilderCopy = {
   ariaLabel: "Schedule builder",
-  addDeparture: "Add a departure",
   addDepartureOnDay: "Add a departure on {day}",
   add: "Add",
   cancel: "Cancel",
@@ -180,6 +187,8 @@ const loadOptions = vi.fn(async () => ({
 afterEach(() => {
   cleanup();
   loadOptions.mockClear();
+  routerReplace.mockClear();
+  useSearchParams.mockReturnValue(new URLSearchParams());
   setMockPathname("/shop/blue-mantis/schedule/board");
 });
 
@@ -345,7 +354,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
 
   it("offers an optional price box, currency-shaped by the server", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     const price = screen.getByLabelText(/Price per diver/);
     expect(price).toHaveAttribute("name", "priceDollars");
@@ -362,15 +371,15 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     // Closed panel, no catalogue: the whole point of the change.
     expect(loadOptions).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadOptions).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
 
     // Reopening reuses what it already has — the catalogue does not change
     // while somebody schedules a week.
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadOptions).toHaveBeenCalledTimes(1);
   });
 });
@@ -465,7 +474,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
 
     // Simulate a navigate-away-and-back: the pathname changes and this
@@ -491,6 +500,56 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     );
 
     expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
+  });
+});
+
+describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+  const props = {
+    shopSlug: "blue-mantis",
+    days,
+    loadOptions,
+    price: PRICE,
+    actions,
+    defaultDateIso: "2026-08-01",
+    canConfigure: true,
+    copy: COPY,
+    more: MORE,
+    initialCourse: null,
+  } as const;
+
+  it("opens when the openAdd prop changes after mount, so the header link works twice", async () => {
+    // The header's "Add a departure" is a Link to `?add=1` on this same
+    // route — a client navigation that re-renders this instance with a new
+    // prop rather than remounting it. Without the prop-change effect the
+    // link opened the panel exactly once per mount.
+    const { rerender } = render(<ScheduleBuilder {...props} openAdd="closed" />);
+    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
+
+    rerender(<ScheduleBuilder {...props} openAdd="quick" />);
+    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
+  });
+
+  it("clears the opening params on Cancel, keeping the rest of the URL", async () => {
+    // Not `...Once`: the mount renders more than once (the open-panel state
+    // settles in an effect), and Cancel's closure reads the *latest* render's
+    // params. afterEach restores the empty default.
+    useSearchParams.mockReturnValue(new URLSearchParams("add=1&after=cursor-2"));
+    render(<ScheduleBuilder {...props} openAdd="quick" />);
+    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
+    expect(routerReplace).toHaveBeenCalledWith("/shop/blue-mantis/schedule/board?after=cursor-2", {
+      scroll: false,
+    });
   });
 });
 
@@ -520,7 +579,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
       />,
     );
 
-    const toggle = screen.getByRole("button", { name: "Add a departure" });
+    const toggle = screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" });
     await userEvent.click(toggle);
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toHaveFocus();
 
@@ -790,7 +849,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("keeps the rare half collapsed, and reveals the whole trip form on request", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     // Collapsed: the questions the board is for are live, the rest inert.
     // (Inert, not absent — the disclosure hides rather than unmounts. What is
@@ -827,7 +886,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // so "not on screen" has to mean "disabled" or a collapsed submission would
     // carry a hidden `dayCount`, deposit, and cadence nobody chose.
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
     await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
 
@@ -853,7 +912,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     const enabled = (name: string) =>
       container.querySelectorAll(`[name="${name}"]:not(:disabled)`).length;
 
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(enabled("plannedDives")).toBe(1);
     expect(enabled("diveSiteId")).toBe(1);
 
@@ -866,7 +925,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("carries the quick dive count and site into the dive plan on first expand", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByRole("option", { name: "Molasses Reef" });
 
     await userEvent.clear(screen.getByLabelText("Dives"));
@@ -886,7 +945,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("loses nothing across expand → collapse → expand", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByRole("option", { name: "Molasses Reef" });
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
 
@@ -909,7 +968,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("mirrors the dive plan's count back to the quick box on the way down", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
     await userEvent.selectOptions(screen.getByLabelText("Number of dives"), "4");
     await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
@@ -948,7 +1007,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
   it("tells a captain whose job scheduling is, rather than showing an empty board", () => {
     renderBuilder({ canConfigure: false });
 
-    expect(screen.queryByRole("button", { name: "Add a departure" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Add a departure/ })).toBeNull();
     expect(screen.getByText(/limited to owners, managers, and instructors/)).toBeInTheDocument();
   });
 });

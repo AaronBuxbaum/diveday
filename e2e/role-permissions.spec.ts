@@ -88,7 +88,8 @@ test.describe("H-14 role permissions", () => {
       // than just omitting the control (ADR 20260806-one-trip-create-form).
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Add a departure" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /Add a departure/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
 
       // Diver deletion is hidden — and so is the strictly stricter erasure

@@ -192,7 +192,6 @@ export default async function ScheduleBoardPage({
     : undefined;
   const builderCopy: BuilderCopy = {
     ariaLabel: st("schedule.builder.ariaLabel"),
-    addDeparture: st("schedule.builder.addDeparture"),
     addDepartureOnDay: st("schedule.builder.addDepartureOnDay"),
     add: st("schedule.builder.add"),
     cancel: st("schedule.builder.cancel"),
@@ -441,6 +440,23 @@ export default async function ScheduleBoardPage({
             >
               {st("schedule.viewPublicPage")}
             </Link>
+            {/* A link to `?add=1`, not a button: the open-the-panel state
+                lives in ScheduleBuilder, and this is the server-rendered side
+                of that boundary. It joins the header's action cluster instead
+                of holding a whole band of its own between header and board —
+                the same control the former /trips/new doors 308 into.
+                `data-board-add` is how the panel's Cancel hands focus back
+                here. Secondary weight: the page's one primary stays "Add a
+                booking". */}
+            {canConfigure ? (
+              <Link
+                href={`/shop/${shopSlug}/schedule/board?add=1`}
+                data-board-add
+                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+              >
+                <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
+              </Link>
+            ) : null}
             {/* The board's primary action. Scheduling a departure is the rarer
                 job — a shop puts a boat on the board once and then seats
                 divers on it all week — and until now "someone just called,
