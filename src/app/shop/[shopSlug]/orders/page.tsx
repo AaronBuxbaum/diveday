@@ -49,7 +49,7 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
  * Paid deliberately has no entry: on this index it is the expected state of
  * nearly every row, and a success pill repeated down the whole column is
  * noise pretending to be information (design principle 9). Paid renders as
- * quiet muted text; a badge appears only on the statuses that need a
+ * an empty cell; a badge appears only on the statuses that need a
  * staffer's eye.
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -481,11 +481,10 @@ export default async function OrdersIndexPage({
                     <td className="hidden px-4 py-3 text-muted sm:table-cell">
                       {row.trip?.title ?? row.order.description ?? "—"}
                     </td>
-                    <td className="hidden px-4 py-3 sm:table-cell">
-                      {statusBadge ?? (
-                        <span className="text-sm text-muted">{t(STATUS_KEYS.paid)}</span>
-                      )}
-                    </td>
+                    {/* Settled rows leave the cell empty — "Paid" on 45 of 50
+                        rows is the expected state formatted as information, so
+                        a marker appears only where a staffer is needed. */}
+                    <td className="hidden px-4 py-3 sm:table-cell">{statusBadge}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-muted tabular-nums">
                       {formatShortDate(row.order.createdAt, locale, shop.timezone)}
                     </td>

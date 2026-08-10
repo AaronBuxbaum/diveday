@@ -80,7 +80,7 @@ test.describe("weather blow-out cascade", () => {
     // Put an empty departure on the board, then blow it out.
     const title = `Blowout Empty ${e2eNow().getTime()}`;
     await page.goto(`/shop/${SHOP}/schedule/board`);
-    await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
     await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(4));
     await page.getByLabel("Departs").fill("08:00");

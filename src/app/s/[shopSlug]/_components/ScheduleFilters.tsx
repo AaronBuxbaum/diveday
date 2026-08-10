@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -13,18 +12,20 @@ export type ScheduleFiltersCopy = {
   course: string;
   hasSpace: string;
   apply: string;
-  applying: string;
 };
 
 /**
- * The schedule's filter row. Changing a filter *is* the ask — so once
- * hydrated, any change submits the form itself and the Apply button steps
- * aside (design/principles.md #10: the action rides on the control, not on a
- * second button the reader must map back to it). Until hydration — and with
- * JS off — the button stays, so the server-fed GET reload keeps working
- * exactly as before. The form remains a plain GET either way: the URL carries
- * the filters, and the list below re-renders server-side, pixel-stable for
- * visual regression.
+ * The schedule's filter row. Changing a filter *is* the ask — so with JS on,
+ * any change submits the form itself and no Apply button renders at all
+ * (design/principles.md #10: the action rides on the control, not on a
+ * second button the reader must map back to it). With JS off, the
+ * `<noscript>` Apply button keeps the server-fed GET reload working. The
+ * button used to render for everyone and be removed on hydration, so every
+ * real visitor watched it flash in and out beside "Has space"; `<noscript>`
+ * trades that flash for a tiny pre-hydration beat where a very fast tap on a
+ * filter does nothing yet. The form remains a plain GET either way: the URL
+ * carries the filters, and the list below re-renders server-side,
+ * pixel-stable for visual regression.
  *
  * `QueryForm`, not a bare `<form method="get">`: auto-submit on change plus a
  * native GET submit meant one tap of "Has space" tore the document down and
@@ -83,14 +84,15 @@ export function ScheduleFilters({
         />
         {copy.hasSpace}
       </label>
-      {hydrated ? null : (
-        <SubmitButton
-          pendingLabel={copy.applying}
-          className={buttonClass({ variant: "secondary" })}
-        >
+      {/* React deliberately skips hydrating <noscript> children (a
+          scripting-enabled browser parses them as one text node), so real
+          JSX here is safe and never mismatches. Nothing inside can run JS
+          anyway — a plain submit button is the whole no-JS story. */}
+      <noscript>
+        <button type="submit" className={buttonClass({ variant: "secondary" })}>
           {copy.apply}
-        </SubmitButton>
-      )}
+        </button>
+      </noscript>
     </QueryForm>
   );
 }

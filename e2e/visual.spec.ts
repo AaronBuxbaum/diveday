@@ -1732,7 +1732,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
-        await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+        await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         // Its two selects fetch their options when the panel opens; wait for
         // the placeholder option to go, so the shot is never of "Loading…".
         await page

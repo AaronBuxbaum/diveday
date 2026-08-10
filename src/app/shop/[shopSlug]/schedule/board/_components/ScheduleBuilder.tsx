@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
@@ -109,7 +109,6 @@ type BuilderActions = {
  */
 export type BuilderCopy = {
   ariaLabel: string;
-  addDeparture: string;
   addDepartureOnDay: string;
   add: string;
   cancel: string;
@@ -692,6 +691,31 @@ export function ScheduleBuilder({
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
 
+  // The top add panel is opened by *links* — the header's "Add a departure",
+  // the empty board's call to action, the former /trips/new doors — all of
+  // which land as a `?add=` client navigation to this same route. The state
+  // initializer above only covers a fresh mount, so a prop change (same
+  // component instance, new search params) has to open the panel too, or the
+  // header link works exactly once.
+  useEffect(() => {
+    if (openAdd !== "closed") setOpen("add:top");
+  }, [openAdd]);
+
+  // Cancelling that panel mirrors the link that opened it: clear the opening
+  // params so the same link opens it again, and hand focus back to the header
+  // control (server-rendered, so reached by its data attribute rather than a
+  // ref). Cursor/notice params survive — only what opened the panel goes.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const cancelTopAdd = () => {
+    setOpen(null);
+    const params = new URLSearchParams(searchParams);
+    for (const key of ["add", "date", "course"]) params.delete(key);
+    router.replace(`${pathname}${params.size > 0 ? `?${params}` : ""}`, { scroll: false });
+    document.querySelector<HTMLElement>("[data-board-add]")?.focus();
+  };
+
   // A shared fact belongs to the group, not the rows (principle 9): when every
   // departure on the board is unpriced, the per-row pill collapses into one
   // notice above the list. Three is the floor — below it, a pill per row still
@@ -763,7 +787,6 @@ export function ScheduleBuilder({
   // 20260801-cache-components-activity-state, currently reverted, commit
   // 100fcf8). Reset on the leading edge of any (re)navigation, same pattern
   // as InlineConfirm.
-  const pathname = usePathname();
   // Skipping the genuine first mount is load-bearing: effects run only after
   // hydration *completes*, but selective hydration lets a person open a panel
   // the moment its own button is interactive — so on a slow connection this
@@ -786,25 +809,11 @@ export function ScheduleBuilder({
 
   return (
     <section aria-label={copy.ariaLabel} className="mb-8">
-      {/* No heading of its own: the page header directly above already names
-          and describes this surface, and "Board" then "The board" was the same
-          fact twice (principle 9 applies to headings too). Secondary weight
-          always: the page's one primary is "Add a booking" in the header —
-          seating divers is the common job — and the panel this opens ends in
-          its own "Put it on the board" primary (principle 8). */}
-      {canConfigure ? (
-        <div className="mb-3 flex justify-end">
-          <button
-            type="button"
-            ref={registerToggle("add:top")}
-            onClick={() => toggle("add:top")}
-            aria-expanded={open === "add:top"}
-            className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-          >
-            <span aria-hidden="true">+</span> {copy.addDeparture}
-          </button>
-        </div>
-      ) : null}
+      {/* No top "Add a departure" band: that control lives in the page
+          header's action cluster (a Link to `?add=1` in page.tsx) rather than
+          holding a stratum of its own whose only content duplicated the "+
+          Add" every day header already carries (principle 8/9). The panel it
+          opens still renders here, keyed "add:top", via `openAdd`. */}
 
       {/* Creating a departure is owner/manager/instructor work (H-14); crew
           still read the board, so it says whose job this is rather than
@@ -815,7 +824,7 @@ export function ScheduleBuilder({
         </p>
       )}
 
-      {/* Keyed "add:top" rather than by its date: the header button and the
+      {/* Keyed "add:top" rather than by its date: the header link and the
           first day's own "+ Add" would otherwise share a panel key and render
           two identical forms at once. */}
       {canConfigure && open === "add:top" ? (
@@ -828,7 +837,7 @@ export function ScheduleBuilder({
           initialCourse={initialCourse}
           startExpanded={openAdd === "expanded"}
           onAdd={actions.add}
-          onCancel={() => closePanel("add:top")}
+          onCancel={cancelTopAdd}
         />
       ) : null}
 
@@ -852,8 +861,17 @@ export function ScheduleBuilder({
                 day numeral, weekday and month as its caps, a hairline running
                 out to the day's own "+ Add". The numeral is what a scrolling
                 thumb catches; the sr-only sentence keeps the date readable in
-                one piece for screen readers. */}
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                one piece for screen readers.
+
+                Sticky like the storefront's, so mid-scroll the rows under a
+                thumb always name their day — but pinned *below* the staff
+                header (sticky top-0, 69px tall; 68 tucks 1px under its border
+                so no slit of scrolling content shows between them). z-20 keeps
+                it above the rows' own z-10 action clusters; the row "⋯" menus
+                disclose inline rather than floating, so nothing needs to paint
+                over a pinned header. The day's "+ Add" rides inside the sticky
+                row, so the affordance travels with the day. */}
+            <div className="sticky top-[68px] z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-2 pb-2">
               <h3 className="flex items-center gap-3">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-3">

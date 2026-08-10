@@ -64,6 +64,20 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * `null` means the destination is real and reachable, but not in the header —
  * it earns its place in the palette instead of one more tab (design
  * principle 8, fewer controls).
+ *
+ * **The dock holds six tabs, and six is the ceiling.** The phone dock renders
+ * every `primary` destination at ~65px per tab at 390px; a seventh pushes
+ * labels below legibility, and there is no squeezing room. Promoting a seventh
+ * destination to `primary` therefore means one of two deliberate moves, never
+ * a seventh tab:
+ *
+ * 1. Demote one of the six back to the palette/contextual-door story above.
+ *    Settings is the named first candidate — it is the only configure-rarely
+ *    tab; the other five are places a shop lives in during a dive day.
+ * 2. If two rare-path destinations genuinely both need tabs, the sixth slot
+ *    becomes a "More" **bottom sheet rising from the dock** (never the old
+ *    header dropdown), fed by the `daily`/`setup` groups — which is what those
+ *    groups are held in reserve for.
  */
 export type StaffNavGroup = "primary" | "daily" | "setup";
 

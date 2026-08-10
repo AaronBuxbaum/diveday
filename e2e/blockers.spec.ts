@@ -3,7 +3,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 signedInAsOwner();
 
 /** The shared window sentence, printed identically on Today and Check-in. */
-const WINDOW_NOTE = /The next 7 days of departures/;
+const WINDOW_NOTE = /the next 7 days of departures/;
 
 /** The by-departure view of the shop home's one work queue. */
 const BY_DEPARTURE = "/shop/blue-mantis?view=departures";
@@ -123,7 +123,7 @@ test("Today and Check-in state the same window and link to each other", async ({
   // read one window now and say so in one sentence, in the same place.
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
-  const todayPivots = page.getByRole("navigation", { name: "The same window, seen another way" });
+  const todayPivots = page.getByRole("navigation", { name: "The same list, seen another way" });
   // Not ready is *not* a pivot from Today any more: it is a view of this very
   // page, and the switch below is its control. Offering it twice on one screen
   // is the duplicate control design principle 8 rules out.
@@ -133,11 +133,11 @@ test("Today and Check-in state the same window and link to each other", async ({
   await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
   await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
   // Counter mode is a narrower lens on that same window, and says only that.
-  await expect(page.getByText(/Counter mode narrows it to arrivals/)).toBeVisible();
+  await expect(page.getByText(/Counter mode shows who could walk up right now/)).toBeVisible();
 
   // From the counter, both of Today's sorts are still one tap away by name.
   await page
-    .getByRole("navigation", { name: "The same window, seen another way" })
+    .getByRole("navigation", { name: "The same list, seen another way" })
     .getByRole("link", { name: "Not ready" })
     .click();
   await expect(page).toHaveURL(/\?view=departures$/);
