@@ -164,7 +164,6 @@
     }
   },
   "shopNav": {
-    "home": "Inicio de DiveDay",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
     "signOutPending": "Cerrando sesión…"

@@ -164,7 +164,6 @@
     }
   },
   "shopNav": {
-    "home": "DiveDay home",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
     "signOutPending": "Signing out…"
