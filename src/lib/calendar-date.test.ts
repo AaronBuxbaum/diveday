@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarDateInTimezone,
+  calendarDateWeekday,
+  calendarDaysBetween,
   groupByLocalDay,
   isCalendarDateExpired,
   isValidCalendarDate,
+  shiftCalendarDate,
 } from "./calendar-date";
 
 describe("isValidCalendarDate", () => {
@@ -117,5 +120,31 @@ describe("groupByLocalDay", () => {
 
   it("returns nothing for nothing", () => {
     expect(groupByLocalDay([], "UTC", (trip: { startsAt: Date }) => trip.startsAt)).toEqual([]);
+  });
+});
+
+describe("calendar arithmetic", () => {
+  it("shifts a date by whole days, rolling months and years", () => {
+    expect(shiftCalendarDate("2026-01-30", 3)).toBe("2026-02-02");
+    expect(shiftCalendarDate("2026-12-30", 5)).toBe("2027-01-04");
+    expect(shiftCalendarDate("2026-03-01", -1)).toBe("2026-02-28");
+    expect(shiftCalendarDate("2028-02-28", 1)).toBe("2028-02-29");
+  });
+
+  it("counts whole days between two dates, in both directions", () => {
+    expect(calendarDaysBetween("2026-07-04", "2026-07-11")).toBe(7);
+    expect(calendarDaysBetween("2026-07-11", "2026-07-04")).toBe(-7);
+    expect(calendarDaysBetween("2026-07-04", "2026-07-04")).toBe(0);
+  });
+
+  it("counts days across a DST boundary without losing or gaining one", () => {
+    // Pure calendar arithmetic: a `CalendarDate` has no instant in it, so the
+    // hour the clocks moved is not this function's business.
+    expect(calendarDaysBetween("2026-10-31", "2026-11-07")).toBe(7);
+  });
+
+  it("names the weekday, 0 = Sunday", () => {
+    expect(calendarDateWeekday("2026-07-05")).toBe(0);
+    expect(calendarDateWeekday("2026-07-04")).toBe(6);
   });
 });

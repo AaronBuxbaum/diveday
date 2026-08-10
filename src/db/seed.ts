@@ -59,6 +59,7 @@ import {
   tripRequirements,
   tripReviews,
   tripSeries,
+  tripSeriesSkips,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -741,6 +742,9 @@ export async function resetDemoSchedule(
   // omissions announced themselves with a 23503, and a silent leak does not.
   // Found by the shop-scoped sweep in `delete-path-coverage.test.ts`, which the
   // cascade's own ordering had already got right.
+  // Before the series it points at, and after the trips: a skip is the
+  // memory of a date that is no longer there.
+  await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));

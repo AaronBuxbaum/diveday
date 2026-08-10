@@ -313,10 +313,19 @@ new domain concept, define it here in the same PR.
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
   and minimum cert requirements per site (e.g. AOW for a deep wreck).
-- **Trip series** — a repeating charter ("every Saturday two-tank") scheduled in one action. The
-  series records only the cadence; each date is materialized as its own independent **trip** that
-  starts identical to the rest and is booked, crewed, edited, or cancelled on its own. See
-  [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
+- **Trip series** — a repeating charter ("every Saturday two-tank", "Monday and Thursday", "every
+  day") scheduled in one action. The series records only the cadence — which weekdays, how many
+  weeks apart, and an optional last date; **no last date means the run simply keeps going**. Each
+  date is materialized as its own independent **trip** that starts identical to the rest and is
+  booked, crewed, edited, moved, or cancelled on its own. See
+  [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md) and
+  [20260810-open-ended-recurring-trips](../architecture/decisions/20260810-open-ended-recurring-trips.md).
+- **Horizon** — how far ahead a repeating trip's dates are actually on the board (120 days). Not a
+  limit on the run: a nightly pass keeps the window full ahead of today, so an open-ended series
+  never runs out.
+- **Skipped occurrence** — a date staff deleted outright from a repeating trip. Recorded so the
+  horizon never puts it back (`trip_series_skips`); cancelling a date, by contrast, keeps the trip
+  and can be reinstated.
 - **Seat claim** — a party member taking over one seat of a party booking as their own identity,
   through a bearer `/claim/[token]` link the organizer shares (a `claim`-purpose
   `booking_capabilities` row; [20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md)).

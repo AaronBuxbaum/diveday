@@ -90,7 +90,7 @@ describe("resolveTripNotice", () => {
     expect(resolve("saved")?.form).toBe("details");
     expect(resolve("conditions")?.form).toBe("conditions");
     expect(resolve("requirements-blocking")?.form).toBe("requirements");
-    expect(resolve("series-extended")?.form).toBe("series");
+    expect(resolve("series-repeating")?.form).toBe("series");
     expect(resolve("last-minute-sent")?.form).toBe("last-minute-deal");
     expect(resolve("diver-full")?.form).toBe("add-diver");
     expect(resolve("cancelled")?.form).toBe("lifecycle");

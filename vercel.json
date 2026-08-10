@@ -5,6 +5,7 @@
     { "path": "/api/cron/reminders", "schedule": "0 14 * * *" },
     { "path": "/api/cron/usage", "schedule": "0 9 * * *" },
     { "path": "/api/cron/retention", "schedule": "30 3 * * 0" },
-    { "path": "/api/cron/backup-export", "schedule": "0 4 * * 1" }
+    { "path": "/api/cron/backup-export", "schedule": "0 4 * * 1" },
+    { "path": "/api/cron/trip-series", "schedule": "15 3 * * *" }
   ]
 }

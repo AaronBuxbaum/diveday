@@ -26,11 +26,9 @@ import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
   changeTripCrew,
-  extendTripSeries,
-  getLatestSeriesInstance,
-  getTripSeriesById,
   getTripWithBooked,
   listTripDiverContacts,
+  setSeriesRepeat,
   setTripStatus,
   type TripCrewChange,
   updateTrip,
@@ -50,7 +48,6 @@ import { notify, publicAppUrl } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
-import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import {
   maxEnteredTemperature,
@@ -60,7 +57,7 @@ import {
 } from "@/lib/temperature-units";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
-import { parseWallTime, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -390,12 +387,16 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
   );
 }
 
-const extendSeriesSchema = z.object({
-  count: z.coerce.number().int().min(1).max(MAX_SERIES_OCCURRENCES),
-});
-
-/** Roll a finite series' horizon forward by adding more dates on the same cadence. */
-export async function extendSeriesAction(
+/**
+ * Stop a series repeating, or start it going again — one switch, both ways.
+ *
+ * Stopping leaves every date already on the board exactly as it is (they are
+ * ordinary trips, some with divers on them) and only closes the cadence, so
+ * nothing new is generated. Starting again re-opens it and fills the horizon in
+ * the same call, which is also how a shop takes a finite series scheduled
+ * before this existed and simply lets it keep going.
+ */
+export async function setSeriesRepeatAction(
   shopSlug: string,
   tripId: string,
   seriesId: string,
@@ -403,33 +404,10 @@ export async function extendSeriesAction(
 ) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const parsed = extendSeriesSchema.safeParse({ count: formData.get("count") });
-  if (!parsed.success) redirect(`${back}?notice=series-error`);
-  const db = await getDb();
-  const [shop, series, latest] = await Promise.all([
-    getShopById(db, s.user.shopId),
-    getTripSeriesById(db, s.user.shopId, seriesId),
-    getLatestSeriesInstance(db, s.user.shopId, seriesId),
-  ]);
-  if (!shop || !series || !latest) redirect(`${back}?notice=series-error`);
-  const walls = weeklyOccurrencesAfter(
-    {
-      start: utcToWallTime(latest.startsAt, shop.timezone),
-      end: utcToWallTime(latest.endsAt, shop.timezone),
-    },
-    series.intervalWeeks,
-    parsed.data.count,
-  );
-  if (!walls) redirect(`${back}?notice=series-error`);
-  const result = await extendTripSeries(db, {
-    shopId: s.user.shopId,
-    seriesId,
-    occurrences: walls.map((wall) => ({
-      startsAt: wallTimeToUtc(wall.start, shop.timezone),
-      endsAt: wallTimeToUtc(wall.end, shop.timezone),
-    })),
-  });
-  revalidateAndRedirect(back, `${back}?notice=${result ? "series-extended" : "series-error"}`);
+  const keepRepeating = formData.get("keepRepeating") === "yes";
+  const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
+  const notice = !result ? "series-error" : keepRepeating ? "series-repeating" : "series-stopped";
+  revalidateAndRedirect(back, `${back}?notice=${notice}`);
 }
 
 const recapShoutoutSchema = z.object({ recapShoutout: z.string().trim().max(400) });

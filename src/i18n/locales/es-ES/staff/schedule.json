@@ -95,15 +95,19 @@
     "cancellationWindowDescription": "Horas antes de la salida en las que un buceador puede cancelar y recibir un reembolso. Se muestra a los buceadores; los reembolsos los sigue gestionando el personal. 48 horas es un plazo habitual.",
     "hoursSuffix": "horas",
     "repeatLegend": "Repetir",
-    "repeatDescription": "Pon la misma salida en el calendario para varias semanas a la vez. Cada fecha se crea como su propia salida — resérvala, asígnale tripulación y edítala de una en una.",
+    "repeatDescription": "Pon una salida fija en el calendario y déjala ahí. Cada fecha se crea como su propia salida — resérvala, asígnale tripulación y edítala de una en una.",
     "howOftenLabel": "Con qué frecuencia",
     "doesntRepeat": "No se repite",
     "everyWeek": "Cada semana",
     "every2Weeks": "Cada 2 semanas",
     "every4Weeks": "Cada 4 semanas",
-    "numberOfTripsLabel": "Número de salidas",
-    "numberOfTripsDescription": "Contando la primera, hasta {max}.",
-    "numberOfTripsPlaceholder": "p. ej. 8"
+    "repeatsOnLabel": "Se repite los",
+    "repeatsOnDescription": "Elige los días en que la haces — lunes y jueves es una sola salida repetida, no dos.",
+    "everyDay": "Todos los días",
+    "endsLabel": "Termina",
+    "endsNever": "Se repite siempre",
+    "endsOnChoice": "En una fecha",
+    "endsOnLabel": "Última fecha"
   },
   "addBooking": "Añadir una reserva"
 }

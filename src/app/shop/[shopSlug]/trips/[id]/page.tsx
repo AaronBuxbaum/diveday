@@ -30,7 +30,7 @@ import { countInWaterCrew } from "@/lib/crew-roles";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
-import { recurrenceSummary } from "@/lib/recurrence";
+import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
@@ -52,12 +52,12 @@ import {
   cancelTripAction,
   clearConditionsAction,
   deleteRecapPhotoAction,
-  extendSeriesAction,
   reinstateTripAction,
   saveConditionsAction,
   saveDetails,
   saveRecapShoutoutAction,
   saveRequirementsAction,
+  setSeriesRepeatAction,
   updateTripCrewAction,
 } from "./actions";
 
@@ -345,10 +345,11 @@ export default async function ManageTripPage({
                 {t("trips.detail.seriesPart", {
                   summary: recurrenceSummaryText(
                     t,
+                    locale,
                     recurrenceSummary({
-                      frequency: "weekly",
                       intervalWeeks: series.intervalWeeks,
-                      occurrenceCount: series.occurrenceCount,
+                      weekdays: series.weekdayMask,
+                      endsOn: series.endsOn,
                     }),
                   ),
                   count: series.scheduledCount,
@@ -484,12 +485,14 @@ export default async function ManageTripPage({
       {canConfigure && series ? (
         <SeriesSection
           intervalWeeks={series.intervalWeeks}
-          occurrenceCount={series.occurrenceCount}
+          weekdays={series.weekdayMask}
+          endsOn={series.endsOn}
           futureScheduledCount={series.futureScheduledCount}
+          horizonDays={SERIES_HORIZON_DAYS}
           status={noticeForForm(tripNotice, "series")}
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
-          extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
+          repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
           locale={locale}
         />
       ) : null}

@@ -33,6 +33,7 @@ const EXPECTED_FILES = [
   "nitrox_certifications.csv",
   "trips.csv",
   "trip_series.csv",
+  "trip_series_skips.csv",
   "trip_schedule_days.csv",
   "trip_dives.csv",
   "trip_requirements.csv",
@@ -79,6 +80,7 @@ const EXPORTED_TABLES = [
   "nitrox_certifications",
   "trips",
   "trip_series",
+  "trip_series_skips",
   "trip_schedule_days",
   "trip_dives",
   "trip_requirements",
@@ -218,6 +220,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   nitrox_certifications: ["shop_id"],
   trips: ["shop_id", "recap_shoutout"], // recap copy travels with recap_photos.csv
   trip_series: ["shop_id"],
+  trip_series_skips: ["id", "shop_id"],
   trip_dives: [],
   trip_requirements: ["shop_id"],
   trip_assignments: [],
