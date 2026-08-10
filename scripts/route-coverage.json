@@ -335,7 +335,7 @@
       "trip-series.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["trip-manage", "trip-manage-course-requirements"]
+    "visual": ["trip-manage", "trip-manage-course-requirements", "trip-repeating-panel"]
   },
   "/shop/[shopSlug]/trips/[id]/guests": {
     "e2e": [

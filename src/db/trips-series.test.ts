@@ -1,62 +1,109 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents, tripRequirements } from "./schema";
+import { bookings, people, rollCallEvents, tripRequirements, trips } from "./schema";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
   createTripSeries,
-  extendTripSeries,
+  deleteTrip,
   getLatestSeriesInstance,
   getTripSeriesById,
   getTripSeriesSummary,
   getTripWithBooked,
   listStaff,
   listTripScheduleDays,
+  moveTrip,
+  type NewTripSeries,
+  rollAllSeriesForward,
+  rollSeriesForward,
+  setSeriesRepeat,
   setTripStatus,
   updateTrip,
 } from "./trips";
 
+/**
+ * Every fixture is anchored in the shop's own zone (the seed's
+ * `America/New_York`) with an explicit `endsOn`, so a test asserting an exact
+ * set of dates is asserting the cadence rather than today's date plus the
+ * horizon. The open-ended cases — which are the point of the feature — assert
+ * on counts and on what a roll does, never on a fixed list.
+ */
+const TZ = "America/New_York";
+const SUN = 0;
+const MON = 1;
+const THU = 4;
+const SAT = 6;
+
+/** 11:00Z is 07:00 in the shop's summer zone — a real morning departure. */
+const at = (iso: string) => new Date(iso);
+
+function seriesInput(overrides: Partial<NewTripSeries> & { shopId: string }): NewTripSeries {
+  return {
+    title: "Saturday Two-Tank",
+    capacity: 12,
+    plannedDives: 2,
+    frequency: "weekly",
+    intervalWeeks: 1,
+    weekdays: weekdaySetFrom([SAT]),
+    anchorDate: "2030-09-07",
+    endsOn: null,
+    timeZone: TZ,
+    template: {
+      startsAt: at("2030-09-07T11:00:00.000Z"),
+      endsAt: at("2030-09-07T15:00:00.000Z"),
+    },
+    ...overrides,
+  };
+}
+
+/** The shop-local dates a series has on the board, in order. */
+async function occurrenceDatesOf(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  seriesId: string,
+) {
+  const rows = await db
+    .select({ date: trips.seriesOccurrenceDate })
+    .from(trips)
+    .where(eq(trips.seriesId, seriesId));
+  return rows
+    .map((row) => row.date)
+    .filter((date): date is string => date !== null)
+    .sort();
+}
+
 describe("recurring trip series (in-memory PGlite)", () => {
-  it("materializes a weekly series of identical, independent trips", async () => {
+  it("materializes a weekly run of identical, independent trips", async () => {
     const { db, shop } = await seededShopContext();
 
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Saturday Two-Tank",
-      description: "Weekly reef charter.",
-      capacity: 12,
-      plannedDives: 2,
-      priceCents: 15_000,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-09-07T11:00:00.000Z"),
-          endsAt: new Date("2030-09-07T15:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-09-14T11:00:00.000Z"),
-          endsAt: new Date("2030-09-14T15:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-09-21T11:00:00.000Z"),
-          endsAt: new Date("2030-09-21T15:00:00.000Z"),
-        },
-      ],
-    });
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        description: "Weekly reef charter.",
+        priceCents: 15_000,
+        endsOn: "2030-09-21",
+      }),
+    );
     if (!result) throw new Error("series not created");
-    expect(result.series.occurrenceCount).toBe(3);
     expect(result.trips).toHaveLength(3);
+    expect(result.series.weekdayMask).toBe(weekdaySetFrom([SAT]));
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual([
+      "2030-09-07",
+      "2030-09-14",
+      "2030-09-21",
+    ]);
     const [firstInstance] = result.trips;
     if (!firstInstance) throw new Error("expected a first instance");
 
-    // Every instance points back to the one series and starts identical.
     for (const trip of result.trips) {
       expect(trip.seriesId).toBe(result.series.id);
       expect(trip.title).toBe("Saturday Two-Tank");
       expect(trip.capacity).toBe(12);
       expect(trip.priceCents).toBe(15_000);
+      // Every instance departs at the same shop-local hour — 07:00 in New York.
+      expect(trip.startsAt.toISOString().slice(11, 16)).toBe("11:00");
       // A readiness requirement row is materialized for each — never an accidental pass.
       const reqs = await db
         .select()
@@ -65,33 +112,133 @@ describe("recurring trip series (in-memory PGlite)", () => {
       expect(reqs).toHaveLength(1);
     }
 
-    // Provenance query reports the cadence and how many are still scheduled.
     const summary = await getTripSeriesSummary(db, shop.id, firstInstance.id);
     expect(summary?.intervalWeeks).toBe(1);
     expect(summary?.scheduledCount).toBe(3);
+    expect(summary?.endsOn).toBe("2030-09-21");
+  });
+
+  it("puts a run on more than one weekday a week — Monday and Thursday is one series", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Mon & Thu shore dive",
+        anchorDate: "2030-09-02", // a Monday
+        weekdays: weekdaySetFrom([MON, THU]),
+        endsOn: "2030-09-12",
+        template: {
+          startsAt: at("2030-09-02T22:00:00.000Z"),
+          endsAt: at("2030-09-03T00:00:00.000Z"),
+        },
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual([
+      "2030-09-02",
+      "2030-09-05",
+      "2030-09-09",
+      "2030-09-12",
+    ]);
+  });
+
+  it("runs daily when every weekday is selected", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Daily morning two-tank",
+        weekdays: EVERY_WEEKDAY,
+        endsOn: "2030-09-13",
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips).toHaveLength(7);
+  });
+
+  it("has no limit: an open-ended run fills the horizon and keeps going", async () => {
+    const { db, shop } = await seededShopContext();
+    // The old model capped a series at 26 dates. A daily run across the
+    // horizon is already four times that, and it does not stop there.
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, weekdays: EVERY_WEEKDAY, endsOn: null }),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips.length).toBeGreaterThan(100);
+
+    // Rolling from a date inside the run adds the dates that have come into
+    // range and nothing else.
+    const latestBefore = await getLatestSeriesInstance(db, shop.id, result.series.id);
+    const rolled = await rollSeriesForward(
+      db,
+      shop.id,
+      result.series.id,
+      at("2030-10-07T12:00:00.000Z"),
+    );
+    expect(rolled?.created).toBe(30);
+    const latestAfter = await getLatestSeriesInstance(db, shop.id, result.series.id);
+    expect(latestAfter?.startsAt.getTime()).toBeGreaterThan(latestBefore?.startsAt.getTime() ?? 0);
+  });
+
+  it("rolling twice over the same window changes nothing the second time", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    const now = at("2030-10-07T12:00:00.000Z");
+    const first = await rollSeriesForward(db, shop.id, result.series.id, now);
+    const second = await rollSeriesForward(db, shop.id, result.series.id, now);
+    expect(first?.created).toBeGreaterThan(0);
+    expect(second?.created).toBe(0);
+  });
+
+  it("never puts a deleted date back on the board", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    const [, second] = result.trips;
+    if (!second) throw new Error("expected a second instance");
+    const removedDate = second.seriesOccurrenceDate;
+
+    expect(await deleteTrip(db, shop.id, second.id)).toEqual({ ok: true });
+    expect(await occurrenceDatesOf(db, result.series.id)).not.toContain(removedDate);
+
+    // The roll re-proposes every cadence date in its window, including this
+    // one — the skip ledger is the only thing keeping it off the board.
+    await rollSeriesForward(db, shop.id, result.series.id, at("2030-09-07T12:00:00.000Z"));
+    expect(await occurrenceDatesOf(db, result.series.id)).not.toContain(removedDate);
+  });
+
+  it("never re-creates a date staff moved somewhere else", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    const [, second] = result.trips;
+    if (!second) throw new Error("expected a second instance");
+
+    // Slide the second Saturday to the Sunday after it. Its cadence slot moves
+    // with it, so the roll must not read that Saturday as an empty slot.
+    const moved = await moveTrip(db, shop.id, second.id, at("2030-09-15T11:00:00.000Z"));
+    expect(moved.ok).toBe(true);
+    const before = await occurrenceDatesOf(db, result.series.id);
+    await rollSeriesForward(db, shop.id, result.series.id, at("2030-09-07T12:00:00.000Z"));
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual(before);
   });
 
   it("edits and cancels one instance without touching its siblings", async () => {
     const { db, shop } = await seededShopContext();
-
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Weeknight Shore Dive",
-      capacity: 8,
-      plannedDives: 1,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-10-01T22:00:00.000Z"),
-          endsAt: new Date("2030-10-02T00:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-10-08T22:00:00.000Z"),
-          endsAt: new Date("2030-10-09T00:00:00.000Z"),
-        },
-      ],
-    });
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Weeknight Shore Dive",
+        capacity: 8,
+        plannedDives: 1,
+        endsOn: "2030-09-14",
+      }),
+    );
     if (!result) throw new Error("series not created");
     const [first, second] = result.trips;
     if (!first || !second) throw new Error("expected two instances");
@@ -112,38 +259,28 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(untouchedSecond?.title).toBe("Weeknight Shore Dive");
     expect(untouchedSecond?.capacity).toBe(8);
 
-    // Cancelling one instance shrinks the still-scheduled count, not the series record.
     const summary = await getTripSeriesSummary(db, shop.id, second.id);
-    expect(summary?.occurrenceCount).toBe(2);
     expect(summary?.scheduledCount).toBe(1);
   });
 
   it("applies one date's details across the future series, skipping over-booked dates", async () => {
     const { db, shop } = await seededShopContext();
-    const now = new Date("2030-08-15T00:00:00.000Z");
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Sunday Reef",
-      capacity: 12,
-      plannedDives: 2,
-      priceCents: 15_000,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-09-01T11:00:00.000Z"),
-          endsAt: new Date("2030-09-01T15:00:00.000Z"),
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Sunday Reef",
+        priceCents: 15_000,
+        anchorDate: "2030-09-01", // a Sunday
+        weekdays: weekdaySetFrom([SUN]),
+        endsOn: "2030-09-15",
+        template: {
+          startsAt: at("2030-09-01T11:00:00.000Z"),
+          endsAt: at("2030-09-01T15:00:00.000Z"),
         },
-        {
-          startsAt: new Date("2030-09-08T11:00:00.000Z"),
-          endsAt: new Date("2030-09-08T15:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-09-15T11:00:00.000Z"),
-          endsAt: new Date("2030-09-15T15:00:00.000Z"),
-        },
-      ],
-    });
+      }),
+    );
     if (!result) throw new Error("series not created");
     const [source, crowded, untouched] = result.trips;
     if (!source || !crowded || !untouched) throw new Error("expected three instances");
@@ -156,8 +293,6 @@ describe("recurring trip series (in-memory PGlite)", () => {
       { shopId: shop.id, tripId: crowded.id, personId: p2.id },
     ]);
 
-    // Staff retune the first date, then push it across the run — with a capacity
-    // below the crowded date's head-count so it must be skipped.
     await updateTrip(db, shop.id, source.id, {
       title: "Sunday Reef — Deep Edition",
       startsAt: source.startsAt,
@@ -184,31 +319,26 @@ describe("recurring trip series (in-memory PGlite)", () => {
 
   it("skips a sibling whose recorded roll call would be orphaned by the new dive count", async () => {
     const { db, shop } = await seededShopContext();
-    const now = new Date("2030-08-15T00:00:00.000Z");
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Monday Wreck",
-      capacity: 10,
-      plannedDives: 2,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-09-02T11:00:00.000Z"),
-          endsAt: new Date("2030-09-02T15:00:00.000Z"),
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Monday Wreck",
+        capacity: 10,
+        anchorDate: "2030-09-02",
+        weekdays: weekdaySetFrom([MON]),
+        endsOn: "2030-09-09",
+        template: {
+          startsAt: at("2030-09-02T11:00:00.000Z"),
+          endsAt: at("2030-09-02T15:00:00.000Z"),
         },
-        {
-          startsAt: new Date("2030-09-09T11:00:00.000Z"),
-          endsAt: new Date("2030-09-09T15:00:00.000Z"),
-        },
-      ],
-    });
+      }),
+    );
     if (!result) throw new Error("series not created");
     const [source, sailed] = result.trips;
     if (!source || !sailed) throw new Error("expected two instances");
 
-    // The second date already sailed its second dive — staff logged a roll
-    // call after it.
     const [p1] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     const [staff] = await listStaff(db, shop.id);
     if (!p1 || !staff) throw new Error("seed people/staff missing");
@@ -227,7 +357,6 @@ describe("recurring trip series (in-memory PGlite)", () => {
       occurredAt: now,
     });
 
-    // Staff shrink the template to a single dive and push it across the run.
     await updateTrip(db, shop.id, source.id, {
       title: source.title,
       startsAt: source.startsAt,
@@ -243,151 +372,152 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(untouched?.plannedDives).toBe(2);
   });
 
-  it("cancels every upcoming date at once but leaves past dates alone", async () => {
+  it("cancels every upcoming date at once, leaves past dates alone, and stops the repeat", async () => {
     const { db, shop } = await seededShopContext();
-    const now = new Date("2030-08-15T00:00:00.000Z");
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Friday Night Dive",
-      capacity: 8,
-      plannedDives: 1,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-08-01T22:00:00.000Z"),
-          endsAt: new Date("2030-08-02T00:00:00.000Z"),
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Friday Night Dive",
+        capacity: 8,
+        plannedDives: 1,
+        anchorDate: "2030-08-03", // a Saturday, before `now`
+        endsOn: "2030-08-31",
+        template: {
+          startsAt: at("2030-08-03T22:00:00.000Z"),
+          endsAt: at("2030-08-04T00:00:00.000Z"),
         },
-        {
-          startsAt: new Date("2030-08-22T22:00:00.000Z"),
-          endsAt: new Date("2030-08-23T00:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-08-29T22:00:00.000Z"),
-          endsAt: new Date("2030-08-30T00:00:00.000Z"),
-        },
-      ],
-    });
+      }),
+    );
     if (!result) throw new Error("series not created");
-    const [past, upcoming] = result.trips;
+    const [past, , upcoming] = result.trips;
     if (!past || !upcoming) throw new Error("expected instances");
 
     const cancelled = await cancelFutureSeriesTrips(db, shop.id, result.series.id, now);
-    expect(cancelled).toBe(2);
+    expect(cancelled).toBe(3);
 
     expect((await getTripWithBooked(db, shop.id, past.id))?.status).toBe("scheduled");
     const summary = await getTripSeriesSummary(db, shop.id, upcoming.id, now);
     expect(summary?.futureScheduledCount).toBe(0);
-    // The series record and its total are untouched — only the instances flipped.
-    expect(summary?.occurrenceCount).toBe(3);
+
+    // …and the run is closed, so the nightly roll cannot re-fill what staff
+    // just cleared. Without this, cancelling would undo itself by morning.
+    const before = await occurrenceDatesOf(db, result.series.id);
+    await rollAllSeriesForward(db, now);
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual(before);
   });
 
-  it("rolls the horizon forward, inheriting the latest date's template", async () => {
+  it("stops and restarts a repeat without disturbing the dates already on the board", async () => {
     const { db, shop } = await seededShopContext();
-    const result = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Saturday Wall",
-      capacity: 10,
-      plannedDives: 2,
-      priceCents: 16_000,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [
-        {
-          startsAt: new Date("2030-09-07T11:00:00.000Z"),
-          endsAt: new Date("2030-09-07T15:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-09-14T11:00:00.000Z"),
-          endsAt: new Date("2030-09-14T15:00:00.000Z"),
-        },
-      ],
-    });
+    const now = at("2030-09-07T12:00:00.000Z");
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
 
-    const latestBefore = await getLatestSeriesInstance(db, shop.id, result.series.id);
-    expect(latestBefore?.startsAt.toISOString()).toBe("2030-09-14T11:00:00.000Z");
+    const stopped = await setSeriesRepeat(db, shop.id, result.series.id, false, now);
+    expect(stopped).toEqual({ created: 0 });
+    const afterStop = await occurrenceDatesOf(db, result.series.id);
+    expect(afterStop.length).toBeGreaterThan(0);
+    expect((await getTripSeriesById(db, shop.id, result.series.id))?.endsOn).toBe("2030-09-07");
 
-    const extended = await extendTripSeries(db, {
-      shopId: shop.id,
-      seriesId: result.series.id,
-      occurrences: [
-        {
-          startsAt: new Date("2030-09-21T11:00:00.000Z"),
-          endsAt: new Date("2030-09-21T15:00:00.000Z"),
-        },
-        {
-          startsAt: new Date("2030-09-28T11:00:00.000Z"),
-          endsAt: new Date("2030-09-28T15:00:00.000Z"),
-        },
-      ],
-    });
-    if (!extended) throw new Error("series not extended");
-    expect(extended.trips).toHaveLength(2);
-    expect(extended.series.occurrenceCount).toBe(4);
-    for (const trip of extended.trips) {
-      expect(trip.seriesId).toBe(result.series.id);
-      expect(trip.title).toBe("Saturday Wall");
-      expect(trip.capacity).toBe(10);
-      expect(trip.priceCents).toBe(16_000);
-    }
-    const latestAfter = await getLatestSeriesInstance(db, shop.id, result.series.id);
-    expect(latestAfter?.startsAt.toISOString()).toBe("2030-09-28T11:00:00.000Z");
-    expect((await getTripSeriesById(db, shop.id, result.series.id))?.occurrenceCount).toBe(4);
+    // A stopped run generates nothing, however far the clock moves.
+    await rollSeriesForward(db, shop.id, result.series.id, at("2030-11-07T12:00:00.000Z"));
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual(afterStop);
+
+    // Starting again re-opens it and refills the horizon in the same call.
+    const restarted = await setSeriesRepeat(
+      db,
+      shop.id,
+      result.series.id,
+      true,
+      at("2030-11-07T12:00:00.000Z"),
+    );
+    expect(restarted?.created).toBeGreaterThan(0);
+    expect((await getTripSeriesById(db, shop.id, result.series.id))?.endsOn).toBeNull();
+    expect((await occurrenceDatesOf(db, result.series.id)).length).toBeGreaterThan(
+      afterStop.length,
+    );
   });
 
   it("rejects a series with an invalid dive count", async () => {
     const { db, shop } = await seededShopContext();
     expect(
-      await createTripSeries(db, {
-        shopId: shop.id,
-        title: "Impossible cadence",
-        capacity: 10,
-        plannedDives: 9,
-        frequency: "weekly",
-        intervalWeeks: 1,
-        occurrences: [
-          {
-            startsAt: new Date("2030-11-01T13:00:00.000Z"),
-            endsAt: new Date("2030-11-01T17:00:00.000Z"),
-          },
-        ],
-      }),
+      await createTripSeries(db, seriesInput({ shopId: shop.id, plannedDives: 9 })),
     ).toBeNull();
+  });
+
+  it("rejects a cadence that names no weekday at all", async () => {
+    const { db, shop } = await seededShopContext();
+    // The refusal that matters: an empty set would create a series row with no
+    // dates and no complaint.
+    expect(await createTripSeries(db, seriesInput({ shopId: shop.id, weekdays: 0 }))).toBeNull();
   });
 
   it("gives every occurrence of a multi-day series its own meeting days", async () => {
     const { db, shop } = await seededShopContext();
-    const created = await createTripSeries(db, {
-      shopId: shop.id,
-      title: "Weekend course",
-      capacity: 6,
-      frequency: "weekly",
-      intervalWeeks: 1,
-      occurrences: [0, 7].map((offset) => ({
-        startsAt: new Date(Date.UTC(2030, 9, 4 + offset, 12)),
-        endsAt: new Date(Date.UTC(2030, 9, 5 + offset, 16)),
-        scheduleDays: [0, 1].map((day) => ({
-          dayNumber: day + 1,
-          startsAt: new Date(Date.UTC(2030, 9, 4 + offset + day, 12)),
-          endsAt: new Date(Date.UTC(2030, 9, 4 + offset + day, 16)),
-        })),
-      })),
-    });
+    const created = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Weekend course",
+        capacity: 6,
+        anchorDate: "2030-10-05", // a Saturday
+        endsOn: "2030-10-12",
+        template: {
+          startsAt: at("2030-10-05T12:00:00.000Z"),
+          endsAt: at("2030-10-06T16:00:00.000Z"),
+          scheduleDays: [
+            {
+              dayNumber: 1,
+              startsAt: at("2030-10-05T12:00:00.000Z"),
+              endsAt: at("2030-10-05T16:00:00.000Z"),
+            },
+            {
+              dayNumber: 2,
+              startsAt: at("2030-10-06T12:00:00.000Z"),
+              endsAt: at("2030-10-06T16:00:00.000Z"),
+            },
+          ],
+        },
+      }),
+    );
     if (!created) throw new Error("series not created");
     expect(created.trips).toHaveLength(2);
-    for (const instance of created.trips) {
-      expect(await listTripScheduleDays(db, shop.id, instance.id)).toHaveLength(2);
-    }
-    // Each week's days belong to that week, not to the first occurrence's.
+
     const weekStarts = [];
     for (const instance of created.trips) {
       const days = await listTripScheduleDays(db, shop.id, instance.id);
+      expect(days).toHaveLength(2);
       weekStarts.push(days.map((day) => day.startsAt.toISOString()));
     }
+    // Each week's second day belongs to that week, not to the first occurrence's.
     expect(weekStarts).toEqual([
-      ["2030-10-04T12:00:00.000Z", "2030-10-05T12:00:00.000Z"],
-      ["2030-10-11T12:00:00.000Z", "2030-10-12T12:00:00.000Z"],
+      ["2030-10-05T12:00:00.000Z", "2030-10-06T12:00:00.000Z"],
+      ["2030-10-12T12:00:00.000Z", "2030-10-13T12:00:00.000Z"],
+    ]);
+  });
+
+  it("holds the shop's published hour across a daylight-saving change", async () => {
+    const { db, shop } = await seededShopContext();
+    // US DST ends 2030-11-03. A 07:00 New York departure is 11:00Z before it
+    // and 12:00Z after — the *instant* moves so the clock on the wall doesn't.
+    const created = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        anchorDate: "2030-10-26", // a Saturday
+        endsOn: "2030-11-09",
+        template: {
+          startsAt: at("2030-10-26T11:00:00.000Z"),
+          endsAt: at("2030-10-26T15:00:00.000Z"),
+        },
+      }),
+    );
+    if (!created) throw new Error("series not created");
+    expect(created.trips.map((trip) => trip.startsAt.toISOString())).toEqual([
+      "2030-10-26T11:00:00.000Z",
+      "2030-11-02T11:00:00.000Z",
+      "2030-11-09T12:00:00.000Z",
     ]);
   });
 });

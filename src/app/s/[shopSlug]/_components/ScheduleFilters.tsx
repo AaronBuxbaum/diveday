@@ -5,13 +5,6 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
-/**
- * Shown only to a browser with scripting off — see the `<noscript>` below for
- * why this is a markup constant rather than JSX. The default (`display: none`)
- * lives in `src/app/globals.css`.
- */
-const NO_JS_REVEAL = "<style>[data-noscript-only]{display:contents}</style>";
-
 export type ScheduleFiltersCopy = {
   tripType: string;
   allTrips: string;
@@ -22,15 +15,17 @@ export type ScheduleFiltersCopy = {
 };
 
 /**
- * The schedule's filter row. Changing a filter *is* the ask — so once
- * hydrated, any change submits the form itself and there is no Apply button to
- * map back to it (design/principles.md #10: the action rides on the control).
- * With JS off the button is there, so the server-fed GET reload keeps working
- * exactly as before; it is hidden from everyone else by CSS rather than
- * removed on hydration, so it never flashes in and out (see the `<noscript>`
- * block below). The form remains a plain GET either way: the URL carries the
- * filters, and the list below re-renders server-side, pixel-stable for visual
- * regression.
+ * The schedule's filter row. Changing a filter *is* the ask — so with JS on,
+ * any change submits the form itself and no Apply button renders at all
+ * (design/principles.md #10: the action rides on the control, not on a
+ * second button the reader must map back to it). With JS off, the
+ * `<noscript>` Apply button keeps the server-fed GET reload working. The
+ * button used to render for everyone and be removed on hydration, so every
+ * real visitor watched it flash in and out beside "Has space"; `<noscript>`
+ * trades that flash for a tiny pre-hydration beat where a very fast tap on a
+ * filter does nothing yet. The form remains a plain GET either way: the URL
+ * carries the filters, and the list below re-renders server-side,
+ * pixel-stable for visual regression.
  *
  * `QueryForm`, not a bare `<form method="get">`: auto-submit on change plus a
  * native GET submit meant one tap of "Has space" tore the document down and
@@ -89,54 +84,15 @@ export function ScheduleFilters({
         />
         {copy.hasSpace}
       </label>
-      {/*
-       * Apply is the no-JS fallback, and it used to be removed *on* hydration —
-       * so every visitor with JS watched it render and then vanish a beat
-       * later, a small horizontal shift beside "Has space" that phone
-       * screenshots kept catching mid-flight.
-       *
-       * It is now hidden by default and revealed only by a stylesheet the
-       * browser parses when scripting is off, so a JS visitor never sees it —
-       * not after hydration, and not in the moments before it either. The
-       * button stays in the server HTML either way, which is what a no-JS GET
-       * submit needs.
-       *
-       * "Needs", not "is enough for": this page currently renders *nothing* to
-       * a browser with scripting off. The whole `<main>` streams inside a
-       * hidden staging div that an inline script relocates, so a JS-less diver
-       * sees `loading.tsx`'s skeleton and never reaches this form at all. That
-       * follows from `instant = true` plus a loading boundary, not from
-       * anything here, and whether it is worth fixing is a product call — see
-       * docs/product/follow-ups/FU-20260810-no-js-renders-only-the-skeleton.md.
-       * Keeping the fallback correct costs a span and a CSS rule and is right
-       * under every answer to that question.
-       *
-       * `dangerouslySetInnerHTML` is load-bearing here rather than a shortcut:
-       * a browser with scripting enabled parses `<noscript>` content as plain
-       * text, so React children in this slot would fail to hydrate and could be
-       * re-inserted as live elements — visible to exactly the readers meant
-       * never to see them. The markup is a constant with nothing interpolated
-       * into it.
-       *
-       * The trade this accepts, and the reason it was worth a second look: a JS
-       * visitor who taps a filter in the gap before hydration now gets nothing
-       * instead of a working Apply. That gap is a fraction of a second on the
-       * page's own filter row; the flash it replaces was on every single load.
-       *
-       * A plain `<button>`, not `SubmitButton`: a pending label comes from
-       * `useFormStatus`, and the only reader who ever sees this control has no
-       * JS to run it. For them a submit is a full document navigation, so there
-       * is no in-flight state left to announce.
-       */}
-      <noscript
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: a module-level constant with nothing interpolated into it — and innerHTML is the safe form here, since React children inside <noscript> can hydrate into live elements a JS visitor would see.
-        dangerouslySetInnerHTML={{ __html: NO_JS_REVEAL }}
-      />
-      <span data-noscript-only>
+      {/* React deliberately skips hydrating <noscript> children (a
+          scripting-enabled browser parses them as one text node), so real
+          JSX here is safe and never mismatches. Nothing inside can run JS
+          anyway — a plain submit button is the whole no-JS story. */}
+      <noscript>
         <button type="submit" className={buttonClass({ variant: "secondary" })}>
           {copy.apply}
         </button>
-      </span>
+      </noscript>
     </QueryForm>
   );
 }

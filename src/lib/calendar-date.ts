@@ -55,6 +55,40 @@ export function calendarDateToUtcMidnight(date: CalendarDate): Date {
 }
 
 /**
+ * The same calendar date `days` later (or earlier, for a negative count),
+ * rolling months and years over correctly. Pure calendar arithmetic: a
+ * `CalendarDate` has no instant in it, so `Date.UTC` here is a convenient
+ * integer calendar and never a timezone conversion.
+ */
+export function shiftCalendarDate(date: CalendarDate, days: number): CalendarDate {
+  const [year, month, day] = date.split("-").map(Number);
+  return toDateInputValue(utcToWallTimeParts(Date.UTC(year, month - 1, day + days)));
+}
+
+/** Whole calendar days from `from` to `to` — negative when `to` is earlier. */
+export function calendarDaysBetween(from: CalendarDate, to: CalendarDate): number {
+  const ms = calendarDateToUtcMidnight(to).getTime() - calendarDateToUtcMidnight(from).getTime();
+  return Math.round(ms / 86_400_000);
+}
+
+/** Day of the week a calendar date falls on: 0 = Sunday … 6 = Saturday. */
+export function calendarDateWeekday(date: CalendarDate): number {
+  return calendarDateToUtcMidnight(date).getUTCDay();
+}
+
+/** Date parts of a UTC-calendar millisecond value, as the wall shape `toDateInputValue` reads. */
+function utcToWallTimeParts(ms: number) {
+  const shifted = new Date(ms);
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+    hour: 0,
+    minute: 0,
+  };
+}
+
+/**
  * A date-only expiry is valid through the end of its own local day: it has
  * not yet expired while today's shop-local date is on or before it, and
  * expires only once the shop's local calendar rolls past it (CR-009) — never

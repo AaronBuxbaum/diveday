@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
-import { LogoMark } from "@/components/Logo";
+import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
 import {
@@ -17,8 +16,6 @@ import {
 } from "./ShopNavLinks";
 import { StaffTabBar } from "./StaffTabBar";
 import { CommandPalette } from "./search/CommandPalette";
-import { buttonClass } from "./ui/button";
-import { InlineConfirm } from "./ui/InlineConfirm";
 
 async function signOutAction() {
   "use server";
@@ -119,16 +116,22 @@ export function ShopNav({
          * `lg` up the tab strip joins the row via the `order` utilities.
          */}
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
-          <Link
-            href={root}
-            className="flex min-w-0 shrink items-center gap-2 font-semibold tracking-tight lg:order-1"
-          >
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
-              <LogoMark className="size-5" />
-              <span className="sr-only">{t("shared.shopNav.home")}</span>
-            </span>
-            <span className="max-w-40 truncate">{shopName}</span>
-          </Link>
+          {/* The identity block is the session's own disclosure: Sign out
+              (and, someday, other "me" items) lives behind it rather than
+              standing in permanent chrome beside Search — the rarest control
+              in the header does not get all-day screen time (principle 10).
+              Home stays one tap away as Today, in the tabs and the dock. */}
+          <div className="lg:order-1">
+            <ShopIdentityMenu
+              shopName={shopName}
+              signOutAction={signOutAction}
+              copy={{
+                signOut: t("shared.shopNav.signOut"),
+                signOutConfirm: t("shared.shopNav.signOutConfirm"),
+                signOutPending: t("shared.shopNav.signOutPending"),
+              }}
+            />
+          </div>
           {/* Trips are created from the Schedule, where the surrounding week is visible. */}
           <div className="ml-auto flex shrink-0 items-center gap-2 lg:order-3 lg:ml-0 lg:gap-3">
             <CommandPalette
@@ -154,31 +157,6 @@ export function ShopNav({
               }}
             />
             <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
-            <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
-              {/* Two-tap mis-tap protection (task 81): sits right beside Search,
-                so one stray tap used to log the whole crew out mid-shift.
-                Compact mode (no `message`) — an undo banner isn't safe here:
-                the grace window it needs would keep the session (or a
-                passwordless resume) alive briefly, and on a shared boat or
-                front-desk device that's a window for whoever touches the
-                device next to reclaim the previous login (principle 7). */}
-              <InlineConfirm
-                triggerLabel={t("shared.shopNav.signOut")}
-                confirmLabel={t("shared.shopNav.signOutConfirm")}
-                pendingLabel={t("shared.shopNav.signOutPending")}
-                triggerClassName={buttonClass({
-                  variant: "ghost",
-                  size: "sm",
-                  className: "rounded-xl",
-                })}
-                confirmClassName={buttonClass({
-                  variant: "danger",
-                  size: "sm",
-                  className: "rounded-xl",
-                })}
-                autoResetMs={4000}
-              />
-            </form>
           </div>
           <ShopNavLinks
             root={root}

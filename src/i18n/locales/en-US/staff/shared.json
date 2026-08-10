@@ -1,8 +1,8 @@
 {
   "operationalWindow": {
-    "note": "The next {days} days of departures — the same window Today and Check-in both read.",
-    "arrivalsLens": "Counter mode narrows it to arrivals from {lookback} hours ago through the next {ahead} hours.",
-    "pivotsLabel": "The same window, seen another way"
+    "note": "Everything here covers the next {days} days of departures — Today and Check-in work from one shared list.",
+    "arrivalsLens": "Counter mode shows who could walk up right now: arrivals from the last {lookback} hours through the next {ahead} hours.",
+    "pivotsLabel": "The same list, seen another way"
   },
   "skipToContent": "Skip to main content",
   "publicPreview": {
@@ -164,7 +164,6 @@
     }
   },
   "shopNav": {
-    "home": "DiveDay home",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
     "signOutPending": "Signing out…"

@@ -20,6 +20,7 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
+import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { AppDb } from "./client";
 import {
   activityEvents,
@@ -63,6 +64,7 @@ import {
   tripReviews,
   tripScheduleDays,
   tripSeries,
+  tripSeriesSkips,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -216,6 +218,13 @@ export async function loadShopExportBundleInput(
         .from(tripSeries)
         .where(eq(tripSeries.shopId, shopId))
         .orderBy(asc(tripSeries.createdAt), asc(tripSeries.id));
+      const seriesTitle = new Map(seriesRows.map((row) => [row.id, row.title]));
+
+      const seriesSkipRows = await tx
+        .select()
+        .from(tripSeriesSkips)
+        .where(eq(tripSeriesSkips.shopId, shopId))
+        .orderBy(asc(tripSeriesSkips.createdAt), asc(tripSeriesSkips.id));
 
       const waitlistRows = await tx
         .select()
@@ -784,6 +793,7 @@ export async function loadShopExportBundleInput(
             "deposit_cents",
             "cancellation_window_hours",
             "series_id",
+            "series_occurrence_date",
             "course_id",
             "dive_site_id",
             "dive_site_name",
@@ -808,6 +818,7 @@ export async function loadShopExportBundleInput(
             row.depositCents,
             row.cancellationWindowHours,
             row.seriesId,
+            row.seriesOccurrenceDate,
             row.courseId,
             row.diveSiteId,
             row.diveSiteId ? siteName.get(row.diveSiteId) : null,
@@ -824,16 +835,47 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "trip_series.csv",
-          header: ["id", "title", "frequency", "interval_weeks", "occurrence_count", "created_at"],
+          header: [
+            "id",
+            "title",
+            "frequency",
+            "interval_weeks",
+            // The stored value is a bitmask; the CSV carries the days a person
+            // can read, because a shop opening this in a spreadsheet is owed
+            // "mon,thu" rather than "18" (src/lib/recurrence.ts).
+            "weekdays",
+            "weekday_mask",
+            "anchor_date",
+            "ends_on",
+            "occurrence_count",
+            "created_at",
+          ],
           rows: seriesRows.map((row) => [
             row.id,
             row.title,
             row.frequency,
             row.intervalWeeks,
+            weekdaysIn(row.weekdayMask)
+              .map((day) => WEEKDAY_EXPORT_CODES[day])
+              .join(","),
+            row.weekdayMask,
+            row.anchorDate,
+            row.endsOn,
             row.occurrenceCount,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_series.csv"],
+        },
+        {
+          file: "trip_series_skips.csv",
+          header: ["series_id", "series_title", "occurrence_date", "created_at"],
+          rows: seriesSkipRows.map((row) => [
+            row.seriesId,
+            seriesTitle.get(row.seriesId) ?? null,
+            row.occurrenceDate,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_series_skips.csv"],
         },
         {
           file: "trip_schedule_days.csv",
@@ -2044,6 +2086,9 @@ export async function loadShopExportCounts(
     ),
     "trip_series.csv": await countOf(
       db.select({ n: count() }).from(tripSeries).where(eq(tripSeries.shopId, shopId)),
+    ),
+    "trip_series_skips.csv": await countOf(
+      db.select({ n: count() }).from(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId)),
     ),
     "trip_schedule_days.csv": await countOf(
       db

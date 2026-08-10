@@ -47,8 +47,9 @@ test.describe("schedule builder", () => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
-    // Add — the whole departure, from the board.
-    await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+    // Add — the whole departure, from the board. The control is a link in the
+    // page header's action cluster (?add=1), not a button of its own band.
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
     await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(addDay);
     await page.getByLabel("Departs").fill("09:00");
@@ -106,7 +107,7 @@ test.describe("schedule builder", () => {
     // it (task 150). Price it in the same breath and there is nothing to flag.
     const title = `Priced Trip ${e2eNow().getTime()}`;
     await page.goto(BOARD);
-    await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
     await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(4));
     await page.getByLabel("Seats").fill("6");
@@ -132,18 +133,22 @@ test.describe("schedule builder", () => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
-    // Opening the top "Add a departure" panel moves focus straight into its
-    // first field, rather than leaving a keyboard user on the button that
-    // just revealed a form below it.
-    const addToggle = page.getByRole("button", { name: "Add a departure", exact: true });
+    // Opening the top "Add a departure" panel (the header's ?add=1 link)
+    // moves focus straight into its first field, rather than leaving a
+    // keyboard user on the control that just revealed a form below it.
+    const addToggle = page.getByRole("link", { name: "Add a departure", exact: true });
     await addToggle.click();
     await expect(page.getByLabel("What is it")).toBeFocused();
 
-    // Cancelling hands focus back to the toggle that opened the panel, not
-    // to <body>.
+    // Cancelling hands focus back to the header link that opened the panel,
+    // not to <body> — and clears ?add so the link works a second time.
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByLabel("What is it")).not.toBeVisible();
     await expect(addToggle).toBeFocused();
+    await expect(page).not.toHaveURL(/add=/);
+    await addToggle.click();
+    await expect(page.getByLabel("What is it")).toBeFocused();
+    await page.getByRole("button", { name: "Cancel" }).click();
 
     // Same contract for a row's Move panel — reached through the "⋯" action
     // list, which itself focuses its first action on open and hands focus
@@ -249,7 +254,8 @@ test.describe("schedule builder, as the daily crew", () => {
     // day from each trip's own page.
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Add a departure", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Add a departure", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Add a departure/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move, copy, or remove / })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move / })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Remove / })).toHaveCount(0);

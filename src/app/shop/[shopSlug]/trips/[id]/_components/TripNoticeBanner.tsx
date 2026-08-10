@@ -149,7 +149,8 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.seriesAppliedPartial",
   },
   "series-cancelled": { form: "series", tone: "danger", key: "trips.notices.seriesCancelled" },
-  "series-extended": { form: "series", tone: "success", key: "trips.notices.seriesExtended" },
+  "series-repeating": { form: "series", tone: "success", key: "trips.notices.seriesRepeating" },
+  "series-stopped": { form: "series", tone: "success", key: "trips.notices.seriesStopped" },
   "series-error": { form: "series", tone: "danger", key: "trips.notices.seriesError" },
   "recap-note": { form: "recap-note", tone: "success", key: "trips.notices.recapNote" },
   "recap-photo-removed": {

@@ -16,17 +16,19 @@ import {
   moveTrip,
 } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
-  MAX_SERIES_OCCURRENCES,
-  MIN_SERIES_OCCURRENCES,
-  weeklyOccurrences,
+  isValidWeekdaySet,
+  MAX_INTERVAL_WEEKS,
+  type WeekdaySet,
+  weekdaySetFrom,
 } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
-import { parseWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /* -------------------------------------------------------------------------- *
  * The schedule builder
@@ -131,16 +133,30 @@ const addSchema = z.object({
   ),
   courseId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   diveSiteId: z.preprocess((value) => value || undefined, z.uuid().optional()),
-  // "0" means it does not repeat; any other value is the number of weeks between instances.
+  // "0" means it does not repeat; any other value is the number of weeks between
+  // firing weeks. The days *within* a firing week arrive separately, as
+  // `repeatWeekday` checkboxes — see `repeatWeekdaysFrom` below.
   repeatIntervalWeeks: z.preprocess(
     (value) => (value === "" || value === undefined ? "0" : value),
-    z.coerce.number().int().min(0).max(8),
+    z.coerce.number().int().min(0).max(MAX_INTERVAL_WEEKS),
   ),
-  repeatCount: z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.coerce.number().int().min(MIN_SERIES_OCCURRENCES).max(MAX_SERIES_OCCURRENCES).optional(),
+  // Blank means the run simply keeps going, which is the default a repeating
+  // departure is offered on: a standing Saturday charter has no last date, and
+  // making a shop invent one was the old form's real limit.
+  repeatEndsOn: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.string().refine(isValidCalendarDate).optional(),
   ),
 });
+
+/**
+ * The weekday checkboxes, which a `FormData` carries as repeats of one name and
+ * `Object.fromEntries` therefore collapses to the last one — so they are read
+ * off the form directly rather than through the schema above.
+ */
+function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
+  return weekdaySetFrom(formData.getAll("repeatWeekday").map((value) => Number(value)));
+}
 
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
@@ -166,12 +182,15 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     courseId,
     diveSiteId,
     repeatIntervalWeeks,
-    repeatCount,
+    repeatEndsOn,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
-  if (!startWall || !endWall) return await invalid();
+  // `parseWallTime` accepts a shape; `isValidCalendarDate` accepts a *day* —
+  // and a series stores this string as the anchor its whole cadence is counted
+  // from, so "2026-02-31" has to die here rather than three months later.
+  if (!startWall || !endWall || !isValidCalendarDate(date)) return await invalid();
   // The times must be a coherent single day before we shift them across days
   // or weeks; every meeting day and every occurrence inherits this same
   // wall-clock start/end.
@@ -190,21 +209,16 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   // change, and what a shop promises is the wall-clock time — "back at the
   // dock at 12:30" on both days.
   //
-  // Null only ever means "`dayCount` is out of range" — `tripMeetingDays` never
-  // reads the day it is handed (src/lib/trip-days.ts, pinned by its own test),
-  // and `dayCount` is one parsed value for the whole submission. So this cannot
-  // fail for a later occurrence having succeeded for the first. Every caller
-  // still refuses on null rather than trusting that: a series must be whole.
-  const meetingDaysFrom = (day: { start: WallTime; end: WallTime }) => {
-    const days = tripMeetingDays(day, dayCount);
-    if (!days) return null;
-    return days.map((meeting, index) => ({
-      dayNumber: index + 1,
-      startsAt: wallTimeToUtc(meeting.start, shop.timezone),
-      endsAt: wallTimeToUtc(meeting.end, shop.timezone),
-    }));
-  };
-  const scheduleDays = meetingDaysFrom({ start: startWall, end: endWall });
+  // For a repeating departure this is also the *shape* every later date is
+  // rebuilt from: the query layer re-places these meeting days on each cadence
+  // date in the shop's own zone, so a two-day course stays a two-day course
+  // wherever it lands (`daysOnOccurrence` in src/db/trips-series.ts).
+  const meetingDays = tripMeetingDays({ start: startWall, end: endWall }, dayCount);
+  const scheduleDays = meetingDays?.map((meeting, index) => ({
+    dayNumber: index + 1,
+    startsAt: wallTimeToUtc(meeting.start, shop.timezone),
+    endsAt: wallTimeToUtc(meeting.end, shop.timezone),
+  }));
   if (!scheduleDays) return await invalid();
   // The trip itself spans its first day's departure to its last day's return,
   // so every "is it over?" question in the app — sailed guards, the board's
@@ -249,34 +263,25 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   };
 
   if (repeatIntervalWeeks > 0) {
-    // No fallback count: the panel asks for one and requires it the moment a
-    // cadence is picked, so an absent count here is a malformed submission,
-    // not a shop that meant "eight".
-    if (repeatCount === undefined) return await invalid();
-    const occurrenceWalls = weeklyOccurrences(
-      { start: startWall, end: endWall },
-      { frequency: "weekly", intervalWeeks: repeatIntervalWeeks, occurrenceCount: repeatCount },
-    );
-    if (!occurrenceWalls) return await invalid();
-    // Built up front so a refusal refuses the *whole* series: a fallback here
-    // would put a half-shaped one on the board, some dates carrying their
-    // meeting days and one silently not.
-    const occurrences = [];
-    for (const occurrence of occurrenceWalls) {
-      const days = meetingDaysFrom(occurrence);
-      const last = days?.at(-1);
-      if (!days || !last) return await invalid();
-      occurrences.push({
-        startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
-        endsAt: last.endsAt,
-        scheduleDays: days,
-      });
-    }
+    // No fallback set: the panel pre-checks the chosen date's own weekday the
+    // moment a cadence is picked, so an empty set here is a malformed
+    // submission, not a shop that meant "Saturdays".
+    const weekdays = repeatWeekdaysFrom(formData);
+    if (!isValidWeekdaySet(weekdays)) return await invalid();
+    // A series does not count out a batch of dates any more: it carries the
+    // cadence, an optional last date, and the one departure staff filled in.
+    // The query layer places that shape on every cadence date inside the
+    // horizon and keeps doing so (ADR 20260810-open-ended-recurring-trips) —
+    // `repeatEndsOn` left blank is a run with no end at all.
     const series = await createTripSeries(db, {
       ...common,
       frequency: "weekly",
       intervalWeeks: repeatIntervalWeeks,
-      occurrences,
+      weekdays,
+      anchorDate: date,
+      endsOn: repeatEndsOn ?? null,
+      timeZone: shop.timezone,
+      template: { startsAt, endsAt: lastDay.endsAt, scheduleDays },
     });
     if (!series) return await invalid();
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });

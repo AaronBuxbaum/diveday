@@ -12,12 +12,16 @@ export async function signInAsOwner(page: Page) {
 }
 
 /**
- * Sign out through ShopNav's two-tap compact-mode InlineConfirm (UX-persona
- * task 81): the first tap only arms the button and relabels it to the
- * confirm state without submitting, so a single click here would leave the
- * session signed in and every caller's next assertion hanging.
+ * Sign out through the header's identity menu: Sign out lives behind the
+ * shop-identity disclosure (logo + name), keeping its two-tap compact-mode
+ * InlineConfirm (UX-persona task 81) — the first tap only arms the button
+ * and relabels it to the confirm state without submitting, so skipping
+ * either step here would leave the session signed in and every caller's
+ * next assertion hanging. `[data-identity-menu]` is the trigger's stable
+ * hook; its accessible name is the shop's own (variable) name.
  */
 export async function signOut(page: Page) {
+  await page.locator("[data-identity-menu]").click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Sign out? Confirm" }).click();
   await expect(page).toHaveURL(/\/$/);

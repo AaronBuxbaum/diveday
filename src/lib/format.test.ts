@@ -9,6 +9,7 @@ import {
   formatTimeRange,
   formatTimeRangeTz,
   isValidTimeZone,
+  weekdayNames,
 } from "./format";
 
 const morning = new Date("2026-07-17T07:30:00Z");
@@ -206,5 +207,20 @@ describe("formatter caching", () => {
       expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
       expect(formatShortDate(morning, "en-US", "Pacific/Honolulu")).toBe("Thu, Jul 16");
     }
+  });
+});
+
+describe("weekdayNames", () => {
+  it("names the seven days Sunday first, matching the recurrence bit order", () => {
+    expect(weekdayNames("en-US")).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
+  });
+
+  it("spells them in the reader's own language", () => {
+    // The reason these are not seven keys per bundle: `Intl` already knows.
+    expect(weekdayNames("es-ES")[1]).toMatch(/^lun/i);
+  });
+
+  it("is stable — it reads a fixed reference week, never the clock", () => {
+    expect(weekdayNames("en-US")).toEqual(weekdayNames("en-US"));
   });
 });

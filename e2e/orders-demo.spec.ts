@@ -182,10 +182,12 @@ test.describe("demo billing history", () => {
     await expect(page).toHaveURL(/page=2/);
     // Every row on page 2, not "every row that happened to match" — iterating
     // the matched badges alone passes trivially when the match set is empty.
+    // A settled order renders an empty status cell (only exceptional states
+    // carry a badge), so "every row is paid" reads as "no row carries one".
     const rows = page.locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     for (const row of await rows.all()) {
-      await expect(row.getByText("Paid").filter({ visible: true }).first()).toBeVisible();
+      await expect(row.locator("td").nth(2)).toHaveText("");
     }
   });
 });

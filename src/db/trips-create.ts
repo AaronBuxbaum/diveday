@@ -141,6 +141,8 @@ export async function insertTripInstance(
   params: {
     shopId: string;
     seriesId?: string;
+    /** The cadence slot a series instance fills — see `trips.series_occurrence_date`. */
+    seriesOccurrenceDate?: string;
     courseId?: string;
     course: Course | null;
     title: string;
@@ -161,6 +163,7 @@ export async function insertTripInstance(
     .values({
       shopId: params.shopId,
       seriesId: params.seriesId,
+      seriesOccurrenceDate: params.seriesOccurrenceDate,
       courseId: params.courseId,
       title: params.title,
       description: params.description,

@@ -109,6 +109,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_retention.prune_failed",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",
+      "cron_trip_series.roll_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,
