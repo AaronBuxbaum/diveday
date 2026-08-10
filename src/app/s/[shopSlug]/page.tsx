@@ -396,7 +396,6 @@ export default async function SchedulePage({
             course: t("schedule.filters.course"),
             hasSpace: t("schedule.filters.hasSpace"),
             apply: t("schedule.filters.apply"),
-            applying: t("schedule.filters.applying"),
           }}
         />
       ) : null}

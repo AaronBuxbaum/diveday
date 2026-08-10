@@ -852,8 +852,17 @@ export function ScheduleBuilder({
                 day numeral, weekday and month as its caps, a hairline running
                 out to the day's own "+ Add". The numeral is what a scrolling
                 thumb catches; the sr-only sentence keeps the date readable in
-                one piece for screen readers. */}
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                one piece for screen readers.
+
+                Sticky like the storefront's, so mid-scroll the rows under a
+                thumb always name their day — but pinned *below* the staff
+                header (sticky top-0, 69px tall; 68 tucks 1px under its border
+                so no slit of scrolling content shows between them). z-20 keeps
+                it above the rows' own z-10 action clusters; the row "⋯" menus
+                disclose inline rather than floating, so nothing needs to paint
+                over a pinned header. The day's "+ Add" rides inside the sticky
+                row, so the affordance travels with the day. */}
+            <div className="sticky top-[68px] z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-2 pb-2">
               <h3 className="flex items-center gap-3">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-3">

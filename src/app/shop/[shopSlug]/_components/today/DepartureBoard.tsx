@@ -202,7 +202,11 @@ function DepartureCard({
           // The most operational sentence on the page — read in glare at the
           // dock deciding whether the boat leaves — so it holds 16px. One
           // blocked diver is named outright: the answer, not a door to it.
-          <p className="mt-1.5 text-base font-semibold text-danger">
+          // Regular weight and ink on purpose: the bar's red segment and the
+          // counts line already state the blocked fact, and a third statement
+          // in bold red made the card sound an alarm three times for one fact
+          // (principle 9). The words carry the state; the name is the value.
+          <p className="mt-1.5 text-base">
             {blocked === 1 && blockedNames[0]
               ? fill(copy.blockedWarningNamed, { name: blockedNames[0] })
               : fill(
