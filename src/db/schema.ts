@@ -294,9 +294,12 @@ export const personRoles = pgTable(
 export const tripStatus = pgEnum("trip_status", ["scheduled", "cancelled"]);
 
 /**
- * How a trip series repeats. Only weekly today (the shop's "every Saturday
- * two-tank"); the enum exists so a later monthly or daily cadence is an additive
- * migration, not a reshape. See 20260719-recurring-trip-series.
+ * How a trip series repeats. Only weekly, and deliberately so: a weekday *set*
+ * plus a week interval already expresses daily ("all seven"), weekly, and
+ * every-N-weeks, so a second enum value would be a second way to say the same
+ * thing. A genuinely different shape — monthly by nth-weekday — would be the
+ * additive migration this enum leaves room for.
+ * See 20260719-recurring-trip-series and 20260810-open-ended-recurring-trips.
  */
 export const tripRecurrenceFrequency = pgEnum("trip_recurrence_frequency", ["weekly"]);
 
@@ -305,9 +308,13 @@ export const tripRecurrenceFrequency = pgEnum("trip_recurrence_frequency", ["wee
  * on the boat — its instances do. Each instance is a real, independent `trips`
  * row (see `trips.series_id`) so bookings, manifests, waivers, and roll
  * call all use the one operational spine and an owner can edit or cancel a
- * single date without touching the rest. The series row is provenance and the
- * cadence description, not a live scheduler: instances are materialized once at
- * creation (docs/architecture/decisions/20260719-recurring-trip-series.md).
+ * single date without touching the rest.
+ *
+ * The series row is the cadence, not a live scheduler: nothing reads a trip's
+ * details *through* it. Instances are materialized into a rolling window —
+ * `SERIES_HORIZON_DAYS` ahead — so a series with no end date is a real,
+ * unlimited run rather than a finite batch somebody has to re-schedule
+ * (docs/architecture/decisions/20260810-open-ended-recurring-trips.md).
  */
 export const tripSeries = pgTable(
   "trip_series",
@@ -318,17 +325,80 @@ export const tripSeries = pgTable(
       .references(() => shops.id),
     title: text("title").notNull(),
     frequency: tripRecurrenceFrequency("frequency").notNull().default("weekly"),
-    /** Weeks between instances: 1 for weekly, 2 for every other week, etc. */
+    /** Weeks between firing weeks: 1 for every week, 2 for every other week, etc. */
     intervalWeeks: integer("interval_weeks").notNull().default(1),
     /**
-     * How many instances the series has materialized — set at creation and
-     * bumped when the horizon is rolled forward (see `extendTripSeries`). Drives
-     * the staff-facing "Repeats weekly · N trips" summary.
+     * Which weekdays each firing week departs on, as the bitmask
+     * `src/lib/recurrence.ts` defines: bit 0 Sunday … bit 6 Saturday. "Every
+     * day" is all seven bits, which is why there is no separate daily cadence.
+     *
+     * The app always writes a real set. The `0` default exists only so the
+     * release *before* this column shipped could still insert during the deploy
+     * window — an empty set is refused by `seriesOccurrenceDates`, so such a row
+     * generates nothing, which is what that release expects.
+     */
+    weekdayMask: integer("weekday_mask").notNull().default(0),
+    /**
+     * The shop-local calendar date the cadence's weeks are counted from — the
+     * *phase*, not necessarily an occurrence. Stored rather than derived from
+     * the earliest instance because that instance can be moved or deleted, and
+     * an every-other-week series whose phase drifts when a date is removed
+     * would silently start departing on the wrong weeks.
+     *
+     * Empty string is the same deploy-window sentinel as `weekday_mask`'s zero,
+     * and is refused the same way.
+     */
+    anchorDate: text("anchor_date").notNull().default(""),
+    /**
+     * The last shop-local date the series may fire on, or **null for a series
+     * that simply keeps going** — the ordinary case for a shop's standing
+     * Saturday charter. Null is what makes the run unlimited; the horizon roll
+     * keeps the board full ahead of it.
+     */
+    endsOn: text("ends_on"),
+    /**
+     * How many instances the series has materialized *so far* — bumped by every
+     * horizon roll. A fact about the board, never a target: an open-ended series
+     * has no total, and staff are shown this count as "N dates on the board".
      */
     occurrenceCount: integer("occurrence_count").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("trip_series_shop_idx").on(table.shopId)],
+);
+
+/**
+ * Dates the series must never put back on the board.
+ *
+ * A materialized instance is independent — staff cancel it, move it, or delete
+ * it outright, and no sibling notices. Cancelling and moving keep the row, so
+ * the horizon roll sees the date is spoken for. **Deleting does not**, and
+ * without this ledger the next roll would helpfully re-create the very
+ * departure somebody just removed. One row per removed occurrence, written in
+ * the same transaction as the delete.
+ *
+ * Keyed by the occurrence's own cadence date (`trips.series_occurrence_date`),
+ * not by the instant it departed, so a date that was moved before being deleted
+ * still closes the slot it came from.
+ */
+export const tripSeriesSkips = pgTable(
+  "trip_series_skips",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    seriesId: uuid("series_id")
+      .notNull()
+      .references(() => tripSeries.id),
+    /** Shop-local calendar date, `YYYY-MM-DD` — the cadence slot being closed. */
+    occurrenceDate: text("occurrence_date").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_series_skips_slot_idx").on(table.seriesId, table.occurrenceDate),
+    index("trip_series_skips_shop_idx").on(table.shopId),
+  ],
 );
 
 /**
@@ -810,6 +880,15 @@ export const trips = pgTable(
      * pointer is provenance, never a live link that rewrites this row.
      */
     seriesId: uuid("series_id").references(() => tripSeries.id),
+    /**
+     * The cadence slot this instance was materialized for, as a shop-local
+     * `YYYY-MM-DD` — set with `series_id` and never afterwards. It is what makes
+     * a horizon roll idempotent: the roll asks "which of these dates already
+     * has an instance?", and the answer must survive staff sliding the
+     * departure to another day. Keying off `starts_at` instead would report the
+     * moved-from slot as empty and re-create the departure staff just moved.
+     */
+    seriesOccurrenceDate: text("series_occurrence_date"),
     /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */

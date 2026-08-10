@@ -234,3 +234,26 @@ export function formatRelativeDay(
     "day",
   );
 }
+
+/**
+ * The seven weekday names, Sunday first, in the given locale — "Sun", "Mon", …
+ * or their equivalents in the reader's own language.
+ *
+ * Calendar data, not copy: `Intl` knows these for every locale the app
+ * negotiates, so a `weekdayMon` key in each bundle would be seven strings per
+ * language to maintain for something the platform hands over correct. The order
+ * matches the weekday numbering of `src/lib/recurrence.ts` (0 = Sunday), which
+ * is `Date#getUTCDay`'s.
+ *
+ * Formatted from a fixed reference week (2024-01-07 is a Sunday) rather than
+ * from the clock, so the labels are identical in every render — including a
+ * frozen-clock e2e run. `timeZone: "UTC"` because a weekday *name* has no
+ * instant in it; the reference dates are a calendar, not a moment.
+ */
+export function weekdayNames(locale = "en-US", width: "short" | "narrow" = "short"): string[] {
+  const format = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    weekday: width,
+    timeZone: "UTC",
+  });
+  return Array.from({ length: 7 }, (_, day) => format.format(new Date(Date.UTC(2024, 0, 7 + day))));
+}

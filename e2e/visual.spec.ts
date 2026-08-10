@@ -4,12 +4,18 @@ import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-s
 import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import {
+  daysFromNow,
+  openSettingsRow,
+  openTripFromBoard,
+  openTripTab,
+  seededTripId,
+} from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Ninety-five key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 380 screenshots per run (see
+ * Visual regression coverage. Ninety-seven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 388 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -1756,6 +1762,27 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
         await capture(page, "schedule-builder-add-full", scheme);
+      });
+
+      // The repeating-trip panel on a trip's own page. Built through the add
+      // panel rather than seeded, because putting a standing charter into the
+      // demo seed would move a dozen unrelated baselines (the board, the public
+      // schedule, Today, the monthly report) for one section's sake. Per-test
+      // reset makes the write safe, and the frozen clock makes the dates it
+      // generates stable.
+      test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
+        const title = "Standing Saturday charter";
+        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.getByLabel("What is it").fill(title);
+        await page.getByLabel("Date").fill(daysFromNow(4));
+        await page.getByLabel("Departs").fill("08:00");
+        await page.getByLabel("Returns").fill("11:00");
+        await page.getByLabel("How often").selectOption("1");
+        await page.getByRole("button", { name: "Put it on the board" }).click();
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await openTripFromBoard(page, title);
+        await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
+        await capture(page, "trip-repeating-panel", scheme);
       });
 
       // The blow-out confirm — the one deliberate step between the captain's

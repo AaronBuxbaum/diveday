@@ -20,10 +20,15 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatDayParts, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
+import {
+  formatDayParts,
+  formatMoneyCents,
+  formatShortDate,
+  formatTimeRange,
+  weekdayNames,
+} from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { MAX_SERIES_OCCURRENCES, MIN_SERIES_OCCURRENCES } from "@/lib/recurrence";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -272,19 +277,20 @@ export default async function ScheduleBoardPage({
     everyWeek: st("schedule.builder.everyWeek"),
     every2Weeks: st("schedule.builder.every2Weeks"),
     every4Weeks: st("schedule.builder.every4Weeks"),
-    numberOfTripsLabel: st("schedule.builder.numberOfTripsLabel"),
-    numberOfTripsDescription: st("schedule.builder.numberOfTripsDescription", {
-      max: MAX_SERIES_OCCURRENCES,
-    }),
-    numberOfTripsPlaceholder: st("schedule.builder.numberOfTripsPlaceholder"),
+    repeatsOnLabel: st("schedule.builder.repeatsOnLabel"),
+    repeatsOnDescription: st("schedule.builder.repeatsOnDescription"),
+    everyDay: st("schedule.builder.everyDay"),
+    endsLabel: st("schedule.builder.endsLabel"),
+    endsNever: st("schedule.builder.endsNever"),
+    endsOnChoice: st("schedule.builder.endsOnChoice"),
+    endsOnLabel: st("schedule.builder.endsOnLabel"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive
   // cards' shared words. Resolved here because a Client Component can neither
   // translate itself nor import the domain's limits at render time.
   const builderMore: BuilderMoreOptions = {
-    minOccurrences: MIN_SERIES_OCCURRENCES,
-    maxOccurrences: MAX_SERIES_OCCURRENCES,
+    weekdayNames: weekdayNames(locale),
     minDays: MIN_TRIP_DAYS,
     maxDays: MAX_TRIP_DAYS,
     diveFields: {

@@ -41,7 +41,9 @@ export const EXPORT_FILE_NOTES = {
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
   "trip_series.csv":
-    "Recurring-trip templates; every materialized instance is its own row in trips.csv carrying series_id.",
+    "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
+  "trip_series_skips.csv":
+    "Dates removed from a recurring trip. One row per date staff deleted outright, so it is never put back on the board.",
   "trip_schedule_days.csv":
     "The meeting windows for each trip day; multi-day courses can have different times on each day.",
   "trip_dives.csv": "The ordered dives within each trip, with their sites.",

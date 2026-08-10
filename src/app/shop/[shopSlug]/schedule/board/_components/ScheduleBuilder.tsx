@@ -190,9 +190,13 @@ export type BuilderCopy = {
   everyWeek: string;
   every2Weeks: string;
   every4Weeks: string;
-  numberOfTripsLabel: string;
-  numberOfTripsDescription: string;
-  numberOfTripsPlaceholder: string;
+  repeatsOnLabel: string;
+  repeatsOnDescription: string;
+  everyDay: string;
+  endsLabel: string;
+  endsNever: string;
+  endsOnChoice: string;
+  endsOnLabel: string;
 };
 
 /**
@@ -211,9 +215,13 @@ export type BuilderInitialCourse = {
 
 /** Everything the panel needs that only matters once "More options" is open. */
 export type BuilderMoreOptions = {
-  /** Occurrence bounds for the repeat fieldset (src/lib/recurrence.ts). */
-  minOccurrences: number;
-  maxOccurrences: number;
+  /**
+   * The seven weekday names, Sunday first, spelled for the request locale — the
+   * repeat fieldset's day picker. Calendar data, so `Intl` provides them rather
+   * than the message bundle; they are resolved on the server because that is
+   * where the negotiated locale lives.
+   */
+  weekdayNames: string[];
   /** Meeting-day bounds for a multi-day departure (src/lib/trip-days.ts). */
   minDays: number;
   maxDays: number;
@@ -307,6 +315,8 @@ function AddPanel({
       return !current;
     });
   };
+  /** The departure's date, mirrored so the repeat fieldset can seed its weekday. */
+  const [startDate, setStartDate] = useState(dateIso);
 
   return (
     <FieldGrid
@@ -355,7 +365,16 @@ function AddPanel({
       </Field>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
-          <input name="date" type="date" required defaultValue={dateIso} className={controlClass} />
+          {/* Read here as well as submitted: the repeat fieldset below pre-checks
+              this date's own weekday, so it has to see the date change. */}
+          <input
+            name="date"
+            type="date"
+            required
+            defaultValue={dateIso}
+            onChange={(event) => setStartDate(event.currentTarget.value)}
+            className={controlClass}
+          />
         </Field>
         <Field label={copy.departs}>
           <input
@@ -585,8 +604,7 @@ function AddPanel({
         <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
         <p className="text-sm text-muted">{copy.repeatDescription}</p>
         <RepeatFields
-          minOccurrences={more.minOccurrences}
-          maxOccurrences={more.maxOccurrences}
+          startDate={startDate}
           disabled={!expanded}
           copy={{
             howOftenLabel: copy.howOftenLabel,
@@ -594,9 +612,14 @@ function AddPanel({
             everyWeek: copy.everyWeek,
             every2Weeks: copy.every2Weeks,
             every4Weeks: copy.every4Weeks,
-            numberOfTripsLabel: copy.numberOfTripsLabel,
-            numberOfTripsDescription: copy.numberOfTripsDescription,
-            numberOfTripsPlaceholder: copy.numberOfTripsPlaceholder,
+            repeatsOnLabel: copy.repeatsOnLabel,
+            repeatsOnDescription: copy.repeatsOnDescription,
+            everyDay: copy.everyDay,
+            endsLabel: copy.endsLabel,
+            endsNever: copy.endsNever,
+            endsOnChoice: copy.endsOnChoice,
+            endsOnLabel: copy.endsOnLabel,
+            weekdayNames: more.weekdayNames,
           }}
         />
       </fieldset>

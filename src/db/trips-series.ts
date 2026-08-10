@@ -1,9 +1,32 @@
-import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  calendarDaysBetween,
+  isValidCalendarDate,
+  shiftCalendarDate,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
-import type { TripRecurrenceFrequency } from "@/lib/recurrence";
-import type { AppDb } from "./client";
-import { bookings, rollCallEvents, tripDives, tripSeries, trips } from "./schema";
+import {
+  isValidWeeklyPattern,
+  SERIES_HORIZON_DAYS,
+  seriesOccurrenceDates,
+  type TripRecurrenceFrequency,
+  type WeekdaySet,
+} from "@/lib/recurrence";
+import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import type { AppDb, AppTransaction } from "./client";
+import {
+  bookings,
+  rollCallEvents,
+  shops,
+  tripDives,
+  tripScheduleDays,
+  tripSeries,
+  tripSeriesSkips,
+  trips,
+} from "./schema";
 import {
   insertTripInstance,
   type NewTrip,
@@ -17,38 +40,258 @@ import {
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
- * per occurrence (ADR 20260719-recurring-trip-series).
+ * per occurrence (ADR 20260719-recurring-trip-series, amended by
+ * 20260810-open-ended-recurring-trips).
  *
- * The whole point is that instances are independent after creation — staff edit
- * or cancel any single date without touching its siblings. The series-wide
- * operations here (`applyDetailsToFutureSeries`, `cancelFutureSeriesTrips`,
- * `extendTripSeries`) are therefore deliberate fan-outs over future
- * still-scheduled dates, never a shared row every instance reads through.
+ * The whole point is that instances are independent after creation — staff edit,
+ * move, cancel, or delete any single date without touching its siblings. The
+ * series-wide operations here (`applyDetailsToFutureSeries`,
+ * `cancelFutureSeriesTrips`, `rollSeriesForward`) are therefore deliberate
+ * fan-outs over the instance set, never a shared row every instance reads
+ * through.
+ *
+ * What changed in the amendment is the *end* of a series, not its spine. A
+ * series no longer counts out a fixed batch of dates: it carries a cadence and
+ * an optional last date, and instances are materialized into a rolling window
+ * `SERIES_HORIZON_DAYS` wide. `rollSeriesForward` is the one function that
+ * fills that window, and it is idempotent by construction — it proposes the
+ * cadence's dates and creates only the ones that have neither an instance nor a
+ * skip. That is what lets a nightly cron, a staff button, and series creation
+ * itself all be the same call.
  */
+
+/** Where a materialization pass reads its per-occurrence shape from. */
+type InstanceTemplate = {
+  trip: typeof trips.$inferSelect;
+  days: Array<{ startsAt: Date; endsAt: Date }>;
+  drafts: Array<{
+    diveNumber: number;
+    title: string | null;
+    diveSiteId: string | null;
+    description: string | null;
+  }>;
+};
+
+/** The wall-clock time of day of an instant, placed on a different calendar date. */
+function timeOfDayOnDate(instant: Date, date: CalendarDate, timeZone: string): WallTime {
+  const wall = utcToWallTime(instant, timeZone);
+  const [year, month, day] = date.split("-").map(Number);
+  return { year, month, day, hour: wall.hour, minute: wall.minute };
+}
+
+/**
+ * The template's meeting days re-placed on a new occurrence date.
+ *
+ * Each day keeps its own wall-clock start and end and its own offset from day
+ * one, so a two-day course still meets on consecutive mornings and a night
+ * charter that docks after midnight still ends on the following date. The
+ * offsets are measured against the template's *actual* first day rather than
+ * its cadence slot: an instance staff dragged to another day is still a
+ * perfectly good shape to copy, and its move must not drag the cadence along
+ * with it.
+ *
+ * Everything is rebuilt from wall-clock parts rather than by adding a
+ * millisecond delta, so an occurrence on the far side of a daylight-saving
+ * change departs at the hour the shop published, not an hour off it.
+ */
+function daysOnOccurrence(
+  templateDays: ReadonlyArray<{ startsAt: Date; endsAt: Date }>,
+  occurrenceDate: CalendarDate,
+  timeZone: string,
+): TripScheduleDayInput[] {
+  const firstDay = templateDays[0];
+  if (!firstDay) return [];
+  const dayOneDate = calendarDateInTimezone(firstDay.startsAt, timeZone);
+  return templateDays.map((day, index) => {
+    const startOffset = calendarDaysBetween(
+      dayOneDate,
+      calendarDateInTimezone(day.startsAt, timeZone),
+    );
+    const endOffset = calendarDaysBetween(dayOneDate, calendarDateInTimezone(day.endsAt, timeZone));
+    return {
+      dayNumber: index + 1,
+      startsAt: wallTimeToUtc(
+        timeOfDayOnDate(day.startsAt, shiftCalendarDate(occurrenceDate, startOffset), timeZone),
+        timeZone,
+      ),
+      endsAt: wallTimeToUtc(
+        timeOfDayOnDate(day.endsAt, shiftCalendarDate(occurrenceDate, endOffset), timeZone),
+        timeZone,
+      ),
+    };
+  });
+}
+
+/** The furthest-out instance of a series, with the shape a new date copies from. */
+async function loadTemplate(
+  tx: AppTransaction,
+  shopId: string,
+  seriesId: string,
+): Promise<InstanceTemplate | null> {
+  const [trip] = await tx
+    .select()
+    .from(trips)
+    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId)))
+    .orderBy(desc(trips.startsAt))
+    .limit(1);
+  if (!trip) return null;
+  const days = await tx
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, trip.id))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  const dives = await tx
+    .select()
+    .from(tripDives)
+    .where(eq(tripDives.tripId, trip.id))
+    .orderBy(asc(tripDives.diveNumber));
+  return {
+    trip,
+    days: days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
+    drafts: dives.map((dive) => ({
+      diveNumber: dive.diveNumber,
+      title: dive.title,
+      diveSiteId: dive.diveSiteId,
+      description: dive.description,
+    })),
+  };
+}
+
+/**
+ * Fill a series' window: create an instance for every cadence date between
+ * `from` and `through` that does not already have one.
+ *
+ * Idempotent on purpose — this is called on creation, from the trip page, and
+ * nightly by `/api/cron/trip-series`, and all three must be able to run over
+ * the same window without doubling a departure. A date is "spoken for" when an
+ * instance carries it (whatever that instance's status, and wherever staff have
+ * since moved it) or when a skip row records that staff deleted it.
+ *
+ * Templates from the furthest-out instance, so a shop that improves next
+ * month's charter sees the improvement on the dates that follow it. Returns the
+ * created instances, or null when the series has nothing to template from or
+ * its course has since been archived — guessing the cert gate on a safety
+ * surface is never acceptable.
+ */
+async function materializeWindow(
+  tx: AppTransaction,
+  input: {
+    series: typeof tripSeries.$inferSelect;
+    timeZone: string;
+    from: CalendarDate;
+    through: CalendarDate;
+  },
+): Promise<Array<typeof trips.$inferSelect> | null> {
+  const { series, timeZone } = input;
+  const proposed = seriesOccurrenceDates({
+    anchorDate: series.anchorDate,
+    pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
+    from: input.from,
+    through: input.through,
+    endsOn: series.endsOn,
+  });
+  if (!proposed) return null;
+  if (proposed.length === 0) return [];
+
+  const template = await loadTemplate(tx, series.shopId, series.id);
+  if (!template) return null;
+  const { ok, course } = await resolveCourse(
+    tx,
+    series.shopId,
+    template.trip.courseId ?? undefined,
+  );
+  if (!ok) return null;
+
+  const [taken, skipped] = await Promise.all([
+    tx
+      .select({ date: trips.seriesOccurrenceDate })
+      .from(trips)
+      .where(and(eq(trips.seriesId, series.id), eq(trips.shopId, series.shopId))),
+    tx
+      .select({ date: tripSeriesSkips.occurrenceDate })
+      .from(tripSeriesSkips)
+      .where(eq(tripSeriesSkips.seriesId, series.id)),
+  ]);
+  const spokenFor = new Set<string>();
+  for (const row of taken) if (row.date) spokenFor.add(row.date);
+  for (const row of skipped) spokenFor.add(row.date);
+
+  const created = [];
+  for (const occurrenceDate of proposed) {
+    if (spokenFor.has(occurrenceDate)) continue;
+    const days = daysOnOccurrence(template.days, occurrenceDate, timeZone);
+    const first = days[0];
+    const last = days.at(-1);
+    if (!first || !last) continue;
+    created.push(
+      await insertTripInstance(tx, {
+        shopId: series.shopId,
+        seriesId: series.id,
+        seriesOccurrenceDate: occurrenceDate,
+        courseId: template.trip.courseId ?? undefined,
+        course,
+        title: template.trip.title,
+        description: template.trip.description ?? undefined,
+        startsAt: first.startsAt,
+        endsAt: last.endsAt,
+        capacity: template.trip.capacity,
+        plannedDives: template.trip.plannedDives,
+        priceCents: template.trip.priceCents,
+        depositCents: template.trip.depositCents,
+        cancellationWindowHours: template.trip.cancellationWindowHours,
+        drafts: template.drafts,
+        scheduleDays: days,
+      }),
+    );
+  }
+  if (created.length > 0) {
+    await tx
+      .update(tripSeries)
+      .set({ occurrenceCount: series.occurrenceCount + created.length })
+      .where(eq(tripSeries.id, series.id));
+  }
+  return created;
+}
 
 export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"> & {
   frequency: TripRecurrenceFrequency;
   intervalWeeks: number;
+  /** Which weekdays each firing week departs on (src/lib/recurrence.ts bitmask). */
+  weekdays: WeekdaySet;
+  /** Shop-local date the cadence is counted from — the phase, not necessarily a departure. */
+  anchorDate: CalendarDate;
+  /** Shop-local last date, or null for a series that simply keeps going. */
+  endsOn: CalendarDate | null;
+  /** The shop's own zone; every occurrence date is resolved through it. */
+  timeZone: string;
   /**
-   * Pre-computed occurrences (shop-local wall time already converted to UTC).
-   * `scheduleDays` is per occurrence rather than shared: a multi-day departure
-   * repeated weekly has a different set of dates every week, and each week's
-   * days have to be resolved through the shop's zone on their own dates so a
-   * DST boundary between two occurrences lands on the right instant.
+   * One occurrence's wall-clock shape, as if it fell on `anchorDate` — the
+   * departure staff filled in. Every generated date is this shape re-placed on
+   * its own day, so a multi-day departure keeps its meeting days and a series
+   * that spans a daylight-saving change keeps its published hours.
    */
-  occurrences: Array<{ startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] }>;
+  template: { startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] };
 };
 
 /**
  * Materialize a recurring series: one `trip_series` row plus one fully-formed,
- * independent trip per occurrence, all in a single transaction. Every instance
- * starts identical; staff edit or cancel any single date afterward without
- * touching its siblings (20260719-recurring-trip-series). Returns null on the
- * same validation failures as `createTrip`, or when no occurrences are supplied.
+ * independent trip for every cadence date inside the horizon, all in a single
+ * transaction. Every instance starts identical; staff edit, move, cancel, or
+ * delete any single date afterward without touching its siblings.
+ *
+ * The horizon is a materialization window, not the length of the series — a
+ * series with `endsOn: null` keeps rolling forward for as long as the shop runs
+ * it (20260810-open-ended-recurring-trips). Returns null on the same validation
+ * failures as `createTrip`, plus an unusable cadence or a window that yields no
+ * dates at all.
  */
 export async function createTripSeries(db: AppDb, input: NewTripSeries) {
   return db.transaction(async (tx) => {
-    if (input.occurrences.length === 0) return null;
+    if (!isValidWeeklyPattern({ intervalWeeks: input.intervalWeeks, weekdays: input.weekdays })) {
+      return null;
+    }
+    if (!isValidCalendarDate(input.anchorDate)) return null;
+    if (input.endsOn !== null && !isValidCalendarDate(input.endsOn)) return null;
     const plannedDives = normalizedDiveCount(input.plannedDives);
     if (!plannedDives) return null;
     const drafts = normalizedDiveDrafts(
@@ -66,35 +309,193 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
         title: input.title,
         frequency: input.frequency,
         intervalWeeks: input.intervalWeeks,
-        occurrenceCount: input.occurrences.length,
+        weekdayMask: input.weekdays,
+        anchorDate: input.anchorDate,
+        endsOn: input.endsOn,
+        occurrenceCount: 0,
       })
       .returning();
     if (!series) throw new Error("createTripSeries: insert returned no row");
 
-    const created = [];
-    for (const occurrence of input.occurrences) {
-      created.push(
-        await insertTripInstance(tx, {
-          shopId: input.shopId,
-          seriesId: series.id,
-          courseId: input.courseId,
-          course,
-          title: input.title,
-          description: input.description,
-          startsAt: occurrence.startsAt,
-          endsAt: occurrence.endsAt,
-          capacity: input.capacity,
-          plannedDives,
-          priceCents: input.priceCents,
-          depositCents: input.depositCents,
-          cancellationWindowHours: input.cancellationWindowHours,
-          drafts,
-          scheduleDays: occurrence.scheduleDays,
-        }),
-      );
-    }
-    return { series, trips: created };
+    // The seed instance carries the shape every later date is re-placed from,
+    // so it is written directly rather than through the window: there is
+    // nothing to template off yet. It sits on the first cadence date on or
+    // after the anchor — which is the anchor itself in the ordinary case, and
+    // the following Monday when a shop starts a Mon+Thu run on a Saturday.
+    const [seedDate] =
+      seriesOccurrenceDates({
+        anchorDate: input.anchorDate,
+        pattern: { intervalWeeks: input.intervalWeeks, weekdays: input.weekdays },
+        from: input.anchorDate,
+        through: shiftCalendarDate(input.anchorDate, SERIES_HORIZON_DAYS),
+        endsOn: input.endsOn,
+      }) ?? [];
+    if (!seedDate) return null;
+
+    const seedDays = daysOnOccurrence(
+      input.template.scheduleDays?.length
+        ? input.template.scheduleDays
+        : [{ startsAt: input.template.startsAt, endsAt: input.template.endsAt }],
+      seedDate,
+      input.timeZone,
+    );
+    const seedFirst = seedDays[0];
+    const seedLast = seedDays.at(-1);
+    if (!seedFirst || !seedLast) return null;
+    const seed = await insertTripInstance(tx, {
+      shopId: input.shopId,
+      seriesId: series.id,
+      seriesOccurrenceDate: seedDate,
+      courseId: input.courseId,
+      course,
+      title: input.title,
+      description: input.description,
+      startsAt: seedFirst.startsAt,
+      endsAt: seedLast.endsAt,
+      capacity: input.capacity,
+      plannedDives,
+      priceCents: input.priceCents,
+      depositCents: input.depositCents,
+      cancellationWindowHours: input.cancellationWindowHours,
+      drafts,
+      scheduleDays: seedDays,
+    });
+    await tx.update(tripSeries).set({ occurrenceCount: 1 }).where(eq(tripSeries.id, series.id));
+
+    // Measured from the series' own first date rather than from today, so a
+    // shop that schedules next season's run gets that season on the board
+    // rather than one lonely date and a promise. The nightly roll takes over
+    // from there, measuring from today.
+    const rest = await materializeWindow(tx, {
+      series: { ...series, occurrenceCount: 1 },
+      timeZone: input.timeZone,
+      from: seedDate,
+      through: shiftCalendarDate(seedDate, SERIES_HORIZON_DAYS),
+    });
+    if (!rest) return null;
+    return { series, trips: [seed, ...rest] };
   });
+}
+
+export type SeriesRollResult = { created: number };
+
+/**
+ * Roll one series' horizon forward: put every cadence date between today and
+ * `SERIES_HORIZON_DAYS` out on the board that is not already there.
+ *
+ * This is the whole of "a series has no limit". Nothing schedules a series
+ * *itself*; the board simply always holds the next four months of it, and this
+ * call is what keeps that true — from the nightly cron, from the trip page's
+ * own control, and from creation. Running it twice changes nothing the second
+ * time.
+ *
+ * The window starts at today rather than at the series' anchor, so a date in
+ * the past that staff deleted before this ledger existed is never resurrected,
+ * and a series whose end date has passed generates nothing at all. Returns null
+ * when the series is unknown to the shop, has no instance left to template
+ * from, or its course was archived.
+ */
+export async function rollSeriesForward(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+  now: Date = nowDate(),
+): Promise<SeriesRollResult | null> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ series: tripSeries, timeZone: shops.timezone })
+      .from(tripSeries)
+      .innerJoin(shops, eq(shops.id, tripSeries.shopId))
+      .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)))
+      .limit(1);
+    if (!row) return null;
+    const today = calendarDateInTimezone(now, row.timeZone);
+    const created = await materializeWindow(tx, {
+      series: row.series,
+      timeZone: row.timeZone,
+      from: today,
+      through: shiftCalendarDate(today, SERIES_HORIZON_DAYS),
+    });
+    if (!created) return null;
+    return { created: created.length };
+  });
+}
+
+export type SeriesSweepResult = {
+  seriesConsidered: number;
+  seriesExtended: number;
+  tripsCreated: number;
+  failures: number;
+};
+
+/**
+ * Roll every still-running series in every shop forward — the nightly pass
+ * behind `/api/cron/trip-series`.
+ *
+ * Candidates are the series that have not ended: `ends_on` is null (the
+ * open-ended run) or still ahead of us. The date comparison is a deliberately
+ * loose pre-filter — `ends_on` is a shop-local date and the cutoff here is a
+ * UTC one, so a shop up to a day either side of the line is still considered
+ * and `materializeWindow` makes the exact call in the shop's own zone.
+ *
+ * One transaction per series, so a series whose course was archived (or whose
+ * instances were all deleted) is reported as a failure and the rest still roll.
+ */
+export async function rollAllSeriesForward(
+  db: AppDb,
+  now: Date = nowDate(),
+): Promise<SeriesSweepResult> {
+  const cutoff = calendarDateInTimezone(shiftDaysUtc(now, -1), "UTC");
+  const candidates = await db
+    .select({ id: tripSeries.id, shopId: tripSeries.shopId })
+    .from(tripSeries)
+    .where(or(isNull(tripSeries.endsOn), gte(tripSeries.endsOn, cutoff)))
+    .orderBy(asc(tripSeries.createdAt), asc(tripSeries.id));
+
+  const summary: SeriesSweepResult = {
+    seriesConsidered: candidates.length,
+    seriesExtended: 0,
+    tripsCreated: 0,
+    failures: 0,
+  };
+  for (const candidate of candidates) {
+    const result = await rollSeriesForward(db, candidate.shopId, candidate.id, now);
+    if (!result) {
+      summary.failures += 1;
+      continue;
+    }
+    if (result.created > 0) {
+      summary.seriesExtended += 1;
+      summary.tripsCreated += result.created;
+    }
+  }
+  return summary;
+}
+
+/** Whole days added to an instant, for a UTC-only pre-filter bound. */
+function shiftDaysUtc(instant: Date, days: number): Date {
+  return new Date(instant.getTime() + days * 86_400_000);
+}
+
+/**
+ * Close a cadence slot for good: the date staff deleted must not come back on
+ * the next roll. Called inside `deleteTrip`'s own transaction, so a departure
+ * is never removed without the ledger entry that keeps it removed. Silently
+ * does nothing for a one-off trip or a pre-ledger instance with no slot.
+ */
+export async function recordSeriesSkip(
+  tx: AppTransaction,
+  trip: { shopId: string; seriesId: string | null; seriesOccurrenceDate: string | null },
+): Promise<void> {
+  if (!trip.seriesId || !trip.seriesOccurrenceDate) return;
+  await tx
+    .insert(tripSeriesSkips)
+    .values({
+      shopId: trip.shopId,
+      seriesId: trip.seriesId,
+      occurrenceDate: trip.seriesOccurrenceDate,
+    })
+    .onConflictDoNothing();
 }
 
 /**
@@ -140,7 +541,7 @@ export async function getTripSeriesById(db: AppDb, shopId: string, seriesId: str
   return row ?? null;
 }
 
-/** The furthest-out instance of a series — the anchor a horizon-roll extends from. */
+/** The furthest-out instance of a series — the template a new date is copied from. */
 export async function getLatestSeriesInstance(db: AppDb, shopId: string, seriesId: string) {
   const [row] = await db
     .select()
@@ -152,11 +553,51 @@ export async function getLatestSeriesInstance(db: AppDb, shopId: string, seriesI
 }
 
 /**
+ * Stop a series repeating, or start it again — the two halves of one switch.
+ *
+ * Stopping sets `ends_on` to today in the shop's own zone: every date already
+ * on the board stays exactly as it is (they are ordinary trips with divers on
+ * them), and no new one is ever generated. Starting again clears `ends_on` and
+ * refills the horizon in the same call, which is also how a shop takes a
+ * finite, pre-existing series and lets it simply keep going.
+ *
+ * Returns null when the series is unknown to the shop; `created` is how many
+ * dates the restart put on the board.
+ */
+export async function setSeriesRepeat(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+  keepRepeating: boolean,
+  now: Date = nowDate(),
+): Promise<SeriesRollResult | null> {
+  const [row] = await db
+    .select({ id: tripSeries.id, timeZone: shops.timezone })
+    .from(tripSeries)
+    .innerJoin(shops, eq(shops.id, tripSeries.shopId))
+    .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)))
+    .limit(1);
+  if (!row) return null;
+  await db
+    .update(tripSeries)
+    .set({ endsOn: keepRepeating ? null : calendarDateInTimezone(now, row.timeZone) })
+    .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)));
+  if (!keepRepeating) return { created: 0 };
+  return (await rollSeriesForward(db, shopId, seriesId, now)) ?? { created: 0 };
+}
+
+/**
  * Cancel every still-scheduled, not-yet-departed instance of a series in one
  * action — the series-wide counterpart to `setTripStatus` on a single date.
  * Past and already-cancelled dates are left untouched (history is never
  * rewritten), and each cancelled row can still be reinstated on its own trip
- * page. Returns how many dates were taken off the board.
+ * page.
+ *
+ * **Also stops the series repeating.** Without that, a nightly roll would
+ * cheerfully re-fill the horizon staff had just cleared, and "cancel every
+ * upcoming date" would be a button that undoes itself by morning. Staff turn
+ * the run back on from the same panel. Returns how many dates were taken off
+ * the board.
  */
 export async function cancelFutureSeriesTrips(
   db: AppDb,
@@ -176,6 +617,7 @@ export async function cancelFutureSeriesTrips(
       ),
     )
     .returning({ id: trips.id });
+  await setSeriesRepeat(db, shopId, seriesId, false, now);
   return cancelled.length;
 }
 
@@ -288,83 +730,5 @@ export async function applyDetailsToFutureSeries(
       updated += 1;
     }
     return { updated, skipped };
-  });
-}
-
-export type ExtendTripSeriesInput = {
-  shopId: string;
-  seriesId: string;
-  /** Pre-computed new occurrences (shop-local wall time already converted to UTC). */
-  occurrences: Array<{ startsAt: Date; endsAt: Date }>;
-};
-
-/**
- * Roll a finite series' horizon forward: materialize more independent instances
- * on the same cadence, each inheriting the furthest existing date's template
- * (details and dive plan). The occurrence window is computed by the caller from
- * that anchor via `weeklyOccurrencesAfter`, so no date already on the board is
- * ever duplicated. Bumps `occurrenceCount` to the new materialized total. Returns
- * null when the series is unknown to the shop, has no instance to template from,
- * its course was archived, or no occurrences were supplied.
- */
-export async function extendTripSeries(db: AppDb, input: ExtendTripSeriesInput) {
-  return db.transaction(async (tx) => {
-    if (input.occurrences.length === 0) return null;
-    const [series] = await tx
-      .select()
-      .from(tripSeries)
-      .where(and(eq(tripSeries.id, input.seriesId), eq(tripSeries.shopId, input.shopId)))
-      .limit(1);
-    if (!series) return null;
-    const [template] = await tx
-      .select()
-      .from(trips)
-      .where(and(eq(trips.seriesId, input.seriesId), eq(trips.shopId, input.shopId)))
-      .orderBy(desc(trips.startsAt))
-      .limit(1);
-    if (!template) return null;
-    // Fail closed on a course session whose course was archived after the series
-    // was built: guessing the cert gate on a safety surface is never acceptable.
-    const { ok, course } = await resolveCourse(tx, input.shopId, template.courseId ?? undefined);
-    if (!ok) return null;
-    const templateDives = await tx
-      .select()
-      .from(tripDives)
-      .where(eq(tripDives.tripId, template.id))
-      .orderBy(asc(tripDives.diveNumber));
-    const drafts = templateDives.map((dive) => ({
-      diveNumber: dive.diveNumber,
-      title: dive.title,
-      diveSiteId: dive.diveSiteId,
-      description: dive.description,
-    }));
-
-    const created = [];
-    for (const occurrence of input.occurrences) {
-      created.push(
-        await insertTripInstance(tx, {
-          shopId: input.shopId,
-          seriesId: series.id,
-          courseId: template.courseId ?? undefined,
-          course,
-          title: template.title,
-          description: template.description ?? undefined,
-          startsAt: occurrence.startsAt,
-          endsAt: occurrence.endsAt,
-          capacity: template.capacity,
-          plannedDives: template.plannedDives,
-          priceCents: template.priceCents,
-          depositCents: template.depositCents,
-          cancellationWindowHours: template.cancellationWindowHours,
-          drafts,
-        }),
-      );
-    }
-    const [updatedSeries] = await tx
-      .update(tripSeries)
-      .set({ occurrenceCount: series.occurrenceCount + created.length })
-      .where(eq(tripSeries.id, series.id))
-      .returning();
-    return { series: updatedSeries ?? series, trips: created };
   });
 }

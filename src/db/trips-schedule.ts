@@ -17,6 +17,7 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { insertTripInstance, resolveCourse } from "./trips-create";
+import { recordSeriesSkip } from "./trips-series";
 
 /**
  * The staff schedule builder's mutations: slide a departure to another day,
@@ -175,7 +176,12 @@ export async function deleteTrip(
 ): Promise<DeleteTripOutcome> {
   return db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: trips.id })
+      .select({
+        id: trips.id,
+        shopId: trips.shopId,
+        seriesId: trips.seriesId,
+        seriesOccurrenceDate: trips.seriesOccurrenceDate,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .limit(1)
@@ -199,6 +205,12 @@ export async function deleteTrip(
     if ((await countRollCallEvidence(tx, tripId)) > 0) {
       return { ok: false, reason: "already_sailed" };
     }
+
+    // A removed date must stay removed: a series instance leaves behind a skip
+    // so the next horizon roll does not helpfully put it back (see
+    // `trip_series_skips`). Written before the delete, in the same transaction,
+    // so the two can never disagree.
+    await recordSeriesSkip(tx, existing);
 
     // Children without a cascade of their own, innermost first. `activityEvents`
     // cascades from the trip and needs no line here.

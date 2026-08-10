@@ -1,75 +1,119 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
+import { weekdayNames } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type RecurrenceCadence,
   type RecurrenceSummary,
   recurrenceSummary,
+  type WeekdaySet,
 } from "@/lib/recurrence";
 import type { FormNotice } from "@/lib/staff-notices";
 
 /**
- * `recurrenceSummary` returns a code, not prose (src/lib/recurrence.ts) — this
+ * `recurrenceSummary` returns codes, not prose (src/lib/recurrence.ts) — this
  * map is where the cadence half of it becomes a word in the staff bundle.
  * Shared with `trips/[id]/page.tsx`'s "part of a series" line, which composes
  * the same summary into a different parent sentence.
  */
 const RECURRENCE_CADENCE_KEYS: Record<RecurrenceCadence, StaffMessageKey> = {
+  daily: "trips.series.cadenceDaily",
   weekly: "trips.series.cadenceWeekly",
   everyNWeeks: "trips.series.cadenceEveryNWeeks",
 };
 
 /**
- * The one sentence a `RecurrenceSummary` renders as, e.g. "Repeats weekly ·
- * 8 trips". One ICU template (`trips.series.summaryLine`) receives the
- * already-translated cadence word plus the raw trip count, which the template
- * itself pluralizes — never string concatenation.
+ * The one sentence a `RecurrenceSummary` renders as, e.g. "Repeats weekly on
+ * Mon and Thu · keeps going".
+ *
+ * Three composed pieces, never string concatenation: the weekday list comes
+ * from `Intl.ListFormat` (which knows where a locale puts its "and"), the
+ * cadence from one ICU template that receives that list, and the tail from a
+ * second template that says whether the run has an end. "Every day" needs no
+ * day list at all — spelling out all seven would be noise.
  */
-export function recurrenceSummaryText(t: StaffTranslator, summary: RecurrenceSummary): string {
+export function recurrenceSummaryText(
+  t: StaffTranslator,
+  locale: string,
+  summary: RecurrenceSummary,
+): string {
+  const names = weekdayNames(locale);
+  const days = cachedListFormat(locale, { type: "conjunction" }).format(
+    summary.weekdays.map((day) => names[day] ?? ""),
+  );
   const cadence =
-    summary.cadence === "weekly"
-      ? t(RECURRENCE_CADENCE_KEYS.weekly)
-      : t(RECURRENCE_CADENCE_KEYS.everyNWeeks, { weeks: summary.intervalWeeks });
-  return t("trips.series.summaryLine", { cadence, trips: summary.tripCount });
+    // No days at all is the deploy-window sentinel a release that predates the
+    // weekday set could leave behind (see `trip_series.weekday_mask`). It never
+    // generates a date, so the honest line says the cadence is unset rather
+    // than trailing a dangling "on ".
+    summary.weekdays.length === 0
+      ? t("trips.series.cadenceUnset")
+      : summary.cadence === "daily"
+        ? t(RECURRENCE_CADENCE_KEYS.daily)
+        : summary.cadence === "weekly"
+          ? t(RECURRENCE_CADENCE_KEYS.weekly, { days })
+          : t(RECURRENCE_CADENCE_KEYS.everyNWeeks, { weeks: summary.intervalWeeks, days });
+  return summary.endsOn
+    ? t("trips.series.summaryUntil", {
+        cadence,
+        date: formatCalendarDate(summary.endsOn, locale),
+      })
+    : t("trips.series.summaryOpenEnded", { cadence });
 }
 
 /**
  * Series-wide controls for a materialized recurring trip: apply this date's
- * template to the rest of the run, roll the finite horizon forward, or cancel
+ * template to the rest of the run, stop (or restart) the repeat, or cancel
  * every upcoming date at once. Each instance stays fully independent — these
  * are conveniences over the per-date tooling, never a live link that rewrites
  * siblings behind staff's back (20260719-recurring-trip-series).
+ *
+ * There is no "add more dates" control any more, and its absence is the
+ * feature: an open-ended series keeps its own next few months on the board
+ * (ADR 20260810-open-ended-recurring-trips), so the only honest questions left
+ * are whether it should keep going and whether the dates already on the board
+ * should stand.
  */
 export function SeriesSection({
   intervalWeeks,
-  occurrenceCount,
+  weekdays,
+  endsOn,
   futureScheduledCount,
+  horizonDays,
   status,
   applyAction,
   cancelAction,
-  extendAction,
+  repeatAction,
   locale,
 }: {
   intervalWeeks: number;
-  occurrenceCount: number;
+  weekdays: WeekdaySet;
+  /** The series' last date, or null when it simply keeps going. */
+  endsOn: CalendarDate | null;
   futureScheduledCount: number;
+  /** How far ahead the board is kept full, for the "keeps going" explanation. */
+  horizonDays: number;
   /**
-   * What the last series action did — apply, extend, or cancel. One status for
+   * What the last series action did — apply, repeat, or cancel. One status for
    * the three of them: they share a section and only one can have just run.
    */
   status?: FormNotice;
   applyAction: () => void;
   cancelAction: () => void;
-  extendAction: (formData: FormData) => void;
+  repeatAction: (formData: FormData) => void;
   locale: string;
 }) {
   const t = staffTranslator(locale);
   const hasFuture = futureScheduledCount > 0;
   const hasOtherFuture = futureScheduledCount > 1;
+  const repeating = endsOn === null;
   const summary = recurrenceSummaryText(
     t,
-    recurrenceSummary({ frequency: "weekly", intervalWeeks, occurrenceCount }),
+    locale,
+    recurrenceSummary({ intervalWeeks, weekdays, endsOn }),
   );
   return (
     <section className="mt-12 rounded-xl border border-border bg-surface p-5">
@@ -97,28 +141,22 @@ export function SeriesSection({
           </form>
         ) : null}
 
-        <form action={extendAction} className="flex flex-col gap-1.5">
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("trips.series.addMoreDates")}
-              <input
-                name="count"
-                type="number"
-                min={1}
-                max={26}
-                defaultValue={4}
-                aria-label={t("trips.series.addMoreDatesAriaLabel")}
-                className={`${controlClass} tabular-nums sm:w-28`}
-              />
-            </label>
-            <SubmitButton
-              pendingLabel={t("trips.series.adding")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("trips.series.addToSchedule")}
-            </SubmitButton>
-          </div>
-          <p className="text-sm text-muted">{t("trips.series.extendDescription")}</p>
+        {/* One switch, two directions — a series that was stopped (or arrived
+            finite from before this feature existed) can be turned back on, so
+            "stop repeating" is never a door that only shuts. */}
+        <form action={repeatAction} className="flex flex-col gap-1.5">
+          <input type="hidden" name="keepRepeating" value={repeating ? "no" : "yes"} />
+          <SubmitButton
+            pendingLabel={t("trips.series.saving")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {repeating ? t("trips.series.stopRepeating") : t("trips.series.startRepeating")}
+          </SubmitButton>
+          <p className="text-sm text-muted">
+            {repeating
+              ? t("trips.series.stopRepeatingDescription")
+              : t("trips.series.startRepeatingDescription", { days: horizonDays })}
+          </p>
         </form>
 
         {hasFuture ? (

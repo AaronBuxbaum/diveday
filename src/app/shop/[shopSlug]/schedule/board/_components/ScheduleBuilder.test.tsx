@@ -104,21 +104,24 @@ const COPY: BuilderCopy = {
   cancellationWindowDescription: "Hours before departure.",
   hoursSuffix: "hours",
   repeatLegend: "Repeat",
-  repeatDescription: "Put the same trip on the board for several weeks at once.",
+  repeatDescription: "Put a standing departure on the board and leave it there.",
   howOftenLabel: "How often",
   doesntRepeat: "Doesn't repeat",
   everyWeek: "Every week",
   every2Weeks: "Every 2 weeks",
   every4Weeks: "Every 4 weeks",
-  numberOfTripsLabel: "Number of trips",
-  numberOfTripsDescription: "Counting the first, up to 12.",
-  numberOfTripsPlaceholder: "e.g. 8",
+  repeatsOnLabel: "Repeats on",
+  repeatsOnDescription: "Pick any days you run it.",
+  everyDay: "Every day",
+  endsLabel: "Ends",
+  endsNever: "Keeps repeating",
+  endsOnChoice: "On a date",
+  endsOnLabel: "Last date",
 };
 
 /** The bounds and shared dive-card words the expanded half of the panel needs. */
 const MORE: BuilderMoreOptions = {
-  minOccurrences: 2,
-  maxOccurrences: 12,
+  weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   minDays: 1,
   maxDays: 7,
   diveFields: {
