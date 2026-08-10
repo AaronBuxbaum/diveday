@@ -41,7 +41,7 @@ describe("rollCallLabelText", () => {
     };
     for (const translator of [t, es]) {
       const words = rollCallLabelText(translator, rollCallLabel("after_dive_1", missing));
-      expect(words).not.toContain("✓");
+      expect(words).not.toContain("☑️");
       expect(words).not.toBe(rollCallLabelText(translator, rollCallLabel("departure", missing)));
     }
   });

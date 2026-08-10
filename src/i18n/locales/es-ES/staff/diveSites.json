@@ -57,6 +57,27 @@
     "descriptionLabel": "¿Qué hace especial a este sitio?",
     "satelliteImageLabel": "URL de imagen satelital",
     "routeImageLabel": "URL de imagen de ruta",
+    "route": {
+      "legend": "La ruta que se bucea",
+      "description": "Toca la vista satelital para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
+      "needsCoordinates": "Completa la latitud y la longitud de arriba y aquí aparecerá la vista satelital, lista para dibujar.",
+      "labelLabel": "Cómo se llama la ruta",
+      "labelPlaceholder": "Vuelta por el jardín de coral",
+      "noteLabel": "Una línea sobre la ruta",
+      "notePlaceholder": "Un recorrido tranquilo desde el muerto por la cresta de coral y de vuelta.",
+      "zoomLabel": "Zoom",
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "undo": "Deshacer punto",
+      "clear": "Borrar ruta",
+      "mapAriaLabel": "Vista satelital: toca para añadir un punto de la ruta",
+      "status": {
+        "empty": "Toca donde empieza la inmersión.",
+        "one": "Un punto marcado: toca dónde sigue.",
+        "some": "{count} puntos. Toca para añadir otro, o Deshacer para quitar el último.",
+        "full": "Es el máximo de puntos que admite una ruta ({count}). Deshaz para cambiar alguno."
+      }
+    },
     "sitePhotosLabel": "URLs de fotos del sitio",
     "sitePhotosHint": "(una por línea, hasta seis)",
     "marineLifeLabel": "¿Qué podrían ver los buceadores?",

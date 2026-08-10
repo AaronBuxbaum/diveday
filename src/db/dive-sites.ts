@@ -1,5 +1,6 @@
 import { and, asc, count, eq, gte, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import { offsetPage } from "./paging";
@@ -37,6 +38,12 @@ export type DiveSiteInput = {
   minimumCertificationLevel?: CertificationLevel | null;
   requiredSpecialties?: DiveSpecialty[];
   requiresNitrox?: boolean;
+  /** Waypoints the shop clicked onto the satellite frame (src/lib/dive-site-route.ts). */
+  routePoints?: RoutePoint[];
+  routeLabel?: string;
+  routeNote?: string;
+  /** The zoom those waypoints were drawn at, and must be rendered at. */
+  routeZoom?: number;
 };
 
 export async function listDiveSites(db: AppDb, shopId: string) {
@@ -163,6 +170,10 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
       requiresNitrox: input.requiresNitrox ?? false,
+      routePoints: input.routePoints ?? [],
+      routeLabel: input.routeLabel || null,
+      routeNote: input.routeNote || null,
+      routeZoom: input.routeZoom ?? DEFAULT_ROUTE_ZOOM,
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
@@ -200,6 +211,12 @@ export async function updateDiveSite(
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
       requiresNitrox: input.requiresNitrox ?? false,
+      // Same `??`/`||` split as the fields above: an omitted route clears the
+      // line off the site, which is how a shop takes one back down.
+      routePoints: input.routePoints ?? [],
+      routeLabel: input.routeLabel || null,
+      routeNote: input.routeNote || null,
+      routeZoom: input.routeZoom ?? DEFAULT_ROUTE_ZOOM,
     })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .returning();
@@ -241,6 +258,10 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     minimumCertificationLevel: source.minimumCertificationLevel,
     requiredSpecialties: source.requiredSpecialties,
     requiresNitrox: source.requiresNitrox,
+    routePoints: source.routePoints,
+    routeLabel: source.routeLabel ?? undefined,
+    routeNote: source.routeNote ?? undefined,
+    routeZoom: source.routeZoom,
   });
 }
 

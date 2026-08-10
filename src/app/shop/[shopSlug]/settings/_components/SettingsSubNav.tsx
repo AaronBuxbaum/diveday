@@ -22,6 +22,17 @@ import {
  * Reads the active item from the pathname, matching `WaiversSubNav.tsx`'s and
  * `PublicShopNav.tsx`'s pattern, so it can live in the shared layout without
  * re-rendering on every tab switch.
+ *
+ * **On the hub, the group name is also the way down the page.** Settings used
+ * to wear two navigations, stacked: this card, and — four lines below it — a
+ * `JumpNav` row of the *same three words* ("Your shop", "Money", "Data &
+ * integrations") as anchors into the page's own sections. Two controls, one
+ * vocabulary, different grammars, adjacent: which one moved you down the page
+ * and which one left it was a coin flip, and it was the "funky/disorganized"
+ * of the report. The words appear once now. On the hub each group name is the
+ * anchor to its section (and a group with no sub-pages of its own — Money —
+ * gets a row for that reason alone); on a sub-page the hub is elsewhere, so
+ * the names go back to being plain captions over their pills.
  */
 export type SettingsSubNavCopy = {
   ariaLabel: string;
@@ -75,9 +86,15 @@ export function SettingsSubNav({
 
   const hubItem: SettingsNavItem = { key: "hub", href: root, label: copy.hub };
 
+  // Whether the hub itself is the page being read — which is what decides
+  // whether a group name is a destination on this page or a caption for one
+  // elsewhere.
+  const onHub = pathname === root;
+
   // Groups in `SETTINGS_GROUPS`' own order, each carrying the destinations
-  // registered under it (also in registry order); a group with no
-  // destination today (Money) renders no row.
+  // registered under it (also in registry order). Off the hub, a group with no
+  // destination today (Money) renders no row; on the hub it does, because
+  // there its name is the anchor to a section that exists.
   const groupRows = SETTINGS_GROUPS.map((group) => ({
     group,
     items: SETTINGS_DESTINATIONS.filter((destination) => destination.groupId === group.id).map(
@@ -87,7 +104,7 @@ export function SettingsSubNav({
         label: copy.destinationLabels[destination.id],
       }),
     ),
-  })).filter((row) => row.items.length > 0);
+  })).filter((row) => onHub || row.items.length > 0);
 
   const current = activeSettingsNavKey(pathname, [
     hubItem,
@@ -117,13 +134,40 @@ export function SettingsSubNav({
       aria-label={copy.ariaLabel}
       className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 print:hidden ${className}`}
     >
-      <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>
+      {/* The way back to the hub — absent *on* the hub, where it was a pill
+          that went nowhere sitting directly above an `<h1>` reading the same
+          three words. Removing it is a whole row of chrome off the top of a
+          phone screen, on the one settings page that is already the longest. */}
+      {onHub ? null : <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>}
+      {/* The group name sits on its own line, above the pills it owns — not
+          beside them. Inline, a 12px uppercase caption and a 14px semibold pill
+          shared a line at two different weights, and on a phone the pills
+          wrapped out from under their own caption: "Data & integrations" ended
+          three lines above the last thing that belonged to it, and "Money",
+          which owns no sub-page, read as a heading with nothing under it. A
+          caption and an indented row underneath says which pills are whose at
+          any width. */}
       {groupRows.map(({ group, items }) => (
-        <div key={group.id} className="flex flex-wrap items-center gap-2">
-          <span className="px-1 text-xs font-semibold tracking-wide text-muted uppercase">
-            {copy.groupLabels[group.id]}
-          </span>
-          {items.map(renderItem)}
+        <div key={group.id} className="flex flex-col gap-1">
+          {onHub ? (
+            // A same-document anchor, which the browser handles itself: no
+            // re-render, no refetch, works before JavaScript arrives — the
+            // same reasoning `JumpNav` records, and the reason the hub's
+            // `PreserveFormScroll` handshake is undisturbed by it.
+            <a
+              href={`#${group.id}`}
+              className="inline-flex min-h-11 w-fit items-center rounded-xl px-2 text-xs font-semibold tracking-wide text-muted uppercase transition-colors duration-200 hover:bg-surface hover:text-foreground"
+            >
+              {copy.groupLabels[group.id]}
+            </a>
+          ) : (
+            <span className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
+              {copy.groupLabels[group.id]}
+            </span>
+          )}
+          {items.length > 0 ? (
+            <div className="flex flex-wrap gap-2">{items.map(renderItem)}</div>
+          ) : null}
         </div>
       ))}
     </nav>

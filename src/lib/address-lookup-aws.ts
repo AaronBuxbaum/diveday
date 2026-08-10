@@ -4,6 +4,7 @@ import {
   type AddressLookupConfig,
   type AddressLookupProvider,
   type AddressLookupResult,
+  hasAddressParts,
   isLookupWorthy,
   type PlaceSuggestion,
   toShopAddressFields,
@@ -55,6 +56,21 @@ export function awsAddressLookupProvider(
           new AutocompleteCommand({
             QueryText: query.trim(),
             MaxResults: ADDRESS_SUGGESTION_LIMIT,
+            // Not optional, despite the name. `Autocomplete` returns only the
+            // place id, place type and a one-line label by default — the
+            // `Address` object comes back holding a `Label` and *nothing else*
+            // unless `Core` is asked for ("`Address` contains the result label
+            // and, if `["Core"]` is specified for `AdditionalFeatures`, it also
+            // contains the full breakdown of the address into structured
+            // fields", Amazon Location developer guide). Without it every
+            // suggestion still reads correctly in the list and then fills the
+            // five boxes with five empty strings when picked, because a pick
+            // *replaces* the whole address — which is how "address lookup
+            // doesn't work" was reported with the request succeeding every
+            // time. The extra attributes are priced, which is the trade the
+            // guide flags; a structured address is the entire point of the
+            // control, so there is nothing to trade away.
+            AdditionalFeatures: ["Core"],
           }),
         )) as {
           ResultItems?: {
@@ -92,7 +108,14 @@ export function awsAddressLookupProvider(
               postalCode: item.Address?.PostalCode,
               countryCode: item.Address?.Country?.Code2,
             }),
-          }));
+          }))
+          // Braces to the `AdditionalFeatures` belt above: a pick *replaces*
+          // the whole address, so a suggestion carrying no structured parts is
+          // not a weaker answer — it is a trap that blanks all five boxes the
+          // moment it is chosen. If a result ever comes back label-only again
+          // (a provider change, a place type with no breakdown), it is dropped
+          // rather than offered.
+          .filter((suggestion) => hasAddressParts(suggestion.address));
         return { status: "ok", suggestions };
       } catch (error) {
         // A geocoder being down must never take the settings page with it: the

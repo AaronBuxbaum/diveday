@@ -667,10 +667,10 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
   it("never carries the danger tone on hue alone", () => {
     const { container } = renderBoard(returnedDay({ diveNumber: 1, uncounted: 1 }));
 
-    // Badge's own aria-hidden glyph for the three status tones — a colorblind
+    // Badge's own aria-hidden mark for the three status tones — a colorblind
     // scan gets the mark before it gets to the words (design/principles.md #6).
     const badge = container.querySelector("a span.bg-danger\\/10");
-    expect(badge?.textContent).toContain("✕");
+    expect(badge?.textContent).toContain("❌");
   });
 
   it("confirms a removal in a panel below the row, and only submits on the second press", async () => {

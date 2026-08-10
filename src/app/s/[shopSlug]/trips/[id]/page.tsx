@@ -34,9 +34,9 @@ import { isStaff } from "@/lib/authz";
 import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { googleMapsUrl } from "@/lib/dive-site-map";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
+import { googleMapsUrl } from "@/lib/maps";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,

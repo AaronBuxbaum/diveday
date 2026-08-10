@@ -102,6 +102,18 @@ export function toShopAddressFields(parts: LookedUpAddress): ShopAddressFields {
 }
 
 /**
+ * Whether a folded address carries anything at all.
+ *
+ * Picking a suggestion replaces every one of the five columns, so an address
+ * with no parts in it is not a thin answer — it is one that empties the boxes
+ * the shop already filled in. Adapters use this to drop such a result instead
+ * of offering it.
+ */
+export function hasAddressParts(address: ShopAddressFields): boolean {
+  return Object.values(address).some((value) => value.length > 0);
+}
+
+/**
  * The result of asking for suggestions. `not_configured` is a first-class
  * answer, not an error: a deployment with no geocoder credentials is the
  * ordinary local and self-hosted case, and the card falls back to the plain

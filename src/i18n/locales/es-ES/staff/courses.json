@@ -4,7 +4,6 @@
     "title": "Cursos",
     "description": "La copia de tu centro del catálogo PADI y SSI. Abre un curso para editar su página y precio, u oculta los que no ofreces.",
     "agencyTabsLabel": "Filtrar cursos por agencia",
-    "allAgencies": "Todas",
     "hidden": "Oculto",
     "orHigher": "{level} o superior",
     "openToUncertified": "Abierto a buceadores sin certificar",

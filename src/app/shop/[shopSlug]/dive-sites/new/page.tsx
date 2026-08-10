@@ -19,6 +19,7 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
@@ -126,6 +127,10 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
       landmarks,
+      routePoints: parsed.route.points,
+      routeLabel: parsed.route.label,
+      routeNote: parsed.route.note,
+      routeZoom: parsed.route.zoom,
     });
     revalidateAndRedirect(back, `${back}/${site.id}`);
   }
@@ -149,6 +154,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
         <SiteFields
           t={t}
           depthUnit={depthUnit}
+          routeCopy={routeEditorCopy(t)}
           certificationDescription={t("diveSites.new.certificationDescription")}
         />
         <SubmitButton

@@ -1,6 +1,5 @@
 import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
-import { JumpNav } from "@/components/JumpNav";
 import type { AppDb } from "@/db/client";
 import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -78,28 +77,19 @@ async function renderSettings(role: Role, seed?: (db: AppDb, session: Session) =
 }
 
 describe("settings findability", () => {
-  it("jumps to exactly the group anchors the page renders", async () => {
+  it("renders exactly the groups the sub-nav offers anchors for", async () => {
     // The `<h2 id>`s shipped with `scroll-mt-24` and no link to them for a
-    // whole release. These two assertions are the pair that keeps that from
-    // recurring: the row targets every group, and every group is a target.
+    // whole release, and this is half the pair that keeps that from recurring:
+    // every registered group is a section on this page. The other half — every
+    // group name being a link to its section — moved into `SettingsSubNav`
+    // when the hub's separate `JumpNav` row was folded into it, and lives in
+    // that component's own test. Both read `SETTINGS_GROUPS`, so a group added
+    // to the registry and missed on either side fails here or there.
     const element = await renderSettings("owner");
     const groups = findElements<{ group: { id: string } }>(element, SettingsGroup);
     expect(groups.map((group) => group.props.group.id)).toEqual(
       SETTINGS_GROUPS.map((group) => group.id),
     );
-
-    const jumpRow = findElements<{ ariaLabel: string; items: { id: string; label: string }[] }>(
-      element,
-      JumpNav,
-    );
-    expect(jumpRow).toHaveLength(1);
-    const items = jumpRow[0]?.props.items ?? [];
-    expect(items).toHaveLength(SETTINGS_GROUPS.length);
-    // Real words from the staff bundle, not keys leaking through.
-    expect(items.map((item) => item.label)).toContain("Your shop");
-
-    const anchors = hrefsIn(JumpNav({ ariaLabel: "Jump to a section", items }));
-    expect(anchors).toEqual(SETTINGS_GROUPS.map((group) => `#${group.id}`));
   });
 
   it("gives an owner a door to Team and to Promo codes, and only one door each", async () => {

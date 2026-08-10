@@ -92,9 +92,12 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   // The zone was accepted (an invalid one bounces back to the form with an
   // error) and it is what the new shop reads the clock in: the frozen harness
   // instant is mid-morning in New York and late evening in Papua, so the
-  // greeting proves the stored zone rather than the default.
+  // greeting proves the stored zone rather than the default. "Working late" is
+  // Today's 22:00–05:00 band (src/lib/today.ts) — the English there is not
+  // "Good night", which is what you say on the way out rather than to somebody
+  // who has just opened the app.
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
-  await expect(page.getByRole("heading", { name: /Good night, Sari/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Working late, Sari/ })).toBeVisible();
 });
 
 /**

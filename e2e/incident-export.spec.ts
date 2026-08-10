@@ -31,7 +31,7 @@ test("one tap from the manifest opens the incident-ready document with the recor
   await markBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await markBoarded.click();
   await expect(
-    page.locator("#roll-call-list").getByRole("button", { name: "Boarded ✓" }).first(),
+    page.locator("#roll-call-list").getByRole("button", { name: "Boarded ☑️" }).first(),
   ).toBeVisible();
 
   // The one-tap entry point.

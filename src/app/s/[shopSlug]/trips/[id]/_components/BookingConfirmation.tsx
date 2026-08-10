@@ -54,7 +54,7 @@ function PaymentSection({
       <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
         <h3 className="font-semibold text-success">
           {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
-          {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✓
+          {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✅
         </h3>
         <p className="mt-1 text-sm text-muted">
           {depositWithBalance

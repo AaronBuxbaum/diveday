@@ -73,6 +73,13 @@ server, which removes the entire browser-key problem rather than managing it.
   swallows the error into `{ status: "failed" }`.
 - Amazon Location `Autocomplete` is unavailable in `ap-southeast-1` and `ap-southeast-5` for GrabMaps
   customers; `PLACES_AWS_REGION` must not be set to one of those.
+- `Autocomplete` returns only a place id, a place type and a one-line label unless the request asks
+  for `AdditionalFeatures: ["Core"]`; the `Address` object comes back carrying a `Label` and no
+  structured fields. The adapter always asks for `Core`, and the extra attributes are priced. This
+  is the one request parameter the feature cannot work without — a response missing it looks
+  entirely healthy (real places, right order, no error) and then writes five empty strings into the
+  shop's address, because a pick replaces every column. Shipped without it, which is how the lookup
+  was reported as broken while every request succeeded (2026-08-09).
 
 ## Alternatives considered
 

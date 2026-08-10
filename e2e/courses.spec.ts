@@ -138,9 +138,15 @@ test.describe("staff", () => {
     expect(at("Advanced Open Water Diver")).toBeLessThan(at("Rescue Diver"));
     expect(at("Rescue Diver")).toBeLessThan(at("Divemaster"));
 
-    // Agency is a tab now, not a pill repeated on every row.
+    // Agency is a tab, not a pill repeated on every row — and there is no
+    // "All". Progression order is the order a shop *teaches*, which only means
+    // anything inside one agency's ladder; "All" interleaved two of them into
+    // one column where an Open Water sat next to an Open Water. The shop's
+    // first agency is the default, so the bare URL stays canonical.
     const tabs = page.getByRole("navigation", { name: "Filter courses by agency" });
-    await expect(tabs.getByRole("link", { name: "All" })).toHaveAttribute("aria-current", "true");
+    await expect(tabs.getByRole("link", { name: "All" })).toHaveCount(0);
+    await expect(tabs.getByRole("link", { name: "PADI" })).toHaveAttribute("aria-current", "true");
+
     await tabs.getByRole("link", { name: "SSI" }).click();
     await expect(page).toHaveURL("/shop/blue-mantis/courses?agency=ssi");
     const roster = page.locator("main ul > li");
@@ -149,10 +155,11 @@ test.describe("staff", () => {
     await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
     await expect(tabs.getByRole("link", { name: "SSI" })).toHaveAttribute("aria-current", "true");
 
-    // The tab survives a reload (it is a real URL), and "All" brings the rest back.
+    // The tab survives a reload (it is a real URL), and the default tab brings
+    // the rest back on the canonical URL.
     await page.reload();
     await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
-    await tabs.getByRole("link", { name: "All" }).click();
+    await tabs.getByRole("link", { name: "PADI" }).click();
     await expect(page).toHaveURL("/shop/blue-mantis/courses");
     await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(1);
   });

@@ -20,7 +20,7 @@
   "waitingOnYou": "Waiting on you",
   "waitingDetail": "Reviews with words to read",
   "thisMonthStat": "This month: {rating}★ average from {count, plural, one {# review} other {# reviews}}",
-  "standout": "✦ Standout review",
+  "standout": "⭐ Standout review",
   "emptyHeading": "No reviews yet",
   "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
   "emptyWaitingHeading": "Nothing waiting on you",

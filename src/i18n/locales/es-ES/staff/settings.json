@@ -236,9 +236,6 @@
       "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo.",
       "cta": "Configurar respaldos"
     },
-    "jump": {
-      "label": "Ir a una sección"
-    },
     "team": {
       "heading": "Equipo",
       "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones.",

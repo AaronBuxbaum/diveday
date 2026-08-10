@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 
 export type ScheduleFiltersCopy = {
   tripType: string;
@@ -24,6 +25,11 @@ export type ScheduleFiltersCopy = {
  * exactly as before. The form remains a plain GET either way: the URL carries
  * the filters, and the list below re-renders server-side, pixel-stable for
  * visual regression.
+ *
+ * `QueryForm`, not a bare `<form method="get">`: auto-submit on change plus a
+ * native GET submit meant one tap of "Has space" tore the document down and
+ * put the diver back at the top of the page, above the filter they had just
+ * touched. Same URL, same server render, client transition.
  */
 export function ScheduleFilters({
   embed,
@@ -46,7 +52,7 @@ export function ScheduleFilters({
   const submit = () => formRef.current?.requestSubmit();
 
   return (
-    <form ref={formRef} method="get" className="mb-6 flex flex-wrap items-end gap-3">
+    <QueryForm ref={formRef} className="mb-6 flex flex-wrap items-end gap-3">
       {embed ? <input type="hidden" name="embed" value="1" /> : null}
       {month ? <input type="hidden" name="month" value={month} /> : null}
       <FieldGrid columns={1} className="min-w-40">
@@ -85,6 +91,6 @@ export function ScheduleFilters({
           {copy.apply}
         </SubmitButton>
       )}
-    </form>
+    </QueryForm>
   );
 }

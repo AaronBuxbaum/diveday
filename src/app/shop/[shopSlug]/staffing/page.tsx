@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -135,19 +136,24 @@ export default async function StaffingPage({
       ) : null}
 
       <section className="mt-8 rounded-2xl border border-border bg-surface p-5">
-        <FieldGrid as="form" columns={3} method="get">
-          <Field label={t("staffing.window.from")}>
-            <input name="from" type="date" defaultValue={fromValue} className={controlClass} />
-          </Field>
-          <Field label={t("staffing.window.through")}>
-            <input name="to" type="date" defaultValue={toValue} className={controlClass} />
-          </Field>
-          <FieldActions>
-            <button type="submit" className={buttonClass({ variant: "secondary" })}>
-              {t("staffing.window.show")}
-            </button>
-          </FieldActions>
-        </FieldGrid>
+        {/* `QueryForm`, not a native GET form: moving the window is a filter
+            over this page, and a document reload dropped the manager back at
+            the top of it every time. */}
+        <QueryForm>
+          <FieldGrid columns={3}>
+            <Field label={t("staffing.window.from")}>
+              <input name="from" type="date" defaultValue={fromValue} className={controlClass} />
+            </Field>
+            <Field label={t("staffing.window.through")}>
+              <input name="to" type="date" defaultValue={toValue} className={controlClass} />
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                {t("staffing.window.show")}
+              </button>
+            </FieldActions>
+          </FieldGrid>
+        </QueryForm>
       </section>
 
       {/* One line about crewing, not a table of it. Which departures still

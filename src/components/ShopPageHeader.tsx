@@ -76,13 +76,15 @@ export function ShopStat({
   );
 }
 
-// Decorative, `aria-hidden` tone glyph — the same reasoning as `Badge`'s (see
-// ui/badge.tsx): status here is hue plus reading the words, which a
-// colorblind scan can miss before it gets to the words at all.
+// Decorative, `aria-hidden` tone mark — the same reasoning, and the same
+// emoji, as `Badge`'s (see ui/badge.tsx): status here is hue plus reading the
+// words, which a colorblind scan can miss before it gets to the words at all,
+// and a text dingbat at this size reads as a font falling back rather than as
+// a status.
 const NOTICE_GLYPH: Record<"success" | "danger" | "warning" | "neutral", string | null> = {
-  success: "✓ ",
-  danger: "✕ ",
-  warning: "▲ ",
+  success: "✅ ",
+  danger: "❌ ",
+  warning: "⚠️ ",
   neutral: null,
 };
 

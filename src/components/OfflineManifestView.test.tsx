@@ -930,7 +930,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     await waitFor(() =>
       expect(priyaRow().getByRole("button", { name: "Not back aboard" })).toBeInTheDocument(),
     );
-    expect(screen.queryByText(/Not boarded ✓/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not boarded ☑️/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "After dive 1 roll call" })).toBeInTheDocument();
     expect(screen.queryByText(/everyone's aboard/)).not.toBeInTheDocument();
@@ -1287,7 +1287,7 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
     // Both the state pill beside her name and the control below it.
     expect(priya.getAllByText("Not back aboard")).toHaveLength(2);
     expect(priya.queryByText("Not boarded")).not.toBeInTheDocument();
-    expect(priya.queryByText("Not boarded ✓")).not.toBeInTheDocument();
+    expect(priya.queryByText("Not boarded ☑️")).not.toBeInTheDocument();
     // The whole roster has a result and the crew were counted — and it still
     // does not read complete, because one diver has not come back.
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
@@ -1312,7 +1312,7 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
     const priya = within(document.getElementById("offline-roll-call-diver-priya") as HTMLElement);
     expect(priya.getByText("Not boarded")).toBeInTheDocument();
     // Left ashore is a diver accounted for, so this one *is* a settled result.
-    expect(priya.getByRole("button", { name: "Not boarded ✓" })).toBeInTheDocument();
+    expect(priya.getByRole("button", { name: "Not boarded ☑️" })).toBeInTheDocument();
     expect(screen.queryByText("Not back aboard")).not.toBeInTheDocument();
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
   });

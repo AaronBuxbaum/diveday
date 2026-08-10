@@ -198,11 +198,11 @@ test.describe("staff", () => {
     // Cancel: gone from public schedule; reinstate: back.
     await page.getByRole("button", { name: "Cancel trip" }).click();
     // The danger-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "✕ Cancelled" —
+    // (Badge.tsx toneGlyph), so the element's own text is "❌Cancelled" —
     // matching the bare word would also hit the "Trip cancelled — it's off
     // the public schedule." alert on the same page (getByText is
     // case-insensitive substring by default).
-    await expect(page.getByText("✕ Cancelled")).toBeVisible();
+    await expect(page.getByText("❌Cancelled")).toBeVisible();
     await page.goto("/shop/blue-mantis/schedule/board");
     await expect(
       page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),

@@ -103,6 +103,20 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
           commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
         ],
+        // The three routes below used to be hand-authored SVG in
+        // `src/lib/dive-site-map.ts`, keyed by site name — which is why only
+        // DiveDay's own demo sites ever had one. They are ordinary rows now:
+        // the waypoints a staffer would have clicked, on a site any shop could
+        // have drawn (ADR 20260809-shop-drawn-dive-routes).
+        routePoints: [
+          { x: 16, y: 67 },
+          { x: 44, y: 29 },
+          { x: 72, y: 52 },
+          { x: 84, y: 78 },
+        ],
+        routeLabel: "Reef garden loop",
+        routeNote:
+          "A relaxed sweep from the mooring along the coral ridge and back by the sand channels.",
       },
       {
         shopId,
@@ -131,6 +145,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
           commonsImage("AtlanticGoliathGrouper.jpg"),
         ],
+        routePoints: [
+          { x: 18, y: 63 },
+          { x: 49, y: 35 },
+          { x: 75, y: 60 },
+          { x: 84, y: 78 },
+        ],
+        routeLabel: "Exterior circuit",
+        routeNote: "Descend together, trace the superstructure, then return to the ascent line.",
       },
       {
         shopId,
@@ -154,6 +176,15 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           commonsImage("Blue Tang Pickles 20080310.jpg"),
           commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
         ],
+        routePoints: [
+          { x: 17, y: 68 },
+          { x: 49, y: 36 },
+          { x: 72, y: 56 },
+          { x: 84, y: 79 },
+        ],
+        routeLabel: "Shallow statue arc",
+        routeNote:
+          "An easy, shallow arc around the statue and coral garden before a calm return to the mooring.",
       },
       {
         shopId,
