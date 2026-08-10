@@ -15,6 +15,7 @@ import {
   ShopNavLinks,
   type ShopNavLinksCopy,
 } from "./ShopNavLinks";
+import { StaffTabBar } from "./StaffTabBar";
 import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 import { InlineConfirm } from "./ui/InlineConfirm";
@@ -100,109 +101,114 @@ export function ShopNav({
       }),
     })),
   };
+  // Shared by the header tabs and the phone dock, so a badge can never say
+  // different things in the two places the same destination renders.
+  const badgeLabels = {
+    blockers: t("shared.shopNavLinks.badgeBlocked", {
+      count: navCounts?.blockers ?? 0,
+    }),
+  };
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur print:hidden sm:px-6">
-      {/*
-       * Below `lg` the primary links take their own full-width row under the
-       * logo instead of being crushed into whatever slice of the top row is
-       * left over; from `lg` up everything collapses back to a single row via
-       * the `order` utilities.
-       *
-       * That breakpoint used to be `sm`, which is where the row *stops being a
-       * phone*, not where it fits: the logo, search, shortcut key, and sign-out
-       * are fixed-width, so between 640px and roughly 980px the links were left
-       * a ~300px column and wrapped one per line — a tablet in portrait got a
-       * vertical stack of nav links beside a vertically centred logo, and at
-       * 640px itself "Today" and "More" overlapped outright. `lg` is the first
-       * width where the single row actually has the room.
-       */}
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
-        <Link
-          href={root}
-          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight lg:order-1"
-        >
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
-            <LogoMark className="size-5" />
-            <span className="sr-only">{t("shared.shopNav.home")}</span>
-          </span>
-          <span className="hidden max-w-40 truncate sm:inline">{shopName}</span>
-          <span className="sm:hidden">DiveDay</span>
-        </Link>
-        {/* Trips are created from the Schedule, where the surrounding week is visible. */}
-        <div className="ml-auto flex shrink-0 items-center gap-2 lg:order-3 lg:ml-0 lg:gap-3">
-          <CommandPalette
-            shopSlug={shopSlug}
-            boatBoardingHref={boatBoardingHref}
-            gates={navGates}
-            copy={{
-              search: t("shared.commandPalette.search"),
-              dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
-              comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
-              placeholder: t("shared.commandPalette.placeholder"),
-              emptyShort: t("shared.commandPalette.emptyShort"),
-              emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
-              groupDivers: t("shared.commandPalette.groupDivers"),
-              groupTrips: t("shared.commandPalette.groupTrips"),
-              groupDiveSites: t("shared.commandPalette.groupDiveSites"),
-              groupCourses: t("shared.commandPalette.groupCourses"),
-              groupOrders: t("shared.commandPalette.groupOrders"),
-              groupGoTo: t("shared.commandPalette.groupGoTo"),
-              destinationLabels,
-              goToBoarding: t("shared.commandPalette.goToBoarding"),
-              goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-            }}
-          />
-          <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
-          <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
-            {/* Two-tap mis-tap protection (task 81): sits right beside Search,
+    <>
+      <header className="sticky top-0 z-30 border-b border-border bg-surface px-4 py-3 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-surface/95 print:hidden sm:px-6">
+        {/*
+         * One row, always. Below `lg` the primary destinations live in the
+         * phone dock (StaffTabBar, fixed to the bottom edge where a thumb
+         * actually is) rather than wrapping into extra header rows, so the
+         * header keeps to identity, search, and sign-out on every width; from
+         * `lg` up the tab strip joins the row via the `order` utilities.
+         */}
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
+          <Link
+            href={root}
+            className="flex min-w-0 shrink items-center gap-2 font-semibold tracking-tight lg:order-1"
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
+              <LogoMark className="size-5" />
+              <span className="sr-only">{t("shared.shopNav.home")}</span>
+            </span>
+            <span className="max-w-40 truncate">{shopName}</span>
+          </Link>
+          {/* Trips are created from the Schedule, where the surrounding week is visible. */}
+          <div className="ml-auto flex shrink-0 items-center gap-2 lg:order-3 lg:ml-0 lg:gap-3">
+            <CommandPalette
+              shopSlug={shopSlug}
+              boatBoardingHref={boatBoardingHref}
+              gates={navGates}
+              copy={{
+                search: t("shared.commandPalette.search"),
+                dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
+                comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
+                placeholder: t("shared.commandPalette.placeholder"),
+                emptyShort: t("shared.commandPalette.emptyShort"),
+                emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
+                groupDivers: t("shared.commandPalette.groupDivers"),
+                groupTrips: t("shared.commandPalette.groupTrips"),
+                groupDiveSites: t("shared.commandPalette.groupDiveSites"),
+                groupCourses: t("shared.commandPalette.groupCourses"),
+                groupOrders: t("shared.commandPalette.groupOrders"),
+                groupGoTo: t("shared.commandPalette.groupGoTo"),
+                destinationLabels,
+                goToBoarding: t("shared.commandPalette.goToBoarding"),
+                goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+              }}
+            />
+            <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
+            <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
+              {/* Two-tap mis-tap protection (task 81): sits right beside Search,
                 so one stray tap used to log the whole crew out mid-shift.
                 Compact mode (no `message`) — an undo banner isn't safe here:
                 the grace window it needs would keep the session (or a
                 passwordless resume) alive briefly, and on a shared boat or
                 front-desk device that's a window for whoever touches the
                 device next to reclaim the previous login (principle 7). */}
-            <InlineConfirm
-              triggerLabel={t("shared.shopNav.signOut")}
-              confirmLabel={t("shared.shopNav.signOutConfirm")}
-              pendingLabel={t("shared.shopNav.signOutPending")}
-              triggerClassName={buttonClass({
-                variant: "ghost",
-                size: "sm",
-                className: "rounded-xl",
-              })}
-              confirmClassName={buttonClass({
-                variant: "danger",
-                size: "sm",
-                className: "rounded-xl",
-              })}
-              autoResetMs={4000}
-            />
-          </form>
+              <InlineConfirm
+                triggerLabel={t("shared.shopNav.signOut")}
+                confirmLabel={t("shared.shopNav.signOutConfirm")}
+                pendingLabel={t("shared.shopNav.signOutPending")}
+                triggerClassName={buttonClass({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "rounded-xl",
+                })}
+                confirmClassName={buttonClass({
+                  variant: "danger",
+                  size: "sm",
+                  className: "rounded-xl",
+                })}
+                autoResetMs={4000}
+              />
+            </form>
+          </div>
+          <ShopNavLinks
+            root={root}
+            gates={navGates}
+            counts={navCounts}
+            copy={
+              {
+                primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),
+                more: t("shared.shopNavLinks.more"),
+                groupDaily: t("shared.shopNavLinks.groupDaily"),
+                groupSetup: t("shared.shopNavLinks.groupSetup"),
+                labels: destinationLabels,
+                // Resolved for the count each badge actually carries, so the
+                // sr-only noun is pluralised rather than assembled from a digit
+                // and a bare word.
+                badgeLabels,
+              } satisfies ShopNavLinksCopy
+            }
+            className="hidden lg:order-2 lg:flex lg:w-auto lg:flex-1"
+          />
         </div>
-        <ShopNavLinks
-          root={root}
-          gates={navGates}
-          counts={navCounts}
-          copy={
-            {
-              primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),
-              more: t("shared.shopNavLinks.more"),
-              groupDaily: t("shared.shopNavLinks.groupDaily"),
-              groupSetup: t("shared.shopNavLinks.groupSetup"),
-              labels: destinationLabels,
-              // Resolved for the count each badge actually carries, so the
-              // sr-only noun is pluralised rather than assembled from a digit
-              // and a bare word.
-              badgeLabels: {
-                blockers: t("shared.shopNavLinks.badgeBlocked", {
-                  count: navCounts?.blockers ?? 0,
-                }),
-              },
-            } satisfies ShopNavLinksCopy
-          }
-          className="order-last w-full lg:order-2 lg:w-auto lg:flex-1"
-        />
-      </div>
-    </header>
+      </header>
+      <StaffTabBar
+        root={root}
+        gates={navGates}
+        counts={navCounts}
+        labels={destinationLabels}
+        navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
+        badgeLabels={badgeLabels}
+      />
+    </>
   );
 }
