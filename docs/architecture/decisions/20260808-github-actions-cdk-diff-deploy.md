@@ -61,10 +61,15 @@ and is left workstation-only on purpose (§17, `credentials-off-dotenv`).
 
 Creating the `infra-deploy` GitHub Environment with a required reviewer, and setting the two role ARNs
 (CDK outputs `GitHubActionsCdkDiffRoleArn`/`GitHubActionsCdkDeployRoleArn`) as the
-`AWS_CDK_DIFF_ROLE_ARN`/`AWS_CDK_DEPLOY_ROLE_ARN` repository variables, is manual action
-`github-actions-cdk-oidc` (§17) — nothing in this stack has a credential for GitHub's own API, the
-same reason `credentials-to-vercel`/`credentials-to-github-actions` are manual hand-offs rather than
-CDK outputs.
+`AWS_CDK_DIFF_ROLE_ARN`/`AWS_CDK_DEPLOY_ROLE_ARN` repository variables, are both offered as yes/no
+prompts in `pnpm infra:deploy`'s post-deploy wizard (`scripts/post-deploy-wizard.mjs`), the same
+pattern the wizard already uses for the reg-suit GitHub secrets — `scripts/sync-github-cdk-ci-vars.mjs`
+runs `gh variable set` after reading the two `CfnOutput`s, and
+`scripts/sync-github-cdk-ci-environment.mjs` `PUT`s the environment with the `gh` CLI's authenticated
+user as its reviewer. Manual action `github-actions-cdk-oidc` (§17) documents the underlying commands
+for a workstation without the wizard, but neither step is CloudFormation's to do — nothing in this
+stack has a credential for GitHub's own API, the same reason `credentials-to-vercel` is a hand-off
+rather than a `CfnOutput`.
 
 ## Alternatives considered
 
@@ -93,13 +98,21 @@ CDK outputs.
   this stack does none today (confirmed by running `cdk synth` with no AWS credentials), so granting it
   now would be unused privilege. Revisit if a future change adds a `fromLookup` call — `cdk diff` would
   start failing on `AccessDenied` for that specific role, which is a legible failure to work from.
+- **Leave the GitHub Environment and role-ARN variables as hand-typed `manual-actions.md` instructions**,
+  with no wizard automation. Rejected once it was clear both steps are exactly as `gh`-CLI-automatable
+  as the existing reg-suit secrets sync the wizard already runs (`scripts/sync-github-secrets.mjs`) —
+  leaving them manual would have been an inconsistency with that precedent, not a safer default. The
+  environment-reviewer step still requires an explicit `[y/N]` answer each time, matching how the
+  wizard already gates comparably consequential steps ("Deploy the linked Vercel project to
+  Production?").
 
 ## Consequences
 
 - A PR that touches `infra/` gets a `cdk synth` check for free (no credentials needed to fail loudly on
-  a broken template) and a `cdk diff` PR comment once the manual action is complete. Before that manual
-  action, the `diff` job's `configure-aws-credentials` step fails clearly (`role-to-assume` resolves to
-  an empty string) rather than silently skipping.
+  a broken template) and a `cdk diff` PR comment once the wizard's two GitHub prompts have been answered
+  yes at least once. Until then, the `diff` job's `configure-aws-credentials` step fails clearly
+  (`role-to-assume` resolves to an empty string, and a pre-flight step in `infra.yml` names the missing
+  variable and points at manual action `github-actions-cdk-oidc`) rather than silently skipping.
 - `cdk deploy` from CI is possible for the first time, but only behind two independent locks: an
   explicit `workflow_dispatch` with `command: deploy`, and a required-reviewer approval on the
   `infra-deploy` environment. `pnpm infra:deploy` from a workstation is unchanged and remains the only
@@ -109,8 +122,10 @@ CDK outputs.
 - Untested end to end: this sandbox has no AWS account to deploy against, so the OIDC trust conditions,
   the bootstrap-role `AssumeRole` chain, and the environment-approval gate are verified by reading the
   synthesized template (`cdk synth`, inspected directly) and by this stack's existing unit tests, not by
-  a live `cdk diff`/`cdk deploy` run. The first real exercise is the PR that lands this, after the
-  manual action is complete.
+  a live `cdk diff`/`cdk deploy` run. `sync-github-cdk-ci-vars.mjs` and `sync-github-cdk-ci-environment.mjs`
+  are unit-tested against a stubbed `gh` binary, but the first real exercise of the whole chain — the
+  wizard prompts, the `gh api` calls they make, and the workflow assuming the resulting roles — is the
+  PR that lands this, after `pnpm infra:deploy` is run once.
 - Escape hatch: if GitHub Environment approval proves too slow or friction-heavy for a solo operator,
   the fix is loosening `infra-deploy`'s reviewer requirement, not removing the environment — the OIDC
   trust condition would need updating in the same change, since it names the environment by string.

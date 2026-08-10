@@ -1511,23 +1511,22 @@ exports.handler = async (event) => {
       {
         id: "github-actions-cdk-oidc",
         title: "Authorize GitHub Actions to run cdk diff/deploy",
-        category: "Prerequisites",
-        when: "once, after the first deploy of this stack",
-        why: "The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API, and GitHubActionsCdkDeployRole's trust policy (infra-stack.ts §18) only ever hands an OIDC token to a job that references the infra-deploy GitHub Environment, which nothing but a human clicking through repo Settings can create.",
+        category: "Credentials",
+        when: "once, after the first deploy of this stack, and again if the deploy role's required reviewer needs to change",
+        why: "The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API. `pnpm infra:deploy`'s post-deploy wizard offers both as yes/no prompts right after a successful deploy (scripts/post-deploy-wizard.mjs), each a thin wrapper around the two commands below. Both need a gh-authenticated workstation, which is why this stays a wizard prompt rather than something CloudFormation could do -- GitHubActionsCdkDeployRole's trust policy (infra-stack.ts §18) only ever hands an OIDC token to a job that references the infra-deploy environment, so nothing runs until this has happened at least once.",
         run: [
-          "GitHub -> repo Settings -> Environments -> New environment, named infra-deploy -> add yourself as a required reviewer.",
-          "gh variable set AWS_CDK_DIFF_ROLE_ARN --body <GitHubActionsCdkDiffRoleArn output>",
-          "gh variable set AWS_CDK_DEPLOY_ROLE_ARN --body <GitHubActionsCdkDeployRoleArn output>",
+          "node scripts/sync-github-cdk-ci-vars.mjs < <(printf 'AWS_CDK_DIFF_ROLE_ARN=%s\\nAWS_CDK_DEPLOY_ROLE_ARN=%s' <GitHubActionsCdkDiffRoleArn output> <GitHubActionsCdkDeployRoleArn output>)",
+          "node scripts/sync-github-cdk-ci-environment.mjs",
         ],
         produces:
           ".github/workflows/infra.yml's diff job can assume a role on any pull request; its deploy job can only obtain one once a required reviewer approves a run against the infra-deploy environment.",
         store:
-          "GitHub repo Settings -> Environments (infra-deploy) and Settings -> Secrets and variables -> Actions -> Variables.",
+          "GitHub repo Settings -> Environments (infra-deploy) and Settings -> Secrets and variables -> Actions -> Variables (AWS_CDK_DIFF_ROLE_ARN, AWS_CDK_DEPLOY_ROLE_ARN) -- the CfnOutputs are GitHubActionsCdkDiffRoleArn and GitHubActionsCdkDeployRoleArn.",
         verify: [
           'Open a pull request that touches infra/ and confirm the "cdk synth + diff" check posts a PR comment.',
           'Actions -> Infra -> Run workflow, command: deploy -- confirm the run stops at "Review pending deployments" until approved.',
         ],
-        note: "The two values are role identifiers, not secrets -- store them as repository variables, not secrets. A GitHub Actions secret is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read.",
+        note: "The role ARNs are stored as repository variables, not secrets: they are identifiers, not credentials, and a secret's value is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read. Re-running the environment prompt only ever adds the current gh user as a reviewer -- it never removes anyone else's approval right, so adding a second reviewer is a manual GitHub-side edit.",
       },
       {
         id: "cost-explorer-enabled",
@@ -1774,7 +1773,6 @@ exports.handler = async (event) => {
       new Set([
         "aws-cli-admin-profile",
         "cdk-bootstrap",
-        "github-actions-cdk-oidc",
         "cost-explorer-enabled",
         // The three non-AWS cost guardrails (ADR
         // 20260806-provider-usage-guardrails). They belong in the short list
