@@ -17,6 +17,7 @@ export type BuddyMemberOption = { token: string; label: string };
  * manifest; the team itself prints on each member's row.
  */
 export function BuddyTeamsPanel({
+  defaultOpen,
   buddyTeamsList,
   diverOptions,
   crewOptions,
@@ -29,6 +30,12 @@ export function BuddyTeamsPanel({
   dissolveBuddyTeamAction,
   t,
 }: {
+  /**
+   * Arrive with the panel open — set by the `?buddies=open` the buddy actions
+   * redirect back with, so the panel does not fold shut between the steps of
+   * one team-building session.
+   */
+  defaultOpen: boolean;
   buddyTeamsList: TripBuddyTeam[];
   diverOptions: BuddyMemberOption[];
   crewOptions: BuddyMemberOption[];
@@ -57,67 +64,93 @@ export function BuddyTeamsPanel({
   const panelError = builderError ? null : buddyErrorText;
   return (
     <section aria-labelledby="buddy-teams-heading" className="mt-9 print:hidden">
-      <h2 id="buddy-teams-heading" className="text-lg font-semibold">
-        {t("trips.manifest.buddyHeading")}
-      </h2>
-      <p className="mt-1 max-w-prose text-sm text-muted">{t("trips.manifest.buddyDescription")}</p>
-      <FormStatus className="mt-2">{panelError}</FormStatus>
-      {buddyTeamsList.length === 0 ? (
-        <EmptyState className="mt-3">
-          <h3 className="font-medium">{t("trips.manifest.buddyNoTeams")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("trips.manifest.buddyNoTeamsHint")}</p>
-        </EmptyState>
-      ) : (
-        <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
-          {buddyTeamsList.map((team, index) => {
-            // Members of *this* team can't join another, and neither can a
-            // diver already on one — so the "add" picker offers whoever is
-            // left, plus any crew not already on this team.
-            const onThisTeam = new Set(
-              team.members.map((member) =>
-                member.kind === "diver" ? `diver:${member.bookingId}` : `crew:${member.personId}`,
-              ),
-            );
-            const free = (options: BuddyMemberOption[]) =>
-              options.filter((option) => !onThisTeam.has(option.token));
-            const addableDivers = free(diverOptions);
-            const addableCrew = free(crewOptions);
-            return (
-              <li key={team.teamId} className="px-4 py-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                      {t("trips.manifest.buddyTeamLabel", { number: index + 1 })}
-                    </p>
-                    <ul className="mt-1.5 flex flex-wrap items-center gap-2">
-                      {team.members.map((member) => {
-                        const token =
-                          member.kind === "diver"
-                            ? `diver:${member.bookingId}`
-                            : `crew:${member.personId}`;
-                        const name =
-                          member.kind === "crew"
-                            ? t("trips.manifest.buddyCrewName", { name: member.fullName })
-                            : member.cancelled
-                              ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
-                              : member.fullName;
-                        // Only a team of three or more can lose a member and
-                        // stay a team; at two the act is a dissolve, which
-                        // has its own button and its own entry on the trail.
-                        const removable = team.members.length > 2;
-                        return (
-                          <li
-                            key={token}
-                            className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
-                              removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
-                            }`}
-                          >
-                            <span>{name}</span>
-                            {removable ? (
-                              <form action={removeBuddyTeamMemberAction} className="flex">
-                                <input type="hidden" name="teamId" value={team.teamId} />
-                                <input type="hidden" name="member" value={token} />
-                                {/* A real target, not a bare "×" glyph: this
+      {/* The whole panel sits behind one disclosure line. Grouping people is
+          dock/desk prep, done once per departure — but the open panel (team
+          rows, per-team pickers, dissolve buttons) stood at permanent height
+          on every manifest visit, between the roll call and the offline
+          backstop. The teams themselves already ride on each member's row
+          where roll call reads them, so at rest this section owes the page
+          one line: how many teams, and who is not on one. It arrives open
+          when a refusal needs reading — a submit's answer must never hide
+          behind the fold it came from. */}
+      <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
+        <summary className="flex min-h-11 w-fit cursor-pointer list-none flex-wrap items-baseline gap-x-2 select-none [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden="true"
+            className="inline-block self-center text-xs text-muted transition-transform duration-200 group-open/buddypanel:rotate-90"
+          >
+            ▸
+          </span>
+          <h2 id="buddy-teams-heading" className="inline text-lg font-semibold">
+            {t("trips.manifest.buddyHeading")}
+          </h2>
+          <span className="text-sm text-muted">
+            {t("trips.manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
+            {unteamedDivers.length > 0
+              ? t("trips.manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
+              : ""}
+          </span>
+        </summary>
+        <p className="mt-1 max-w-prose text-sm text-muted">
+          {t("trips.manifest.buddyDescription")}
+        </p>
+        <FormStatus className="mt-2">{panelError}</FormStatus>
+        {buddyTeamsList.length === 0 ? (
+          <EmptyState className="mt-3">
+            <h3 className="font-medium">{t("trips.manifest.buddyNoTeams")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("trips.manifest.buddyNoTeamsHint")}</p>
+          </EmptyState>
+        ) : (
+          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+            {buddyTeamsList.map((team, index) => {
+              // Members of *this* team can't join another, and neither can a
+              // diver already on one — so the "add" picker offers whoever is
+              // left, plus any crew not already on this team.
+              const onThisTeam = new Set(
+                team.members.map((member) =>
+                  member.kind === "diver" ? `diver:${member.bookingId}` : `crew:${member.personId}`,
+                ),
+              );
+              const free = (options: BuddyMemberOption[]) =>
+                options.filter((option) => !onThisTeam.has(option.token));
+              const addableDivers = free(diverOptions);
+              const addableCrew = free(crewOptions);
+              return (
+                <li key={team.teamId} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                        {t("trips.manifest.buddyTeamLabel", { number: index + 1 })}
+                      </p>
+                      <ul className="mt-1.5 flex flex-wrap items-center gap-2">
+                        {team.members.map((member) => {
+                          const token =
+                            member.kind === "diver"
+                              ? `diver:${member.bookingId}`
+                              : `crew:${member.personId}`;
+                          const name =
+                            member.kind === "crew"
+                              ? t("trips.manifest.buddyCrewName", { name: member.fullName })
+                              : member.cancelled
+                                ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
+                                : member.fullName;
+                          // Only a team of three or more can lose a member and
+                          // stay a team; at two the act is a dissolve, which
+                          // has its own button and its own entry on the trail.
+                          const removable = team.members.length > 2;
+                          return (
+                            <li
+                              key={token}
+                              className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
+                                removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
+                              }`}
+                            >
+                              <span>{name}</span>
+                              {removable ? (
+                                <form action={removeBuddyTeamMemberAction} className="flex">
+                                  <input type="hidden" name="teamId" value={team.teamId} />
+                                  <input type="hidden" name="member" value={token} />
+                                  {/* A real target, not a bare "×" glyph: this
                                     panel is worked on a moving deck, and the
                                     chip shape is what makes the control read
                                     as a control rather than a typo. `size-11`
@@ -127,143 +160,147 @@ export function BuddyTeamsPanel({
                                     the act behind it removes a person from a
                                     buddy team. The chip's own padding grew to
                                     hold it. */}
-                                <button
-                                  type="submit"
-                                  className="flex size-11 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
-                                >
-                                  <span aria-hidden="true">×</span>
-                                  <span className="sr-only">
-                                    {t("trips.manifest.buddyRemoveMember", {
-                                      name: member.fullName,
-                                    })}
-                                  </span>
-                                </button>
-                              </form>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <p className="mt-1 text-sm text-muted">
-                      {t("trips.manifest.buddyRecordedBy", { name: team.recordedByName })}
-                    </p>
-                  </div>
-                  {/* Nothing in this panel is worked at the rail — grouping
+                                  <button
+                                    type="submit"
+                                    className="flex size-11 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
+                                  >
+                                    <span aria-hidden="true">×</span>
+                                    <span className="sr-only">
+                                      {t("trips.manifest.buddyRemoveMember", {
+                                        name: member.fullName,
+                                      })}
+                                    </span>
+                                  </button>
+                                </form>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <p className="mt-1 text-sm text-muted">
+                        {t("trips.manifest.buddyRecordedBy", { name: team.recordedByName })}
+                      </p>
+                    </div>
+                    {/* Nothing in this panel is worked at the rail — grouping
                       people is desk/dock prep, so these controls take the
                       app's default size rather than the roll-call buttons'
                       `boat`. Dissolving is destructive but never this
-                      section's main action, so it is `danger` weight, not
-                      `danger-solid` (docs/design/forms-and-controls.md). */}
-                  <form action={dissolveBuddyTeamAction}>
-                    <input type="hidden" name="teamId" value={team.teamId} />
-                    <button type="submit" className={buttonClass({ variant: "danger" })}>
-                      {t("trips.manifest.buddyDissolve")}
-                    </button>
-                  </form>
-                </div>
-                {addableDivers.length + addableCrew.length > 0 ? (
-                  <form
-                    action={addBuddyTeamMemberAction}
-                    className="mt-3 flex flex-wrap items-end gap-2"
-                  >
-                    <input type="hidden" name="teamId" value={team.teamId} />
-                    <Field label={t("trips.manifest.buddyAddMemberLabel")}>
-                      <select name="member" required defaultValue="" className={controlClass}>
-                        <option value="" disabled>
-                          {t("trips.manifest.buddySelectPlaceholder")}
-                        </option>
-                        <optgroup label={t("trips.manifest.buddyDiverGroupLabel")}>
-                          {addableDivers.map((option) => (
-                            <option key={option.token} value={option.token}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label={t("trips.manifest.buddyCrewGroupLabel")}>
-                          {addableCrew.map((option) => (
-                            <option key={option.token} value={option.token}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                    </Field>
-                    <button type="submit" className={buttonClass({ variant: "secondary" })}>
-                      {t("trips.manifest.buddyAddMemberSubmit")}
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {/*
-       * The builder: tick two or more. A multi-select checkbox list rather
-       * than N paired dropdowns, because a team has no fixed size and the
-       * old two-select form could only ever express the one case the model
-       * no longer restricts us to.
-       */}
-      {showBuilder ? (
-        // Behind a native disclosure: forming a team happens a handful of
-        // times per departure, but the open checkbox grid used to stand at
-        // full height on every manifest visit — the rare path at permanent
-        // weight (principle 8). The roll call above is the page's job;
-        // the builder opens when asked and costs nothing when it isn't.
-        // A submit that came back refused must not hide its own answer behind
-        // the fold — the disclosure arrives open whenever there is a worded
-        // refusal to read.
-        <details className="group/buddies mt-4" open={builderError ? true : undefined}>
-          <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
-            <span
-              aria-hidden="true"
-              className="inline-block text-xs text-muted transition-transform duration-200 group-open/buddies:rotate-90"
-            >
-              ▸
-            </span>
-            {t("trips.manifest.buddyNewTeamHeading")}
-          </summary>
-          <form action={formBuddyTeamAction} className="mt-2">
-            <fieldset className="rounded-lg border border-border bg-surface p-4">
-              <p className="max-w-prose text-sm text-muted">
-                {t("trips.manifest.buddyNewTeamHint")}
-              </p>
-              {/* The same checkboxes, in the same form — plus drag-one-onto-another
+                      section's main action — and with two or three teams open,
+                      a red-boxed `danger` button per row framed the panel's
+                      calm content in warnings, so it is the quieter
+                      `danger-ghost`: the hue stays, the box waits for hover
+                      (design review 20260810). */}
+                    <form action={dissolveBuddyTeamAction}>
+                      <input type="hidden" name="teamId" value={team.teamId} />
+                      <button type="submit" className={buttonClass({ variant: "danger-ghost" })}>
+                        {t("trips.manifest.buddyDissolve")}
+                      </button>
+                    </form>
+                  </div>
+                  {addableDivers.length + addableCrew.length > 0 ? (
+                    <form
+                      action={addBuddyTeamMemberAction}
+                      className="mt-3 flex flex-wrap items-end gap-2"
+                    >
+                      <input type="hidden" name="teamId" value={team.teamId} />
+                      <Field label={t("trips.manifest.buddyAddMemberLabel")}>
+                        <select name="member" required defaultValue="" className={controlClass}>
+                          <option value="" disabled>
+                            {t("trips.manifest.buddySelectPlaceholder")}
+                          </option>
+                          <optgroup label={t("trips.manifest.buddyDiverGroupLabel")}>
+                            {addableDivers.map((option) => (
+                              <option key={option.token} value={option.token}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={t("trips.manifest.buddyCrewGroupLabel")}>
+                            {addableCrew.map((option) => (
+                              <option key={option.token} value={option.token}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </Field>
+                      <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                        {t("trips.manifest.buddyAddMemberSubmit")}
+                      </button>
+                    </form>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {/*
+         * The builder: tick two or more. A multi-select checkbox list rather
+         * than N paired dropdowns, because a team has no fixed size and the
+         * old two-select form could only ever express the one case the model
+         * no longer restricts us to.
+         */}
+        {showBuilder ? (
+          // Behind a native disclosure: forming a team happens a handful of
+          // times per departure, but the open checkbox grid used to stand at
+          // full height on every manifest visit — the rare path at permanent
+          // weight (principle 8). The roll call above is the page's job;
+          // the builder opens when asked and costs nothing when it isn't.
+          // A submit that came back refused must not hide its own answer behind
+          // the fold — the disclosure arrives open whenever there is a worded
+          // refusal to read.
+          <details className="group/buddies mt-4" open={builderError ? true : undefined}>
+            <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
+              <span
+                aria-hidden="true"
+                className="inline-block text-xs text-muted transition-transform duration-200 group-open/buddies:rotate-90"
+              >
+                ▸
+              </span>
+              {t("trips.manifest.buddyNewTeamHeading")}
+            </summary>
+            <form action={formBuddyTeamAction} className="mt-2">
+              <fieldset className="rounded-lg border border-border bg-surface p-4">
+                <p className="max-w-prose text-sm text-muted">
+                  {t("trips.manifest.buddyNewTeamHint")}
+                </p>
+                {/* The same checkboxes, in the same form — plus drag-one-onto-another
                 for the two-person case, which is what a phone at the dock wants
                 and what ticking boxes is worst at (2026-08-06 review). Ticking
                 three still builds a team of three. */}
-              <BuddyDragGroups
-                groups={[
-                  { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
-                  { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
-                ].filter((group) => group.options.length > 0)}
-                copy={{
-                  hint: t("trips.manifest.buddyDragHint"),
-                  holding: t("trips.manifest.buddyDragHolding"),
-                  over: t("trips.manifest.buddyDragOver"),
-                }}
-              />
-              {/* The action row is where this form's own answer lands — a
+                <BuddyDragGroups
+                  groups={[
+                    { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
+                    { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
+                  ].filter((group) => group.options.length > 0)}
+                  copy={{
+                    hint: t("trips.manifest.buddyDragHint"),
+                    holding: t("trips.manifest.buddyDragHolding"),
+                    over: t("trips.manifest.buddyDragOver"),
+                  }}
+                />
+                {/* The action row is where this form's own answer lands — a
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <button type="submit" className={buttonClass()}>
-                  {t("trips.manifest.buddyFormSubmit")}
-                </button>
-                <FormStatus>{builderError}</FormStatus>
-              </div>
-            </fieldset>
-          </form>
-        </details>
-      ) : unteamedDivers.length === 1 && unteamedDivers[0] ? (
-        // An odd roster is normal, never an error — say so instead of
-        // rendering a builder that can only fail.
-        <p className="mt-3 text-sm text-muted">
-          {t("trips.manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
-        </p>
-      ) : unteamedDivers.length === 0 && buddyTeamsList.length > 0 ? (
-        <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyEveryoneTeamed")}</p>
-      ) : null}
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <button type="submit" className={buttonClass()}>
+                    {t("trips.manifest.buddyFormSubmit")}
+                  </button>
+                  <FormStatus>{builderError}</FormStatus>
+                </div>
+              </fieldset>
+            </form>
+          </details>
+        ) : unteamedDivers.length === 1 && unteamedDivers[0] ? (
+          // An odd roster is normal, never an error — say so instead of
+          // rendering a builder that can only fail.
+          <p className="mt-3 text-sm text-muted">
+            {t("trips.manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
+          </p>
+        ) : unteamedDivers.length === 0 && buddyTeamsList.length > 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyEveryoneTeamed")}</p>
+        ) : null}
+      </details>
     </section>
   );
 }

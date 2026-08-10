@@ -82,9 +82,15 @@ function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
  * staffer was working, so a refusal returns them to the list they were looking
  * at rather than to "departure". This is the page's old `back`. It is a
  * relative path built from bound values, never anything a caller supplied.
+ *
+ * `buddies=open`: the teams panel sits collapsed at rest, and every one of
+ * these acts both starts inside it and redirects. Without this the panel
+ * would fold shut after each successful step of a session that plainly isn't
+ * finished (form a team, add the third, form the next), so the redirect says
+ * to arrive with it open.
  */
 function manifestBack(ctx: ManifestActionContext): string {
-  return `${manifestPath(ctx)}?checkpoint=${ctx.checkpoint}`;
+  return `${manifestPath(ctx)}?checkpoint=${ctx.checkpoint}&buddies=open`;
 }
 
 /**

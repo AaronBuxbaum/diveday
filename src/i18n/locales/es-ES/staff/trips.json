@@ -391,7 +391,7 @@
     "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto hasta contabilizarlos.",
     "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la tripulación necesita su propio resultado.",
     "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado. Permanece en este manifiesto y no puede embarcar hasta que se despeje su control de preparación.} other {Hay # buceadores bloqueados. Permanecen en este manifiesto y no pueden embarcar hasta que se despeje su control de preparación.}}",
-    "blockedAfterDive": "{count, plural, one {# buceador ya zarpó — regístralo igual; el seguimiento de su preparación se resuelve en tierra, no aquí.} other {# buceadores ya zarparon — regístralos igual; el seguimiento de su preparación se resuelve en tierra, no aquí.}}",
+    "blockedAfterDive": "{count, plural, one {El seguimiento de la preparación de # buceador se resuelve en tierra — nunca mantiene abierto este recuento.} other {El seguimiento de la preparación de # buceadores se resuelve en tierra — nunca mantiene abierto este recuento.}}",
     "crewHeading": "Tripulación",
     "crewRollCallDescription": "Cada persona de esta lista necesita su propio resultado antes de cerrar este control. La tripulación es quien más probablemente sigue en el agua.",
     "crewMarkAboard": "Marcar a bordo",
@@ -418,7 +418,7 @@
     "medicalClearanceImported": "Autorización médica importada — no revisada aquí",
     "medicalWaiverSigned": "Exención médica firmada",
     "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
-    "addNoteSummary": "Añadir una nota a este registro del pase de lista",
+    "addNoteSummary": "Añadir una nota",
     "rollCallRecordedByPlain": "{label} {date} por {name}",
     "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
     "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
@@ -461,7 +461,13 @@
     "notBackAboardDescription": "Tras una inmersión, “sin regresar a bordo” significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
     "saving": "Guardando…",
     "tapToUndo": "Toca de nuevo el estado ☑️ para deshacer.",
-    "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer."
+    "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer.",
+    "diverFactsSummary": "Contacto y equipo",
+    "stillToCallListLabel": "Buceadores por pasar lista",
+    "buddySummaryTeams": "{count, plural, =0 {Todavía no hay equipos de buceo} one {# equipo de buceo} other {# equipos de buceo}}",
+    "buddySummaryUnteamed": " · {count, plural, one {# buceador sin equipo de buceo} other {# buceadores sin equipo de buceo}}",
+    "noDiversLine": "No hay buceadores reservados en esta salida.",
+    "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica"
   },
   "offlineManifestManager": {
     "checkingDevice": "Comprobando este dispositivo…",

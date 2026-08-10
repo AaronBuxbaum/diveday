@@ -21,7 +21,11 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  // The panel rests collapsed behind its summary line; working in it starts
+  // by opening it. Every buddy action redirects back with `?buddies=open`,
+  // so it stays open across the steps below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();
+  await page.getByRole("heading", { name: "Buddy teams" }).click();
 
   // The seeded teams are already at a glance — including the trio the old
   // two-body model could not express at all, with the divemaster marked as
@@ -95,7 +99,10 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  // Same collapsed-at-rest panel as the first test: open it once, and the
+  // `?buddies=open` redirects keep it open across the acts below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();
+  await page.getByRole("heading", { name: "Buddy teams" }).click();
 
   const teamPanel = page.locator("section", {
     has: page.getByRole("heading", { name: "Buddy teams" }),

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
-import { MissingDiversGrid, type MissingDiversGridCopy } from "@/components/MissingDiversGrid";
 import {
   OfflineManifestManager,
   type OfflineManifestManagerCopy,
@@ -20,7 +19,7 @@ import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
-import { readinessBlockerText, readinessStatusText } from "@/i18n/readiness-labels";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -72,11 +71,16 @@ export default async function TripManifestPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ checkpoint?: string; buddyError?: string; notice?: string }>;
+  searchParams: Promise<{
+    checkpoint?: string;
+    buddyError?: string;
+    buddies?: string;
+    notice?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { checkpoint: requestedCheckpoint, buddyError, notice } = await searchParams;
+  const { checkpoint: requestedCheckpoint, buddyError, buddies, notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -161,10 +165,9 @@ export default async function TripManifestPage({
   // with three back puts the alert on three rows, and the line says "N teams
   // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
   const separatedTeams = isDeparture ? 0 : splitBuddyTeamIds(manifest, "separated_after_dive").size;
-  // Nobody has said anything about these divers at this checkpoint — the face
-  // grid's whole population. Derived once: it used to be filtered twice, once
-  // for the tiles and once for the heading's count, which is two chances for
-  // the number and the faces to disagree.
+  // Nobody has said anything about these divers at this checkpoint — the
+  // summary panel's jump chips. Derived once, beside the counts they explain,
+  // so the number and the names can never disagree.
   const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
@@ -286,24 +289,33 @@ export default async function TripManifestPage({
           </ShopNotice>
         </div>
       ) : null}
+      {/* A segmented control, not a row of buttons: the active checkpoint used
+          to wear the same filled-primary costume as "Mark boarded", which gave
+          the page a second primary that was not an action at all (principle
+          8). Same idiom as the trip sub-nav's track; boat-size targets because
+          this row is switched at the rail. */}
       <nav
-        className="mt-7 flex flex-wrap items-center gap-2 overflow-x-auto pb-2 print:hidden"
+        className="mt-7 flex w-fit max-w-full snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden"
         aria-label={t("trips.manifest.checkpointNavAriaLabel")}
       >
-        {checkpoints.map((value) => (
-          <Link
-            key={value}
-            href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
-            scroll={false}
-            className={buttonClass({
-              variant: value === checkpoint ? "primary" : "secondary",
-              size: "boat",
-              className: "shrink-0",
-            })}
-          >
-            {rollCallCheckpointText(t, value)}
-          </Link>
-        ))}
+        {checkpoints.map((value) => {
+          const active = value === checkpoint;
+          return (
+            <Link
+              key={value}
+              href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
+              scroll={false}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex min-h-14 shrink-0 snap-start items-center justify-center rounded-xl px-5 text-base font-semibold whitespace-nowrap transition-colors duration-200 ${
+                active
+                  ? "bg-surface text-primary shadow-sm"
+                  : "text-muted hover:bg-surface hover:text-foreground"
+              }`}
+            >
+              {rollCallCheckpointText(t, value)}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* The one count surface on this page: the checkpoint's progress, the
@@ -316,6 +328,11 @@ export default async function TripManifestPage({
         completeness={completeness}
         summary={manifest.summary}
         separatedTeams={separatedTeams}
+        uncalled={uncalledDivers.map((diver) => ({
+          bookingId: diver.bookingId,
+          fullName: diver.fullName,
+          blocked: diver.readiness.status === "blocked",
+        }))}
         t={t}
       />
 
@@ -357,42 +374,12 @@ export default async function TripManifestPage({
         t={t}
       />
 
-      {/* Who nobody has said anything about yet — and only them. A diver a
-          human recorded as not back aboard is *not* in this grid: they have a
-          result, and it is the loudest row on the list above. That is why
-          nothing here is worded as "missing", and why the dock's version of
-          this state is calm — the boat has not left. */}
-      <MissingDiversGrid
-        divers={uncalledDivers.map((diver) => ({
-          bookingId: diver.bookingId,
-          fullName: diver.fullName,
-          rentsKit: diver.rentalFit.state === "rents",
-          blocked: diver.readiness.status === "blocked",
-        }))}
-        tone={isDeparture ? "neutral" : "urgent"}
-        copy={
-          {
-            heading: isDeparture
-              ? t("trips.manifest.stillToBoardHeading", { count: uncalledDivers.length })
-              : t("trips.manifest.notCountedBackHeading", { count: uncalledDivers.length }),
-            statusLabel: isDeparture
-              ? t("trips.manifest.missingDiversPillDock")
-              : t("trips.manifest.missingDiversPillAfterDive"),
-            tapHint: t("trips.manifest.missingDiversTapHint"),
-            rentsKitLabel: t("trips.manifest.rentsKitLabel"),
-            ownKitLabel: t("trips.manifest.ownKitLabel"),
-            // The one readiness vocabulary (src/i18n/readiness-labels.ts) —
-            // the same word the diver's own row wears.
-            blockedLabel: readinessStatusText(t, "blocked"),
-          } satisfies MissingDiversGridCopy
-        }
-      />
-
       {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
           people happens before the boat leaves, while the lists above are
           worked at the rail. Below the lists, still expanded — the teams
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
+        defaultOpen={buddies === "open"}
         buddyTeamsList={buddyTeamsList}
         diverOptions={diverOptions}
         crewOptions={crewOptions}
@@ -453,7 +440,12 @@ export default async function TripManifestPage({
           } satisfies OfflineManifestManagerCopy
         }
         pushOptIn={
+          // Keyed: the manager renders this prop in a child position React
+          // treats as a list slot, and the un-keyed element was the page's one
+          // dev-overlay warning ("each child in a list should have a unique
+          // key") — noise that hides a real issue when one appears.
           <PushOptIn
+            key="push-opt-in"
             publicKey={webPushPublicKey()}
             subscribeAction={subscribePushAction.bind(null, tripId)}
             unsubscribeAction={unsubscribePushAction.bind(null, tripId)}

@@ -111,10 +111,12 @@ export function CrewRollCall({
                         <strong className="text-base">{member.fullName}</strong>
                         <span className="text-sm text-muted">{member.roles.join(", ")}</span>
                         {/* Same rule, same reason, as the diver rows: hidden
-                            on screen only while the buttons beside it carry
-                            the word, and always present on paper. Crew always
-                            get both buttons, so there is no readiness case to
-                            carve out here.
+                            on screen while the buttons beside it carry the
+                            word — a recorded result on the settled control,
+                            or an untouched pair whose un-tapped "Mark aboard"
+                            already says awaiting — and always present on
+                            paper. Crew always get both buttons, so there is
+                            no readiness case to carve out here.
                             The warning fill is the diver rows' rule too — it
                             marks a result *carried forward from the dock*, not
                             merely "has a result". Keyed on `rc` it painted the
@@ -122,7 +124,7 @@ export function CrewRollCall({
                             member who was demonstrably on the boat read on
                             paper as the one thing needing attention. */}
                         <span
-                          className={`${recordedHere ? "hidden print:inline-flex " : ""}${
+                          className={`${recordedHere || !rc ? "hidden print:inline-flex " : ""}${
                             impliedNotBoarded
                               ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
                               : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"

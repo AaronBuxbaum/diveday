@@ -1,4 +1,5 @@
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 
@@ -37,6 +38,7 @@ export function SummaryPanel({
   completeness,
   summary,
   separatedTeams,
+  uncalled,
   t,
 }: {
   checkpoint: RollCallCheckpoint;
@@ -56,6 +58,15 @@ export function SummaryPanel({
    * src/lib/manifests.ts) — the page derives it, this only says it.
    */
   separatedTeams: number;
+  /**
+   * The divers nobody has said anything about at this checkpoint — the same
+   * derivation the page makes once (`uncalledDivers`). Rendered as jump chips
+   * in the scrolling half, right under the count that names them: the answer
+   * to "who am I still waiting on?" sits where the question arises, instead of
+   * in a separate face-grid section further down the page (principle 10). Each
+   * chip links to that diver's own row.
+   */
+  uncalled: ReadonlyArray<{ bookingId: string; fullName: string; blocked: boolean }>;
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -129,7 +140,14 @@ export function SummaryPanel({
             ? t("trips.manifest.crewNoneAboard")
             : completeness.reason === "crew_awaiting"
               ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
-              : t("trips.manifest.allAccountedFor");
+              : completeness.reason === "no_divers"
+                ? // An empty roster keeps the checkpoint open (the completeness
+                  // rule refuses it), and the sentence here must not read as an
+                  // all-clear over a manifest that counts nobody — the same
+                  // never-an-all-clear rule the glossary sets for shops that
+                  // skip roll call (dive-domain review 20260810).
+                  t("trips.manifest.noDiversLine")
+                : t("trips.manifest.allAccountedFor");
   return (
     <>
       <section
@@ -226,6 +244,41 @@ export function SummaryPanel({
         <p className="text-base font-semibold text-muted" aria-live="polite">
           {mutedText}
         </p>
+        {/* Who the count is about, one tappable chip each. This replaced the
+            standalone "Still to board" face-grid section: the names belong to
+            the number that summarizes them, not to a second surface a captain
+            reaches after scrolling the whole roster. Independent of
+            `mutedText` — a stated not-back-aboard suppresses the muted count
+            while divers may still be uncalled, and those names must not
+            disappear with it. Words carry the exceptional state (a blocked
+            diver's chip says so), never colour alone.
+
+            Only once the roll call has *started*: "who's left?" is a
+            mid-roll-call question, and at 0 recorded the chips would restate
+            the entire roster immediately above the roster itself (principle
+            9). The count line above covers the starting state. */}
+        {uncalled.length > 0 && uncalled.length < summary.totalDivers ? (
+          <ul
+            className="mt-2 flex flex-wrap gap-2"
+            aria-label={t("trips.manifest.stillToCallListLabel")}
+          >
+            {uncalled.map((diver) => (
+              <li key={diver.bookingId}>
+                <a
+                  href={`#diver-row-${diver.bookingId}`}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold hover:bg-surface-sunken"
+                >
+                  {diver.fullName}
+                  {diver.blocked && isDeparture ? (
+                    <span className="text-base font-medium text-danger">
+                      {readinessStatusText(t, "blocked")}
+                    </span>
+                  ) : null}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {/* What being blocked means at *this* checkpoint. This was a warning-
             toned banner of its own under the panel, with a "Blocked divers"
             heading restating the count the panel already showed. The count is

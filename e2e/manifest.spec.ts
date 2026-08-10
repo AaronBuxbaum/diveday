@@ -96,7 +96,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=departure/);
 
-  await page.getByText("Add a note to this roll-call record").first().click();
+  await page.getByText("Add a note").first().click();
   await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
   // Park the button clear of the sticky header and progress panel before
   // sampling. Playwright scrolls a target into view as part of clicking it, so
@@ -477,29 +477,46 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await context.setOffline(false);
 });
 
-test("displays missing diver face-grid on manifest page", async ({ page }) => {
+test("the summary panel names who is still to call, one jump chip each", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
 
+  // "Who's left?" is a mid-roll-call question: before anyone is recorded the
+  // chips would restate the whole roster above the roster itself, so they
+  // hold off until the first result lands.
+  const chips = page.getByRole("list", { name: "Divers still to call" });
+  await expect(chips).toHaveCount(0);
+  const boardTom = page
+    .locator("#roll-call-list li")
+    .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) })
+    .getByRole("button", { name: "Mark boarded" });
+  await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await boardTom.click();
+  await expect(page.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
+
   // At the dock these are people still to board — ordinary, expected, and
   // deliberately not called "missing": a recorded not-back-aboard diver is
-  // the missing one, and they are never in this grid (glossary; DD/D review).
-  const grid = page.locator("#missing-divers-grid").filter({ visible: true });
-  await expect(grid).toBeVisible();
-  await expect(grid.getByRole("heading", { name: /Still to board \(\d+\)/ })).toBeVisible();
-  await expect(grid.getByText("Not yet called")).toBeVisible();
+  // the missing one, and they get a loud row rather than a chip (glossary;
+  // DD/D review). The names sit with the count that summarizes them, right
+  // under the checkpoint panel — and the one recorded diver's name is gone
+  // from them.
+  await expect(chips).toBeVisible();
+  await expect(chips.getByRole("link", { name: /Tom Okafor/ })).toHaveCount(0);
   await expect(page.getByText(/[Mm]issing divers/)).toHaveCount(0);
-  // Priya is blocked at departure, and the grid says the same word her own
+  // Priya is blocked at departure, and her chip says the same word her own
   // row does rather than contradicting it.
-  await expect(
-    grid.locator("button").filter({ hasText: "Priya" }).getByText("Blocked"),
-  ).toBeVisible();
+  const priyaChip = chips.getByRole("link", { name: /Priya/ });
+  await expect(priyaChip.getByText("Blocked")).toBeVisible();
 
-  // Clicking an avatar scrolls to the corresponding diver row
-  const firstAvatar = page.locator("#missing-divers-grid button").filter({ visible: true }).first();
-  await expect(firstAvatar).toBeVisible();
-  await firstAvatar.click();
+  // Tapping a chip jumps to that diver's own row.
+  await priyaChip.click();
+  await expect(page).toHaveURL(/#diver-row-/);
+  await expect(
+    page
+      .locator("#roll-call-list li")
+      .filter({ has: page.getByRole("heading", { name: "Priya Sharma" }) }),
+  ).toBeInViewport();
 });
 
 test("a checkpoint with every diver counted stays open until the crew are called too", async ({
