@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -23,7 +22,13 @@ import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import {
+  formatDayParts,
+  formatMoneyCents,
+  formatShortDate,
+  formatTime,
+  formatTimeRange,
+} from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
@@ -35,7 +40,7 @@ import {
   pushCursor,
 } from "@/lib/schedule-pagination";
 import { scheduleJsonLd } from "@/lib/structured-data";
-import { capacityLabel, isFull } from "@/lib/trips";
+import { capacityLabel, isFull, pinnedNextDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
@@ -189,12 +194,15 @@ export default async function SchedulePage({
     upcoming.map((trip) => trip.id),
   );
 
-  // A prominent quick link to the soonest departure with room, so a returning
-  // diver who already knows what they want never has to scroll the full list.
-  // Only on the default (unbounded) view — once a diver has paged the
-  // calendar to a specific month, `upcoming` is bounded to it and its first
-  // trip is no longer necessarily the shop's actual next departure.
-  const nextDeparture = !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
+  // The pinned quick link to the soonest departure with room — rendered only
+  // when that answer is *not* already the agenda's own first row, i.e. when
+  // the soonest boats are full and the bookable one is buried mid-list
+  // (`pinnedNextDeparture`; principle 9 — the pin used to restate the first
+  // row card-for-card two hundred pixels above it). Only on the default
+  // (unbounded) view — once a diver has paged the calendar to a specific
+  // month, `upcoming` is bounded to it and its first trip is no longer
+  // necessarily the shop's actual next departure.
+  const nextDeparture = !explicitMonth ? pinnedNextDeparture(upcoming) : null;
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -239,59 +247,85 @@ export default async function SchedulePage({
           : "mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
       }
     >
+      {/* One breath of masthead, not five: the old eyebrow / display title /
+          description / timezone-line / hero-card stack pushed the first
+          departure most of a screen down on a phone, all of it saying "this is
+          a schedule" — which the list below already proves. The h1 stays (it
+          is the page's name, for readers and search alike) but at reading
+          size, and the description and timezone sentence share one muted
+          paragraph beneath it. The visual lead of the page is the next
+          departure itself — the fact a diver arrives for (principle 10). */}
       {isEmbed ? null : (
-        <ShopPageHeader
-          eyebrow={t("schedule.eyebrow")}
-          title={t("schedule.title")}
-          description={t("schedule.diverDescription")}
-        />
-      )}
-
-      {/* Whose morning is "7:30 AM"? A diver comparing boats from another
-          timezone reads these times against their own clock unless something
-          says otherwise, and until now nothing did (review finding I18N-L2).
-          Stated once, above everything that shows a time — the quick link, the
-          month grid, and every card in the list — rather than stamped onto each
-          of the twenty figures below it. Anchored to the first departure on the
-          page, because a zone's *name* moves with daylight saving and a
-          schedule read in March may be listing July boats. Kept in embed mode
-          too: the widget is the same list of times, and a remote booker
-          misreading them is the same mistake wherever it is framed. */}
-      {(() => {
-        // The first departure actually on this page, not the shop's first
-        // ever: a diver who has paged the calendar to December should be told
-        // December's zone name, not August's.
-        const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
-        if (!zoneAnchor) return null;
-        return (
-          <p className="mb-6 text-sm text-muted">
-            {t("schedule.timesInZone", {
-              shop: shop.name,
-              zone: timeZoneLabel(zoneAnchor, locale, tz),
-            })}
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">{t("schedule.title")}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            {t("schedule.diverDescription")}
+            {(() => {
+              // Whose morning is "7:30 AM"? A diver comparing boats from
+              // another timezone reads these times against their own clock
+              // unless something says otherwise (review finding I18N-L2).
+              // Stated once, above everything that shows a time. Anchored to
+              // the first departure on the page, because a zone's *name*
+              // moves with daylight saving and a schedule read in March may
+              // be listing July boats.
+              const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+              if (!zoneAnchor) return null;
+              return (
+                <>
+                  {" "}
+                  {t("schedule.timesInZone", {
+                    shop: shop.name,
+                    zone: timeZoneLabel(zoneAnchor, locale, tz),
+                  })}
+                </>
+              );
+            })()}
           </p>
-        );
-      })()}
+        </header>
+      )}
+      {/* The embed widget keeps the timezone sentence even without the
+          masthead: it is the same list of times, and a remote booker
+          misreading them is the same mistake wherever it is framed. */}
+      {isEmbed
+        ? (() => {
+            const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+            if (!zoneAnchor) return null;
+            return (
+              <p className="mb-4 text-sm text-muted">
+                {t("schedule.timesInZone", {
+                  shop: shop.name,
+                  zone: timeZoneLabel(zoneAnchor, locale, tz),
+                })}
+              </p>
+            );
+          })()
+        : null}
 
       {nextDeparture ? (
         <Link
           href={`${publicTripPath(shopSlug, nextDeparture.id)}${isEmbed ? "?embed=1" : ""}#book`}
-          className="card-scale-hint mb-8 flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-sm transition-all duration-200 hover:border-primary/50"
+          className="group card-scale-hint mb-10 flex flex-col gap-4 rounded-3xl border border-primary/25 bg-primary/5 p-6 shadow-sm transition-all duration-200 hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
               {t("schedule.nextDeparture.eyebrow")}
             </p>
-            {/* Two lines, not one truncated one: on a phone the single line
-                spent itself on the date and cut the trip's name — the one fact
-                this card exists to carry (dock test; principle 10). */}
-            <p className="mt-1 text-sm font-medium text-muted tabular-nums">
-              {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} ·{" "}
+            {/* The departure time is the hero figure — the one datum a
+                returning diver came to check — with the date reading as its
+                caption. Two lines, not one truncated one: on a phone a single
+                line spent itself on the date and cut the trip's name (dock
+                test; principle 10). */}
+            <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
               {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
+              <span className="ml-2 text-lg font-medium text-muted">
+                {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)}
+              </span>
             </p>
-            <p className="line-clamp-2 text-lg font-semibold">{nextDeparture.title}</p>
+            <p className="mt-1 line-clamp-2 text-lg font-medium group-hover:text-primary">
+              {nextDeparture.title}
+            </p>
           </div>
-          <Badge tone="primary" tabularNums className="shrink-0">
+          <Badge tone="primary" tabularNums className="shrink-0 self-start sm:self-center">
             {(() => {
               const label = capacityLabel(nextDeparture);
               return label.kind === "full"
@@ -309,29 +343,39 @@ export default async function SchedulePage({
         // (e2e/schedule-embed.spec.ts), and two month arrows don't merit one.
         <section
           aria-label={t("schedule.monthNav")}
-          className="mb-4 flex flex-wrap items-center justify-between gap-3"
+          className="mb-4 flex flex-wrap items-center gap-2"
         >
+          {/* The arrows sit beside the label they page, not floated to the
+              far edge of the viewport — a control detached from its object is
+              a control the reader has to go looking for (principle 10; the
+              lone `›` at the right margin read as a stray glyph on a phone). */}
           <p className="text-base font-semibold">{monthLabel(currentMonth, locale)}</p>
-          <div className="flex items-center gap-1">
-            {prevMonthKey ? (
-              <Link
-                href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                aria-label={t("schedule.previousMonth")}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "min-w-11" })}
-              >
-                <span aria-hidden="true">‹</span>
-              </Link>
-            ) : null}
-            {nextMonthKey ? (
-              <Link
-                href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                aria-label={t("schedule.nextMonth")}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "min-w-11" })}
-              >
-                <span aria-hidden="true">›</span>
-              </Link>
-            ) : null}
-          </div>
+          {prevMonthKey ? (
+            <Link
+              href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+              aria-label={t("schedule.previousMonth")}
+              className={buttonClass({
+                variant: "ghost",
+                size: "sm",
+                className: "min-w-11 text-base",
+              })}
+            >
+              <span aria-hidden="true">‹</span>
+            </Link>
+          ) : null}
+          {nextMonthKey ? (
+            <Link
+              href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
+              aria-label={t("schedule.nextMonth")}
+              className={buttonClass({
+                variant: "ghost",
+                size: "sm",
+                className: "min-w-11 text-base",
+              })}
+            >
+              <span aria-hidden="true">›</span>
+            </Link>
+          ) : null}
         </section>
       ) : null}
 
@@ -371,7 +415,7 @@ export default async function SchedulePage({
           </p>
         </EmptyState>
       ) : (
-        <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
+        <ul className="flex flex-col" aria-label={t("schedule.tripListLabel")}>
           {(() => {
             // "Two-tank trip" (task 6) gets its plain-language explanation
             // once, on the first card that says it — every later trip
@@ -412,16 +456,20 @@ export default async function SchedulePage({
               const tripHref = `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
-                  {/* A "stretched link" card: the whole row navigates to the
+                  {/* A "stretched link" row: the whole row navigates to the
                     trip via an invisible overlay anchor, while the course
                     title keeps its own real link into the course page
                     (task 1) — two <a> tags can never nest, so the overlay
                     sits behind everything and the course link opts back
-                    onto z-10 to stay reachable by mouse and keyboard alike. */}
-                  <div className="group card-scale-hint relative flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center">
+                    onto z-10 to stay reachable by mouse and keyboard alike.
+                    The row itself is borderless — the agenda's hierarchy is
+                    carried by the day blocks, type, and whitespace, and the
+                    hover/focus surface tint is the tap affordance (design
+                    principle 10: type and space before boxes). */}
+                  <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors duration-200 hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
                     <Link
                       href={tripHref}
-                      className="absolute inset-0 z-0 rounded-2xl"
+                      className="absolute inset-0 z-0 rounded-xl"
                       aria-label={t("schedule.tripCardLabel", {
                         when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
                         trip: trip.title,
@@ -434,13 +482,15 @@ export default async function SchedulePage({
                         the ordinary space before AM/PM and strands "PM" on
                         its own line. (The stretched link's aria-label keeps
                         the full date for screen readers.) */}
-                    <div className="shrink-0 sm:w-36">
-                      <p className="text-sm font-medium tabular-nums whitespace-nowrap">
+                    <div className="shrink-0 sm:w-40">
+                      <p className="text-base font-semibold tabular-nums whitespace-nowrap">
                         {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                       </p>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
+                      <h2 className="text-base font-semibold group-hover:text-primary">
+                        {trip.title}
+                      </h2>
                       {trip.course ? (
                         <p className="mt-0.5 text-sm font-medium text-primary">
                           {t("schedule.courseSession")} ·{" "}
@@ -519,8 +569,11 @@ export default async function SchedulePage({
                     {/* The badge is spent on the states that need a decision
                         now — full, or nearly — and routine availability reads
                         as the quiet fact it is (principle 9: counts are facts,
-                        not alerts; a pill on every row means nothing on any). */}
-                    <div className="shrink-0">
+                        not alerts; a pill on every row means nothing on any).
+                        The chevron is the row's one at-rest tap cue: without a
+                        border, a phone row — where hover doesn't exist — read
+                        as a text listing rather than a pressable thing. */}
+                    <div className="flex shrink-0 items-center gap-2">
                       {full || lowInventory ? (
                         <Badge tone={full ? "neutral" : "warning"} tabularNums>
                           {capacityText}
@@ -528,6 +581,12 @@ export default async function SchedulePage({
                       ) : (
                         <p className="text-sm text-muted tabular-nums">{capacityText}</p>
                       )}
+                      <span
+                        aria-hidden="true"
+                        className="text-muted transition-transform duration-200 group-hover:translate-x-0.5"
+                      >
+                        ›
+                      </span>
                     </div>
                   </div>
                 </li>
@@ -535,16 +594,31 @@ export default async function SchedulePage({
             };
             return upcoming.flatMap((trip) => {
               const dayIso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
+              // The day header is a calendar block — big day numeral, weekday
+              // and month as its caps — because the question a diver scans
+              // this list with is "which day can I go?", and a numeral you
+              // can catch mid-scroll answers it faster than a sentence-case
+              // date in small caps. Sticky, so mid-list the reader always
+              // knows which day the rows under their thumb belong to.
+              const dayParts = formatDayParts(trip.startsAt, locale, shop.timezone);
               const dayRule =
                 dayIso === lastDayIso ? null : (
                   <li
                     key={`day-${dayIso}`}
                     role="presentation"
                     aria-hidden="true"
-                    className="mt-3 flex items-center gap-3 first:mt-0"
+                    className="sticky top-0 z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0"
                   >
-                    <span className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
-                      {formatShortDate(trip.startsAt, locale, shop.timezone)}
+                    <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
+                      {dayParts.day}
+                    </span>
+                    <span className="flex flex-col justify-center leading-tight">
+                      <span className="text-xs font-bold tracking-[0.18em] uppercase">
+                        {dayParts.weekday}
+                      </span>
+                      <span className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
+                        {dayParts.month}
+                      </span>
                     </span>
                     <span className="h-px flex-1 bg-border" />
                   </li>

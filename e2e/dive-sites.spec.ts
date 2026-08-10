@@ -479,9 +479,8 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
 }) => {
   // The per-test fixture reset already restored the seeded briefing; read it
   // straight off the public schedule as a diver. Scoped to the trip-list
-  // item rather than a bare role query: this trip is also the schedule's
-  // soonest departure with room, so its title appears a second time in the
-  // "Next boat out" quick-link card above the list.
+  // item so the locator can never drift onto another surface that happens to
+  // carry the trip's title (reviews quote trip names too).
   await page.goto("/s/blue-mantis");
   await page
     .locator("li")

@@ -176,6 +176,30 @@ export function formatTimeRangeTz(
   return `${formatTime(start, locale, timeZone)} – ${endWithZone}`;
 }
 
+/**
+ * The pieces of a calendar-agenda date block — weekday cap, day numeral, month
+ * cap — for surfaces that lay the date out as a block rather than a sentence
+ * (the public schedule's day headers). Same options object as
+ * `formatShortDate`, so the two share one cached formatter; `formatToParts`
+ * hands each localized piece back separately so the layout, not string
+ * splitting, decides where they sit.
+ */
+export function formatDayParts(
+  date: Date,
+  locale = "en-US",
+  timeZone: string,
+): { weekday: string; day: string; month: string } {
+  const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone,
+  }).formatToParts(date);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return { weekday: pick("weekday"), day: pick("day"), month: pick("month") };
+}
+
 /** The calendar day a date falls on in a given timezone, as a UTC-midnight instant — for day-granularity diffs, never for display. */
 function calendarDayMs(date: Date, timeZone: string): number {
   const iso = cachedFormatter("dt", Intl.DateTimeFormat, "en-CA", {

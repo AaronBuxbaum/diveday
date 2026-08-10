@@ -29,3 +29,19 @@ export function capacityLabel(trip: TripCapacity): CapacityLabel {
   const remaining = spotsRemaining(trip);
   return remaining === 0 ? { kind: "full" } : { kind: "left", remaining };
 }
+
+/**
+ * The departure the schedule pins above its agenda — the soonest one with
+ * room, but only when that is *news*. When the first listed departure already
+ * has room, the agenda's own first row answers "when can I go?" and a pinned
+ * card would restate it card-for-card two hundred pixels apart
+ * (design/principles.md #9). The pin earns its place exactly when the soonest
+ * boats are full and the answer is buried mid-list.
+ */
+export function pinnedNextDeparture<T extends TripCapacity & { id: string }>(
+  upcoming: readonly T[],
+): T | null {
+  const next = upcoming.find((trip) => !isFull(trip)) ?? null;
+  if (!next || next.id === upcoming[0]?.id) return null;
+  return next;
+}
