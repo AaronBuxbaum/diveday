@@ -5,9 +5,9 @@
   schedule filters' Apply-button flash (FU-20260810-schedule-apply-flash)
 - **Kind:** question
 - **Effort:** M
-- **Touches:** `src/app/s/[shopSlug]/_components/ScheduleFilters.tsx`, `src/app/globals.css`,
+- **Touches:** `src/app/s/[shopSlug]/_components/ScheduleFilters.tsx`,
   `src/components/ui/QueryForm.tsx`, `src/app/s/[shopSlug]/loading.tsx`,
-  `docs/architecture/decisions/20260804-instant-navigation.md`
+  `e2e/schedule-filters.spec.ts`, `docs/architecture/decisions/20260804-instant-navigation.md`
 
 ## What I noticed
 
@@ -57,15 +57,17 @@ My recommendation is (1) with a documented decision, because I could not find a 
 fallbacks: a diver without JavaScript cannot complete a booking on this app regardless of the filter
 row, since checkout is Stripe.
 
-Whichever is chosen, the flash fix that raised this is unaffected — hiding the button by CSS instead
-of removing it on hydration is right under all three answers.
+Whichever is chosen, the flash fix that raised this is unaffected — putting the button in
+`<noscript>` instead of removing it on hydration is right under all three answers, and
+`e2e/schedule-filters.spec.ts` now pins the property it leans on (a scripting-enabled browser parses
+`<noscript>` content as one text node, so React never hydrates it into live elements).
 
 ## Proposed change
 
 Under answer (1): add an ADR recording that the app requires JavaScript, then delete the fallbacks
-that exist only for its absence — the schedule filters' `<noscript>` block and its
-`[data-noscript-only]` rule in `globals.css`, the `apply` copy key in both locale bundles, and the
-"with JavaScript off … everything still works" paragraph in `QueryForm`'s docblock (the
+that exist only for its absence — the schedule filters' `<noscript>` block, the `apply` copy key in
+both locale bundles, and the "with JavaScript off … everything still works" paragraph in
+`QueryForm`'s docblock (the
 *pre-hydration* half of that sentence stays true and should be kept). Then sweep for other comments
 promising no-JS behaviour so none is left claiming something untrue.
 
@@ -96,10 +98,10 @@ requires JS, or specific diver-facing routes give up their loading boundary abov
 
 Done when: an ADR records the decision, and every no-JS fallback and every code comment promising
 no-JS behaviour either works or is gone. If the decision is that JS is required, the schedule
-filters' <noscript> block, the [data-noscript-only] rule in src/app/globals.css, and the
-schedule.filters.apply key in both src/i18n/locales/*/diver.json go with it — and
-e2e/schedule-filters.spec.ts's "the Apply button never appears for a diver with JavaScript" test is
-then asserting something that no longer has a subject, so remove it in the same change.
+filters' <noscript> block and the schedule.filters.apply key in both
+src/i18n/locales/*/diver.json go with it — and e2e/schedule-filters.spec.ts's "the Apply button
+never gets a box for a diver with JavaScript" test is then asserting something that no longer has a
+subject, so remove it in the same change.
 
 Run `pnpm check` and `pnpm e2e schedule-filters.spec.ts --reporter=line`. Delete
 docs/product/follow-ups/FU-20260810-no-js-renders-only-the-skeleton.md as part of the change.

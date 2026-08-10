@@ -188,16 +188,21 @@ test.describe("schedule builder", () => {
     // The board's day headers are sticky so a staffer scrolled into the middle
     // of a two-week window still knows which day the rows under their thumb
     // belong to. They pin directly under the staff shell's own sticky header,
-    // whose height is the measured constant `--staff-nav-h` in
-    // src/app/globals.css — content-driven, so it cannot be derived in CSS, and
-    // this test is what keeps the number honest.
+    // at a `top-[68px]` that is a *measured* constant: the nav's height is
+    // content-driven, so it cannot be derived in CSS, and nothing until this
+    // test checked that the number still matched the nav.
     //
-    // Flush, not merely "clear of it", because the constant can drift in both
-    // directions and both are real: too small and the day hides behind the nav,
-    // too large and it floats in a band of dead space. The second one is not
-    // hypothetical — the nav used to be 169px on a phone, and when the phone
-    // dock moved its links out and left one 69px row, a "clearance >= 0" check
-    // passed happily on a header hanging 100px below the nav.
+    // Flush, not merely "clear of it", because the constant drifts in both
+    // directions and both are real. Too small and the day hides behind the nav.
+    // Too large and it floats in a band of dead space — which is not
+    // hypothetical: the nav was 169px on a phone until the dock moved its links
+    // out and left one 69px row, and a one-sided "clearance >= 0" check passed
+    // happily on a day header hanging 100px below the nav.
+    //
+    // The band below is deliberately asymmetric. 68px against a 69px nav is a
+    // 1px overlap on purpose (see ScheduleBuilder: it tucks under the nav's
+    // bottom border so no slit of scrolling content shows between the two), so
+    // -2 is the floor rather than 0.
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
@@ -232,15 +237,15 @@ test.describe("schedule builder", () => {
       });
 
       expect(measured.pinnedCount, `no day header pinned at ${width}px`).toBeGreaterThan(0);
-      // A few pixels of slack for sub-pixel layout, and nothing more: the gap
-      // this is policing is measured in tens of pixels when it goes wrong.
+      // A couple of pixels of slack either way, and no more: the gap this is
+      // policing is measured in tens of pixels when it goes wrong.
       expect(
         measured.clearance,
-        `a pinned day header does not sit flush under the shop nav at ${width}px (off by ${measured.clearance}px) — --staff-nav-h in src/app/globals.css no longer matches the nav's height`,
-      ).toBeGreaterThanOrEqual(0);
+        `a pinned day header is behind the shop nav at ${width}px (overlapping by ${-measured.clearance}px) — the sticky offset in ScheduleBuilder is smaller than the nav`,
+      ).toBeGreaterThanOrEqual(-2);
       expect(
         measured.clearance,
-        `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — --staff-nav-h in src/app/globals.css is larger than the nav`,
+        `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — the sticky offset in ScheduleBuilder is larger than the nav`,
       ).toBeLessThanOrEqual(4);
     }
   });

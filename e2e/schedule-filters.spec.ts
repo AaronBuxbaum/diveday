@@ -20,8 +20,10 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
 
   // Course-only: every visible row now names a course session, and the fun
   // dives are gone.
-  // Changing a filter applies itself once hydrated — the Apply button is the
-  // no-JS fallback and leaves the page after hydration.
+  // Changing a filter applies itself once hydrated. The Apply button is the
+  // no-JS fallback and never renders for this reader at all — it lives inside
+  // `<noscript>`, which a scripting-enabled browser keeps as text (the test
+  // below pins that).
   await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Trip type").selectOption("course");
   await expect(page).toHaveURL(/tripType=course/);
@@ -48,23 +50,29 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   await expect(page).toHaveURL(/hasSpace=1/);
 });
 
-test("the Apply button never appears for a diver with JavaScript", async ({ page }) => {
-  // Apply is the no-JS fallback. It used to be *removed* on hydration, so every
-  // real visitor watched it render and then vanish a beat later — a small
+test("the Apply button never gets a box for a diver with JavaScript", async ({ page }) => {
+  // Apply is the no-JS fallback, and it used to be *removed* on hydration — so
+  // every real visitor watched it render and then vanish a beat later, a small
   // horizontal shift beside "Has space" that phone screenshots kept catching
-  // mid-flight. It is now in the server HTML on both paths and revealed only by
-  // a stylesheet a browser parses when scripting is off, so with JS it has no
-  // box at any point in the page's life.
+  // mid-flight. It now lives in `<noscript>`, which fixes that by leaning on
+  // something subtle enough to be worth pinning down: a browser with scripting
+  // enabled parses `<noscript>` content as a single *text node*, so the markup
+  // never becomes elements and React does not hydrate into it.
   //
-  // Sampled from before hydration rather than after it: asserting on the
-  // settled page would pass just as well against the old remove-on-hydrate
-  // behaviour, which is the thing being regression-tested.
+  // That property is load-bearing and invisible in the source — ScheduleFilters
+  // states it in a comment and nothing else checks it. If React ever started
+  // hydrating those children, the button would come back as a live element and
+  // the flash would return, silently. Hence this test.
+  //
+  // Sampled every frame from before hydration, not asserted on the settled
+  // page: a settled-page check passes just as happily against the old
+  // remove-on-hydrate behaviour, which is precisely what is being guarded.
   await page.addInitScript(() => {
-    (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed = false;
+    const w = window as unknown as { __applyEverBoxed: boolean };
+    w.__applyEverBoxed = false;
     const sample = () => {
-      const el = document.querySelector("[data-noscript-only]");
-      if (el && el.getBoundingClientRect().height > 0) {
-        (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed = true;
+      for (const el of document.querySelectorAll("noscript, noscript *")) {
+        if (el.getBoundingClientRect().height > 0) w.__applyEverBoxed = true;
       }
       requestAnimationFrame(sample);
     };
@@ -72,7 +80,7 @@ test("the Apply button never appears for a diver with JavaScript", async ({ page
   });
   await page.goto("/s/blue-mantis");
 
-  // The filters are live — i.e. the window in which the old button would have
+  // The filters are live — so the window in which the old button would have
   // been removed has closed, and the sampler above ran across all of it.
   await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
   expect(
@@ -80,7 +88,13 @@ test("the Apply button never appears for a diver with JavaScript", async ({ page
       () => (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed,
     ),
   ).toBe(false);
-  await expect(page.getByRole("button", { name: "Apply" })).toBeHidden();
+
+  // The button is text inside <noscript>, not an element: no accessible button
+  // to find, and nothing parsed into child elements.
+  await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
+  expect(await page.evaluate(() => document.querySelector("noscript")?.children.length ?? -1)).toBe(
+    0,
+  );
 });
 
 test("paging and month arrows keep the filters a diver applied", async ({ page }) => {
