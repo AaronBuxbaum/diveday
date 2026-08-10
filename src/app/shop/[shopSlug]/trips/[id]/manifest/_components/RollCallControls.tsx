@@ -204,6 +204,19 @@ export function RollCallControls({
           copy={copy}
         />
       ) : null}
+      {/* The exception control. Most people board, so while nothing has been
+          recorded and the board button is on offer, this drops the border and
+          fill — the exception at less than equal weight (design principle 8),
+          still a full dock-test target. Foreground ink, not muted: marking a
+          no-show is a routine dock act on the surface with the harshest
+          viewing conditions, so it demotes by losing its box, never its
+          legibility (dive-domain review 20260810). It takes the bordered
+          treatment back the moment it matters: when it is the only control on
+          the row (a blocked diver at departure), or when it carries the
+          recorded state (the settled "Not boarded ☑️", the danger-tinted
+          "Not back aboard"). After a dive the unrecorded label keeps danger
+          ink — it is the control that reports a person missing, and it must
+          be findable at the rail without reading every word. */}
       <RollCallButton
         // Same remount-on-checkpoint reasoning as the board button above.
         key={isCrew ? `crew-not-aboard-${checkpoint}` : `not-boarded-${checkpoint}`}
@@ -235,13 +248,17 @@ export function RollCallControls({
         }
         pendingLabel={t("trips.manifest.saving")}
         formId={formId}
-        className={`${BOAT_TARGET_CLASS} ${
+        className={
           notBackAboard
-            ? "border border-danger bg-danger/15 text-danger"
+            ? `${BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
             : recordedNotBoarded
-              ? "border border-border-strong bg-surface-sunken"
-              : "border border-border hover:bg-surface-sunken"
-        }`}
+              ? `${BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
+              : showBoardControl
+                ? isDeparture
+                  ? `${BOAT_TARGET_CLASS} hover:bg-surface-sunken`
+                  : `${BOAT_TARGET_CLASS} text-danger hover:bg-danger/10`
+                : `${BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
+        }
         copy={copy}
       />
       {recordedHere ? (
@@ -255,7 +272,7 @@ export function RollCallControls({
         // a mis-tap on a divemaster was permanent, which is exactly the
         // wrong lesson on the half of the roll call that closes the
         // checkpoint.
-        <p className="text-xs text-muted">
+        <p className="text-sm text-muted">
           {notBackAboard
             ? t("trips.manifest.tapToUndoNotBackAboard")
             : t("trips.manifest.tapToUndo")}

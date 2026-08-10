@@ -2478,6 +2478,9 @@ for (const scheme of ["light", "dark"] as const) {
         const panel = page.locator("section", {
           has: page.getByRole("heading", { name: "Buddy teams" }),
         });
+        // The panel rests collapsed behind its summary line — the capture is
+        // of the panel itself, so open it the way a staffer would.
+        await page.getByRole("heading", { name: "Buddy teams" }).click();
         await expect(panel.getByText("Keiko Tanaka (crew)")).toBeVisible();
         await panel.scrollIntoViewIfNeeded();
         await capture(page, "manifest-buddy-teams-panel", scheme);

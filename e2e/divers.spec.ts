@@ -145,8 +145,14 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.getByRole("button", { name: "Save details" }).click();
   await expect(page.getByRole("status")).toContainText("Diver details updated");
 
-  // Prints on the manifest.
+  // Reads on the manifest — behind the row's own "Contact & gear" disclosure
+  // on screen (the print copy always carries it).
   await page.goto(`${tripPath}/manifest`);
+  await page
+    .locator("#roll-call-list li")
+    .filter({ has: page.getByRole("heading", { name: diverName }) })
+    .getByText("Contact & gear")
+    .click();
   await expect(page.getByText("Casey Diver · +1 305 555 0166")).toBeVisible();
 });
 

@@ -994,7 +994,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-    fireEvent.click(screen.getByText("Add a note to this roll-call record"));
+    fireEvent.click(screen.getByText("Add a note"));
     const noteInput = screen.getByLabelText("Optional note") as HTMLInputElement;
     fireEvent.change(noteInput, { target: { value: "Missed the morning van" } });
     expect(noteInput.value).toBe("Missed the morning van");

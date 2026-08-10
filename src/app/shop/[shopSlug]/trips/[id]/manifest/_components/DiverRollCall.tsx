@@ -31,6 +31,69 @@ import {
   rollCallRowState,
 } from "./RollCallControls";
 
+/**
+ * The reference half of a diver's row — emergency contact, rental fit, medical
+ * evidence. None of it is roll call: the row's job at the rail is name, state,
+ * one tap, and these facts have their moment either before the boat leaves
+ * (Prep owns chasing gaps) or when something has gone wrong (one tap away, and
+ * always on the paper the boat carries). Rendered twice per row: inside the
+ * screen-only disclosure, and in a print-only block — a closed `<details>`
+ * contributes nothing to print, and the printed manifest is the document a
+ * coastguard reads, so it keeps every fact without asking paper to disclose.
+ */
+function DiverFacts({
+  diver,
+  locale,
+  timezone,
+  t,
+}: {
+  diver: TripManifest["divers"][number];
+  locale: string;
+  timezone: string;
+  t: StaffTranslator;
+}) {
+  return (
+    <div className="grid gap-2 text-base sm:grid-cols-2">
+      <p>
+        <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
+        <span className="mt-0.5 block text-muted">
+          {diver.emergencyContactName && diver.emergencyContactPhone
+            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+            : t("trips.manifest.notOnFile")}
+        </span>
+      </p>
+      {/* Only when there is something to load or a note to read:
+          "No fit on file — not asked yet" printed on most rows
+          is the absence of information formatted as information
+          (principle 9), and Prep owns chasing the gap. A nitrox
+          request always shows — that's an operational fact. */}
+      {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
+        <p>
+          <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
+          <span className="mt-0.5 block text-muted">
+            {rentalFitLineText(t, locale, diver.rentalFit)}
+            {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
+          </span>
+        </p>
+      ) : null}
+      {diver.medicalWaiver ? (
+        <p>
+          <span className="font-bold">
+            {diver.medicalWaiver.source === "paper"
+              ? t("trips.manifest.medicalReviewedPaper")
+              : diver.medicalWaiver.source === "imported"
+                ? t("trips.manifest.medicalClearanceImported")
+                : t("trips.manifest.medicalWaiverSigned")}
+          </span>
+          <span className="mt-0.5 block text-muted">
+            {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
   divers,
@@ -108,7 +171,7 @@ export function DiverRollCall({
           // checkpoint* — the two buttons already carry that answer in words,
           // so the status pill would only repeat them.
           const rowState = rollCallRowState(checkpoint, rc);
-          const { notBackAboard, impliedNotBoarded, recordedHere } = rowState;
+          const { impliedNotBoarded, recordedHere } = rowState;
           // Each roll-call state gets its own fill (`ROLL_CALL_ROW_TONE`) so
           // staff can tell at a glance who has been handled — aboard green,
           // left ashore amber, not back aboard red, nothing said yet slate.
@@ -122,10 +185,14 @@ export function DiverRollCall({
           const recordedTone = rollCallRecordedTone(rowState);
           const untouchedTone =
             ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
-          // Only the rows a human still has to walk to carry the scroll margin
-          // that keeps them clear of the sticky panel when something jumps to
-          // them.
-          const scrollMargin = notBackAboard || (!recordedTone && !ready) ? "scroll-mt-32 " : "";
+          // Every row is a jump target now — the summary panel's chips link to
+          // any uncalled diver — so every row carries the scroll margin that
+          // keeps its name clear of the sticky checkpoint panel. Sized to the
+          // panel at its tallest for the checkpoint kind: after a dive it can
+          // carry up to three pinned danger lines, and a jump that buries the
+          // name under the panel invites a tap on the *next* visible row's
+          // button for the wrong diver (dive-domain review 20260810).
+          const scrollMargin = isDeparture ? "scroll-mt-64 " : "scroll-mt-80 ";
           const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${scrollMargin}${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
@@ -143,7 +210,12 @@ export function DiverRollCall({
           //    red "Blocked" badge, a lone "Mark not boarded" button, and
           //    nothing anywhere near their name saying they are aboard.
           const boardingControlShown = ready || !isDeparture;
-          const pillRepeatsAControl = recordedHere && boardingControlShown;
+          // An untouched row's pill repeats a control too: an un-tapped "Mark
+          // boarded" beside the name already says nothing has been recorded,
+          // so "Awaiting roll call" on the same line is the affordance
+          // restated as a badge (principle 9). The carried-forward pill stays
+          // — no control on the row says "not boarded at the dock".
+          const pillRepeatsAControl = (recordedHere || !rc) && boardingControlShown;
           // Not a Badge: "carried forward from the dock" needs a fill of its
           // own, a distinction the app's five standard Badge tones don't carry.
           const rollCallPillClass = impliedNotBoarded
@@ -185,13 +257,24 @@ export function DiverRollCall({
                     ) : null}
                     {/* The captain reading the boarding list has no other way
                         to know a booked diver is 12 (H-21). Words, not colour
-                        alone — this is read in sunlight on a moving boat. */}
+                        alone — this is read in sunlight on a moving boat. An
+                        *adult's* age is a fact, not a flag: on screen it was a
+                        chip repeating down the whole roster (principle 9), so
+                        it now shows on paper only, where the manifest is the
+                        record. The minor badge stays on screen — it is the
+                        exception the crew is being told about. */}
                     {diver.age !== null && diver.age !== undefined ? (
-                      <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
-                        {diver.minor
-                          ? t("trips.manifest.minorAge", { age: diver.age })
-                          : t("trips.manifest.age", { age: diver.age })}
-                      </Badge>
+                      diver.minor ? (
+                        <Badge tone="warning" tabularNums>
+                          {t("trips.manifest.minorAge", { age: diver.age })}
+                        </Badge>
+                      ) : (
+                        <span className="hidden print:inline-flex">
+                          <Badge tone="neutral" tabularNums>
+                            {t("trips.manifest.age", { age: diver.age })}
+                          </Badge>
+                        </span>
+                      )
                     ) : null}
                     {diver.birthday ? (
                       <Badge tone="primary">
@@ -225,44 +308,6 @@ export function DiverRollCall({
                       <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                     </p>
                   ) : null}
-                  <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
-                    <p>
-                      <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
-                      <span className="mt-0.5 block text-muted">
-                        {diver.emergencyContactName && diver.emergencyContactPhone
-                          ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                          : t("trips.manifest.notOnFile")}
-                      </span>
-                    </p>
-                    {/* Only when there is something to load or a note to read:
-                        "No fit on file — not asked yet" printed on most rows
-                        is the absence of information formatted as information
-                        (principle 9), and Prep owns chasing the gap. A nitrox
-                        request always shows — that's an operational fact. */}
-                    {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
-                      <p>
-                        <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
-                        <span className="mt-0.5 block text-muted">
-                          {rentalFitLineText(t, locale, diver.rentalFit)}
-                          {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
-                        </span>
-                      </p>
-                    ) : null}
-                    {diver.medicalWaiver ? (
-                      <p>
-                        <span className="font-bold">
-                          {diver.medicalWaiver.source === "paper"
-                            ? t("trips.manifest.medicalReviewedPaper")
-                            : diver.medicalWaiver.source === "imported"
-                              ? t("trips.manifest.medicalClearanceImported")
-                              : t("trips.manifest.medicalWaiverSigned")}
-                        </span>
-                        <span className="mt-0.5 block text-muted">
-                          {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
-                        </span>
-                      </p>
-                    ) : null}
-                  </div>
                   {!ready ? (
                     <>
                       <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
@@ -291,6 +336,39 @@ export function DiverRollCall({
                       </Link>
                     </>
                   ) : null}
+                  {/* Reference facts, disclosed on demand. The row's job at
+                      the rail is the head count — nine emergency contacts and
+                      six rental lists at permanent height were dock-prep and
+                      break-glass reference standing between the captain and
+                      the next name (principles 9 and 10). One tap opens them;
+                      paper always carries them (the print-only block below —
+                      a closed details contributes nothing to print). */}
+                  <details className="group/facts mt-1 max-w-xl print:hidden">
+                    {/* Muted, not action-blue: two of these per row down a
+                        nine-diver roster is eighteen links' worth of primary
+                        ink for rare paths, drowning the one link that earns
+                        it ("Resolve blockers"). The label names everything
+                        behind it — a door marked "Contact & gear" with a
+                        medical line behind it is a mislabeled door on a
+                        safety surface (design review 20260810). */}
+                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline">
+                      {diver.medicalWaiver
+                        ? t("trips.manifest.diverFactsSummaryWithMedical")
+                        : t("trips.manifest.diverFactsSummary")}
+                      <span
+                        aria-hidden="true"
+                        className="font-normal transition-transform duration-200 group-open/facts:rotate-45"
+                      >
+                        +
+                      </span>
+                    </summary>
+                    <div className="mt-2">
+                      <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
+                    </div>
+                  </details>
+                  <div className="mt-3 hidden print:block">
+                    <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
+                  </div>
                   {/* Closed, this is one quiet line — the same grammar as the
                       "Resolve blockers" link above it. The box only exists
                       around an open note: rendered shut on every diver, the
@@ -307,7 +385,7 @@ export function DiverRollCall({
                         native marker, so without it the two would be
                         indistinguishable. Same idiom as the divers page's
                         add-diver summary. */}
-                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-semibold text-primary hover:underline">
+                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline">
                       {t("trips.manifest.addNoteSummary")}
                       <span
                         aria-hidden="true"

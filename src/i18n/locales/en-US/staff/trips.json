@@ -391,7 +391,7 @@
     "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open until they’re counted.",
     "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
     "blockedDeparture": "{count, plural, one {# diver is blocked. They remain on this manifest and cannot board until their readiness check clears.} other {# divers are blocked. They remain on this manifest and cannot board until their readiness check clears.}}",
-    "blockedAfterDive": "{count, plural, one {# diver already sailed — record them anyway; readiness follow-up happens ashore, not here.} other {# divers already sailed — record them anyway; readiness follow-up happens ashore, not here.}}",
+    "blockedAfterDive": "{count, plural, one {Readiness follow-up for # diver happens ashore — it never holds this head count open.} other {Readiness follow-up for # divers happens ashore — it never holds this head count open.}}",
     "crewHeading": "Crew",
     "crewRollCallDescription": "Every person on this list needs a result of their own before this checkpoint closes. Crew are the people most likely to still be in the water.",
     "crewMarkAboard": "Mark aboard",
@@ -418,7 +418,7 @@
     "medicalClearanceImported": "Medical clearance imported — not reviewed here",
     "medicalWaiverSigned": "Medical waiver signed",
     "resolveBlockersLink": "Resolve blockers on Guests →",
-    "addNoteSummary": "Add a note to this roll-call record",
+    "addNoteSummary": "Add a note",
     "rollCallRecordedByPlain": "{label} {date} by {name}",
     "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
     "carriedForwardFromDock": "Carried forward — this diver never left the dock. Mark boarded to bring them back on.",
@@ -461,7 +461,13 @@
     "notBackAboardDescription": "After a dive, “not back aboard” means this diver has not returned to the boat. It keeps the count open — it never closes it.",
     "saving": "Saving…",
     "tapToUndo": "Tap the ☑️ status again to undo.",
-    "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo."
+    "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo.",
+    "diverFactsSummary": "Contact & gear",
+    "stillToCallListLabel": "Divers still to call",
+    "buddySummaryTeams": "{count, plural, =0 {No teams yet} one {# team} other {# teams}}",
+    "buddySummaryUnteamed": " · {count, plural, one {# diver not on a team} other {# divers not on a team}}",
+    "noDiversLine": "No divers are booked on this departure.",
+    "diverFactsSummaryWithMedical": "Contact, gear & medical"
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",
