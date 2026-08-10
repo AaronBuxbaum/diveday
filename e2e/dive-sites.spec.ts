@@ -76,6 +76,8 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
     const manageTripUrl = page.url();
 
+    // The conditions form waits behind its disclosure (summary-first Overview).
+    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
@@ -107,8 +109,12 @@ test.describe("staff", () => {
 
     await signInAsOwner(page);
     await page.goto(manageTripUrl);
+    // Published, so the disclosure reads "Edit"; the clear control sits inside.
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
+    // The clear's own notice forces the disclosure open on the redirected
+    // render — no click needed (and one would close it again).
     await expect(page.getByLabel("Water temp °C")).toHaveValue("");
     await expect(page.getByLabel("Visibility m")).toHaveValue("");
 

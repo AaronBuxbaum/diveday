@@ -140,6 +140,9 @@ test.describe("staff", () => {
     const tripId = manageHref?.split("/").at(-1);
     await manageLink.click();
 
+    // The conditions form waits behind the section's disclosure (summary-first
+    // Overview); no prediction is published yet, so the toggle reads "Publish".
+    await page.getByText("Write a crew prediction", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
@@ -184,6 +187,8 @@ test.describe("staff", () => {
       .getByRole("link", { name: title, exact: true })
       .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
+    // The details form waits behind its Edit disclosure (summary-first Overview).
+    await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
