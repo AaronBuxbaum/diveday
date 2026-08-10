@@ -18,9 +18,15 @@ const CHIP_TONES = {
   // against AA's 4.5), and on `bg-surface` both tones clear the bar today
   // (warning 5.02:1, danger 6.47:1, measured) — the border keeps the chip a
   // chip.
-  danger: "border-danger/40 bg-surface text-danger",
-  warning: "border-warning/40 bg-surface text-warning",
-  neutral: "border-border bg-surface-sunken text-muted",
+  danger: "rounded-full border border-danger/40 bg-surface px-2.5 py-0.5 text-danger",
+  warning: "rounded-full border border-warning/40 bg-surface px-2.5 py-0.5 text-warning",
+  // No box at all: a neutral kind is a category, not an alert, and when every
+  // row in the queue wears a bordered pill the pill grammar is spent — a badge
+  // must mark the exceptional state, never the expected one (design principle
+  // 9). The label keeps the same size, casing, and position, so the eye still
+  // groups rows by kind; only the chrome is gone, which is what lets the
+  // warning and danger chips above actually pop when one appears.
+  neutral: "text-muted",
 } as const;
 
 export function KindChip({
@@ -47,7 +53,7 @@ export function KindChip({
   const { tone } = ACTION_KIND_META[kind];
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
     >
       {t(ACTION_KIND_KEYS[kind])}
       {count === undefined || !Number.isFinite(count) || count <= 0 ? null : (

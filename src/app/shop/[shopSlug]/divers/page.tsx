@@ -211,44 +211,58 @@ export default async function DiversPage({
       {/* The id is the door the roster's empty state opens: with nobody on
           file, "add one here" used to be prose pointing at a collapsed
           disclosure two sections up, which is not a way forward. `scroll-mt`
-          keeps the summary clear of the sticky header once it is scrolled to. */}
-      <details
-        id="add-diver"
-        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
-      >
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
+          keeps the summary clear of the sticky header once it is scrolled to.
+
+          At rest this is a button-shaped summary, nothing more. It used to be
+          a full-width bordered card — the largest object on the screen — for
+          the roster's *rare* path: the front desk arrives here to find a
+          person, not to mint one (design principle 8, "collapse the rare
+          path"). The card chrome now belongs to the open state only, where a
+          form actually stands in it. */}
+      <details id="add-diver" className="group/add mt-8 scroll-mt-24">
+        <summary
+          className={buttonClass({
+            variant: "secondary",
+            className: "list-none [&::-webkit-details-marker]:hidden",
+          })}
+        >
           {t("divers.page.addDiverSummary")}{" "}
-          <span aria-hidden="true" className="text-xl font-normal text-primary">
+          <span
+            aria-hidden="true"
+            className="text-lg font-normal transition-transform duration-200 group-open/add:rotate-45"
+          >
             +
           </span>
         </summary>
-        <p className="mt-2 text-sm text-muted">{t("divers.page.addDiverBody")}</p>
-        {/* The same name/email/phone trio every seat-a-diver door wears
+        <div className="mt-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          <p className="text-sm text-muted">{t("divers.page.addDiverBody")}</p>
+          {/* The same name/email/phone trio every seat-a-diver door wears
             (src/components/seat-diver/). This one mints a person without a
             departure, so nothing here is required but the name — and its own
             validator takes a longer address and phone than a seating does, so
             it passes those caps rather than inheriting the tighter ones. */}
-        <PersonFieldTrio
-          className="mt-4"
-          as="form"
-          action={addDiverAction}
-          email="optional"
-          nameLabel={t("divers.page.fullNameLabel")}
-          emailLabel={t("divers.page.emailLabel")}
-          phoneLabel={t("divers.page.phoneLabel")}
-          optionalHint={t("divers.page.optionalHint")}
-          emailMaxLength={320}
-          phoneMaxLength={40}
-        >
-          <FieldActions>
-            <SubmitButton
-              pendingLabel={t("divers.page.adding")}
-              className={buttonClass({ size: "lg" })}
-            >
-              {t("divers.page.addDiver")}
-            </SubmitButton>
-          </FieldActions>
-        </PersonFieldTrio>
+          <PersonFieldTrio
+            className="mt-4"
+            as="form"
+            action={addDiverAction}
+            email="optional"
+            nameLabel={t("divers.page.fullNameLabel")}
+            emailLabel={t("divers.page.emailLabel")}
+            phoneLabel={t("divers.page.phoneLabel")}
+            optionalHint={t("divers.page.optionalHint")}
+            emailMaxLength={320}
+            phoneMaxLength={40}
+          >
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("divers.page.adding")}
+                className={buttonClass({ size: "lg" })}
+              >
+                {t("divers.page.addDiver")}
+              </SubmitButton>
+            </FieldActions>
+          </PersonFieldTrio>
+        </div>
       </details>
 
       <DiverList
