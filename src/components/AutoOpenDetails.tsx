@@ -16,12 +16,16 @@ import { useEffect, useRef } from "react";
  */
 export function AutoOpenDetails({
   openOnHash,
+  open,
   className,
   children,
 }: {
   /** The fragment (no leading "#") of an anchor inside `children` — the id
    * belongs to that inner element, not to this `<details>` itself. */
   openOnHash: string;
+  /** Server-decided initial state (e.g. "this section just saved") — the hash
+   * check can only ever open, never close, so the two compose. */
+  open?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -44,7 +48,7 @@ export function AutoOpenDetails({
   }, [openOnHash]);
 
   return (
-    <details ref={ref} className={className}>
+    <details ref={ref} open={open} className={className}>
       {children}
     </details>
   );

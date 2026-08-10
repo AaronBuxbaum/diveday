@@ -408,6 +408,7 @@ export default async function ManageTripPage({
         status={noticeForForm(tripNotice, "conditions")}
         trip={trip}
         locale={locale}
+        timezone={shop.timezone}
         temperatureUnit={temperatureUnitFor(shop)}
         depthUnit={shop.depthUnit}
       />

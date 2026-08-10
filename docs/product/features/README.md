@@ -39,6 +39,10 @@ straight from a brainstorm entry.
   (the gate register) point *into* this folder for feature detail — they sequence and gate, they
   don't duplicate a feature write-up that belongs here. Keep it that way: if you find yourself
   describing a feature in either of those files, move the description here and leave a link.
+- [../follow-ups/](../follow-ups/README.md) is the inbox *upstream* of this folder, not a fifth
+  file in it: an agent files a thought there mid-change, and when the human accepts it, the entry
+  moves here (or into [../human-decisions.md](../human-decisions.md), or becomes an ADR) and the
+  follow-up file is deleted. Never leave an accepted item living in both places.
 - Dated buyer/rival analyses under `docs/product/assessments/` (see [the doc map](../../README.md)
   for the full list) feed this folder — a surviving recommendation belongs here (usually
   `roadmap.md`), not left sitting only in the assessment.

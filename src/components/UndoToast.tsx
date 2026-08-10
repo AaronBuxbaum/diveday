@@ -86,7 +86,10 @@ export function UndoToast({
 
   if (!visible) return null;
   return (
-    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
+    // `--dock-clearance` lifts the toast above the staff phone dock when one
+    // is on screen (set by the shop layout's content wrapper); everywhere else
+    // the variable is unset and the toast sits at its usual 1rem.
+    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--dock-clearance,0rem))] z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
         onMouseEnter={pause}

@@ -119,7 +119,8 @@
       "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
       "label": "Elementos de la lista",
       "submit": "Guardar lista de equipo",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
     "dockCall": {
       "heading": "Hora de presentación en el muelle",
@@ -127,7 +128,8 @@
       "detail": "Tiempo para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
       "label": "Minutos antes de zarpar",
       "submit": "Guardar hora de presentación",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "value": "{count} min antes de zarpar"
     },
     "units": {
       "heading": "Unidades",
@@ -155,7 +157,8 @@
       "detail": "Desmarca lo que no ofrezcas — un centro que no tiene GoPros nunca ofrece una, y desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no llenan nitrox, así que empieza desmarcado.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "value": "{count, plural, one {# artículo ofrecido} other {# artículos ofrecidos}}"
     },
     "rentalPricing": {
       "heading": "Precios de alquiler",
@@ -166,14 +169,15 @@
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
       "submit": "Guardar precios de alquiler",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "value": "Equipo completo {price}"
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
       "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad.",
       "notConnectedDetail": "DiveDay nunca retiene tu dinero — los pagos de pedidos van directo a tu propio saldo de Stripe.",
       "connect": "Conectar Stripe",
-      "notConfiguredWarning": "Los pagos en línea no están configurados en esta instancia de DiveDay — contacta a {email} para activarlos.",
+      "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay — escribe a {email} y los ponemos en marcha.",
       "connectedHeading": "Cuenta de Stripe conectada",
       "disconnectedHeading": "Cuenta de Stripe desconectada",
       "readyBadge": "Lista para pagos",
@@ -188,31 +192,27 @@
       "refresh": "Actualizar estado",
       "refreshing": "Actualizando…",
       "disconnect": "Desconectar",
-      "disconnecting": "Desconectando…"
+      "disconnecting": "Desconectando…",
+      "rowHeading": "Pagos en línea",
+      "summaryNotConnected": "Sin conectar",
+      "summaryDisconnected": "Desconectada"
     },
     "embed": {
       "heading": "Widget para tu web",
-      "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web.",
-      "cta": "Obtener código del widget"
+      "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web."
     },
     "calendar": {
       "heading": "Suscripciones al calendario",
-      "description": "Pon tus salidas en la app de calendario que ya usas — de solo lectura, así que DiveDay nunca la modifica.",
-      "cta": "Gestionar suscripciones"
-    },
-    "data": {
-      "heading": "Datos",
-      "description": "Trae contactos desde un CSV, o llévate todo en un ZIP de CSV.",
-      "detail": "Ninguna de las dos toca los ajustes de arriba.",
-      "importCta": "Importar contactos",
-      "exportCta": "Exportar datos"
+      "description": "Pon tus salidas en la app de calendario que ya usas — de solo lectura, así que DiveDay nunca la modifica."
     },
     "trial": {
       "heading": "Tu prueba",
       "activeDescription": "Quedan {count, plural, one {# día} other {# días}}, hasta el {endDate}.",
       "expiredDescription": "Tu prueba terminó el {endDate}. Todo lo que has configurado sigue funcionando.",
       "upgradeBody": "¿Listo para pasar a un plan de pago? Escríbenos y te ponemos en marcha.",
-      "emailCta": "Escribir a {email}"
+      "emailCta": "Escribir a {email}",
+      "value": "{count, plural, one {Queda # día} other {Quedan # días}}",
+      "expiredValue": "Terminó el {endDate}"
     },
     "support": {
       "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras.",
@@ -228,28 +228,28 @@
     },
     "whatsapp": {
       "heading": "WhatsApp",
-      "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
-      "cta": "Configurar WhatsApp"
+      "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma."
     },
     "backup": {
       "heading": "Respaldos",
-      "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo.",
-      "cta": "Configurar respaldos"
-    },
-    "jump": {
-      "label": "Ir a una sección"
+      "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo."
     },
     "team": {
       "heading": "Equipo",
-      "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones.",
-      "cta": "Gestionar equipo"
+      "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones."
+    },
+    "diveSites": {
+      "heading": "Puntos de buceo",
+      "description": "La biblioteca de puntos que usa el tablón — profundidades, condiciones y qué ven los buceadores allí."
+    },
+    "waivers": {
+      "heading": "Plantilla de exención",
+      "description": "La exención que firma cada buceador, y el registro de quién la ha firmado."
     },
     "promos": {
       "heading": "Códigos promocionales",
-      "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites.",
-      "cta": "Gestionar códigos promocionales"
+      "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites."
     },
-    "detailLabel": "Más sobre {heading}",
     "dataJobs": {
       "mediaKind": {
         "course_photo": "Foto del curso",
@@ -279,6 +279,15 @@
         "discharge": "Marcar como hecho en Stripe",
         "discharging": "Guardando…"
       }
+    },
+    "summary": {
+      "notSet": "Sin configurar"
+    },
+    "dataImport": {
+      "description": "Trae contactos desde un CSV — se emparejan con buceadores existentes, nunca se duplican."
+    },
+    "dataExport": {
+      "description": "Llévate todo lo que guarda tu centro en un ZIP de CSV."
     }
   },
   "team": {

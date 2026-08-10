@@ -30,6 +30,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
@@ -158,6 +159,10 @@ export default async function EditDiveSitePage({
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
       landmarks,
+      routePoints: parsed.route.points,
+      routeLabel: parsed.route.label,
+      routeNote: parsed.route.note,
+      routeZoom: parsed.route.zoom,
     });
     if (!updated) notFound();
     revalidateAndRedirect(`${back}/${id}`, `${back}/${id}?notice=saved`);
@@ -283,6 +288,7 @@ export default async function EditDiveSitePage({
           t={t}
           depthUnit={depthUnit}
           values={site}
+          routeCopy={routeEditorCopy(t)}
           certificationDescription={t("diveSites.edit.certificationDescription")}
           requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
         />

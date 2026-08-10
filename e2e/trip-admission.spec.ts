@@ -184,6 +184,9 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", title);
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    // The requirements form waits behind its Edit disclosure (summary-first
+    // Overview).
+    await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
@@ -256,6 +259,9 @@ test.describe("as owner", () => {
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    // The requirements form waits behind its Edit disclosure (summary-first
+    // Overview).
+    await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
 

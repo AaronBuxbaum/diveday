@@ -88,6 +88,25 @@ separately. That joint design now exists on paper — the Proposed ADR
 [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md) and its
 [dossier](../../architecture/boat-resource-model-dossier.md) — the deferral itself is unchanged.
 
+## Concept-model simplification (proposed — each row needs an owner decision)
+
+A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
+converged on one finding: the app asks a shop to learn roughly twice as many nouns as it has
+concepts. The surface-level follow-through shipped (the Today redesign, the audit-fix loops, the
+six-tab header); what remains below is **concept**-level — each row changes what the product *is*
+named or shaped like, so each needs an explicit owner call before implementation, recorded in
+[human-decisions.md](../human-decisions.md). None is sequenced; recommendations are the review's,
+not decisions.
+
+| Proposal | What it merges or cuts | Recommendation | Cost |
+| --- | --- | --- | --- |
+| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | Do it, in two slices: Close-out-as-evening-view first (M), the Check-in fold second (L) | Route 308s, `?view=` contract, large e2e/visual churn |
+| **Check-in = boarding's first rung** | `bookings.status = checked_in` and the manifest's "boarded" are two staff-recorded arrival facts that can disagree; make arrival a two-rung state (arrived → aboard) on the departure's first checkpoint | Do it *with* the Check-in fold above, not before — it is the data half of the same merge | Schema migration, counter surface, Today rows, reports |
+| **One "your trip" link per diver** | Promote `/ready/[token]` to the single capability page (waiver step, prep, recap as states over time); retire the trip page's `?booking=` confirmation branch and the second booking-time email | Do it; the strongest diver-facing simplification found | Checkout return URLs, email templates, capability-purpose mapping, recap-token reconciliation for the post-trip state |
+| **One "Bill" per booking** | Order / invoice / checkout / payment stay as Stripe mechanisms but surface as one money story per booking — quoted, deposit, paid, owed, refunded | Do after the diver-link work; touches every money surface | Orders index re-homing, back-office panels, reports |
+| **One "Deal", one "Interest"** | Shop promo codes + one-trip last-minute deals become one discount concept with a scope; wait list + last-minute list become one "divers who want in" record with a scope | The review's alternative — cutting the last-minute subsystem outright — is defensible pre-users but cuts a shipped revenue feature, so it is explicitly an owner call | Two staff pages merge, Stripe coupon lifecycle, `bookSpot` resolution |
+| **"Departure" as the one noun** | Retire trip/charter/course-session as UI vocabulary (`trips.course_id` already agrees a session *is* a trip row); a course departure is a departure with a curriculum | Copy-level only, no schema rename; do alongside any of the above | Every staff/diver bundle, glossary, marketing pages |
+
 ## Not scheduled — candidate subsystems
 
 Revenue-layer features DiveDay has deliberately **not** built, kept as a shortlist. Each is a real

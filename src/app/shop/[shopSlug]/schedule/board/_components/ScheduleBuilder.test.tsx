@@ -189,6 +189,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [baseTrip({ id: "trip-unpriced", priceCents: null })],
       },
     ];
@@ -218,6 +219,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [baseTrip({ id: "trip-priced", priceCents: 8500 })],
       },
     ];
@@ -248,11 +250,13 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [baseTrip({ id: "t1", priceCents: null }), baseTrip({ id: "t2", priceCents: null })],
       },
       {
         dateIso: "2026-08-02",
         label: "Sun, Aug 2",
+        parts: { weekday: "Sun", day: "2", month: "Aug" },
         trips: [baseTrip({ id: "t3", priceCents: null })],
       },
     ];
@@ -281,6 +285,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [
           baseTrip({ id: "t1", priceCents: null }),
           baseTrip({ id: "t2", priceCents: null }),
@@ -311,7 +316,14 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
 });
 
 describe("ScheduleBuilder add panel: price, and options fetched on open", () => {
-  const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
 
   function renderBuilder() {
     return render(
@@ -369,10 +381,11 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [baseTrip({ id: "trip-full", capacity: 6, booked: 6 })],
       },
     ];
-    const { container } = render(
+    render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
@@ -388,20 +401,21 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       />,
     );
 
-    const capacityBadge = container.querySelector("span.tabular-nums");
-    expect(capacityBadge?.className).toContain("bg-success/10");
-    expect(capacityBadge?.className).not.toContain("bg-surface-sunken");
+    const capacityBadge = screen.getByText("6/6");
+    expect(capacityBadge.className).toContain("bg-success/10");
+    expect(capacityBadge.className).not.toContain("bg-surface-sunken");
   });
 
-  it("renders the primary tone (not the old grey neutral) while seats remain", () => {
+  it("renders the count as quiet muted text — not a badge — while seats remain", () => {
     const days: BuilderDay[] = [
       {
         dateIso: "2026-08-01",
         label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
         trips: [baseTrip({ id: "trip-open", capacity: 6, booked: 3 })],
       },
     ];
-    const { container } = render(
+    render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
@@ -417,15 +431,23 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       />,
     );
 
-    const capacityBadge = container.querySelector("span.tabular-nums");
-    expect(capacityBadge?.className).toContain("bg-primary/10");
+    // Counts are facts, not alerts (design/principles.md #9): a routine 3/6
+    // reads in the muted register, and only the sold-out boat earns a badge.
+    const count = screen.getByText("3/6");
+    expect(count.className).toContain("text-muted");
+    expect(count.className).not.toContain("bg-primary/10");
   });
 });
 
 describe("ScheduleBuilder open-panel reset on revisit", () => {
   it("closes an expanded add/move/copy panel on a pathname change, instead of resurfacing it with stale defaults", async () => {
     const days: BuilderDay[] = [
-      { dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [baseTrip()] },
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: [baseTrip()],
+      },
     ];
     const { rerender } = render(
       <ScheduleBuilder
@@ -474,7 +496,14 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
 
 describe("ScheduleBuilder panel focus management (accessibility audit §3)", () => {
   it("moves focus into the add panel's first field on open, and back to the toggle on cancel", async () => {
-    const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: [],
+      },
+    ];
     render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
@@ -502,7 +531,12 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
 
   it("moves focus into the move panel's date field on open, and back to the row's actions control on cancel", async () => {
     const days: BuilderDay[] = [
-      { dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [baseTrip()] },
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: [baseTrip()],
+      },
     ];
     render(
       <ScheduleBuilder
@@ -538,6 +572,7 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
     {
       dateIso: "2026-08-01",
       label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
       trips: [baseTrip(), baseTrip({ id: "trip-2", title: "Night Dive" })],
     },
   ];
@@ -626,6 +661,7 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     {
       dateIso: "2026-07-31",
       label: "Fri, Jul 31",
+      parts: { weekday: "Fri", day: "31", month: "Jul" },
       trips: [baseTrip({ id: "trip-returned", rollCallOpen })],
     },
   ];
@@ -667,10 +703,10 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
   it("never carries the danger tone on hue alone", () => {
     const { container } = renderBoard(returnedDay({ diveNumber: 1, uncounted: 1 }));
 
-    // Badge's own aria-hidden glyph for the three status tones — a colorblind
+    // Badge's own aria-hidden mark for the three status tones — a colorblind
     // scan gets the mark before it gets to the words (design/principles.md #6).
     const badge = container.querySelector("a span.bg-danger\\/10");
-    expect(badge?.textContent).toContain("✕");
+    expect(badge?.textContent).toContain("❌");
   });
 
   it("confirms a removal in a panel below the row, and only submits on the second press", async () => {
@@ -717,7 +753,14 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
 });
 
 describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip-create-form)", () => {
-  const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
 
   function renderBuilder(overrides: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
     return render(

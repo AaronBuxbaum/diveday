@@ -26,6 +26,7 @@ const checks = [
   ["adrs", "check-adrs.mjs"],
   ["docs", "check-doc-links.mjs"],
   ["agents", "check-agents.mjs"],
+  ["follow-ups", "check-follow-ups.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],

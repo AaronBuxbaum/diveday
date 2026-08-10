@@ -308,7 +308,8 @@
       "lastMinuteFill": "Fill seats",
       "emergencyContact": "Contact",
       "stuckPaymentOperation": "Stripe",
-      "failedPhotoDeletion": "Cleanup"
+      "failedPhotoDeletion": "Cleanup",
+      "reviewsPending": "Reviews"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -406,7 +407,8 @@
       "resendWaiverLink": "Resend waiver link",
       "resendConfirmation": "Resend confirmation",
       "openOrders": "Review in Orders",
-      "openDataSettings": "Review in Settings"
+      "openDataSettings": "Review in Settings",
+      "openReviews": "Open reviews"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -418,7 +420,7 @@
       "morning": "Good morning, {name}",
       "afternoon": "Good afternoon, {name}",
       "evening": "Good evening, {name}",
-      "night": "Good night, {name}"
+      "night": "Working late, {name}"
     },
     "seasonalBriefing": {
       "summer": "Enjoy the surface interval — grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we'll see you on the next boat.",
@@ -443,6 +445,10 @@
         "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
       },
       "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
+    },
+    "reviewsPending": {
+      "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
+      "detail": "Divers wrote about their trips — publish the good words or quietly hide the rest."
     }
   },
   "tripDiveFields": {
@@ -515,7 +521,7 @@
       "statsDivers": "Divers",
       "statsBoarded": "Boarded",
       "statsAwaiting": "Awaiting",
-      "rollCallCompleteHeading": "Roll call complete ✦",
+      "rollCallCompleteHeading": "Roll call complete 🎉",
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "allAboard": "Every diver has a result — everyone's aboard.",
       "someNotBoarded": "Every diver has a result — {count} marked not boarded. Confirm they're accounted for before moving on.",
@@ -539,9 +545,9 @@
       "notePlaceholder": "Late to the boat, medical question, kit issue…",
       "noteHint": "The note travels with this roll-call record.",
       "saving": "Saving…",
-      "boardedDone": "Boarded ✓",
+      "boardedDone": "Boarded ☑️",
       "markBoarded": "Mark boarded",
-      "notBoardedDone": "Not boarded ✓",
+      "notBoardedDone": "Not boarded ☑️",
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",

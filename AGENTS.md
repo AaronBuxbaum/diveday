@@ -30,7 +30,8 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, Intl-cache, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, destructive-migration, e2e-hygiene, and agent-layer (skills/index/task-context) safeguards. The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard) |
+| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, Intl-cache, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, destructive-migration, e2e-hygiene, follow-up-register, and agent-layer (skills/index/task-context) safeguards. The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard) |
+| `pnpm check:follow-ups` | every entry in `docs/product/follow-ups/` — the register where you leave an idea, question, risk, or deliberately-skipped cleanup for the human to triage — is still actionable cold: dated ADR-style id, the four sections filled with real prose, `Touches:` paths that exist, and a fenced prompt long enough and specific enough to hand a session with none of your context. Closing an entry means deleting the file, never marking it done |
 | `pnpm check:intl-cache` | every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the call site. Constructing one costs ~12x reusing it (measured) and this app formats on essentially every render, so the constructor is a per-render tax that shows up as CI e2e flake under load. Regressed twice before it was checked — most recently as an `Intl.PluralRules` per interpolated message. `Intl.Locale` is exempt: a parsed locale value, not a compiled formatter |
 | `pnpm check:e2e-hygiene` | no timing guesses in `e2e/`: `waitForTimeout` sleeps, `networkidle` waits, spec-level `retries:`, and hand-rolled retry loops are refused unless the line carries `diveday:allow-e2e-hygiene <rule>: <why>` naming the mechanism that makes it deterministic. The suite runs `retries: 0` so a flake fails loudly and gets root-caused; every one of these shapes converts a deterministic failure into an intermittent pass instead — the exact class a 2026-08-06 review stripped back out of the tree after their written justifications proved false. The fix for a race is always waiting for what the destination page itself renders (see the **debug** skill) |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
@@ -110,6 +111,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Paging a staff list (prev / "Page 3 of 7" / next) | one component, `src/components/Pager.tsx`, words from the one `shared.pager.*` key set; one query shape, `offsetPage` in `src/db/paging.ts`. **Every paged staff list wears it** — orders, the by-departure view, divers, reports, reviews, the dive-site library and the published site catalog, courses, both promo lists, the waiver signature log, and the add-booking departure picker (ADR 20260803-one-pagination-model); a new paged list uses it from the start. Keyset cursors (`src/db/cursor.ts`) are the one earned exception — the schedule board pages a stream with no end to count. A list's **count must share the row query's exact scope** (joins, `where`, `having`, `now`), or the pager promises pages that render nothing |
 | Why a route paints instantly (or doesn't) | Each page declares `export const instant = true` and owns a body-shaped `loading.tsx` — that file *is* the Suspense boundary, and what a client navigation into the segment paints. `instant = false` survives on exactly one shell, `src/app/shop/[shopSlug]/layout.tsx`, which cannot be instant because its cross-tenant `notFound()` must run before `{children}` (ADR 20260804-instant-navigation) |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
+| An idea, question, risk, or cleanup you are **not** doing in this change | one file per item in `docs/product/follow-ups/`, copied from its `TEMPLATE.md` — the human's triage inbox, not a backlog. Committed work still lives in `docs/product/features/`, human-owned calls in `docs/product/human-decisions.md` |
 
 ## Skills and providers
 
@@ -153,6 +155,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
+- **A thought you don't act on goes in the register, not in your closing message.** Finishing a
+  change with an idea you left undone, a question only a human can answer, a risk you noticed in
+  passing, or a cleanup you deliberately scoped out? File it as one file in
+  [docs/product/follow-ups/](docs/product/follow-ups/README.md), in the same commit, and list it in
+  the PR description. A closing message is read once and gone; that folder is where the human
+  triages. Each entry is written for a reader with none of your context and ends with a prompt they
+  can paste into a fresh session — see its `TEMPLATE.md`. This never replaces doing the work you
+  were asked to do, and a failing test is never a follow-up (next rule). Nor is it a place to open
+  a second front: never act on someone else's entry as a drive-by.
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave
   it red for someone else. See **Parallel work** first: check for an in-flight fix on the same

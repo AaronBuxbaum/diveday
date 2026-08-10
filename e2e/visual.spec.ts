@@ -4,7 +4,7 @@ import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-s
 import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import { openSettingsRow, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
@@ -1249,6 +1249,7 @@ for (const scheme of ["light", "dark"] as const) {
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
         await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(reviewSettingsPage, "Review link");
         await reviewSettingsPage
           .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
@@ -1464,18 +1465,19 @@ for (const scheme of ["light", "dark"] as const) {
        * other baseline. A freshly onboarded shop is the real "empty queue"
        * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
        *
-       * **Three captures in one test, deliberately.** `nav-more-menu` is the
-       * same page with the header's "More" panel open, and `settings-trial` is
+       * **Two captures in one test, deliberately.** `settings-trial` is
        * this shop's Settings page — the trial-status card only ever renders
        * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
-       * shop the other settings capture uses) can never show it. All three
+       * shop the other settings capture uses) can never show it. (A third
+       * capture, `nav-more-menu`, retired with the "More" menu itself when
+       * the header became six tabs.) Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. A second test would have to onboard a *second*
        * shop, because `/api/test/reset` reseeds the demo shop and purges
        * minted demo shops but does not delete one created through `/onboard`,
        * so the slug would have to differ — and a different slug is different
        * pixels in every baseline. Splitting here would move a baseline to buy
-       * isolation, which is the wrong trade; the three captures are one
+       * isolation, which is the wrong trade; the captures are one
        * onboarded session anyway. The trial card itself is clock-anchored and
        * deterministic: this shop's `created_at` is the harness's one frozen
        * instant, so "21 days left" and the end date never drift between runs.
@@ -1514,18 +1516,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
         await capture(page, "today-empty", scheme);
 
-        // The "More" menu open — the only way to see its named groups ("Run the
-        // shop", and Settings under "Set up") and the destinations they hold,
-        // since the panel used to separate them with one unlabelled rule. Team
-        // and Promo codes left this menu when Settings became their only door.
-        // Captured here rather
-        // than over the seeded Today: the nav is identical (a fresh owner passes
-        // every gate) and this page is short, so the baseline is the menu rather
-        // than a second copy of a very tall dashboard whose every content change
-        // would diff this image too.
-        await page.locator("header summary").filter({ hasText: "More" }).click();
-        await page.getByRole("list", { name: "Run the shop" }).waitFor();
-        await capture(page, "nav-more-menu", scheme);
+        // The "More" menu capture retired with the menu itself: the header is
+        // six tabs now (every former menu row is a tab, a palette row, or a
+        // contextual door), so there is no panel left to photograph — the
+        // header's own pixels are in every staff capture already.
 
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
@@ -2101,6 +2095,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
+        // One row open in the capture, so the baseline shows the disclosure's
+        // open-form treatment as well as the at-rest directory.
+        await openSettingsRow(page, "Rental prices");
         await capture(page, "settings-payments", scheme);
       });
 
@@ -2332,6 +2329,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         try {
           await page.goto("/shop/blue-mantis/settings");
+          await openSettingsRow(page, "What we rent");
           await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
@@ -2342,6 +2340,7 @@ for (const scheme of ["light", "dark"] as const) {
           await capture(page, "prep-no-nitrox", scheme);
         } finally {
           await page.goto("/shop/blue-mantis/settings");
+          await openSettingsRow(page, "What we rent");
           await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
@@ -2355,7 +2354,7 @@ for (const scheme of ["light", "dark"] as const) {
        * checkpoint that stays open. Nothing in the seed reaches it, and the
        * departure capture above cannot show it, so it gets its own baseline:
        * this is the screen a captain reads when someone is still in the water,
-       * and it used to be pixel-identical to a settled "Not boarded ✓" row.
+       * and it used to be pixel-identical to a settled "Not boarded ☑️" row.
        * Its own test so the roll-call write is contained — the per-test DB
        * reset (e2e/fixtures.ts) puts it back.
        */
@@ -2604,6 +2603,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "dive-sites-library", scheme);
       });
 
+      // A site's own briefing form, which is where the route a shop draws is
+      // drawn. Captured on a seeded site that already has one, so the frame
+      // holds the map, the curve, and its start/finish dots rather than the
+      // empty state — the thing worth having a baseline of. The satellite
+      // embed is a third-party iframe and renders nothing deterministic in
+      // CI, which is exactly why the overlay is what this watches: the SVG is
+      // ours and is drawn from the row.
+      test(`the dive-site briefing form renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("link", { name: "Molasses Reef" }).first().click();
+        await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+        // The route's own caption box, which only renders once the editor has
+        // mounted and read the coordinate fields beside it.
+        await page.getByLabel("What the route is called").waitFor();
+        await capture(page, "dive-site-edit", scheme);
+      });
+
       // The front desk's invoice builder. It redirects to Divers for a shop
       // that can't take money, so mark the demo shop connected first:
       // /api/test/seed-stripe-account is a pure DB write that never calls
@@ -2645,8 +2663,7 @@ for (const scheme of ["light", "dark"] as const) {
        * that has nothing to do with the overlay. The calendar settings page is
        * the shortest read-only staff surface there is (two panels, no seeded
        * rows, nothing minted until a button is pressed), so almost all of each
-       * of these images is the overlay itself. Same reasoning as
-       * `nav-more-menu`, which is captured over a freshly onboarded shop.
+       * of these images is the overlay itself.
        *
        * One test each, and each closes its overlay before finishing: an overlay
        * left open leaks into whatever the same page does next, which is the

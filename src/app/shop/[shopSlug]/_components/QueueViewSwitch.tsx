@@ -13,6 +13,7 @@ import Link from "next/link";
  *
  * Server-rendered from `?view=`, so it needs no JavaScript, survives a
  * bookmark, and cannot fork the page's data client-side.
+
  */
 export type QueueView = "urgency" | "departures";
 

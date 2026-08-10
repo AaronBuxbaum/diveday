@@ -82,7 +82,8 @@ export type TodayActionKind =
   | "email_delivery"
   | "emergency_contact"
   | "stuck_payment_operation"
-  | "failed_photo_deletion";
+  | "failed_photo_deletion"
+  | "reviews_pending";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -137,6 +138,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // sink below every per-diver row when severity is what breaks a tie.
   stuck_payment_operation: 20,
   failed_photo_deletion: 21,
+  // Divers said something worth publishing; nothing sails or refunds on it.
+  reviews_pending: 22,
 };
 
 /**
@@ -171,6 +174,7 @@ export const ACTION_KIND_META = {
   emergency_contact: { tone: "neutral" },
   stuck_payment_operation: { tone: "warning" },
   failed_photo_deletion: { tone: "warning" },
+  reviews_pending: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**
@@ -669,6 +673,12 @@ export type TodayGreetingBand = "morning" | "afternoon" | "evening" | "night";
  * local timezone. The greeting itself — reading like dive briefing copy
  * rather than cutesy filler — lives in `src/i18n/today-labels.ts`'s
  * `GREETING_KEYS`.
+ *
+ * `night` is a *band*, not a sign-off: from 22:00 it is a staffer still at the
+ * desk building tomorrow's board, so the English reads "Working late" rather
+ * than "Good night", which in English is what you say on the way out the door.
+ * (Spanish has no such split — "buenas noches" is both — so its evening and
+ * night strings are allowed to differ in shape from the English pair.)
  */
 export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetingBand {
   const wall = utcToWallTime(date, timezone);

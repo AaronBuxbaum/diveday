@@ -1708,6 +1708,10 @@ export async function loadShopExportBundleInput(
             "forecast_longitude",
             "satellite_image_url",
             "route_image_url",
+            "route_points",
+            "route_label",
+            "route_note",
+            "route_zoom",
             "image_urls",
             "deleted_at",
             "created_at",
@@ -1732,6 +1736,14 @@ export async function loadShopExportBundleInput(
             row.forecastLongitude,
             row.satelliteImageUrl,
             row.routeImageUrl,
+            // The drawn route travels with the site, so a shop that exports
+            // and re-imports keeps the line it drew — the waypoints are only
+            // meaningful next to the coordinates and zoom two columns over, so
+            // all four go together or none of them do.
+            JSON.stringify(row.routePoints),
+            row.routeLabel,
+            row.routeNote,
+            row.routeZoom,
             JSON.stringify(row.imageUrls),
             row.deletedAt,
             row.createdAt,

@@ -32,6 +32,9 @@ test.describe("refunds", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: options.title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: options.title })).toBeVisible();
+    // The requirements form waits behind its Edit disclosure (summary-first
+    // Overview).
+    await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Require payment to board").check();
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("requirements updated");

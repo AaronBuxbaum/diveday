@@ -39,8 +39,10 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 
   // Complete the contact-details step for real, through the actual settings
   // form — not a flag the checklist sets itself — then confirm it reflects.
+  // The checklist deep-links to the contact row's fragment, which opens the
+  // row — the settings hub keeps its forms behind summary rows.
   await page.getByRole("link", { name: "Add contact details" }).click();
-  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings$`));
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#contact$`));
   await page.getByLabel("Contact email").fill("hello@firstrun.example.com");
   await page.getByRole("button", { name: "Save contact details" }).click();
   await expect(page.getByText("Contact details saved.")).toBeVisible();
@@ -92,9 +94,12 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   // The zone was accepted (an invalid one bounces back to the form with an
   // error) and it is what the new shop reads the clock in: the frozen harness
   // instant is mid-morning in New York and late evening in Papua, so the
-  // greeting proves the stored zone rather than the default.
+  // greeting proves the stored zone rather than the default. "Working late" is
+  // Today's 22:00–05:00 band (src/lib/today.ts) — the English there is not
+  // "Good night", which is what you say on the way out rather than to somebody
+  // who has just opened the app.
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
-  await expect(page.getByRole("heading", { name: /Good night, Sari/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Working late, Sari/ })).toBeVisible();
 });
 
 /**

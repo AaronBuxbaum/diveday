@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
+import { openSettingsRow } from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -101,7 +102,10 @@ test.describe("H-14 role permissions", () => {
       // stay available.
       await page.goto(await firstTripManageHref(page));
       await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Publish crew prediction" })).toBeVisible();
+      // The conditions form sits behind its disclosure now; the visible half
+      // for a captain is the section's own toggle (Publish or Edit, depending
+      // on whether a prediction is live).
+      await expect(page.getByText(/Write a crew prediction|Edit crew prediction/)).toBeVisible();
       // Crew editing is unconditional (no config-gated form around it), so its
       // presence for a captain is the heading itself, not a submit button.
       await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
@@ -183,6 +187,8 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/settings`);
+      // The catalog form waits behind its summary row on the settings hub.
+      await openSettingsRow(page, "What we rent");
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
@@ -195,6 +201,9 @@ test.describe("H-14 role permissions", () => {
 
       // Trip definition is available to the owner.
       await page.goto(await firstTripManageHref(page));
+      // The details form waits behind its Edit disclosure (summary-first
+      // Overview) — the owner sees the toggle, and the form behind it.
+      await page.getByText("Edit details", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
     });
 

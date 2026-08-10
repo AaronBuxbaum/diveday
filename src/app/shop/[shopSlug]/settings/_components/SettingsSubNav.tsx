@@ -22,6 +22,15 @@ import {
  * Reads the active item from the pathname, matching `WaiversSubNav.tsx`'s and
  * `PublicShopNav.tsx`'s pattern, so it can live in the shared layout without
  * re-rendering on every tab switch.
+ *
+ * **On the hub this is a quiet anchor row, not the card.** The hub is a
+ * directory now — every destination this card would list renders 400px lower
+ * as a door row with a better description, so the full card there was the
+ * page's own contents repeated above its `<h1>` (and on a phone it was the
+ * entire first viewport). On the hub only the three group names render, as
+ * plain same-document anchors into the sections they name; the grouped pill
+ * card appears on the six sub-pages, where "back to the hub / sideways to a
+ * sibling" is real work it does.
  */
 export type SettingsSubNavCopy = {
   ariaLabel: string;
@@ -75,9 +84,38 @@ export function SettingsSubNav({
 
   const hubItem: SettingsNavItem = { key: "hub", href: root, label: copy.hub };
 
+  // Whether the hub itself is the page being read — which is what decides
+  // whether this nav is the way *around* the page (three quiet anchors) or
+  // the way *back and sideways* from a sub-page (the grouped pill card).
+  const onHub = pathname === root;
+
+  if (onHub) {
+    return (
+      // Same column as the hub's own `<main>` (max-w-3xl), so the anchors sit
+      // on the page's left edge; `-ml-3` cancels the first pill's own padding
+      // so its label lines up optically with the `<h1>` beneath.
+      <div className="mx-auto w-full max-w-3xl px-4 pt-8 sm:px-6 sm:pt-10 print:hidden">
+        <nav aria-label={copy.ariaLabel} className={`-ml-3 flex flex-wrap gap-1 ${className}`}>
+          {SETTINGS_GROUPS.map((group) => (
+            // A same-document anchor, which the browser handles itself: no
+            // re-render, no refetch, works before JavaScript arrives — the
+            // same reasoning the retired `JumpNav` recorded.
+            <a
+              key={group.id}
+              href={`#${group.id}`}
+              className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground"
+            >
+              {copy.groupLabels[group.id]}
+            </a>
+          ))}
+        </nav>
+      </div>
+    );
+  }
+
   // Groups in `SETTINGS_GROUPS`' own order, each carrying the destinations
-  // registered under it (also in registry order); a group with no
-  // destination today (Money) renders no row.
+  // registered under it (also in registry order). A group with no destination
+  // today (Money) renders no row here — its section lives on the hub.
   const groupRows = SETTINGS_GROUPS.map((group) => ({
     group,
     items: SETTINGS_DESTINATIONS.filter((destination) => destination.groupId === group.id).map(
@@ -96,10 +134,12 @@ export function SettingsSubNav({
 
   const renderItem = (item: SettingsNavItem) => {
     const active = item.key === current;
+    // Hover is a weaker tint than the active pill's solid fill + shadow —
+    // a hovered sibling must never read as "you are here".
     const cls = `${itemClass} ${
       active
         ? "bg-surface text-primary shadow-sm"
-        : "text-muted hover:bg-surface hover:text-foreground"
+        : "text-muted hover:bg-surface/60 hover:text-foreground"
     }`;
     return active ? (
       <span key={item.key} aria-current="page" data-tab-active="true" className={cls}>
@@ -113,19 +153,28 @@ export function SettingsSubNav({
   };
 
   return (
-    <nav
-      aria-label={copy.ariaLabel}
-      className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 print:hidden ${className}`}
-    >
-      <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>
-      {groupRows.map(({ group, items }) => (
-        <div key={group.id} className="flex flex-wrap items-center gap-2">
-          <span className="px-1 text-xs font-semibold tracking-wide text-muted uppercase">
-            {copy.groupLabels[group.id]}
-          </span>
-          {items.map(renderItem)}
-        </div>
-      ))}
-    </nav>
+    <div className="mx-auto w-full max-w-5xl px-4 pt-8 sm:px-6 sm:pt-10 print:hidden">
+      <nav
+        aria-label={copy.ariaLabel}
+        className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 ${className}`}
+      >
+        {/* The way back to the hub. */}
+        <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>
+        {/* The group name sits on its own line, above the pills it owns — not
+          beside them. Inline, a 12px uppercase caption and a 14px semibold pill
+          shared a line at two different weights, and on a phone the pills
+          wrapped out from under their own caption: "Data & integrations" ended
+          three lines above the last thing that belonged to it. A caption and an
+          indented row underneath says which pills are whose at any width. */}
+        {groupRows.map(({ group, items }) => (
+          <div key={group.id} className="flex flex-col gap-1">
+            <span className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
+              {copy.groupLabels[group.id]}
+            </span>
+            <div className="flex flex-wrap gap-2">{items.map(renderItem)}</div>
+          </div>
+        ))}
+      </nav>
+    </div>
   );
 }

@@ -15,10 +15,10 @@ import {
   staffNavDestinations,
 } from "@/lib/staff-destinations";
 
-// `whitespace-nowrap`: the primary row is `flex-1` per link inside a
-// horizontally scrolling, snapping strip. Without it a narrow phone shrinks
-// each link below its label and breaks the word instead of scrolling —
-// "Check-in" rendered as "Check-" / "in" and "Not ready" as "Not" / "ready".
+// `whitespace-nowrap`: a flex item can shrink below its label's width, and a
+// squeezed tab must never break its word ("Check-in" as "Check-" / "in") —
+// the strip only renders from `lg` up, but a crowded row is still possible
+// with long translations.
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
@@ -68,10 +68,14 @@ function isCurrent(pathname: string, href: string, root: string) {
  * only the first knew about `alsoMatch`, so a destination reached *from* a
  * "More" page left the whole header with nothing reading as current.
  */
-function isDestinationCurrent(pathname: string, root: string, destination: StaffDestination) {
+export function isDestinationCurrent(
+  pathname: string,
+  root: string,
+  destination: StaffDestination,
+) {
   return (
     isCurrent(pathname, staffDestinationHref(root, destination), root) ||
-    (destination.alsoMatch ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root) : false)
+    (destination.alsoMatch ?? []).some((prefix) => isCurrent(pathname, `${root}${prefix}`, root))
   );
 }
 
@@ -100,6 +104,10 @@ function NavCountBadge({
       tone={STAFF_DESTINATION_BADGE_TONES[badge]}
       size="sm"
       tabularNums
+      // A count, not a status (see `Badge`): the tone and the digit already
+      // say it, and the mark's width is what pushed a six-tab phone header
+      // into a ragged second row.
+      toneMark={false}
       className="ml-1.5 px-1.5 py-0"
     >
       <span aria-hidden="true">{count}</span>
@@ -256,24 +264,14 @@ export function ShopNavLinks({
   );
 
   return (
-    // `items-start` so "More" sits on the first row when the links wrap to two
-    // on a phone, rather than floating in the gutter between them. Identical to
-    // `items-center` from `sm` up, where the strip is a single row.
-    <div className={`flex min-w-0 items-start gap-2 ${className}`}>
-      {/*
-       * Wraps rather than scrolls. The primary labels (four of them since Not
-       * ready became Today's view) still need more room than a phone gives this
-       * strip — ~285px — so as a one-line scroller it hid the tail of the row:
-       * the right edge guillotined "Divers" mid-word against the More button,
-       * and on the schedule board the *active* tab sat entirely off-screen, so
-       * nothing on the page read as current. Wrapping costs one
-       * header row on a phone and shows every destination, with the label
-       * itself kept whole by `whitespace-nowrap` in `linkClass`. It never wraps
-       * from `sm` up, where the row has room.
-       */}
+    // Display is the caller's call: below `lg` the primary destinations render
+    // as the phone dock (StaffTabBar) instead, and ShopNav hands this strip
+    // `hidden lg:flex` — so none of the phone-wrap layout this strip used to
+    // carry survives here.
+    <div className={`min-w-0 items-center gap-2 ${className}`}>
       <nav
         aria-label={copy.primaryNavAriaLabel}
-        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-0.5 gap-y-1 pr-2 sm:gap-x-1 sm:pr-3"
+        className="flex min-w-0 flex-1 items-center gap-x-1 pr-3"
       >
         {primary.map((destination) => {
           const href = staffDestinationHref(root, destination);
@@ -296,68 +294,62 @@ export function ShopNavLinks({
           );
         })}
       </nav>
-      <details ref={detailsRef} className="relative shrink-0">
-        <summary
-          ref={summaryRef}
-          className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
-        >
-          {copy.more}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-3"
+      {/* No menu over nothing: with every destination either a tab, a palette
+          row, or a contextual door, "More" holds no rows for any role today —
+          a header menu named "More" was the IA admitting it hadn't decided.
+          The machinery stays for the day a destination earns a menu back. */}
+      {daily.length + setup.length === 0 ? null : (
+        <details ref={detailsRef} className="relative shrink-0">
+          <summary
+            ref={summaryRef}
+            className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
           >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </summary>
-        {/* Mobile-only scrim: makes the panel read as modal on a phone (where
-            it covers most of the viewport) and gives a large, obvious tap
-            target to dismiss it, on top of the outside-click handler above. */}
-        {moreOpen ? (
-          <button
-            type="button"
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={closeMore}
-            className="fixed inset-0 z-10 cursor-default bg-foreground/20 sm:hidden"
-          />
-        ) : null}
-        {/*
-         * One column, one link per row — a two-column grid wrapped short labels
-         * onto two lines. Two named groups rather than one bare rule: the
-         * divider that used to sit here said "these are different" without ever
-         * saying how, so which half held Reports and which held Promo codes was
-         * a memory test.
-         */}
-        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
-          {daily.length > 0 ? (
-            <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
-              {daily.map(moreLink)}
-            </MoreGroup>
-          ) : null}
-          {/* A visible heading over a single row is noise, so the configure-once
+            {copy.more}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-3"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          {/*
+           * One column, one link per row — a two-column grid wrapped short labels
+           * onto two lines. Two named groups rather than one bare rule: the
+           * divider that used to sit here said "these are different" without ever
+           * saying how, so which half held Reports and which held Promo codes was
+           * a memory test.
+           */}
+          <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
+            {daily.length > 0 ? (
+              <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
+                {daily.map(moreLink)}
+              </MoreGroup>
+            ) : null}
+            {/* A visible heading over a single row is noise, so the configure-once
               half wears one only once it is a genuine group. It keeps the same
               accessible name either way — a screen reader still hears which
               half of the menu it is in. */}
-          {setup.length > 1 ? (
-            <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
-              {setup.map(moreLink)}
-            </MoreGroup>
-          ) : setup.length === 1 ? (
-            <ul
-              aria-label={copy.groupSetup}
-              className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
-            >
-              {setup.map(moreLink)}
-            </ul>
-          ) : null}
-        </div>
-      </details>
+            {setup.length > 1 ? (
+              <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
+                {setup.map(moreLink)}
+              </MoreGroup>
+            ) : setup.length === 1 ? (
+              <ul
+                aria-label={copy.groupSetup}
+                className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
+              >
+                {setup.map(moreLink)}
+              </ul>
+            ) : null}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

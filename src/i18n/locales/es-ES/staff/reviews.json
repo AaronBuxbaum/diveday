@@ -20,7 +20,7 @@
   "waitingOnYou": "Esperando tu revisión",
   "waitingDetail": "Reseñas con palabras por leer",
   "thisMonthStat": "Este mes: media de {rating}★ de {count, plural, one {# reseña} other {# reseñas}}",
-  "standout": "✦ Reseña destacada",
+  "standout": "⭐ Reseña destacada",
   "emptyHeading": "Todavía no hay reseñas",
   "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
   "emptyWaitingHeading": "Nada esperando tu revisión",

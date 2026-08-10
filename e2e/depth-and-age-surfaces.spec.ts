@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { tripPathByTitle } from "./helpers";
+import { openSettingsRow, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -59,15 +59,15 @@ test.describe("staff", () => {
     await expect(page.getByText(/Age \d+/).first()).toBeVisible();
 
     // The warning-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "▲ Minor", not
+    // (Badge.tsx toneGlyph), so the element's own text is "⚠️Minor", not
     // "Minor" alone.
-    const minorBadge = page.getByText("▲ Minor").first();
+    const minorBadge = page.getByText("⚠️Minor").first();
     await expect(minorBadge).toBeVisible();
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
     const minorRow = page
-      .locator("li", { has: page.getByText("▲ Minor") })
+      .locator("li", { has: page.getByText("⚠️Minor") })
       .filter({ visible: true })
       .last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
@@ -112,7 +112,7 @@ test.describe("staff", () => {
     // And the diver it is about is still boardable. "Ready", not "Ready to
     // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
     // the roster and the counter share with the manifest.
-    await expect(page.getByText("✓ Ready", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("✅Ready", { exact: true }).first()).toBeVisible();
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
@@ -122,7 +122,7 @@ test.describe("staff", () => {
     await expect(
       page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
     ).toBeVisible();
-    await expect(page.locator("#roll-call-list").getByText("✓ Ready")).toHaveCount(0);
+    await expect(page.locator("#roll-call-list").getByText("✅Ready")).toHaveCount(0);
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {
@@ -140,6 +140,7 @@ test.describe("staff", () => {
 
     // Switch the shop to feet; 18 m must read back as 59 ft, not as 18.
     await page.goto(`/shop/${SHOP}/settings`);
+    await openSettingsRow(page, "Units");
     await page.getByLabel("Show depths in", { exact: true }).selectOption("feet");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();
@@ -165,6 +166,10 @@ test.describe("staff", () => {
     // than a hint beside it — a bare "Water temp" is how a 27 meant as °F
     // reaches every diver as an 81°F day.
     await page.goto(tripPath);
+    // The conditions form waits behind its disclosure (summary-first
+    // Overview) — Publish or Edit, depending on whether the seed already
+    // published a prediction for this trip.
+    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page.getByLabel("Water temp °C").fill("27");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
@@ -174,12 +179,15 @@ test.describe("staff", () => {
     // visibility in metres.
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
+    await openSettingsRow(page, "Units");
     await page.getByLabel("Show water temperature in", { exact: true }).selectOption("fahrenheit");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();
 
     // 27°C reads back as 81°F — the stored Celsius never moved.
     await page.goto(tripPath);
+    // A prediction is published now, so the disclosure reads "Edit".
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("81");
     await expect(page.getByLabel("Visibility m")).toBeVisible();
 
@@ -189,6 +197,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
     await page.goto(tripPath);
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("76");
   });
 });

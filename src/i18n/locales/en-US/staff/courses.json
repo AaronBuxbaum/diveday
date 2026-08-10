@@ -4,7 +4,6 @@
     "title": "Courses",
     "description": "Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don't offer.",
     "agencyTabsLabel": "Filter courses by agency",
-    "allAgencies": "All",
     "hidden": "Hidden",
     "orHigher": "{level} or higher",
     "openToUncertified": "Open to uncertified divers",

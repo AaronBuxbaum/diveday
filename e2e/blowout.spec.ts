@@ -66,7 +66,7 @@ test.describe("weather blow-out cascade", () => {
     await page.getByRole("link", { name: "Back to the trip" }).click();
     // Not `exact: true`: the status is a `<Badge tone="danger">`, which renders
     // an aria-hidden glyph inside the same span as the label, so the element's
-    // text is "✕Cancelled" and no element has the exact text "Cancelled".
+    // text is "❌Cancelled" and no element has the exact text "Cancelled".
     // `import.spec.ts` matches this badge the same way. The "Reinstate trip"
     // button on the next line is what makes the pair specific to a cancelled
     // trip rather than to any prose containing the word.

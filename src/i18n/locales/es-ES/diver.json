@@ -654,7 +654,7 @@
   },
   "capability": {
     "waiverReceived": "Exención recibida",
-    "waiverDone": "Papeleo terminado ✓",
+    "waiverDone": "Papeleo terminado ✅",
     "readinessTitle": "Tu preparación para la salida"
   },
   "seatClaim": {
@@ -679,7 +679,7 @@
     "claimedNotice": "Esta plaza ya es tuya — todo lo que ves en esta página es sobre ti. Quien organiza el grupo puede ver que está reclamada.",
     "panelHeading": "Las plazas de tu grupo",
     "panelBody": "Envía a cada buceador su propio enlace — cada uno añade sus datos, firma su propia exención y recibe su propia preparación. Una plaza que nadie reclama simplemente se queda contigo, tal y como se reservó.",
-    "claimedBadge": "Reclamada ✓",
+    "claimedBadge": "Reclamada ✅",
     "awaitingBadge": "Aún sin reclamar",
     "copyLabel": "Copiar enlace",
     "showLink": "Mostrar enlace",

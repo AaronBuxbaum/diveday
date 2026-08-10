@@ -268,3 +268,19 @@ export async function seededTripId(page: Page, shopSlug: string, title: string):
   if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
   return tripId;
 }
+
+/**
+ * Open a settings-hub row by its heading. The hub states each setting's
+ * current value in a `<summary>` row and keeps the form behind it (the
+ * trip Overview's summary-first grammar), so a spec that edits a setting
+ * opens the row first. A row that is already open — a save redirects back
+ * with `?saved=<section>`, which re-renders it open — is left alone.
+ */
+export async function openSettingsRow(page: Page, heading: string) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.getByRole("heading", { level: 3, name: heading, exact: true }) })
+    .first();
+  const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
+  if (!isOpen) await details.locator("summary").click();
+}

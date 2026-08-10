@@ -67,10 +67,10 @@ test.describe("as owner", () => {
     await expect(standing.getByText("Trips and courses")).toBeVisible();
     await expect(standing.getByText("Redeemed 1 time")).toBeVisible();
     // The success-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "✓ Live", not
+    // (Badge.tsx toneGlyph), so the element's own text is "✅Live", not
     // "Live" alone — and a bare substring match also picks up the "live
     // now" window text elsewhere in this same card.
-    await expect(standing.getByText("✓ Live")).toBeVisible();
+    await expect(standing.getByText("✅Live")).toBeVisible();
 
     // An expired code is honestly not live, rather than quietly still offered.
     const expired = page.locator("li").filter({ hasText: "OPENWATER25" }).filter({ visible: true });
@@ -210,7 +210,7 @@ test.describe("as owner", () => {
         .locator("li")
         .filter({ hasText: "REEF10" })
         .filter({ visible: true })
-        .getByText(live ? "✓ Live" : "Switched off"),
+        .getByText(live ? "✅Live" : "Switched off"),
     ).toBeVisible();
   }
 

@@ -122,7 +122,12 @@
     "cancellationWindowDescription": "Horas antes de la salida en las que un buceador puede cancelar y recibir un reembolso. Se muestra a los buceadores; los reembolsos los sigue gestionando el personal. 48 horas es un plazo habitual.",
     "hoursSuffix": "horas",
     "saving": "Guardando…",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "edit": "Editar detalles",
+    "summaryPrice": "{price} por buceador",
+    "summaryNoPrice": "Sin precio establecido — la página de reservas no muestra tarifa",
+    "summaryDeposit": "Depósito de {amount} al reservar",
+    "summaryCancellation": "Ventana de cancelación gratuita de {hours} horas"
   },
   "conditions": {
     "heading": "Previsión de la tripulación",
@@ -138,7 +143,12 @@
     "publishing": "Publicando…",
     "publish": "Publicar previsión de la tripulación",
     "clearing": "Borrando…",
-    "returnToAutomated": "Volver al pronóstico automático"
+    "returnToAutomated": "Volver al pronóstico automático",
+    "editEmpty": "Escribir una predicción de la tripulación",
+    "editPublished": "Editar la predicción de la tripulación",
+    "summaryPublished": "Predicción de la tripulación publicada:",
+    "holdOnSummary": "La pausa por condiciones está activa — las nuevas reservas están en pausa",
+    "publishedAt": "Publicada {date}"
   },
   "crew": {
     "heading": "Tripulación",
@@ -161,7 +171,10 @@
     "description": "Un breve saludo de la tripulación, que aparece en el resumen de cada buceador después de que esta salida zarpe. Déjalo en blanco para no enviar ninguno.",
     "placeholder": "Visibilidad increíble hoy — gracias por bucear con nosotros. ¡Vuelve el próximo mes para el pecio!",
     "saving": "Guardando…",
-    "save": "Guardar nota de resumen"
+    "save": "Guardar nota de resumen",
+    "edit": "Editar nota",
+    "write": "Escribir una nota",
+    "emptySummary": "Aún no hay nota — los resúmenes se envían sin ella."
   },
   "requirements": {
     "heading": "Requisitos de preparación",
@@ -188,7 +201,12 @@
     "siteAlsoRequiresCourse": "<strong>{site}</strong> exige {list}. Es la regla propia del sitio de buceo para esa inmersión, y la formación continua se imparte en los sitios para los que titula — así que nunca impide la inscripción. Sí aparece en la lista de asistentes como bloqueo de preparación para que el instructor lo resuelva.",
     "sitesAlsoRequireCourse": "<strong>{site}</strong> exigen {list}. Son las reglas propias de los sitios de buceo para esas inmersiones, y la formación continua se imparte en los sitios para los que titula — así que nunca impide la inscripción. Sí aparece en la lista de asistentes como bloqueo de preparación para que el instructor lo resuelva.",
     "saving": "Guardando…",
-    "save": "Guardar requisitos"
+    "save": "Guardar requisitos",
+    "edit": "Editar requisitos",
+    "paymentLabel": "Pago:",
+    "specialtiesLabel": "Especialidades:",
+    "noSpecialties": "No se requieren",
+    "notConfigured": "Los requisitos de este viaje no están configurados — cada buceador queda bloqueado hasta que lo estén."
   },
   "series": {
     "heading": "Serie repetida",
@@ -386,7 +404,7 @@
     "soulsOnBoardLine": "Buceadores {divers} · Tripulación {crew} · Personas a bordo {souls}",
     "checkpointNavAriaLabel": "Punto de control del pase de lista",
     "activeCheckpoint": "Punto de control activo",
-    "rollCallComplete": "Pase de lista completo ✦",
+    "rollCallComplete": "Pase de lista completo 🎉",
     "recordedOfTotal": "{recorded} de {total} buceadores registrados",
     "progressAriaLabel": "Progreso del pase de lista",
     "allAccountedFor": "Todos contabilizados — buceadores y tripulación. Listo para el siguiente control.",
@@ -401,9 +419,9 @@
     "crewHeading": "Tripulación",
     "crewRollCallDescription": "Cada persona de esta lista necesita su propio resultado antes de cerrar este control. La tripulación es quien más probablemente sigue en el agua.",
     "crewMarkAboard": "Marcar a bordo",
-    "crewAboardCheck": "A bordo ✓",
+    "crewAboardCheck": "A bordo ☑️",
     "crewMarkNotAboard": "Marcar no embarcado",
-    "crewNotAboardCheck": "No embarcado ✓",
+    "crewNotAboardCheck": "No embarcado ☑️",
     "crewMarkNotBackAboard": "Marcar sin volver a bordo",
     "crewNotBackAboardActive": "No ha vuelto a bordo",
     "crewRollCallRecordedBy": "{label} · {date} · {name}",
@@ -456,17 +474,17 @@
     "buddyErrorAlreadyTeamed": "Uno de esos buceadores ya está en un equipo de buceo. Deshaz ese equipo primero.",
     "buddyErrorTooFew": "Un equipo de buceo necesita al menos dos personas.",
     "buddyErrorGeneric": "No se guardó. Inténtalo de nuevo.",
-    "boardedCheck": "Embarcado ✓",
+    "boardedCheck": "Embarcado ☑️",
     "markBoarded": "Marcar embarcado",
     "undoing": "Deshaciendo…",
     "boarding": "Embarcando…",
-    "notBoardedCheck": "No embarcado ✓",
+    "notBoardedCheck": "No embarcado ☑️",
     "markNotBoarded": "Marcar no embarcado",
     "notBackAboardActive": "Sin regresar a bordo",
     "markNotBackAboard": "Marcar sin regresar a bordo",
     "notBackAboardDescription": "Tras una inmersión, “sin regresar a bordo” significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
     "saving": "Guardando…",
-    "tapToUndo": "Toca de nuevo el estado ✓ para deshacer.",
+    "tapToUndo": "Toca de nuevo el estado ☑️ para deshacer.",
     "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer."
   },
   "offlineManifestManager": {

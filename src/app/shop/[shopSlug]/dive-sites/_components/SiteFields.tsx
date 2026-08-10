@@ -3,7 +3,9 @@ import type { DiveSpecialty } from "@/db/schema";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
+import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
+import { RouteEditor, type RouteEditorCopy } from "./RouteEditor";
 
 /**
  * The subset of a stored dive site the form needs to prefill. `undefined`
@@ -18,6 +20,10 @@ export type SiteFieldValues = {
   description: string | null;
   satelliteImageUrl: string | null;
   routeImageUrl: string | null;
+  routePoints: RoutePoint[];
+  routeLabel: string | null;
+  routeNote: string | null;
+  routeZoom: number;
   imageUrls: string[];
   marineLife: string | null;
   marineLifeDescription: string | null;
@@ -46,6 +52,7 @@ export function SiteFields({
   values,
   certificationDescription,
   requiredSpecialtiesLabel,
+  routeCopy,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -56,6 +63,8 @@ export function SiteFields({
   certificationDescription: string;
   /** Edit-only heading above the specialty checkboxes; the new form has none. */
   requiredSpecialtiesLabel?: string;
+  /** Every word the route editor renders, resolved here (it is a Client Component). */
+  routeCopy: RouteEditorCopy;
 }) {
   return (
     <>
@@ -99,6 +108,18 @@ export function SiteFields({
           </Field>
         </FieldGrid>
       </fieldset>
+      {/* Directly under the coordinates it depends on: the route is drawn as
+          percentages of the frame those two fields centre, and the editor
+          watches them as they are typed. */}
+      <RouteEditor
+        initialPoints={values?.routePoints ?? []}
+        initialLabel={values?.routeLabel ?? ""}
+        initialNote={values?.routeNote ?? ""}
+        initialZoom={values?.routeZoom ?? DEFAULT_ROUTE_ZOOM}
+        latitude={values?.forecastLatitude ?? null}
+        longitude={values?.forecastLongitude ?? null}
+        copy={routeCopy}
+      />
       <FieldGrid columns={1} className="gap-y-5">
         <Field label={t("diveSites.form.locationLabel")} hint={t("diveSites.form.optionalHint")}>
           <input

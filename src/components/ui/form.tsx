@@ -279,9 +279,9 @@ const STATUS_TONE: Record<NoticeTone, string> = {
  * hue is a tone a colourblind scan misses before it reaches the words.
  */
 const STATUS_GLYPH: Record<NoticeTone, string | null> = {
-  success: "✓",
-  danger: "✕",
-  warning: "▲",
+  success: "✅",
+  danger: "❌",
+  warning: "⚠️",
   neutral: null,
 };
 

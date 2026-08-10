@@ -137,7 +137,13 @@ export function FirstRunChecklist({
           doneLabel={copy.contactDone}
           doneBadge={copy.doneBadge}
           action={
-            <Link href={`/shop/${shopSlug}/settings`} className={buttonClass({ size: "sm" })}>
+            // Straight to the open contact row — the settings hub keeps its
+            // forms behind summary rows, and a link that promises a form must
+            // land on it open.
+            <Link
+              href={`/shop/${shopSlug}/settings#contact`}
+              className={buttonClass({ size: "sm" })}
+            >
               {copy.contactAction}
             </Link>
           }

@@ -140,6 +140,9 @@ test.describe("staff", () => {
     const tripId = manageHref?.split("/").at(-1);
     await manageLink.click();
 
+    // The conditions form waits behind the section's disclosure (summary-first
+    // Overview); no prediction is published yet, so the toggle reads "Publish".
+    await page.getByText("Write a crew prediction", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
@@ -184,6 +187,8 @@ test.describe("staff", () => {
       .getByRole("link", { name: title, exact: true })
       .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
+    // The details form waits behind its Edit disclosure (summary-first Overview).
+    await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -193,11 +198,11 @@ test.describe("staff", () => {
     // Cancel: gone from public schedule; reinstate: back.
     await page.getByRole("button", { name: "Cancel trip" }).click();
     // The danger-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "✕ Cancelled" —
+    // (Badge.tsx toneGlyph), so the element's own text is "❌Cancelled" —
     // matching the bare word would also hit the "Trip cancelled — it's off
     // the public schedule." alert on the same page (getByText is
     // case-insensitive substring by default).
-    await expect(page.getByText("✕ Cancelled")).toBeVisible();
+    await expect(page.getByText("❌Cancelled")).toBeVisible();
     await page.goto("/shop/blue-mantis/schedule/board");
     await expect(
       page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),

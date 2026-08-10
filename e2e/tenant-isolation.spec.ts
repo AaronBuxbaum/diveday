@@ -81,7 +81,9 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
   // Staff chrome does render — for their *own* shop. Without this the 404s
   // below could just as well mean "this account is not staff anywhere".
-  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  // Scoped to the header: the primary destinations render twice in the DOM
+  // (header strip and the phone dock), one visible per breakpoint.
+  await expect(page.locator("header").getByRole("navigation", { name: "Primary" })).toBeVisible();
 
   // The public schedule stays public, for this signed-in outsider as much as
   // for an anonymous visitor. Since the namespace split (ADR

@@ -76,6 +76,8 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
     const manageTripUrl = page.url();
 
+    // The conditions form waits behind its disclosure (summary-first Overview).
+    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
@@ -107,8 +109,12 @@ test.describe("staff", () => {
 
     await signInAsOwner(page);
     await page.goto(manageTripUrl);
+    // Published, so the disclosure reads "Edit"; the clear control sits inside.
+    await page.getByText("Edit crew prediction", { exact: true }).click();
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
+    // The clear's own notice forces the disclosure open on the redirected
+    // render — no click needed (and one would close it again).
     await expect(page.getByLabel("Water temp °C")).toHaveValue("");
     await expect(page.getByLabel("Visibility m")).toHaveValue("");
 
@@ -215,6 +221,88 @@ test.describe("staff", () => {
     const card = page.getByRole("list", { name: "Saved dive sites" }).locator("li");
     await expect(card).toHaveCount(1);
     await expect(card.getByText("Location to add")).toBeVisible();
+  });
+
+  test("a shop draws the route it swims, and a diver reads it on the briefing", async ({
+    page,
+  }) => {
+    // The whole point of the feature (ADR 20260809-shop-drawn-dive-routes): a
+    // route used to be hand-authored SVG keyed by site name, so only DiveDay's
+    // three demo sites could have one. This walks a shop's own site from no
+    // route to a drawn one.
+    test.setTimeout(30_000);
+    const siteName = `Drawn Ledge ${e2eNow().getTime()}`;
+    const tripTitle = `Drawn Ledge charter ${e2eNow().getTime()}`;
+
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(siteName);
+    // No coordinates yet: there is no frame to draw on, and the editor says so
+    // rather than showing a map centred on a guess.
+    await expect(page.getByText(/Fill in the forecast latitude and longitude/)).toBeVisible();
+
+    await page.getByLabel("Latitude").fill("25.101");
+    await page.getByLabel("Longitude").fill("-80.404");
+    // Typing the pair is enough — the frame follows the boxes, so a brand-new
+    // site is drawable without a save-and-come-back round trip.
+    const map = page.getByRole("button", {
+      name: "Satellite view — click to add a route waypoint",
+    });
+    await expect(map).toBeVisible();
+    await expect(page.getByText("Click where the dive starts.")).toBeVisible();
+
+    await map.click({ position: { x: 60, y: 200 } });
+    await expect(page.getByText(/One waypoint down/)).toBeVisible();
+    await map.click({ position: { x: 200, y: 90 } });
+    await map.click({ position: { x: 340, y: 210 } });
+    await expect(
+      page.getByText("3 waypoints. Click to add another, or Undo to take one back."),
+    ).toBeVisible();
+
+    // Undo takes back exactly the last point, which is the control staff reach
+    // for most while drawing.
+    await page.getByRole("button", { name: "Undo point" }).click();
+    await expect(page.getByText(/^2 waypoints/)).toBeVisible();
+    await map.click({ position: { x: 340, y: 210 } });
+
+    await page.getByLabel("What the route is called").fill("Ledge and back");
+    await page
+      .getByLabel("One line about the route")
+      .fill("Out along the ledge, home over the sand.");
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
+
+    // Saved, and read back on the form: the route survives the round trip
+    // rather than being a drawing that only existed in the browser.
+    await expect(page.getByLabel("What the route is called")).toHaveValue("Ledge and back");
+    await expect(page.getByText(/^3 waypoints/)).toBeVisible();
+
+    // And it reaches the diver, which is the only reason to draw it.
+    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.getByLabel("What is it").fill(tripTitle);
+    // By name, like the flow above: the collapsed quick row keeps its own
+    // "Dive site" select mounted, so a label match finds the wrong one.
+    await page.locator('select[name="dive-1-siteId"]').selectOption({ label: siteName });
+    await page.getByLabel("Date").fill(daysFromNow(5));
+    await page.getByLabel("Departs").fill("09:00");
+    await page.getByLabel("Returns").fill("12:00");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
+
+    // Reach the diver's page by the trip's own id, taken off the board — the
+    // public schedule pages a busy seeded board by month, so a departure five
+    // days out is not reliably on its first screen.
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await page
+      .locator("li")
+      .filter({ hasText: tripTitle })
+      .getByRole("link", { name: tripTitle, exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
+    const tripId = page.url().split("/").pop();
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    await expect(page.getByText("Ledge and back")).toBeVisible();
+    await expect(page.getByText("Out along the ledge, home over the sand.")).toBeVisible();
+    await expect(page.getByTitle(`Satellite map of ${siteName}`)).toBeVisible();
   });
 
   test("a half-entered forecast point is named as the reason, and nothing typed is lost", async ({
@@ -391,9 +479,8 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
 }) => {
   // The per-test fixture reset already restored the seeded briefing; read it
   // straight off the public schedule as a diver. Scoped to the trip-list
-  // item rather than a bare role query: this trip is also the schedule's
-  // soonest departure with room, so its title appears a second time in the
-  // "Next boat out" quick-link card above the list.
+  // item so the locator can never drift onto another surface that happens to
+  // carry the trip's title (reviews quote trip names too).
   await page.goto("/s/blue-mantis");
   await page
     .locator("li")

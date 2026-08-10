@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openSettingsRow } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -28,6 +29,7 @@ const SHOP = DEMO_SHOP_SLUG;
  */
 async function setCurrency(page: Page, code: string) {
   await page.goto(`/shop/${SHOP}/settings`);
+  await openSettingsRow(page, "Units");
   await page.getByLabel("Charge and display in", { exact: true }).selectOption(code);
   // Currency shares the "Units" card and its one save button with the depth and
   // water-temperature units — the two selects beside it post their rendered
@@ -63,8 +65,10 @@ test.describe("shop currency", () => {
   test("money follows the shop's currency instead of assuming dollars", async ({ page }) => {
     await setCurrency(page, "eur");
     try {
-      // Staff price entry first — we're already on settings, so this is free.
-      // The box is prefixed with the shop's own symbol, not a literal `$`.
+      // Staff price entry first — we're already on settings; the price boxes
+      // wait behind the "Rental prices" row. The box is prefixed with the
+      // shop's own symbol, not a literal `$`.
+      await openSettingsRow(page, "Rental prices");
       await expect(page.getByText("€", { exact: true }).first()).toBeVisible();
       await expect(page.getByText("$", { exact: true })).toHaveCount(0);
 
@@ -94,7 +98,9 @@ test.describe("shop currency", () => {
 
       await setCurrency(page, "jpy");
       // Whole-number entry: a ¥1,234.56 price does not exist, so the price box
-      // must not invite one. Free — setCurrency left us on settings.
+      // must not invite one. setCurrency left us on settings; the box waits
+      // behind the "Rental prices" row.
+      await openSettingsRow(page, "Rental prices");
       await expect(page.getByLabel(/Full set/).first()).toHaveAttribute("step", "1");
 
       expect(await reportedRevenueDigits(page, "¥")).toBe(euros * 100);
@@ -115,6 +121,7 @@ test.describe("shop currency", () => {
     // typed here would outlive the test and change what `rentals.spec.ts`
     // sees on the booking confirmation — which is exactly what it did.
     await page.goto(`/shop/${SHOP}/settings`);
+    await openSettingsRow(page, "Rental prices");
     const seeded = await page
       .getByLabel(/Full set/)
       .first()
@@ -123,6 +130,7 @@ test.describe("shop currency", () => {
 
     await setCurrency(page, "eur");
     try {
+      await openSettingsRow(page, "Rental prices");
       await expect(page.getByLabel(/Full set/).first()).toHaveValue(seeded);
     } finally {
       await setCurrency(page, "usd");

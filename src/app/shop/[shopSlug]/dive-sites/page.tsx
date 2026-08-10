@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 import { getDb } from "@/db/client";
 import {
   currentGlobalDiveSiteVersions,
@@ -173,42 +174,42 @@ export default async function DiveSitesPage({
         learned the box exists. Hidden only when the library is empty, where
         the empty state has the single thing to do. */}
       {stats.total > 0 ? (
-        <FieldGrid
-          as="form"
+        <QueryForm
           aria-label={t("diveSites.list.searchAriaLabel")}
-          columns={2}
           className="mb-6 rounded-lg border border-border bg-surface p-4"
         >
-          <Field label={t("diveSites.list.searchLabel")}>
-            <input
-              type="search"
-              name="q"
-              defaultValue={query}
-              placeholder={t("diveSites.list.searchPlaceholder")}
-              maxLength={120}
-              className={controlClass}
-            />
-          </Field>
-          <FieldActions>
-            {/* Secondary: the page's one primary is the header's create
+          <FieldGrid columns={2}>
+            <Field label={t("diveSites.list.searchLabel")}>
+              <input
+                type="search"
+                name="q"
+                defaultValue={query}
+                placeholder={t("diveSites.list.searchPlaceholder")}
+                maxLength={120}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              {/* Secondary: the page's one primary is the header's create
                 action (principle 8). */}
-            <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-              {t("diveSites.list.searchApply")}
-            </button>
-            {query ? (
-              <Link
-                href={`/shop/${shopSlug}/dive-sites`}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "text-foreground",
-                })}
-              >
-                {t("diveSites.list.searchClear")}
-              </Link>
-            ) : null}
-          </FieldActions>
-        </FieldGrid>
+              <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                {t("diveSites.list.searchApply")}
+              </button>
+              {query ? (
+                <Link
+                  href={`/shop/${shopSlug}/dive-sites`}
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "sm",
+                    className: "text-foreground",
+                  })}
+                >
+                  {t("diveSites.list.searchClear")}
+                </Link>
+              ) : null}
+            </FieldActions>
+          </FieldGrid>
+        </QueryForm>
       ) : null}
 
       {sites.length === 0 ? (

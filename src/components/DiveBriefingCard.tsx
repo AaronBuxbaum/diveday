@@ -2,11 +2,10 @@ import Image from "next/image";
 import type { diveSites } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { siteFit } from "@/lib/diver-planning";
 import { DiveSiteFieldGuide } from "./DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "./DiveSiteLandmarks";
-import { DiveSiteMap } from "./DiveSiteMap";
+import { canDrawRoute, DiveSiteMap } from "./DiveSiteMap";
 
 /**
  * `siteFit` returns a tone, not prose (src/lib/diver-planning.ts) — these two
@@ -75,8 +74,8 @@ export function DiveBriefingCard({
 
   return (
     <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
-      {site && getSeedDiveSiteMap(site.name) ? (
-        <DiveSiteMap siteName={site.name} t={t} />
+      {site && canDrawRoute(site) ? (
+        <DiveSiteMap site={site} t={t} />
       ) : site?.satelliteImageUrl ? (
         <div className="relative h-56 w-full">
           {/* First-party blob/bundled URL only — ingested server-side at save time

@@ -308,7 +308,8 @@
       "lastMinuteFill": "Llenar plazas",
       "emergencyContact": "Contacto",
       "stuckPaymentOperation": "Stripe",
-      "failedPhotoDeletion": "Limpieza"
+      "failedPhotoDeletion": "Limpieza",
+      "reviewsPending": "Reseñas"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -406,7 +407,8 @@
       "resendWaiverLink": "Reenviar enlace de exención",
       "resendConfirmation": "Reenviar confirmación",
       "openOrders": "Revisar en Pedidos",
-      "openDataSettings": "Revisar en Ajustes"
+      "openDataSettings": "Revisar en Ajustes",
+      "openReviews": "Ver reseñas"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
@@ -418,7 +420,7 @@
       "morning": "Buenos días, {name}",
       "afternoon": "Buenas tardes, {name}",
       "evening": "Buenas noches, {name}",
-      "night": "Buenas noches, {name}"
+      "night": "Trabajando hasta tarde, {name}"
     },
     "seasonalBriefing": {
       "summer": "Aprovecha el intervalo de superficie — busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
@@ -443,6 +445,10 @@
         "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
       },
       "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}."
+    },
+    "reviewsPending": {
+      "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
+      "detail": "Los buceadores escribieron sobre sus salidas — publica las buenas palabras u oculta el resto con discreción."
     }
   },
   "tripDiveFields": {
@@ -515,7 +521,7 @@
       "statsDivers": "Buceadores",
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
-      "rollCallCompleteHeading": "Pase de lista completo ✦",
+      "rollCallCompleteHeading": "Pase de lista completo 🎉",
       "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
       "allAboard": "Todos tienen un resultado — todos a bordo.",
       "someNotBoarded": "Todos tienen un resultado — {count} marcados como no embarcados. Confirma que están localizados antes de continuar.",
@@ -539,9 +545,9 @@
       "notePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…",
       "noteHint": "La nota viaja con este registro de pase de lista.",
       "saving": "Guardando…",
-      "boardedDone": "Embarcado ✓",
+      "boardedDone": "Embarcado ☑️",
       "markBoarded": "Marcar embarcado",
-      "notBoardedDone": "No embarcado ✓",
+      "notBoardedDone": "No embarcado ☑️",
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",

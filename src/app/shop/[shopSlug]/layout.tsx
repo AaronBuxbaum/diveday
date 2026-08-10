@@ -9,7 +9,6 @@ import { SkipLink } from "@/components/SkipLink";
 import { countBlockedDivers } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { countReviewsAwaitingModeration } from "@/db/reviews";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
@@ -151,20 +150,20 @@ export default async function ShopLayout({
   if (session?.user && !shop) notFound();
 
   const showNav = ownShop;
-  // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
-  // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
-  // already run on every visit, gated the same way the nav itself is so a
-  // signed-out or embedded render never pays for them.
-  // The boat-boarding link rides along: it doesn't depend on the counts, so
-  // the three resolve together instead of serially.
-  const [navReviewsCount, navBlockersCount, boatBoardingHref] =
+  // The blocked-diver count for Today's nav badge (task 83) — a query the
+  // shop's own pages already run on every visit, gated the same way the nav
+  // itself is so a signed-out or embedded render never pays for it. (The old
+  // Reviews badge moved onto Today's queue as a `reviews_pending` row — a
+  // queue's signal belongs on the page that ranks work, not on a nav row.)
+  // The boat-boarding link rides along: it doesn't depend on the count, so
+  // the two resolve together instead of serially.
+  const [navBlockersCount, boatBoardingHref] =
     showNav && session?.user && shop
       ? await Promise.all([
-          countReviewsAwaitingModeration(db, shop.id),
           countBlockedDivers(db, shop.id, nowDate()),
           todayBoatHref(db, shop.id, shop.timezone, shopSlug),
         ])
-      : [0, 0, undefined];
+      : [0, undefined];
 
   return (
     <>
@@ -222,7 +221,7 @@ export default async function ShopLayout({
             team: canManageStaffAccounts(session.user.roles),
             settings: canManageShopSettings(session.user.roles),
           }}
-          navCounts={{ reviews: navReviewsCount, blockers: navBlockersCount }}
+          navCounts={{ blockers: navBlockersCount }}
           locale={locale}
         />
       ) : null}
@@ -233,7 +232,17 @@ export default async function ShopLayout({
           saving their own shop's roster while the visible page is this one. */}
       {ownShop && session?.user && isStaff(session.user.roles) ? <OfflineManifestAutoSave /> : null}
       <PreserveFormScroll />
-      <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+      {/* Below `lg` the phone dock (StaffTabBar) owns the bottom edge, so the
+          content wrapper both publishes the clearance it demands and pads
+          itself by it — pages never end underneath the dock, and any fixed
+          element that shares the bottom edge (UndoToast) adds the same
+          `--dock-clearance` to its own offset. One variable, one owner: from
+          `lg` up it collapses to zero and everything sits where it always did. */}
+      <div
+        id="shop-main-content"
+        tabIndex={-1}
+        className="flex-1 outline-none [--dock-clearance:4.5rem] pb-(--dock-clearance) lg:[--dock-clearance:0rem]"
+      >
         {children}
       </div>
     </>

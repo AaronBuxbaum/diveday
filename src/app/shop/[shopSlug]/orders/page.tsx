@@ -9,6 +9,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
@@ -228,16 +229,30 @@ export default async function OrdersIndexPage({
         title={t("orders.index.title")}
         description={t("orders.index.description")}
         actions={
-          // While the unfiltered list is empty, the empty state below holds
-          // this same door — two identical primaries for one action is triage
-          // work the layout should do (principle 8), so the header stands down.
-          rows.length === 0 && !hasFilters ? undefined : paymentsConnected ? (
-            <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-              {t("orders.index.newOrder")}
-            </Link>
-          ) : (
-            <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
-          )
+          <>
+            {/* The monthly report is this page's money, summed — its door
+                lives here now that Reports left the header nav (it keeps its
+                palette row and gate). */}
+            {canReconcilePayments ? (
+              <Link
+                href={`/shop/${shopSlug}/reports`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("orders.index.monthlyReport")}
+              </Link>
+            ) : null}
+            {/* While the unfiltered list is empty, the empty state below holds
+                this same door — two identical primaries for one action is
+                triage work the layout should do (principle 8), so the header
+                stands down. */}
+            {rows.length === 0 && !hasFilters ? null : paymentsConnected ? (
+              <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+                {t("orders.index.newOrder")}
+              </Link>
+            ) : (
+              <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
+            )}
+          </>
         }
       />
 
@@ -286,62 +301,68 @@ export default async function OrdersIndexPage({
         </section>
       ) : null}
 
-      <FieldGrid as="form" columns={4} className="rounded-lg border border-border bg-surface p-4">
-        <Field label={t("orders.index.filters.statusLabel")}>
-          <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>
-            <option value="">{t("orders.index.filters.statusAll")}</option>
-            {orderStatus.enumValues.map((value) => (
-              <option key={value} value={value}>
-                {STATUS_KEYS[value] ? t(STATUS_KEYS[value]) : value}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("orders.index.filters.diverLabel")}>
-          {/* Pinned by a `?personId=` link (roster, diver record). The name is
+      {/* `QueryForm`, not the native GET submit this used to be: applying a
+          filter tore the document down and landed the staffer back at the top
+          of the page, above the row they were reading. Same URL, same server
+          render (see `src/components/ui/QueryForm.tsx`). */}
+      <QueryForm className="rounded-lg border border-border bg-surface p-4">
+        <FieldGrid columns={4}>
+          <Field label={t("orders.index.filters.statusLabel")}>
+            <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>
+              <option value="">{t("orders.index.filters.statusAll")}</option>
+              {orderStatus.enumValues.map((value) => (
+                <option key={value} value={value}>
+                  {STATUS_KEYS[value] ? t(STATUS_KEYS[value]) : value}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("orders.index.filters.diverLabel")}>
+            {/* Pinned by a `?personId=` link (roster, diver record). The name is
               shown but not editable, because `personId` wins over a typed one
               — and the id rides along as a hidden field so applying a status or
               a date does not silently throw the staffer back to every diver,
               which is what this form's missing `personId` used to do. */}
-          <input
-            type="text"
-            name={personId ? undefined : "personQuery"}
-            defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
-            placeholder={t("orders.index.filters.diverPlaceholder")}
-            maxLength={120}
-            readOnly={Boolean(personId)}
-            disabled={Boolean(personId)}
-            className={controlClass}
-          />
-        </Field>
-        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
-        {showAll ? <input type="hidden" name="range" value="all" /> : null}
-        <Field label={t("orders.index.filters.fromLabel")}>
-          <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
-        </Field>
-        <Field label={t("orders.index.filters.toLabel")}>
-          <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
-        </Field>
-        <FieldActions>
-          {/* Secondary weight: a filter form is never the page's one obvious
+            <input
+              type="text"
+              name={personId ? undefined : "personQuery"}
+              defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
+              placeholder={t("orders.index.filters.diverPlaceholder")}
+              maxLength={120}
+              readOnly={Boolean(personId)}
+              disabled={Boolean(personId)}
+              className={controlClass}
+            />
+          </Field>
+          {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {showAll ? <input type="hidden" name="range" value="all" /> : null}
+          <Field label={t("orders.index.filters.fromLabel")}>
+            <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
+          </Field>
+          <Field label={t("orders.index.filters.toLabel")}>
+            <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
+          </Field>
+          <FieldActions>
+            {/* Secondary weight: a filter form is never the page's one obvious
               action — that stays with the header's New order (principle 8). */}
-          <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-            {t("orders.index.filters.apply")}
-          </button>
-          {hasFilters ? (
-            <Link
-              href={`/shop/${shopSlug}/orders`}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "text-foreground",
-              })}
-            >
-              {t("orders.index.filters.clear")}
-            </Link>
-          ) : null}
-        </FieldActions>
-      </FieldGrid>
+            <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
+              {t("orders.index.filters.apply")}
+            </button>
+            {hasFilters ? (
+              <Link
+                href={`/shop/${shopSlug}/orders`}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "text-foreground",
+                })}
+              >
+                {t("orders.index.filters.clear")}
+              </Link>
+            ) : null}
+          </FieldActions>
+        </FieldGrid>
+      </QueryForm>
 
       {personId && filteredPersonName ? (
         <p className="mt-4 text-sm text-muted">
