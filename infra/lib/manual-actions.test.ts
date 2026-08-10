@@ -142,15 +142,17 @@ describe("the synthesized stack", () => {
     expect(parameter.MinValue).toBe(1);
   });
 
-  it("denies the read-only MCP identities any secret value", () => {
+  it("denies the read-only MCP identities and the GitHub Actions CI roles any secret value", () => {
     const { template } = synthesize();
     const denials = policyStatements(template).filter(
       (statement) =>
         statement.includes('"Deny"') && statement.includes("secretsmanager:GetSecretValue"),
     );
-    // One per read-only user. ReadOnlyAccess is AWS's to change; the Deny is
-    // what makes "this credential cannot reach key material" true regardless.
-    expect(denials).toHaveLength(2);
+    // One per read-only MCP user (ReadOnlyAccess is AWS's to change) plus one
+    // per GitHub Actions CI role (§18) -- the deploy role's actual resource
+    // writes run under the bootstrap deploy-role's own permissions, not this
+    // one's, so the Deny is what bounds what the CI caller can do directly.
+    expect(denials).toHaveLength(4);
   });
 
   it("grants nothing read access to the credentials secret", () => {
