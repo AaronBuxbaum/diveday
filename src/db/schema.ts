@@ -362,9 +362,22 @@ export const tripSeries = pgTable(
      * has no total, and staff are shown this count as "N dates on the board".
      */
     occurrenceCount: integer("occurrence_count").notNull(),
+    /**
+     * When the nightly horizon pass last considered this run — null until it
+     * has. It is the sweep's queue order, not a statistic: least-recently-rolled
+     * first makes the pass a round robin, so one shop with a great many runs
+     * delays another shop's by a night instead of starving it forever
+     * (`rollAllSeriesForward`). Written on every attempt, including a failed one.
+     */
+    lastRolledAt: timestamp("last_rolled_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("trip_series_shop_idx").on(table.shopId)],
+  (table) => [
+    index("trip_series_shop_idx").on(table.shopId),
+    // The sweep's own ordering. Without it the nightly pass sorts every
+    // still-running series in the deployment on each tick.
+    index("trip_series_roll_queue_idx").on(table.lastRolledAt),
+  ],
 );
 
 /**

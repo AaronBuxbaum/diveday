@@ -25,12 +25,14 @@ import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
+  cancelOffCadenceSeriesTrips,
   changeTripCrew,
   getTripWithBooked,
   listTripDiverContacts,
   setSeriesRepeat,
   setTripStatus,
   type TripCrewChange,
+  updateSeriesCadence,
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
@@ -38,6 +40,7 @@ import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
 import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
@@ -48,6 +51,12 @@ import { notify, publicAppUrl } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import {
+  isValidWeekdaySet,
+  MAX_INTERVAL_WEEKS,
+  MIN_INTERVAL_WEEKS,
+  weekdaySetFrom,
+} from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import {
   maxEnteredTemperature,
@@ -407,6 +416,72 @@ export async function setSeriesRepeatAction(
   const keepRepeating = formData.get("keepRepeating") === "yes";
   const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
   const notice = !result ? "series-error" : keepRepeating ? "series-repeating" : "series-stopped";
+  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+}
+
+const cadenceSchema = z.object({
+  repeatIntervalWeeks: z.coerce.number().int().min(MIN_INTERVAL_WEEKS).max(MAX_INTERVAL_WEEKS),
+  // Blank is the answer, not a missing one: it means the run keeps going.
+  repeatEndsOn: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.string().refine(isValidCalendarDate).optional(),
+  ),
+});
+
+/**
+ * Change a running series' cadence — which weekdays, how many weeks apart, and
+ * when it ends.
+ *
+ * Widening (a weekday added, the end date pushed out) fills the horizon in the
+ * same call. Narrowing cancels **nothing**: the dates that no longer fit are
+ * counted and reported, and taking them off the board is a separate tap
+ * (`cancelOffCadenceSeriesAction`). Those are real departures with real divers,
+ * and a cadence edit that silently emptied a fortnight of the schedule is the
+ * one outcome this whole two-step exists to prevent.
+ */
+export async function updateSeriesCadenceAction(
+  shopSlug: string,
+  tripId: string,
+  seriesId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireTripConfig(shopSlug, tripId);
+  const parsed = cadenceSchema.safeParse(Object.fromEntries(formData));
+  // The weekday chips repeat one field name, which `Object.fromEntries`
+  // collapses to the last of them — read off the form itself, as the board's
+  // add panel does.
+  const weekdays = weekdaySetFrom(formData.getAll("repeatWeekday").map((value) => Number(value)));
+  if (!parsed.success || !isValidWeekdaySet(weekdays)) {
+    redirect(`${back}?notice=series-error`);
+  }
+  const result = await updateSeriesCadence(await getDb(), s.user.shopId, seriesId, {
+    intervalWeeks: parsed.data.repeatIntervalWeeks,
+    weekdays,
+    endsOn: parsed.data.repeatEndsOn ?? null,
+  });
+  const notice = !result
+    ? "series-error"
+    : result.offCadence > 0
+      ? "series-cadence-narrowed"
+      : "series-cadence-saved";
+  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+}
+
+/**
+ * The second half of narrowing: take the upcoming dates the new cadence no
+ * longer fires on off the public schedule. Cancels, never deletes, so each one
+ * is reinstatable from its own trip page.
+ */
+export async function cancelOffCadenceSeriesAction(
+  shopSlug: string,
+  tripId: string,
+  seriesId: string,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireTripConfig(shopSlug, tripId);
+  const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
   revalidateAndRedirect(back, `${back}?notice=${notice}`);
 }
 

@@ -92,6 +92,11 @@ export async function GET(request: Request) {
       seriesExtended: summary.seriesExtended,
       tripsCreated: summary.tripsCreated,
       seriesFailed: summary.failures,
+      // Never silently capped: a pass that hit `SERIES_SWEEP_LIMIT` says how
+      // many runs it left for tomorrow, so a deployment that has outgrown one
+      // nightly pass is visible in the log rather than as boards that advance
+      // more slowly than they should.
+      seriesDeferred: summary.deferred,
     });
 
     Sentry.captureCheckIn({

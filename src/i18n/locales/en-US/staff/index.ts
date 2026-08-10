@@ -7,6 +7,17 @@
 // namespace is a new <namespace>.json here plus one import line; new keys in
 // an existing area touch only that area's file.
 //
+// **A namespace can also get too big to type.** next-intl derives the key union
+// from the bundle's own shape, and past a certain size TypeScript stops
+// resolving new keys in it — not with an error naming the cause, but by
+// rejecting a key that is demonstrably in the JSON, at some call sites and not
+// others. `trips` hit that at ~560 keys: keys added to it typechecked in a
+// fresh file and failed inside `trips/[id]/_components/`. Splitting the series
+// copy out into `tripSeries.json` fixed it with no other change. So the
+// per-area rule above is not only about merge conflicts — if a `t()` call
+// rejects a key you can see in the file, the namespace is full, and the fix is
+// a new one rather than a cast.
+//
 // pnpm check:locale proves the file sets match across locales and that every
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
@@ -33,6 +44,7 @@ import settings from "./settings.json";
 import shared from "./shared.json";
 import shopHome from "./shopHome.json";
 import staffing from "./staffing.json";
+import tripSeries from "./tripSeries.json";
 import trips from "./trips.json";
 import waiversStaff from "./waiversStaff.json";
 import whatsapp from "./whatsapp.json";
@@ -51,6 +63,7 @@ const staff = {
   reviews,
   schedule,
   trips,
+  tripSeries,
   settings,
   blockers,
   checkIn,

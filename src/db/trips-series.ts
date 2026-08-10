@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -11,6 +11,7 @@ import { maxRecordedDiveNumber } from "@/lib/manifests";
 import {
   isValidWeeklyPattern,
   SERIES_HORIZON_DAYS,
+  seriesFiresOn,
   seriesOccurrenceDates,
   type TripRecurrenceFrequency,
   type WeekdaySet,
@@ -210,7 +211,14 @@ async function materializeWindow(
     tx
       .select({ date: tripSeriesSkips.occurrenceDate })
       .from(tripSeriesSkips)
-      .where(eq(tripSeriesSkips.seriesId, series.id)),
+      // Shop-scoped as well as series-scoped. A series id is globally unique,
+      // so this is belt and braces today — but the house rule is that the query
+      // carries the shop condition rather than trusting that every writer got
+      // the pairing right, and a skip that silently applied across tenants
+      // would take a departure off a board nobody could explain.
+      .where(
+        and(eq(tripSeriesSkips.seriesId, series.id), eq(tripSeriesSkips.shopId, series.shopId)),
+      ),
   ]);
   const spokenFor = new Set<string>();
   for (const row of taken) if (row.date) spokenFor.add(row.date);
@@ -407,7 +415,24 @@ export async function rollSeriesForward(
       .from(tripSeries)
       .innerJoin(shops, eq(shops.id, tripSeries.shopId))
       .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)))
-      .limit(1);
+      .limit(1)
+      // The series row is the lock every roll of this series queues behind, and
+      // it is load-bearing rather than defensive. `materializeWindow` decides
+      // what to create by *reading* the instance set and then inserting, so
+      // under READ COMMITTED two overlapping passes both read the same empty
+      // slots and both fill them — a whole horizon of duplicate departures, on
+      // the public schedule, each separately bookable. That is not a
+      // hypothetical pairing: the nightly cron fires at 03:15 UTC while staff
+      // can be pressing "Start repeating" or saving a cadence, and both land
+      // here. `FOR UPDATE` on this one row serializes them; the second pass
+      // then reads the first's rows and finds every slot spoken for, which is
+      // exactly the no-op its idempotency already promises.
+      //
+      // The lock is taken on the *series*, not the trips, because the trips
+      // whose absence is being read do not exist yet — there is no row to lock.
+      // `createTripSeries` needs no such line: it inserted this row inside its
+      // own transaction, so it already holds the lock.
+      .for("update");
     if (!row) return null;
     const today = calendarDateInTimezone(now, row.timeZone);
     const created = await materializeWindow(tx, {
@@ -426,7 +451,21 @@ export type SeriesSweepResult = {
   seriesExtended: number;
   tripsCreated: number;
   failures: number;
+  /** Runs that were due but did not fit in this pass — zero on a healthy night. */
+  deferred: number;
 };
+
+/**
+ * How many runs one nightly pass will roll.
+ *
+ * A bound, and a deliberately generous one: a roll that finds nothing to do is
+ * two small queries, and only the few series crossing the horizon on any given
+ * night write anything at all. What the cap actually buys is that no single
+ * shop's schedule can push another shop's off the end of a 60-second function
+ * — see `SERIES_SWEEP_ORDER` for why "off the end" would otherwise be
+ * permanent rather than a one-night delay.
+ */
+export const SERIES_SWEEP_LIMIT = 500;
 
 /**
  * Roll every still-running series in every shop forward — the nightly pass
@@ -438,6 +477,18 @@ export type SeriesSweepResult = {
  * UTC one, so a shop up to a day either side of the line is still considered
  * and `materializeWindow` makes the exact call in the shop's own zone.
  *
+ * **Least-recently-rolled first, and bounded.** Ordering by creation date —
+ * what this did first — would put every series created after a burst behind
+ * that burst *every night*: one shop with a thousand runs would permanently
+ * starve a shop that started later, and the starved shop sees only its board
+ * quietly failing to advance four months out. Ordering by `last_rolled_at`
+ * (never-rolled first) makes the queue a round robin, so a pass that hits the
+ * cap defers work by one night rather than forever. The stamp is written on
+ * every attempt, success or failure, for exactly that reason.
+ *
+ * A run left over is *reported*, never silently dropped: `deferred` is the
+ * count the cron logs.
+ *
  * One transaction per series, so a series whose course was archived (or whose
  * instances were all deleted) is reported as a failure and the rest still roll.
  */
@@ -446,20 +497,48 @@ export async function rollAllSeriesForward(
   now: Date = nowDate(),
 ): Promise<SeriesSweepResult> {
   const cutoff = calendarDateInTimezone(shiftDaysUtc(now, -1), "UTC");
+  // A run whose cadence cannot generate is not a candidate. The only way to
+  // hold one is the deploy window this feature's migration describes: the
+  // release *before* the cadence columns existed inserts a `trip_series` row
+  // naming neither, so it lands on their inert defaults. Left in the sweep it
+  // would fail every night forever — a permanently red monitor for a row that
+  // was never going to generate a date — and staff can repair it from the trip
+  // page's cadence editor whenever they notice.
+  const runnable = and(
+    gt(tripSeries.weekdayMask, 0),
+    ne(tripSeries.anchorDate, ""),
+    or(isNull(tripSeries.endsOn), gte(tripSeries.endsOn, cutoff)),
+  );
   const candidates = await db
     .select({ id: tripSeries.id, shopId: tripSeries.shopId })
     .from(tripSeries)
-    .where(or(isNull(tripSeries.endsOn), gte(tripSeries.endsOn, cutoff)))
-    .orderBy(asc(tripSeries.createdAt), asc(tripSeries.id));
+    .where(runnable)
+    // `nulls first` written into the ordering itself: Drizzle's `asc()` appends
+    // its own keyword, which would put the null clause in front of it and make
+    // the SQL unparseable. A never-rolled run has to sort first — it is the one
+    // most in need of a pass.
+    .orderBy(sql`${tripSeries.lastRolledAt} asc nulls first`, asc(tripSeries.id))
+    .limit(SERIES_SWEEP_LIMIT + 1);
 
+  const batch = candidates.slice(0, SERIES_SWEEP_LIMIT);
   const summary: SeriesSweepResult = {
-    seriesConsidered: candidates.length,
+    seriesConsidered: batch.length,
     seriesExtended: 0,
     tripsCreated: 0,
     failures: 0,
+    // One extra row read is enough to know the queue was longer than the pass.
+    // Not the true remainder, and it does not need to be: the number that
+    // matters is "did anything wait?", and the next pass takes it first.
+    deferred: candidates.length > SERIES_SWEEP_LIMIT ? candidates.length - SERIES_SWEEP_LIMIT : 0,
   };
-  for (const candidate of candidates) {
+  for (const candidate of batch) {
     const result = await rollSeriesForward(db, candidate.shopId, candidate.id, now);
+    // Stamped whatever happened, so a series that fails every night still goes
+    // to the back of the queue instead of holding the front of it.
+    await db
+      .update(tripSeries)
+      .set({ lastRolledAt: now })
+      .where(and(eq(tripSeries.id, candidate.id), eq(tripSeries.shopId, candidate.shopId)));
     if (!result) {
       summary.failures += 1;
       continue;
@@ -523,7 +602,9 @@ export async function getTripSeriesSummary(
       future: sql<number>`count(*) filter (where ${trips.status} = 'scheduled' and ${trips.startsAt} >= ${now})::int`,
     })
     .from(trips)
-    .where(eq(trips.seriesId, row.series.id));
+    // Same reasoning as the skips read above: the shop condition travels with
+    // the query, not with the caller's confidence in the series id.
+    .where(and(eq(trips.seriesId, row.series.id), eq(trips.shopId, shopId)));
   return {
     ...row.series,
     scheduledCount: counts?.scheduled ?? 0,
@@ -550,6 +631,186 @@ export async function getLatestSeriesInstance(db: AppDb, shopId: string, seriesI
     .orderBy(desc(trips.startsAt))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * An upcoming date that is on the board but no longer on the cadence — what a
+ * shop is shown after narrowing a run. `booked` counts the divers who would be
+ * turned around if it were cancelled, which is the whole reason this is offered
+ * rather than done.
+ */
+export type OffCadenceSeriesTrip = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  occurrenceDate: CalendarDate;
+  booked: number;
+};
+
+/**
+ * The still-scheduled, not-yet-departed instances whose cadence slot the series
+ * no longer fires on.
+ *
+ * Only ever non-empty after staff *narrow* a run — dropping a weekday, widening
+ * the interval, pulling the end date in. Those instances are ordinary trips with
+ * ordinary rosters, so narrowing the cadence must not touch them; this is what
+ * lets the surface offer them as an explicit second step instead
+ * (`cancelOffCadenceSeriesTrips`).
+ *
+ * Judged on `series_occurrence_date`, not `starts_at`: an instance staff dragged
+ * to another day still fills the slot it was generated for, and reading the moved
+ * date would report a perfectly good departure as orphaned. An instance with no
+ * slot at all (created before the ledger existed) is left out — there is nothing
+ * to judge it against, and guessing would offer to cancel a real departure.
+ */
+export async function listOffCadenceSeriesTrips(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+  now: Date = nowDate(),
+): Promise<OffCadenceSeriesTrip[]> {
+  const [series] = await db
+    .select()
+    .from(tripSeries)
+    .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)))
+    .limit(1);
+  if (!series) return [];
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      occurrenceDate: trips.seriesOccurrenceDate,
+      booked: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.seriesId, seriesId),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt));
+  const cadence = {
+    anchorDate: series.anchorDate,
+    pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
+    endsOn: series.endsOn,
+  };
+  return rows
+    .filter(
+      (row): row is typeof row & { occurrenceDate: string } =>
+        row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
+    )
+    .map((row) => ({ ...row }));
+}
+
+/**
+ * Take the off-cadence upcoming dates off the public schedule — the second,
+ * explicit half of narrowing a run.
+ *
+ * Cancels rather than deletes, through the same status every per-date cancel
+ * uses, so each one is reinstatable from its own trip page and every booking's
+ * history survives. Re-derives the list inside the transaction rather than
+ * trusting ids from the form: a date can be booked, moved, or cancelled between
+ * the page render and the tap, and cancelling a departure that has *since*
+ * come back onto the cadence would be the exact silent bulk cancellation this
+ * two-step exists to prevent. Returns how many were taken off.
+ */
+export async function cancelOffCadenceSeriesTrips(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+  now: Date = nowDate(),
+): Promise<number> {
+  const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
+  if (stale.length === 0) return 0;
+  const cancelled = await db
+    .update(trips)
+    .set({ status: "cancelled" })
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.seriesId, seriesId),
+        eq(trips.status, "scheduled"),
+        inArray(
+          trips.id,
+          stale.map((trip) => trip.id),
+        ),
+      ),
+    )
+    .returning({ id: trips.id });
+  return cancelled.length;
+}
+
+export type SeriesCadencePatch = {
+  intervalWeeks: number;
+  weekdays: WeekdaySet;
+  /** The new last date, or null to let the run keep going. */
+  endsOn: CalendarDate | null;
+};
+
+export type SeriesCadenceUpdate = {
+  /** Dates the widened cadence put on the board in the same call. */
+  created: number;
+  /** Upcoming dates the narrowed cadence no longer fires on — offered, never cancelled here. */
+  offCadence: number;
+};
+
+/**
+ * Change a running series' cadence: which weekdays, how many weeks apart, and
+ * when (or whether) it ends.
+ *
+ * **Widening is free; narrowing is never destructive.** Adding a weekday or
+ * pushing the end date out just saves and rolls the horizon, and the new dates
+ * appear. Dropping a weekday or pulling the end date in saves the cadence and
+ * *reports* how many upcoming dates no longer fit — it cancels nothing. Those
+ * are real trips with real divers on them, and a cadence edit that quietly
+ * emptied a fortnight of the board would be a bulk cancellation nobody asked
+ * for. The surface offers them as a separate, counted step
+ * (`cancelOffCadenceSeriesTrips`).
+ *
+ * The anchor date never moves. It is the cadence's *phase*, not its start: an
+ * every-other-week run that re-anchored on the day somebody edited it would
+ * silently swap which fortnight it sails in.
+ *
+ * Returns null when the series is unknown to the shop or the cadence is
+ * unusable — an empty weekday set would leave a run that generates nothing while
+ * still claiming to repeat.
+ */
+export async function updateSeriesCadence(
+  db: AppDb,
+  shopId: string,
+  seriesId: string,
+  patch: SeriesCadencePatch,
+  now: Date = nowDate(),
+): Promise<SeriesCadenceUpdate | null> {
+  if (!isValidWeeklyPattern({ intervalWeeks: patch.intervalWeeks, weekdays: patch.weekdays })) {
+    return null;
+  }
+  if (patch.endsOn !== null && !isValidCalendarDate(patch.endsOn)) return null;
+  const [row] = await db
+    .select({ id: tripSeries.id })
+    .from(tripSeries)
+    .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)))
+    .limit(1);
+  if (!row) return null;
+
+  await db
+    .update(tripSeries)
+    .set({
+      intervalWeeks: patch.intervalWeeks,
+      weekdayMask: patch.weekdays,
+      endsOn: patch.endsOn,
+    })
+    .where(and(eq(tripSeries.id, seriesId), eq(tripSeries.shopId, shopId)));
+
+  const rolled = await rollSeriesForward(db, shopId, seriesId, now);
+  const offCadence = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
+  return { created: rolled?.created ?? 0, offCadence: offCadence.length };
 }
 
 /**

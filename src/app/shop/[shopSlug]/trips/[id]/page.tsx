@@ -19,6 +19,7 @@ import {
   getTripCrewAssignments,
   getTripSeriesSummary,
   getTripWithBooked,
+  listOffCadenceSeriesTrips,
   listStaff,
   listTripDives,
   listTripScheduleDays,
@@ -27,7 +28,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { countInWaterCrew } from "@/lib/crew-roles";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
@@ -48,6 +49,7 @@ import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSectio
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import {
   applySeriesDetailsAction,
+  cancelOffCadenceSeriesAction,
   cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
@@ -58,6 +60,7 @@ import {
   saveRecapShoutoutAction,
   saveRequirementsAction,
   setSeriesRepeatAction,
+  updateSeriesCadenceAction,
   updateTripCrewAction,
 } from "./actions";
 
@@ -142,6 +145,12 @@ export default async function ManageTripPage({
     // must always offer the way back to it (ADR 20260804-blowout-cascade).
     hasTripBlowout(db, shop.id, tripId),
   ]);
+  // Only ever non-empty right after staff narrowed this run's cadence, and only
+  // for someone who can act on it — a second query rather than a field on the
+  // summary, because it is the one thing here that costs a join and is empty
+  // almost always.
+  const offCadence =
+    canConfigure && series ? await listOffCadenceSeriesTrips(db, shop.id, series.id) : [];
   // Where this departure goes, composed from the dives already loaded above —
   // no second query, and the same answer the public schedule card gives.
   const diveSites = summarizeTripDiveSites(
@@ -487,12 +496,29 @@ export default async function ManageTripPage({
           intervalWeeks={series.intervalWeeks}
           weekdays={series.weekdayMask}
           endsOn={series.endsOn}
+          anchorDate={series.anchorDate}
           futureScheduledCount={series.futureScheduledCount}
           horizonDays={SERIES_HORIZON_DAYS}
+          offCadence={offCadence.map((date) => ({
+            id: date.id,
+            title: date.title,
+            // Formatted here, where the request locale and the shop's zone both
+            // are — the panel is handed words, never instants.
+            label: formatShortDate(date.startsAt, locale, shop.timezone),
+            booked: date.booked,
+          }))}
+          weekdayNames={weekdayNames(locale)}
           status={noticeForForm(tripNotice, "series")}
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
+          cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
+          cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
+            null,
+            shopSlug,
+            tripId,
+            series.id,
+          )}
           locale={locale}
         />
       ) : null}

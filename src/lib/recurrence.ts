@@ -59,11 +59,21 @@ export const MAX_INTERVAL_WEEKS = 8;
 export const SERIES_HORIZON_DAYS = 120;
 
 /**
- * A hard stop on how many dates one generation pass may propose. Not a product
- * limit — the window bounds that — but a runaway guard: a caller that passes a
- * malformed window must fail loudly-and-small rather than materialize a decade
- * of Tuesdays inside one transaction. A daily series across the horizon needs
- * `SERIES_HORIZON_DAYS` of them, so this sits comfortably above the real cap.
+ * A hard stop on how many dates one generation pass may propose.
+ *
+ * Not a product limit — the window bounds that — but a runaway guard: a caller
+ * that passes a malformed window materializes a bounded batch rather than a
+ * decade of Tuesdays inside one transaction. A daily series across the horizon
+ * needs `SERIES_HORIZON_DAYS` + 1 of them, so on every call site this app has
+ * the guard never binds.
+ *
+ * When it does bind it **truncates, and says so through the return value's
+ * length rather than by failing** — the caller gets the earliest dates, which
+ * is the useful half of a too-wide window, and the next pass picks up where it
+ * stopped because generation is windowed and idempotent. Anyone widening
+ * `SERIES_HORIZON_DAYS` past this number has to raise this too, or a daily run
+ * will quietly stop generating partway to the new horizon and look, from the
+ * board, exactly like a horizon that simply is not that wide.
  */
 export const MAX_OCCURRENCES_PER_ROLL = 400;
 
@@ -184,19 +194,56 @@ export function seriesOccurrenceDates(window: OccurrenceWindow): CalendarDate[] 
   const last = window.endsOn && window.endsOn < window.through ? window.endsOn : window.through;
   if (start > last) return [];
 
-  const phaseFrom = weekStart(window.anchorDate);
   const dates: CalendarDate[] = [];
   for (
     let date = start;
     date <= last && dates.length < MAX_OCCURRENCES_PER_ROLL;
     date = shiftCalendarDate(date, 1)
   ) {
-    if (!weekdaySetHas(window.pattern.weekdays, calendarDateWeekday(date))) continue;
-    const weekIndex = Math.floor(calendarDaysBetween(phaseFrom, date) / 7);
-    if (weekIndex % window.pattern.intervalWeeks !== 0) continue;
-    dates.push(date);
+    if (firesOn(window, date)) dates.push(date);
   }
   return dates;
+}
+
+/** The cadence a series runs on, without a window — what `seriesFiresOn` asks about. */
+export type SeriesCadence = {
+  anchorDate: CalendarDate;
+  pattern: WeeklyPattern;
+  endsOn?: CalendarDate | null;
+};
+
+/**
+ * Does this cadence fire on this date? The single-date form of
+ * `seriesOccurrenceDates`, and deliberately the same arithmetic — the two share
+ * `firesOn` below rather than restating the phase rule, because a generator and
+ * a checker that disagree would produce a board that disagrees with the
+ * sentence describing it.
+ *
+ * This is what answers "which dates already on the board no longer fit?" when
+ * staff narrow a cadence. Note it is a question about the *slot*, not the
+ * departure: an instance staff dragged to another day keeps its cadence date
+ * and so keeps fitting, which is right — it is still the Thursday run, just
+ * moved. Returns false rather than throwing for an unusable cadence: nothing
+ * fires on a cadence that cannot generate.
+ */
+export function seriesFiresOn(cadence: SeriesCadence, date: CalendarDate): boolean {
+  if (!isValidWeeklyPattern(cadence.pattern)) return false;
+  if (date < cadence.anchorDate) return false;
+  if (cadence.endsOn && date > cadence.endsOn) return false;
+  return firesOn(cadence, date);
+}
+
+/**
+ * The phase rule itself, with no bounds checking: is `date` on one of the
+ * cadence's weekdays, in one of its firing weeks? Weeks are counted from the
+ * Sunday that opens the anchor's own week — so a Sunday-plus-Monday fortnightly
+ * run keeps both days in the same fortnight, which "days since the anchor,
+ * modulo 14" would not.
+ */
+function firesOn(cadence: SeriesCadence, date: CalendarDate): boolean {
+  if (!weekdaySetHas(cadence.pattern.weekdays, calendarDateWeekday(date))) return false;
+  const weekIndex = Math.floor(calendarDaysBetween(weekStart(cadence.anchorDate), date) / 7);
+  return weekIndex % cadence.pattern.intervalWeeks === 0;
 }
 
 /**

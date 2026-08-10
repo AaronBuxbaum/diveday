@@ -142,16 +142,37 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.waiverMedicalAttestation",
   },
   "waiver-error": { form: "roster", tone: "danger", key: "trips.notices.waiverError" },
-  "series-applied": { form: "series", tone: "success", key: "trips.notices.seriesApplied" },
+  "series-applied": { form: "series", tone: "success", key: "tripSeries.notices.seriesApplied" },
   "series-applied-partial": {
     form: "series",
     tone: "success",
-    key: "trips.notices.seriesAppliedPartial",
+    key: "tripSeries.notices.seriesAppliedPartial",
   },
-  "series-cancelled": { form: "series", tone: "danger", key: "trips.notices.seriesCancelled" },
-  "series-repeating": { form: "series", tone: "success", key: "trips.notices.seriesRepeating" },
-  "series-stopped": { form: "series", tone: "success", key: "trips.notices.seriesStopped" },
-  "series-error": { form: "series", tone: "danger", key: "trips.notices.seriesError" },
+  "series-cancelled": { form: "series", tone: "danger", key: "tripSeries.notices.seriesCancelled" },
+  "series-repeating": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesRepeating",
+  },
+  "series-cadence-saved": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesCadenceSaved",
+  },
+  // Warning, not success: the cadence saved, but the shop is now looking at
+  // dates on the board that it no longer describes, and the next tap is theirs.
+  "series-cadence-narrowed": {
+    form: "series",
+    tone: "warning",
+    key: "tripSeries.notices.seriesCadenceNarrowed",
+  },
+  "series-off-cadence-cancelled": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesOffCadenceCancelled",
+  },
+  "series-stopped": { form: "series", tone: "success", key: "tripSeries.notices.seriesStopped" },
+  "series-error": { form: "series", tone: "danger", key: "tripSeries.notices.seriesError" },
   "recap-note": { form: "recap-note", tone: "success", key: "trips.notices.recapNote" },
   "recap-photo-removed": {
     form: "recap-photos",

@@ -32,6 +32,17 @@ export type RepeatFieldsCopy = {
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 /**
+ * The cadence a series already runs on, for the editing surface. Absent when
+ * this is the create form, which starts from "Doesn't repeat".
+ */
+export type RepeatFieldsInitial = {
+  intervalWeeks: number;
+  /** Ascending day numbers, 0 = Sunday. */
+  weekdays: number[];
+  endsOn: string | null;
+};
+
+/**
  * "How often", "Repeats on", and "Ends" — the three questions a repeating
  * departure actually has, and none it doesn't.
  *
@@ -51,11 +62,19 @@ const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export function RepeatFields({
   startDate,
   copy,
+  initial,
   disabled = false,
 }: {
   /** The departure's own date (`YYYY-MM-DD`), whose weekday seeds the picker. */
   startDate: string;
   copy: RepeatFieldsCopy;
+  /**
+   * The cadence to open on. Given, this is the *edit* form: it starts on the
+   * shop's real answer, drops "Doesn't repeat" (stopping a run is its own
+   * control, and not the same act as editing one), and never re-seeds itself
+   * from the date.
+   */
+  initial?: RepeatFieldsInitial;
   /**
    * Inert and out of the submission entirely — for a caller that keeps this
    * block mounted while it is off screen so a chosen cadence survives being
@@ -63,17 +82,21 @@ export function RepeatFields({
    */
   disabled?: boolean;
 }) {
-  const [repeats, setRepeats] = useState(false);
-  const [endsOnDate, setEndsOnDate] = useState(false);
+  const editing = initial !== undefined;
+  const [repeats, setRepeats] = useState(editing);
+  const [endsOnDate, setEndsOnDate] = useState(initial?.endsOn != null);
   const startWeekday = isValidCalendarDate(startDate) ? calendarDateWeekday(startDate) : null;
-  const [weekdays, setWeekdays] = useState<number[]>(startWeekday === null ? [] : [startWeekday]);
+  const [weekdays, setWeekdays] = useState<number[]>(
+    initial?.weekdays ?? (startWeekday === null ? [] : [startWeekday]),
+  );
   const groupId = useId();
 
   // The picker follows the date field while it is still only a default: a shop
   // that changes the date after choosing a cadence should not have to come back
   // and re-check the new weekday. `touched` is what stops this from ever
-  // overwriting an answer somebody actually gave.
-  const [touched, setTouched] = useState(false);
+  // overwriting an answer somebody actually gave — and an edit form opens on a
+  // real answer, so it is touched from the start.
+  const [touched, setTouched] = useState(editing);
   useEffect(() => {
     if (touched || startWeekday === null) return;
     setWeekdays([startWeekday]);
@@ -93,12 +116,16 @@ export function RepeatFields({
         <Field label={copy.howOftenLabel}>
           <select
             name="repeatIntervalWeeks"
-            defaultValue="0"
+            defaultValue={String(initial?.intervalWeeks ?? 0)}
             disabled={disabled}
             onChange={(event) => setRepeats(event.currentTarget.value !== "0")}
             className={controlClass}
           >
-            <option value="0">{copy.doesntRepeat}</option>
+            {/* Absent while editing: "stop repeating" is its own control on the
+                trip page, and it is a different act from changing a cadence —
+                offering it here would let a shop end a run by picking an option
+                labelled as a frequency. */}
+            {editing ? null : <option value="0">{copy.doesntRepeat}</option>}
             <option value="1">{copy.everyWeek}</option>
             <option value="2">{copy.every2Weeks}</option>
             <option value="4">{copy.every4Weeks}</option>
@@ -106,7 +133,7 @@ export function RepeatFields({
         </Field>
         <Field label={copy.endsLabel}>
           <select
-            defaultValue="never"
+            defaultValue={initial?.endsOn == null ? "never" : "on"}
             disabled={disabled || !repeats}
             onChange={(event) => setEndsOnDate(event.currentTarget.value === "on")}
             className={`${controlClass} disabled:cursor-not-allowed disabled:opacity-60`}
@@ -175,6 +202,7 @@ export function RepeatFields({
             name="repeatEndsOn"
             type="date"
             min={startDate}
+            defaultValue={initial?.endsOn ?? undefined}
             required
             disabled={disabled}
             className={controlClass}
