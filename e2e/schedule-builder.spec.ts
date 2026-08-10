@@ -183,6 +183,72 @@ test.describe("schedule builder", () => {
       page.getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }).first(),
     ).toBeVisible();
   });
+
+  test("a pinned day header sits flush under the shop nav", async ({ page }) => {
+    // The board's day headers are sticky so a staffer scrolled into the middle
+    // of a two-week window still knows which day the rows under their thumb
+    // belong to. They pin directly under the staff shell's own sticky header,
+    // at a `top-[68px]` that is a *measured* constant: the nav's height is
+    // content-driven, so it cannot be derived in CSS, and nothing until this
+    // test checked that the number still matched the nav.
+    //
+    // Flush, not merely "clear of it", because the constant drifts in both
+    // directions and both are real. Too small and the day hides behind the nav.
+    // Too large and it floats in a band of dead space — which is not
+    // hypothetical: the nav was 169px on a phone until the dock moved its links
+    // out and left one 69px row, and a one-sided "clearance >= 0" check passed
+    // happily on a day header hanging 100px below the nav.
+    //
+    // The band below is deliberately asymmetric. 68px against a 69px nav is a
+    // 1px overlap on purpose (see ScheduleBuilder: it tucks under the nav's
+    // bottom border so no slit of scrolling content shows between the two), so
+    // -2 is the floor rather than 0.
+    await page.goto(BOARD);
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+
+    // Phone, tablet, desktop — the widths at which the nav has historically
+    // changed shape, so a future re-wrap is caught wherever it happens.
+    for (const width of [390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const measured = await page.evaluate(async () => {
+        window.scrollTo(0, document.body.scrollHeight / 2);
+        // A frame boundary, not a timing guess: sticky offsets are resolved
+        // during layout, so the next animation frame is the first moment the
+        // pinned positions are readable at all.
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        const nav = document.querySelector("header.sticky");
+        const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+        const headers = [...document.querySelectorAll("h3")]
+          .map((heading) => heading.parentElement)
+          .filter(
+            (el): el is HTMLElement => el !== null && getComputedStyle(el).position === "sticky",
+          );
+        const offset = headers[0] ? Number.parseFloat(getComputedStyle(headers[0]).top) : -1;
+        // "Pinned" is a header holding its sticky offset rather than flowing.
+        const pinned = headers
+          .map((el) => el.getBoundingClientRect())
+          .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+        return {
+          pinnedCount: pinned.length,
+          // How far the worst-placed pinned header clears the nav. Negative
+          // means it is hiding underneath it.
+          clearance: Math.min(...pinned.map((rect) => rect.top - navBottom)),
+        };
+      });
+
+      expect(measured.pinnedCount, `no day header pinned at ${width}px`).toBeGreaterThan(0);
+      // A couple of pixels of slack either way, and no more: the gap this is
+      // policing is measured in tens of pixels when it goes wrong.
+      expect(
+        measured.clearance,
+        `a pinned day header is behind the shop nav at ${width}px (overlapping by ${-measured.clearance}px) — the sticky offset in ScheduleBuilder is smaller than the nav`,
+      ).toBeGreaterThanOrEqual(-2);
+      expect(
+        measured.clearance,
+        `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — the sticky offset in ScheduleBuilder is larger than the nav`,
+      ).toBeLessThanOrEqual(4);
+    }
+  });
 });
 
 test.describe("schedule builder, as the daily crew", () => {
