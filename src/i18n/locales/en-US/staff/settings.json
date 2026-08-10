@@ -119,7 +119,8 @@
       "description": "One item per line. Divers see this same concise list on every trip.",
       "label": "Checklist items",
       "submit": "Save packing checklist",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "value": "{count, plural, one {# item} other {# items}}"
     },
     "dockCall": {
       "heading": "Dock call time",
@@ -127,7 +128,8 @@
       "detail": "Time for gear setup, cert checks, and the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip reminder.",
       "label": "Minutes before departure",
       "submit": "Save dock call time",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "value": "{count} min before departure"
     },
     "units": {
       "heading": "Units",
@@ -155,7 +157,8 @@
       "detail": "Untick anything you don't offer — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts unticked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "value": "{count, plural, one {# item offered} other {# items offered}}"
     },
     "rentalPricing": {
       "heading": "Rental prices",
@@ -166,14 +169,15 @@
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(per dive)",
       "submit": "Save rental prices",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "value": "Full set {price}"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",
       "notConnectedDescription": "Connect a Stripe account you own.",
       "notConnectedDetail": "DiveDay never holds your money — payments for orders go straight into your own Stripe balance.",
       "connect": "Connect Stripe",
-      "notConfiguredWarning": "Online payments aren't configured for this DiveDay instance yet — contact {email} to get it set up.",
+      "notConfiguredWarning": "Online payments aren’t switched on for DiveDay yet — email {email} and we’ll get it set up.",
       "connectedHeading": "Stripe account connected",
       "disconnectedHeading": "Stripe account disconnected",
       "readyBadge": "Ready for payments",
@@ -188,31 +192,27 @@
       "refresh": "Refresh status",
       "refreshing": "Refreshing…",
       "disconnect": "Disconnect",
-      "disconnecting": "Disconnecting…"
+      "disconnecting": "Disconnecting…",
+      "rowHeading": "Online payments",
+      "summaryNotConnected": "Not connected",
+      "summaryDisconnected": "Disconnected"
     },
     "embed": {
       "heading": "Website embed",
-      "description": "Copy-paste snippets that put your live booking calendar on your own website.",
-      "cta": "Get embed code"
+      "description": "Copy-paste snippets that put your live booking calendar on your own website."
     },
     "calendar": {
       "heading": "Calendar subscriptions",
-      "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it.",
-      "cta": "Manage subscriptions"
-    },
-    "data": {
-      "heading": "Data",
-      "description": "Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs.",
-      "detail": "Neither one touches the settings above.",
-      "importCta": "Import contacts",
-      "exportCta": "Data export"
+      "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it."
     },
     "trial": {
       "heading": "Your trial",
       "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",
       "expiredDescription": "Your trial ended {endDate}. Everything you've set up keeps working.",
       "upgradeBody": "Ready to move to a paid plan? Email us and we'll get you set up.",
-      "emailCta": "Email {email}"
+      "emailCta": "Email {email}",
+      "value": "{count, plural, one {# day left} other {# days left}}",
+      "expiredValue": "Ended {endDate}"
     },
     "support": {
       "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time.",
@@ -228,35 +228,28 @@
     },
     "whatsapp": {
       "heading": "WhatsApp",
-      "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
-      "cta": "Set up WhatsApp"
+      "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number."
     },
     "backup": {
       "heading": "Backups",
-      "description": "A weekly copy of everything your shop holds, delivered to storage you own.",
-      "cta": "Set up backups"
+      "description": "A weekly copy of everything your shop holds, delivered to storage you own."
     },
     "team": {
       "heading": "Team",
-      "description": "Who works here, what each person is allowed to reach, and where your invitations stand.",
-      "cta": "Manage team"
+      "description": "Who works here, what each person is allowed to reach, and where your invitations stand."
     },
     "diveSites": {
       "heading": "Dive sites",
-      "description": "The site library the board picks from — depths, conditions, and what divers see there.",
-      "cta": "Open dive sites"
+      "description": "The site library the board picks from — depths, conditions, and what divers see there."
     },
     "waivers": {
       "heading": "Waiver template",
-      "description": "The release every diver signs, and the log of who has signed it.",
-      "cta": "Open waivers"
+      "description": "The release every diver signs, and the log of who has signed it."
     },
     "promos": {
       "heading": "Promo codes",
-      "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",
-      "cta": "Manage promo codes"
+      "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits."
     },
-    "detailLabel": "More about {heading}",
     "dataJobs": {
       "mediaKind": {
         "course_photo": "Course photo",
@@ -286,6 +279,15 @@
         "discharge": "Mark done at Stripe",
         "discharging": "Saving…"
       }
+    },
+    "summary": {
+      "notSet": "Not set"
+    },
+    "dataImport": {
+      "description": "Bring contacts in from a CSV — matched to existing divers, never duplicated."
+    },
+    "dataExport": {
+      "description": "Take everything your shop holds back out as a ZIP of CSVs."
     }
   },
   "team": {

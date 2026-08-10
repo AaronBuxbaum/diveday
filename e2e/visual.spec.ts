@@ -4,7 +4,7 @@ import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-s
 import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import { openSettingsRow, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
@@ -1249,6 +1249,7 @@ for (const scheme of ["light", "dark"] as const) {
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
         await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(reviewSettingsPage, "Review link");
         await reviewSettingsPage
           .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
@@ -2094,6 +2095,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
+        // One row open in the capture, so the baseline shows the disclosure's
+        // open-form treatment as well as the at-rest directory.
+        await openSettingsRow(page, "Rental prices");
         await capture(page, "settings-payments", scheme);
       });
 
@@ -2325,6 +2329,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         try {
           await page.goto("/shop/blue-mantis/settings");
+          await openSettingsRow(page, "What we rent");
           await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
@@ -2335,6 +2340,7 @@ for (const scheme of ["light", "dark"] as const) {
           await capture(page, "prep-no-nitrox", scheme);
         } finally {
           await page.goto("/shop/blue-mantis/settings");
+          await openSettingsRow(page, "What we rent");
           await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();

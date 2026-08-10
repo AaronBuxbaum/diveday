@@ -205,6 +205,8 @@ test.describe("backup settings authorization", () => {
   test("and is not offered the door from the settings index", async ({ page }) => {
     await page.goto("/shop/blue-mantis/settings");
 
-    await expect(page.getByRole("link", { name: "Set up backups" })).toHaveCount(0);
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Backups", exact: true }),
+    ).toHaveCount(0);
   });
 });

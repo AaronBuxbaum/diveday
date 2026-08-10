@@ -15,10 +15,10 @@ import {
   staffNavDestinations,
 } from "@/lib/staff-destinations";
 
-// `whitespace-nowrap`: the primary row is `flex-1` per link inside a
-// horizontally scrolling, snapping strip. Without it a narrow phone shrinks
-// each link below its label and breaks the word instead of scrolling —
-// "Check-in" rendered as "Check-" / "in" and "Not ready" as "Not" / "ready".
+// `whitespace-nowrap`: a flex item can shrink below its label's width, and a
+// squeezed tab must never break its word ("Check-in" as "Check-" / "in") —
+// the strip only renders from `lg` up, but a crowded row is still possible
+// with long translations.
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
@@ -68,7 +68,11 @@ function isCurrent(pathname: string, href: string, root: string) {
  * only the first knew about `alsoMatch`, so a destination reached *from* a
  * "More" page left the whole header with nothing reading as current.
  */
-function isDestinationCurrent(pathname: string, root: string, destination: StaffDestination) {
+export function isDestinationCurrent(
+  pathname: string,
+  root: string,
+  destination: StaffDestination,
+) {
   return (
     isCurrent(pathname, staffDestinationHref(root, destination), root) ||
     (destination.alsoMatch ?? []).some((prefix) => isCurrent(pathname, `${root}${prefix}`, root))
@@ -260,24 +264,14 @@ export function ShopNavLinks({
   );
 
   return (
-    // `items-start` so "More" sits on the first row when the links wrap to two
-    // on a phone, rather than floating in the gutter between them. Identical to
-    // `items-center` from `sm` up, where the strip is a single row.
-    <div className={`flex min-w-0 items-start gap-2 ${className}`}>
-      {/*
-       * Wraps rather than scrolls. The primary labels (four of them since Not
-       * ready became Today's view) still need more room than a phone gives this
-       * strip — ~285px — so as a one-line scroller it hid the tail of the row:
-       * the right edge guillotined "Divers" mid-word against the More button,
-       * and on the schedule board the *active* tab sat entirely off-screen, so
-       * nothing on the page read as current. Wrapping costs one
-       * header row on a phone and shows every destination, with the label
-       * itself kept whole by `whitespace-nowrap` in `linkClass`. It never wraps
-       * from `sm` up, where the row has room.
-       */}
+    // Display is the caller's call: below `lg` the primary destinations render
+    // as the phone dock (StaffTabBar) instead, and ShopNav hands this strip
+    // `hidden lg:flex` — so none of the phone-wrap layout this strip used to
+    // carry survives here.
+    <div className={`min-w-0 items-center gap-2 ${className}`}>
       <nav
         aria-label={copy.primaryNavAriaLabel}
-        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-0.5 gap-y-1 pr-2 sm:gap-x-1 sm:pr-3"
+        className="flex min-w-0 flex-1 items-center gap-x-1 pr-3"
       >
         {primary.map((destination) => {
           const href = staffDestinationHref(root, destination);
@@ -286,21 +280,7 @@ export function ShopNavLinks({
             <Link
               key={destination.id}
               href={href}
-              // The phone wrap, made deliberate. Six tabs cannot fit one phone
-              // row, so they wrap — and left-aligned at their natural widths
-              // that came out as a full row of four and a stub of two hanging
-              // under the active pill, which is the "breaks line weirdly" of
-              // the report. A 30% basis puts three on a row and `grow` spreads
-              // them flush to both edges, so the two rows read as one block.
-              //
-              // Basis-and-grow rather than an equal-column grid, deliberately:
-              // a flex item never shrinks below its `whitespace-nowrap` label,
-              // so a translation wider than a third of the screen (es-ES
-              // "Configuración") simply takes the next row. The same label in a
-              // fixed grid column would have overflowed the cell and made the
-              // *page* scroll sideways — the bug being fixed on Settings in
-              // this same change.
-              className={`${navClass(active)} max-sm:grow max-sm:basis-[30%] max-sm:justify-center`}
+              className={navClass(active)}
               aria-current={active ? "page" : undefined}
               onClick={closeMore}
             >
@@ -338,18 +318,6 @@ export function ShopNavLinks({
               <path d="m6 9 6 6 6-6" />
             </svg>
           </summary>
-          {/* Mobile-only scrim: makes the panel read as modal on a phone (where
-            it covers most of the viewport) and gives a large, obvious tap
-            target to dismiss it, on top of the outside-click handler above. */}
-          {moreOpen ? (
-            <button
-              type="button"
-              aria-hidden="true"
-              tabIndex={-1}
-              onClick={closeMore}
-              className="fixed inset-0 z-10 cursor-default bg-foreground/20 sm:hidden"
-            />
-          ) : null}
           {/*
            * One column, one link per row — a two-column grid wrapped short labels
            * onto two lines. Two named groups rather than one bare rule: the

@@ -285,15 +285,36 @@ export function DiverRollCall({
                           to (2026-08-06 review). */}
                       <Link
                         href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
-                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
+                        className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline print:hidden"
                       >
                         {t("trips.manifest.resolveBlockersLink")}
                       </Link>
                     </>
                   ) : null}
-                  <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3 print:hidden">
-                    <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
+                  {/* Closed, this is one quiet line — the same grammar as the
+                      "Resolve blockers" link above it. The box only exists
+                      around an open note: rendered shut on every diver, the
+                      bordered sunken card read as an empty *input* repeated
+                      the length of the boat, which is nine boxes of chrome
+                      for an action most roll calls never take (design
+                      principles 8 and 10 — collapse the rare path; hierarchy
+                      before boxes). */}
+                  <details className="group/note mt-1 max-w-xl print:hidden open:mt-3 open:rounded-xl open:border open:border-border/70 open:bg-surface-sunken/50 open:p-3">
+                    {/* The plus glyph is what tells this line apart from the
+                        "Resolve blockers" navigation link it can stack under:
+                        this one discloses in place (rotating to a ✕ when
+                        open), that one leaves the page. `flex` suppresses the
+                        native marker, so without it the two would be
+                        indistinguishable. Same idiom as the divers page's
+                        add-diver summary. */}
+                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-semibold text-primary hover:underline">
                       {t("trips.manifest.addNoteSummary")}
+                      <span
+                        aria-hidden="true"
+                        className="font-normal transition-transform duration-200 group-open/note:rotate-45"
+                      >
+                        +
+                      </span>
                     </summary>
                     <RollCallNote
                       bookingId={diver.bookingId}

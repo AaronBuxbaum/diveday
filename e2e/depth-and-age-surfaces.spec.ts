@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { tripPathByTitle } from "./helpers";
+import { openSettingsRow, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -140,6 +140,7 @@ test.describe("staff", () => {
 
     // Switch the shop to feet; 18 m must read back as 59 ft, not as 18.
     await page.goto(`/shop/${SHOP}/settings`);
+    await openSettingsRow(page, "Units");
     await page.getByLabel("Show depths in", { exact: true }).selectOption("feet");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();
@@ -178,6 +179,7 @@ test.describe("staff", () => {
     // visibility in metres.
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
+    await openSettingsRow(page, "Units");
     await page.getByLabel("Show water temperature in", { exact: true }).selectOption("fahrenheit");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();

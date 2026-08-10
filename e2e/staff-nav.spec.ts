@@ -16,7 +16,9 @@ test.describe("owner", () => {
   test("the header is six tabs, no More menu, and the demoted doors hold", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    const nav = page.getByRole("navigation", { name: "Primary" });
+    // Scoped to the header: the primary destinations render twice in the DOM
+    // (header strip and phone dock), one visible per breakpoint.
+    const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // "Board", not "Schedule": the public schedule is a different page at a
     // different URL, and staff call this one the board.
     await expect(nav.getByRole("link")).toHaveText([
@@ -40,8 +42,12 @@ test.describe("owner", () => {
 
     await nav.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("link", { name: "Open dive sites" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open waivers" })).toBeVisible();
+    // Door rows: the heading is the link, with no separate CTA label.
+    const settingsMain = page.getByRole("main");
+    await expect(settingsMain.getByRole("link", { name: "Dive sites", exact: true })).toBeVisible();
+    await expect(
+      settingsMain.getByRole("link", { name: "Waiver template", exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -51,7 +57,7 @@ test.describe("captain", () => {
   test("a gated destination is absent from the nav, not shown and refused", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    const nav = page.getByRole("navigation", { name: "Primary" });
+    const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // Ungated daily surfaces are all still tabs.
     await expect(nav.getByRole("link", { name: "Orders" })).toBeVisible();
     // Settings is owner/manager work, so for a captain it is simply not in
@@ -59,5 +65,42 @@ test.describe("captain", () => {
     await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Promo codes" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+  });
+});
+
+test.describe("phone dock", () => {
+  signedInAsOwner();
+  // The one breakpoint story this spec exists to pin: below `lg` the primary
+  // destinations live in a fixed bottom tab bar (the phone dock), and the
+  // header keeps to identity, search, and sign-out — no wrapped rows of tabs.
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("the primary destinations are a bottom tab bar, not header rows", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+
+    const dock = page.getByRole("navigation", { name: "Primary" }).filter({ visible: true });
+    await expect(dock.getByRole("link")).toHaveText([
+      /Today/,
+      "Check-in",
+      "Divers",
+      "Board",
+      "Orders",
+      "Settings",
+    ]);
+
+    // The header's own copy of the strip is gone from view on a phone.
+    await expect(
+      page.locator("header").getByRole("navigation", { name: "Primary" }),
+    ).not.toBeVisible();
+
+    // The dock is the thumb's nav: fixed to the bottom edge of the viewport.
+    const box = await dock.boundingBox();
+    if (!box) throw new Error("dock has no box");
+    expect(box.y + box.height).toBeGreaterThan(820);
+
+    // And it navigates: the dock's own tab, not a header row, changes page.
+    await dock.getByRole("link", { name: "Board" }).click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(dock.getByRole("link", { name: "Board" })).toHaveAttribute("aria-current", "page");
   });
 });
