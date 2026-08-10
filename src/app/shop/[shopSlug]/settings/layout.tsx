@@ -4,6 +4,7 @@ import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { SettingsSubNav, type SettingsSubNavCopy } from "./_components/SettingsSubNav";
+import { SettingsSubNavFallback } from "./_components/SettingsSubNavFallback";
 import {
   SETTINGS_DESTINATIONS,
   SETTINGS_GROUPS,
@@ -45,11 +46,13 @@ export default function SettingsLayout({
 }) {
   return (
     <>
-      <div className="mx-auto w-full max-w-5xl px-4 pt-8 sm:px-6 sm:pt-10 print:hidden">
-        <Suspense fallback={<SettingsSubNavFallback />}>
-          <SettingsSubNavLoader params={params} />
-        </Suspense>
-      </div>
+      {/* Width and padding live inside the nav (and its fallback), not here:
+          the hub's anchor row aligns with the hub's max-w-3xl column while the
+          sub-pages' card keeps the wider max-w-5xl rail, and only those
+          route-aware client components know which page this is. */}
+      <Suspense fallback={<SettingsSubNavFallback />}>
+        <SettingsSubNavLoader params={params} />
+      </Suspense>
       {children}
     </>
   );
@@ -79,29 +82,4 @@ async function SettingsSubNavLoader({ params }: { params: Promise<{ shopSlug: st
     destinationLabels,
   };
   return <SettingsSubNav shopSlug={shopSlug} copy={copy} />;
-}
-
-/**
- * Same shape as the loaded nav (a hub row, then two grouped rows) so the
- * static shell doesn't jump when the real nav streams in.
- */
-function SettingsSubNavFallback() {
-  return (
-    <div
-      aria-hidden="true"
-      className="flex animate-pulse flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3"
-    >
-      <div className="h-11 w-24 rounded-xl bg-surface" />
-      <div className="flex flex-wrap gap-2">
-        <div className="h-11 w-20 rounded-xl bg-surface" />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <div className="h-11 w-28 rounded-xl bg-surface" />
-        <div className="h-11 w-32 rounded-xl bg-surface" />
-        <div className="h-11 w-24 rounded-xl bg-surface" />
-        <div className="h-11 w-24 rounded-xl bg-surface" />
-        <div className="h-11 w-20 rounded-xl bg-surface" />
-      </div>
-    </div>
-  );
 }

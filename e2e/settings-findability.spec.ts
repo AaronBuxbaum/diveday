@@ -1,12 +1,15 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
+import { openSettingsRow } from "./helpers";
 
 /**
- * Settings is the longest page in the staff app — three groups of cards that
- * run past eight phone screens. Two things kept a shop from getting down it:
- * the group headings carried `id`/`scroll-mt` anchors that nothing linked, and
- * two surfaces a shop configures from here — Team and Promo codes — had no
- * card at all, reachable only from the nav's "Set up" menu or ⌘K.
+ * Settings used to be the longest page in the staff app — three groups of
+ * cards past eight phone screens; it is a compact answers-first directory
+ * now, but the door problems this spec guards predate that. Two things kept
+ * a shop from getting down it: the group headings carried `id`/`scroll-mt`
+ * anchors that nothing linked, and two surfaces a shop configures from here —
+ * Team and Promo codes — had no card at all, reachable only from the nav's
+ * "Set up" menu or ⌘K.
  *
  * This spec is the door test for both. The gating itself is H-14's
  * (e2e/role-permissions.spec.ts); what is asserted here is that the doors
@@ -42,16 +45,17 @@ test.describe("as owner", () => {
     await jump.getByRole("link", { name: "Data & integrations" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings#data-integrations$`));
 
-    // Team: the card an owner opening Settings to add a colleague looks for.
+    // Team: the row an owner opening Settings to add a colleague looks for.
+    // The heading is the link now — a door row carries no separate CTA label.
     await page.goto(`/shop/${SHOP}/settings`);
-    await page.getByRole("link", { name: "Manage team" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Team", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
     // Promo codes: in Money, where the shop's other money is. Settings is now
     // the *only* door to both of these — the header dropped their rows.
     await page.goto(`/shop/${SHOP}/settings`);
-    await page.getByRole("link", { name: "Manage promo codes" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Promo codes", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
     await expect(
       page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }),
@@ -63,6 +67,8 @@ test.describe("as owner", () => {
     // afterwards, so a shop that clicked past the picker read every departure
     // time, day header, and "sailing today" in US Eastern with no way out.
     await page.goto(`/shop/${SHOP}/settings`);
+    // The row states its current zone at rest; the picker waits behind it.
+    await openSettingsRow(page, "Timezone");
     const zone = page.getByLabel("Timezone", { exact: true });
     await expect(zone).toHaveValue("America/New_York");
 

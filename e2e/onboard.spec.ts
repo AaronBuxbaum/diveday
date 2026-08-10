@@ -39,8 +39,10 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 
   // Complete the contact-details step for real, through the actual settings
   // form — not a flag the checklist sets itself — then confirm it reflects.
+  // The checklist deep-links to the contact row's fragment, which opens the
+  // row — the settings hub keeps its forms behind summary rows.
   await page.getByRole("link", { name: "Add contact details" }).click();
-  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings$`));
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#contact$`));
   await page.getByLabel("Contact email").fill("hello@firstrun.example.com");
   await page.getByRole("button", { name: "Save contact details" }).click();
   await expect(page.getByText("Contact details saved.")).toBeVisible();

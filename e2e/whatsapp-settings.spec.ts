@@ -70,6 +70,10 @@ test.describe("WhatsApp settings authorization", () => {
   test("and is not offered the link from the settings index", async ({ page }) => {
     await page.goto("/shop/blue-mantis/settings");
 
-    await expect(page.getByRole("link", { name: "Set up WhatsApp" })).toHaveCount(0);
+    // Scoped to `main`: the settings sub-nav carries its own "WhatsApp" tab,
+    // which is not the door row this asserts about.
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "WhatsApp", exact: true }),
+    ).toHaveCount(0);
   });
 });

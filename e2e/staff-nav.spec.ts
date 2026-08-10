@@ -40,8 +40,12 @@ test.describe("owner", () => {
 
     await nav.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("link", { name: "Open dive sites" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open waivers" })).toBeVisible();
+    // Door rows: the heading is the link, with no separate CTA label.
+    const settingsMain = page.getByRole("main");
+    await expect(settingsMain.getByRole("link", { name: "Dive sites", exact: true })).toBeVisible();
+    await expect(
+      settingsMain.getByRole("link", { name: "Waiver template", exact: true }),
+    ).toBeVisible();
   });
 });
 

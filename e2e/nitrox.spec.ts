@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { e2eNow } from "./helpers";
+import { e2eNow, openSettingsRow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -108,6 +108,7 @@ test.describe("staff", () => {
 
     try {
       await page.goto("/shop/blue-mantis/settings");
+      await openSettingsRow(page, "What we rent");
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
       await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -136,6 +137,7 @@ test.describe("staff", () => {
       // test that disables nitrox here must turn it back on or every later
       // test in this worker sees it missing.
       await page.goto("/shop/blue-mantis/settings");
+      await openSettingsRow(page, "What we rent");
       await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
       await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -148,6 +150,7 @@ test.describe("staff", () => {
   }) => {
     try {
       await page.goto("/shop/blue-mantis/settings");
+      await openSettingsRow(page, "What we rent");
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
       await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -175,6 +178,7 @@ test.describe("staff", () => {
       await expect(tanks.getByText("Nitrox", { exact: true })).toHaveCount(0);
     } finally {
       await page.goto("/shop/blue-mantis/settings");
+      await openSettingsRow(page, "What we rent");
       await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
       await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -208,6 +212,7 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await expect(page).toHaveURL(/\/shop\/nitrox-off-e2e/);
 
   await page.goto("/shop/nitrox-off-e2e/settings");
+  await openSettingsRow(page, "What we rent");
   const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
   await expect(nitroxCheckbox).not.toBeChecked();
   // Most shops don't fill nitrox: no price field to fill in until it's ticked.
@@ -216,6 +221,8 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await nitroxCheckbox.check();
   await page.getByRole("button", { name: "Save rental catalog" }).click();
   await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+  // The price boxes wait behind their own row.
+  await openSettingsRow(page, "Rental prices");
   await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(1);
 });
 

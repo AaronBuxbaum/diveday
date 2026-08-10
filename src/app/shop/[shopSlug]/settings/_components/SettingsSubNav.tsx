@@ -23,16 +23,14 @@ import {
  * `PublicShopNav.tsx`'s pattern, so it can live in the shared layout without
  * re-rendering on every tab switch.
  *
- * **On the hub, the group name is also the way down the page.** Settings used
- * to wear two navigations, stacked: this card, and — four lines below it — a
- * `JumpNav` row of the *same three words* ("Your shop", "Money", "Data &
- * integrations") as anchors into the page's own sections. Two controls, one
- * vocabulary, different grammars, adjacent: which one moved you down the page
- * and which one left it was a coin flip, and it was the "funky/disorganized"
- * of the report. The words appear once now. On the hub each group name is the
- * anchor to its section (and a group with no sub-pages of its own — Money —
- * gets a row for that reason alone); on a sub-page the hub is elsewhere, so
- * the names go back to being plain captions over their pills.
+ * **On the hub this is a quiet anchor row, not the card.** The hub is a
+ * directory now — every destination this card would list renders 400px lower
+ * as a door row with a better description, so the full card there was the
+ * page's own contents repeated above its `<h1>` (and on a phone it was the
+ * entire first viewport). On the hub only the three group names render, as
+ * plain same-document anchors into the sections they name; the grouped pill
+ * card appears on the six sub-pages, where "back to the hub / sideways to a
+ * sibling" is real work it does.
  */
 export type SettingsSubNavCopy = {
   ariaLabel: string;
@@ -87,14 +85,37 @@ export function SettingsSubNav({
   const hubItem: SettingsNavItem = { key: "hub", href: root, label: copy.hub };
 
   // Whether the hub itself is the page being read — which is what decides
-  // whether a group name is a destination on this page or a caption for one
-  // elsewhere.
+  // whether this nav is the way *around* the page (three quiet anchors) or
+  // the way *back and sideways* from a sub-page (the grouped pill card).
   const onHub = pathname === root;
 
+  if (onHub) {
+    return (
+      // Same column as the hub's own `<main>` (max-w-3xl), so the anchors sit
+      // on the page's left edge; `-ml-3` cancels the first pill's own padding
+      // so its label lines up optically with the `<h1>` beneath.
+      <div className="mx-auto w-full max-w-3xl px-4 pt-8 sm:px-6 sm:pt-10 print:hidden">
+        <nav aria-label={copy.ariaLabel} className={`-ml-3 flex flex-wrap gap-1 ${className}`}>
+          {SETTINGS_GROUPS.map((group) => (
+            // A same-document anchor, which the browser handles itself: no
+            // re-render, no refetch, works before JavaScript arrives — the
+            // same reasoning the retired `JumpNav` recorded.
+            <a
+              key={group.id}
+              href={`#${group.id}`}
+              className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground"
+            >
+              {copy.groupLabels[group.id]}
+            </a>
+          ))}
+        </nav>
+      </div>
+    );
+  }
+
   // Groups in `SETTINGS_GROUPS`' own order, each carrying the destinations
-  // registered under it (also in registry order). Off the hub, a group with no
-  // destination today (Money) renders no row; on the hub it does, because
-  // there its name is the anchor to a section that exists.
+  // registered under it (also in registry order). A group with no destination
+  // today (Money) renders no row here — its section lives on the hub.
   const groupRows = SETTINGS_GROUPS.map((group) => ({
     group,
     items: SETTINGS_DESTINATIONS.filter((destination) => destination.groupId === group.id).map(
@@ -104,7 +125,7 @@ export function SettingsSubNav({
         label: copy.destinationLabels[destination.id],
       }),
     ),
-  })).filter((row) => onHub || row.items.length > 0);
+  })).filter((row) => row.items.length > 0);
 
   const current = activeSettingsNavKey(pathname, [
     hubItem,
@@ -113,10 +134,12 @@ export function SettingsSubNav({
 
   const renderItem = (item: SettingsNavItem) => {
     const active = item.key === current;
+    // Hover is a weaker tint than the active pill's solid fill + shadow —
+    // a hovered sibling must never read as "you are here".
     const cls = `${itemClass} ${
       active
         ? "bg-surface text-primary shadow-sm"
-        : "text-muted hover:bg-surface hover:text-foreground"
+        : "text-muted hover:bg-surface/60 hover:text-foreground"
     }`;
     return active ? (
       <span key={item.key} aria-current="page" data-tab-active="true" className={cls}>
@@ -130,46 +153,28 @@ export function SettingsSubNav({
   };
 
   return (
-    <nav
-      aria-label={copy.ariaLabel}
-      className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 print:hidden ${className}`}
-    >
-      {/* The way back to the hub — absent *on* the hub, where it was a pill
-          that went nowhere sitting directly above an `<h1>` reading the same
-          three words. Removing it is a whole row of chrome off the top of a
-          phone screen, on the one settings page that is already the longest. */}
-      {onHub ? null : <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>}
-      {/* The group name sits on its own line, above the pills it owns — not
+    <div className="mx-auto w-full max-w-5xl px-4 pt-8 sm:px-6 sm:pt-10 print:hidden">
+      <nav
+        aria-label={copy.ariaLabel}
+        className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface-sunken p-3 ${className}`}
+      >
+        {/* The way back to the hub. */}
+        <div className="flex flex-wrap gap-2">{renderItem(hubItem)}</div>
+        {/* The group name sits on its own line, above the pills it owns — not
           beside them. Inline, a 12px uppercase caption and a 14px semibold pill
           shared a line at two different weights, and on a phone the pills
           wrapped out from under their own caption: "Data & integrations" ended
-          three lines above the last thing that belonged to it, and "Money",
-          which owns no sub-page, read as a heading with nothing under it. A
-          caption and an indented row underneath says which pills are whose at
-          any width. */}
-      {groupRows.map(({ group, items }) => (
-        <div key={group.id} className="flex flex-col gap-1">
-          {onHub ? (
-            // A same-document anchor, which the browser handles itself: no
-            // re-render, no refetch, works before JavaScript arrives — the
-            // same reasoning `JumpNav` records, and the reason the hub's
-            // `PreserveFormScroll` handshake is undisturbed by it.
-            <a
-              href={`#${group.id}`}
-              className="inline-flex min-h-11 w-fit items-center rounded-xl px-2 text-xs font-semibold tracking-wide text-muted uppercase transition-colors duration-200 hover:bg-surface hover:text-foreground"
-            >
-              {copy.groupLabels[group.id]}
-            </a>
-          ) : (
+          three lines above the last thing that belonged to it. A caption and an
+          indented row underneath says which pills are whose at any width. */}
+        {groupRows.map(({ group, items }) => (
+          <div key={group.id} className="flex flex-col gap-1">
             <span className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
               {copy.groupLabels[group.id]}
             </span>
-          )}
-          {items.length > 0 ? (
             <div className="flex flex-wrap gap-2">{items.map(renderItem)}</div>
-          ) : null}
-        </div>
-      ))}
-    </nav>
+          </div>
+        ))}
+      </nav>
+    </div>
   );
 }

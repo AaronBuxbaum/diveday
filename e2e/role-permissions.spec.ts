@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
+import { openSettingsRow } from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -186,6 +187,8 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/settings`);
+      // The catalog form waits behind its summary row on the settings hub.
+      await openSettingsRow(page, "What we rent");
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
