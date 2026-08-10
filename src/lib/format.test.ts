@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatByteSize,
   formatDateTimeTz,
+  formatDayParts,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -33,6 +34,28 @@ describe("isValidTimeZone (CR-014)", () => {
 describe("formatShortDate", () => {
   it("renders weekday, month, and day", () => {
     expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
+  });
+});
+
+describe("formatDayParts", () => {
+  it("hands back the localized weekday, day numeral, and month separately", () => {
+    expect(formatDayParts(morning, "en-US", "UTC")).toEqual({
+      weekday: "Fri",
+      day: "17",
+      month: "Jul",
+    });
+  });
+
+  it("resolves the calendar day in the shop's zone, not the host's", () => {
+    // 2026-07-17T02:30Z is still the evening of the 16th in New York.
+    const lateNightUtc = new Date("2026-07-17T02:30:00Z");
+    expect(formatDayParts(lateNightUtc, "en-US", "America/New_York").day).toBe("16");
+  });
+
+  it("localizes every piece", () => {
+    const parts = formatDayParts(morning, "es-ES", "UTC");
+    expect(parts.day).toBe("17");
+    expect(parts.month.toLowerCase()).toContain("jul");
   });
 });
 
