@@ -65,12 +65,32 @@ function ActionRow({
       <p className="mt-1.5 text-muted">{action.detail}</p>
     </div>
   );
+  // Rows split by what their control *is*. A row whose control performs a
+  // send (waiver, invite, invoice) keeps a real button — the tap has a
+  // consequence and deserves an explicit target. A row whose control merely
+  // navigates dissolves into the row itself: the whole row is the link
+  // (design/principles.md #10, "actions ride on their objects"), with the
+  // destination named by a quiet chevron affordance instead of a bordered
+  // button. Ten bordered "Open …" buttons down a queue made every row read
+  // as a form; a tappable row reads as a list.
+  const rowIsLink = !action.waiver && !action.resend && !action.invite && !action.payment?.orderId;
   return (
     <li
       className={
         grouped
-          ? "px-4 py-3.5 transition-colors duration-200 sm:px-5"
-          : "card-scale-hint rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-primary/40 sm:p-5"
+          ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
+              rowIsLink
+                ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60"
+                : ""
+            }`
+          : `group/row relative rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 sm:p-5${
+              // Pressable chrome only on a card that is actually pressable —
+              // a Send-waiver card that scaled and tinted on hover while only
+              // its button did anything was a false affordance.
+              rowIsLink
+                ? " card-scale-hint hover:border-primary/40 has-[a:focus-visible]:border-primary/40"
+                : ""
+            }`
       }
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
@@ -111,12 +131,29 @@ function ActionRow({
             copy={paymentCopy}
           />
         ) : (
-          <Link
-            href={action.href}
-            className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-          >
-            {action.actionLabel}
-          </Link>
+          <>
+            {/* The stretched link, same construction as the public schedule's
+                agenda rows: an invisible overlay makes the whole row the tap
+                target (a far better dock-test target than a 44px button), the
+                aria-label keeps the destination's name for screen readers and
+                the role-based tests, and the visible affordance below is
+                presentational. `has-[a:focus-visible]` on the row carries the
+                focus tint; the overlay's own outline draws around the row. */}
+            <Link
+              href={action.href}
+              aria-label={action.actionLabel}
+              className={`absolute inset-0 z-0 ${grouped ? "" : "rounded-2xl"}`}
+            />
+            <span
+              aria-hidden="true"
+              className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
+            >
+              {action.actionLabel}
+              <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
+                ›
+              </span>
+            </span>
+          </>
         )}
       </div>
     </li>
@@ -278,7 +315,11 @@ export function TodayQueue({
                 ) : (
                   <section
                     key={departureGroup.key}
-                    className="card-scale-hint overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-colors duration-200 hover:border-primary/40"
+                    // No hover chrome on the card itself: the card never
+                    // navigates, and having just taught "tint = tappable" on
+                    // the rows inside it, a scaling, border-tinting wrapper
+                    // would be a false affordance. The rows carry their own.
+                    className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
                   >
                     <h4 className="border-b border-border bg-surface-sunken px-4 py-2 text-sm font-semibold sm:px-5">
                       {departureGroup.label}
