@@ -178,6 +178,54 @@ test.describe("schedule builder", () => {
       page.getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }).first(),
     ).toBeVisible();
   });
+
+  test("a pinned day header sits below the shop nav, not behind it", async ({ page }) => {
+    // The board's day headers are sticky so a staffer scrolled into the middle
+    // of a two-week window still knows which day the rows under their thumb
+    // belong to. They pin *below* the staff shell's own sticky header, whose
+    // height is the measured constant `--staff-nav-h` in src/app/globals.css —
+    // the nav has no fixed height (it wraps into one, two, or three rows), so
+    // that number cannot be derived in CSS and this is what keeps it honest.
+    await page.goto(BOARD);
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+
+    // One width per shape the nav takes, either side of its own `sm:`/`lg:`
+    // breakpoints.
+    for (const width of [390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const measured = await page.evaluate(async () => {
+        window.scrollTo(0, document.body.scrollHeight / 2);
+        // A frame boundary, not a timing guess: sticky offsets are resolved
+        // during layout, so the next animation frame is the first moment the
+        // pinned positions are readable at all.
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        const nav = document.querySelector("header.sticky");
+        const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+        const headers = [...document.querySelectorAll("h3")]
+          .map((heading) => heading.parentElement)
+          .filter(
+            (el): el is HTMLElement => el !== null && getComputedStyle(el).position === "sticky",
+          );
+        const offset = headers[0] ? Number.parseFloat(getComputedStyle(headers[0]).top) : -1;
+        // "Pinned" is a header holding its sticky offset rather than flowing.
+        const pinned = headers
+          .map((el) => el.getBoundingClientRect())
+          .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+        return {
+          pinnedCount: pinned.length,
+          // How far the worst-placed pinned header clears the nav. Negative
+          // means it is hiding underneath it.
+          clearance: Math.min(...pinned.map((rect) => rect.top - navBottom)),
+        };
+      });
+
+      expect(measured.pinnedCount, `no day header pinned at ${width}px`).toBeGreaterThan(0);
+      expect(
+        measured.clearance,
+        `a pinned day header is behind the shop nav at ${width}px — --staff-nav-h in src/app/globals.css no longer matches the nav's height`,
+      ).toBeGreaterThanOrEqual(0);
+    }
+  });
 });
 
 test.describe("schedule builder, as the daily crew", () => {

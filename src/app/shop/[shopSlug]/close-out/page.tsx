@@ -377,8 +377,13 @@ export default async function CloseOutPage({
             </p>
             {/* The tally rides *inside* each chip. Set beside one it was bound
                 to its label by a 2px gap difference, and a row of them wrapping
-                at 390px read as loose digits. */}
-            <ul className="mt-3 flex flex-wrap items-center gap-2">
+                at 390px read as loose digits.
+                `gap-x-5`, wider than the chips' own `gap-1.5`: a neutral chip
+                no longer draws a border around itself, so the space between
+                two chips is the only thing left saying where one tally ends
+                and the next begins. At `gap-2` that boundary was narrower than
+                the gap *inside* "WAIVER · 3". */}
+            <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
               {state.tomorrow.byKind.map((entry) => (
                 <li key={entry.kind}>
                   <KindChip kind={entry.kind} count={entry.count} t={t} />

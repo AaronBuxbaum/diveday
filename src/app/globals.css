@@ -295,6 +295,63 @@ summary {
 }
 
 /*
+ * How much viewport the staff shell's own sticky header (`src/components/
+ * ShopNav.tsx`, `sticky top-0 z-30`) takes, so a `/shop/**` surface can pin
+ * something of its own *below* it instead of behind it.
+ *
+ * The nav has no fixed height — it wraps as much or as little as the logo,
+ * search and sign-out cluster leaves room for beside the links — so this cannot
+ * be derived in CSS and is measured instead. Measured on the schedule board at
+ * every width from 360px to 1280px, it takes exactly three heights, and they
+ * change at the nav's own `sm:` and `lg:` breakpoints: 169px below 640px, 121px
+ * from 640px to 1023px, 69px from 1024px up (where it collapses to a single
+ * row).
+ *
+ * A measured constant drifts, so it is checked rather than trusted:
+ * `e2e/schedule-builder.spec.ts` asserts a pinned day header clears the nav at
+ * all three widths, and fails naming this variable if the nav's shape changes.
+ * The public schedule needs none of this — its header is not sticky, which is
+ * why its day rules can simply say `top-0`.
+ */
+:root {
+  --staff-nav-h: 169px;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --staff-nav-h: 121px;
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --staff-nav-h: 69px;
+  }
+}
+
+/*
+ * The no-JS fallback controls: in the server HTML for a visitor with scripting
+ * off, invisible to everyone else.
+ *
+ * Hidden here by default and revealed only by a `<style>` the browser parses
+ * when scripting is *off* — so the reveal is the exception and nothing has to
+ * be torn out of the DOM to hide it. Removing the control on hydration instead
+ * is what made the schedule filters' Apply button render and then vanish a
+ * beat later on every JS load; CSS settles the question before first paint, on
+ * both paths.
+ *
+ * The reveal side lives at the one call site
+ * (`src/app/s/[shopSlug]/_components/ScheduleFilters.tsx`), because a
+ * `<noscript>`'s content has to be written as raw markup: a browser with
+ * scripting enabled parses it as text, so React children there fail to hydrate
+ * and can come back as live elements — visible to precisely the readers who
+ * should never see them.
+ */
+[data-noscript-only] {
+  display: none;
+}
+
+/*
  * Print / Save-as-PDF. Three things make a dive-day document read well on a
  * shop's (usually black-and-white) printer, and none of them should touch the
  * on-screen app:

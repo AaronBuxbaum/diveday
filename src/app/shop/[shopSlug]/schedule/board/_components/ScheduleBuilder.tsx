@@ -852,8 +852,33 @@ export function ScheduleBuilder({
                 day numeral, weekday and month as its caps, a hairline running
                 out to the day's own "+ Add". The numeral is what a scrolling
                 thumb catches; the sr-only sentence keeps the date readable in
-                one piece for screen readers. */}
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                one piece for screen readers.
+
+                Sticky, like the public schedule's — and for a sharper reason.
+                This is a two-week window that runs past fifteen rows on a
+                phone, so a staffer scrolled into the middle of it had to scroll
+                back up to find out which day the rows under their thumb belong
+                to. Pinned, the numeral answers that continuously, and it
+                releases at the end of its own day block (the day `<div>` is its
+                containing block) rather than stacking up.
+
+                Three details this needs that the public page does not:
+
+                — `top`, not `top-0`. The staff shell's header is itself sticky
+                  at `top-0`, so a day header pinned to zero would sit *behind*
+                  it. `--staff-nav-h` (globals.css) is how tall that header is
+                  at this width; the public page has no sticky chrome above it.
+                — The row-width inset. Rows are `-mx-3 sm:-mx-4` so their hover
+                  tint runs wider than this header's own box; without matching
+                  the inset, a row scrolling underneath would show through in
+                  the gutters on both sides.
+                — `z-20`. A row's right-hand column is `relative z-10` (it lifts
+                  its badges and the "⋯" over the title's stretched hit area),
+                  and rows come after this header in the DOM, so at an equal
+                  z-index they would paint over it. There is nothing to fight
+                  above z-10 any more: the move/copy/remove menu discloses
+                  inline now, so nothing on this board floats. */}
+            <div className="sticky top-[var(--staff-nav-h)] z-20 -mx-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background px-3 pt-2 pb-3 sm:-mx-4 sm:px-4">
               <h3 className="flex items-center gap-3">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-3">

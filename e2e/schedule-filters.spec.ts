@@ -48,6 +48,41 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   await expect(page).toHaveURL(/hasSpace=1/);
 });
 
+test("the Apply button never appears for a diver with JavaScript", async ({ page }) => {
+  // Apply is the no-JS fallback. It used to be *removed* on hydration, so every
+  // real visitor watched it render and then vanish a beat later — a small
+  // horizontal shift beside "Has space" that phone screenshots kept catching
+  // mid-flight. It is now in the server HTML on both paths and revealed only by
+  // a stylesheet a browser parses when scripting is off, so with JS it has no
+  // box at any point in the page's life.
+  //
+  // Sampled from before hydration rather than after it: asserting on the
+  // settled page would pass just as well against the old remove-on-hydrate
+  // behaviour, which is the thing being regression-tested.
+  await page.addInitScript(() => {
+    (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed = false;
+    const sample = () => {
+      const el = document.querySelector("[data-noscript-only]");
+      if (el && el.getBoundingClientRect().height > 0) {
+        (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed = true;
+      }
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.goto("/s/blue-mantis");
+
+  // The filters are live — i.e. the window in which the old button would have
+  // been removed has closed, and the sampler above ran across all of it.
+  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __applyEverBoxed: boolean }).__applyEverBoxed,
+    ),
+  ).toBe(false);
+  await expect(page.getByRole("button", { name: "Apply" })).toBeHidden();
+});
+
 test("paging and month arrows keep the filters a diver applied", async ({ page }) => {
   // Regression: the pager and month-arrow links rebuilt their query from
   // scratch and dropped `hasSpace`/`tripType`, so tapping "Show later" handed

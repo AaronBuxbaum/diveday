@@ -12,15 +12,39 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
  * reading warning on one surface and neutral on the other, which is exactly
  * the drift `ACTION_KIND_META` exists to prevent one level down.
  */
+/**
+ * Only the exceptional tones wear a pill.
+ *
+ * Danger and warning stay exactly as they were: toned text on the plain
+ * surface, not on a 10% tinted fill — the tint is the documented sub-AA
+ * combination (`--warning` on its own fill reads 4.39:1 against AA's 4.5), and
+ * on `bg-surface` both tones clear the bar today (warning 5.02:1, danger
+ * 6.47:1, measured) — the border keeps the chip a chip.
+ *
+ * Neutral is now quiet caps text with no border and no fill. Once the queue's
+ * bordered "Open …" buttons dissolved into whole-row links, the chip became
+ * the loudest mark on every row, and seven of the twenty-three kinds are
+ * neutral (`ACTION_KIND_META`) — so a staffer scanning for the red
+ * `MISSING DIVER` had to read past a column of grey pills shaped exactly like
+ * it. That is the "a badge on every row means nothing on any row" failure
+ * design/principles.md #9 names, and the fix is to spend chip-weight only
+ * where the row is exceptional.
+ *
+ * The words do not change, so state is still never carried by color alone.
+ * `text-muted` clears AA against every surface these two consumers put it on —
+ * `bg-background` 5.01:1, `bg-surface` 5.27:1, `bg-surface-sunken` 4.58:1 in
+ * light; 7.29 / 6.54 / 7.63:1 in dark (measured, not eyeballed) — which is why
+ * dropping the sunken fill is safe: the chip now sits on the row's own
+ * background, including the `hover:bg-surface` tint.
+ */
 const CHIP_TONES = {
-  // Toned text on the plain surface, not on a 10% tinted fill: the tint is the
-  // documented sub-AA combination (`--warning` on its own fill reads 4.39:1
-  // against AA's 4.5), and on `bg-surface` both tones clear the bar today
-  // (warning 5.02:1, danger 6.47:1, measured) — the border keeps the chip a
-  // chip.
-  danger: "border-danger/40 bg-surface text-danger",
-  warning: "border-warning/40 bg-surface text-warning",
-  neutral: "border-border bg-surface-sunken text-muted",
+  danger: "rounded-full border border-danger/40 bg-surface px-2.5 py-0.5 tracking-wide text-danger",
+  warning:
+    "rounded-full border border-warning/40 bg-surface px-2.5 py-0.5 tracking-wide text-warning",
+  // Wider tracking than the pills carry, matching the calendar block's caps
+  // (`src/app/s/[shopSlug]/page.tsx`): it is the app's established register for
+  // a label that names something without competing with it.
+  neutral: "tracking-[0.18em] text-muted",
 } as const;
 
 export function KindChip({
@@ -47,7 +71,7 @@ export function KindChip({
   const { tone } = ACTION_KIND_META[kind];
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase ${CHIP_TONES[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase ${CHIP_TONES[tone]}`}
     >
       {t(ACTION_KIND_KEYS[kind])}
       {count === undefined || !Number.isFinite(count) || count <= 0 ? null : (
