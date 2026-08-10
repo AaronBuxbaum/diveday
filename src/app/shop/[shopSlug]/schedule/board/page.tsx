@@ -20,7 +20,7 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
+import { formatDayParts, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { MAX_SERIES_OCCURRENCES, MIN_SERIES_OCCURRENCES } from "@/lib/recurrence";
@@ -356,7 +356,12 @@ export default async function ScheduleBoardPage({
     const dateIso = toDateInputValue(wall);
     let day = builderDays.at(-1);
     if (day?.dateIso !== dateIso) {
-      day = { dateIso, label: formatShortDate(trip.startsAt, locale, tz), trips: [] };
+      day = {
+        dateIso,
+        label: formatShortDate(trip.startsAt, locale, tz),
+        parts: formatDayParts(trip.startsAt, locale, tz),
+        trips: [],
+      };
       builderDays.push(day);
     }
     day.trips.push({

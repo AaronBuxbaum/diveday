@@ -53,6 +53,14 @@ export type BuilderDay = {
   dateIso: string;
   /** Preformatted for the shop's locale, e.g. "Tue, Jul 21". */
   label: string;
+  /**
+   * The same date as a calendar block — big day numeral, weekday and month
+   * caps — so the board's day headers read exactly like the public schedule's
+   * (`formatDayParts`). One calendar grammar on both sides of the counter:
+   * the staff board and the diver schedule are the same schedule, and they
+   * should look like it.
+   */
+  parts: { weekday: string; day: string; month: string };
   trips: BuilderTrip[];
 };
 
@@ -837,13 +845,32 @@ export function ScheduleBuilder({
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-5">
+      <div className="mt-4 flex flex-col gap-8">
         {days.map((day) => (
           <div key={day.dateIso}>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
-              <h3 className="text-sm font-semibold tracking-wide text-muted uppercase">
-                {day.label}
+            {/* The day header is the public schedule's calendar block — big
+                day numeral, weekday and month as its caps, a hairline running
+                out to the day's own "+ Add". The numeral is what a scrolling
+                thumb catches; the sr-only sentence keeps the date readable in
+                one piece for screen readers. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <h3 className="flex items-center gap-3">
+                <span className="sr-only">{day.label}</span>
+                <span aria-hidden="true" className="flex items-center gap-3">
+                  <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
+                    {day.parts.day}
+                  </span>
+                  <span className="flex flex-col justify-center leading-tight">
+                    <span className="text-xs font-bold tracking-[0.18em] uppercase">
+                      {day.parts.weekday}
+                    </span>
+                    <span className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
+                      {day.parts.month}
+                    </span>
+                  </span>
+                </span>
               </h3>
+              <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-border" />
               {canConfigure ? (
                 <button
                   type="button"
@@ -871,7 +898,7 @@ export function ScheduleBuilder({
               />
             ) : null}
 
-            <ul className="mt-3 flex flex-col gap-2">
+            <ul className="mt-2 flex flex-col">
               {day.trips.map((trip) => {
                 const full = trip.booked >= trip.capacity;
                 // "Copy" is designed to mint a same-titled departure on another
@@ -881,7 +908,12 @@ export function ScheduleBuilder({
                 return (
                   <li
                     key={trip.id}
-                    className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
+                    // Borderless, like the public agenda's rows: the day blocks,
+                    // type, and whitespace carry the hierarchy, and the hover
+                    // tint says "this row is a thing" without a box saying it
+                    // permanently (design/principles.md #10). The open panels
+                    // below keep their own bordered boxes — a form is a form.
+                    className="group/trip -mx-3 rounded-xl px-3 py-4 transition-colors duration-200 hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
                   >
                     {/* Two columns, not six loose flex children. The time, the
                         title block, the badges and the buttons all used to sit
@@ -890,8 +922,11 @@ export function ScheduleBuilder({
                         three-line title at three different heights and nothing
                         lined up with anything. Now: what the departure *is* on
                         the left, what you *do* about it on the right, each
-                        internally aligned. */}
-                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                        internally aligned.
+                        `relative` scopes the title's stretched pseudo-element
+                        to this summary block only — the move/copy/remove
+                        panels below stay outside the row's tap target. */}
+                    <div className="relative flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                       <div className="flex w-full min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 sm:w-auto sm:flex-1">
                         {/* `leading-6` matches the title's line box, so the
                             time and the departure name share a baseline
@@ -911,9 +946,17 @@ export function ScheduleBuilder({
                           sharing ~340px with them and stacking three lines
                           deep. */}
                         <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+                          {/* The whole summary is the tap target, phone
+                              included: the title link stretches over it via
+                              its pseudo-element (the public agenda's own
+                              mechanic — a borderless row with only a text
+                              link reads as a listing, not a pressable
+                              thing). The badges and the "⋯" menu opt back on
+                              top with z-10; the accessible name stays the
+                              plain title the tests and specs click. */}
                           <Link
                             href={`/shop/${shopSlug}/trips/${trip.id}`}
-                            className="font-medium hover:text-primary"
+                            className="font-medium group-hover/trip:text-primary after:absolute after:inset-0 after:z-0"
                           >
                             {trip.title}
                           </Link>
@@ -930,12 +973,19 @@ export function ScheduleBuilder({
                               .filter(Boolean)
                               .join(" · ") || copy.noSiteSetYet}
                           </p>
-                          <p className="mt-1 text-sm">
-                            <span className="text-muted">{copy.crewLabel} </span>
+                          {/* Muted end to end: who's crewing is a caption-grade
+                              fact repeated on nearly every row — only the gap
+                              ("Nobody yet") earns row-grade ink (principle 9). */}
+                          <p className="mt-1 text-sm text-muted">
                             {trip.crew.length > 0 ? (
-                              trip.crew.join(", ")
+                              `${copy.crewLabel} ${trip.crew.join(", ")}`
                             ) : (
-                              <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
+                              <>
+                                {copy.crewLabel}{" "}
+                                <span className="font-medium text-warning">
+                                  {copy.crewNobodyYet}
+                                </span>
+                              </>
                             )}
                           </p>
                           {/* A returned departure is otherwise the only row here
@@ -951,22 +1001,34 @@ export function ScheduleBuilder({
                         </div>
                       </div>
                       {/* The right-hand column: what this departure's state is,
-                          then what you can do about it, on one centred line. */}
-                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                        {/* A sold-out boat is a win worth noticing, not a quiet
-                            state (design/principles.md #3) — "success" stands
-                            out where "neutral" would recede. Matches the same
-                            badge on the trip page (task appendix, UX persona
-                            lens 17: this one used to render grey here and green
-                            there for the same fact). */}
-                        <Badge tone={full ? "success" : "primary"} tabularNums>
-                          {trip.booked}/{trip.capacity}
-                        </Badge>
+                          then what you can do about it, on one centred line.
+                          `z-10` lifts its own links and the "⋯" controls above
+                          the title's stretched overlay. */}
+                      <div className="relative z-10 flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                        {/* Counts are facts, not alerts (design/principles.md
+                            #9): a routine 5/12 reads as quiet tabular text, the
+                            same register the public schedule gives "7 spots
+                            left". Only the sold-out boat keeps a badge — a win
+                            worth noticing (#3), "success" where "neutral" would
+                            recede, matching the same badge on the trip page. */}
+                        {full ? (
+                          <Badge tone="success" tabularNums>
+                            {trip.booked}/{trip.capacity}
+                          </Badge>
+                        ) : (
+                          <p className="text-sm text-muted tabular-nums">
+                            {trip.booked}/{trip.capacity}
+                          </p>
+                        )}
                         {/* The loudest thing this board can say (DOM-H3): the
                             boat is back and somebody on its list was never
                             counted. "danger" carries an aria-hidden ✕ of its
                             own, so hue is never the only signal, and the whole
                             badge is a link straight to the open checkpoint. */}
+                        {/* `min-h-11` on both badge links: the badge stays its
+                            size, the hit area clears the 44px dock-test bar —
+                            the roll-call one is the most safety-adjacent tap
+                            on this board and must not be its smallest. */}
                         {trip.rollCallOpen ? (
                           <Link
                             href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
@@ -974,6 +1036,7 @@ export function ScheduleBuilder({
                               ref,
                               dive: trip.rollCallOpen.diveNumber,
                             })}
+                            className="inline-flex min-h-11 items-center"
                           >
                             <Badge tone="danger">
                               {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
@@ -984,6 +1047,7 @@ export function ScheduleBuilder({
                           <Link
                             href={`/shop/${shopSlug}/trips/${trip.id}#details`}
                             aria-label={fill(copy.noPriceSetAria, { ref })}
+                            className="inline-flex min-h-11 items-center"
                           >
                             <Badge tone="warning">{copy.noPriceSet}</Badge>
                           </Link>
@@ -1000,7 +1064,7 @@ export function ScheduleBuilder({
                             principles #8, "collapse the rare path"). The
                             content is the row; the controls appear when asked. */}
                         {canConfigure && !trip.rollCallOpen ? (
-                          <div data-row-menu={trip.id} className="relative shrink-0">
+                          <div data-row-menu={trip.id} className="flex shrink-0 items-center gap-1">
                             <button
                               type="button"
                               ref={registerToggle(`menu:${trip.id}`)}
@@ -1019,8 +1083,17 @@ export function ScheduleBuilder({
                                 ⋯
                               </span>
                             </button>
+                            {/* The three choices disclose *inline*, unfolding
+                                beside the "⋯" that revealed them, never as a
+                                floating panel. On these borderless rows a
+                                dropdown hung over whatever sat beneath it —
+                                the next day's "+ Add" ended up 18px from
+                                fully covered, an automated-scan WCAG 2.5.8
+                                failure. Inline, nothing can ever be obscured,
+                                and the actions sit beside the row they act on
+                                (design/principles.md #10). */}
                             {open === `menu:${trip.id}` ? (
-                              <div className="absolute top-full right-0 z-20 mt-1 flex w-max min-w-36 flex-col rounded-xl border border-border bg-surface p-1 shadow-lg animate-scale-in">
+                              <div className="flex items-center gap-1 animate-scale-in">
                                 <button
                                   type="button"
                                   ref={focusOnMount}
@@ -1029,7 +1102,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.move}
@@ -1041,7 +1113,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.copy}
@@ -1062,7 +1133,6 @@ export function ScheduleBuilder({
                                   className={buttonClass({
                                     variant: "danger-ghost",
                                     size: "sm",
-                                    className: "w-full justify-start",
                                   })}
                                 >
                                   {copy.remove}
@@ -1071,6 +1141,17 @@ export function ScheduleBuilder({
                             ) : null}
                           </div>
                         ) : null}
+                        {/* The row's one at-rest tap cue, same as the public
+                            agenda's: without a border, a phone row — where
+                            hover doesn't exist — reads as a text listing
+                            rather than a pressable thing. Decorative; the
+                            title link is the navigation. */}
+                        <span
+                          aria-hidden="true"
+                          className="text-muted transition-transform duration-200 group-hover/trip:translate-x-0.5"
+                        >
+                          ›
+                        </span>
                       </div>
                     </div>
 
