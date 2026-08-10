@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { shiftCalendarDate } from "./calendar-date";
 import {
   addDaysToWall,
   EVERY_WEEKDAY,
   isValidWeeklyPattern,
   MAX_OCCURRENCES_PER_ROLL,
   recurrenceSummary,
+  seriesFiresOn,
   seriesOccurrenceDates,
   weekdaySetFrom,
   weekdaySetHas,
@@ -239,6 +241,47 @@ describe("seriesOccurrenceDates", () => {
       through: "2036-01-01",
     });
     expect(proposed).toHaveLength(MAX_OCCURRENCES_PER_ROLL);
+  });
+});
+
+describe("seriesFiresOn", () => {
+  const saturdays = {
+    anchorDate: SATURDAY,
+    pattern: { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]) },
+  };
+
+  it("agrees with the generator, date for date", () => {
+    // The two share their arithmetic on purpose: a checker that disagreed with
+    // the generator would report a real departure as orphaned, or hide one that
+    // is.
+    const generated = new Set(dates({ ...saturdays, from: SATURDAY, through: "2026-08-29" }));
+    for (let day = 0; day < 60; day += 1) {
+      const date = shiftCalendarDate(SATURDAY, day);
+      if (date > "2026-08-29") break;
+      expect(seriesFiresOn(saturdays, date)).toBe(generated.has(date));
+    }
+  });
+
+  it("does not fire before the anchor or after the end date", () => {
+    expect(seriesFiresOn(saturdays, "2026-06-27")).toBe(false);
+    expect(seriesFiresOn({ ...saturdays, endsOn: "2026-07-11" }, "2026-07-18")).toBe(false);
+    expect(seriesFiresOn({ ...saturdays, endsOn: "2026-07-11" }, "2026-07-11")).toBe(true);
+  });
+
+  it("says no rather than throwing for a cadence that cannot generate", () => {
+    expect(
+      seriesFiresOn({ anchorDate: SATURDAY, pattern: { intervalWeeks: 1, weekdays: 0 } }, SATURDAY),
+    ).toBe(false);
+  });
+
+  it("keeps the fortnightly phase for a date in a skipped week", () => {
+    const fortnightly = {
+      anchorDate: SATURDAY,
+      pattern: { intervalWeeks: 2, weekdays: weekdaySetFrom([SAT]) },
+    };
+    expect(seriesFiresOn(fortnightly, "2026-07-04")).toBe(true);
+    expect(seriesFiresOn(fortnightly, "2026-07-11")).toBe(false);
+    expect(seriesFiresOn(fortnightly, "2026-07-18")).toBe(true);
   });
 });
 

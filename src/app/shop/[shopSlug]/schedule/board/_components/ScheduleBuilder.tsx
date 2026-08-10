@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
-import { RepeatFields } from "./RepeatFields";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {

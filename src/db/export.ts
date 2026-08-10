@@ -848,6 +848,7 @@ export async function loadShopExportBundleInput(
             "anchor_date",
             "ends_on",
             "occurrence_count",
+            "last_rolled_at",
             "created_at",
           ],
           rows: seriesRows.map((row) => [
@@ -862,6 +863,7 @@ export async function loadShopExportBundleInput(
             row.anchorDate,
             row.endsOn,
             row.occurrenceCount,
+            row.lastRolledAt,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_series.csv"],

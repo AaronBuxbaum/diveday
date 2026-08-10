@@ -1,17 +1,20 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents, tripRequirements, trips } from "./schema";
+import { bookings, people, rollCallEvents, tripRequirements, tripSeries, trips } from "./schema";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
+  cancelOffCadenceSeriesTrips,
   createTripSeries,
   deleteTrip,
   getLatestSeriesInstance,
   getTripSeriesById,
   getTripSeriesSummary,
   getTripWithBooked,
+  listOffCadenceSeriesTrips,
   listStaff,
   listTripScheduleDays,
   moveTrip,
@@ -20,6 +23,7 @@ import {
   rollSeriesForward,
   setSeriesRepeat,
   setTripStatus,
+  updateSeriesCadence,
   updateTrip,
 } from "./trips";
 
@@ -33,6 +37,7 @@ import {
 const TZ = "America/New_York";
 const SUN = 0;
 const MON = 1;
+const WED = 3;
 const THU = 4;
 const SAT = 6;
 
@@ -437,6 +442,203 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect((await occurrenceDatesOf(db, result.series.id)).length).toBeGreaterThan(
       afterStop.length,
     );
+  });
+
+  it("widens a cadence in place: a second weekday appears on the board", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-09-07T12:00:00.000Z");
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    const before = await occurrenceDatesOf(db, result.series.id);
+
+    const updated = await updateSeriesCadence(
+      db,
+      shop.id,
+      result.series.id,
+      { intervalWeeks: 1, weekdays: weekdaySetFrom([WED, SAT]), endsOn: null },
+      now,
+    );
+    expect(updated?.created).toBeGreaterThan(0);
+    // Nothing is orphaned by adding a day, so there is nothing to ask about.
+    expect(updated?.offCadence).toBe(0);
+    const after = await occurrenceDatesOf(db, result.series.id);
+    expect(after.length).toBeGreaterThan(before.length);
+    // Every Saturday that was there is still there, and Wednesdays joined it.
+    expect(after).toEqual(expect.arrayContaining(before));
+  });
+
+  it("narrowing a cadence cancels nothing — it reports what no longer fits", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-09-07T12:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
+    );
+    if (!result) throw new Error("series not created");
+    const before = await occurrenceDatesOf(db, result.series.id);
+
+    // Drop Wednesday. The Wednesdays already on the board are ordinary trips.
+    const updated = await updateSeriesCadence(
+      db,
+      shop.id,
+      result.series.id,
+      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
+      now,
+    );
+    expect(updated?.offCadence).toBeGreaterThan(0);
+    // The whole point: saving a narrower cadence took nothing off the board.
+    expect(await occurrenceDatesOf(db, result.series.id)).toEqual(before);
+    const stale = await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+    expect(stale.every((trip) => calendarDateWeekday(trip.occurrenceDate) === WED)).toBe(true);
+  });
+
+  it("reports how many of the orphaned dates carry divers before anything is cancelled", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-09-07T12:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
+    );
+    if (!result) throw new Error("series not created");
+    const wednesday = result.trips.find(
+      (trip) => trip.seriesOccurrenceDate && calendarDateWeekday(trip.seriesOccurrenceDate) === WED,
+    );
+    if (!wednesday) throw new Error("expected a Wednesday instance");
+    const [diver] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!diver) throw new Error("seed people missing");
+    await db.insert(bookings).values({ shopId: shop.id, tripId: wednesday.id, personId: diver.id });
+
+    await updateSeriesCadence(
+      db,
+      shop.id,
+      result.series.id,
+      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
+      now,
+    );
+    const stale = await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+    const booked = stale.find((trip) => trip.id === wednesday.id);
+    // The head count is the whole reason this is an offer and not a side effect.
+    expect(booked?.booked).toBe(1);
+  });
+
+  it("cancels the orphaned dates only when asked, and leaves the ones that sailed", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-09-30T12:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
+    );
+    if (!result) throw new Error("series not created");
+    // A Wednesday that has already departed by `now` — history, never a
+    // schedule edit to make.
+    const pastWednesday = result.trips.find(
+      (trip) =>
+        trip.startsAt < now &&
+        trip.seriesOccurrenceDate &&
+        calendarDateWeekday(trip.seriesOccurrenceDate) === WED,
+    );
+    if (!pastWednesday) throw new Error("expected a departed Wednesday");
+
+    await updateSeriesCadence(
+      db,
+      shop.id,
+      result.series.id,
+      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
+      now,
+    );
+    const cancelled = await cancelOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+    expect(cancelled).toBeGreaterThan(0);
+    expect(await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now)).toEqual([]);
+    expect((await getTripWithBooked(db, shop.id, pastWednesday.id))?.status).toBe("scheduled");
+    // Cancelled, not deleted: every one is reinstatable from its own page.
+    expect(await occurrenceDatesOf(db, result.series.id)).toContain(
+      pastWednesday.seriesOccurrenceDate,
+    );
+  });
+
+  it("keeps the phase when the interval changes — the anchor never moves", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-09-07T12:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, endsOn: "2030-10-19" }),
+    );
+    if (!result) throw new Error("series not created");
+
+    await updateSeriesCadence(
+      db,
+      shop.id,
+      result.series.id,
+      { intervalWeeks: 2, weekdays: weekdaySetFrom([SAT]), endsOn: "2030-10-19" },
+      now,
+    );
+    // Fortnightly *from the anchor's own week*, not from the day of the edit:
+    // the surviving dates are the anchor and every second Saturday after it.
+    const stale = await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+    const staleDates = stale.map((trip) => trip.occurrenceDate);
+    expect(staleDates).toEqual(["2030-09-14", "2030-09-28", "2030-10-12"]);
+  });
+
+  it("refuses a cadence edit that would leave the run unable to generate", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    expect(
+      await updateSeriesCadence(db, shop.id, result.series.id, {
+        intervalWeeks: 1,
+        weekdays: 0,
+        endsOn: null,
+      }),
+    ).toBeNull();
+    // And the stored cadence is untouched, so the board still matches its own
+    // description.
+    expect((await getTripSeriesById(db, shop.id, result.series.id))?.weekdayMask).toBe(
+      weekdaySetFrom([SAT]),
+    );
+  });
+
+  it("leaves a deploy-window series inert instead of failing the sweep every night", async () => {
+    const { db, shop } = await seededShopContext();
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    // Exactly what the release *before* the cadence columns writes: a row on
+    // their inert defaults. It can never generate, so the nightly pass must not
+    // keep reporting it as a failure — that is a permanently red monitor for a
+    // row nothing is wrong with.
+    await db
+      .update(tripSeries)
+      .set({ weekdayMask: 0, anchorDate: "" })
+      .where(eq(tripSeries.id, result.series.id));
+
+    const sweep = await rollAllSeriesForward(db, at("2030-10-07T12:00:00.000Z"));
+    expect(sweep.failures).toBe(0);
+    expect(sweep.seriesConsidered).toBe(0);
+  });
+
+  it("rolls least-recently-rolled first, so no run can be starved by another", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-10-07T12:00:00.000Z");
+    const first = await createTripSeries(db, seriesInput({ shopId: shop.id, title: "First" }));
+    const second = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, title: "Second", anchorDate: "2030-09-01" }),
+    );
+    if (!first || !second) throw new Error("series not created");
+
+    // The older run has already been rolled tonight; the newer one never has.
+    await db
+      .update(tripSeries)
+      .set({ lastRolledAt: now })
+      .where(eq(tripSeries.id, first.series.id));
+    await rollAllSeriesForward(db, now);
+
+    // Both carry a stamp afterwards — the sweep records every attempt, which is
+    // what stops a failing run holding the front of the queue forever.
+    const rows = await db
+      .select({ id: tripSeries.id, lastRolledAt: tripSeries.lastRolledAt })
+      .from(tripSeries)
+      .where(eq(tripSeries.shopId, shop.id));
+    expect(rows.every((row) => row.lastRolledAt !== null)).toBe(true);
   });
 
   it("rejects a series with an invalid dive count", async () => {

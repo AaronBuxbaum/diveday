@@ -14,8 +14,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Ninety-seven key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 388 screenshots per run (see
+ * Visual regression coverage. Ninety-eight key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 392 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -1783,6 +1783,13 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripFromBoard(page, title);
         await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
         await capture(page, "trip-repeating-panel", scheme);
+
+        // And the cadence editor open — the weekday chips carrying the run's
+        // real answer, which is the state the collapsed panel above can never
+        // show. Same page, one click, so it costs a click rather than a build.
+        await page.getByText("Change the days it runs").click();
+        await page.getByRole("group", { name: "Repeats on" }).waitFor();
+        await capture(page, "trip-repeating-cadence", scheme);
       });
 
       // The blow-out confirm — the one deliberate step between the captain's

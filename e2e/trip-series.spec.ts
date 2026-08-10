@@ -58,7 +58,31 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await expect(series).toContainText(startWeekday);
   await expect(series).toContainText(secondDay);
 
+  // Widen the run from the trip page: a third day joins it, and nothing that is
+  // already on the board is disturbed.
+  // The cadence editor is a closed <details>; its fields are not reachable
+  // until the summary is clicked.
+  await series.getByText("Change the days it runs").click();
+  const thirdDay = ["Mon", "Tue", "Thu"].find(
+    (day) => day !== startWeekday && day !== secondDay,
+  ) as string;
+  await series.getByText(thirdDay, { exact: true }).click();
+  await series.getByRole("button", { name: "Save the days" }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  // Scoped to the panel: the page header carries the same sentence.
+  await expect(series.getByText(new RegExp(`Repeats weekly on .*${thirdDay}`))).toBeVisible();
+
+  // Narrowing it back is never a silent bulk cancellation: the dates that no
+  // longer fit are listed, with head counts, and left on the board until asked.
+  await page.goto(tripUrl);
+  await series.getByText("Change the days it runs").click();
+  await series.getByText(thirdDay, { exact: true }).click();
+  await series.getByRole("button", { name: "Save the days" }).click();
+  await expect(series).toContainText("no longer part of this run");
+  await expect(series.getByRole("button", { name: /^Cancel those \d+ dates$/ })).toBeVisible();
+
   // Stopping the repeat keeps every date already on the board and closes the run.
+  await page.goto(tripUrl);
   await series.getByRole("button", { name: "Stop repeating" }).click();
   await expect(page.getByRole("status")).toContainText("Stopped repeating");
 

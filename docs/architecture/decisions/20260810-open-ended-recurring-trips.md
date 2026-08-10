@@ -110,3 +110,50 @@ The trade-offs:
 - **Series created before this change are frozen where they are.** The migration back-fills
   `ends_on` to each one's own last date, so an upgraded shop's board does not silently grow
   overnight. One click on "Start repeating again" lets any of them keep going.
+
+
+## Addendum, 2026-08-10 — editing a cadence, and what a narrower one may not do
+
+The decision above left a run's cadence fixed at creation, and that gap closed in the same week: a
+shop that adds Wednesday to its Monday-and-Thursday run should not have to build a second repeating
+trip, or delete one that already has divers on it. `updateSeriesCadence` changes the weekday set,
+the interval, and the end date of a running series, from a disclosure on the trip page.
+
+**The anchor date never moves.** It is the cadence's phase, not its start: an every-other-week run
+re-anchored on the day somebody edited it would silently swap which fortnight it sails in.
+
+**Widening and narrowing are deliberately asymmetric, and this is the whole of the decision.**
+Adding a weekday or pushing the end date out saves and rolls the horizon — the new dates appear and
+nothing else moves. Dropping a weekday or pulling the end date in saves the cadence and **cancels
+nothing**. The instances it orphans are ordinary trips with rosters, deposits and waivers on them,
+so they are listed back to staff with their head counts and taken off the board only on a second,
+explicit tap (`cancelOffCadenceSeriesTrips`, which cancels rather than deletes, so each stays
+reinstatable). A cadence edit that quietly emptied a fortnight of the schedule is the one outcome
+this two-step exists to prevent.
+
+"No longer fits" is judged on the instance's cadence slot, never on where it currently departs: an
+instance staff dragged to another day still fills the slot it was generated for, and reading its
+moved date would report a perfectly good departure as orphaned.
+
+Departure *times* are out of scope. Moving an instant divers were told to show up at is a
+notification problem before it is a scheduling one, and `moveTrip` already handles it per date.
+
+## Addendum, 2026-08-10 — what a security review changed
+
+A `security-reviewer` pass over the merged change found no cross-tenant leak and no authorization
+bypass, and three things worth fixing. All three are in the tree:
+
+- **The horizon roll takes `FOR UPDATE` on its series row.** `materializeWindow` decides what to
+  create by reading the instance set and then inserting, so under READ COMMITTED two overlapping
+  passes both read the same empty slots and both fill them — a whole horizon of duplicate
+  departures, publicly bookable. The nightly cron and a staff tap really can land together. The
+  lock is on the *series*, because the trips whose absence is being read do not exist to lock.
+- **The nightly sweep is bounded and least-recently-rolled first.** Ordered by creation date, one
+  shop with many runs would put every later-created run permanently behind its own — starvation,
+  not delay, and invisible to the starved shop. `trip_series.last_rolled_at` makes the queue a
+  round robin; a pass that hits `SERIES_SWEEP_LIMIT` defers by a night and *says so* in its log
+  line rather than capping silently.
+- **A run whose cadence cannot generate is excluded from the sweep.** The migration's deploy-window
+  sentinels (`weekday_mask = 0`, `anchor_date = ''`) would otherwise be counted as a failure every
+  night forever — a permanently red monitor for a row that was never going to produce a date. The
+  cadence editor above is now also the repair path for one.
