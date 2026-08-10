@@ -16,7 +16,7 @@ describe("post-deploy wizard", () => {
   });
 
   it("runs only the selected handoffs and derives SES DNS records from AWS", async () => {
-    const answers = ["yes", "yes", "yes", "y", "yes"];
+    const answers = ["yes", "yes", "yes", "y", "no", "no", "yes"];
     const commands = [];
     await runPostDeployWizard({
       ask: async () => answers.shift() ?? "no",
@@ -123,7 +123,7 @@ describe("post-deploy wizard", () => {
   });
 
   it("skips a Vercel DNS record already present by name, type, and value", async () => {
-    const answers = ["no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
     const commands = [];
     await runPostDeployWizard({
       ask: async () => answers.shift() ?? "no",
@@ -150,7 +150,7 @@ describe("post-deploy wizard", () => {
   });
 
   it("does not treat a superset domain as a match for an existing DNS record", async () => {
-    const answers = ["no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
     const commands = [];
     await runPostDeployWizard({
       ask: async () => answers.shift() ?? "no",
@@ -178,8 +178,84 @@ describe("post-deploy wizard", () => {
     expect(dnsAdds).toHaveLength(3);
   });
 
+  it("reads the CDK CI role ARNs from the stack outputs and pipes them to the sync script", async () => {
+    const answers = ["no", "no", "no", "no", "yes", "no", "no"];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => answers.shift() ?? "no",
+      cdkArguments: [],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_, options) => {
+        commands.push({ command, arguments_, options });
+        if (command === "aws") {
+          return JSON.stringify([
+            { OutputKey: "GitHubActionsCdkDiffRoleArn", OutputValue: "arn:aws:iam::111:role/diff" },
+            {
+              OutputKey: "GitHubActionsCdkDeployRoleArn",
+              OutputValue: "arn:aws:iam::111:role/deploy",
+            },
+            { OutputKey: "PostDeployWizard", OutputValue: "unrelated" },
+          ]);
+        }
+        return "";
+      },
+      log: () => {},
+    });
+
+    expect(commands).toEqual([
+      {
+        command: "aws",
+        arguments_: [
+          "cloudformation",
+          "describe-stacks",
+          "--stack-name",
+          "diveday-infra",
+          "--query",
+          "Stacks[0].Outputs",
+          "--output",
+          "json",
+        ],
+        options: { encoding: "utf8", env: { AWS_DEFAULT_REGION: "us-east-2" } },
+      },
+      {
+        command: process.execPath,
+        arguments_: [expect.stringContaining("sync-github-cdk-ci-vars.mjs")],
+        options: {
+          stdio: ["pipe", "inherit", "inherit"],
+          input:
+            "AWS_CDK_DIFF_ROLE_ARN=arn:aws:iam::111:role/diff\nAWS_CDK_DEPLOY_ROLE_ARN=arn:aws:iam::111:role/deploy",
+        },
+      },
+    ]);
+  });
+
+  it("creates the infra-deploy GitHub Environment when asked", async () => {
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => answers.shift() ?? "no",
+      cdkArguments: [],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_, options) => {
+        commands.push({ command, arguments_, options });
+        return "";
+      },
+      log: () => {},
+    });
+
+    expect(commands).toEqual([
+      {
+        command: process.execPath,
+        arguments_: [expect.stringContaining("sync-github-cdk-ci-environment.mjs")],
+        options: { stdio: "inherit" },
+      },
+    ]);
+  });
+
   it("falls back to adding every DNS record when listing existing ones fails", async () => {
-    const answers = ["no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
     const commands = [];
     const messages = [];
     await runPostDeployWizard({

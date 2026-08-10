@@ -74,6 +74,48 @@ export async function runPostDeployWizard({
     run(process.execPath, [join(scriptDirectory, "sync-github-secrets.mjs"), ".env.github"]);
   }
 
+  if (
+    yes(
+      await ask("Set the GitHub Actions CDK diff/deploy role ARNs as repository variables? [y/N] "),
+    )
+  ) {
+    const outputs = JSON.parse(
+      execute(
+        "aws",
+        [
+          "cloudformation",
+          "describe-stacks",
+          "--stack-name",
+          "diveday-infra",
+          "--query",
+          "Stacks[0].Outputs",
+          "--output",
+          "json",
+        ],
+        { encoding: "utf8", env: syncEnvironment },
+      ),
+    );
+    const outputValue = (key) => outputs.find((output) => output.OutputKey === key)?.OutputValue;
+    const roleArns = [
+      `AWS_CDK_DIFF_ROLE_ARN=${outputValue("GitHubActionsCdkDiffRoleArn") ?? ""}`,
+      `AWS_CDK_DEPLOY_ROLE_ARN=${outputValue("GitHubActionsCdkDeployRoleArn") ?? ""}`,
+    ].join("\n");
+    run(process.execPath, [join(scriptDirectory, "sync-github-cdk-ci-vars.mjs")], {
+      input: roleArns,
+      stdio: ["pipe", "inherit", "inherit"],
+    });
+  }
+
+  if (
+    yes(
+      await ask(
+        "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
+      ),
+    )
+  ) {
+    run(process.execPath, [join(scriptDirectory, "sync-github-cdk-ci-environment.mjs")]);
+  }
+
   if (!yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) return;
 
   const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");
