@@ -14,15 +14,6 @@ export type ScheduleFiltersCopy = {
   apply: string;
 };
 
-/** The Apply label is bundle copy, but the markup is built by hand. */
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 /**
  * The schedule's filter row. Changing a filter *is* the ask — so with JS on,
  * any change submits the form itself and no Apply button renders at all
@@ -93,15 +84,15 @@ export function ScheduleFilters({
         />
         {copy.hasSpace}
       </label>
-      {/* Raw markup, not JSX children: a scripting-enabled browser parses
-          noscript content as one text node, so React hydrating real elements
-          in there would mismatch. Nothing inside can run JS anyway — a plain
-          submit button is the whole no-JS story. */}
-      <noscript
-        dangerouslySetInnerHTML={{
-          __html: `<button type="submit" class="${buttonClass({ variant: "secondary" })}">${escapeHtml(copy.apply)}</button>`,
-        }}
-      />
+      {/* React deliberately skips hydrating <noscript> children (a
+          scripting-enabled browser parses them as one text node), so real
+          JSX here is safe and never mismatches. Nothing inside can run JS
+          anyway — a plain submit button is the whole no-JS story. */}
+      <noscript>
+        <button type="submit" className={buttonClass({ variant: "secondary" })}>
+          {copy.apply}
+        </button>
+      </noscript>
     </QueryForm>
   );
 }

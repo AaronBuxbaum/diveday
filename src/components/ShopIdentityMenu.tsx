@@ -3,8 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { buttonClass } from "@/components/ui/button";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 
 export type ShopIdentityMenuCopy = {
   signOut: string;
