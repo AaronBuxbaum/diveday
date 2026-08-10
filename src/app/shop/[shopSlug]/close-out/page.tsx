@@ -377,8 +377,11 @@ export default async function CloseOutPage({
             </p>
             {/* The tally rides *inside* each chip. Set beside one it was bound
                 to its label by a 2px gap difference, and a row of them wrapping
-                at 390px read as loose digits. */}
-            <ul className="mt-3 flex flex-wrap items-center gap-2">
+                at 390px read as loose digits. The gap between chips must
+                stay visibly wider than the gap around the interpunct inside
+                one, or proximity regroups "PREP · 2  FILL SEATS" into
+                "2 FILL SEATS" on a narrow screen. */}
+            <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
               {state.tomorrow.byKind.map((entry) => (
                 <li key={entry.kind}>
                   <KindChip kind={entry.kind} count={entry.count} t={t} />
