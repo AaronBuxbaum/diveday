@@ -18,11 +18,14 @@ afterEach(() => {
   }
 });
 
-// Stubs the three `gh` invocations the script makes, in order: `gh repo view`
-// (returns a fixed owner/repo), `gh api user` (returns a fixed numeric id),
-// and `gh api --method PUT .../environments/infra-deploy --input -` (records
-// the target path and the JSON body piped to it).
-function writeGhStub(binDirectory, pathLog, bodyLog) {
+// Stubs every `gh` invocation the script makes: `gh repo view`, `gh api
+// user`, the environment GET, the PUT, and (first-run only) the
+// deployment-branch-policies POST. `getResponse` is either a JSON string (the
+// existing environment) or the literal "404" to simulate one not existing
+// yet. Each PUT/POST call's arguments are appended to callLog as JSON lines
+// so a test can inspect exactly what was sent, in order.
+function writeGhStub(binDirectory, callLogPath, getResponse) {
+  const escapedGetResponse = getResponse.replace(/'/g, "'\\''");
   writeFileSync(
     join(binDirectory, "gh"),
     `#!/bin/sh
@@ -34,10 +37,21 @@ case "$1 $2" in
     echo "42"
     ;;
   "api --method")
-    echo "$4" > "${pathLog}"
-    cat > "${bodyLog}"
+    method="$3"
+    path="$4"
+    body="$(cat 2>/dev/null || true)"
+    printf '%s\\n' "{\\"method\\":\\"$method\\",\\"path\\":\\"$path\\",\\"body\\":$([ -n "$body" ] && printf '%s' "$body" || echo null)}" >> "${callLogPath}"
+    ;;
+  "api repos/octocat/diveday/environments/infra-deploy")
+    response='${escapedGetResponse}'
+    if [ "$response" = "404" ]; then
+      echo "gh: HTTP 404: Not Found" >&2
+      exit 1
+    fi
+    echo "$response"
     ;;
   *)
+    echo "unstubbed: $@" >&2
     exit 1
     ;;
 esac
@@ -54,25 +68,99 @@ function run(binDirectory) {
   );
 }
 
+function readCalls(callLogPath) {
+  return readFileSync(callLogPath, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
 describe("sync-github-cdk-ci-environment", () => {
-  it("PUTs the current gh user as the infra-deploy environment's required reviewer", () => {
+  it("creates the environment with a main-only branch policy on first run", () => {
     const directory = temporaryDirectory("diveday-gh-cdk-env-");
-    const pathLog = join(directory, "path.log");
-    const bodyLog = join(directory, "body.log");
-    writeGhStub(directory, pathLog, bodyLog);
+    const callLogPath = join(directory, "calls.log");
+    writeGhStub(directory, callLogPath, "404");
 
     const output = run(directory);
+    const calls = readCalls(callLogPath);
 
-    expect(readFileSync(pathLog, "utf8").trim()).toBe(
-      "repos/octocat/diveday/environments/infra-deploy",
-    );
-    expect(JSON.parse(readFileSync(bodyLog, "utf8"))).toEqual({
-      wait_timer: 0,
-      prevent_self_review: false,
-      reviewers: [{ type: "User", id: 42 }],
-      deployment_branch_policy: null,
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEqual({
+      method: "PUT",
+      path: "repos/octocat/diveday/environments/infra-deploy",
+      body: {
+        wait_timer: 0,
+        prevent_self_review: false,
+        reviewers: [{ type: "User", id: 42 }],
+        deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+      },
+    });
+    expect(calls[1]).toEqual({
+      method: "POST",
+      path: "repos/octocat/diveday/environments/infra-deploy/deployment-branch-policies",
+      body: null,
     });
     expect(output).toContain("infra-deploy");
-    expect(output).toContain("42");
+  });
+
+  it("adds the current user to an existing reviewer list instead of replacing it", () => {
+    const directory = temporaryDirectory("diveday-gh-cdk-env-");
+    const callLogPath = join(directory, "calls.log");
+    writeGhStub(
+      directory,
+      callLogPath,
+      JSON.stringify({
+        wait_timer: 30,
+        prevent_self_review: true,
+        protection_rules: [
+          {
+            type: "required_reviewers",
+            reviewers: [{ type: "Team", reviewer: { id: 7, slug: "platform" } }],
+          },
+        ],
+        deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+      }),
+    );
+
+    run(directory);
+    const calls = readCalls(callLogPath);
+
+    // No branch-policy registration call: the environment already existed.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].body).toEqual({
+      wait_timer: 30,
+      prevent_self_review: true,
+      reviewers: [
+        { type: "Team", id: 7 },
+        { type: "User", id: 42 },
+      ],
+      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+    });
+  });
+
+  it("does not duplicate the current user if already a reviewer", () => {
+    const directory = temporaryDirectory("diveday-gh-cdk-env-");
+    const callLogPath = join(directory, "calls.log");
+    writeGhStub(
+      directory,
+      callLogPath,
+      JSON.stringify({
+        wait_timer: 0,
+        prevent_self_review: false,
+        protection_rules: [
+          {
+            type: "required_reviewers",
+            reviewers: [{ type: "User", reviewer: { id: 42, login: "octocat" } }],
+          },
+        ],
+        deployment_branch_policy: null,
+      }),
+    );
+
+    run(directory);
+    const calls = readCalls(callLogPath);
+
+    expect(calls[0].body.reviewers).toEqual([{ type: "User", id: 42 }]);
   });
 });

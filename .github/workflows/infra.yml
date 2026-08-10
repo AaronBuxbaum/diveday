@@ -107,22 +107,34 @@ jobs:
       # AWS_CDK_DIFF_ROLE_ARN variable (manual action "github-actions-cdk-oidc")
       # has not been set up yet.
       - run: pnpm exec cdk synth --quiet
+      # This repo restricts who can open a pull request to collaborators
+      # (repo setting: pull_request_creation_policy=collaborators_only), which
+      # is the primary control here. This condition is defense in depth on
+      # top of that, not instead of it: GitHubActionsCdkDiffRole's trust
+      # policy accepts any `pull_request`-triggered run in this repo,
+      # including one whose head is a fork, and this is the one place in the
+      # job that credentials actually get requested — everything before this
+      # point (synth) needs none. Skip the AWS-credentialed steps entirely
+      # when the PR's head repo isn't this one; `cdk synth` above still ran
+      # and still reported a broken template regardless.
+      #
       # aws-actions/configure-aws-credentials reports an empty role-to-assume
       # as an opaque "Credentials could not be loaded" SDK error, which reads
       # like a broken workflow rather than an unfinished one-time setup step.
       # Say the actual cause: the manual action hasn't been done yet.
       - name: Confirm the diff role ARN is set
-        if: vars.AWS_CDK_DIFF_ROLE_ARN == ''
+        if: vars.AWS_CDK_DIFF_ROLE_ARN == '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           echo "::error::AWS_CDK_DIFF_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDiffRoleArn stack output."
           exit 1
       - uses: aws-actions/configure-aws-credentials@v4
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_CDK_DIFF_ROLE_ARN }}
           role-session-name: gha-cdk-diff
       - name: Post the diff to the pull request
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: corymhall/cdk-diff-action@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}

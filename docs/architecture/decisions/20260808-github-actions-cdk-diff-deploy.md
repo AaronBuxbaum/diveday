@@ -129,3 +129,45 @@ rather than a `CfnOutput`.
 - Escape hatch: if GitHub Environment approval proves too slow or friction-heavy for a solo operator,
   the fix is loosening `infra-deploy`'s reviewer requirement, not removing the environment — the OIDC
   trust condition would need updating in the same change, since it names the environment by string.
+
+## Security review findings
+
+An adversarial review of this change (before merge) found two real bugs and confirmed two more as
+accepted, documented tradeoffs rather than oversights:
+
+- **Fixed — `sync-github-cdk-ci-environment.mjs` was destructively overwriting the reviewer list.**
+  Its own header comment claimed re-running it "does not remove anyone else's approval right", but the
+  code unconditionally `PUT`-replaced `reviewers` with a single-element array, and the original test
+  asserted exactly that destructive body. A human who later added a second reviewer by hand — the
+  documented way to strengthen the gate — would have had it silently wiped by the next routine
+  `pnpm infra:deploy`. Fixed by `GET`-ing the environment first and only ever *adding* the current user
+  to whatever reviewer list already exists (deduped, never removing an entry this script didn't add);
+  `wait_timer`/`prevent_self_review` are carried forward unchanged from an existing environment.
+- **Fixed — `deployment_branch_policy: null` let `cdk deploy` run from any branch.** The trust
+  condition only checks that a job declared `environment: infra-deploy`, not which ref it ran from, and
+  `workflow_dispatch` lets the invoker pick any branch — so unrestricted branch policy meant the
+  "reviewed code merged to main" assumption the rest of this document leans on was not actually
+  enforced by anything. Fixed by restricting first-time environment creation to a `main`-only custom
+  branch policy (`custom_branch_policies: true` plus a registered `main` policy, not
+  `protected_branches: true` — that depends on branch protection being separately configured on `main`,
+  and silently allows *zero* branches to deploy if it isn't). An environment that already exists keeps
+  whatever branch policy is currently set, so a human's later change here survives a re-run.
+- **Accepted — the environment's sole required reviewer can self-approve their own deploy.**
+  `prevent_self_review` stays `false`, and the reviewer is always the `gh` CLI's current user — so the
+  person who clicks "Run workflow" can also click "Approve and deploy". This is a real gap relative to
+  "a second person reviewed it," but the gate's actual value for a solo operator is what the
+  Alternatives section above already argues: it turns "workflow_dispatch was clicked" into "a human
+  consciously clicked twice, in the Actions UI, after seeing the pending-deployment prompt" — not
+  editable by rewriting the workflow YAML. Revisit this the moment a second person, or a less-trusted CI
+  identity, gets write access to this repo: at that point a real second reviewer becomes both possible
+  and necessary, and the fix the destructive-overwrite bug above closes is what makes adding one durable.
+- **Accepted, with defense in depth added — fork pull requests and `GitHubActionsCdkDiffRole`.** The
+  role's trust condition (`repo:aaronbuxbaum/diveday:*`) accepts any `pull_request`-triggered run in
+  this repo, and GitHub's exact behavior for OIDC token issuance on a fork-originated `pull_request` run
+  was not something this review could verify live. The repository's actual, current control is
+  `pull_request_creation_policy: collaborators_only` (a GitHub repo setting, confirmed via the API) —
+  non-collaborators cannot open a PR against this repo at all, fork or not, so the theoretical gap has
+  no one able to trigger it today. `.github/workflows/infra.yml`'s `diff` job now also skips every
+  AWS-credentialed step (everything after `cdk synth`, which needs no credentials regardless) when
+  `github.event.pull_request.head.repo.full_name != github.repository`, as defense in depth that holds
+  even if the collaborator restriction is ever loosened.
