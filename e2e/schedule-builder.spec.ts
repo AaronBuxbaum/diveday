@@ -179,18 +179,25 @@ test.describe("schedule builder", () => {
     ).toBeVisible();
   });
 
-  test("a pinned day header sits below the shop nav, not behind it", async ({ page }) => {
+  test("a pinned day header sits flush under the shop nav", async ({ page }) => {
     // The board's day headers are sticky so a staffer scrolled into the middle
     // of a two-week window still knows which day the rows under their thumb
-    // belong to. They pin *below* the staff shell's own sticky header, whose
-    // height is the measured constant `--staff-nav-h` in src/app/globals.css —
-    // the nav has no fixed height (it wraps into one, two, or three rows), so
-    // that number cannot be derived in CSS and this is what keeps it honest.
+    // belong to. They pin directly under the staff shell's own sticky header,
+    // whose height is the measured constant `--staff-nav-h` in
+    // src/app/globals.css — content-driven, so it cannot be derived in CSS, and
+    // this test is what keeps the number honest.
+    //
+    // Flush, not merely "clear of it", because the constant can drift in both
+    // directions and both are real: too small and the day hides behind the nav,
+    // too large and it floats in a band of dead space. The second one is not
+    // hypothetical — the nav used to be 169px on a phone, and when the phone
+    // dock moved its links out and left one 69px row, a "clearance >= 0" check
+    // passed happily on a header hanging 100px below the nav.
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
 
-    // One width per shape the nav takes, either side of its own `sm:`/`lg:`
-    // breakpoints.
+    // Phone, tablet, desktop — the widths at which the nav has historically
+    // changed shape, so a future re-wrap is caught wherever it happens.
     for (const width of [390, 768, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       const measured = await page.evaluate(async () => {
@@ -220,10 +227,16 @@ test.describe("schedule builder", () => {
       });
 
       expect(measured.pinnedCount, `no day header pinned at ${width}px`).toBeGreaterThan(0);
+      // A few pixels of slack for sub-pixel layout, and nothing more: the gap
+      // this is policing is measured in tens of pixels when it goes wrong.
       expect(
         measured.clearance,
-        `a pinned day header is behind the shop nav at ${width}px — --staff-nav-h in src/app/globals.css no longer matches the nav's height`,
+        `a pinned day header does not sit flush under the shop nav at ${width}px (off by ${measured.clearance}px) — --staff-nav-h in src/app/globals.css no longer matches the nav's height`,
       ).toBeGreaterThanOrEqual(0);
+      expect(
+        measured.clearance,
+        `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — --staff-nav-h in src/app/globals.css is larger than the nav`,
+      ).toBeLessThanOrEqual(4);
     }
   });
 });

@@ -299,34 +299,29 @@ summary {
  * ShopNav.tsx`, `sticky top-0 z-30`) takes, so a `/shop/**` surface can pin
  * something of its own *below* it instead of behind it.
  *
- * The nav has no fixed height — it wraps as much or as little as the logo,
- * search and sign-out cluster leaves room for beside the links — so this cannot
- * be derived in CSS and is measured instead. Measured on the schedule board at
- * every width from 360px to 1280px, it takes exactly three heights, and they
- * change at the nav's own `sm:` and `lg:` breakpoints: 169px below 640px, 121px
- * from 640px to 1023px, 69px from 1024px up (where it collapses to a single
- * row).
+ * The height is content-driven, so it cannot be derived in CSS and is measured
+ * instead: 69px, on the schedule board at every width from 360px to 1280px.
+ *
+ * One value, no breakpoints — but only since the phone dock landed. The nav
+ * used to wrap its links under the logo below `lg`, standing 169px tall on a
+ * phone and 121px on a tablet, and this variable carried all three. Moving
+ * those links into the bottom dock left one row at every width. Do not read
+ * the single value as "the nav is obviously a fixed height": it is one number
+ * because the nav currently has one shape, and if the links ever come back
+ * into the header this needs its media queries back.
  *
  * A measured constant drifts, so it is checked rather than trusted:
- * `e2e/schedule-builder.spec.ts` asserts a pinned day header clears the nav at
- * all three widths, and fails naming this variable if the nav's shape changes.
+ * `e2e/schedule-builder.spec.ts` asserts a pinned day header sits *flush* under
+ * the nav — not merely clear of it — at three widths, and fails naming this
+ * variable either way. Both directions are real regressions: too small and the
+ * header hides behind the nav, too large and it floats in a band of dead space
+ * (which is exactly what the stale 169px did after the dock shipped).
+ *
  * The public schedule needs none of this — its header is not sticky, which is
  * why its day rules can simply say `top-0`.
  */
 :root {
-  --staff-nav-h: 169px;
-}
-
-@media (min-width: 40rem) {
-  :root {
-    --staff-nav-h: 121px;
-  }
-}
-
-@media (min-width: 64rem) {
-  :root {
-    --staff-nav-h: 69px;
-  }
+  --staff-nav-h: 69px;
 }
 
 /*
