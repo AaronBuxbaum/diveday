@@ -232,7 +232,17 @@ export default async function ShopLayout({
           saving their own shop's roster while the visible page is this one. */}
       {ownShop && session?.user && isStaff(session.user.roles) ? <OfflineManifestAutoSave /> : null}
       <PreserveFormScroll />
-      <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+      {/* Below `lg` the phone dock (StaffTabBar) owns the bottom edge, so the
+          content wrapper both publishes the clearance it demands and pads
+          itself by it — pages never end underneath the dock, and any fixed
+          element that shares the bottom edge (UndoToast) adds the same
+          `--dock-clearance` to its own offset. One variable, one owner: from
+          `lg` up it collapses to zero and everything sits where it always did. */}
+      <div
+        id="shop-main-content"
+        tabIndex={-1}
+        className="flex-1 outline-none [--dock-clearance:4.5rem] pb-(--dock-clearance) lg:[--dock-clearance:0rem]"
+      >
         {children}
       </div>
     </>
