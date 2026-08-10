@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { signOut } from "./helpers";
+import { openSettingsRow, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -42,6 +42,7 @@ test.describe("as owner", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
+    await openSettingsRow(page, "Review link");
     await page
       .getByLabel("Review link (optional)", { exact: true })
       .fill("https://g.page/r/blue-mantis/review");

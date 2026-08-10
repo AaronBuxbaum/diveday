@@ -51,7 +51,7 @@ describe("FirstRunChecklist", () => {
     expect(screen.queryByText("Done")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add contact details" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/settings",
+      "/shop/blue-mantis/settings#contact",
     );
     expect(screen.getByRole("link", { name: "Add a dive site" })).toHaveAttribute(
       "href",

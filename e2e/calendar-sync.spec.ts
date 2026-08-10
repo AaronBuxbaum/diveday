@@ -61,23 +61,21 @@ test.describe("staff calendar subscriptions", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
-    const card = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Calendar subscriptions" }) })
-      .filter({ visible: true });
-    await expect(card).toBeVisible();
-    // The card's own short teaser, not the full page's read-only explainer —
-    // that longer sentence belongs to the destination page alone.
+    // The door row (heading-as-link) carries its own short teaser, not the
+    // full page's read-only explainer — that longer sentence belongs to the
+    // destination page alone. Scoped to `main` so the settings sub-nav's own
+    // "Calendar subscriptions" tab can't answer for the row.
+    const main = page.getByRole("main");
     await expect(
-      card.getByText("Put your departures on the calendar app you already use"),
+      main.getByText("Put your departures on the calendar app you already use"),
     ).toBeVisible();
     await expect(
-      card.getByText(
+      main.getByText(
         "Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
       ),
     ).toHaveCount(0);
 
-    await card.getByRole("link", { name: "Manage subscriptions" }).click();
+    await main.getByRole("link", { name: "Calendar subscriptions", exact: true }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
     ).toBeVisible();

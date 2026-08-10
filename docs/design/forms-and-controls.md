@@ -216,9 +216,11 @@ weight.
 
 The "several independent sections can have several primaries" carve-out above fits a page built
 from two or three genuinely separate workflows — a trip page's roster tab beside its prep tab, say.
-It does not fit a **settings hub**: a single continuously-scrolling page whose only job is to list
-many independent, fully reversible preference forms, with no section more urgent than any other
-(`SettingsPage.tsx` is the one today — nine "Save" forms from timezone to rental pricing). Nine
+It does not fit a **settings hub**: a page whose only job is to list many independent, fully
+reversible preference forms, with no section more urgent than any other (`SettingsPage.tsx` is the
+one today — nine "Save" forms from timezone to rental pricing, each behind its row's summary-first
+disclosure, so at most a few are ever open at once — and the rule still holds for the ones that
+are). Nine
 solid teal buttons down one scroll don't read as nine calm, equally-available options; they read as
 nine simultaneous demands, which fights principle #3 ("calm surfaces, earned moments of joy") on a
 page that is, by design, the least urgent place in the app. Every "Save" on a settings hub demotes
