@@ -171,11 +171,21 @@ jobs:
           aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
           role-session-name: gha-cdk-deploy
-      # Not `pnpm infra:deploy`: that wrapper also reads the diveday/env
-      # secret with an administrator profile to write .env.local/.env.vercel/
-      # .env.github, which is workstation-only by design (infra-stack.ts §5,
-      # §17's credentials-off-dotenv). GitHubActionsCdkDeployRole is denied
-      # secretsmanager:GetSecretValue outright (§18), so that wrapper would
-      # fail here anyway — this runs the deploy CDK itself needs and nothing
-      # past it.
-      - run: pnpm exec cdk deploy DiveDay --require-approval never
+      # `pnpm infra:deploy`, not a bare `cdk deploy`: once the required-reviewer
+      # approval above has already gated this job, ADR 20260811-ci-deploy-full-wizard
+      # runs the same wrapper a workstation operator would — write
+      # .env.local/.env.vercel/.env.github from the diveday/env secret, then
+      # answer yes to every post-deploy wizard question non-interactively.
+      # GitHubActionsCdkDeployRole is granted a read of exactly that one secret
+      # and nothing else (infra-stack.ts §18); the diff role two jobs up still
+      # cannot read any secret at all. GH_TOKEN/VERCEL_TOKEN authenticate the
+      # gh/vercel CLIs the wizard shells out to (manual actions
+      # "ci-github-admin-token"/"ci-vercel-deploy-token", §17); VERCEL_ORG_ID/
+      # VERCEL_PROJECT_ID let the Vercel CLI act on the linked project without
+      # an interactive `vercel link`.
+      - run: pnpm infra:deploy DiveDay --require-approval never
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_DEPLOY_GH_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.INFRA_DEPLOY_VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}

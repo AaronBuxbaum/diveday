@@ -183,4 +183,80 @@ exit 1
     expect(ssmCalls).toContain("get-parameter /diveday/env-sync/vercel/preview");
     expect(ssmCalls).toContain("put-parameter /diveday/env-sync/vercel/preview");
   });
+
+  describe("AWS credential selection", () => {
+    function runWithCredentialLogging(extraEnvironment) {
+      const binDirectory = temporaryDirectory("diveday-vercel-stub-");
+      const credentialLogPath = join(binDirectory, "credentials.log");
+      writeFileSync(
+        join(binDirectory, "aws"),
+        `#!/bin/sh
+if [ "$1" = "sts" ] && [ "$2" = "get-caller-identity" ]; then
+  echo "AWS_PROFILE=\${AWS_PROFILE:-<unset>} AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID:-<unset>}" >> "${credentialLogPath}"
+  echo '{"Account":"000000000000"}'
+  exit 0
+fi
+if [ "$1" = "ssm" ] && [ "$2" = "get-parameter" ]; then
+  echo "ParameterNotFound: parameter not found." >&2
+  exit 254
+fi
+if [ "$1" = "ssm" ] && [ "$2" = "put-parameter" ]; then
+  exit 0
+fi
+exit 1
+`,
+      );
+      chmodSync(join(binDirectory, "aws"), 0o755);
+      writeFileSync(
+        join(binDirectory, "pnpm"),
+        `#!/bin/sh
+if [ "$4" = "add" ]; then
+  cat >/dev/null
+  exit 0
+fi
+exit 1
+`,
+      );
+      chmodSync(join(binDirectory, "pnpm"), 0o755);
+
+      const inputPath = join(binDirectory, ".env.vercel");
+      writeFileSync(inputPath, "A=1\n");
+
+      const environment = {
+        ...process.env,
+        PATH: `${binDirectory}:${process.env.PATH}`,
+        AWS_PROFILE: "ambient-caller-profile",
+        AWS_ACCESS_KEY_ID: "ambient-key",
+        AWS_SECRET_ACCESS_KEY: "ambient-secret",
+        ...extraEnvironment,
+      };
+      if (extraEnvironment?.CI === undefined) delete environment.CI;
+
+      execFileSync(
+        "node",
+        [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, "production"],
+        { env: environment, encoding: "utf8" },
+      );
+
+      return readFileSync(credentialLogPath, "utf8").trim();
+    }
+
+    it("swaps to the diveday-admin profile and strips ambient keys on a workstation", () => {
+      expect(runWithCredentialLogging({})).toBe(
+        "AWS_PROFILE=diveday-admin AWS_ACCESS_KEY_ID=<unset>",
+      );
+    });
+
+    it("honors INFRA_ENV_SYNC_PROFILE instead of the diveday-admin default off CI", () => {
+      expect(runWithCredentialLogging({ INFRA_ENV_SYNC_PROFILE: "diveday-break-glass" })).toBe(
+        "AWS_PROFILE=diveday-break-glass AWS_ACCESS_KEY_ID=<unset>",
+      );
+    });
+
+    it("keeps the ambient OIDC-assumed credentials as-is in CI, without a diveday-admin profile", () => {
+      expect(runWithCredentialLogging({ CI: "true" })).toBe(
+        "AWS_PROFILE=ambient-caller-profile AWS_ACCESS_KEY_ID=ambient-key",
+      );
+    });
+  });
 });

@@ -42,18 +42,22 @@ function fingerprint(value) {
 
 const parameterName = `/diveday/env-sync/vercel/${environment}`;
 
-// diveday-admin is the only profile that can read `diveday/env` (the
-// deployer key that may have just run `cdk deploy` deliberately cannot), so
-// this reuses that exact administrator channel rather than open a second
-// one. Ambient AWS_ACCESS_KEY_ID etc. are stripped because AWS gives them
-// precedence over AWS_PROFILE.
-const adminEnvironment = {
-  ...process.env,
-  AWS_PROFILE: process.env.INFRA_ENV_SYNC_PROFILE?.trim() || "diveday-admin",
-};
-delete adminEnvironment.AWS_ACCESS_KEY_ID;
-delete adminEnvironment.AWS_SECRET_ACCESS_KEY;
-delete adminEnvironment.AWS_SESSION_TOKEN;
+// On a workstation, diveday-admin is the only profile that can read
+// `diveday/env` (the deployer key that may have just run `cdk deploy`
+// deliberately cannot), so this reuses that exact administrator channel
+// rather than open a second one. Ambient AWS_ACCESS_KEY_ID etc. are stripped
+// because AWS gives them precedence over AWS_PROFILE. In CI there is no
+// diveday-admin profile: GitHubActionsCdkDeployRole is instead granted
+// read/write on this checkpoint's own SSM parameter path (infra-stack.ts
+// §18, ADR 20260811-ci-deploy-full-wizard), so the job's already-assumed
+// OIDC credentials are reused as-is.
+const adminEnvironment = { ...process.env };
+if (!process.env.CI) {
+  adminEnvironment.AWS_PROFILE = process.env.INFRA_ENV_SYNC_PROFILE?.trim() || "diveday-admin";
+  delete adminEnvironment.AWS_ACCESS_KEY_ID;
+  delete adminEnvironment.AWS_SECRET_ACCESS_KEY;
+  delete adminEnvironment.AWS_SESSION_TOKEN;
+}
 adminEnvironment.AWS_DEFAULT_REGION ||= "us-east-1";
 
 try {
@@ -64,7 +68,9 @@ try {
   // process.env. ensureAwsLogin already printed whatever the AWS CLI itself
   // reported straight to this terminal (`stdio: "inherit"` in aws-login.mjs).
   console.error(
-    "Could not authenticate the AWS profile that holds the Vercel sync checkpoint. Run `aws login --profile diveday-admin` (or set INFRA_ENV_SYNC_PROFILE to the profile you use) in an interactive terminal, then rerun this command.",
+    process.env.CI
+      ? "Could not read/write the Vercel sync checkpoint with the job's own AWS credentials. Confirm GitHubActionsCdkDeployRole's ReadWriteVercelSyncCheckpoint statement (infra-stack.ts §18) is deployed and the required-reviewer approval on infra-deploy actually ran."
+      : "Could not authenticate the AWS profile that holds the Vercel sync checkpoint. Run `aws login --profile diveday-admin` (or set INFRA_ENV_SYNC_PROFILE to the profile you use) in an interactive terminal, then rerun this command.",
   );
   process.exit(1);
 }
