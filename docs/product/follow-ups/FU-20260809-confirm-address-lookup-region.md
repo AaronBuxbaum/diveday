@@ -1,10 +1,10 @@
-# FU-20260809-confirm-address-lookup-region — Mint (or repaste) the address-lookup credential the deployment is missing
+# FU-20260809-confirm-address-lookup-region — Get the deployment signing with the address-lookup key the account actually holds
 
 - **Status:** Open
 - **Raised:** 2026-08-09 — branch `claude/mobile-ui-ux-fixes-o4971v`, while fixing the reported
   "Address lookup isn't available right now" on Settings
-- **Updated:** 2026-08-11 — PR #458. The failure was made to name its own cause, the cause was then
-  read off the deployment, and the remaining work is one AWS action.
+- **Updated:** 2026-08-11 — PR #458 made the failure name its own cause; the name was then read off
+  the deployment and the AWS side checked. What is left is a deployment step, not an AWS one.
 - **Kind:** half-done
 - **Effort:** S
 - **Touches:** `infra/lib/infra-stack.ts` (§12, where the credential is minted), `.env.example`
@@ -33,38 +33,43 @@ So the deployment holds a `PLACES_AWS_ACCESS_KEY_ID` that no longer exists in ac
 whenever all three `PLACES_AWS_*` values are merely *present*, so a hand-filled or superseded value
 looks exactly like a working one until the first request.
 
-The likely single cause, shared with FU-20260811-deploy-the-fixed-ci-trust-policies: **the
-`diveday-infra` stack has not been deployed since §12 was added on 2026-08-04.** That would mean the
-`diveday-places-lookup` user and its key were never minted (this failure), and that §18's CI roles
-were never created either — which produces exactly the `sts:AssumeRoleWithWebIdentity` refusal that
-entry is about, since AWS returns the same "Not authorized" for a role that does not exist. One
-deploy would settle both.
+Checked on 2026-08-11: the stack is **not** stale — `diveday-infra` was last updated at 17:57:55Z,
+ten minutes before the log line above, and `diveday-places-lookup` has existed since 2026-08-05. So
+the user and its key are real, and what the running app signs with is not the pair the account
+holds. The ordering is itself the clue: a failure timestamped shortly *after* a deploy is the
+signature of a deployment carrying pre-deploy environment values, not of a wrong value sitting in
+the dashboard.
 
 ## Why it isn't already done
 
-It needs someone who can reach the AWS account. Agent sessions here have no AWS access — outbound
-AWS calls are blocked by policy — and minting an IAM credential is not something a session should be
-doing unattended in any case.
+It needs someone who can reach the AWS account and the Vercel project. Agent sessions here have
+neither — outbound AWS calls are blocked by policy — and re-pasting a live credential is not
+something a session should be doing unattended in any case.
 
 ## Proposed change
 
-1. Check whether the stack is stale, which is the fork everything else hangs off:
+1. Find out which key the account holds, and which one the deployment sends:
    ```
-   aws cloudformation describe-stacks --stack-name diveday-infra \
-     --query 'Stacks[0].LastUpdatedTime' --output text
-   aws iam get-user --user-name diveday-places-lookup
+   aws iam list-access-keys --user-name diveday-places-lookup
+   AWS_ACCESS_KEY_ID=<deployed PLACES_AWS_ACCESS_KEY_ID> \
+   AWS_SECRET_ACCESS_KEY=<deployed PLACES_AWS_SECRET_ACCESS_KEY> aws sts get-caller-identity
    ```
-   A last-update time before 2026-08-04, or `NoSuchEntity`, confirms it.
-2. **Stack stale** ⇒ run `pnpm infra:deploy` from a workstation with the `diveday-admin` profile. It
-   mints the `diveday-places-lookup` user and key, creates §18's CI roles, and the wizard pushes the
-   resulting `PLACES_AWS_*` values into Vercel. This also discharges
-   FU-20260811-deploy-the-fixed-ci-trust-policies.
-3. **Stack current** ⇒ the key exists and the deployment is holding a superseded one (§12's keys are
-   minted with a `credentialSerial` parameter, so a deploy that bumped it deleted the old pair).
-   Repaste `PLACES_AWS_ACCESS_KEY_ID` and `PLACES_AWS_SECRET_ACCESS_KEY` in Vercel Production from
-   Secrets Manager `diveday/env`.
+   `list-access-keys` gives the id, its `Status`, and a `CreateDate` — a `CreateDate` matching the
+   stack's last update means that deploy rotated the pair and deleted its predecessor (§12 mints
+   through a `credentialSerial` parameter). `Inactive` reads as an unrecognised client too.
+2. **`get-caller-identity` fails** ⇒ the value in Vercel is stale. Repaste
+   `PLACES_AWS_ACCESS_KEY_ID` and `PLACES_AWS_SECRET_ACCESS_KEY` in Vercel Production from Secrets
+   Manager `diveday/env`, which the last deploy refreshed.
+3. **Redeploy the app, whether or not step 2 changed anything.** Vercel resolves environment
+   variables into a deployment: editing one in the dashboard does not reach a deployment that is
+   already running, so a build that started before the credential moved keeps signing with the dead
+   pair indefinitely. This is the step most likely to be skipped, because the dashboard shows the
+   right value the whole time — and if `get-caller-identity` *succeeded* in step 1, it is the entire
+   remaining fix. Suspect it first whenever the failure timestamp sits shortly after a stack deploy;
+   that ordering is the signature of this, not of a bad value.
 4. Confirm from the box: four characters into the address search should list real places, and
-   picking one should fill all five boxes.
+   picking one should fill all five boxes. If the reason changes to `denied` with
+   `AccessDeniedException`, the credential is now valid and §12's policy is the next thing to read.
 
 Not proposing any application change. The code path is proven — it reached AWS, signed a request,
 and reported the refusal accurately — and nothing an app can do fixes a credential the account does
@@ -85,13 +90,16 @@ Read first: section 12 of infra/lib/infra-stack.ts (the diveday-places-lookup IA
 geo-places:Autocomplete policy, and mintAccessKey's credentialSerial), and
 docs/architecture/decisions/20260804-aws-location-address-lookup.md.
 
-Do this: run `aws cloudformation describe-stacks --stack-name diveday-infra --query
-'Stacks[0].LastUpdatedTime'` and `aws iam get-user --user-name diveday-places-lookup`. If the stack
-predates 2026-08-04 or the user does not exist, run `pnpm infra:deploy` from a workstation with the
-diveday-admin profile — that mints the user and key and pushes the values to Vercel, and also
-discharges docs/product/follow-ups/FU-20260811-deploy-the-fixed-ci-trust-policies.md. If the stack is
-current, the deployment is holding a superseded key: repaste PLACES_AWS_ACCESS_KEY_ID and
-PLACES_AWS_SECRET_ACCESS_KEY in Vercel Production from Secrets Manager diveday/env.
+Already checked on 2026-08-11, so do not redo it: the diveday-infra stack is current (last updated
+17:57:55Z) and the diveday-places-lookup user has existed since 2026-08-05. The account is fine; the
+running deployment is what is signing with the wrong pair.
+
+Do this: run `aws iam list-access-keys --user-name diveday-places-lookup`, then
+`aws sts get-caller-identity` using the PLACES_AWS_* pair the deployment holds. If that fails,
+repaste both values in Vercel Production from Secrets Manager diveday/env. Then redeploy the app
+either way — Vercel resolves environment variables into a deployment, so an edit in the dashboard
+never reaches a build that is already running, and a failure timestamped just after a stack deploy
+is usually exactly this.
 
 Do not change application code. The app reached AWS, signed correctly, and reported the refusal
 accurately; there is nothing for it to fix.

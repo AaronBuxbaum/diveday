@@ -27,14 +27,10 @@ an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, GitHub mints t
 is case-sensitive with no ignore-case variant. Both CI roles' trust conditions therefore matched
 nothing, from any branch.
 
-There may be less to this than a spelling. AWS returns the identical "Not authorized" for a role
-that does not exist, and on the same day the deployed address lookup was found to be signing with an
-access key the account does not recognise either
-([FU-20260809](FU-20260809-confirm-address-lookup-region.md)) — the key §12 mints. Both are
-explained at once if the `diveday-infra` stack has simply not been deployed since 2026-08-04, in
-which case neither §12's IAM user nor §18's roles were ever created. The casing fix is still
-required for the roles to be assumable once they exist; it is just possibly not the only thing
-missing.
+The stack itself is not stale — checked on 2026-08-11, `diveday-infra` was last updated at 17:57:55Z
+that day — so the roles do exist and the spelling is the whole story. If that deploy came from a
+`main` carrying the fix below, the trust policies are already correct and this entry may need
+nothing but a re-run to confirm and close.
 
 ## Why it isn't already done
 
@@ -45,7 +41,11 @@ admin credential, which no agent session has.
 
 ## Proposed change
 
-1. Run `pnpm infra:deploy` from a workstation carrying the `diveday-admin` profile (see
+0. Re-run the `Infra / cdk synth + diff` job first. The stack was deployed at 17:57:55Z on
+   2026-08-11; if that deploy came from a `main` that already carried the casing fix, the trust
+   policies are correct and the job will now get credentials — in which case confirm and delete this
+   entry without deploying anything.
+1. Otherwise run `pnpm infra:deploy` from a workstation carrying the `diveday-admin` profile (see
    [docs/engineering/infrastructure-runbook.md](../../engineering/infrastructure-runbook.md)).
 2. Re-run the `Infra / cdk synth + diff` job on any open `infra/`-touching PR and confirm it now gets
    credentials and posts its diff comment. The same deploy should make the settings address
