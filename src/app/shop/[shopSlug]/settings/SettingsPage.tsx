@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
@@ -986,12 +985,17 @@ export default async function SettingsPage({
                 <SectionNotice banner={banner} section="stripe" active={activeSection} />
                 {!account ? (
                   connectConfigured ? (
-                    <Link
+                    // A plain <a>, not <Link>: this route 302s to Stripe's
+                    // OAuth authorize URL, and Next's client-side navigation
+                    // would follow that redirect via fetch — a cross-origin
+                    // request Stripe's CORS policy rejects. A full
+                    // navigation handles the redirect natively.
+                    <a
                       href={`/shop/${shopSlug}/settings/connect`}
                       className={buttonClass({ className: "mt-4" })}
                     >
                       {t("settings.main.stripe.connect")}
-                    </Link>
+                    </a>
                   ) : (
                     <div className="mt-4">
                       <ShopNotice tone="warning" role="status">
@@ -1029,12 +1033,15 @@ export default async function SettingsPage({
                     <div className="mt-5 flex flex-wrap items-center gap-3">
                       {account.disconnectedAt ? (
                         connectConfigured ? (
-                          <Link
-                            href={`/shop/${shopSlug}/settings/connect`}
-                            className={buttonClass()}
-                          >
+                          // A plain <a>, not <Link>: this route 302s to
+                          // Stripe's OAuth authorize URL, and Next's
+                          // client-side navigation would follow that
+                          // redirect via fetch — a cross-origin request
+                          // Stripe's CORS policy rejects. A full navigation
+                          // handles the redirect natively.
+                          <a href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
                             {t("settings.main.stripe.reconnect")}
-                          </Link> // i18n-exempt: JSX ternary punctuation below, not copy — scanner false positive.
+                          </a> // i18n-exempt: JSX ternary punctuation below, not copy — scanner false positive.
                         ) : null
                       ) : (
                         <>
