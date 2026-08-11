@@ -97,6 +97,51 @@ export function RequirementsSection({
       })}
     </p>
   );
+  // The gate as the list of things a diver must actually bring — and only
+  // those. "Payment: not required" and "Specialties: None required" rendered
+  // the absence of a rule as a rule (design/principles.md #9); what the gate
+  // does not ask for simply isn't on it, and a trip that asks for nothing says
+  // so in one quiet sentence. Exact words, never color alone: these lines are
+  // what admission and readiness will enforce (principle 6).
+  const requirementLines =
+    requirement === null
+      ? []
+      : [
+          requirement.requiresWaiver ? t("trips.requirements.summaryWaiver") : null,
+          !trip.course && requirement.requiresPayment
+            ? t("trips.requirements.summaryPayment")
+            : null,
+          requirement.minimumCertificationLevel
+            ? t("trips.requirements.summaryCert", {
+                level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
+              })
+            : null,
+          ...(trip.course
+            ? []
+            : requirement.requiredSpecialties.map((specialty) =>
+                t("trips.requirements.summarySpecialtyCard", {
+                  specialty: t(SPECIALTY_KEYS[specialty]),
+                }),
+              )),
+          !trip.course && requirement.requiresNitrox
+            ? t("trips.requirements.summaryNitroxCard")
+            : null,
+        ].filter((line): line is string => Boolean(line));
+  const requirementSummary =
+    requirementLines.length > 0 ? (
+      <ul className="mt-4 grid gap-2 text-sm">
+        {requirementLines.map((line) => (
+          <li key={line} className="flex gap-2">
+            <span aria-hidden="true" className="text-muted">
+              •
+            </span>
+            <span className="font-medium">{line}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="mt-4 text-sm text-muted">{t("trips.requirements.summaryNoneRequired")}</p>
+    );
   return (
     <section className="mt-10">
       <h2 className="text-lg font-semibold">{t("trips.requirements.heading")}</h2>
@@ -106,80 +151,24 @@ export function RequirementsSection({
           : t("trips.requirements.tripDescription")}
       </p>
       {trip.course ? (
-        <div className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm">
-          <p>
-            <strong>{t("trips.requirements.waiverLabel")}</strong>{" "}
-            {requirement?.requiresWaiver
-              ? t("trips.requirements.required")
-              : t("trips.requirements.notRequired")}
-          </p>
-          <p className="mt-2">
-            <strong>{t("trips.requirements.certificationLabel")}</strong>{" "}
-            {requirement?.minimumCertificationLevel
-              ? t("trips.requirements.certOrHigher", {
-                  level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
-                })
-              : t("trips.requirements.notRequiredForEnrollment")}
-          </p>
+        <>
+          {requirementSummary}
           {hasSiteRequirement ? siteNote("course") : null}
-        </div>
+        </>
       ) : (
         <>
-          {/* The gate, stated as facts — the same card shape the read-only
-              course branch wears, so "what does this trip require?" is
-              answered without opening the editor. Exact words, never color
-              alone: this is what admission and readiness will enforce
-              (principle 6). */}
-          <div className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm">
-            {/* Fail-closed words for a fail-closed state: with no requirements
-                row, readiness blocks every diver (`requirements_not_configured`,
-                src/lib/readiness.ts) — so the card must never read as "nothing
-                required" (dive-domain review, this change). */}
-            {requirement === null ? (
-              <p className="font-medium text-warning-strong">
-                {t("trips.requirements.notConfigured")}
-              </p>
-            ) : (
-              <>
-                <p>
-                  <strong>{t("trips.requirements.waiverLabel")}</strong>{" "}
-                  {requirement.requiresWaiver
-                    ? t("trips.requirements.required")
-                    : t("trips.requirements.notRequired")}
-                </p>
-                <p className="mt-2">
-                  <strong>{t("trips.requirements.paymentLabel")}</strong>{" "}
-                  {requirement.requiresPayment
-                    ? t("trips.requirements.required")
-                    : t("trips.requirements.notRequired")}
-                </p>
-                <p className="mt-2">
-                  <strong>{t("trips.requirements.certificationLabel")}</strong>{" "}
-                  {requirement.minimumCertificationLevel
-                    ? t("trips.requirements.certOrHigher", {
-                        level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
-                      })
-                    : t("trips.requirements.noCardRequired")}
-                </p>
-                <p className="mt-2">
-                  <strong>{t("trips.requirements.specialtiesLabel")}</strong> {(() => {
-                    const specialtyParts = [
-                      ...requirement.requiredSpecialties.map((specialty) =>
-                        t(SPECIALTY_KEYS[specialty]),
-                      ),
-                      ...(requirement.requiresNitrox ? [t("trips.requirements.nitrox")] : []),
-                    ];
-                    return specialtyParts.length > 0
-                      ? cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
-                          specialtyParts,
-                        )
-                      : t("trips.requirements.noSpecialties");
-                  })()}
-                </p>
-              </>
-            )}
-            {hasSiteRequirement ? siteNote("trip") : null}
-          </div>
+          {/* Fail-closed words for a fail-closed state: with no requirements
+              row, readiness blocks every diver (`requirements_not_configured`,
+              src/lib/readiness.ts) — so the summary must never read as
+              "nothing required" (dive-domain review). */}
+          {requirement === null ? (
+            <p className="mt-4 text-sm font-medium text-warning-strong">
+              {t("trips.requirements.notConfigured")}
+            </p>
+          ) : (
+            requirementSummary
+          )}
+          {hasSiteRequirement ? siteNote("trip") : null}
           <EditDisclosure
             label={t("trips.requirements.edit")}
             open={Boolean(status) || requirement === null}

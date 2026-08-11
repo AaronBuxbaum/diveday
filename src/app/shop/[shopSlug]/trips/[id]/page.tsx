@@ -392,54 +392,10 @@ export default async function ManageTripPage({
         />
       ) : null}
 
-      {/* Conditions are crew-entered (glossary) — open to all staff. Its
-          fields are uncontrolled (`defaultValue`, not `value`), so a save or
-          clear that lands via a same-route re-render rather than a fresh
-          mount leaves the old value on screen — the same
-          cacheComponents-can-skip-a-remount class ADR
-          20260802-cache-components-cross-render-state and ADR
-          20260801-cache-components-activity-state both hit, just in the
-          opposite direction (unresettable state that needs a forced remount,
-          not state that needs to survive one). Keying on the fields
-          themselves (not `conditionsUpdatedAt`, which the e2e harness's
-          frozen clock would hold identical across a save-then-clear in the
-          same test) forces the remount `defaultValue` needs on any actual
-          change to what these inputs show, republish-with-different-values
-          included — not just the set/cleared transition this bug was found on. */}
-      <ConditionsSection
-        key={[
-          trip.waterTemperatureC,
-          trip.visibilityMeters,
-          trip.surfaceConditions,
-          trip.conditionsSummary,
-        ].join("|")}
-        saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
-        clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "conditions")}
-        trip={trip}
-        locale={locale}
-        timezone={shop.timezone}
-        temperatureUnit={temperatureUnitFor(shop)}
-        depthUnit={shop.depthUnit}
-      />
-
-      <RecapNoteSection
-        action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "recap-note")}
-        shoutout={trip.recapShoutout}
-        locale={locale}
-      />
-
-      {/* Diver-shared recap photos sit beside the crew's own shout-out — both
-          are the post-trip recap's content, and moderating one moved off the
-          Guests tab to slim it (task 156, UX persona lens 17). */}
-      <RecapPhotoGallery
-        photos={recapPhotos}
-        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "recap-photos")}
-        locale={locale}
-      />
-
+      {/* Ops before content: what the trip requires and who runs it are what a
+          staffer opening an upcoming departure needs next, so they follow the
+          details directly — the crew's day-of prediction and the post-trip
+          recap material read after them. */}
       {canConfigure ? (
         <RequirementsSection
           action={saveRequirementsAction.bind(null, shopSlug, tripId)}
@@ -489,6 +445,54 @@ export default async function ManageTripPage({
           notOnShift: t("trips.crew.notOnShift"),
           manageShifts: t("trips.crew.manageShifts"),
         }}
+      />
+
+      {/* Conditions are crew-entered (glossary) — open to all staff. Its
+          fields are uncontrolled (`defaultValue`, not `value`), so a save or
+          clear that lands via a same-route re-render rather than a fresh
+          mount leaves the old value on screen — the same
+          cacheComponents-can-skip-a-remount class ADR
+          20260802-cache-components-cross-render-state and ADR
+          20260801-cache-components-activity-state both hit, just in the
+          opposite direction (unresettable state that needs a forced remount,
+          not state that needs to survive one). Keying on the fields
+          themselves (not `conditionsUpdatedAt`, which the e2e harness's
+          frozen clock would hold identical across a save-then-clear in the
+          same test) forces the remount `defaultValue` needs on any actual
+          change to what these inputs show, republish-with-different-values
+          included — not just the set/cleared transition this bug was found on. */}
+      <ConditionsSection
+        key={[
+          trip.waterTemperatureC,
+          trip.visibilityMeters,
+          trip.surfaceConditions,
+          trip.conditionsSummary,
+        ].join("|")}
+        saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
+        clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "conditions")}
+        trip={trip}
+        locale={locale}
+        timezone={shop.timezone}
+        temperatureUnit={temperatureUnitFor(shop)}
+        depthUnit={shop.depthUnit}
+      />
+
+      <RecapNoteSection
+        action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-note")}
+        shoutout={trip.recapShoutout}
+        locale={locale}
+      />
+
+      {/* Diver-shared recap photos sit beside the crew's own shout-out — both
+          are the post-trip recap's content, and moderating one moved off the
+          Guests tab to slim it (task 156, UX persona lens 17). */}
+      <RecapPhotoGallery
+        photos={recapPhotos}
+        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-photos")}
+        locale={locale}
       />
 
       {canConfigure && series ? (

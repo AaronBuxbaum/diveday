@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
@@ -62,6 +63,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Trip guests — DiveDay",
 };
+
+/**
+ * How many activity entries show before the tail collapses behind "Show all":
+ * enough to answer "what just happened on this trip" at a glance, few enough
+ * that a season of history never buries the sections below.
+ */
+const RECENT_ACTIVITY_COUNT = 3;
 
 type TripGuestsSearchParams = Promise<{
   notice?: string;
@@ -221,6 +229,10 @@ async function TripGuestsBody({
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
   const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
+  // The freshest entries answer "what just happened here"; the tail waits
+  // behind the disclosure below.
+  const recentActivity = activity.slice(0, RECENT_ACTIVITY_COUNT);
+  const olderActivity = activity.slice(RECENT_ACTIVITY_COUNT);
   const waiverByBooking = new Map(
     readinessRows.map(
       (row) =>
@@ -282,17 +294,6 @@ async function TripGuestsBody({
         />
       )}
 
-      <WaitlistSection
-        waitlist={waitlist}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        shopName={shop.name}
-        tripTitle={trip.title}
-        tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
-        inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
-        locale={locale}
-      />
-
       {demand ? (
         <section className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
           <p className="text-xs font-semibold tracking-widest text-warning uppercase">
@@ -314,21 +315,6 @@ async function TripGuestsBody({
           </Link>
         </section>
       ) : null}
-
-      {cancelled ? null : (
-        <AddDiverSection
-          shopSlug={shopSlug}
-          full={isFull(trip)}
-          query={diverQuery}
-          candidates={diverCandidates}
-          tripId={tripId}
-          addBookingAction={seatNewDiverAction.bind(null, "trip-guests", shopSlug)}
-          addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
-          addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
-          status={noticeForForm(tripNotice, "add-diver")}
-          locale={locale}
-        />
-      )}
 
       {/* Sits above the roster so the good news is read before the blockers
           (H-21). Renders nothing when nobody on board is celebrating. */}
@@ -363,21 +349,101 @@ async function TripGuestsBody({
         tripDate={tripDateIso}
       />
 
+      {/* Below the roster and only when someone is actually waiting: an empty
+          wait list used to lead this page as a full-width dashed card — "None"
+          rendered as a status (design/principles.md #9). Today's own
+          "invite the next in line" row only exists when waiting > 0, so its
+          `#waitlist` landing always finds this section. */}
+      {waitlist.length > 0 ? (
+        <WaitlistSection
+          waitlist={waitlist}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          shopName={shop.name}
+          tripTitle={trip.title}
+          tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
+          inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+          locale={locale}
+        />
+      ) : null}
+
+      {/* After the roster, not before it: this page's question is "who is
+          attending", and the answer leads while the tools follow
+          (design/principles.md #10). The empty roster's own action, seat-diver
+          refusals, and the divers page's cross-link all land here by the
+          `#add-diver` anchor, so the section keeps its place in the document
+          without needing to sit above the fold. */}
+      {cancelled ? null : (
+        <AddDiverSection
+          shopSlug={shopSlug}
+          full={isFull(trip)}
+          query={diverQuery}
+          candidates={diverCandidates}
+          tripId={tripId}
+          addBookingAction={seatNewDiverAction.bind(null, "trip-guests", shopSlug)}
+          addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
+          addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
+          status={noticeForForm(tripNotice, "add-diver")}
+          locale={locale}
+        />
+      )}
+
       <section className="mt-10">
         <h2 className="text-lg font-semibold">{t("trips.guests.activityHeading")}</h2>
         {activity.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          // The shared empty-section grammar, not a bare paragraph — the
+          // roster above already wears the same dashed card for "nothing here"
+          // (design/principles.md #4).
+          <EmptyState className="mt-4">
+            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          </EmptyState>
         ) : (
-          <ol className="mt-4 grid gap-2">
-            {activity.map((event) => (
-              <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
-                <span>{event.message}</span>
-                <span className="ml-2 text-muted">
-                  {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                </span>
-              </li>
-            ))}
-          </ol>
+          <>
+            <ol className="mt-4 grid gap-2">
+              {recentActivity.map((event) => (
+                <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
+                  <span>{event.message}</span>
+                  <span className="ml-2 text-muted">
+                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            {/* The tail waits behind a disclosure: the freshest entries answer
+                "what just happened here", while a season's history at equal
+                weight is noise (design/principles.md #9). */}
+            {olderActivity.length > 0 ? (
+              <details className="group mt-2">
+                <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden hover:underline">
+                  {t("trips.guests.activityShowAll", { count: activity.length })}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    className="size-4 transition-transform duration-200 group-open:rotate-180"
+                  >
+                    <path
+                      d="m6 8 4 4 4-4"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </summary>
+                <ol className="mt-2 grid gap-2">
+                  {olderActivity.map((event) => (
+                    <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
+                      <span>{event.message}</span>
+                      <span className="ml-2 text-muted">
+                        {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ) : null}
+          </>
         )}
       </section>
 

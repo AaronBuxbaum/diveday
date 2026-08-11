@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { controlClass } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
@@ -191,12 +192,19 @@ export function CrewSection({
       ) : null}
 
       {staff.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">{copy.noStaff}</p>
+        // The shared empty-section grammar, not a bare paragraph
+        // (design/principles.md #4).
+        <EmptyState className="mt-4">
+          <p className="text-sm text-muted">{copy.noStaff}</p>
+        </EmptyState>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {hasUnassignedStaff ? (
-            <label className="flex flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
-              {copy.assignLabel}
+            // The select's own placeholder option already says "Assign crew…",
+            // so a visible caption beside it said the same thing twice
+            // (design/principles.md #9) — the aria-label keeps the accessible
+            // name the specs and screen readers address it by.
+            <div>
               <select
                 aria-label={copy.assignLabel}
                 defaultValue=""
@@ -217,7 +225,7 @@ export function CrewSection({
                     </option>
                   ))}
               </select>
-            </label>
+            </div>
           ) : null}
 
           {localCrew.length === 0 ? (
@@ -232,9 +240,18 @@ export function CrewSection({
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{entry.fullName}</span>
                     <span className="text-muted">{entry.roles.join(", ")}</span>
-                    <Badge tone={onShift.has(entry.id) ? "success" : "warning"} size="sm">
-                      {onShift.has(entry.id) ? copy.onShift : copy.notOnShift}
-                    </Badge>
+                    {/* Badge only for the exceptional state: on a normal day
+                        every crew member is on a shift, and a green pill per
+                        row is the expected state formatted as an alert
+                        (design/principles.md #9). A row with no badge is
+                        covered; the sr-only text keeps that fact audible. */}
+                    {onShift.has(entry.id) ? (
+                      <span className="sr-only">{copy.onShift}</span>
+                    ) : (
+                      <Badge tone="warning" size="sm">
+                        {copy.notOnShift}
+                      </Badge>
+                    )}
                   </span>
                   <span className="flex items-center gap-2">
                     {/* The job on *this* sailing (ADR 20260803-per-trip-crew-role).
@@ -266,10 +283,13 @@ export function CrewSection({
                         ))}
                       </select>
                     </span>
+                    {/* min-w-11 with a centered glyph: 44px tall but ~24px
+                        wide was a sliver of a target for a dockside tap that
+                        drops a crew member (design/principles.md #2). */}
                     <button
                       type="button"
                       onClick={() => handleUnassign(entry.id)}
-                      className="min-h-11 rounded-lg px-2 text-xs font-semibold text-muted hover:text-danger"
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-sm font-semibold text-muted hover:bg-danger/10 hover:text-danger"
                       aria-label={fill(copy.unassignAria, { name: entry.fullName })}
                     >
                       ×

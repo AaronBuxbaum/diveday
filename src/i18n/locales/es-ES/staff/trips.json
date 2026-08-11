@@ -141,9 +141,9 @@
     "returnToAutomated": "Volver al pronóstico automático",
     "editEmpty": "Escribir una predicción de la tripulación",
     "editPublished": "Editar la predicción de la tripulación",
-    "summaryPublished": "Predicción de la tripulación publicada:",
     "holdOnSummary": "La pausa por condiciones está activa — las nuevas reservas están en pausa",
-    "publishedAt": "Publicada {date}"
+    "publishedAt": "Publicada {date}",
+    "visibilityFact": "{value} de visibilidad"
   },
   "crew": {
     "heading": "Tripulación",
@@ -175,12 +175,7 @@
     "heading": "Requisitos de preparación",
     "courseDescription": "Esta sesión mantiene las reglas de admisión con las que se creó — editar el curso más tarde no cambiará lo que necesitan los alumnos ya inscritos.",
     "tripDescription": "Estas son las reglas de la salida. Un buceador sigue bloqueado hasta que se cumplan todas.",
-    "waiverLabel": "Exención:",
-    "required": "obligatoria",
-    "notRequired": "no obligatoria",
-    "certificationLabel": "Certificación existente:",
     "certOrHigher": "{level} o superior",
-    "notRequiredForEnrollment": "no obligatoria para inscribirse",
     "requireWaiver": "Exigir una exención de responsabilidad firmada",
     "requirePayment": "Exigir el pago para embarcar",
     "minimumCertificationLabel": "Certificación mínima",
@@ -198,10 +193,13 @@
     "saving": "Guardando…",
     "save": "Guardar requisitos",
     "edit": "Editar requisitos",
-    "paymentLabel": "Pago:",
-    "specialtiesLabel": "Especialidades:",
-    "noSpecialties": "No se requieren",
-    "notConfigured": "Los requisitos de este viaje no están configurados — cada buceador queda bloqueado hasta que lo estén."
+    "notConfigured": "Los requisitos de este viaje no están configurados — cada buceador queda bloqueado hasta que lo estén.",
+    "summaryWaiver": "Una exención de responsabilidad firmada",
+    "summaryPayment": "El pago realizado antes de embarcar",
+    "summaryCert": "Certificación {level} o superior",
+    "summarySpecialtyCard": "Una tarjeta verificada de especialidad de {specialty}",
+    "summaryNitroxCard": "Una tarjeta de nitrox verificada",
+    "summaryNoneRequired": "Nada que comprobar — cualquier buceador con plaza puede embarcar."
   },
   "recapPhotos": {
     "heading": "Fotos de buceadores",
@@ -334,6 +332,7 @@
     "removeBooking": "Eliminar reserva",
     "removeBookingConfirmButton": "Sí, eliminar reserva",
     "privateStaffNotes": "Notas privadas del personal ({count})",
+    "addFirstNoteSummary": "Añadir una nota privada",
     "detailsSummary": "Detalles",
     "detailsSummaryLabel": "Detalles de {name}",
     "noteDeletedToast": "Nota privada eliminada.",
@@ -565,6 +564,7 @@
     "scheduleAnotherDeparture": "Programar otra salida",
     "activityHeading": "Actividad",
     "noActivity": "Todavía no hay actividad del personal registrada.",
+    "activityShowAll": "{count, plural, one {Ver el historial completo (# entrada)} other {Ver el historial completo (# entradas)}}",
     "promoteHeading": "Promocionar esta salida",
     "promoteSentCount": "{count, plural, one {# oferta enviada} other {# ofertas enviadas}}"
   },

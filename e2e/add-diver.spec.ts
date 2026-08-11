@@ -13,7 +13,7 @@ signedInAsOwner();
 async function openPrivateNotes(page: Page) {
   const details = page
     .locator("details")
-    .filter({ hasText: "Private staff notes" })
+    .filter({ hasText: /Private staff notes|Add a private note/ })
     .filter({ visible: true });
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("summary").click();
@@ -85,7 +85,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // a one-tap undo instead.
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Private note deleted." })).toBeVisible();
-  await expect(page.getByText("Private staff notes (0)")).toBeVisible();
+  await expect(page.getByText("Add a private note").first()).toBeVisible();
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
   await expect(page.getByText(/deleted a private note about Walk-in Wanda/)).toBeVisible();
 
@@ -98,7 +98,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // Delete again — the rest of this test doesn't care about the note, only
   // about the trip filling up.
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Private staff notes (0)")).toBeVisible();
+  await expect(page.getByText("Add a private note").first()).toBeVisible();
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
