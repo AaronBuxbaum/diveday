@@ -208,10 +208,26 @@ async function TripGuestsBody({
   // outcomes stay on the page banner — they carry the undo control, and the
   // row they belong to is already named by `?bid=`.
   const tripNotice = resolveTripNotice({ notice, count, form, gate, tripId, locale });
-  // The deal panel is always rendered (inside a <details> its own
-  // `#last-minute-deal` landing auto-opens); the add-diver section is not
-  // rendered on a cancelled departure, so its notices fall back to the banner.
-  const guestSections = new Set([...(cancelled ? [] : ["add-diver"]), "last-minute-deal"]);
+  // "Promote this trip" appears only when there is somebody to promote it to.
+  // The panel used to render for every departure and, on the great majority of
+  // them, opened onto a single empty state — a marketing console offered to a
+  // shop whose last-minute list is empty, or whose members all said they are
+  // around some other week. An offer nobody can accept is not a control, it is
+  // a row of chrome on the tab that answers "who is attending" (principle 10).
+  // A blast that *has* gone out keeps its panel regardless: the record of what
+  // was sent, to how many people, is trip history and outlives the list that
+  // received it. Today's own "fill these seats" row is gated on the same reach
+  // (src/db/today.ts), so its `#last-minute-deal` anchor cannot point at a
+  // section this hides.
+  const showPromote = lastMinuteEligibleCount > 0 || lastMinutePromos.length > 0;
+  // The deal panel, when shown, is inside a <details> whose `#last-minute-deal`
+  // landing auto-opens; the add-diver section is not rendered on a cancelled
+  // departure, so its notices fall back to the banner — as do the deal's own on
+  // the (unreachable in practice) hidden case.
+  const guestSections = new Set([
+    ...(cancelled ? [] : ["add-diver"]),
+    ...(showPromote ? ["last-minute-deal"] : []),
+  ]);
   const pageNotice = tripNotice && guestSections.has(tripNotice.form) ? undefined : tripNotice;
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
@@ -399,11 +415,22 @@ async function TripGuestsBody({
           </EmptyState>
         ) : (
           <>
+            {/* When it happened is a column, not a trailing clause. Set inline
+                after the sentence, the timestamps landed at a different x on
+                every row — the eye reads them as part of the message and then
+                has to re-find where the next one starts. Right-aligned they
+                form the scannable edge a log wants, and `items-baseline` keeps
+                the two texts on one line rather than one boxed above the other.
+                Below `sm` the time drops under its own message instead of
+                squeezing a name into two words. */}
             <ol className="mt-4 grid gap-2">
               {recentActivity.map((event) => (
-                <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
-                  <span>{event.message}</span>
-                  <span className="ml-2 text-muted">
+                <li
+                  key={event.id}
+                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+                >
+                  <span className="min-w-0">{event.message}</span>
+                  <span className="shrink-0 text-muted tabular-nums">
                     {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
                   </span>
                 </li>
@@ -433,9 +460,12 @@ async function TripGuestsBody({
                 </summary>
                 <ol className="mt-2 grid gap-2">
                   {olderActivity.map((event) => (
-                    <li key={event.id} className="rounded-lg bg-surface-sunken px-4 py-3 text-sm">
-                      <span>{event.message}</span>
-                      <span className="ml-2 text-muted">
+                    <li
+                      key={event.id}
+                      className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+                    >
+                      <span className="min-w-0">{event.message}</span>
+                      <span className="shrink-0 text-muted tabular-nums">
                         {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
                       </span>
                     </li>
@@ -456,52 +486,54 @@ async function TripGuestsBody({
           ancestor <details> for a same-page anchor on its own, but a
           Next.js <Link> transition doesn't run that native "reveal"
           algorithm — AutoOpenDetails covers both. */}
-      <AutoOpenDetails
-        openOnHash="last-minute-deal"
-        className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface"
-      >
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-          <span>{t("trips.guests.promoteHeading")}</span>
-          <span className="flex items-center gap-2 text-muted">
-            {lastMinutePromos.length > 0
-              ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
-              : null}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-4 transition-transform group-open:rotate-180"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </summary>
-        {/* `p-4`, not `px-4`: with horizontal padding alone the panel's last
-            row — the sent-deal list, or the empty state — ran flush into the
-            card's bottom edge, while the section's own top margin left a wide
-            gap above it. On a phone, where the rows wrap and fill the width,
-            that read as a cut-off panel (2026-08-06 review). The section
-            itself no longer carries a page-level top margin here; this
-            container owns the inset, and it is the same `p-4` as the summary
-            above it. */}
-        <div className="border-t border-border p-4">
-          <LastMinuteDealSection
-            shopSlug={shopSlug}
-            locale={locale}
-            eligibleCount={lastMinuteEligibleCount}
-            openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
-            cancelled={cancelled}
-            promos={lastMinutePromos}
-            timezone={shop.timezone}
-            status={noticeForForm(tripNotice, "last-minute-deal")}
-            sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
-          />
-        </div>
-      </AutoOpenDetails>
+      {showPromote ? (
+        <AutoOpenDetails
+          openOnHash="last-minute-deal"
+          className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface"
+        >
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            <span>{t("trips.guests.promoteHeading")}</span>
+            <span className="flex items-center gap-2 text-muted">
+              {lastMinutePromos.length > 0
+                ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
+                : null}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-4 transition-transform group-open:rotate-180"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </summary>
+          {/* `p-4`, not `px-4`: with horizontal padding alone the panel's last
+              row — the sent-deal list, or the empty state — ran flush into the
+              card's bottom edge, while the section's own top margin left a wide
+              gap above it. On a phone, where the rows wrap and fill the width,
+              that read as a cut-off panel (2026-08-06 review). The section
+              itself no longer carries a page-level top margin here; this
+              container owns the inset, and it is the same `p-4` as the summary
+              above it. */}
+          <div className="border-t border-border p-4">
+            <LastMinuteDealSection
+              shopSlug={shopSlug}
+              locale={locale}
+              eligibleCount={lastMinuteEligibleCount}
+              openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+              cancelled={cancelled}
+              promos={lastMinutePromos}
+              timezone={shop.timezone}
+              status={noticeForForm(tripNotice, "last-minute-deal")}
+              sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
+            />
+          </div>
+        </AutoOpenDetails>
+      ) : null}
     </>
   );
 }

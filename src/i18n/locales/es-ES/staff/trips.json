@@ -45,7 +45,7 @@
     "waiverInPerson": "Exención en papel registrada — la liberación del buceador está archivada.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel — o envía el enlace digital para que el buceador lo responda.",
     "waiverError": "No se pudo crear ese enlace de exención. Prueba con una reserva y una plantilla vigentes.",
-    "recapNote": "Nota de resumen guardada — acompaña el resumen de cada buceador en cuanto esta salida zarpe.",
+    "recapNote": "Nota de resumen guardada — acompaña el resumen de cada buceador.",
     "recapPhotoRemoved": "Foto eliminada del resumen.",
     "requirements": "Requisitos de preparación de la salida actualizados.",
     "requirementsBlocking": "Requisitos actualizados. Algunos buceadores ya reservados en esta salida dejan de cumplirlos — revisa la lista de asistentes.",
@@ -163,7 +163,7 @@
   },
   "recapNote": {
     "heading": "Nota de resumen post-salida",
-    "description": "Un breve saludo de la tripulación, que aparece en el resumen de cada buceador después de que esta salida zarpe. Déjalo en blanco para no enviar ninguno.",
+    "description": "Un breve saludo de la tripulación, que aparece en el resumen de cada buceador. Déjalo en blanco para no enviar ninguno.",
     "placeholder": "Visibilidad increíble hoy — gracias por bucear con nosotros. ¡Vuelve el próximo mes para el pecio!",
     "saving": "Guardando…",
     "save": "Guardar nota de resumen",

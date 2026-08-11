@@ -114,6 +114,7 @@ export default async function CalendarSubscriptionsPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={t("calendar.eyebrow")}
+        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("calendar.title")}
         description={t("calendar.description")}
       />

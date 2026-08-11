@@ -62,6 +62,23 @@ test.describe("as owner", () => {
     ).toBeVisible();
   });
 
+  test("a settings sub-page carries a way back and no repeated directory", async ({ page }) => {
+    // The six sub-pages used to open under a grouped pill card listing every
+    // settings destination — the hub's own directory, repeated above each
+    // page's <h1> as permanent chrome, and on a phone the whole first
+    // viewport. What a sub-page actually needs is the way back, which its
+    // eyebrow now is.
+    await page.goto(`/shop/${SHOP}/settings/team`);
+    await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("link", { name: "Data export" })).toHaveCount(0);
+
+    // Scoped to `main`: the shop's identity menu carries its own Settings link,
+    // and this assertion is about the page's own eyebrow.
+    await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
+    await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
+  });
+
   test("a shop can change the zone its whole schedule is read in", async ({ page }) => {
     // Sign-up asked for a timezone once and nothing could change it
     // afterwards, so a shop that clicked past the picker read every departure

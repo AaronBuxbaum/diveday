@@ -32,6 +32,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
@@ -47,6 +48,7 @@ import {
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
+import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
@@ -956,6 +958,7 @@ export async function getTodayWork(
     courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,
+    lastMinuteWindows,
     rollCallGaps,
   ] = await Promise.all([
     boardedCountsByTrip(
@@ -982,6 +985,11 @@ export async function getTodayWork(
       shopId,
       inWindow.map((trip) => trip.id),
     ),
+    // Who is even reachable by a blast. Not scoped to a trip: an entry is a
+    // standing "I'm around these dates" preference, and which departures it
+    // covers is arithmetic (`lastMinuteEntryMatchesTripDate`), done per trip
+    // below against the same predicate the trip's own Guests tab uses.
+    listActiveLastMinuteWindows(db, shopId),
     // Deliberately not derived from `inWindow`/`todayTrips`: those look only
     // forward, and a boat that is out or already came back is exactly what this
     // chases.
@@ -1208,10 +1216,23 @@ export async function getTodayWork(
     // can always resend from the trip page itself (docs ADR
     // 20260727-last-minute-fill-promos).
     const openSeats = Math.max(0, trip.capacity - trip.booked);
+    // The reach test goes last on purpose: it is the only clause that scans a
+    // list, and the three before it rule out most departures for free.
+    //
+    // Why it is there at all — a shop with an empty last-minute list, or one
+    // whose members all stated dates that miss this departure, was being told
+    // to "fill these seats" and handed a panel whose only content was an empty
+    // state. The trip's Guests tab now hides that panel outright when nobody
+    // matches, so this row's own `#last-minute-deal` anchor would land on
+    // nothing. A queue row must be work someone can actually do
+    // (design/principles.md #10).
     if (
       openSeats > 0 &&
       urgencyFor(trip.startsAt, now) !== "later" &&
-      neverSentLastMinuteDeal.has(trip.id)
+      neverSentLastMinuteDeal.has(trip.id) &&
+      lastMinuteWindows.some((entry) =>
+        lastMinuteEntryMatchesTripDate(entry, shopDay(trip.startsAt, timeZone)),
+      )
     ) {
       actions.push({
         id: `last-minute-fill:${trip.id}`,

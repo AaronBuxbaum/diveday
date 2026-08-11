@@ -53,7 +53,11 @@ export default async function EmbedSettingsPage() {
   if (!scheduleUrl) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader eyebrow={t("settings.embed.eyebrow")} title={t("settings.embed.title")} />
+        <ShopPageHeader
+          eyebrow={t("settings.embed.eyebrow")}
+          eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
+          title={t("settings.embed.title")}
+        />
         <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
           {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
         </p>
@@ -95,6 +99,7 @@ export default async function EmbedSettingsPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={t("settings.embed.eyebrow")}
+        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.embed.title")}
         description={t("settings.embed.description")}
       />

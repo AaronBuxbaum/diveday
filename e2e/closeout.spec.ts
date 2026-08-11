@@ -36,6 +36,14 @@ test.describe("end-of-day close-out", () => {
     // never empty on the demo shop.
     await expect(page.getByText("No departures today.")).toHaveCount(0);
 
+    // …and every one of them is still out at the fleet's frozen 09:30, so no
+    // row offers the post-trip recap note. Only this negative is reachable
+    // here, for the same process-wide-clock reason the handoff test below
+    // records; the positive is covered in
+    // src/app/shop/[shopSlug]/close-out/_components/RecapNoteEditor.test.tsx
+    // and src/lib/closeout.test.ts's `ended` assertions.
+    await expect(page.getByText("Post-trip recap note")).toHaveCount(0);
+
     // Make an explicit decision about the first leftover: dismiss it. Every
     // other row keeps its carry default.
     const dismissals = page.locator('input[type="radio"][value="dismiss"]');

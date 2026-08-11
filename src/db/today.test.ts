@@ -342,10 +342,46 @@ describe("today's work queue (in-memory PGlite)", () => {
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
 
+    // Somebody to send the deal to. A diver who states no dates is around for
+    // every departure — without one on the list the row is correctly absent
+    // (the test below), so this is the row's premise, not scenery.
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+    });
+
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
     expect(row?.kind).toBe("last_minute_fill");
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
+  });
+
+  it("does not nudge to fill seats when nobody on the last-minute list is around for that date", async () => {
+    // The row's whole job is "send a deal to the people waiting for one." With
+    // nobody reachable there is nothing to send, the trip's Guests tab hides
+    // the panel outright, and the row's own `#last-minute-deal` anchor would
+    // land on nothing.
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+
+    // On the list, but stating a window months after this departure — the
+    // sharper case than an empty list, because the entry exists and still must
+    // not count.
+    const nextYear = new Date(nowMs() + 300 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+      availableFrom: nextYear,
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(
+      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
+    ).toBeUndefined();
   });
 
   it("stops nudging once a last-minute deal has actually been sent for that trip", async () => {

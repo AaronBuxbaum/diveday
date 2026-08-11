@@ -120,6 +120,14 @@ export type CloseoutTripInput = {
   endsAt: Date;
   /** Non-cancelled bookings — a fact about the trip, shown beside its state. */
   booked: number;
+  /**
+   * The crew's post-trip note, as it stands. Carried here because the close-out
+   * is where it gets written: the nightly run mails each diver their recap
+   * after the departure ends, so the evening the boat came in is both the last
+   * chance to add "the eagle ray on the second dive" and the one moment someone
+   * still remembers it. Null when nothing is written yet.
+   */
+  recapShoutout: string | null;
 };
 
 /**
@@ -147,6 +155,15 @@ export type CloseoutDeparture = {
   gapReason: RollCallGapReason | null;
   diveNumber: number;
   uncounted: number;
+  /** See `CloseoutTripInput.recapShoutout`. */
+  recapShoutout: string | null;
+  /**
+   * Whether this departure is behind the shop — the same reading `sendDueRecaps`
+   * makes about whose recap is due. Only a returned boat is offered the recap
+   * note: a trip still out has no day to write about yet, and one that never
+   * left has none coming.
+   */
+  ended: boolean;
 };
 
 /** The one-line answer to "how did today end?", as a code. */
@@ -256,6 +273,8 @@ export function assembleDayCloseout(input: {
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       booked: trip.booked,
+      recapShoutout: trip.recapShoutout,
+      ended: trip.endsAt <= now,
       ...departureStatus(trip, worstGapByTrip.get(trip.tripId), now),
     }))
     .sort(
