@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 // Creates or updates the infra-deploy GitHub Environment that
 // GitHubActionsCdkDeployRole's OIDC trust condition names (infra-stack.ts
-// §18): required reviewer = the gh CLI's currently authenticated user, which
-// is who ran `pnpm infra:deploy` and answered "yes" to this prompt.
+// §18): required reviewer = the gh CLI's currently authenticated user. On a
+// workstation that is who ran `pnpm infra:deploy` and answered "yes" to this
+// prompt. In the CI-unattended run (ADR 20260811-ci-deploy-full-wizard) it is
+// instead whoever the INFRA_DEPLOY_GH_TOKEN PAT belongs to -- not necessarily
+// the human who approved that specific deploy run -- so every run of this
+// script logs the exact user id it adds (see the final console.log below);
+// nothing here is silent about which identity became a required reviewer.
 //
 // GitHub's environment-update endpoint takes `reviewers` as the full desired
 // state, not a delta -- a naive unconditional PUT would silently drop a
