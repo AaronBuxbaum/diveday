@@ -185,7 +185,7 @@ exit 1
   });
 
   describe("AWS credential selection", () => {
-    function runWithCredentialLogging(extraEnvironment) {
+    function runWithCredentialLogging(extraArguments = [], extraEnvironment = {}) {
       const binDirectory = temporaryDirectory("diveday-vercel-stub-");
       const credentialLogPath = join(binDirectory, "credentials.log");
       writeFileSync(
@@ -230,11 +230,15 @@ exit 1
         AWS_SECRET_ACCESS_KEY: "ambient-secret",
         ...extraEnvironment,
       };
-      if (extraEnvironment?.CI === undefined) delete environment.CI;
 
       execFileSync(
         "node",
-        [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, "production"],
+        [
+          join(process.cwd(), "scripts", "import-vercel-env.mjs"),
+          inputPath,
+          "production",
+          ...extraArguments,
+        ],
         { env: environment, encoding: "utf8" },
       );
 
@@ -242,20 +246,29 @@ exit 1
     }
 
     it("swaps to the diveday-admin profile and strips ambient keys on a workstation", () => {
-      expect(runWithCredentialLogging({})).toBe(
+      expect(runWithCredentialLogging()).toBe(
         "AWS_PROFILE=diveday-admin AWS_ACCESS_KEY_ID=<unset>",
       );
     });
 
     it("honors INFRA_ENV_SYNC_PROFILE instead of the diveday-admin default off CI", () => {
-      expect(runWithCredentialLogging({ INFRA_ENV_SYNC_PROFILE: "diveday-break-glass" })).toBe(
+      expect(runWithCredentialLogging([], { INFRA_ENV_SYNC_PROFILE: "diveday-break-glass" })).toBe(
         "AWS_PROFILE=diveday-break-glass AWS_ACCESS_KEY_ID=<unset>",
       );
     });
 
-    it("keeps the ambient OIDC-assumed credentials as-is in CI, without a diveday-admin profile", () => {
-      expect(runWithCredentialLogging({ CI: "true" })).toBe(
+    it("keeps the ambient OIDC-assumed credentials as-is with --ci-unattended, without a diveday-admin profile", () => {
+      expect(runWithCredentialLogging(["--ci-unattended"])).toBe(
         "AWS_PROFILE=ambient-caller-profile AWS_ACCESS_KEY_ID=ambient-key",
+      );
+    });
+
+    it("never treats a bare CI=true (or GITHUB_ACTIONS=true) as authorization to skip the profile swap", () => {
+      // Only the explicit --ci-unattended flag scripts/post-deploy-wizard.mjs
+      // forwards may do that -- see infra-deploy.mjs's isCiDeploy comment
+      // (security review on ADR 20260811-ci-deploy-full-wizard).
+      expect(runWithCredentialLogging([], { CI: "true", GITHUB_ACTIONS: "true" })).toBe(
+        "AWS_PROFILE=diveday-admin AWS_ACCESS_KEY_ID=<unset>",
       );
     });
   });

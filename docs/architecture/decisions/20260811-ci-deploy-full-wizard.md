@@ -50,23 +50,47 @@ never`** instead of a bare `cdk deploy`, with `GH_TOKEN`/`VERCEL_TOKEN`/`VERCEL_
 `vercel` CLIs the same way a workstation run does, and neither is authenticated by the OIDC role
 that only AWS trusts.
 
-**`scripts/infra-deploy.mjs` picks a third mode.** The post-deploy branch was interactive-terminal
-or nothing; it is now `--no-wizard` → skip, TTY and not CI → interactive (unchanged), `CI` set →
-run `runPostDeployWizard` with `ask: async () => "yes"`, else → print the "run this in a terminal"
-message (unchanged). CI's own approval gate is what "unblocked manually" already means by the time
-this process runs — nothing inside the script blocks a second time. A step whose own command fails
-(an expired PAT, a revoked Vercel token) throws and exits the process non-zero, same as any other
-failed deploy step; there is no partial-success state to paper over.
+**`scripts/infra-deploy.mjs` picks a third mode, gated on an explicit `--ci-unattended` flag —
+never on an ambient environment variable.** The post-deploy branch was interactive-terminal or
+nothing; it is now `--no-wizard` → skip, TTY and `--ci-unattended` absent → interactive (unchanged),
+`--ci-unattended` present → run `runPostDeployWizard` with `ask: async () => "yes"`, else → print the
+"run this in a terminal" message (unchanged). Only `.github/workflows/infra.yml`'s `deploy` job
+passes `--ci-unattended`; CI's own approval gate is what "unblocked manually" already means by the
+time this process runs — nothing inside the script blocks a second time. A step whose own command
+fails (an expired PAT, a revoked Vercel token) throws and exits the process non-zero, same as any
+other failed deploy step; there is no partial-success state to paper over.
+
+An adversarial security review of this record (before merge) found the first implementation used
+`process.env.CI` — later a same-review-round attempt using `process.env.GITHUB_ACTIONS === "true" &&
+process.env.ACTIONS_ID_TOKEN_REQUEST_URL` — to select this branch, and flagged both as unsafe: `CI`
+is a generic convention many local tools set (`act`, several test runners, a shell profile left from
+a past debugging session), and this repo's own "Unit tests" CI job — which requests no OIDC token at
+all — turned out to already carry `ACTIONS_ID_TOKEN_REQUEST_URL` regardless, breaking an unrelated
+pre-existing test (`distribute-env.test.mjs`) the moment that branch was gated on it. Either signal
+being present on an ordinary workstation shell or an unrelated CI job, combined with a live AWS
+session able to read `diveday/env`, would silently run the entire wizard with no human confirmation
+at all — pushing to Vercel Production and mutating the `infra-deploy` GitHub Environment's protection
+rules. `--ci-unattended` is not an ambient signal: nothing supplies a CLI argument to `pnpm
+infra:deploy` by accident the way it can an environment variable.
 
 The secret-read environment-selection logic (previously "always swap `AWS_PROFILE` to
-`diveday-admin` and strip ambient keys") is now conditioned on `process.env.CI`: on a workstation it
-is unchanged, and in CI the ambient OIDC-assumed credentials from the deploy step just above are
-reused as-is — there is no `diveday-admin` profile on a runner to swap to, and the role granted
-above can now read the one secret directly. `import-vercel-env.mjs`'s own admin-profile swap for the
-Vercel-sync checkpoint gets the identical CI-aware branch, for the identical reason.
+`diveday-admin` and strip ambient keys") is now conditioned on that same flag: on a workstation it is
+unchanged, and with `--ci-unattended` the ambient OIDC-assumed credentials from the deploy step just
+above are reused as-is — there is no `diveday-admin` profile on a runner to swap to, and the role
+granted above can now read the one secret directly. `import-vercel-env.mjs`'s own admin-profile swap
+for the Vercel-sync checkpoint gets the identical branch, driven by its own `--ci-unattended` flag
+that `scripts/post-deploy-wizard.mjs` forwards to it only when `infra-deploy.mjs` was itself invoked
+with the flag — the wizard step never re-derives "is this CI" from the ambient environment a second
+time.
 
 ## Alternatives considered
 
+- **Gate the unattended branch on `process.env.CI` or `process.env.GITHUB_ACTIONS`/
+  `ACTIONS_ID_TOKEN_REQUEST_URL`.** Both tried, both rejected by the security review described above:
+  neither is proof of running inside the specific, OIDC-approved deploy job, and the second was
+  empirically disproven by this repo's own "Unit tests" CI job carrying the token-request URL despite
+  requesting no OIDC token. An explicit CLI flag only the workflow itself passes has no equivalent
+  false-positive surface.
 - **Give the deploy role a temporary AssumeRole into a CI-only "diveday-ci-admin" identity** instead
   of widening its own policy. Rejected: it reintroduces exactly the shape 20260805 and 20260808 both
   moved away from — an administrator-equivalent identity reachable from CI — for a capability that

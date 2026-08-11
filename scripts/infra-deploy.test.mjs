@@ -102,7 +102,6 @@ function run(directory, bin, extraArguments, extraEnvironment) {
       encoding: "utf8",
       env: {
         ...process.env,
-        CI: "true",
         AWS_PROFILE: "ambient-caller-profile",
         AWS_ACCESS_KEY_ID: "ambient-key",
         AWS_SECRET_ACCESS_KEY: "ambient-secret",
@@ -118,7 +117,7 @@ function run(directory, bin, extraArguments, extraEnvironment) {
 describe("infra-deploy in CI", () => {
   it("runs the post-deploy wizard non-interactively, answering yes to every question", () => {
     const { directory, bin, ghCallLogPath } = fixture();
-    const result = run(directory, bin, [], {});
+    const result = run(directory, bin, ["--ci-unattended"], {});
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
@@ -138,9 +137,9 @@ describe("infra-deploy in CI", () => {
     );
   });
 
-  it("skips the wizard on --no-wizard even in CI", () => {
+  it("skips the wizard on --no-wizard even with --ci-unattended", () => {
     const { directory, bin, ghCallLogPath } = fixture();
-    const result = run(directory, bin, ["--no-wizard"], {});
+    const result = run(directory, bin, ["--ci-unattended", "--no-wizard"], {});
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("Skipped the post-deploy wizard (--no-wizard).");
@@ -150,11 +149,33 @@ describe("infra-deploy in CI", () => {
 
   it("reads the credentials secret with the ambient OIDC-assumed credentials, not a diveday-admin profile", () => {
     const { directory, bin, secretCallLogPath } = fixture();
-    const result = run(directory, bin, ["--no-wizard"], {});
+    const result = run(directory, bin, ["--ci-unattended", "--no-wizard"], {});
 
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(secretCallLogPath, "utf8").trim()).toBe(
       "AWS_PROFILE=ambient-caller-profile AWS_ACCESS_KEY_ID=ambient-key",
     );
+  });
+
+  it("never treats CI=true, or any other ambient environment variable, as authorization to run unattended", () => {
+    // A dev shell running `act`, a test runner, or a leftover CI=true from a
+    // past debugging session must not be able to trigger the auto-yes wizard
+    // and the ambient-credential secret read just by having those variables
+    // set -- only the explicit --ci-unattended flag .github/workflows/infra.yml
+    // passes can (security review on ADR 20260811-ci-deploy-full-wizard).
+    const { directory, bin, secretCallLogPath, ghCallLogPath } = fixture();
+    const result = run(directory, bin, ["--no-wizard"], {
+      CI: "true",
+      GITHUB_ACTIONS: "true",
+      ACTIONS_ID_TOKEN_REQUEST_URL: "https://pipelines.actions.githubusercontent.com/token",
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    // The workstation profile swap still ran: diveday-admin, not the ambient
+    // caller profile, and the ambient key was stripped before the read.
+    expect(readFileSync(secretCallLogPath, "utf8").trim()).toBe(
+      "AWS_PROFILE=diveday-admin AWS_ACCESS_KEY_ID=<unset>",
+    );
+    expect(() => readFileSync(ghCallLogPath, "utf8")).toThrow();
   });
 });

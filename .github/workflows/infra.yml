@@ -182,8 +182,11 @@ jobs:
       # gh/vercel CLIs the wizard shells out to (manual actions
       # "ci-github-admin-token"/"ci-vercel-deploy-token", §17); VERCEL_ORG_ID/
       # VERCEL_PROJECT_ID let the Vercel CLI act on the linked project without
-      # an interactive `vercel link`.
-      - run: pnpm infra:deploy DiveDay --require-approval never
+      # an interactive `vercel link`. --ci-unattended is what actually selects
+      # this behavior -- deliberately not an ambient env var like CI, which a
+      # local dev tool could set by convention (ADR 20260811-ci-deploy-full-wizard);
+      # only this one `run:` line ever passes it.
+      - run: pnpm infra:deploy DiveDay --require-approval never --ci-unattended
         env:
           GH_TOKEN: ${{ secrets.INFRA_DEPLOY_GH_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.INFRA_DEPLOY_VERCEL_TOKEN }}

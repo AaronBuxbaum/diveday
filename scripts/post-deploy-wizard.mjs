@@ -35,6 +35,12 @@ export async function runPostDeployWizard({
   cdkArguments,
   credentialsDocument,
   log = console.log,
+  // Forwarded to import-vercel-env.mjs as `--ci-unattended` so it makes the
+  // same CI-vs-workstation AWS-credential choice its caller already made,
+  // without needing to re-derive it from the ambient environment itself (see
+  // infra-deploy.mjs's isCiDeploy comment for why an ambient signal is unsafe
+  // here). Never true when called from the interactive branch.
+  ciUnattended = false,
 }) {
   const run = (command, arguments_, options = {}) =>
     execute(command, arguments_, { stdio: "inherit", ...options });
@@ -63,6 +69,7 @@ export async function runPostDeployWizard({
       join(scriptDirectory, "import-vercel-env.mjs"),
       ".env.vercel",
       "production",
+      ...(ciUnattended ? ["--ci-unattended"] : []),
     ]);
   }
 
