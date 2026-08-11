@@ -32,6 +32,9 @@ the deployer key it just ran `cdk deploy` with cannot.
 - The parameter holds fingerprints, not values: one `KEY=<sha256-hex>` line per pushed variable, in
   the same dotenv-line shape used everywhere else in this tooling. Nothing in this parameter can
   reconstruct a secret; it exists only to answer "did this change since the last push."
+- The fingerprint document is written with `--value file://<temp-path>`, never as a literal CLI
+  argument — the same reason `vercel env add` already reads a value from stdin rather than argv: a
+  literal argument sits in `ps` output for any other user on the machine.
 - `import-vercel-env.mjs` authenticates the same way `infra-deploy.mjs`'s post-deploy handoff does —
   `INFRA_ENV_SYNC_PROFILE` (default `diveday-admin`), ambient `AWS_ACCESS_KEY_ID`/etc. stripped
   because AWS gives them precedence over `AWS_PROFILE`, then `ensureAwsLogin` opens the browser login
