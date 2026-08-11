@@ -27,6 +27,15 @@ an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, GitHub mints t
 is case-sensitive with no ignore-case variant. Both CI roles' trust conditions therefore matched
 nothing, from any branch.
 
+There may be less to this than a spelling. AWS returns the identical "Not authorized" for a role
+that does not exist, and on the same day the deployed address lookup was found to be signing with an
+access key the account does not recognise either
+([FU-20260809](FU-20260809-confirm-address-lookup-region.md)) — the key §12 mints. Both are
+explained at once if the `diveday-infra` stack has simply not been deployed since 2026-08-04, in
+which case neither §12's IAM user nor §18's roles were ever created. The casing fix is still
+required for the roles to be assumable once they exist; it is just possibly not the only thing
+missing.
+
 ## Why it isn't already done
 
 The fix is in the stack's source; AWS is still holding the trust policies built from the old
@@ -39,7 +48,9 @@ admin credential, which no agent session has.
 1. Run `pnpm infra:deploy` from a workstation carrying the `diveday-admin` profile (see
    [docs/engineering/infrastructure-runbook.md](../../engineering/infrastructure-runbook.md)).
 2. Re-run the `Infra / cdk synth + diff` job on any open `infra/`-touching PR and confirm it now gets
-   credentials and posts its diff comment.
+   credentials and posts its diff comment. The same deploy should make the settings address
+   type-ahead work again — check it, and close
+   [FU-20260809](FU-20260809-confirm-address-lookup-region.md) if it does.
 3. If it still cannot assume the role, the next thing to check is whether the deployed
    `GitHubActionsOidcProvider` exists at all and carries `sts.amazonaws.com` as a client id — the
    error is deliberately identical for a missing role, a missing provider and a non-matching

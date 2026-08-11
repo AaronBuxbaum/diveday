@@ -1,97 +1,102 @@
-# FU-20260809-confirm-address-lookup-region — Read the reason the deployed address lookup is failing, and fix that deployment
+# FU-20260809-confirm-address-lookup-region — Mint (or repaste) the address-lookup credential the deployment is missing
 
 - **Status:** Open
 - **Raised:** 2026-08-09 — branch `claude/mobile-ui-ux-fixes-o4971v`, while fixing the reported
   "Address lookup isn't available right now" on Settings
-- **Updated:** 2026-08-11 — branch `claude/shop-address-autocomplete-error-n47nnx`, after a second
-  report of the same failure. The failure now names its own cause; nobody has read the name yet.
-- **Kind:** question
+- **Updated:** 2026-08-11 — PR #458. The failure was made to name its own cause, the cause was then
+  read off the deployment, and the remaining work is one AWS action.
+- **Kind:** half-done
 - **Effort:** S
-- **Touches:** `src/lib/address-lookup.ts`, `src/lib/address-lookup-aws.ts`,
-  `infra/lib/infra-stack.ts`, `docs/architecture/decisions/20260804-aws-location-address-lookup.md`
+- **Touches:** `infra/lib/infra-stack.ts` (§12, where the credential is minted), `.env.example`
+  (the `PLACES_AWS_*` names the deployment must hold),
+  `docs/architecture/decisions/20260804-aws-location-address-lookup.md`
 
 ## What I noticed
 
-The address type-ahead on `/shop/<slug>/settings` fails on the deployed site, reproducibly, on
-every keystroke. The second report (2026-08-11) carried the server action's actual response body:
+The address type-ahead on `/shop/<slug>/settings` fails on the deployed site, reproducibly, on every
+keystroke. As of PR #458 the failure classifies itself, and on 2026-08-11 it was read:
 
 ```
-1:{"status":"failed"}
+{"level":"warn","event":"address_lookup.failed","error":"UnrecognizedClientException",
+ "code":null,"status":403,"reason":"denied"}
 ```
 
-That is the adapter's catch branch — the Amazon Location `Autocomplete` call threw. It is not the
-missing-`AdditionalFeatures` bug fixed on 2026-08-09 (those requests returned HTTP 200), it is not
-`not_configured` (the search box only renders when all three `PLACES_AWS_*` values are set and
-non-empty in the deployment, so they are set), and it is not the app's own rate limit (that has its
-own `rate_limited` status). Three causes remain, and all three are in the deployment rather than in
-the code:
+Every part of that is load-bearing. An AWS endpoint **answered**, with a status and an exception
+name, so the host resolved and `PLACES_AWS_REGION` names a region that serves the Places API — the
+region hypothesis this entry was originally opened for is dead. `UnrecognizedClientException` is the
+signature-layer refusal, not the authorization one: AWS does not know the access key id at all. A
+key that existed but lacked `geo-places:Autocomplete` would be `AccessDeniedException`, and a key
+whose secret did not match would be `SignatureDoesNotMatch`.
 
-1. the credential in Vercel is rejected or lacks `geo-places:Autocomplete`,
-2. `PLACES_AWS_REGION` names a region that does not serve the Places API,
-3. something else answered with an error.
+So the deployment holds a `PLACES_AWS_ACCESS_KEY_ID` that no longer exists in account
+`417160702652` — or never did. Note this is invisible from the box: the search field renders
+whenever all three `PLACES_AWS_*` values are merely *present*, so a hand-filled or superseded value
+looks exactly like a working one until the first request.
 
-Two changes on this branch narrow it. `PLACES_AWS_REGION` is now set from a named constant in §12 of
-the stack instead of inheriting `this.region`, so cause 2 cannot be reintroduced by a stack that
-moves — but that only fixes what a **future** deploy hands Vercel, and nobody has confirmed what the
-value in Vercel is today. And the failure now classifies itself: the action returns
-`{ "status": "failed", "reason": "denied" | "unreachable" | "rejected" | "unknown" }`, and the log
-line carries the same reason alongside the AWS exception name, transport code and HTTP status.
+The likely single cause, shared with FU-20260811-deploy-the-fixed-ci-trust-policies: **the
+`diveday-infra` stack has not been deployed since §12 was added on 2026-08-04.** That would mean the
+`diveday-places-lookup` user and its key were never minted (this failure), and that §18's CI roles
+were never created either — which produces exactly the `sts:AssumeRoleWithWebIdentity` refusal that
+entry is about, since AWS returns the same "Not authorized" for a role that does not exist. One
+deploy would settle both.
 
 ## Why it isn't already done
 
-It needs someone who can read the deployed environment. This session had no AWS access — outbound
-AWS calls are blocked by policy here — so the reason code has been shipped but never observed
-against the real deployment.
+It needs someone who can reach the AWS account. Agent sessions here have no AWS access — outbound
+AWS calls are blocked by policy — and minting an IAM credential is not something a session should be
+doing unattended in any case.
 
 ## Proposed change
 
-1. Open `/shop/<slug>/settings`, type four characters into the address search box, and read the
-   `reason` in the response body in the network panel. (Or query the app's CloudWatch log group for
-   `$.event = "address_lookup.failed"`, which carries `reason`, `error`, `code` and `status` — the
-   query text itself is deliberately never logged.)
-2. Act on the reason:
-   - `denied` ⇒ the credential. Compare the deployed `PLACES_AWS_ACCESS_KEY_ID` against the Secrets
-     Manager value; §12 grants exactly `geo-places:Autocomplete` to `diveday-places-lookup`, so a
-     key from a different user, a key minted before §12 was deployed, or a stack that has not been
-     deployed since §12 was added all land here.
-   - `unreachable` ⇒ the region. Set `PLACES_AWS_REGION` in Vercel to the value §12 now generates
-     (`us-east-1`); the deployed value predates that constant and may be anything.
-   - `rejected` ⇒ the request itself; read the AWS exception name in the log line.
-   - `unknown` ⇒ read the log line before guessing.
-3. Confirm the box lists real places and that picking one fills all five boxes.
+1. Check whether the stack is stale, which is the fork everything else hangs off:
+   ```
+   aws cloudformation describe-stacks --stack-name diveday-infra \
+     --query 'Stacks[0].LastUpdatedTime' --output text
+   aws iam get-user --user-name diveday-places-lookup
+   ```
+   A last-update time before 2026-08-04, or `NoSuchEntity`, confirms it.
+2. **Stack stale** ⇒ run `pnpm infra:deploy` from a workstation with the `diveday-admin` profile. It
+   mints the `diveday-places-lookup` user and key, creates §18's CI roles, and the wizard pushes the
+   resulting `PLACES_AWS_*` values into Vercel. This also discharges
+   FU-20260811-deploy-the-fixed-ci-trust-policies.
+3. **Stack current** ⇒ the key exists and the deployment is holding a superseded one (§12's keys are
+   minted with a `credentialSerial` parameter, so a deploy that bumped it deleted the old pair).
+   Repaste `PLACES_AWS_ACCESS_KEY_ID` and `PLACES_AWS_SECRET_ACCESS_KEY` in Vercel Production from
+   Secrets Manager `diveday/env`.
+4. Confirm from the box: four characters into the address search should list real places, and
+   picking one should fill all five boxes.
 
-Not proposing further UI work: the three states a staffer can act on already read differently, and
-the reason is deliberately not shown on screen — a dive shop cannot act on `AccessDeniedException`.
+Not proposing any application change. The code path is proven — it reached AWS, signed a request,
+and reported the refusal accurately — and nothing an app can do fixes a credential the account does
+not recognise.
 
 ## Prompt
 
 ```text
-DiveDay's shop-address type-ahead fails on the deployed site: the server action at
-/shop/<slug>/settings answers every keystroke with {"status":"failed"}. The cause is in the
-deployment, not the code, and the code now names which one. Find it and fix the deployment.
+DiveDay's shop-address type-ahead is dead on the deployed site. The cause is known and the remaining
+work is one AWS action; nobody with account access has performed it yet.
 
-Read first: src/lib/address-lookup.ts (classifyLookupError and the reason vocabulary),
-src/lib/address-lookup-aws.ts (the adapter's catch branch), section 12 of infra/lib/infra-stack.ts
-(the diveday-places-lookup IAM user and the PLACES_AWS_* values it generates), and
+The deployment's log line reads:
+  {"event":"address_lookup.failed","error":"UnrecognizedClientException","status":403,"reason":"denied"}
+An AWS endpoint answered, so the region is fine. UnrecognizedClientException means the access key id
+in PLACES_AWS_ACCESS_KEY_ID is not a key that exists in account 417160702652.
+
+Read first: section 12 of infra/lib/infra-stack.ts (the diveday-places-lookup IAM user, its
+geo-places:Autocomplete policy, and mintAccessKey's credentialSerial), and
 docs/architecture/decisions/20260804-aws-location-address-lookup.md.
 
-Do this: reproduce the failure on the deployed site and read the `reason` field the action now
-returns, or query the app's CloudWatch log group for `$.event = "address_lookup.failed"` and read
-`reason`, `error`, `code` and `status`. Then follow the branch table in
-docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md — `denied` means the wrong or
-under-permitted key is deployed, `unreachable` means PLACES_AWS_REGION names a region that does not
-serve Amazon Location Places, `rejected` means the request itself was refused. Fix the deployment
-value; do not change application code to route around a bad credential.
+Do this: run `aws cloudformation describe-stacks --stack-name diveday-infra --query
+'Stacks[0].LastUpdatedTime'` and `aws iam get-user --user-name diveday-places-lookup`. If the stack
+predates 2026-08-04 or the user does not exist, run `pnpm infra:deploy` from a workstation with the
+diveday-admin profile — that mints the user and key and pushes the values to Vercel, and also
+discharges docs/product/follow-ups/FU-20260811-deploy-the-fixed-ci-trust-policies.md. If the stack is
+current, the deployment is holding a superseded key: repaste PLACES_AWS_ACCESS_KEY_ID and
+PLACES_AWS_SECRET_ACCESS_KEY in Vercel Production from Secrets Manager diveday/env.
 
-Context that makes this non-obvious: the search box only renders when all three PLACES_AWS_* values
-are present, so "the box is there" already proves the variables are set — what is unproven is
-whether they are correct. Note also that a lookup can fail with real places listed and no error at
-all if AdditionalFeatures: ["Core"] is ever dropped from the request; that is a different bug, fixed
-on 2026-08-09, and its tests are in src/lib/address-lookup-aws.test.ts.
+Do not change application code. The app reached AWS, signed correctly, and reported the refusal
+accurately; there is nothing for it to fix.
 
-Done means: the type-ahead lists real places on the deployed site and picking one fills all five
-address boxes, stated as an observation rather than an inference. If the fix was a config value,
-say which one it was and where it now lives. Run `pnpm check`, and `pnpm test infra -u` if infra/
-changed. Delete docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md as part of the
-change.
+Done means: typing four characters into the address search on /shop/<slug>/settings lists real
+places and picking one fills all five address boxes, stated as an observation of the deployed site.
+Delete docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md as part of the change.
 ```
