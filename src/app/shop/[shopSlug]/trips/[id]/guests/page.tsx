@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
@@ -390,7 +391,12 @@ async function TripGuestsBody({
       <section className="mt-10">
         <h2 className="text-lg font-semibold">{t("trips.guests.activityHeading")}</h2>
         {activity.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          // The shared empty-section grammar, not a bare paragraph — the
+          // roster above already wears the same dashed card for "nothing here"
+          // (design/principles.md #4).
+          <EmptyState className="mt-4">
+            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          </EmptyState>
         ) : (
           <>
             <ol className="mt-4 grid gap-2">

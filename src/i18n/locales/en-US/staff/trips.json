@@ -141,9 +141,9 @@
     "returnToAutomated": "Return to automated outlook",
     "editEmpty": "Write a crew prediction",
     "editPublished": "Edit crew prediction",
-    "summaryPublished": "Crew prediction published:",
     "holdOnSummary": "Conditions hold is on — new bookings are paused",
-    "publishedAt": "Published {date}"
+    "publishedAt": "Published {date}",
+    "visibilityFact": "{value} visibility"
   },
   "crew": {
     "heading": "Crew",
@@ -332,6 +332,7 @@
     "removeBooking": "Remove booking",
     "removeBookingConfirmButton": "Yes, remove booking",
     "privateStaffNotes": "Private staff notes ({count})",
+    "addFirstNoteSummary": "Add a private note",
     "detailsSummary": "Details",
     "detailsSummaryLabel": "Details for {name}",
     "noteDeletedToast": "Private note deleted.",

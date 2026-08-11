@@ -54,8 +54,12 @@ export function ConditionsSection({
     trip.waterTemperatureC !== null
       ? `${temperatureInUnit(trip.waterTemperatureC, temperatureUnit)} ${temperatureUnitLabel}`
       : null,
+    // "18 m" alone carries a unit but no subject — an operational read names
+    // what the figure measures (principle 6).
     trip.visibilityMeters !== null
-      ? `${depthInUnit(trip.visibilityMeters, depthUnit)} ${depthUnitLabel}`
+      ? t("trips.conditions.visibilityFact", {
+          value: `${depthInUnit(trip.visibilityMeters, depthUnit)} ${depthUnitLabel}`,
+        })
       : null,
     trip.surfaceConditions,
   ].filter((part): part is string => Boolean(part));
@@ -71,12 +75,11 @@ export function ConditionsSection({
       ) : null}
       {published ? (
         <div className="mt-1 text-sm text-muted">
-          <p>
-            <span className="font-medium text-foreground">
-              {t("trips.conditions.summaryPublished")}
-            </span>{" "}
-            {publishedFacts.join(" · ")}
-          </p>
+          {/* No bold lead-in label: it restated the heading one line up at
+              equal weight (design/principles.md #9) — the "Published …"
+              timestamp below already says this is the published read. The
+              facts line carries the ink instead. */}
+          <p className="font-medium text-foreground">{publishedFacts.join(" · ")}</p>
           {trip.conditionsSummary ? <p className="mt-1">{trip.conditionsSummary}</p> : null}
           {/* An operational read must never look fresher than it is (design
               principle 4's safety carve-out) — the publish time rides with

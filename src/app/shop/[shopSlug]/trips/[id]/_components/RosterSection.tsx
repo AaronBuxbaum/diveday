@@ -449,11 +449,24 @@ export function RosterSection({
                 {checkedInPill}
                 {/* One readiness vocabulary, one tone per state
                         (src/i18n/readiness-labels.ts): this badge said "Needs
-                        attention" about the diver the manifest called "Blocked". */}
+                        attention" about the diver the manifest called "Blocked".
+                        "Ready" wears the same quiet glyph-plus-text the settled
+                        rows use, never the green pill — a card can be expanded
+                        (missing contact, depth advisory) while still ready, and
+                        a success badge one row below eight quiet ✓s read as a
+                        second grammar for the same fact (principle 9). Badges
+                        here mark the exceptional states only. */}
                 {readiness ? (
-                  <Badge tone={readinessStatusTone(readiness.status)}>
-                    {readinessStatusText(t, readiness.status)}
-                  </Badge>
+                  readiness.status === "ready" ? (
+                    <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
+                      <span aria-hidden="true">✓</span>
+                      {readinessStatusText(t, "ready")}
+                    </span>
+                  ) : (
+                    <Badge tone={readinessStatusTone(readiness.status)}>
+                      {readinessStatusText(t, readiness.status)}
+                    </Badge>
+                  )
                 ) : null}
               </>
             );
@@ -751,9 +764,14 @@ export function RosterSection({
                 </div>
                 <details className="mt-4 border-t border-border pt-4">
                   <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-                    {t("trips.roster.privateStaffNotes", {
-                      count: notesByBooking.get(booking.id)?.length ?? 0,
-                    })}
+                    {/* A zero count is the absence of information formatted as
+                        information (principle 9) — with no notes the disclosure
+                        is simply the door to writing the first one. */}
+                    {(notesByBooking.get(booking.id)?.length ?? 0) === 0
+                      ? t("trips.roster.addFirstNoteSummary")
+                      : t("trips.roster.privateStaffNotes", {
+                          count: notesByBooking.get(booking.id)?.length ?? 0,
+                        })}
                   </summary>
                   <div className="mt-2 grid gap-3">
                     {(notesByBooking.get(booking.id) ?? []).map(({ note, authorName }) => (
