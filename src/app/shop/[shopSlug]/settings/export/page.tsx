@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { getShopById } from "@/db/shops";
@@ -120,6 +121,7 @@ export default async function DataOutSettingsPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={t("settings.export.eyebrow")}
+        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.export.title")}
         description={t("settings.export.description")}
         actions={
@@ -151,41 +153,57 @@ export default async function DataOutSettingsPage({
         </p>
       ) : null}
 
-      <section className="rounded-2xl border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">{t("settings.export.bundle.heading")}</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("settings.export.bundle.description")}
-        </p>
-        {/* `items-start`: these notes range from one line to fifteen, and grid's
-            default stretch made every short card as tall as the essay beside it
-            — `shop.csv`, a single sentence, rendered as a 300px box of empty
-            grey. Let each card be its own height and put the slack between the
-            rows instead. */}
-        <ul className="mt-4 grid items-start gap-2 sm:grid-cols-2">
-          {(families ?? []).map((family) => (
-            <li
-              key={family.file}
-              className="flex items-baseline justify-between gap-3 rounded-xl bg-surface-sunken px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="font-mono text-sm break-all text-foreground">{family.file}</p>
-                <p className="mt-0.5 text-xs text-muted">{family.note}</p>
-              </div>
-              <span className="shrink-0 text-xs font-medium text-muted tabular-nums">
-                {t("settings.export.rowCount", { count: family.count })}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 text-sm text-muted">
-          <span className="font-medium text-foreground">
-            {t("settings.export.notIncluded.label")}
-          </span>{" "}
-          {t.rich("settings.export.notIncluded.text", {
-            mono: (chunks) => <code>{chunks}</code>,
-          })}
-        </p>
-      </section>
+      {/* Collapsed by default. This is the page's *reference*, not its work:
+          forty-odd file cards, several of them fifteen lines of prose, ran
+          about 5,000px and pushed Backups — a destination a shop actually
+          configures — entirely below the fold. The question the page answers
+          is "how do I get my data out", and the button above already answers
+          it; "exactly which files, with how many rows in each" is the question
+          after that, and it waits behind its own summary with the file count
+          on the closed row so the reader knows what is in there. */}
+      <details className="group/bundle rounded-2xl border border-border bg-surface">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-6 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold">{t("settings.export.bundle.heading")}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted">
+              {t("settings.export.bundle.fileCount", { count: (families ?? []).length })}
+            </p>
+          </div>
+          <DisclosureCaret className="size-4 text-muted group-open/bundle:rotate-90" />
+        </summary>
+        <div className="border-t border-border p-6">
+          <p className="max-w-2xl text-sm text-muted">{t("settings.export.bundle.description")}</p>
+          {/* `items-start`: these notes range from one line to fifteen, and grid's
+              default stretch made every short card as tall as the essay beside it
+              — `shop.csv`, a single sentence, rendered as a 300px box of empty
+              grey. Let each card be its own height and put the slack between the
+              rows instead. */}
+          <ul className="mt-4 grid items-start gap-2 sm:grid-cols-2">
+            {(families ?? []).map((family) => (
+              <li
+                key={family.file}
+                className="flex items-baseline justify-between gap-3 rounded-xl bg-surface-sunken px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-mono text-sm break-all text-foreground">{family.file}</p>
+                  <p className="mt-0.5 text-xs text-muted">{family.note}</p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-muted tabular-nums">
+                  {t("settings.export.rowCount", { count: family.count })}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm text-muted">
+            <span className="font-medium text-foreground">
+              {t("settings.export.notIncluded.label")}
+            </span>{" "}
+            {t.rich("settings.export.notIncluded.text", {
+              mono: (chunks) => <code>{chunks}</code>,
+            })}
+          </p>
+        </div>
+      </details>
 
       <BackupsSection
         t={t}

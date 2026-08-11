@@ -360,6 +360,7 @@
     },
     "bundle": {
       "heading": "What's in the bundle",
+      "fileCount": "{count, plural, one {# file, with a row count for each} other {# files, with a row count for each}}",
       "description": "One ZIP with a README and a CSV per record type. Every date carries its timezone, money is in cents, and archived history comes along too."
     },
     "rowCount": "{count, plural, one {# row} other {# rows}}",

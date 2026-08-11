@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import type { LastMinuteListWindow } from "@/lib/last-minute-list";
 import type { AppDb, DbExecutor } from "./client";
 import { findOrCreatePerson } from "./people";
 import {
@@ -95,6 +96,32 @@ export async function listLastMinuteList(
     )
     .orderBy(asc(lastMinuteListEntries.createdAt));
   return rows;
+}
+
+/**
+ * Just the stated availability windows of a shop's active entries — no people,
+ * no ordering. `listLastMinuteList` above answers "who is on the list"; this
+ * answers the only question a *count* needs, which is how many of them a given
+ * departure date falls inside (`lastMinuteEntryMatchesTripDate`).
+ *
+ * Today's queue reads it to decide whether a "fill these seats" row has anyone
+ * behind it at all. A shop's opt-in list is a standing preference list, not a
+ * transaction log, so this is a small read; the matching itself is pure
+ * arithmetic over the rows, done once for every departure in the window.
+ */
+export async function listActiveLastMinuteWindows(
+  db: DbExecutor,
+  shopId: string,
+): Promise<LastMinuteListWindow[]> {
+  return db
+    .select({
+      availableFrom: lastMinuteListEntries.availableFrom,
+      availableUntil: lastMinuteListEntries.availableUntil,
+    })
+    .from(lastMinuteListEntries)
+    .where(
+      and(eq(lastMinuteListEntries.shopId, shopId), isNull(lastMinuteListEntries.unsubscribedAt)),
+    );
 }
 
 /** Staff-initiated removal — kept as history (unsubscribedAt), not deleted. */

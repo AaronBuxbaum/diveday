@@ -360,6 +360,7 @@
     },
     "bundle": {
       "heading": "Qué contiene el paquete",
+      "fileCount": "{count, plural, one {# archivo, con el número de filas de cada uno} other {# archivos, con el número de filas de cada uno}}",
       "description": "Un ZIP con un README y un CSV por tipo de registro. Cada fecha lleva su zona horaria, el dinero va en centavos y el historial archivado también viene."
     },
     "rowCount": "{count, plural, one {# fila} other {# filas}}",

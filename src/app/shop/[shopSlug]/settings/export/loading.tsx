@@ -1,7 +1,13 @@
 /**
- * Header + the bundle's two-column file list + the backups half (status card
- * and destination form), so the one data-out surface never blocks blank
+ * Header + the bundle's (collapsed) summary card + the backups half (status
+ * card and destination form), so the one data-out surface never blocks blank
  * (ADR 20260806-one-data-out-surface).
+ *
+ * The bundle's file list used to be modelled here as eight card-shaped bars,
+ * because the section rendered open. It is a closed `<details>` now — a
+ * heading and a file count — and a skeleton that promised the taller shape
+ * would collapse the moment the page arrived, which is the jump these files
+ * exist to prevent.
  */
 export default function Loading() {
   return (
@@ -12,11 +18,7 @@ export default function Loading() {
         <div className="mt-3 h-4 w-full max-w-xl rounded bg-surface-sunken" />
         <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
           <div className="h-5 w-44 rounded bg-surface-sunken" />
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {["a", "b", "c", "d", "e", "f", "g", "h"].map((slot) => (
-              <div key={slot} className="h-16 rounded-xl bg-surface-sunken" />
-            ))}
-          </div>
+          <div className="mt-2 h-4 w-56 rounded bg-surface-sunken" />
         </div>
         <div className="mt-10">
           <div className="h-5 w-28 rounded bg-surface-sunken" />

@@ -20,6 +20,7 @@ function trip(overrides: Partial<CloseoutTripInput> & { tripId: string }): Close
     startsAt: new Date("2026-08-04T11:30:00Z"),
     endsAt: new Date("2026-08-04T15:30:00Z"),
     booked: 8,
+    recapShoutout: null,
     ...overrides,
   };
 }
@@ -142,6 +143,41 @@ describe("assembleDayCloseout", () => {
     // not left is stated but does not gate — closing before a night dive
     // departs is an ordinary early close, not an incident.
     expect(state.mustAcknowledge.map((d) => d.tripId)).toEqual(["out"]);
+  });
+
+  it("marks only the boats that are actually back as ended, and carries each one's recap note", () => {
+    // `ended` is what decides whether the close-out offers a departure the
+    // crew's post-trip note. A boat still out has no day to write about yet
+    // and one that has not left has no recap coming — the same reading
+    // `sendDueRecaps` makes about whose recap is due.
+    const state = assembleDayCloseout({
+      trips: [
+        trip({ tripId: "home", recapShoutout: "Eagle ray on the second dive!" }),
+        trip({
+          tripId: "out",
+          title: "Afternoon Two-Tank",
+          startsAt: new Date(now.getTime() - 3 * HOUR),
+          endsAt: new Date(now.getTime() + 1 * HOUR),
+        }),
+        trip({
+          tripId: "night",
+          title: "Night Dive",
+          startsAt: new Date(now.getTime() + 2 * HOUR),
+          endsAt: new Date(now.getTime() + 5 * HOUR),
+        }),
+      ],
+      gaps: [],
+      actions: [],
+      timeZone: TZ,
+      now,
+    });
+
+    const byTrip = new Map(state.departures.map((d) => [d.tripId, d]));
+    expect(byTrip.get("home")?.ended).toBe(true);
+    expect(byTrip.get("out")?.ended).toBe(false);
+    expect(byTrip.get("night")?.ended).toBe(false);
+    expect(byTrip.get("home")?.recapShoutout).toBe("Eagle ray on the second dive!");
+    expect(byTrip.get("out")?.recapShoutout).toBeNull();
   });
 
   it("ignores another day's roll-call gaps: yesterday's residue is Today's chase, not tonight's list", () => {

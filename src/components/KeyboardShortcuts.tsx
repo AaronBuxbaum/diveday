@@ -103,7 +103,13 @@ export function KeyboardShortcuts({
         aria-keyshortcuts="?"
         aria-label={copy.buttonAriaLabel}
         title={copy.buttonTitle}
-        className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-border text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground sm:inline-flex"
+        // `size-11`, not `size-9`: this sits immediately beside the command
+        // palette's Search button, which is `min-h-11`, and two bordered boxes
+        // on one row at 36px and 44px read as a misalignment rather than as
+        // two controls — the shorter box's edges line up with nothing. Square
+        // at the taller box's own height, and it clears the 44px tap target
+        // the rest of the app holds to as a bonus.
+        className="hidden size-11 shrink-0 items-center justify-center rounded-xl border border-border text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground sm:inline-flex"
       >
         <kbd className="font-semibold">?</kbd>
       </button>

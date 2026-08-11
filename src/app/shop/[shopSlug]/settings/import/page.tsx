@@ -291,6 +291,7 @@ export default async function ImportContactsPage({
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={t("settings.import.eyebrow")}
+        eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.import.title")}
         description={t("settings.import.description")}
       />

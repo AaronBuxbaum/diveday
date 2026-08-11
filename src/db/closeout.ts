@@ -50,7 +50,13 @@ export type DayCloseout = {
 async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Date) {
   const bounds = shopDayBounds(now, timeZone);
   const rows = await db
-    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      recapShoutout: trips.recapShoutout,
+    })
     .from(trips)
     .where(
       and(
@@ -83,6 +89,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
+    recapShoutout: row.recapShoutout,
   }));
 }
 

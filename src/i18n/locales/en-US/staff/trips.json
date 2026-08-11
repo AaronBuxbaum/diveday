@@ -45,7 +45,7 @@
     "waiverInPerson": "Paper waiver recorded — the diver's release is on file.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
     "waiverError": "That waiver link could not be created. Try a current booking and template.",
-    "recapNote": "Recap note saved — it rides along on every diver's recap once this trip departs.",
+    "recapNote": "Recap note saved — it rides along on every diver's recap.",
     "recapPhotoRemoved": "Photo removed from the recap.",
     "requirements": "Trip readiness requirements updated.",
     "requirementsBlocking": "Requirements updated. Some divers already booked on this trip no longer meet them — check the roster.",
@@ -163,7 +163,7 @@
   },
   "recapNote": {
     "heading": "Post-trip recap note",
-    "description": "A short shout-out from the crew, shown on every diver's recap after this trip departs. Leave it blank to send none.",
+    "description": "A short shout-out from the crew, shown on every diver's recap. Leave it blank to send none.",
     "placeholder": "Killer vis today — thanks for diving with us. Come back for the wreck next month!",
     "saving": "Saving…",
     "save": "Save recap note",

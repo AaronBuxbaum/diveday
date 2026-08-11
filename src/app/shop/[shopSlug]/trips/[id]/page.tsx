@@ -26,6 +26,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { countInWaterCrew } from "@/lib/crew-roles";
 import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
@@ -166,6 +167,12 @@ export default async function ManageTripPage({
   const firstDay = scheduleDays[0];
   const endWall = utcToWallTime(firstDay?.endsAt ?? trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
+  // "Is this trip behind us?" — the same reading the recap run makes when it
+  // decides whose recap to send (`sendDueRecaps`, src/db/recap.ts): the boat is
+  // back once its end time has passed, and a cancelled departure never sailed
+  // at all. Read through the clock, never `new Date()`, so the e2e fleet's
+  // frozen instant renders this page identically every run.
+  const departed = !cancelled && trip.endsAt <= nowDate();
   const crewIds = crewAssignments.map((entry) => entry.personId);
   const tripRoleByPerson = new Map(
     crewAssignments.map((entry) => [entry.personId, entry.tripRole] as const),
@@ -478,12 +485,25 @@ export default async function ManageTripPage({
         depthUnit={shop.depthUnit}
       />
 
-      <RecapNoteSection
-        action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "recap-note")}
-        shoutout={trip.recapShoutout}
-        locale={locale}
-      />
+      {/* Only once the boat is back. The note is what the crew wants divers to
+          read *about the day they just had* — "the eagle ray on the second
+          dive", a thank-you to the group — and it rides out on the recap the
+          nightly run sends after a departure ends. Offered on a trip that has
+          not sailed, it was a blank box asking staff to write the highlight of
+          something that has not happened yet, sitting in the middle of the
+          surface where they set that trip up. The close-out puts it where it
+          belongs (`/close-out`, ADR 20260804-day-closeout): tonight's ended
+          departures each carry this editor, and this section is the same note
+          on the trip's own record afterwards, for the days when the evening
+          got away from someone. */}
+      {departed ? (
+        <RecapNoteSection
+          action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "recap-note")}
+          shoutout={trip.recapShoutout}
+          locale={locale}
+        />
+      ) : null}
 
       {/* Diver-shared recap photos sit beside the crew's own shout-out — both
           are the post-trip recap's content, and moderating one moved off the

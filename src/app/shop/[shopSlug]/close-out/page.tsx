@@ -10,6 +10,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { closeDay, getDayCloseout } from "@/db/closeout";
+import { setTripRecapShoutout } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import {
   CLOSEOUT_DECISION_KEYS,
@@ -31,6 +32,7 @@ import {
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { RecapNoteEditor } from "./_components/RecapNoteEditor";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -64,9 +66,9 @@ export default async function CloseOutPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ closed?: string }>;
+  searchParams: Promise<{ closed?: string; noted?: string }>;
 }) {
-  const [session, { shopSlug }, { closed }] = await Promise.all([
+  const [session, { shopSlug }, { closed, noted }] = await Promise.all([
     requireStaffSession(),
     params,
     searchParams,
@@ -119,6 +121,24 @@ export default async function CloseOutPage({
     revalidateAndRedirect(`/shop/${staff.user.shopSlug}/close-out?closed=1`);
   }
 
+  /**
+   * Save one departure's post-trip recap note, from its own row. Every staff
+   * role may write one, the same rule as closing the day itself: whoever came
+   * back with the boat is who remembers the dive. `?noted=<tripId>` is what
+   * re-opens that row with its confirmation after the redirect — a page-level
+   * banner would answer a question asked six rows down.
+   */
+  async function saveRecapNoteAction(tripId: string, formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const note = String(formData.get("recapShoutout") ?? "").slice(0, 400);
+    await setTripRecapShoutout(await getDb(), staff.user.shopId, tripId, note);
+    revalidateAndRedirect(
+      `/shop/${staff.user.shopSlug}/close-out`,
+      `/shop/${staff.user.shopSlug}/close-out?noted=${encodeURIComponent(tripId)}`,
+    );
+  }
+
   const detailTime = (departure: CloseoutDeparture) =>
     formatTime(
       departure.status === "not_departed" ? departure.startsAt : departure.endsAt,
@@ -128,7 +148,7 @@ export default async function CloseOutPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["closed"]} />
+      <FlashParams params={["closed", "noted"]} />
       <ShopPageHeader
         eyebrow={`${t("closeout.title")} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={t(CLOSEOUT_HEADLINE_KEYS[state.shape])}
@@ -253,6 +273,18 @@ export default async function CloseOutPage({
                       </Link>
                     ) : null}
                   </div>
+                  {/* The one thing this evening can still add to a departure
+                      that is behind the shop. Only on an ended boat: a trip
+                      still out has no day to write about yet, and one that
+                      never left has no recap coming. */}
+                  {departure.ended ? (
+                    <RecapNoteEditor
+                      action={saveRecapNoteAction.bind(null, departure.tripId)}
+                      shoutout={departure.recapShoutout}
+                      saved={noted === departure.tripId}
+                      t={t}
+                    />
+                  ) : null}
                 </li>
               );
             })}
