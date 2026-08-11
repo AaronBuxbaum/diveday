@@ -2173,6 +2173,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-payments", scheme);
       });
 
+      /**
+       * The address card, open — one search box and the address it found (ADR
+       * 20260811-address-is-one-search-box). It earns its own capture because
+       * the row is closed in `settings-payments`, so the shape that replaced
+       * five text boxes and a Save button is otherwise never looked at.
+       *
+       * The fleet configures no `PLACES_AWS_*` credentials, so this captures
+       * the unconfigured state — the search box absent, its one sentence in
+       * place of it — which is what every local and self-hosted instance sees,
+       * and what the seeded shop's stored address and Remove control sit under.
+       */
+      test(`the shop address card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Shop address" }).waitFor();
+        await openSettingsRow(page, "Shop address");
+        await page.getByRole("button", { name: "Remove address" }).waitFor();
+        await capture(page, "settings-address", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what
