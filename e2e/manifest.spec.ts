@@ -95,7 +95,10 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(page).toHaveURL(/checkpoint=departure/);
 
   await page.getByText("Add a note").first().click();
-  await page.getByLabel("Optional note").first().fill("Guest asked to sit out before departure.");
+  await page
+    .getByLabel("Note", { exact: true })
+    .first()
+    .fill("Guest asked to sit out before departure.");
   // Park the button clear of the sticky header and progress panel before
   // sampling. Playwright scrolls a target into view as part of clicking it, so
   // a button sitting under those overlays moves the page after the sample and

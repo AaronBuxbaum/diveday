@@ -71,20 +71,14 @@
     "label": "Print / save PDF"
   },
   "rollCallNote": {
-    "optionalNote": "Optional note",
+    "optionalNote": "Note",
     "message": {
-      "manualOnly": "Saved on this device — added to the roll-call record when you set a status.",
+      "manualOnly": "Saves with this diver’s roll-call result.",
       "saving": "Saving…",
-      "saved": "Saved to this roll-call record.",
-      "queued": "Saved on this device — will send when you’re back online.",
-      "error": "Couldn’t save to the record — still saved on this device. Try again.",
-      "idle": "Saves automatically — on this device and to the roll-call record."
-    },
-    "statusPill": {
-      "saving": "Saving…",
-      "saved": "Saved",
-      "queued": "Queued offline",
-      "error": "Sync error"
+      "saved": "Saved.",
+      "queued": "Saved on this device — sends when you’re back online.",
+      "error": "Couldn’t save — your note is still here. Try again.",
+      "idle": "Saves as you type."
     },
     "notePlaceholder": "Late to the boat, medical question, kit issue…"
   },

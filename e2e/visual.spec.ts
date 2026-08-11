@@ -2439,6 +2439,42 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * A diver row with both of its disclosures open — "Contact & gear" and
+       * "Add a note". The `manifest` capture above photographs nine rows at
+       * rest, which proves nothing about what a tap reveals, and this is where
+       * the row's geometry is: the two summaries share one line and each panel
+       * opens down its own grid column, so an open panel must not move its
+       * neighbour, and neither summary may shift under the finger that opened
+       * it. It is also the only baseline carrying the emergency contact, the
+       * rental list, and the note field's save line.
+       */
+      test(`a diver row's open disclosures render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        const row = page.locator("#roll-call-list li").first();
+        // By position, not by label: the facts summary reads "Contact & gear"
+        // or "Contact, gear & medical" depending on what that diver has on
+        // file, and "Contact" also matches the "Emergency contact" heading the
+        // panel reveals (twice — the print-only copy is in the DOM too).
+        const summaries = row.locator("summary");
+        await summaries.nth(0).click();
+        await summaries.nth(1).click();
+        // Both panels painted before the shot: the facts grid renders its
+        // emergency-contact heading, the note panel its input.
+        // Scoped to the disclosure: the print-only copy of the same facts is
+        // in the DOM on every row, carrying the identical heading.
+        await expect(row.locator("details").first().getByText("Emergency contact")).toBeVisible();
+        await expect(row.getByRole("textbox", { name: "Note" })).toBeVisible();
+        // The pointer is left on the summary by the click above, which would
+        // bank a hover-underlined label into the baseline.
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-row-disclosures", scheme);
+      });
+
+      /**
        * A split buddy team after a dive (ADR 20260804-buddy-teams): Tom is
        * recorded back aboard and his seeded teammate Lena has no result yet, so
        * his row carries the danger chip and the checkpoint panel adds the
