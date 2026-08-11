@@ -5,18 +5,8 @@
       "ScheduleWakeup",
       "RemoteTrigger",
       "delete",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__send_later",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__create_trigger",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__delete_trigger",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__update_trigger",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__fire_trigger",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__list_triggers",
-      "mcp__claude-code-remote__send_later",
-      "mcp__claude-code-remote__create_trigger",
-      "mcp__claude-code-remote__delete_trigger",
-      "mcp__claude-code-remote__update_trigger",
-      "mcp__claude-code-remote__fire_trigger",
-      "mcp__claude-code-remote__list_triggers",
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a",
+      "mcp__claude-code-remote",
       "Bash(pnpm lint)",
       "Bash(pnpm lint:fix)",
       "Bash(pnpm typecheck)",
@@ -69,5 +59,6 @@
       "mcp__github__:*"
     ],
     "deny": ["Bash(pnpm infra:*)", "Bash(cdk:*)", "Bash(aws:*)"]
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
