@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
@@ -103,11 +103,20 @@ function distribute(target, outputPath, source) {
   );
 }
 
+// Make sure the one hand-edited file exists before anything reads it, and carry
+// a pre-split `.env.local`'s manual values into it so nobody re-pastes a Stripe
+// key. Safe to run every time: it never overwrites a value.
+execFileSync(process.execPath, [join(scriptDirectory, "env-manual.mjs")], { stdio: "inherit" });
+
+// Each target is rendered from the same two sources — this document and
+// `.env.manual` — never from another target. `.env.vercel` used to be rendered
+// from the freshly written `.env.local`, which is how a credential typed into a
+// local file reached production and stayed there (ADR
+// 20260812-env-provenance-registry).
 distribute("local", ".env.local", document);
-const localDocument = readFileSync(".env.local", "utf8");
-distribute("vercel", ".env.vercel", localDocument);
-distribute("github", ".env.github", localDocument);
-console.log("Created .env.local, .env.vercel, and .env.github from diveday/env.");
+distribute("vercel", ".env.vercel", document);
+distribute("github", ".env.github", document);
+console.log("Created .env.local, .env.vercel, and .env.github from diveday/env and .env.manual.");
 
 if (stdin.isTTY && stdout.isTTY && !process.env.CI && !process.argv.includes("--no-wizard")) {
   const terminal = createInterface({ input: stdin, output: stdout });

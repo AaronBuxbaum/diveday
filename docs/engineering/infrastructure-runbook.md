@@ -465,15 +465,33 @@ The post-deploy read defaults to `us-east-1` if that profile has no region confi
 
 **The resulting document supplies `.env.local` and named AWS CLI profiles.** `dotenv -c` loads the
 app configuration through the usual local cascade; the helper leaves generic deployer credentials
-blank there and the wizard can write them to `~/.aws/credentials`. It preserves externally managed
-choices — including Stripe values injected from 1Password — before creating the complete platform
-files:
+blank there and the wizard can write them to `~/.aws/credentials`.
+
+**Nothing merges.** Every key has exactly one producer, declared in
+[`config/env-registry.mjs`](../../config/env-registry.mjs), and each target file is rendered from the
+two sources that own values — this secret, and `.env.manual` — never from another target file (ADR
+[20260812-env-provenance-registry](../architecture/decisions/20260812-env-provenance-registry.md)).
+So:
+
+- **`.env.manual` is the only file you edit.** It holds the values no system can mint: the Neon URL,
+  the two Stripe secrets from 1Password, Meta's app credentials, the read-only usage tokens, and a
+  couple of choices like `OPS_ALERT_EMAIL`. `pnpm env:manual` creates it, and on first run lifts
+  those values out of a pre-split `.env.local` so nothing is re-pasted. `pnpm check:env` lists what
+  is still blank and what each one switches off — every line may legitimately stay empty.
+- **`.env.local` is generated and overwritten on every deploy.** An edit there is lost; make it in
+  `.env.manual`.
+- **A value the stack mints has no local override**, and putting one in `.env.manual` is refused
+  rather than ignored. This is what the design is for: the previous version merged the secret into
+  `.env.local` and let the file win, so a credential typed in by hand was pinned there forever — and
+  since `.env.vercel` was then rendered *from* `.env.local`, it rode into Vercel Production and left
+  the deployed address lookup signing with an access key AWS had never issued.
 
 | Destination | What to take |
 | --- | --- |
-| `.env.local` | App configuration and derived app secrets. Fill or inject remaining provider-specific values, including Stripe from 1Password. |
+| `.env.local` | Generated: app configuration, minted credentials, derived app secrets, and whatever `.env.manual` supplies. Do not edit. |
+| `.env.manual` | The one file you fill in, from 1Password and the provider consoles. Never generated over. |
 | `~/.aws/credentials` | Generated profiles, written only when the wizard prompt is accepted. Existing unrelated profiles stay intact; `diveday-admin` receives only its `us-east-1` config entry because this stack never owns its credential. |
-| Vercel | `.env.vercel`, then `node scripts/import-vercel-env.mjs .env.vercel production`. It excludes workstation/CI values and includes nonblank Stripe values preserved from 1Password. |
+| Vercel | `.env.vercel`, then `node scripts/import-vercel-env.mjs .env.vercel production`. Rendered from the secret plus `.env.manual` — never from `.env.local` — so it excludes workstation/CI values and carries the Stripe secrets straight from 1Password. |
 | GitHub Actions secrets | `.env.github`, then `gh secret set --env-file .env.github`. |
 | `~/.aws/credentials`, Claude Code cloud env | The "Not .env values" section at the bottom. |
 
@@ -492,8 +510,10 @@ belongs to, so pasting the whole document into `.env.local` stays safe.
 
 Because the application destination format should be the hand-off format. A bespoke JSON shape means
 transcribing field by field and inventing a mapping from key names to variable names; `.env.example`
-already *is* this project's registry of app configuration. The document is generated from that file
-at synth time, so:
+is already the shape of this project's app configuration. It is itself generated from
+[`config/env-registry.mjs`](../../config/env-registry.mjs) — run
+`node scripts/render-env-example.mjs --write` after adding a variable, and `pnpm check:env` fails if
+the committed copy has drifted. The secret document is generated from that file at synth time, so:
 
 - a variable renamed in `.env.example` renames itself in the secret on the next deploy;
 - a value the stack claims to supply for a key `.env.example` no longer declares **fails the synth**
