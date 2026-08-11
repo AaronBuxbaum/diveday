@@ -1995,6 +1995,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-list", scheme);
       });
 
+      /**
+       * The saved copy actually *opened* — the roll call a crew member works
+       * with no signal, which until now had no baseline of any kind. The four
+       * other offline captures photograph the shell's states around it (the
+       * list, nothing-saved, discarded, another shop's), and none of them
+       * contains a diver row, so every control on the surface a boat falls back
+       * to was uncovered: the roster, the per-diver note disclosure, the
+       * board/not-boarded pair, the freshness pill. Found by a 2026-08-11 change
+       * that restyled the note disclosure here and moved no pixels in any
+       * baseline.
+       */
+      test(`the offline roll call renders true to the design (${scheme})`, async ({ page }) => {
+        // Board → trip → Manifest, then the saved copy.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).click();
+        await page.waitForURL(/offline-manifest/);
+        // The roster is what proves the record was read back and decrypted —
+        // the shell renders its chrome before the store resolves.
+        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await capture(page, "offline-manifest-roll-call", scheme);
+      });
+
       // The offline fallback a captain lands on after a failed reload with
       // no snapshot saved — the entire safety surface in that moment, so it
       // gets its own baseline rather than relying on the roll-call text

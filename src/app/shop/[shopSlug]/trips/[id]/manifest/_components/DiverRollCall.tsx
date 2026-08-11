@@ -46,19 +46,30 @@ function DiverFacts({
   diver,
   locale,
   timezone,
+  columns,
   t,
 }: {
   diver: TripManifest["divers"][number];
   locale: string;
   timezone: string;
+  /**
+   * How much width these facts have, which differs by a factor of two between
+   * the two places they render — and the answer is not the same in both.
+   *
+   * `1` is the on-screen disclosure, one of two panels sharing the row's
+   * width: a second column there wrapped "Asha Sharma (sister) ·
+   * +1-305-555-0231" mid-number.
+   *
+   * `2` is paper, which has the whole page and no disclosure beside it. Single
+   * column there leaves the right half of a US-Letter sheet blank and stretches
+   * a nine-diver roster far enough to spill onto another page — more sheets for
+   * a boat to carry and lose, to buy width nothing needed.
+   */
+  columns: 1 | 2;
   t: StaffTranslator;
 }) {
   return (
-    // One column, never two. These render inside a half-width disclosure panel
-    // on screen, where a second column left "Asha Sharma (sister) ·
-    // +1-305-555-0231" wrapping mid-number; at most three facts stack short
-    // enough that a column split buys nothing on paper either.
-    <div className="grid gap-2 text-base">
+    <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
         <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
         <span className="mt-0.5 block text-muted">
@@ -404,7 +415,13 @@ export function DiverRollCall({
                         </span>
                       </summary>
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
+                        <DiverFacts
+                          diver={diver}
+                          locale={locale}
+                          timezone={timezone}
+                          columns={1}
+                          t={t}
+                        />
                       </div>
                     </details>
                     {/* Closed, this is one quiet line — the same grammar as the
@@ -450,7 +467,13 @@ export function DiverRollCall({
                     </details>
                   </div>
                   <div className="mt-3 hidden print:block">
-                    <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
+                    <DiverFacts
+                      diver={diver}
+                      locale={locale}
+                      timezone={timezone}
+                      columns={2}
+                      t={t}
+                    />
                   </div>
                   {rc && !rc.implied ? (
                     <p className="mt-3 text-sm text-muted">
