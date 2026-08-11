@@ -56,9 +56,8 @@
       "mcp__github__get_check_run",
       "mcp__github__subscribe_pr_activity",
       "mcp__github__unsubscribe_pr_activity",
-      "mcp__github__:*"
-    ],
-    "deny": ["Bash(pnpm infra:*)", "Bash(cdk:*)", "Bash(aws:*)"]
+      "mcp__github"
+    ]
   },
   "enableAllProjectMcpServers": true
 }
