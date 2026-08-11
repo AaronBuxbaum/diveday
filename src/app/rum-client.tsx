@@ -93,6 +93,15 @@ export function CloudWatchRum() {
           allowCookies: false,
           enableXRay: false,
           disableAutoPageView: true,
+          // aws-rum-web@3.2.0 pre-populates its data-plane endpoint with
+          // "us-west-2" before deciding whether to substitute the region
+          // argument above, so that substitution never runs outside
+          // us-west-2 (aws-observability/aws-rum-web#881): requests get
+          // signed for `config.region` but posted to the us-west-2
+          // endpoint, which the dataplane refuses with "Credential should
+          // be scoped to a valid region." Naming the endpoint explicitly
+          // sidesteps the broken default.
+          endpoint: `https://dataplane.rum.${config.region}.amazonaws.com`,
         });
         // The effect below already ran, against a client that did not exist
         // yet, so the entry page view is recorded here or not at all.
