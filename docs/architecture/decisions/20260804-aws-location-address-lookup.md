@@ -70,9 +70,22 @@ server, which removes the entire browser-key problem rather than managing it.
   `District` are used inconsistently inside large cities, which the adapter handles by preferring the
   first non-empty of the two; other conventions may surface as shops outside the US start using it.
 - A geocoder outage degrades to the five boxes with a note, never a broken page — the adapter
-  swallows the error into `{ status: "failed" }`.
+  swallows the error into `{ status: "failed", reason }`. The staffer reads one sentence whatever
+  the reason is; the reason exists for whoever has to fix the deployment, and it travels back in the
+  action's return value as well as into the log line. It is a category (`denied`, `unreachable`,
+  `rejected`, `unknown`), never the provider's message — an AWS error can echo the query.
 - Amazon Location `Autocomplete` is unavailable in `ap-southeast-1` and `ap-southeast-5` for GrabMaps
-  customers; `PLACES_AWS_REGION` must not be set to one of those.
+  customers; `PLACES_AWS_REGION` must not be set to one of those. More generally the Places API is
+  not served in every AWS region, and the SDK has no ruleset check behind it — it composes
+  `geo-places.<region>.amazonaws.com` from whatever string it is given, so a region that does not
+  serve the API fails in DNS on every keystroke with no HTTP status and no AWS exception name. The
+  stack therefore sets `PLACES_AWS_REGION` from a **named** constant (§12) rather than from
+  `this.region` the way the SES, SNS and CloudWatch credentials do: those services are served
+  everywhere, so inheriting the deployer's region is harmless for them and a silent trap here.
+- The provider's own throttle (`ThrottlingException`, HTTP 429) resolves to `rate_limited`, the same
+  temporary "resting" state as DiveDay's per-staffer limiter, rather than to `failed`. It is the
+  identical fact — the budget is spent, wait — and reporting it as a dead end is what the
+  `rate_limited` state was split out to stop.
 - `Autocomplete` returns only a place id, a place type and a one-line label unless the request asks
   for `AdditionalFeatures: ["Core"]`; the `Address` object comes back carrying a `Label` and no
   structured fields. The adapter always asks for `Core`, and the extra attributes are priced. This

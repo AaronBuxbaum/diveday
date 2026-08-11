@@ -4,6 +4,7 @@ import {
   type AddressLookupConfig,
   type AddressLookupProvider,
   type AddressLookupResult,
+  classifyLookupError,
   hasAddressParts,
   isLookupWorthy,
   type PlaceSuggestion,
@@ -121,24 +122,38 @@ export function awsAddressLookupProvider(
         // A geocoder being down must never take the settings page with it: the
         // five boxes still work, and the staffer types the address.
         //
-        // The error's **shape** is logged, never its message or body: an AWS
+        // The error's **shape** is read, never its message or body: an AWS
         // error can echo the query back, and a partial address is the shop's
-        // own business detail. A name, an error code and an HTTP status are
-        // enough to tell the three cases that matter apart — expired or
+        // own business detail. A class name, a transport code and an HTTP
+        // status are enough to tell the cases that matter apart — expired or
         // wrong-permission credentials (403 / AccessDeniedException), a region
-        // where the Places API is not available (UnrecognizedClientException),
-        // and throttling — which is exactly what was missing when this was
-        // reported as simply not working, with nothing anywhere to say why
-        // (2026-08-06 review).
-        const shape = error as { name?: unknown; $metadata?: { httpStatusCode?: unknown } };
+        // where the Places API is not served (the host never resolves, so
+        // there is no status at all), and throttling.
+        //
+        // Both halves of that go out: the classification travels back to the
+        // caller so the failure names itself where a person is already looking,
+        // and the raw shape is logged so a CloudWatch reader gets the AWS
+        // vocabulary too. Only one of those two was here before, which is how a
+        // reproducible outage stayed a question (FU-20260809).
+        const shape = error as {
+          name?: unknown;
+          code?: unknown;
+          $metadata?: { httpStatusCode?: unknown };
+        };
+        const name = typeof shape?.name === "string" ? shape.name : null;
+        const code = typeof shape?.code === "string" ? shape.code : null;
+        const status =
+          typeof shape?.$metadata?.httpStatusCode === "number"
+            ? shape.$metadata.httpStatusCode
+            : null;
+        const outcome = classifyLookupError({ name, code, status });
         log("address_lookup.failed", "warn", {
-          error: typeof shape?.name === "string" ? shape.name : "unknown",
-          status:
-            typeof shape?.$metadata?.httpStatusCode === "number"
-              ? shape.$metadata.httpStatusCode
-              : null,
+          error: name ?? "unknown",
+          code,
+          status,
+          reason: outcome.status === "rate_limited" ? "throttled" : outcome.reason,
         });
-        return { status: "failed" };
+        return outcome;
       }
     },
   };

@@ -890,7 +890,18 @@ exports.handler = async (event) => {
     );
 
     const placesLookupKey = mintAccessKey("PlacesLookupUserAccessKey", placesLookupUser);
-    envValues.PLACES_AWS_REGION = this.region;
+    // Named, not inherited. Every other AWS credential here takes `this.region`,
+    // which is whatever region the human who ran `cdk deploy` had configured -
+    // an accident, not a decision. That is harmless for SES, SNS and CloudWatch,
+    // which are served everywhere. Amazon Location's Places API is not: the SDK
+    // builds `geo-places.<region>.amazonaws.com` out of this string and there is
+    // no ruleset check behind it, so a region that does not serve the API fails
+    // in DNS on every keystroke - no HTTP status, no AWS exception name, nothing
+    // to read but "address lookup isn't available right now". The address card
+    // is the one feature whose whole surface a moved stack could silently take
+    // out, so it says which region it calls.
+    const PLACES_LOOKUP_REGION = "us-east-1";
+    envValues.PLACES_AWS_REGION = PLACES_LOOKUP_REGION;
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
 

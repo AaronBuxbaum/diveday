@@ -136,7 +136,9 @@ describe("the address card with a geocoder", () => {
 
   it("says so, and leaves the boxes usable, when the lookup is unavailable", async () => {
     const user = userEvent.setup();
-    suggest.mockResolvedValue({ status: "failed" });
+    // The reason travels for whoever has to fix the deployment; the staffer
+    // reads the same sentence whichever one it is.
+    suggest.mockResolvedValue({ status: "failed", reason: "denied" });
     renderFields();
 
     await user.type(screen.getByRole("combobox"), "102 Ocean");

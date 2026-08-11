@@ -1,85 +1,97 @@
-# FU-20260809-confirm-address-lookup-region — Confirm the deployed address lookup actually returns suggestions now
+# FU-20260809-confirm-address-lookup-region — Read the reason the deployed address lookup is failing, and fix that deployment
 
 - **Status:** Open
 - **Raised:** 2026-08-09 — branch `claude/mobile-ui-ux-fixes-o4971v`, while fixing the reported
   "Address lookup isn't available right now" on Settings
+- **Updated:** 2026-08-11 — branch `claude/shop-address-autocomplete-error-n47nnx`, after a second
+  report of the same failure. The failure now names its own cause; nobody has read the name yet.
 - **Kind:** question
 - **Effort:** S
-- **Touches:** `src/lib/address-lookup-aws.ts`, `infra/lib/infra-stack.ts`,
-  `docs/architecture/decisions/20260804-aws-location-address-lookup.md`
+- **Touches:** `src/lib/address-lookup.ts`, `src/lib/address-lookup-aws.ts`,
+  `infra/lib/infra-stack.ts`, `docs/architecture/decisions/20260804-aws-location-address-lookup.md`
 
 ## What I noticed
 
-The address type-ahead on `/shop/<slug>/settings` was reported as not working. There was a real,
-provable bug and it is fixed on this branch: Amazon Location's `Autocomplete` returns only a place
-id, a place type and a one-line label unless the request asks for `AdditionalFeatures: ["Core"]`,
-and the adapter never asked. Without it the lookup *succeeds* — real places, right order, no error —
-and then writes five empty strings into the shop's address, because picking a suggestion replaces
-every column. That is indistinguishable from "the lookup doesn't work" from the box.
+The address type-ahead on `/shop/<slug>/settings` fails on the deployed site, reproducibly, on
+every keystroke. The second report (2026-08-11) carried the server action's actual response body:
 
-What I could not check is the other half of the report. The staffer said they saw the sentence
-"Address lookup isn't available right now", which is the `failed` branch — the adapter caught an
-exception. That branch cannot be reached by the missing-`Core` bug: those requests returned 200.
-So either the message was seen before some other transient (a throttle, an expired key), or the
-deployment is in a region where `geo-places` is not served and *every* request 4xxs.
+```
+1:{"status":"failed"}
+```
 
-I have no AWS credentials in this environment and cannot call the API to tell those apart.
+That is the adapter's catch branch — the Amazon Location `Autocomplete` call threw. It is not the
+missing-`AdditionalFeatures` bug fixed on 2026-08-09 (those requests returned HTTP 200), it is not
+`not_configured` (the search box only renders when all three `PLACES_AWS_*` values are set and
+non-empty in the deployment, so they are set), and it is not the app's own rate limit (that has its
+own `rate_limited` status). Three causes remain, and all three are in the deployment rather than in
+the code:
+
+1. the credential in Vercel is rejected or lacks `geo-places:Autocomplete`,
+2. `PLACES_AWS_REGION` names a region that does not serve the Places API,
+3. something else answered with an error.
+
+Two changes on this branch narrow it. `PLACES_AWS_REGION` is now set from a named constant in §12 of
+the stack instead of inheriting `this.region`, so cause 2 cannot be reintroduced by a stack that
+moves — but that only fixes what a **future** deploy hands Vercel, and nobody has confirmed what the
+value in Vercel is today. And the failure now classifies itself: the action returns
+`{ "status": "failed", "reason": "denied" | "unreachable" | "rejected" | "unknown" }`, and the log
+line carries the same reason alongside the AWS exception name, transport code and HTTP status.
 
 ## Why it isn't already done
 
-It needs someone who can read the deployment's environment and CloudWatch. The adapter already logs
-the discriminating facts on every failure — `log("address_lookup.failed", "warn", { error, status })`
-carries the AWS exception name and HTTP status, deliberately without the query — so the answer is a
-log query, not a code change.
+It needs someone who can read the deployed environment. This session had no AWS access — outbound
+AWS calls are blocked by policy here — so the reason code has been shipped but never observed
+against the real deployment.
 
 ## Proposed change
 
-1. In CloudWatch Logs Insights, filter the app log group for `$.event = "address_lookup.failed"`
-   over the last 30 days. Nothing there ⇒ the missing-`Core` fix was the whole bug; close this.
-2. If lines are present, read `error`:
-   - `AccessDeniedException` / status 403 ⇒ the `diveday-places-lookup` IAM user's policy did not
-     apply, or the key in Vercel is from a different user. §12 of `infra/lib/infra-stack.ts` grants
-     exactly `geo-places:Autocomplete`; compare the deployed `PLACES_AWS_ACCESS_KEY_ID` against the
-     Secrets Manager value.
-   - `UnrecognizedClientException`, or any error at status 4xx across every request ⇒ almost
-     certainly the region. `PLACES_AWS_REGION` is set from `this.region` — the CDK stack's own
-     region — and Amazon Location Places is not offered everywhere. Set `PLACES_AWS_REGION`
-     explicitly to a supported region rather than inheriting the stack's, and record the constraint
-     in the ADR next to the existing GrabMaps note.
-   - `ThrottlingException` ⇒ nothing to fix; the app already reports throttling as its own
-     "resting" state, separate from failure.
+1. Open `/shop/<slug>/settings`, type four characters into the address search box, and read the
+   `reason` in the response body in the network panel. (Or query the app's CloudWatch log group for
+   `$.event = "address_lookup.failed"`, which carries `reason`, `error`, `code` and `status` — the
+   query text itself is deliberately never logged.)
+2. Act on the reason:
+   - `denied` ⇒ the credential. Compare the deployed `PLACES_AWS_ACCESS_KEY_ID` against the Secrets
+     Manager value; §12 grants exactly `geo-places:Autocomplete` to `diveday-places-lookup`, so a
+     key from a different user, a key minted before §12 was deployed, or a stack that has not been
+     deployed since §12 was added all land here.
+   - `unreachable` ⇒ the region. Set `PLACES_AWS_REGION` in Vercel to the value §12 now generates
+     (`us-east-1`); the deployed value predates that constant and may be anything.
+   - `rejected` ⇒ the request itself; read the AWS exception name in the log line.
+   - `unknown` ⇒ read the log line before guessing.
+3. Confirm the box lists real places and that picking one fills all five boxes.
 
-Not proposing a UI change: the three states already read differently, and adding a fourth sentence
-before knowing which one fires would be guessing at the copy.
+Not proposing further UI work: the three states a staffer can act on already read differently, and
+the reason is deliberately not shown on screen — a dive shop cannot act on `AccessDeniedException`.
 
 ## Prompt
 
 ```text
-Confirm whether DiveDay's shop-address type-ahead works on the deployed environment, and fix the
-config if it does not.
+DiveDay's shop-address type-ahead fails on the deployed site: the server action at
+/shop/<slug>/settings answers every keystroke with {"status":"failed"}. The cause is in the
+deployment, not the code, and the code now names which one. Find it and fix the deployment.
 
-Read first: src/lib/address-lookup-aws.ts (the adapter and its failure logging), section 12 of
-infra/lib/infra-stack.ts (the IAM user and the PLACES_AWS_* values), and
+Read first: src/lib/address-lookup.ts (classifyLookupError and the reason vocabulary),
+src/lib/address-lookup-aws.ts (the adapter's catch branch), section 12 of infra/lib/infra-stack.ts
+(the diveday-places-lookup IAM user and the PLACES_AWS_* values it generates), and
 docs/architecture/decisions/20260804-aws-location-address-lookup.md.
 
-Context that makes this non-obvious: a request that is missing `AdditionalFeatures: ["Core"]`
-returns HTTP 200 with real place names and no structured address, so the feature looks healthy in
-logs while filling the shop's five address boxes with empty strings. That bug is already fixed. The
-open question is a *different* failure: staff reported the "isn't available right now" sentence,
-which only renders when the AWS call threw. The likeliest cause is that PLACES_AWS_REGION inherits
-the CDK stack's region and Amazon Location Places is not served there.
+Do this: reproduce the failure on the deployed site and read the `reason` field the action now
+returns, or query the app's CloudWatch log group for `$.event = "address_lookup.failed"` and read
+`reason`, `error`, `code` and `status`. Then follow the branch table in
+docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md — `denied` means the wrong or
+under-permitted key is deployed, `unreachable` means PLACES_AWS_REGION names a region that does not
+serve Amazon Location Places, `rejected` means the request itself was refused. Fix the deployment
+value; do not change application code to route around a bad credential.
 
-Do this: query the app's CloudWatch log group for `$.event = "address_lookup.failed"` over 30 days
-and read the `error` and `status` fields (the query text itself is deliberately never logged). If
-there are no such lines, the feature is healthy — say so and stop. If there are, follow the branch
-table in docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md: an access-denied
-means the wrong key is deployed, a repeated 4xx client error means the region does not serve
-geo-places, and throttling means nothing is wrong.
+Context that makes this non-obvious: the search box only renders when all three PLACES_AWS_* values
+are present, so "the box is there" already proves the variables are set — what is unproven is
+whether they are correct. Note also that a lookup can fail with real places listed and no error at
+all if AdditionalFeatures: ["Core"] is ever dropped from the request; that is a different bug, fixed
+on 2026-08-09, and its tests are in src/lib/address-lookup-aws.test.ts.
 
-Done means: either a stated confirmation that the lookup returns suggestions on the deployed
-environment, or a config change (an explicit PLACES_AWS_REGION in the infra stack, or a corrected
-key) plus a line in the ADR's consequences recording the region constraint.
-
-Run `pnpm check` and `pnpm test infra -u` if infra/ changed. Delete
-docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md as part of the change.
+Done means: the type-ahead lists real places on the deployed site and picking one fills all five
+address boxes, stated as an observation rather than an inference. If the fix was a config value,
+say which one it was and where it now lives. Run `pnpm check`, and `pnpm test infra -u` if infra/
+changed. Delete docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md as part of the
+change.
 ```

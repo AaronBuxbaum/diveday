@@ -92,9 +92,64 @@ describe("Amazon Location address suggestions", () => {
   it("degrades rather than throwing when the geocoder is down", async () => {
     // A geocoder being unavailable must never take the settings page with it:
     // the five boxes still work and the staffer types the address.
-    const client = { send: vi.fn().mockRejectedValue(new Error("ThrottlingException")) };
+    const client = { send: vi.fn().mockRejectedValue(new Error("boom")) };
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
-    expect(result).toEqual({ status: "failed" });
+    expect(result).toEqual({ status: "failed", reason: "unknown" });
+  });
+
+  it("names the deployment mistake behind a failure instead of swallowing it", async () => {
+    // The report this closes arrived as the literal response body
+    // `{"status":"failed"}` from the network panel: three different broken
+    // deployments and one healthy-but-throttled one all read identically, and
+    // the only fact that told them apart lived in a log nobody reporting the
+    // bug can reach.
+    const denied = Object.assign(new Error("nope"), {
+      name: "AccessDeniedException",
+      $metadata: { httpStatusCode: 403 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(denied) };
+    const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
+    expect(result).toEqual({ status: "failed", reason: "denied" });
+  });
+
+  it("reads a host that never resolved — a region that does not serve the API — as unreachable", async () => {
+    const unresolved = Object.assign(
+      new Error("getaddrinfo ENOTFOUND geo-places.example.amazonaws.com"),
+      { code: "ENOTFOUND" },
+    );
+    const client = { send: vi.fn().mockRejectedValue(unresolved) };
+    const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
+    expect(result).toEqual({ status: "failed", reason: "unreachable" });
+  });
+
+  it("hands an AWS throttle to the resting state, not to the dead end", async () => {
+    // Spending the provider's budget is the same temporary thing as spending
+    // DiveDay's own, and the card already has words for it.
+    const throttled = Object.assign(new Error("slow down"), {
+      name: "ThrottlingException",
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(throttled) };
+    const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
+    expect(result).toEqual({ status: "rate_limited" });
+  });
+
+  it("never lets the query back out through the log line", async () => {
+    // An AWS error can echo the query, and the query is a partial business
+    // address: the shape goes to the log, the message never does.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const echoing = Object.assign(new Error("Invalid QueryText: 102 Ocean Drive, Key Largo"), {
+      name: "ValidationException",
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(echoing) };
+    await awsAddressLookupProvider(config, { client }).suggest("102 Ocean Drive");
+
+    const line = warn.mock.calls.at(-1)?.[0] as string;
+    expect(line).toContain('"event":"address_lookup.failed"');
+    expect(line).toContain('"reason":"rejected"');
+    expect(line).not.toContain("Ocean");
+    warn.mockRestore();
   });
 
   it("asks for a pickable list, not a catalogue, and sends the trimmed query", async () => {
