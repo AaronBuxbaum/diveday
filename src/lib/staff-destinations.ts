@@ -53,9 +53,9 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * Where a destination sits in the header.
  *
  * - `primary` — the tabs always on screen (Today, Check-in, Divers, Board,
- *   Orders, and — gated — Settings). Every one is a place a shop lives in
- *   daily; everything else earns its reach through the palette, a shortcut,
- *   or a contextual door on the surface that owns it.
+ *   Orders). Every one is a place a shop lives in *during a dive day*;
+ *   everything else earns its reach through the palette, a shortcut, or a
+ *   contextual door on the surface that owns it.
  * - `daily`/`setup` — inside "More". Both are empty today: the "More" menu
  *   was the IA admitting it hadn't decided, and the header no longer renders
  *   it when there is nothing to hold. The groups stay in the type so a future
@@ -65,16 +65,17 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * it earns its place in the palette instead of one more tab (design
  * principle 8, fewer controls).
  *
- * **The dock holds six tabs, and six is the ceiling.** The phone dock renders
+ * **The dock holds five tabs, and six is the ceiling.** The phone dock renders
  * every `primary` destination at ~65px per tab at 390px; a seventh pushes
- * labels below legibility, and there is no squeezing room. Promoting a seventh
- * destination to `primary` therefore means one of two deliberate moves, never
- * a seventh tab:
+ * labels below legibility, and there is no squeezing room. Settings was the
+ * sixth and has been demoted — it is the one configure-rarely destination on a
+ * bar the other five are worked from all day, and its door is now the header's
+ * shop-identity menu, which is on screen at every width beside the shop's own
+ * name. Promoting a sixth destination to `primary` therefore means one of two
+ * deliberate moves, never a growing bar:
  *
- * 1. Demote one of the six back to the palette/contextual-door story above.
- *    Settings is the named first candidate — it is the only configure-rarely
- *    tab; the other five are places a shop lives in during a dive day.
- * 2. If two rare-path destinations genuinely both need tabs, the sixth slot
+ * 1. Demote another back to the palette/contextual-door story above.
+ * 2. If two rare-path destinations genuinely both need tabs, the last slot
  *    becomes a "More" **bottom sheet rising from the dock** (never the old
  *    header dropdown), fed by the `daily`/`setup` groups — which is what those
  *    groups are held in reserve for.
@@ -257,17 +258,23 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   },
   // Last, always: Settings is where a shop goes when nothing else on the menu
   // was the answer, and it is the one destination the whole "Set up" group
-  // now holds. `alsoMatch` keeps the header honest for the destination that
-  // left it: Promo codes is reached *from* this page, and without this the
-  // promos page is the one staff surface where nothing in the header reads as
-  // current at all. Team needs no entry — `/settings/team` is already below
-  // `/settings`.
+  // now holds.
+  //
+  // Not a tab. It is the only thing a shop configures rather than works, and
+  // it was taking a sixth of a phone dock that the other five are tapped from
+  // all day with wet hands. Its permanent door is the header's shop-identity
+  // menu (`ShopIdentityMenu`) — the disclosure already hanging off the shop's
+  // own name, on screen at every width, which is exactly where "this shop's
+  // setup" belongs. Plus the palette, like every other demoted destination.
+  //
+  // `alsoMatch` still earns its keep: the identity menu reads it to mark
+  // itself current, so Promo codes, Dive sites and Waivers — all reached
+  // *from* Settings' cards — light the one door that leads back to them.
   {
     id: "settings",
     suffix: "/settings",
-    navGroup: "primary",
+    navGroup: null,
     inPalette: true,
-    // Every destination whose door is a Settings card lights this tab.
     alsoMatch: ["/promos", "/dive-sites", "/waivers"],
     gate: "settings",
   },

@@ -204,7 +204,8 @@
       "certifications.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
-      "orders-demo.spec.ts"
+      "orders-demo.spec.ts",
+      "waivers.spec.ts"
     ],
     "visual": [
       "diver-profile",

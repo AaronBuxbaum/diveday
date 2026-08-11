@@ -19,7 +19,6 @@ export function QueueRowButton({
   ariaLabel,
   trailing,
   pendingTrailing,
-  hint,
   className = "",
   children,
 }: {
@@ -28,8 +27,6 @@ export function QueueRowButton({
   trailing: React.ReactNode;
   /** What the trailing slot says while the tap is in flight. */
   pendingTrailing: React.ReactNode;
-  /** Optional quiet line under the trailing slot (the re-tap undo hint). */
-  hint?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -42,9 +39,8 @@ export function QueueRowButton({
       className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-4 py-3 text-left transition-[background-color,transform] duration-200 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:px-5 ${className}`}
     >
       <span className="min-w-0">{children}</span>
-      <span className="flex shrink-0 flex-col items-end gap-0.5">
-        <span aria-hidden="true">{pending ? pendingTrailing : trailing}</span>
-        {hint}
+      <span aria-hidden="true" className="shrink-0">
+        {pending ? pendingTrailing : trailing}
       </span>
     </button>
   );

@@ -111,7 +111,6 @@ export function RollCallControls({
   action,
   copy,
   showBoardControl,
-  showUndoHint,
   formId,
   t,
 }: {
@@ -129,16 +128,6 @@ export function RollCallControls({
    * !isDeparture`); crew carry no readiness, so their control is always shown.
    */
   showBoardControl: boolean;
-  /**
-   * Whether this row is the one wearing the re-tap undo hint — the most
-   * recently recorded result at this checkpoint, where a mis-tap correction
-   * is live. The hint teaches a *grammar*, not a per-row fact: printed under
-   * every settled row it repeated the identical sentence nine times down a
-   * full boat (design principle 9), so the page says it once, on the row the
-   * finger just left. Re-tap itself works on every settled row regardless —
-   * only the sentence moves (FU-20260811-undo-hint-said-once).
-   */
-  showUndoHint: boolean;
   /**
    * Form id, so a drafted roll-call note with no result to auto-save to yet can
    * ride the "not boarded" submit. Divers only — crew rows take no note.
@@ -247,30 +236,24 @@ export function RollCallControls({
         }
         copy={copy}
       />
-      {/* Not-back-aboard rows are exempt from the once-per-page scoping: that
-          control carries no done-check, so the page's one taught grammar
-          ("tap the ☑️ again") points at nothing there — and it is the
-          highest-consequence state on the page to leave wrong. A crew member
-          who notices row 4 is wrong after rattling through nine names must
-          not read a danger-toned "Not back aboard" button as a claim rather
-          than a toggle. Several at once is an emergency, not repetitive
-          chrome (dive-domain review 20260811). */}
-      {recordedHere && (showUndoHint || notBackAboard) ? (
-        // The undo hint names the control it means. A not-back-aboard
-        // result deliberately carries no done-check, so the generic
-        // "tap the ✓ status again" would point at nothing on screen.
-        //
-        // Crew rows get it too. Re-tap is the app's one undo model for a
-        // high-frequency toggle (design/principles.md §7), and it works
-        // identically here — hiding the hint for crew taught the deck that
-        // a mis-tap on a divemaster was permanent, which is exactly the
-        // wrong lesson on the half of the roll call that closes the
-        // checkpoint.
-        <p className="text-sm text-muted">
-          {notBackAboard
-            ? t("trips.manifest.tapToUndoNotBackAboard")
-            : t("trips.manifest.tapToUndo")}
-        </p>
+      {/* One row state still says how to take it back, and only one.
+          Everywhere else the settled control speaks for itself: a button
+          reading "Boarded ☑️" that you just tapped into that state is its own
+          affordance, and the sentence under it was a line of chrome per
+          settled row teaching a grammar the deck already has.
+          "Not back aboard" is the exception, and stays. It carries no
+          done-check — nothing about it reads as a toggle — and it is the
+          highest-consequence state on the page to leave wrong: a crew member
+          who spots that row 4 is wrong after rattling through nine names must
+          not read a danger-toned button as a claim they cannot undo. Several
+          at once is an emergency, not repetitive chrome (dive-domain review
+          20260811).
+          Crew rows get it on the same terms — re-tap is the app's one undo
+          model for a high-frequency toggle (design/principles.md §7), and
+          hiding it for crew taught the deck that a mis-tap on a divemaster
+          was permanent. */}
+      {recordedHere && notBackAboard ? (
+        <p className="text-sm text-muted">{t("trips.manifest.tapToUndoNotBackAboard")}</p>
       ) : null}
     </div>
   );

@@ -29,8 +29,19 @@ export function ShopPageHeader({
               {eyebrow}
             </p>
           ) : null}
+          {/* One size at every width. Below `sm` this used to step down to
+              `text-3xl` from a time when the staff header wrapped its tabs
+              across two or three rows on a phone and the title was competing
+              for the same vertical space. The tabs live in the bottom dock
+              now (StaffTabBar) and the header block owns the full content
+              width, so the page's own name gets to be the biggest thing on
+              screen there too — which is what a phone, read at arm's length
+              on a wet dock, most needs it to be.
+              `text-balance` because the titles that do wrap here are boat
+              names ("Two-Tank Reef — Molasses & French"), and an even two
+              lines reads better than a full line plus one orphaned word. */}
           <h1
-            className={`text-3xl font-semibold tracking-tight sm:text-4xl${eyebrow ? " mt-2" : ""}`}
+            className={`text-4xl font-semibold tracking-tight text-balance${eyebrow ? " mt-2" : ""}`}
           >
             {title}
           </h1>

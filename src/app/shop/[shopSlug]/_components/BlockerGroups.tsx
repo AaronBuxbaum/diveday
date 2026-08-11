@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { BlockerQueue } from "@/db/blockers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { URGENCY_KEYS } from "@/i18n/today-labels";
@@ -271,12 +272,7 @@ export function BlockerGroups({
             return (
               <details key={group.urgency} className="group/fold">
                 <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block text-xs text-muted transition-transform duration-200 group-open/fold:rotate-90"
-                  >
-                    ▸
-                  </span>
+                  <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />
                   {header}
                 </summary>
                 {rows}

@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -75,12 +76,7 @@ export function BuddyTeamsPanel({
           behind the fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
         <summary className="flex min-h-11 w-fit cursor-pointer list-none flex-wrap items-baseline gap-x-2 select-none [&::-webkit-details-marker]:hidden">
-          <span
-            aria-hidden="true"
-            className="inline-block self-center text-xs text-muted transition-transform duration-200 group-open/buddypanel:rotate-90"
-          >
-            ▸
-          </span>
+          <DisclosureCaret className="self-center text-muted group-open/buddypanel:rotate-90" />
           <h2 id="buddy-teams-heading" className="inline text-lg font-semibold">
             {t("trips.manifest.buddyHeading")}
           </h2>
@@ -251,12 +247,7 @@ export function BuddyTeamsPanel({
           // refusal to read.
           <details className="group/buddies mt-4" open={builderError ? true : undefined}>
             <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
-              <span
-                aria-hidden="true"
-                className="inline-block text-xs text-muted transition-transform duration-200 group-open/buddies:rotate-90"
-              >
-                ▸
-              </span>
+              <DisclosureCaret className="text-muted group-open/buddies:rotate-90" />
               {t("trips.manifest.buddyNewTeamHeading")}
             </summary>
             <form action={formBuddyTeamAction} className="mt-2">

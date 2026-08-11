@@ -124,19 +124,19 @@ describe("permission gating", () => {
 });
 
 describe("what each consumer derives", () => {
-  it("lays the header out as six tabs and no More menu", () => {
-    // The header holds only places a shop lives in daily (plus gated
-    // Settings); everything demoted keeps its palette row, its shortcut, or a
-    // contextual door on the surface that owns it — Reports from Orders'
-    // header, Dive sites and Waivers from Settings' cards, Close-out from
-    // Today's evening handoff, Reviews as a Today queue row.
+  it("lays the header out as five tabs and no More menu", () => {
+    // The header holds only places a shop lives in *during a dive day*;
+    // everything demoted keeps its palette row, its shortcut, or a contextual
+    // door on the surface that owns it — Reports from Orders' header, Dive
+    // sites and Waivers from Settings' cards, Close-out from Today's evening
+    // handoff, Reviews as a Today queue row, and Settings itself from the
+    // header's shop-identity menu.
     expect(staffNavDestinations("primary", owner).map((d) => d.id)).toEqual([
       "today",
       "checkIn",
       "divers",
       "board",
       "orders",
-      "settings",
     ]);
     // Both "More" groups are deliberately empty: a menu named "More" was the
     // IA admitting it hadn't decided, and the header no longer renders one
@@ -150,6 +150,10 @@ describe("what each consumer derives", () => {
     // Reachable from Settings' cards → not a header row.
     expect(inHeader("team")).toBe(false);
     expect(inHeader("promoCodes")).toBe(false);
+    // Settings itself is no longer one either: it is the one destination a
+    // shop configures rather than works, and it was costing a sixth of the
+    // phone dock. Its permanent door is the header's shop-identity menu.
+    expect(inHeader("settings")).toBe(false);
     // Read every day → a header row, and no Settings card.
     expect(inHeader("orders")).toBe(true);
     // Both still answer by name in ⌘K, which is where a destination that is
@@ -160,11 +164,11 @@ describe("what each consumer derives", () => {
   });
 
   it("keeps the header honest for a destination that left it", () => {
-    // Promo codes is reached *from* Settings now, so Settings claims `/promos`
-    // as a second "you are here" prefix. Without it the promos page is the one
-    // staff surface where nothing in the header reads as current at all —
-    // which is exactly what the visual baseline caught. Team needs no entry:
-    // `/settings/team` already sits below `/settings`.
+    // Promo codes is reached *from* Settings, so Settings claims `/promos` as
+    // a second "you are here" prefix — read now by the shop-identity menu,
+    // which is Settings' own door since it left the tab strip. Without it the
+    // promos page is a staff surface with nothing anywhere reading as current.
+    // Team needs no entry: `/settings/team` already sits below `/settings`.
     expect(staffDestination("settings").alsoMatch).toEqual(["/promos", "/dive-sites", "/waivers"]);
     expect(staffDestination("team").suffix.startsWith(staffDestination("settings").suffix)).toBe(
       true,

@@ -1,12 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
+import { isDestinationCurrent, type ShopNavGates } from "@/components/ShopNavLinks";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { staffDestination, staffDestinationHref } from "@/lib/staff-destinations";
 
 export type ShopIdentityMenuCopy = {
+  settings: string;
   signOut: string;
   signOutConfirm: string;
   signOutPending: string;
@@ -14,13 +18,17 @@ export type ShopIdentityMenuCopy = {
 
 /**
  * The staff header's identity block — logo and shop name — as a small
- * disclosure holding the session actions. Sign out used to stand in the
- * permanent header at equal standing with Search, chrome that is on screen
- * all day for a control most staffers tap once a shift; the
- * remove-until-it-breaks test (design principle 10) took it first. Behind the
- * identity block it stays one tap from anywhere, for every role, on shared
- * boat and front-desk devices alike — while the header at rest reads
- * identity + Search only.
+ * disclosure holding everything that is about *this shop and this session*
+ * rather than about the dive day.
+ *
+ * Sign out was the first thing filed here: it used to stand in the permanent
+ * header at equal standing with Search, chrome on screen all day for a control
+ * most staffers tap once a shift, and the remove-until-it-breaks test (design
+ * principle 10) took it. Settings is the second, and for the same reason one
+ * step further on — it was a tab, which on a phone means a sixth of the bottom
+ * dock, permanently, for the one destination a shop *configures* rather than
+ * works. Behind the shop's own name it is still one tap from anywhere at every
+ * width, and it reads as what it is.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -28,10 +36,16 @@ export type ShopIdentityMenuCopy = {
  */
 export function ShopIdentityMenu({
   shopName,
+  root,
+  gates,
   signOutAction,
   copy,
 }: {
   shopName: string;
+  /** `/shop/<slug>`, for the destinations filed in here. */
+  root: string;
+  /** Settings is owner/manager work (H-14) — hidden entirely from everyone else. */
+  gates: ShopNavGates;
   signOutAction: () => Promise<void>;
   copy: ShopIdentityMenuCopy;
 }) {
@@ -64,6 +78,13 @@ export function ShopIdentityMenu({
   // Close on any (re)navigation, so an Activity-preserved re-show can never
   // resurface an open session menu (same defensive pattern as InlineConfirm).
   const pathname = usePathname();
+  // Read from the one registry, gate and `alsoMatch` included, so this door
+  // can never drift from the tabs and the palette (src/lib/staff-destinations.ts).
+  // `alsoMatch` is what keeps Promo codes, Dive sites and Waivers — reached
+  // *from* Settings' cards — marking the door that leads back to them.
+  const settings = staffDestination("settings");
+  const showSettings = gates.settings;
+  const settingsCurrent = showSettings && isDestinationCurrent(pathname, root, settings);
   const pathnameEffectRan = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the menu, which is the point.
   useEffect(() => {
@@ -101,20 +122,45 @@ export function ShopIdentityMenu({
       </button>
       {open ? (
         <div className="absolute top-full left-0 z-10 mt-2 min-w-44 rounded-xl border border-border bg-surface p-2 shadow-lg animate-scale-in">
-          <form action={signOutAction} data-scroll-reset="true">
+          {showSettings ? (
+            <Link
+              href={staffDestinationHref(root, settings)}
+              aria-current={settingsCurrent ? "page" : undefined}
+              onClick={() => setOpen(false)}
+              className={buttonClass({
+                variant: "ghost",
+                size: "sm",
+                className: `w-full justify-start rounded-lg ${
+                  settingsCurrent ? "bg-primary/10 text-primary" : ""
+                }`,
+              })}
+            >
+              {copy.settings}
+            </Link>
+          ) : null}
+          {/* Signing out is the destructive end of the menu, so it sits below
+              the rule rather than in the same stack as a navigation row. */}
+          <form
+            action={signOutAction}
+            data-scroll-reset="true"
+            className={showSettings ? "mt-1 border-t border-border pt-1" : ""}
+          >
             <InlineConfirm
               triggerLabel={copy.signOut}
               confirmLabel={copy.signOutConfirm}
               pendingLabel={copy.signOutPending}
+              // `justify-start`: the menu is a list of rows now, and a
+              // centered label beside a left-aligned one reads as two
+              // different kinds of thing.
               triggerClassName={buttonClass({
                 variant: "ghost",
                 size: "sm",
-                className: "w-full rounded-lg",
+                className: "w-full justify-start rounded-lg",
               })}
               confirmClassName={buttonClass({
                 variant: "danger",
                 size: "sm",
-                className: "w-full rounded-lg",
+                className: "w-full justify-start rounded-lg",
               })}
               autoResetMs={4000}
             />

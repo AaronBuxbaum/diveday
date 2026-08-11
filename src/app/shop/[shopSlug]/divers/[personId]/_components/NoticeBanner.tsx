@@ -71,6 +71,19 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.removedReadOnly",
   },
 
+  // The release, recorded from this record ("signed on paper").
+  "waiver-paper-recorded": {
+    form: "waiver",
+    tone: "success",
+    key: "divers.notices.waiverPaperRecorded",
+  },
+  "waiver-medical-attestation": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.waiverMedicalAttestation",
+  },
+  "waiver-error": { form: "waiver", tone: "danger", key: "divers.notices.waiverError" },
+
   // Rental fit.
   "profile-saved": { form: "fit", tone: "success", key: "divers.notices.profileSaved" },
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },
@@ -193,6 +206,7 @@ const DIVER_FORMS = new Set([
   "details",
   "cards",
   "specialty-cards",
+  "waiver",
   "fit",
   "payments",
   "book-activity",

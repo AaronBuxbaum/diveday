@@ -116,16 +116,20 @@ export function ShopNav({
          * `lg` up the tab strip joins the row via the `order` utilities.
          */}
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
-          {/* The identity block is the session's own disclosure: Sign out
-              (and, someday, other "me" items) lives behind it rather than
-              standing in permanent chrome beside Search — the rarest control
-              in the header does not get all-day screen time (principle 10).
-              Home stays one tap away as Today, in the tabs and the dock. */}
+          {/* The identity block is this shop's own disclosure: Sign out and
+              Settings live behind it rather than standing in permanent chrome
+              — the rarest controls in the header do not get all-day screen
+              time (principle 10), and Settings in particular was costing a
+              sixth of the phone dock. Home stays one tap away as Today, in
+              the tabs and the dock. */}
           <div className="lg:order-1">
             <ShopIdentityMenu
               shopName={shopName}
+              root={root}
+              gates={navGates}
               signOutAction={signOutAction}
               copy={{
+                settings: destinationLabels.settings,
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
                 signOutPending: t("shared.shopNav.signOutPending"),

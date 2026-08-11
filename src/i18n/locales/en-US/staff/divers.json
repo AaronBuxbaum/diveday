@@ -328,6 +328,9 @@
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
     "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
     "invalid": "Check the details and try again.",
-    "cardRemovedToast": "Card removed."
+    "cardRemovedToast": "Card removed.",
+    "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",
+    "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
+    "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why."
   }
 }

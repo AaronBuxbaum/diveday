@@ -394,6 +394,64 @@ test("saving a draft preserves partial conditional questionnaire answers", async
   );
 });
 
+/**
+ * The third door onto "signed on paper", and the one that is about the person
+ * rather than a departure: a diver phones ahead, or hands the release over at
+ * the desk days before their boat, and the record is where the staffer already
+ * is. Before this the only way out of the diver's record was to find one of
+ * their trips and go to it — the same errand the check-in queue's own control
+ * was added to end.
+ */
+test("a paper release is recorded from the diver's own record, not just from a departure", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  // The demo roster is well past one page and sorted alphabetically — search
+  // for her rather than assume she is on the unfiltered first page.
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
+  // The Waiver stat card is what sends anyone looking for this control.
+  await expect(page.getByText("Not signed")).toBeVisible();
+
+  await page.getByText("Mark signed on paper").click();
+  // The medical attestation is the control, not a buried confirm. The browser's
+  // own `required` blocks an unchecked submit; strip it to prove the *server*
+  // refuses too, rather than trusting client convenience with a signed release
+  // nobody attested the medical side of.
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('input[name="medicalAttested"]')) {
+      el.removeAttribute("required");
+    }
+  });
+  await page.getByRole("button", { name: "Record paper signature" }).click();
+  await expect(
+    page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
+  ).toBeVisible();
+  // Beside the form that earned it, never a banner at the top of a record this
+  // long (docs/design/forms-and-controls.md).
+  await expect(page.getByText("Not signed")).toBeVisible();
+
+  await page.getByText("Mark signed on paper").click();
+  await page.getByLabel("I have this diver's signed release on file", { exact: false }).check();
+  await page.getByRole("button", { name: "Record paper signature" }).click();
+
+  // The same immutable record a self-service signature produces, read back
+  // person-wide: the stat card flips, and the control retires because there is
+  // nothing left for it to do.
+  await expect(page.getByText("Not signed")).toHaveCount(0);
+  await expect(page.getByText(/Good until/)).toBeVisible();
+  await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
+
+  // And it is genuinely gone rather than merely hidden — the counter, which
+  // reads the same evidence through readiness, now offers her a check-in.
+  await page.goto("/shop/blue-mantis/check-in");
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await search.fill("Priya Sharma");
+  await search.press("Enter");
+  await expect(page.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
+});
+
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
 

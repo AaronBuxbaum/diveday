@@ -1,6 +1,7 @@
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
@@ -214,12 +215,7 @@ export function SeriesSection({
             open. */}
         <details className="group/cadence">
           <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
-            <span
-              aria-hidden="true"
-              className="inline-block text-xs text-muted transition-transform duration-200 group-open/cadence:rotate-90"
-            >
-              ▸
-            </span>
+            <DisclosureCaret className="text-muted group-open/cadence:rotate-90" />
             {t("tripSeries.panel.editCadence")}
           </summary>
           <form action={cadenceAction} className="mt-2 rounded-lg border border-border p-4">

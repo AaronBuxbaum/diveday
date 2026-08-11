@@ -56,12 +56,13 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   await row.getByRole("button", { name: "Check in Diego Alvarez" }).click();
 
   // The settled row IS the confirmation — no success banner restates it from
-  // the top of the page (design principle 9). The state is spelled out on the
-  // row itself, with the re-tap hint — not a badge beside a second control.
+  // the top of the page (design principle 9), and no sentence under the row
+  // teaching the re-tap either: a control the finger just put into "Checked in
+  // ☑️" is its own affordance, and its accessible name already says "Undo".
   const settled = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
   await expect(settled).toBeVisible();
   await expect(settled).toContainText("Checked in ☑️");
-  await expect(settled).toContainText("Tap again to undo.");
+  await expect(settled).not.toContainText("undo");
 
   await settled.click();
   await expect(row.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible();

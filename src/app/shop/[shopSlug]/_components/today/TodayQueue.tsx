@@ -6,6 +6,7 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
@@ -371,12 +372,7 @@ export function TodayQueue({
               <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
                 {/* Which way this goes, before you press it — decorative, the
                     native disclosure semantics carry the state. */}
-                <span
-                  aria-hidden="true"
-                  className="inline-block text-xs text-muted transition-transform duration-200 group-open/fold:rotate-90"
-                >
-                  ▸
-                </span>
+                <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />
                 {header}
               </summary>
               {rows}

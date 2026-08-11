@@ -328,6 +328,9 @@
     "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
     "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
-    "cardRemovedToast": "Tarjeta eliminada."
+    "cardRemovedToast": "Tarjeta eliminada.",
+    "waiverPaperRecorded": "Liberación en papel registrada — firmada y archivada.",
+    "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una liberación en papel — o envía el enlace digital para que el buceador lo responda.",
+    "waiverError": "No se pudo registrar esa liberación en papel. Abre la próxima salida del buceador para ver el motivo."
   }
 }
