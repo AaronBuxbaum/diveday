@@ -1667,6 +1667,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in", scheme);
       });
 
+      // The queue's settled state: a checked-in diver's row wearing the
+      // roll-call grammar — success rule, "Checked in ☑️", the re-tap undo
+      // hint — beside rows still waiting. The default capture above can never
+      // show this (the seed checks nobody in), and it is the half of the
+      // one-tap design a mis-styled row would silently break.
+      test(`counter check-in's settled row renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/check-in");
+        await page.getByRole("button", { name: "Check in Diego Alvarez" }).click();
+        await page.getByRole("button", { name: "Undo check-in for Diego Alvarez" }).waitFor();
+        await capture(page, "check-in-checked", scheme);
+      });
+
       // The end-of-day close-out (ADR 20260804-day-closeout): the ritual
       // surface Today mirrors at 5 p.m. Captured over the plain seed state —
       // today's boat still ahead of the frozen clock, real leftovers, and

@@ -39,6 +39,34 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await expect(page).toHaveURL("/shop/blue-mantis/check-in");
 });
 
+/**
+ * The queue's one-tap grammar: the whole row is the control (the same
+ * roll-call pattern the manifest speaks), and a settled row tapped again
+ * undoes the check-in — re-tap, never a confirm dialog (design principle 7).
+ */
+test("a ready diver checks in with one tap on the row, and a re-tap undoes it", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in");
+
+  const row = page
+    .locator("article")
+    .filter({ hasText: "Diego Alvarez" })
+    .filter({ visible: true });
+  await row.getByRole("button", { name: "Check in Diego Alvarez" }).click();
+
+  // The settled row IS the confirmation — no success banner restates it from
+  // the top of the page (design principle 9). The state is spelled out on the
+  // row itself, with the re-tap hint — not a badge beside a second control.
+  const settled = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(settled).toBeVisible();
+  await expect(settled).toContainText("Checked in ☑️");
+  await expect(settled).toContainText("Tap again to undo.");
+
+  await settled.click();
+  await expect(row.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible();
+});
+
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
   await page.goto("/shop/blue-mantis/check-in");
   await page.getByRole("link", { name: "Add a walk-in" }).click();

@@ -153,7 +153,7 @@
   },
   "/shop/[shopSlug]/check-in": {
     "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
-    "visual": []
+    "visual": ["check-in", "check-in-checked"]
   },
   "/shop/[shopSlug]/check-in/walk-in": {
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
