@@ -277,8 +277,37 @@ export type LookupBias = { longitude: number; latitude: number };
  */
 export const WORLD_BOUNDING_BOX = [-180, -90, 180, 90] as const;
 
+/**
+ * A country to confine results to, or null.
+ *
+ * Unlike {@link LookupBias} this **excludes**, so it is only ever taken from
+ * an address the shop already saved: a shop that has said it is in `MX` is not
+ * looking for its storefront in Malta. It rides *alongside* a bias rather than
+ * instead of one — `Filter.IncludeCountries` is a different field from the
+ * mutually-exclusive `BoundingBox`/`Circle`, and Amazon Location's own guide
+ * shows the pair used together.
+ *
+ * Null unless the stored value is exactly ISO 3166-1 alpha-2. The column is
+ * free text capped at two characters, so it can hold `M`, `us`, or `??` from
+ * before the lookup existed, and the provider's filter pattern is
+ * `([A-Z]{2}|[A-Z]{3})` — passing junk through would turn a shop's own stale
+ * data into a rejected request and read as "lookup isn't available".
+ */
+export function toFilterCountry(stored: string | null | undefined): string | null {
+  const code = (stored ?? "").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : null;
+}
+
+/** Everything the caller knows about *where* to search, beside the query itself. */
+export type LookupContext = {
+  /** Where to rank results around. See {@link LookupBias}. */
+  bias?: LookupBias | null;
+  /** ISO 3166-1 alpha-2 to confine results to. See {@link toFilterCountry}. */
+  country?: string | null;
+};
+
 export type AddressLookupProvider = {
-  suggest(query: string, bias?: LookupBias | null): Promise<AddressLookupResult>;
+  suggest(query: string, context?: LookupContext): Promise<AddressLookupResult>;
 };
 
 export type AddressLookupConfig = {

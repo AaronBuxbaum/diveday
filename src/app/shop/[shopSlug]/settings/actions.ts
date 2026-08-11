@@ -35,6 +35,7 @@ import {
   type AddressLookupResult,
   addressLookupConfigFromEnvironment,
   isLookupWorthy,
+  toFilterCountry,
 } from "@/lib/address-lookup";
 import { isValidTimeZone } from "@/lib/format";
 import {
@@ -55,6 +56,7 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
+import { timeZoneAnchor } from "@/lib/timezones";
 
 /* -------------------------------------------------------------------------- *
  * Shop settings mutations
@@ -545,21 +547,38 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   if (!allowed.allowed) return { status: "rate_limited" };
 
   const config = addressLookupConfigFromEnvironment();
-  // The ordinary local and self-hosted case, not an error: the card falls back
-  // to the plain boxes it has always been.
+  // The ordinary local and self-hosted case, not an error: the card says so
+  // in a sentence rather than offering a box that answers nothing.
   if (!config) return { status: "not_configured" };
 
-  // Where to rank results around. `Suggest` refuses a request with no
-  // geographic anchor at all, and a shop's own dive sites are the best position
-  // this app holds — its storefront is near the water it takes people to. Null
-  // for a shop with no site coordinates yet; the adapter falls back to an
-  // unbiased whole-globe search rather than inventing a centre.
-  const bias = await shopSearchAnchor(db, session.user.shopId);
+  // Where to look from. `Suggest` refuses a request with no geographic anchor
+  // at all, so this ladder always tries to produce one, best signal first:
+  //
+  //  1. **A dive site's own coordinate.** The most precise thing this app
+  //     holds — a shop's storefront is near the water it takes people to.
+  //     Frequently absent, though: the field is the *offshore forecast point*
+  //     and is optional ("Leave both blank to keep crew-only conditions"), so
+  //     a shop that never wanted marine forecasts has none.
+  //  2. **The shop's timezone.** Coarse — a longitude band, not a street — but
+  //     `shops.timezone` is `notNull`, so every shop has one. A bias only
+  //     ranks and never excludes, which is what makes a rough anchor safe and
+  //     still useful: it puts the right region ahead of the wrong hemisphere.
+  //
+  // Null only for a timezone the anchor table has never placed; the adapter
+  // then searches the whole globe rather than inventing a centre.
+  const shop = await getShopById(db, session.user.shopId);
+  const bias =
+    (await shopSearchAnchor(db, session.user.shopId)) ??
+    (shop ? timeZoneAnchor(shop.timezone) : null);
+  // Confines results outright, so it comes only from an address the shop has
+  // already saved — and only when that value is really alpha-2, since the
+  // column is free text that predates the lookup.
+  const country = toFilterCountry(shop?.addressCountry);
 
   // Imported here rather than at module scope so a deployment with no
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
-  return awsAddressLookupProvider(config).suggest(query, bias);
+  return awsAddressLookupProvider(config).suggest(query, { bias, country });
 }
 
 /* -------------------------------------------------------------------------- *

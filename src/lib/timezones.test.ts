@@ -5,6 +5,7 @@ import {
   curatedTimeZones,
   DEFAULT_TIMEZONE,
   supportedTimeZones,
+  timeZoneAnchor,
   timeZoneOptionText,
   timezoneOptionGroups,
 } from "./timezones";
@@ -117,5 +118,46 @@ describe("timeZoneOptionText", () => {
     expect(timeZoneOptionText("Asia/Ho_Chi_Minh")).toBe("Asia/Ho Chi Minh");
     expect(timeZoneOptionText("America/Costa_Rica")).toBe("America/Costa Rica");
     expect(timeZoneOptionText("Asia/Jayapura")).toBe("Asia/Jayapura");
+  });
+});
+
+describe("timeZoneAnchor", () => {
+  /**
+   * The guard that keeps the table honest. A shop's timezone is the one
+   * location signal every shop has (`shops.timezone` is `notNull`), and it is
+   * what biases the settings address search when the shop has no dive-site
+   * coordinate — which is the ordinary case, since those are optional. A
+   * curated dive region with no anchor would silently search unbiased.
+   */
+  it("places every curated dive region", () => {
+    for (const zone of curatedTimeZones()) {
+      expect(timeZoneAnchor(zone), `no anchor for curated zone ${zone}`).not.toBeNull();
+    }
+  });
+
+  it("answers [longitude, latitude] the right way round", () => {
+    // The reverse is a valid pair of numbers and a different continent: Key
+    // Largo's zone belongs in the western hemisphere, north of the equator.
+    const anchor = timeZoneAnchor("America/New_York");
+    expect(anchor).toEqual({ longitude: -74.0, latitude: 40.71 });
+  });
+
+  it("keeps every anchor on the actual planet", () => {
+    // An out-of-range coordinate is a ValidationException from the geocoder,
+    // which reads as "address lookup isn't available" to a shop.
+    for (const zone of curatedTimeZones()) {
+      const anchor = timeZoneAnchor(zone);
+      if (!anchor) continue;
+      expect(Math.abs(anchor.longitude)).toBeLessThanOrEqual(180);
+      expect(Math.abs(anchor.latitude)).toBeLessThanOrEqual(90);
+    }
+  });
+
+  it("is null for a zone nobody has placed, rather than a guess", () => {
+    // Null means "search unbiased", which is honest; a default coordinate
+    // would rank a shop's own street below a same-named place near a point
+    // nobody chose.
+    expect(timeZoneAnchor("Antarctica/Troll")).toBeNull();
+    expect(timeZoneAnchor("Not/AZone")).toBeNull();
   });
 });
