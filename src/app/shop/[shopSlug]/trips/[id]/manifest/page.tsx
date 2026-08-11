@@ -169,6 +169,34 @@ export default async function TripManifestPage({
   // summary panel's jump chips. Derived once, beside the counts they explain,
   // so the number and the names can never disagree.
   const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
+  // The one row wearing the re-tap undo hint: the most recently recorded
+  // result at this checkpoint, across divers *and* crew — the row the finger
+  // just left, where a mis-tap correction is live. The hint teaches the
+  // grammar once instead of repeating under every settled row (design
+  // principle 9; FU-20260811-undo-hint-said-once); re-tap itself still works
+  // on every settled row. Implied (carried-forward) records never count —
+  // nothing there was recorded here, and nothing is undoable.
+  let undoHintBookingId: string | null = null;
+  let undoHintPersonId: string | null = null;
+  {
+    let latestAt = Number.NEGATIVE_INFINITY;
+    for (const diver of manifest.divers) {
+      const rc = diver.rollCall;
+      if (rc && !rc.implied && rc.occurredAt.getTime() > latestAt) {
+        latestAt = rc.occurredAt.getTime();
+        undoHintBookingId = diver.bookingId;
+        undoHintPersonId = null;
+      }
+    }
+    for (const member of manifest.crew) {
+      const rc = member.rollCall;
+      if (rc && !rc.implied && rc.occurredAt.getTime() > latestAt) {
+        latestAt = rc.occurredAt.getTime();
+        undoHintPersonId = member.id;
+        undoHintBookingId = null;
+      }
+    }
+  }
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -353,6 +381,7 @@ export default async function TripManifestPage({
         saveRollCallNoteAction={boundSaveRollCallNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}
         buddyTeamLabel={buddyTeamLabel}
+        undoHintBookingId={undoHintBookingId}
         t={t}
       />
 
@@ -371,6 +400,7 @@ export default async function TripManifestPage({
         crewRollCallAction={boundCrewRollCallAction}
         crewRollCallButtonCopy={crewRollCallButtonCopy}
         buddyTeamLabel={buddyTeamLabel}
+        undoHintPersonId={undoHintPersonId}
         t={t}
       />
 

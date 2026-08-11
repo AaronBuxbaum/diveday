@@ -107,6 +107,7 @@ export function DiverRollCall({
   saveRollCallNoteAction,
   rollCallButtonCopy,
   buddyTeamLabel,
+  undoHintBookingId,
   t,
 }: {
   divers: TripManifest["divers"];
@@ -130,6 +131,12 @@ export function DiverRollCall({
    */
   rollCallButtonCopy: (bookingId: string) => RollCallButtonCopy;
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
+  /**
+   * The booking whose row wears the re-tap undo hint — the page's most
+   * recently recorded result across divers *and* crew, or null when a crew
+   * row (or nobody) holds it. See `showUndoHint` on `RollCallControls`.
+   */
+  undoHintBookingId: string | null;
   t: StaffTranslator;
 }) {
   return (
@@ -454,6 +461,7 @@ export function DiverRollCall({
                   action={rollCallAction}
                   copy={rollCallButtonCopy(diver.bookingId)}
                   showBoardControl={boardingControlShown}
+                  showUndoHint={diver.bookingId === undoHintBookingId}
                   formId={`not-boarded-${diver.bookingId}`}
                   t={t}
                 />
