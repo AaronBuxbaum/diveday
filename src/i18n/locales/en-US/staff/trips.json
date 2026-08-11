@@ -175,12 +175,7 @@
     "heading": "Readiness requirements",
     "courseDescription": "This session keeps the admission rules it was created with — editing the course later won’t change what enrolled students need.",
     "tripDescription": "These are the trip’s rules. A diver stays blocked until every one of them checks out.",
-    "waiverLabel": "Waiver:",
-    "required": "required",
-    "notRequired": "not required",
-    "certificationLabel": "Existing certification:",
     "certOrHigher": "{level} or higher",
-    "notRequiredForEnrollment": "not required for enrollment",
     "requireWaiver": "Require a signed waiver",
     "requirePayment": "Require payment to board",
     "minimumCertificationLabel": "Minimum certification",
@@ -198,10 +193,13 @@
     "saving": "Saving…",
     "save": "Save requirements",
     "edit": "Edit requirements",
-    "paymentLabel": "Payment:",
-    "specialtiesLabel": "Specialties:",
-    "noSpecialties": "None required",
-    "notConfigured": "Requirements aren't set for this trip — every diver stays blocked until they are."
+    "notConfigured": "Requirements aren't set for this trip — every diver stays blocked until they are.",
+    "summaryWaiver": "A signed waiver",
+    "summaryPayment": "Payment settled before boarding",
+    "summaryCert": "{level} certification or higher",
+    "summarySpecialtyCard": "A verified {specialty} specialty card",
+    "summaryNitroxCard": "A verified nitrox card",
+    "summaryNoneRequired": "Nothing to check — any diver with a seat can board."
   },
   "recapPhotos": {
     "heading": "Diver photos",
@@ -565,6 +563,7 @@
     "scheduleAnotherDeparture": "Schedule another departure",
     "activityHeading": "Activity",
     "noActivity": "No staff activity recorded yet.",
+    "activityShowAll": "{count, plural, one {Show the full trail (# entry)} other {Show the full trail (# entries)}}",
     "promoteHeading": "Promote this trip",
     "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}"
   },
