@@ -57,7 +57,7 @@
     "enrollLegend": "Quién puede inscribirse",
     "orHigher": "{level} o superior",
     "ageSuffix": ", {age}+",
-    "enrollDescription": "El único bloque de la página que responde “¿puedo hacer esto?”. La certificación y la edad mínima vienen de la agencia: <strong>{levelAge}</strong> — se muestra aquí automáticamente y no es editable. Tu nota aparece debajo, etiquetada como texto del centro, así que nunca se lee como si sustituyera la tarjeta que revisa el mostrador.",
+    "enrollDescription": "El único bloque que responde “¿puedo hacerlo?”. La titulación y la edad mínima vienen de la agencia: <strong>{levelAge}</strong>, y no son editables. Tu nota va debajo, etiquetada como el centro hablando.",
     "openToUncertified": "abierto a buceadores sin certificar",
     "introCourseLabel": "Es una sesión introductoria — no requiere certificación (Discover Scuba, Try Scuba, …)",
     "prerequisiteLabel": "Nota de requisitos",

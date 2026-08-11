@@ -75,9 +75,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
     omarRow.getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "1 buddy team is split — someone is back aboard and someone is unaccounted for.",
-    ),
+    page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
   ).toBeVisible();
   // The alert informs; it never blocks. The completeness line still names
   // what actually keeps the checkpoint open — awaiting divers — beside it.

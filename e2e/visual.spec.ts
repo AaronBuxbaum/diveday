@@ -2642,7 +2642,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .locator("section")
           .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
-          .getByText(/so it never blocks enrolment/)
+          .getByText(/never blocks? enrolment/)
           .first()
           .waitFor();
         await capture(page, "trip-manage-course-requirements", scheme);

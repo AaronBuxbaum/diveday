@@ -57,7 +57,7 @@
     "enrollLegend": "Who can enroll",
     "orHigher": "{level} or higher",
     "ageSuffix": ", {age}+",
-    "enrollDescription": "The one block on the page that answers “can I do this?”. The certification and minimum age come from the agency: <strong>{levelAge}</strong> — shown here automatically and not editable. Your note appears under them, labelled as the shop talking, so it never reads as replacing the card the desk checks.",
+    "enrollDescription": "The one block that answers “can I do this?”. The certification and minimum age come from the agency: <strong>{levelAge}</strong> — not editable. Your note sits under them, labelled as the shop talking.",
     "openToUncertified": "open to uncertified divers",
     "introCourseLabel": "This is a taster session — no certification required (Discover Scuba, Try Scuba, …)",
     "prerequisiteLabel": "Prerequisite note",

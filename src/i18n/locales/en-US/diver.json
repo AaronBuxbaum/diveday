@@ -612,7 +612,7 @@
     "linkInactive": "That link is no longer active. Ask the shop for a fresh one.",
     "rateLimited": "Give it a few seconds and try again — nothing was lost.",
     "medicalReview": "Thanks — one of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms.",
-    "medicalReviewNext": "A “yes” answer means you’ll need a doctor to confirm in writing that you’re fit to dive before you can go out — that’s true at every shop, not just this one. The shop will reach out about next steps. If your trip is coming up soon, contact them now, since getting a doctor’s sign-off can take a few days.",
+    "medicalReviewNext": "A “yes” means a doctor must confirm in writing that you’re fit to dive before you can go out — that’s true at every shop, not just this one. The shop will be in touch. If your trip is soon, contact them now: a sign-off can take a few days.",
     "medicalContactBoth": "Questions about next steps? Reach out to {shop} — <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "Questions about next steps? Reach out to {shop} — <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop} — <email>{emailAddress}</email>.",
@@ -642,7 +642,7 @@
     "signButton": "Sign waiver",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
-    "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, please bring someone who can help you read it carefully, or ask the shop before your trip — don't sign anything you don't understand."
+    "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, bring someone who can help you read it, or ask the shop first — don't sign anything you don't understand."
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
@@ -673,7 +673,7 @@
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
       "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
-      "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified card on file before this seat can change hands. Contact the shop and they can sort it out."
+      "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified card on file before the seat can change hands. Contact the shop and they can sort it out."
     },
     "claimedNotice": "This seat is yours now — everything on this page is about you. Your organizer can see it’s claimed.",
     "panelHeading": "Your group’s seats",
@@ -713,7 +713,7 @@
     "nitroxReserveWithPrice": "Reserve nitrox-compatible tanks for me — {price} per dive",
     "nitroxReserveNoPrice": "Reserve nitrox-compatible tanks for me — charged per dive",
     "nitroxVerifiedNote": "The crew will set aside nitrox-compatible tanks. You'll analyze your own tanks and sign for the mix at the fill station, as always.",
-    "nitroxNeedsVerification": "We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send the shop a photo of your card or get in touch and they'll add it. Until then, the crew will plan standard air tanks.",
+    "nitroxNeedsVerification": "We need a verified nitrox card before we can reserve nitrox-compatible tanks. Send the shop a photo of your card and they'll add it. Until then the crew plans standard air tanks.",
     "nitroxVerificationRequired": "A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.",
     "bcdSize": "BCD size",
     "finSizePlaceholder": "US 9 / EU 42",
@@ -991,13 +991,13 @@
     "concierge": {
       "eyebrow": "A person, not a wizard",
       "title": "We'll switch you on — and off — ourselves.",
-      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, your data is yours — we'll help you carry it all back out, just as personally.",
+      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, we'll help you carry it all back out just as personally.",
       "emailCta": "Email us at {email}"
     },
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make it concrete in both directions: how to get your divers out of whatever you use now, exactly what comes across into DiveDay — and how the whole shop downloads back out as one ZIP whenever you ask. Coming in takes a file and a few minutes. Going out takes one button.",
+      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make it concrete both ways: how to get your divers out of whatever you use now, exactly what comes across — and how the whole shop downloads back out as one ZIP whenever you ask. Coming in takes a file and a few minutes. Going out takes one button.",
       "spreadsheetTitle": "Coming from a spreadsheet",
       "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
       "readGuide": "Read the guide →",
@@ -1021,7 +1021,7 @@
       "openSettingsTitle": "Open Settings → Import contacts",
       "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV you exported.",
       "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns automatically and previews the file before anything is saved — how each column landed, and anything it's leaving behind. Rows with an email match an existing diver so a re-import updates them instead of duplicating; nothing imports until you confirm.",
+      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, and what it's leaving behind. Rows with an email match an existing diver, so a re-import updates instead of duplicating. Nothing imports until you confirm.",
       "importReadyTitle": "Import — your roster is ready",
       "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
       "openImportCta": "Open Import in your shop",
@@ -1038,7 +1038,7 @@
       "eyebrow": "Coming from a spreadsheet",
       "title": "The spreadsheet got you this far.",
       "heroLede": "It won't flag an unverified card, chase an unsigned waiver, or let a diver book their own seat on a Sunday night. DiveDay reads the sheet you already keep — divers, cards, sizes — and takes the rest off your hands. No system to rip out; you already have the file.",
-      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but it can't do the work that actually keeps a dive day calm and safe — the part you're doing by hand right now, in your head and across a stack of paper.",
+      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but it can't do the work that keeps a dive day calm and safe — the part you're doing by hand right now.",
       "wedgeIntro2": "That's the trade DiveDay makes worth it. Not a prettier list — the jobs a list can't hold:",
       "wedge": {
         "cardsChecked": {
@@ -1060,7 +1060,7 @@
       },
       "step1": "Step 1",
       "columnsTitle": "Does your sheet have these columns?",
-      "columnsIntro": "One row per diver, and columns for what you know about them. Your headings don't have to match anything — DiveDay recognizes the common names, previews the file, and flags anything it doesn't before saving. If you'd rather start from a clean sheet, download one that's already in the right shape.",
+      "columnsIntro": "One row per diver, and columns for what you know about them. Your headings don't have to match anything — DiveDay recognizes the common names, previews the file, and flags what it doesn't. Or start from a clean sheet already in the right shape.",
       "downloadTemplate": "Download the starter template (CSV)",
       "columns": {
         "name": {
@@ -1117,7 +1117,7 @@
       "openSettingsTitle": "Open Settings → Import contacts",
       "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV.",
       "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns automatically and previews the file before anything is saved — how each column landed, and anything it's leaving behind, including any row it can't bring across (one with no name, or a repeated email). Nothing imports until you confirm.",
+      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, what it's leaving behind, and any row it can't bring across (no name, or a repeated email). Nothing imports until you confirm.",
       "importReadyTitle": "Import — your roster is ready",
       "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
       "openImportCta": "Open Import in your shop",
@@ -1330,7 +1330,7 @@
       "item6": "Email support — write in, hear back from a real person"
     },
     "export": {
-      "claim": "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard, with every stored photo (card images, dive-site pictures, trip recaps) included as a real file, not just a link.",
+      "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard. Every stored photo (card images, dive-site pictures, trip recaps) comes as a real file, not a link.",
       "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial."
     },
     "capabilities": {
@@ -1412,11 +1412,11 @@
           },
           "step3": {
             "title": "A second import updates your roster, it doesn't duplicate it",
-            "detail": "Re-run the export later, once your old system has more bookings in it — DiveDay matches existing divers by email and updates their record instead of creating a second one, and a repeated visit history collapses instead of doubling. Safe to import more than once as your export improves."
+            "detail": "Re-run the export later, once your old system has more bookings in it. DiveDay matches existing divers by email and updates them instead of creating a second record, and a repeated visit history collapses instead of doubling."
           },
           "step4": {
             "title": "Budget an afternoon, not a week",
-            "detail": "Exporting from the old system is minutes of work, and the import preview shows exactly what will land before anything saves — review it, fix any flagged rows, and import for real when it reads right. One sitting, not a project plan."
+            "detail": "Exporting from the old system is minutes of work, and the preview shows exactly what will land before anything saves. Review it, fix any flagged rows, import for real. One sitting, not a project plan."
           }
         },
         "coexist": {
@@ -2104,7 +2104,7 @@
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}"
     },
     "whatsappTemplate": {
-      "body": "Hi! An update from {{1}}: {{2}}",
+      "body": "Hi! An update from '{{1}}': '{{2}}'",
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."

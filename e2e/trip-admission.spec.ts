@@ -233,7 +233,9 @@ test.describe("as owner", () => {
     await expect(
       requirements.getByText(/requires Advanced Open Water or higher and Deep specialty/),
     ).toBeVisible();
-    await expect(requirements.getByText(/so it never blocks enrolment/)).toBeVisible();
+    // One site or several, singular or plural — the carve-out is the clause
+    // that has to survive a copy trim, not the sentence carrying it.
+    await expect(requirements.getByText(/never blocks? enrolment/)).toBeVisible();
     // A course session's rules are frozen; there is no form to tighten them.
     await expect(requirements.getByRole("button", { name: "Save requirements" })).toHaveCount(0);
   });
@@ -271,7 +273,7 @@ test.describe("as owner", () => {
     // `FlashParams` strips both `notice`, `count`, and `form`.
     const outcome = page.getByRole("status").filter({ hasText: "Requirements updated." });
     await expect(outcome).toContainText(
-      "Requirements updated. 1 diver already booked on this trip no longer meets them",
+      "Requirements updated. 1 booked diver no longer meets them",
     );
     // And it lands *in the requirements section*, beside the button that was
     // pressed. Overview carries six independent forms down a long page; this

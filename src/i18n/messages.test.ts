@@ -69,6 +69,21 @@ describe("diverTranslator", () => {
     expect(es("reviews.aggregate", { average: "4,5", count: 3 })).toBe("4,5 sobre 5 · 3 opiniones");
   });
 
+  it("passes WhatsApp's own {{1}} placeholders through instead of eating them", () => {
+    // Meta's template syntax is positional double braces, which ICU reads as a
+    // malformed argument — so the message is quoted (`'{{1}}'`) in the bundle.
+    // Without the quotes the translator raises INVALID_MESSAGE, swallows it,
+    // and hands back the *English* fallback: a Spanish shop's template would
+    // register in English while `templateLanguage` claimed otherwise. The
+    // apostrophes are load-bearing; this is what says so.
+    expect(diverTranslator("en-US")("notifications.whatsappTemplate.body")).toBe(
+      "Hi! An update from {{1}}: {{2}}",
+    );
+    expect(diverTranslator("es-ES")("notifications.whatsappTemplate.body")).toBe(
+      "¡Hola! Un aviso de {{1}}: {{2}}",
+    );
+  });
+
   it("falls back to English for a language DiveDay does not carry yet", () => {
     // Blanks (or a raw key) would be worse than English: a shop whose row names
     // an unsupported locale still gets a usable booking page.

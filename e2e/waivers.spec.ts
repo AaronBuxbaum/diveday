@@ -186,16 +186,18 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // the level explicitly so a regression back to <h2> (no <h1> on the page at
   // all) fails here instead of silently passing a level-agnostic query.
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
-  // Task 44's corrected copy, verbatim from the dive-domain-expert review: a
-  // physician's own sign-off is required — the shop only receives and checks
-  // for it, and there is no promised timeline the diver's own doctor
-  // controls. Also the shop's contact as a tappable link, not a dead end.
+  // Task 44's corrected substance, kept through the copy trim that shortened
+  // the sentence: a physician's *own* sign-off is required, the shop only
+  // receives and checks for it, and no timeline the diver's doctor controls is
+  // promised. Matched on the load-bearing clause rather than the full sentence
+  // — the wording has been cut once and may be again; what must not move is
+  // that a doctor confirms in writing before the diver goes out.
   await expect(
     page.getByText(
-      "A “yes” answer means you’ll need a doctor to confirm in writing that you’re fit to dive before you can go out",
+      "a doctor must confirm in writing that you’re fit to dive before you can go out",
     ),
   ).toBeVisible();
-  await expect(page.getByText("The shop will reach out about next steps.")).toBeVisible();
+  await expect(page.getByText("The shop will be in touch.")).toBeVisible();
   await expect(page.getByText("usually before your trip day")).not.toBeVisible();
   await expect(page.getByRole("link", { name: "hello@demo.invalid" })).toHaveAttribute(
     "href",

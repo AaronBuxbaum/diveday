@@ -1,7 +1,7 @@
 {
   "eyebrow": "Códigos promocionales",
   "title": "Descuentos que un buceador puede escribir",
-  "description": "Un código funciona en todo tu calendario, a diferencia de la oferta de última hora que envías desde la página de una salida. DiveDay lo crea en tu propia cuenta de Stripe, y Stripe aplica la caducidad y el límite de canjes cuando el buceador paga.",
+  "description": "Un código funciona en todo tu calendario, a diferencia de la oferta de una sola salida. DiveDay lo crea en tu cuenta de Stripe, que aplica la caducidad y el tope de canjes.",
   "notice": {
     "created": "Código creado y activo en tu cuenta de Stripe.",
     "enabled": "Código activado.",
@@ -87,7 +87,7 @@
     "emptyAction": "Abrir el calendario",
     "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
     "expiresAt": "Caduca {date}",
-    "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de todo el centro de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
+    "rangeNote": "Las ofertas de salida llegan al 90%: el barco zarpa igual, así que siempre queda algo sobre la mesa. Los códigos de todo el centro pueden llegar al 100% porque también se usan para cortesías.",
     "pagination": {
       "total": "{count, plural, one {# oferta} other {# ofertas}}"
     }

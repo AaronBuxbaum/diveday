@@ -52,7 +52,7 @@
   },
   "how": {
     "heading": "How it works",
-    "weekly": "Once a week, DiveDay builds your full export bundle — every CSV, the README, your photos — and delivers it to your bucket. It's the same bundle as the Data export download, so what you'd take when leaving is what gets backed up.",
+    "weekly": "Once a week DiveDay builds your full export bundle — every CSV, the README, your photos — and delivers it to your bucket. Same bundle as the Data export download.",
     "contents": "Your trip schedule rides along as trips.ics, readable by any calendar app.",
     "sealed": "The secret access key is sealed before it's stored and opened only at the moment of upload.",
     "failures": "A delivery that fails is recorded below and tried again on the next weekly run — DiveDay never hammers your bucket with retries."

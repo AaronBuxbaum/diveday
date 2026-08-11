@@ -14,7 +14,7 @@
   "saveWaiver": "Save waiver",
   "releaseTextHeading": "Release text",
   "releaseDescription": {
-    "current": "This is the release every new link sends. Saving replaces it for new links — waivers already signed keep the exact text they were signed against.",
+    "current": "The release every new link sends. Saving replaces it for new links; already-signed waivers keep the text they were signed against.",
     "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · saved {date}",
@@ -26,7 +26,7 @@
   "signatures": {
     "eyebrow": "Settings",
     "title": "Signatures",
-    "description": "Every signed release on file for this shop — who signed, which trip, and any medical follow-up. Signed waivers are tamper-evident — if a record has been altered, we flag it.",
+    "description": "Every signed release on file — who signed, which trip, any medical follow-up. Signed waivers are tamper-evident; an altered record is flagged.",
     "signedRecordHeading": "Signed record",
     "heading": "Signed records",
     "noSignedRecords": "No signed records yet.",

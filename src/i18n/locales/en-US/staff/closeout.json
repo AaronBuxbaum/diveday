@@ -39,7 +39,7 @@
   },
   "leftovers": {
     "heading": "Today's leftovers",
-    "subtitle": "Work from today that is still open. Carry it into tomorrow or dismiss it — the close-out remembers the choice either way, and the queue keeps deriving its own list.",
+    "subtitle": "Open work from today. Carry it into tomorrow or dismiss it — the close-out remembers either choice.",
     "empty": "Nothing is left over from today.",
     "carry": "Carry to tomorrow",
     "dismiss": "Dismiss",
@@ -54,7 +54,7 @@
   },
   "close": {
     "heading": "Close the day",
-    "acknowledge": "{count, plural, one {# boat above is still out or carries an open head count. I have seen it, and closing the day does not stop the chase.} other {# boats above are still out or carry open head counts. I have seen them, and closing the day does not stop the chase.}}",
+    "acknowledge": "{count, plural, one {# boat above is still out or has an open head count. I have seen it — closing the day does not stop the chase.} other {# boats above are still out or have open head counts. I have seen them — closing the day does not stop the chase.}}",
     "button": "Close the day",
     "buttonAgain": "Close the day again",
     "note": "Closing is a record, not a lock: who closed, when, and what was still open. Nothing downstream waits on it."

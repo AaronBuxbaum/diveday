@@ -367,23 +367,23 @@
       "group": "{detail} {names}."
     },
     "detail": {
-      "missingDiver": "Somebody on this boat was marked not back aboard after dive {dive} — {uncounted, plural, one {# of {total} divers who went in} other {# of {total} divers who went in}} has not been counted back since. Find them first, then close the count.",
-      "missingDiverStale": "This trip's dive {dive} count was never closed: {uncounted, plural, one {# of {total} divers was} other {# of {total} divers were}} marked not back aboard and never accounted for afterwards. Too old to settle on the dock — reconstruct it from the trip's manifest and write down what happened.",
-      "openRollCall": "This boat is back and the dive {dive} roll call was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result recorded. Account for everyone before you leave the dock.",
-      "openRollCallUnderway": "This boat is still out and the dive {dive} count was started and left half-done — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while the boat is still on the site.",
-      "openRollCallStale": "This trip's dive {dive} roll call was never closed — {uncounted, plural, one {# of {total} divers still has} other {# of {total} divers still have}} no result. Too old to settle on the dock — reconstruct it from the trip's manifest.",
-      "missingCrew": "A crew member on this boat was marked not back aboard after dive {dive} — {uncounted, plural, one {# of {total} crew who went in} other {# of {total} crew who went in}} has not been counted back since. Find them first, then close the count.",
-      "missingCrewStale": "This trip's dive {dive} crew count was never closed: {uncounted, plural, one {# of {total} crew was} other {# of {total} crew were}} marked not back aboard and never accounted for afterwards. Too old to settle on the dock — reconstruct it from the trip's manifest and write down what happened.",
-      "openCrewRollCall": "This boat is back and the dive {dive} crew count was never finished — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result recorded. Account for everyone before you leave the dock.",
-      "openCrewRollCallUnderway": "This boat is still out and the dive {dive} crew count was started and left half-done — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reach the boat now, while it is still on the site.",
-      "openCrewRollCallStale": "This trip's dive {dive} crew count was never closed — {uncounted, plural, one {# of {total} crew still has} other {# of {total} crew still have}} no result. Too old to settle on the dock — reconstruct it from the trip's manifest.",
-      "departureCountOpen": "The dock count on this boat was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. Missing paperwork, not a diver in the water: settle it so the next boat's count starts from a real list.",
-      "noRollCall": "No roll call was run on this trip at all — {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is simply empty.",
+      "missingDiver": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} not back aboard after dive {dive}. Find them, then close the count.",
+      "missingDiverStale": "{uncounted, plural, one {# of {total} divers was} other {# of {total} divers were}} never accounted for after dive {dive}. Too old to settle on the dock — reconstruct it from the manifest and write down what happened.",
+      "openRollCall": "Boat is back and dive {dive} roll call is unfinished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Account for everyone before you leave the dock.",
+      "openRollCallUnderway": "Boat is still out and dive {dive} is half-counted — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while it's on the site.",
+      "openRollCallStale": "Dive {dive} roll call was never closed — {uncounted, plural, one {# of {total} divers still has} other {# of {total} divers still have}} no result. Too old to settle on the dock — reconstruct it from the manifest.",
+      "missingCrew": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} not back aboard after dive {dive}. Find them, then close the count.",
+      "missingCrewStale": "{uncounted, plural, one {# of {total} crew was} other {# of {total} crew were}} never accounted for after dive {dive}. Too old to settle on the dock — reconstruct it from the manifest and write down what happened.",
+      "openCrewRollCall": "Boat is back and the dive {dive} crew count is unfinished — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Account for everyone before you leave the dock.",
+      "openCrewRollCallUnderway": "Boat is still out and the dive {dive} crew count is half-done — {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reach the boat now, while it's on the site.",
+      "openCrewRollCallStale": "The dive {dive} crew count was never closed — {uncounted, plural, one {# of {total} crew still has} other {# of {total} crew still have}} no result. Too old to settle on the dock — reconstruct it from the manifest.",
+      "departureCountOpen": "The dock count never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. Paperwork, not a diver in the water: settle it so the next count starts from a real list.",
+      "noRollCall": "No roll call was run — {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is empty.",
       "missingFit": "{count, plural, one {# diver is} other {# divers are}} missing rental sizes, so the prep list is incomplete.",
       "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
       "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
       "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
-      "overRatioIntro": "{booked} booked on this intro session, but the assigned crew only covers {capacity} — PADI's published Discover Scuba ratio of {perInstructor} per instructor for the open-water dive, which a certified assistant does not raise. Only another instructor adds seats.",
+      "overRatioIntro": "{booked} booked on this intro session, crew covers {capacity} — {perInstructor} per instructor for the open-water dive, and a certified assistant does not raise it. Only another instructor adds seats.",
       "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
       "missingContactNamed": "No emergency contact on file — ask at the counter; it prints on the manifest.",
       "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
@@ -467,7 +467,7 @@
     "noSiteChosen": "No site chosen yet",
     "diverFacingDetailsLabel": "Diver-facing details",
     "detailsPlaceholder": "What divers should know about this part of the trip.",
-    "footerNote": "Choosing a site brings its saved notes — map, landmarks, and field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock; the trip description and conditions below stay shared across the whole boat day."
+    "footerNote": "Choosing a site brings its saved notes — map, landmarks, field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock."
   },
   "offlineManifest": {
     "freshnessCopy": {
@@ -502,12 +502,12 @@
       "headingEmpty": "Nothing saved on this device yet",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
-      "emptyHint": "While you still have signal, open any shop page — DiveDay keeps this device's copy of the next two days' trips current on its own, so roll call works all the way out to the site."
+      "emptyHint": "While you still have signal, open any shop page — DiveDay keeps this device's copy of the next two days current on its own."
     },
     "single": {
       "eyebrow": "Offline manifest",
       "emptyHeading": "Nothing saved on this phone yet",
-      "emptyHint": "While you still have signal, open the trip's live manifest — it keeps this device's copy current on its own, so roll call works all the way out to the site.",
+      "emptyHint": "While you still have signal, open the trip's live manifest — it keeps this device's copy current on its own.",
       "removedOtherShopHeading": "That saved copy has been removed",
       "removedOtherShopMessage": "A different shop is signed in on this tablet.",
       "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop's own live manifest.",
@@ -567,7 +567,7 @@
     },
     "discarded": {
       "heading": "Roll call that never sent has been removed",
-      "body": "{count, plural, one {# roll-call change} other {# roll-call changes}} recorded on this device never reached DiveDay. The saved copy each one belonged to is long past the date a manifest may stay on a device, so it was removed from here. If any of these trips still needs that record, it has to be re-entered on the live manifest.",
+      "body": "{count, plural, one {# roll-call change} other {# roll-call changes}} recorded on this device never reached DiveDay, and the saved copy is past the date a manifest may stay on a device. Re-enter anything still needed on the live manifest.",
       "item": "{shop} · {trip} — {count, plural, one {# change lost} other {# changes lost}}",
       "acknowledge": "Got it"
     }

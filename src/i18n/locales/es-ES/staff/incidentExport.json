@@ -1,9 +1,9 @@
 {
   "title": "Exportación para incidentes",
   "openLink": "Exportación para incidentes",
-  "ownerOnlyNotice": "La exportación para incidentes es la versión del centro sobre una salida, así que solo un propietario puede generarla. Todo lo que recoge — el pase de lista, la cronología, el estado de cada buceador — está en este manifiesto.",
+  "ownerOnlyNotice": "Solo un propietario puede generar la exportación para incidentes. Todo lo que recoge — recuento, cronología, estado de cada buceador — está en este manifiesto.",
   "backToManifest": "Volver al manifiesto",
-  "description": "Un solo documento con lo registrado para esta salida — embarque, la cronología del pase de lista, la evidencia de certificación y el estado de las exenciones — listo para imprimir y entregar a las autoridades o a la aseguradora.",
+  "description": "Lo registrado en esta salida — embarque, cronología del recuento, evidencia de titulaciones, estado de exenciones — listo para imprimir para autoridades o aseguradoras.",
   "factsOnly": "Este documento presenta hechos registrados con su fecha y hora. No evalúa, certifica ni implica juicio alguno de seguridad.",
   "generatedLine": "Generado el {date} por {name}",
   "shopTimeLabel": "Todas las horas son locales del centro ({timezone})",
@@ -14,7 +14,7 @@
   "summaryAwaiting": "Sin resultado registrado",
   "summaryCrewAssigned": "Tripulación asignada",
   "rosterHeading": "Buceadores y pase de lista",
-  "rosterDescription": "Cada reserva activa en la lista de esta salida, con el resultado registrado en cada punto de control. Un punto de control sin resultado registrado dice “Pendiente de pase de lista”: la ausencia se declara, nunca se deja en blanco. El equipo de buceo es la agrupación que el personal registró en DiveDay para esta salida, no para cada inmersión; un equipo tiene dos o más integrantes y puede incluir a alguien de la tripulación, que aparece marcado como tal. Un espacio en blanco no afirma que alguien buceara solo: muchos centros no registran ningún equipo.",
+  "rosterDescription": "Cada reserva activa con su resultado en cada control. “Pendiente de recuento” significa que no se registró resultado: una ausencia se declara, nunca se deja en blanco. El equipo de buceo es la agrupación registrada para esta salida, no por inmersión; un espacio en blanco no afirma que alguien buceara solo.",
   "colDiver": "Buceador",
   "colEmergencyContact": "Contacto de emergencia",
   "colBuddy": "Equipo de buceo",
@@ -33,7 +33,7 @@
   "colCrewMember": "Miembro de la tripulación",
   "colRoles": "Funciones",
   "evidenceHeading": "Evidencia de certificación y estado de la exención",
-  "evidenceDescription": "Las tarjetas tal como constan en los registros del centro al generar este documento, con sus fechas de revisión. Solo el estado de la exención — las respuestas del cuestionario médico nunca forman parte de este documento.",
+  "evidenceDescription": "Tarjetas tal como constaban al generar este documento, con sus fechas de revisión. Solo el estado de la exención: las respuestas médicas nunca forman parte de este documento.",
   "certNone": "Sin evidencia de certificación registrada.",
   "certLevelLine": "{agency} · {level} · tarjeta n.º {identifier}",
   "certSpecialtyLine": "{agency} · {specialty} · tarjeta n.º {identifier}",
@@ -51,7 +51,7 @@
   "waiverExpired": "El enlace de la exención venció sin firmarse.",
   "waiverMedicalReview": "Revisión médica marcada como necesaria — solo el estado; las respuestas del cuestionario no forman parte de este documento.",
   "timelineHeading": "Cronología del pase de lista",
-  "timelineDescription": "Cada registro del pase de lista de esta salida, del más antiguo al más reciente, correcciones incluidas — los registros solo se agregan, así que una corrección añade una línea y nunca reescribe otra.",
+  "timelineDescription": "Cada entrada de recuento de esta salida, de la más antigua a la más reciente. Las entradas solo se añaden: una corrección agrega una línea y nunca reescribe otra.",
   "timelineEmpty": "No se ha registrado ningún pase de lista para esta salida.",
   "crewTag": "tripulación",
   "timelineOfflineTag": "Registrado sin conexión, sincronizado después",
@@ -65,5 +65,5 @@
   "recordedByName": "Registrado por {name}",
   "noteLine": "Nota: {note}",
   "footerHashLabel": "Código de integridad (SHA-256)",
-  "footerHashExplainer": "Se calcula a partir de los hechos registrados en este documento. Generar la exportación de nuevo con los mismos registros reproduce el mismo código, de modo que dos copias pueden verificarse entre sí."
+  "footerHashExplainer": "Calculado a partir de los datos registrados en este documento. Regenerarlo con los mismos registros reproduce el mismo código, así que dos copias pueden compararse entre sí."
 }

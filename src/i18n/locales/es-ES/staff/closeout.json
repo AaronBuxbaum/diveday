@@ -39,7 +39,7 @@
   },
   "leftovers": {
     "heading": "Lo que quedó de hoy",
-    "subtitle": "Trabajo de hoy que sigue abierto. Llévalo a mañana o descártalo — el cierre recuerda la decisión de todas formas, y la cola sigue derivando su propia lista.",
+    "subtitle": "Trabajo de hoy que sigue abierto. Pásalo a mañana o descártalo: el cierre recuerda ambas decisiones.",
     "empty": "No quedó nada pendiente de hoy.",
     "carry": "Llevar a mañana",
     "dismiss": "Descartar",
@@ -54,7 +54,7 @@
   },
   "close": {
     "heading": "Cerrar el día",
-    "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o con un recuento abierto. Lo he visto, y cerrar el día no detiene la búsqueda.} other {# barcos de arriba siguen fuera o con recuentos abiertos. Los he visto, y cerrar el día no detiene la búsqueda.}}",
+    "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o tiene un recuento abierto. Lo he visto: cerrar el día no detiene el seguimiento.} other {# barcos de arriba siguen fuera o tienen recuentos abiertos. Los he visto: cerrar el día no detiene el seguimiento.}}",
     "button": "Cerrar el día",
     "buttonAgain": "Cerrar el día otra vez",
     "note": "Cerrar es un registro, no un candado: quién cerró, cuándo y qué quedaba abierto. Nada depende de ello."

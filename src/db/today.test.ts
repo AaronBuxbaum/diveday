@@ -954,7 +954,13 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "missing_diver");
       expect(row).toBeDefined();
       expect(row?.urgency).toBe("soon");
-      expect(row?.detail).toContain("never closed");
+      // The residue clause, which only the stale copy carries — the fresh
+      // missing-diver row ends "Find them, then close the count." Pinned on
+      // this phrase rather than the whole sentence: the wording has been
+      // trimmed once and may be again, and what must survive is that an aged
+      // row still says the count never closed and names the manifest as where
+      // to reconstruct it.
+      expect(row?.detail).toContain("Too old to settle on the dock");
       // Still the same kind: what happened did not become less serious, only
       // less settleable on the dock.
       expect(row?.kind).toBe("roll_call_missing_diver");
@@ -1104,7 +1110,9 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "missing_crew");
       expect(row).toBeDefined();
       expect(row?.urgency).toBe("soon");
-      expect(row?.detail).toContain("never closed");
+      // Same residue clause as the diver half above, and same reason for
+      // matching on it rather than the sentence.
+      expect(row?.detail).toContain("Too old to settle on the dock");
       expect(row?.kind).toBe("roll_call_missing_crew");
     });
 

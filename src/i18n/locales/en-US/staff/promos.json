@@ -1,7 +1,7 @@
 {
   "eyebrow": "Promo codes",
   "title": "Discounts a diver can type",
-  "description": "A code works across your whole schedule, unlike the one-trip deal you send from a departure's page. DiveDay creates it on your own Stripe account, and Stripe enforces the expiry and the redemption cap when the diver pays.",
+  "description": "A code works across your whole schedule, unlike the one-trip deal you send from a departure. DiveDay creates it on your Stripe account, which enforces the expiry and redemption cap.",
   "notice": {
     "created": "Code created and live on your Stripe account.",
     "enabled": "Code switched on.",
@@ -87,7 +87,7 @@
     "emptyAction": "Open the schedule",
     "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
     "expiresAt": "Expires {date}",
-    "rangeNote": "Trip deals top out at 90% off — the boat is sailing either way, so a deal always leaves something on the table. Shop-wide codes above can go to 100% because staff also use them for comps and loyalty, not only for filling seats.",
+    "rangeNote": "Trip deals top out at 90% — the boat sails either way, so a deal always leaves something on the table. Shop-wide codes can reach 100% because staff also use them for comps.",
     "pagination": {
       "total": "{count, plural, one {# deal} other {# deals}}"
     }
