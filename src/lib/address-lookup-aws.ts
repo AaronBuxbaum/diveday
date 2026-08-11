@@ -1,4 +1,4 @@
-import { AutocompleteCommand, GeoPlacesClient } from "@aws-sdk/client-geo-places";
+import { GeoPlacesClient, SuggestCommand } from "@aws-sdk/client-geo-places";
 import {
   ADDRESS_SUGGESTION_LIMIT,
   type AddressLookupConfig,
@@ -14,7 +14,8 @@ import { log } from "./log";
 
 /**
  * Address suggestions from Amazon Location Service (ADR
- * 20260804-aws-location-address-lookup).
+ * 20260804-aws-location-address-lookup, amended by ADR
+ * 20260811-address-is-one-search-box).
  *
  * Server-side, always. The SDK signs with SigV4 from credentials that live
  * only in the server's environment, so nothing here reaches the browser — which
@@ -23,14 +24,21 @@ import { log } from "./log";
  * referrer allowlist to keep honest, and no way for a page to spend the shop's
  * geocoding budget without going through the app's own authorization first.
  *
- * `Autocomplete` (not `Suggest` or `Geocode`) because it is the one built for
- * a partial query typed a keystroke at a time, and it returns the structured
- * `Address` this needs — a suggestion the staffer picks fills the five boxes
- * outright rather than posting a display string that then has to be re-parsed.
+ * **`Suggest`, not `Autocomplete`.** This shipped on `Autocomplete` and was
+ * reported as "the search works but never finds my shop by name", which is
+ * exactly what that operation does: it "completes partial queries with valid
+ * address *completion*" (AWS SDK docs), so it answers streets and it does not
+ * answer businesses. `Suggest` is the one that returns "relevant places, points
+ * of interest" — a dive shop typing its own name is the query this card exists
+ * to serve, because a shop owner recalls "Rainbow Reef Dive Center" instantly
+ * and their own postcode slowly. Both take a partial query typed a keystroke at
+ * a time and both return the structured `Address` the columns need, so nothing
+ * about the debounce, the guards, or the mapping changes with the swap; only
+ * the class of thing that can be found does.
  *
  * The SDK handles its own retry and backoff, so there is no request loop here.
  */
-type GeoPlacesLike = { send: (command: AutocompleteCommand) => Promise<unknown> };
+type GeoPlacesLike = { send: (command: SuggestCommand) => Promise<unknown> };
 
 export function awsAddressLookupProvider(
   config: AddressLookupConfig,
@@ -54,73 +62,93 @@ export function awsAddressLookupProvider(
       if (!isLookupWorthy(query)) return { status: "too_short" };
       try {
         const response = (await client.send(
-          new AutocompleteCommand({
+          new SuggestCommand({
             QueryText: query.trim(),
             MaxResults: ADDRESS_SUGGESTION_LIMIT,
-            // Not optional, despite the name. `Autocomplete` returns only the
-            // place id, place type and a one-line label by default — the
-            // `Address` object comes back holding a `Label` and *nothing else*
-            // unless `Core` is asked for ("`Address` contains the result label
-            // and, if `["Core"]` is specified for `AdditionalFeatures`, it also
-            // contains the full breakdown of the address into structured
-            // fields", Amazon Location developer guide). Without it every
-            // suggestion still reads correctly in the list and then fills the
-            // five boxes with five empty strings when picked, because a pick
-            // *replaces* the whole address — which is how "address lookup
-            // doesn't work" was reported with the request succeeding every
-            // time. The extra attributes are priced, which is the trade the
-            // guide flags; a structured address is the entire point of the
-            // control, so there is nothing to trade away.
+            // `Suggest` answers with two kinds of row: places, and *query
+            // refinements* — search terms to try next, which carry no place and
+            // no address. A refinement can never be picked here (there is
+            // nothing to save), so asking for none keeps the whole answer
+            // pickable rather than mixing dead rows into a five-row list.
+            MaxQueryRefinements: 0,
+            // Not optional, despite the name. The `Address` object comes back
+            // holding a `Label` and *nothing else* unless `Core` is asked for
+            // ("`Address` contains the result label and, if `["Core"]` is
+            // specified for `AdditionalFeatures`, it also contains the full
+            // breakdown of the address into structured fields", Amazon Location
+            // developer guide). Without it every suggestion still reads
+            // correctly in the list and then saves five empty strings when
+            // picked, because a pick *replaces* the whole address — which is how
+            // "address lookup doesn't work" was reported with the request
+            // succeeding every time. The extra attributes are priced; a
+            // structured address is the entire point of the control, so there is
+            // nothing to trade away.
             AdditionalFeatures: ["Core"],
           }),
         )) as {
           ResultItems?: {
-            PlaceId?: string;
             Title?: string;
-            Address?: {
-              AddressNumber?: string;
-              Street?: string;
-              Locality?: string;
-              District?: string;
-              Region?: { Code?: string; Name?: string };
-              PostalCode?: string;
-              Country?: { Code2?: string };
+            SuggestResultItemType?: string;
+            Place?: {
+              PlaceId?: string;
+              Address?: {
+                Label?: string;
+                AddressNumber?: string;
+                Street?: string;
+                Locality?: string;
+                District?: string;
+                Region?: { Code?: string; Name?: string };
+                PostalCode?: string;
+                Country?: { Code2?: string };
+              };
             };
           }[];
         };
-        const suggestions: PlaceSuggestion[] = (response.ResultItems ?? [])
-          // A result with no id or nothing to read is not pickable; drop it
-          // rather than render a blank row.
-          .filter((item) => item.PlaceId && item.Title)
-          .map((item) => ({
-            id: item.PlaceId as string,
-            label: item.Title as string,
-            address: toShopAddressFields({
-              streetNumber: item.Address?.AddressNumber,
-              street: item.Address?.Street,
-              // A place inside a big city often carries its neighbourhood as
-              // `Locality` and the city as `District` — or the reverse. The
-              // first non-empty of the two is the town a diver would post a
-              // letter to, which is what this column is for.
-              locality: item.Address?.Locality || item.Address?.District,
-              // The short code where there is one ("FL"), which is what fits a
-              // one-line address; the full name otherwise.
-              region: item.Address?.Region?.Code || item.Address?.Region?.Name,
-              postalCode: item.Address?.PostalCode,
-              countryCode: item.Address?.Country?.Code2,
-            }),
-          }))
-          // Braces to the `AdditionalFeatures` belt above: a pick *replaces*
-          // the whole address, so a suggestion carrying no structured parts is
-          // not a weaker answer — it is a trap that blanks all five boxes the
-          // moment it is chosen. If a result ever comes back label-only again
-          // (a provider change, a place type with no breakdown), it is dropped
-          // rather than offered.
-          .filter((suggestion) => hasAddressParts(suggestion.address));
+        const suggestions: PlaceSuggestion[] = (response.ResultItems ?? []).flatMap((item) => {
+          const place = item.Place;
+          // A row with no place behind it (a query refinement that slipped
+          // through) or nothing to read is not pickable; drop it rather than
+          // render a blank row.
+          if (!place?.PlaceId || !item.Title) return [];
+          const address = toShopAddressFields({
+            streetNumber: place.Address?.AddressNumber,
+            street: place.Address?.Street,
+            // A place inside a big city often carries its neighbourhood as
+            // `Locality` and the city as `District` — or the reverse. The
+            // first non-empty of the two is the town a diver would post a
+            // letter to, which is what this column is for.
+            locality: place.Address?.Locality || place.Address?.District,
+            // The short code where there is one ("FL"), which is what fits a
+            // one-line address; the full name otherwise.
+            region: place.Address?.Region?.Code || place.Address?.Region?.Name,
+            postalCode: place.Address?.PostalCode,
+            countryCode: place.Address?.Country?.Code2,
+          });
+          // Braces to the `AdditionalFeatures` belt above: a pick *replaces* the
+          // whole address and saves it, so a suggestion carrying no structured
+          // parts is not a weaker answer — it is a trap that wipes the shop's
+          // address the moment it is chosen. If a result ever comes back
+          // label-only again (a provider change, a place type with no
+          // breakdown), it is dropped rather than offered.
+          if (!hasAddressParts(address)) return [];
+          // For a business, `Title` is its name and the label is its street —
+          // two different facts, and the second is what separates one franchise
+          // location from the next. For a plain address result the two are the
+          // same string, and repeating it under itself would be noise.
+          const label = place.Address?.Label?.trim();
+          return [
+            {
+              id: place.PlaceId,
+              label: item.Title,
+              detail: label && label !== item.Title ? label : undefined,
+              address,
+            },
+          ];
+        });
         return { status: "ok", suggestions };
       } catch (error) {
         // A geocoder being down must never take the settings page with it: the
-        // five boxes still work, and the staffer types the address.
+        // card says so, and the shop's stored address is left alone.
         //
         // The error's **shape** is read, never its message or body: an AWS
         // error can echo the query back, and a partial address is the shop's

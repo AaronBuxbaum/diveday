@@ -82,7 +82,9 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Save shop address" })).toHaveCount(0);
+      // The address card has no Save button any more — picking a place is the
+      // save — so its search box is what must not be here.
+      await expect(page.getByRole("combobox", { name: "Find your shop" })).toHaveCount(0);
 
       // Trip creation is hidden — and the board says whose job it is rather
       // than just omitting the control (ADR 20260806-one-trip-create-form).

@@ -1,7 +1,13 @@
 # 20260804-aws-location-address-lookup — Look a shop's address up server-side, through Amazon Location
 
-- **Status:** Accepted
+- **Status:** Accepted, partly superseded
 - **Date:** 2026-08-04
+- **Amended by:** [20260811-address-is-one-search-box](20260811-address-is-one-search-box.md), which
+  reverses three of the decisions below: the operation is `Suggest` rather than `Autocomplete` (so a
+  shop can find itself by name — `Autocomplete` answers addresses only), the five free-text boxes are
+  gone rather than staying editable, and an unconfigured deployment states that rather than falling
+  back to them. Everything else here — server-side only, its own IAM user and `PLACES_AWS_*` key
+  pair, a pick replacing the whole address, the four guards on the action — still holds.
 
 ## Context
 
