@@ -32,7 +32,7 @@ Add `.github/workflows/infra.yml` and, in `infra-stack.ts` §18, an `iam.OpenIdC
 long-lived AWS keys in GitHub, matching the direction 20260805 already pushed every other identity
 toward.
 
-- **`GitHubActionsCdkDiffRole`** — trust condition `repo:aaronbuxbaum/diveday:*` (any workflow run in
+- **`GitHubActionsCdkDiffRole`** — trust condition `repo:AaronBuxbaum/diveday:*` (any workflow run in
   this repo). Permissions: `cloudformation:{DescribeStacks,GetTemplate,CreateChangeSet,
   DescribeChangeSet,DeleteChangeSet}` and `ssm:GetParameter` on the bootstrap-version parameter,
   scoped to the `diveday-infra` stack. It can create and inspect a change set to compute an accurate
@@ -40,7 +40,7 @@ toward.
   cannot reach the bootstrap `deploy-role`'s CloudFormation execution permissions (AdministratorAccess
   by default) at all. `.github/workflows/infra.yml`'s `diff` job runs on every `pull_request` that
   touches `infra/`, and posts the comment via `corymhall/cdk-diff-action`.
-- **`GitHubActionsCdkDeployRole`** — trust condition `repo:aaronbuxbaum/diveday:environment:infra-deploy`.
+- **`GitHubActionsCdkDeployRole`** — trust condition `repo:AaronBuxbaum/diveday:environment:infra-deploy`.
   GitHub only issues an OIDC token for a job that references a GitHub Environment once that
   environment's required reviewer has approved the run — so the trust condition alone makes the role
   unassumable until a human clicks "Approve and deploy" in the Actions UI, independent of anything the
@@ -126,6 +126,16 @@ rather than a `CfnOutput`.
   are unit-tested against a stubbed `gh` binary, but the first real exercise of the whole chain — the
   wizard prompts, the `gh api` calls they make, and the workflow assuming the resulting roles — is the
   PR that lands this, after `pnpm infra:deploy` is run once.
+- That first real exercise happened on 2026-08-11 (PR #458, the first `infra/`-touching PR since this
+  landed) and the `diff` job could not assume its role: `Not authorized to perform
+  sts:AssumeRoleWithWebIdentity`. The trust conditions were spelled `repo:aaronbuxbaum/diveday:…`
+  while GitHub mints the `sub` claim as `repo:AaronBuxbaum/diveday:…` — the account name as its
+  holder wrote it — and IAM's `StringLike` is case-sensitive with no ignore-case variant. Reading the
+  synthesized template cannot catch that, because the template is *correct* against a repo name that
+  is one letter different from the real one. `GITHUB_REPO` now carries GitHub's own casing and says
+  why. **The deployed trust policies still hold the old spelling until the stack is deployed again**,
+  so the `diff` job stays red on every `infra/` PR until someone runs `pnpm infra:deploy` — the
+  workflow cannot deploy the fix to its own trust policy.
 - Escape hatch: if GitHub Environment approval proves too slow or friction-heavy for a solo operator,
   the fix is loosening `infra-deploy`'s reviewer requirement, not removing the environment — the OIDC
   trust condition would need updating in the same change, since it names the environment by string.
@@ -162,7 +172,7 @@ accepted, documented tradeoffs rather than oversights:
   identity, gets write access to this repo: at that point a real second reviewer becomes both possible
   and necessary, and the fix the destructive-overwrite bug above closes is what makes adding one durable.
 - **Accepted, with defense in depth added — fork pull requests and `GitHubActionsCdkDiffRole`.** The
-  role's trust condition (`repo:aaronbuxbaum/diveday:*`) accepts any `pull_request`-triggered run in
+  role's trust condition (`repo:AaronBuxbaum/diveday:*`) accepts any `pull_request`-triggered run in
   this repo, and GitHub's exact behavior for OIDC token issuance on a fork-originated `pull_request` run
   was not something this review could verify live. The repository's actual, current control is
   `pull_request_creation_policy: collaborators_only` (a GitHub repo setting, confirmed via the API) —

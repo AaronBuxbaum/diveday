@@ -39,8 +39,20 @@ import {
 const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
-/** Scopes every GitHub Actions OIDC trust condition below (§18) to this repo. */
-const GITHUB_REPO = "aaronbuxbaum/diveday";
+/**
+ * Scopes every GitHub Actions OIDC trust condition below (§18) to this repo.
+ *
+ * Spelled with GitHub's own casing, and it has to be. This string lands in an
+ * IAM `StringLike` on `token.actions.githubusercontent.com:sub`, GitHub mints
+ * that claim as `repo:AaronBuxbaum/diveday:<context>` using the account name as
+ * the account holder wrote it, and `StringLike` is case-sensitive with no
+ * ignore-case variant to reach for. Lower-cased here, the condition matches
+ * nothing: every credentialed CI step fails with `Not authorized to perform
+ * sts:AssumeRoleWithWebIdentity`, which reads like a missing role or an
+ * unfinished setup step rather than a spelling. GitHub's URLs and API are
+ * case-insensitive, so nothing else in the repo notices.
+ */
+const GITHUB_REPO = "AaronBuxbaum/diveday";
 /** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
 const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
