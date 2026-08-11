@@ -7,7 +7,7 @@ import {
   classifyLookupError,
   hasAddressParts,
   isLookupWorthy,
-  type LookupBias,
+  type LookupContext,
   type PlaceSuggestion,
   toShopAddressFields,
   WORLD_BOUNDING_BOX,
@@ -78,7 +78,17 @@ export function awsAddressLookupProvider(
     });
 
   return {
-    async suggest(query: string, bias?: LookupBias | null): Promise<AddressLookupResult> {
+    async suggest(query: string, context: LookupContext = {}): Promise<AddressLookupResult> {
+      const { bias, country } = context;
+      // `IncludeCountries` lives inside the same `Filter` object as the
+      // whole-globe box, so the two have to be assembled together rather than
+      // spread independently — and it is *not* one of the mutually exclusive
+      // anchors, so it may ride with a `BiasPosition` (Amazon Location's own
+      // guide shows that pair).
+      const filter = {
+        ...(bias ? {} : { BoundingBox: [...WORLD_BOUNDING_BOX] }),
+        ...(country ? { IncludeCountries: [country] } : {}),
+      };
       // Checked here as well as at the action, because "don't spend a billed
       // request on two characters" is a property of the lookup, not of one
       // caller's validation.
@@ -99,9 +109,8 @@ export function awsAddressLookupProvider(
             // so it puts the shop's own street above an identically-named
             // place on another coast. The whole-globe box is what a shop with
             // nothing to anchor on gets — see `WORLD_BOUNDING_BOX`.
-            ...(bias
-              ? { BiasPosition: [bias.longitude, bias.latitude] }
-              : { Filter: { BoundingBox: [...WORLD_BOUNDING_BOX] } }),
+            ...(bias ? { BiasPosition: [bias.longitude, bias.latitude] } : {}),
+            ...(Object.keys(filter).length > 0 ? { Filter: filter } : {}),
             // 1..100 per the API reference. Every request parameter here is
             // inside its documented range, and that is not a free-form style
             // note: AWS answers an out-of-range value with a flat
