@@ -1428,8 +1428,9 @@ exports.handler = async (event) => {
     // scope. On a single-operator account that distinction is theoretical - the
     // same person holds account admin either way.
     //
-    // **No *additional* principal is granted read**, and it is worth being exact
-    // about what that does and does not buy.
+    // **Exactly one additional principal is granted read** -- GitHubActionsCdkDeployRole
+    // (§18), scoped to this secret's own ARN and nothing else -- and it is worth
+    // being exact about what that does and does not buy.
     //
     // It bounds the read-only MCP users (§6) completely: they carry an explicit
     // Deny, and a Deny beats any Allow.
@@ -1451,8 +1452,12 @@ exports.handler = async (event) => {
     // others, so the fewer places it sits, the better.
     //
     // The account owner reads the secret with their administrator profile, or in
-    // the console. It is a hand-off point for a human, so a human's credential
-    // is the one that opens it.
+    // the console. It is also a hand-off point for CI: once a human has approved
+    // the infra-deploy GitHub Environment (§18), `pnpm infra:deploy` reads this
+    // same secret with the OIDC-assumed deploy role to run the post-deploy wizard
+    // non-interactively (ADR 20260811-ci-deploy-full-wizard) -- a narrower reach
+    // than the deployer's own already has, and one the resource-scoped Allow below
+    // cannot widen past this one secret.
     envValues.SES_SNS_TOPIC_ARN = sesEventNotifications.topicArn;
     envValues.SMS_SNS_TOPIC_ARN = smsDeliveryReceipts.topicArn;
     // The generated seed is resolved by CloudFormation into this hand-off
@@ -1465,7 +1470,7 @@ exports.handler = async (event) => {
     // from the constant rather than from `Secret.secretName` -- which, without
     // the `parseOwnedSecretName` feature flag, renders as "split the ARN on '-'
     // and take the first piece" and is only correct while the name has no hyphen.
-    new secretsmanager.Secret(this, "CredentialsEnvDocument", {
+    const credentialsSecret = new secretsmanager.Secret(this, "CredentialsEnvDocument", {
       secretName: CREDENTIALS_SECRET_NAME,
       description:
         "Filled-in application .env.example plus named-profile credentials and the seed used locally to derive the three app secrets. pnpm infra:deploy automatically writes .env.local, .env.vercel, and .env.github; the deployer key stays only in its workstation profile block.",
@@ -1494,7 +1499,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "CredentialsSecretName", {
       value: CREDENTIALS_SECRET_NAME,
       description:
-        "Secrets Manager secret holding filled-in application env and named workstation profiles. Nothing is granted read access; use an administrator profile.",
+        "Secrets Manager secret holding filled-in application env and named workstation profiles. Read access is granted to no principal other than GitHubActionsCdkDeployRole (§18, scoped to this secret's own ARN); everyone else uses an administrator profile.",
     });
 
     // 17. Only first-run account approvals that no CLI can truthfully perform.
@@ -1560,6 +1565,45 @@ exports.handler = async (event) => {
           'Actions -> Infra -> Run workflow, command: deploy -- confirm the run stops at "Review pending deployments" until approved.',
         ],
         note: "The role ARNs are stored as repository variables, not secrets: they are identifiers, not credentials, and a secret's value is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read. Re-running the environment prompt only ever adds the current gh user as a reviewer -- it never removes anyone else's approval right, so adding a second reviewer is a manual GitHub-side edit.",
+      },
+      {
+        id: "ci-github-admin-token",
+        title: "Mint a GitHub token for the CI deploy job's own gh CLI calls",
+        category: "Credentials",
+        when: "once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked",
+        why: "The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets, variables, or environments -- those need the Administration/Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it. The wizard's GitHub steps (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs, sync-github-cdk-ci-environment.mjs) run under the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.",
+        run: [
+          "GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write), Variables (read/write), and Environments (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use.",
+          "gh secret set INFRA_DEPLOY_GH_TOKEN",
+        ],
+        produces:
+          ".github/workflows/infra.yml's deploy job can export it as GH_TOKEN so the gh CLI the post-deploy wizard shells out to is authenticated with admin-level repository access, matching what a workstation operator's own `gh auth login` already provides.",
+        store:
+          "GitHub repo Settings -> Secrets and variables -> Actions -> Secrets -> INFRA_DEPLOY_GH_TOKEN.",
+        verify: [
+          "Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the run's log shows the wizard's GitHub steps succeeding rather than gh reporting 403/Resource not accessible.",
+        ],
+        note: "This token is a materially broader credential than AWS_CDK_DIFF_ROLE_ARN/AWS_CDK_DEPLOY_ROLE_ARN (identifiers, not secrets) -- it can rewrite this repository's Actions secrets, variables, and environment protection rules. It is reachable only from the deploy job, which is itself gated by the infra-deploy environment's required-reviewer approval (ADR 20260811-ci-deploy-full-wizard).",
+      },
+      {
+        id: "ci-vercel-deploy-token",
+        title: "Mint a Vercel token and link the project for the CI deploy job",
+        category: "Credentials",
+        when: "once, before the first CI-run post-deploy wizard, and again if the token is revoked",
+        why: "The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.",
+        run: [
+          "Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.",
+          "gh secret set INFRA_DEPLOY_VERCEL_TOKEN",
+          "vercel link (once, on any workstation, against the same project) to read .vercel/project.json's orgId/projectId, then: gh variable set VERCEL_ORG_ID --body <orgId>; gh variable set VERCEL_PROJECT_ID --body <projectId>",
+        ],
+        produces:
+          "The deploy job can export VERCEL_TOKEN/VERCEL_ORG_ID/VERCEL_PROJECT_ID so every `vercel` CLI call in the wizard runs unattended against the right project instead of prompting to link one.",
+        store:
+          "GitHub repo Settings -> Secrets and variables -> Actions -> Secrets (INFRA_DEPLOY_VERCEL_TOKEN) and -> Variables (VERCEL_ORG_ID, VERCEL_PROJECT_ID).",
+        verify: [
+          "Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.",
+        ],
+        note: "A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.",
       },
       {
         id: "cost-explorer-enabled",
@@ -1815,6 +1859,12 @@ exports.handler = async (event) => {
         "provider-spend-caps",
         "usage-guardrail-tokens",
         "verify-usage-guardrails",
+        // Minting a GitHub PAT or a Vercel token is the same class of
+        // no-CLI-can-do-this step as usage-guardrail-tokens above -- the CI
+        // deploy job's own gh/vercel CLI calls need one of each before the
+        // post-deploy wizard can run unattended (ADR 20260811-ci-deploy-full-wizard).
+        "ci-github-admin-token",
+        "ci-vercel-deploy-token",
         "ses-production-access",
         "sns-sms-account-limits",
         // Clicking a link in an email is the whole step, and no CLI can do it
@@ -1831,8 +1881,10 @@ exports.handler = async (event) => {
     });
 
     // 18. GitHub Actions CI: OIDC federation so .github/workflows/infra.yml can
-    // run `cdk diff`/`cdk deploy` from a workflow instead of only a workstation
-    // (§5's cdk-deployer is explicitly workstation-only -- see its comment).
+    // run `cdk diff`/`pnpm infra:deploy` from a workflow instead of only a
+    // workstation (§5's cdk-deployer is explicitly workstation-only -- see its
+    // comment). The deploy job runs the full wrapper, post-deploy wizard
+    // included, non-interactively (ADR 20260811-ci-deploy-full-wizard).
     //
     // Two roles, deliberately not one, because "can see what would change" and
     // "can make it happen" are different privileges with different attack
@@ -1849,13 +1901,25 @@ exports.handler = async (event) => {
     //     "workflow_dispatch was clicked" into "a human clicked Approve", not
     //     anything this role's trust policy alone could enforce.
     //
-    // Neither role can read the credentials secret (§16): both carry the same
-    // explicit Deny as §6's read-only MCP identities, so a change to what
-    // AWS::IAM::Role or the OIDC bootstrap roles can reach can never make a CI
-    // run capable of exfiltrating it. `cdk deploy`'s actual resource writes run
-    // under the bootstrap deploy-role's own permissions (AdministratorAccess by
-    // default -- see §5's note on --cloudformation-execution-policies), not
-    // this role's -- the Deny here bounds what the *caller* can do directly.
+    // GitHubActionsCdkDiffRole can never read the credentials secret (§16): it
+    // carries the same explicit, unscoped Deny as §6's read-only MCP identities,
+    // so a change to what AWS::IAM::Role or the OIDC bootstrap roles can reach
+    // can never make a `diff` run -- assumable by any branch in this repo --
+    // capable of exfiltrating it.
+    //
+    // GitHubActionsCdkDeployRole is the one exception in this stack (ADR
+    // 20260811-ci-deploy-full-wizard): once the required-reviewer approval above
+    // has already happened, `pnpm infra:deploy` needs the same secret read a
+    // workstation operator's administrator profile performs, to run the
+    // post-deploy wizard non-interactively (write .env.local/.env.vercel/
+    // .env.github, then answer yes to every wizard prompt). Its Allow is scoped
+    // to exactly this secret's ARN -- not `Resource: "*"` -- and a Deny on every
+    // *other* secret still applies beneath it, so this role gains nothing beyond
+    // the one document it was already trusted, via the environment gate, to
+    // finish a deploy with. `cdk deploy`'s actual resource writes run under the
+    // bootstrap deploy-role's own permissions (AdministratorAccess by default --
+    // see §5's note on --cloudformation-execution-policies), not this role's --
+    // the policies here bound only what the *caller* can do directly.
     const githubActionsOidcProvider = new iam.OpenIdConnectProvider(
       this,
       "GitHubActionsOidcProvider",
@@ -1960,7 +2024,41 @@ exports.handler = async (event) => {
         resources: [bootstrapVersionParameterArn],
       }),
     );
-    cdkDeployRole.addToPolicy(denyReadingAnySecret());
+    // The post-deploy wizard's Vercel-sync step (scripts/import-vercel-env.mjs)
+    // diffs against a fingerprint checkpoint in Parameter Store, keyed by
+    // environment (ADR 20260811-vercel-sync-checkpoint-in-ssm) -- not a
+    // CDK-managed resource, so this is a name-pattern grant rather than a
+    // reference to a construct. Read and write, scoped to that one path prefix
+    // only: nothing else this role does touches Parameter Store.
+    const vercelSyncParameterArn = `arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/diveday/env-sync/vercel/*`;
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadWriteVercelSyncCheckpoint",
+        actions: ["ssm:GetParameter", "ssm:PutParameter"],
+        resources: [vercelSyncParameterArn],
+      }),
+    );
+    // The one exception to "neither CI role can read a secret" (ADR
+    // 20260811-ci-deploy-full-wizard): scoped to this secret's own ARN, so it
+    // widens nothing else. `denyReadingAnySecret()` below still applies to
+    // every *other* secret in the account, including the app-secret seed this
+    // stack also creates (§16) -- NotResource makes the Deny bind everywhere
+    // except the one ARN just allowed, rather than nowhere at all.
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadCredentialsDocumentForPostDeployWizard",
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [credentialsSecret.secretArn],
+      }),
+    );
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "NeverReadAnyOtherSecretValue",
+        effect: iam.Effect.DENY,
+        actions: ["secretsmanager:GetSecretValue"],
+        notResources: [credentialsSecret.secretArn],
+      }),
+    );
 
     new cdk.CfnOutput(this, "GitHubActionsCdkDiffRoleArn", {
       value: cdkDiffRole.roleArn,

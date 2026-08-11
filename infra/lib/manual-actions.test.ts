@@ -142,28 +142,51 @@ describe("the synthesized stack", () => {
     expect(parameter.MinValue).toBe(1);
   });
 
-  it("denies the read-only MCP identities and the GitHub Actions CI roles any secret value", () => {
+  it("denies the read-only MCP identities and the GitHub Actions CI roles every secret but the one the deploy role needs", () => {
     const { template } = synthesize();
     const denials = policyStatements(template).filter(
       (statement) =>
         statement.includes('"Deny"') && statement.includes("secretsmanager:GetSecretValue"),
     );
-    // One per read-only MCP user (ReadOnlyAccess is AWS's to change) plus one
-    // per GitHub Actions CI role (§18) -- the deploy role's actual resource
+    // One per read-only MCP user (ReadOnlyAccess is AWS's to change), one for
+    // GitHubActionsCdkDiffRole (unscoped -- it can never read any secret), and
+    // one for GitHubActionsCdkDeployRole -- scoped by NotResource to every
+    // secret except the credentials document, rather than Resource "*", since
+    // that one role is deliberately allowed to read exactly that one secret
+    // (ADR 20260811-ci-deploy-full-wizard). The deploy role's actual resource
     // writes run under the bootstrap deploy-role's own permissions, not this
-    // one's, so the Deny is what bounds what the CI caller can do directly.
+    // one's, so these Denies are what bound the CI caller directly.
     expect(denials).toHaveLength(4);
+    const deployRoleDeny = denials.find((statement) => statement.includes("NotResource"));
+    expect(deployRoleDeny, "the deploy role's deny must be scoped via NotResource").toBeDefined();
+    expect(deployRoleDeny).toContain("CredentialsEnvDocument");
   });
 
-  it("grants nothing read access to the credentials secret", () => {
+  it("grants read access to the credentials secret to exactly one identity, scoped to that one secret", () => {
     const { template } = synthesize();
-    const allowsRead = policyStatements(template).some(
+    const allows = policyStatements(template).filter(
       (statement) =>
         statement.includes("secretsmanager:GetSecretValue") && !statement.includes('"Deny"'),
     );
-    expect(allowsRead, "an identity in this stack can read every credential in the account").toBe(
-      false,
+    expect(
+      allows,
+      "only GitHubActionsCdkDeployRole's post-deploy-wizard read may allow secretsmanager:GetSecretValue",
+    ).toHaveLength(1);
+    // Resource-scoped to the credentials document's own ARN, never "*" -- an
+    // unscoped Allow here would read every credential in the account, not just
+    // the one document the wizard needs (ADR 20260811-ci-deploy-full-wizard).
+    expect(allows[0]).not.toContain('"Resource":"*"');
+    expect(allows[0]).toContain("CredentialsEnvDocument");
+  });
+
+  it("scopes the deploy role's Vercel-sync checkpoint access to its own parameter path", () => {
+    const { template } = synthesize();
+    const ssmGrants = policyStatements(template).filter(
+      (statement) => statement.includes("ssm:PutParameter") && statement.includes("GetParameter"),
     );
+    expect(ssmGrants).toHaveLength(1);
+    expect(ssmGrants[0]).toContain("/diveday/env-sync/vercel/*");
+    expect(ssmGrants[0]).not.toContain('"Resource":"*"');
   });
 
   it("scopes the access-key pruner to the identities this stack owns", () => {

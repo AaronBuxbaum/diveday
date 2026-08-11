@@ -121,30 +121,24 @@ pnpm infra:deploy
 
 After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
 then asks whether to update generated AWS CLI profiles, import Vercel Production variables, deploy
-Vercel, update GitHub visual-test secrets, and add SES DNS records through Vercel. Press Enter or
-`n` to skip any one. In CI, or with `--no-wizard`, it only creates the files. SES DNS defaults to the `dive.day` Vercel zone; set
-`VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The Vercel CLI is pinned in this
-repository's dev dependencies and is invoked with `pnpm exec vercel`, never downloaded ad hoc.
+Vercel, update GitHub visual-test secrets, set the CI role-ARN repository variables and the
+`infra-deploy` GitHub Environment reviewer, and add SES DNS records through Vercel. Press Enter or
+`n` to skip any one; `--no-wizard` skips all of it and only creates the three files. In CI, the
+`deploy` job answers yes to every one of those questions automatically instead — see
+[ADR 20260811-ci-deploy-full-wizard](../architecture/decisions/20260811-ci-deploy-full-wizard.md) —
+once the required-reviewer approval on `infra-deploy` has already gated the run. SES DNS defaults to
+the `dive.day` Vercel zone; set `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The
+Vercel CLI is pinned in this repository's dev dependencies and is invoked with `pnpm exec vercel`,
+never downloaded ad hoc.
 
-`.env.local` is a **merge, not an overwrite**: a value already in the file wins over the deployed
-stack's, so a `DATABASE_URL`, a personal Stripe test key, or an `APP_HOST` pointing at localhost
-survives a deploy. Two exceptions, both in `distribute-env.mjs`'s `stackOwns`: the explicit
-`stackManaged` set (the derived app secrets, the SNS topic ARNs), and **every per-service AWS
-credential the stack mints** — anything matching `*_AWS_REGION` / `*_AWS_ACCESS_KEY_ID` /
-`*_AWS_SECRET_ACCESS_KEY`. Those always take the deployed value, with no local override, because
-they are an IAM user's credentials rather than a preference and a private copy is a stale copy
-waiting to happen. Neither exception can blank a line the stack has no value for.
-
-That matters more than it looks, because `.env.vercel` and `.env.github` are rendered from the
-**merged `.env.local`**, not from the secret (see `infra-deploy.mjs`). Before the `*_AWS_*` rule, a
-credential typed into `.env.local` by hand was pinned there forever and then carried into Vercel
-Production by the import step — which is how the deployed address lookup spent a week signing with
-an access key AWS had never issued.
-
-Whatever is kept rather than replaced is printed: `Kept the value already in .env.local for …`. That
-line is a receipt for choices you are expected to make, and the safety net for the values the stack
-writes that are not credentials (a RUM monitor id, a log group name) — blank the line and re-run to
-take the stack's.
+Each of `.env.local`, `.env.vercel`, and `.env.github` is rendered fresh on every deploy, from
+exactly two sources: the `diveday/env` credentials document CloudFormation just produced, and
+`.env.manual`, the one file a human edits (`distribute-env.mjs`; ADR
+20260812-env-provenance-registry). Neither is a merge against whatever the file already held — a
+value typed directly into `.env.local` does not survive the next deploy, and `.env.vercel`/
+`.env.github` are never derived from `.env.local` either, only from the same two sources `.env.local`
+itself came from. If a value needs to persist across deploys and isn't stack-produced, it belongs in
+`.env.manual`, not in the generated file.
 
 Each of these three sync steps only pushes what actually changed, not the whole document every
 time — answering "yes" is safe to do on every deploy. DNS records (inline in
@@ -154,7 +148,9 @@ that — every value is pushed `--sensitive`, and Vercel never returns a sensiti
 set, exactly like the Actions secrets API never returns a value to any token. Vercel's diff instead
 checks a SHA-256 fingerprint of each value against an SSM Parameter Store parameter,
 `/diveday/env-sync/vercel/<environment>`, read and written under the same `diveday-admin` profile
-this handoff already authenticates — never the values themselves (ADR
+this handoff already authenticates on a workstation — or, in CI, under
+`GitHubActionsCdkDeployRole`'s own narrow grant on that one parameter path (ADR
+20260811-ci-deploy-full-wizard) — never the values themselves (ADR
 20260811-vercel-sync-checkpoint-in-ssm). GitHub's diff still checks a local checkpoint file,
 `.env.github.synced`, gitignored, since that sync step has no AWS channel of its own. A value edited
 directly in the Vercel dashboard or GitHub UI is invisible to either check and reads as still in
@@ -464,10 +460,13 @@ are delivered through **one** Secrets Manager secret, `diveday/env`, whose value
 Secrets Manager KMS key. The first document contains that seed, and
 `scripts/distribute-env.mjs` uses HKDF labels to derive separate, stable values for
 `AUTH_SECRET`, `SECRET_ENCRYPTION_KEY`, and `CRON_SECRET` before any target file is written.
-After every successful `pnpm infra:deploy`, the wrapper reads `diveday/env` using the local
-`diveday-admin` profile and automatically writes `.env.local`, `.env.vercel`, and `.env.github`.
-Set `INFRA_ENV_SYNC_PROFILE=<profile-name>` when the administrator profile has a different name.
-The post-deploy read defaults to `us-east-1` if that profile has no region configured.
+After every successful `pnpm infra:deploy`, the wrapper reads `diveday/env` and automatically writes
+`.env.local`, `.env.vercel`, and `.env.github`: on a workstation using the local `diveday-admin`
+profile, in CI using `GitHubActionsCdkDeployRole`'s own narrow, resource-scoped read on exactly that
+one secret (ADR 20260811-ci-deploy-full-wizard) — the ambient OIDC-assumed credentials already used
+for the deploy, no profile swap. Set `INFRA_ENV_SYNC_PROFILE=<profile-name>` when the administrator
+profile has a different name. The post-deploy read defaults to `us-east-1` if that profile has no
+region configured.
 
 **The resulting document supplies `.env.local` and named AWS CLI profiles.** `dotenv -c` loads the
 app configuration through the usual local cascade; the helper leaves generic deployer credentials
@@ -614,8 +613,9 @@ is theoretical on this single-operator account.
 
 ### Who can read it
 
-**No *additional* principal is granted read**, and it is worth being exact about what that buys,
-because the comfortable version of this sentence is wrong.
+**Exactly one additional principal is granted read** — `GitHubActionsCdkDeployRole`, scoped to this
+secret's own ARN and nothing else (ADR 20260811-ci-deploy-full-wizard) — and it is worth being exact
+about what that buys, because the comfortable version of this sentence is wrong.
 
 **The read-only MCP users are genuinely bounded.** They carry an explicit `Deny` on
 `secretsmanager:GetSecretValue` for every secret, and a Deny beats any Allow — so the guarantee holds
@@ -638,7 +638,10 @@ Two consequences follow, and both are load-bearing:
   [manual-actions.md](manual-actions.md), and it is not done today.
 
 Read the secret with the administrator profile, or in the console signed in as the account owner. It
-is a hand-off point for a human, so a human's credential is the one that opens it.
+is a hand-off point for a human, so a human's credential is the one that opens it — and, once that
+same human has approved the `infra-deploy` GitHub Environment for a specific CI run, the one CI
+identity that reaches this secret at all reads only this one document, never anything else in the
+account.
 
 > [!NOTE]
 > Nothing reads this secret at runtime. The app never calls Secrets Manager; it reads environment
