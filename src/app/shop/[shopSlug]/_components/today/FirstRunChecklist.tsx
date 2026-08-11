@@ -212,12 +212,17 @@ export function FirstRunChecklist({
           doneLabel={copy.stripeDone}
           doneBadge={copy.doneBadge}
           action={
-            <Link
+            // A plain <a>, not <Link>: this route 302s to Stripe's OAuth
+            // authorize URL, and Next's client-side navigation would follow
+            // that redirect via fetch — a cross-origin request Stripe's
+            // CORS policy rejects. A full navigation handles the redirect
+            // natively.
+            <a
               href={`/shop/${shopSlug}/settings/connect`}
               className={buttonClass({ size: "sm", variant: "secondary" })}
             >
               {copy.stripeAction}
-            </Link>
+            </a>
           }
         />
       </ol>
