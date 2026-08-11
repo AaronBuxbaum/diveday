@@ -111,8 +111,11 @@ test.describe("staff", () => {
 
     // And the diver it is about is still boardable. "Ready", not "Ready to
     // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
-    // the roster and the counter share with the manifest.
-    await expect(page.getByText("✅Ready", { exact: true }).first()).toBeVisible();
+    // the roster and the counter share with the manifest. The roster renders
+    // ready as the quiet "✓ Ready" text (the success Badge is reserved for
+    // exceptional states — design/principles.md #9), so the glyph here is ✓,
+    // not the Badge's ✅.
+    await expect(page.getByText("✓Ready", { exact: true }).first()).toBeVisible();
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness

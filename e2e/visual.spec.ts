@@ -2558,8 +2558,10 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
         const row = page.locator("#roster li").filter({ visible: true }).first();
+        // A row with no notes labels the disclosure "Add a private note"; once
+        // one exists it reads "Private staff notes (N)" — match either state.
         await row
-          .getByText(/Private staff notes/)
+          .getByText(/Private staff notes|Add a private note/)
           .filter({ visible: true })
           .click();
         await row
@@ -2569,7 +2571,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Private staff note added.").waitFor();
 
         await row
-          .getByText(/Private staff notes/)
+          .getByText(/Private staff notes|Add a private note/)
           .filter({ visible: true })
           .click();
         await row.getByRole("button", { name: "Delete" }).click();
