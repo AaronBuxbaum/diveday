@@ -116,7 +116,16 @@ export async function runPostDeployWizard({
   if (
     yes(
       await ask(
-        "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
+        // "Yourself" on a workstation: the gh CLI's authenticated user, who
+        // just typed this answer. In the CI-unattended run this is instead
+        // whoever the INFRA_DEPLOY_GH_TOKEN PAT belongs to -- not necessarily
+        // the human who approved this specific deploy -- so the question does
+        // not claim otherwise here (security review on ADR
+        // 20260811-ci-deploy-full-wizard). sync-github-cdk-ci-environment.mjs
+        // itself always logs the exact user id it adds.
+        ciUnattended
+          ? "Create/update the infra-deploy GitHub Environment with the INFRA_DEPLOY_GH_TOKEN identity as its required reviewer? [y/N] "
+          : "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
       ),
     )
   ) {

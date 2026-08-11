@@ -121,7 +121,14 @@ A `workflow_dispatch` deploy, once its required reviewer approves, now finishes 
 workstation `pnpm infra:deploy` would leave it in — `.env.local`/`.env.vercel`/`.env.github`
 written, Vercel Production environment variables pushed, the Vercel project deployed, GitHub Actions
 secrets synced, the CDK role-ARN repository variables set, the `infra-deploy` environment's reviewer
-list refreshed, and SES DNS records added — with no second human needed at a workstation.
+list refreshed, and SES DNS records added — with no second human needed at a workstation. One gap:
+`.env.manual` is gitignored and only ever written by a human on a workstation
+(`scripts/env-manual.mjs`), so a CI checkout has never seen it. `distribute-env.mjs` already drops
+blank values for the `vercel`/`github` targets rather than pushing them, so a from-scratch CI-only
+deploy cannot overwrite an already-configured Stripe/Neon/Meta credential with blank — but it also
+silently pushes nothing for those keys, with no failure signal in this workflow. The first deploy for
+a new environment still needs one workstation `pnpm infra:deploy` to seed `.env.manual`'s values
+before a CI-only run can be trusted to carry them forward.
 
 `GitHubActionsCdkDeployRole` is no longer bound by an absolute "cannot read any secret" claim; it is
 bound by "can read exactly one, and only after a human has already approved this specific run." That

@@ -52,7 +52,7 @@ this file is the checklist, not the argument.
 [5] Mint a GitHub token for the CI deploy job's own gh CLI calls
     when     once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked
     why      The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets, variables, or environments -- those need the Administration/Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it. The wizard's GitHub steps (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs, sync-github-cdk-ci-environment.mjs) run under the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.
-    run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Actions (read/write), Secrets (read/write), Variables (read/write), and Environments (read/write) repository permissions.
+    run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write), Variables (read/write), and Environments (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use.
              gh secret set INFRA_DEPLOY_GH_TOKEN
     produces .github/workflows/infra.yml's deploy job can export it as GH_TOKEN so the gh CLI the post-deploy wizard shells out to is authenticated with admin-level repository access, matching what a workstation operator's own `gh auth login` already provides.
     store    GitHub repo Settings -> Secrets and variables -> Actions -> Secrets -> INFRA_DEPLOY_GH_TOKEN.
