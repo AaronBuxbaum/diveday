@@ -151,10 +151,14 @@ time — answering "yes" is safe to do on every deploy. DNS records (inline in
 `post-deploy-wizard.mjs`) diff against what's already live, by listing the current records first.
 Vercel variables (`import-vercel-env.mjs`) and GitHub secrets (`sync-github-secrets.mjs`) can't do
 that — every value is pushed `--sensitive`, and Vercel never returns a sensitive value again once
-set, exactly like the Actions secrets API never returns a value to any token — so both diff against
-a local checkpoint (`.env.vercel.synced.<environment>` / `.env.github.synced`, gitignored) of what
-this script last pushed; a value edited directly in the Vercel dashboard or GitHub UI is invisible
-to it and reads as still in sync.
+set, exactly like the Actions secrets API never returns a value to any token. Vercel's diff instead
+checks a SHA-256 fingerprint of each value against an SSM Parameter Store parameter,
+`/diveday/env-sync/vercel/<environment>`, read and written under the same `diveday-admin` profile
+this handoff already authenticates — never the values themselves (ADR
+20260811-vercel-sync-checkpoint-in-ssm). GitHub's diff still checks a local checkpoint file,
+`.env.github.synced`, gitignored, since that sync step has no AWS channel of its own. A value edited
+directly in the Vercel dashboard or GitHub UI is invisible to either check and reads as still in
+sync.
 
 > [!IMPORTANT]
 > `infra:deploy` is a plain `cdk deploy`, so CDK's default `--require-approval broadening` applies:
