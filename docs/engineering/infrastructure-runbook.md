@@ -147,12 +147,14 @@ writes that are not credentials (a RUM monitor id, a log group name) — blank t
 take the stack's.
 
 Each of these three sync steps only pushes what actually changed, not the whole document every
-time — answering "yes" is safe to do on every deploy. Vercel variables (`import-vercel-env.mjs`)
-and DNS records (inline in `post-deploy-wizard.mjs`) diff against what's already live, by pulling
-the current values/records first. GitHub secrets (`sync-github-secrets.mjs`) can't do that — the
-Actions secrets API never returns a value to any token — so it diffs against a local checkpoint
-(`.env.github.synced`, gitignored) of what this script last pushed; a secret edited directly in the
-GitHub UI is invisible to it and reads as still in sync.
+time — answering "yes" is safe to do on every deploy. DNS records (inline in
+`post-deploy-wizard.mjs`) diff against what's already live, by listing the current records first.
+Vercel variables (`import-vercel-env.mjs`) and GitHub secrets (`sync-github-secrets.mjs`) can't do
+that — every value is pushed `--sensitive`, and Vercel never returns a sensitive value again once
+set, exactly like the Actions secrets API never returns a value to any token — so both diff against
+a local checkpoint (`.env.vercel.synced.<environment>` / `.env.github.synced`, gitignored) of what
+this script last pushed; a value edited directly in the Vercel dashboard or GitHub UI is invisible
+to it and reads as still in sync.
 
 > [!IMPORTANT]
 > `infra:deploy` is a plain `cdk deploy`, so CDK's default `--require-approval broadening` applies:

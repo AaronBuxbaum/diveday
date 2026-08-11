@@ -18,19 +18,14 @@ afterEach(() => {
   }
 });
 
-// Stubs `pnpm exec vercel env pull|add ...`: pull writes back a fixed
-// document (simulating what's already on Vercel), add records the key it
-// was called with and discards the value it reads from stdin.
-function writePnpmStub(binDirectory, { pulledDocument, pullExitCode = 0, addLogPath }) {
-  const pulledFile = join(binDirectory, "pulled-fixture.env");
-  writeFileSync(pulledFile, pulledDocument);
+// Stubs `pnpm exec vercel env add ...`: records the key it was called with
+// and discards the value it reads from stdin. There is no `pull` stub --
+// Vercel never returns a sensitive value once set, so the script no longer
+// calls it.
+function writePnpmStub(binDirectory, addLogPath) {
   writeFileSync(
     join(binDirectory, "pnpm"),
     `#!/bin/sh
-if [ "$4" = "pull" ]; then
-  if [ "${pullExitCode}" -eq 0 ]; then cp "${pulledFile}" "$5"; fi
-  exit ${pullExitCode}
-fi
 if [ "$4" = "add" ]; then
   echo "$5" >> "${addLogPath}"
   cat >/dev/null
@@ -42,42 +37,52 @@ exit 1
   chmodSync(join(binDirectory, "pnpm"), 0o755);
 }
 
-function runImport(candidateLines, { pulledDocument = "", pullExitCode = 0 } = {}) {
+function runImport(candidateLines, { environment = "production", checkpoint } = {}) {
   const binDirectory = temporaryDirectory("diveday-vercel-stub-");
   const addLogPath = join(binDirectory, "add.log");
-  writePnpmStub(binDirectory, { pulledDocument, pullExitCode, addLogPath });
+  writePnpmStub(binDirectory, addLogPath);
 
   const inputPath = join(binDirectory, ".env.vercel");
   writeFileSync(inputPath, `${candidateLines.join("\n")}\n`);
+  if (checkpoint !== undefined) {
+    writeFileSync(`${inputPath}.synced.${environment}`, checkpoint);
+  }
 
   const stdout = execFileSync(
     "node",
-    [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, "production"],
+    [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, environment],
     { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
   );
 
   const added = existsSync(addLogPath)
     ? readFileSync(addLogPath, "utf8").trim().split("\n").filter(Boolean)
     : [];
-  return { stdout, added };
+  const checkpointAfter = existsSync(`${inputPath}.synced.${environment}`)
+    ? readFileSync(`${inputPath}.synced.${environment}`, "utf8")
+    : null;
+  return { stdout, added, checkpointAfter };
 }
 
 describe("import-vercel-env", () => {
-  it("only pushes keys whose value differs from what Vercel already has", () => {
+  it("only pushes keys whose value differs from the last sync", () => {
     const { added } = runImport(["APP_HOST=https://dive.day", "AUTH_SECRET=unchanged"], {
-      pulledDocument: 'APP_HOST="https://old.example"\nAUTH_SECRET="unchanged"\n',
+      checkpoint: "APP_HOST=https://old.example\nAUTH_SECRET=unchanged\n",
     });
     expect(added).toEqual(["APP_HOST"]);
   });
 
-  it("pushes everything the first time, when Vercel has none of these keys yet", () => {
-    const { added } = runImport(["A=1", "B=2"], { pulledDocument: "" });
+  it("pushes everything the first time, when there is no checkpoint yet", () => {
+    const { added } = runImport(["A=1", "B=2"]);
     expect(added.sort()).toEqual(["A", "B"]);
   });
 
-  it("falls back to pushing everything when the pull itself fails", () => {
-    const { added, stdout } = runImport(["A=1"], { pulledDocument: "", pullExitCode: 1 });
+  it("records the full pushed document as the new checkpoint", () => {
+    const { checkpointAfter } = runImport(["A=1", "B=2"], { checkpoint: "A=1\n" });
+    expect(checkpointAfter).toBe("A=1\nB=2\n");
+  });
+
+  it("keeps checkpoints separate per environment", () => {
+    const { added } = runImport(["A=1"], { environment: "preview", checkpoint: "" });
     expect(added).toEqual(["A"]);
-    expect(stdout).toContain("Pushed 1 of 1");
   });
 });
