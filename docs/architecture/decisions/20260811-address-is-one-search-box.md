@@ -46,6 +46,16 @@ be forgotten, never usefully reconsidered.
   one-operation boundary 20260804 established. A stack still holding the old `Autocomplete` statement
   answers every keystroke with `AccessDeniedException`, so `cdk deploy` lands with or before the app
   release. Widening early is safe; nothing else calls `Autocomplete`.
+- **Every request carries a geographic anchor, and the shop's own dive sites are it.** `Suggest`
+  refuses a request with none of `BiasPosition` / `Filter.BoundingBox` / `Filter.Circle` —
+  `ValidationException` naming exactly those three, all of which the API reference marks
+  "Required: No". They are mutually exclusive, so it is one of them, never both. The anchor is
+  `shopSearchAnchor` (`src/db/dive-sites.ts`): the forecast coordinate of the shop's
+  alphabetically-first sited dive site, which is the only lat/lng this app stores for a shop and a
+  good one — a storefront is near the water it takes people to. A bias only *ranks*, so this puts
+  the shop's own street above an identically-named place on another coast rather than excluding
+  anything. A shop with no sited water yet gets `WORLD_BOUNDING_BOX` instead of an invented centre.
+  Ordered by name so the anchor cannot wobble between keystrokes and reshuffle a list mid-read.
 - **A suggestion shows the place's name with its address beneath it.** For a business those are two
   different facts, and the second is the only thing separating one franchise location from the next.
   For a plain address result they are the same string and the second line is omitted.
@@ -91,12 +101,20 @@ be forgotten, never usefully reconsidered.
   default; nothing here uses `dangerouslySetInnerHTML`, and nothing should. The query is still a
   partial business address and is still never logged.
 - **A mocked provider client cannot tell you a request is malformed**, and this feature has now been
-  broken twice by exactly that blind spot: once by a missing `AdditionalFeatures: ["Core"]` (2026-08-09)
-  and once by an out-of-range `MaxQueryRefinements` (2026-08-11). Both times a test asserted the
-  request field and passed, because `{ send: vi.fn() }` accepts any object handed to it — the
-  assertion proved the adapter sends what the adapter sends. Request-shape tests here are therefore
-  written against the **API reference's stated constraints**, not against the value the code
-  happens to pass, and every parameter carries a comment naming its documented range.
+  broken three times by exactly that blind spot: a missing `AdditionalFeatures: ["Core"]`
+  (2026-08-09), an out-of-range `MaxQueryRefinements` (2026-08-11), and a missing geographic anchor
+  (2026-08-11, an hour later). Each time a test asserted the request and passed, because
+  `{ send: vi.fn() }` accepts any object handed to it — the assertion proved the adapter sends what
+  the adapter sends. Request-shape tests here are therefore written against the **API reference's
+  stated constraints**, not against the value the code happens to pass, and every parameter carries
+  a comment naming its documented range.
+- **The API reference is not a sufficient source for this API's request rules**, which is the harder
+  lesson and the reason the point above is not the whole fix. The anchor requirement appears nowhere
+  in it: `BiasPosition`, `Filter.BoundingBox` and `Filter.Circle` are each marked "Required: No",
+  no combination rule is stated, and the filtering guide documents no such constraint either. The
+  only places it surfaces are the field list inside the rejection and the fact that *every*
+  worked example in the developer guide passes a `BiasPosition`. Where the reference and the
+  examples disagree about what a request needs, the examples are the better evidence.
 - **A failure now names the field AWS refused.** `ValidationException` carries a `Reason` enum and a
   `FieldList` of `{ Name, Message }`; the log line takes `Reason` and the field `Name`s and never
   `Message`, which is prose AWS composes around the value it rejected — for `QueryText` that value is

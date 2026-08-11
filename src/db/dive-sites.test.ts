@@ -11,6 +11,7 @@ import {
   listDiveSites,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
+  shopSearchAnchor,
   updateDiveSite,
 } from "./dive-sites";
 import { globalDiveSites, globalDiveSiteVersions } from "./schema";
@@ -146,6 +147,75 @@ describe("dive-site library", () => {
  * into the demo shop just to make a pager appear would distort every other
  * surface that reads it.
  */
+describe("the shop's search anchor", () => {
+  /**
+   * The address type-ahead has to send Amazon Location *some* geographic
+   * anchor — it refuses a request carrying none — and a shop's own dive sites
+   * are the only lat/lng this app stores for a shop.
+   */
+  it("is a dive site's forecast coordinate, as [longitude, latitude]", async () => {
+    const { db, shop } = await seededShopContext();
+    // Sorts first by name, so it is the one a stable anchor must pick.
+    await createDiveSite(db, {
+      shopId: shop.id,
+      name: "AAA Anchor Reef",
+      forecastLatitude: 25.0117,
+      forecastLongitude: -80.4,
+    });
+
+    expect(await shopSearchAnchor(db, shop.id)).toEqual({
+      longitude: -80.4,
+      latitude: 25.0117,
+    });
+  });
+
+  it("stays on the same site across calls, so a bias never wobbles mid-search", async () => {
+    // A bias that moved between keystrokes would reshuffle a list the staffer
+    // is part-way through reading.
+    const { db, shop } = await seededShopContext();
+    await createDiveSite(db, {
+      shopId: shop.id,
+      name: "AAA Anchor Reef",
+      forecastLatitude: 25.0117,
+      forecastLongitude: -80.4,
+    });
+    await createDiveSite(db, {
+      shopId: shop.id,
+      name: "AAB Second Reef",
+      forecastLatitude: 18.3,
+      forecastLongitude: -78.1,
+    });
+
+    const first = await shopSearchAnchor(db, shop.id);
+    expect(await shopSearchAnchor(db, shop.id)).toEqual(first);
+    expect(first).toEqual({ longitude: -80.4, latitude: 25.0117 });
+  });
+
+  it("skips a site that carries only one half of a coordinate", async () => {
+    // Both columns are independently nullable, and half a coordinate is not a
+    // position — biasing to longitude 0 would be a different ocean.
+    const { db, shop } = await seededShopContext();
+    for (const site of await listDiveSites(db, shop.id)) {
+      await deleteDiveSite(db, shop.id, site.id);
+    }
+    await createDiveSite(db, {
+      shopId: shop.id,
+      name: "AAA Half A Coordinate",
+      forecastLatitude: 25.0117,
+    });
+
+    expect(await shopSearchAnchor(db, shop.id)).toBeNull();
+  });
+
+  it("is null for a shop with no sited water yet, rather than an invented centre", async () => {
+    const { db, shop } = await seededShopContext();
+    for (const site of await listDiveSites(db, shop.id)) {
+      await deleteDiveSite(db, shop.id, site.id);
+    }
+    expect(await shopSearchAnchor(db, shop.id)).toBeNull();
+  });
+});
+
 describe("dive-site library paging and search", () => {
   /** Names sort predictably so a page boundary is a fact, not a coincidence. */
   async function seedSites(

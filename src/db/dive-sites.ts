@@ -1,4 +1,17 @@
-import { and, asc, count, eq, gte, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -52,6 +65,46 @@ export async function listDiveSites(db: AppDb, shopId: string) {
     .from(diveSites)
     .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .orderBy(asc(diveSites.name));
+}
+
+/**
+ * Where this shop dives, as one coordinate — the anchor the settings address
+ * search ranks its suggestions around.
+ *
+ * A shop's storefront is near the water it takes people to, so its own dive
+ * sites are the best position this app already holds; nothing else in the
+ * schema carries a lat/lng for a shop. The forecast coordinate is staff-chosen
+ * and already trusted to fetch that site's marine forecast, so it is a real
+ * point rather than an inference.
+ *
+ * Returns null when the shop has no site with both coordinates — a brand-new
+ * shop, or one that has only named its sites. The caller falls back to an
+ * unbiased search (`WORLD_BOUNDING_BOX` in `src/lib/address-lookup.ts`) rather
+ * than inventing a centre.
+ *
+ * Ordered by name, so the same shop gets the same anchor on every keystroke:
+ * a bias that wobbles between sites would reshuffle a list the staffer is
+ * mid-way through reading.
+ */
+export async function shopSearchAnchor(
+  db: AppDb,
+  shopId: string,
+): Promise<{ longitude: number; latitude: number } | null> {
+  const [site] = await db
+    .select({ latitude: diveSites.forecastLatitude, longitude: diveSites.forecastLongitude })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        isNull(diveSites.deletedAt),
+        isNotNull(diveSites.forecastLatitude),
+        isNotNull(diveSites.forecastLongitude),
+      ),
+    )
+    .orderBy(asc(diveSites.name))
+    .limit(1);
+  if (site?.latitude == null || site?.longitude == null) return null;
+  return { longitude: site.longitude, latitude: site.latitude };
 }
 
 /** Three rows of cards on the widest grid the library page uses. */
