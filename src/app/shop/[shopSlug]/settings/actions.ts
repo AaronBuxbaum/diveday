@@ -9,6 +9,7 @@ import {
   canPersonManageShopSettings,
 } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { shopSearchAnchor } from "@/db/dive-sites";
 import { retryMediaDeletion } from "@/db/media-deletions";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
 import {
@@ -548,10 +549,17 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   // to the plain boxes it has always been.
   if (!config) return { status: "not_configured" };
 
+  // Where to rank results around. `Suggest` refuses a request with no
+  // geographic anchor at all, and a shop's own dive sites are the best position
+  // this app holds — its storefront is near the water it takes people to. Null
+  // for a shop with no site coordinates yet; the adapter falls back to an
+  // unbiased whole-globe search rather than inventing a centre.
+  const bias = await shopSearchAnchor(db, session.user.shopId);
+
   // Imported here rather than at module scope so a deployment with no
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
-  return awsAddressLookupProvider(config).suggest(query);
+  return awsAddressLookupProvider(config).suggest(query, bias);
 }
 
 /* -------------------------------------------------------------------------- *

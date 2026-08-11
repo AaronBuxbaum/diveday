@@ -7,8 +7,10 @@ import {
   classifyLookupError,
   hasAddressParts,
   isLookupWorthy,
+  type LookupBias,
   type PlaceSuggestion,
   toShopAddressFields,
+  WORLD_BOUNDING_BOX,
 } from "./address-lookup";
 import { log } from "./log";
 
@@ -76,7 +78,7 @@ export function awsAddressLookupProvider(
     });
 
   return {
-    async suggest(query: string): Promise<AddressLookupResult> {
+    async suggest(query: string, bias?: LookupBias | null): Promise<AddressLookupResult> {
       // Checked here as well as at the action, because "don't spend a billed
       // request on two characters" is a property of the lookup, not of one
       // caller's validation.
@@ -85,6 +87,21 @@ export function awsAddressLookupProvider(
         const response = (await client.send(
           new SuggestCommand({
             QueryText: query.trim(),
+            // **One of these two, always — never neither.** `Suggest` refuses a
+            // request carrying no geographic anchor, answering
+            // `ValidationException` with a field list of exactly
+            // `BiasPosition, Filter.BoundingBox, Filter.Circle` — all three of
+            // which the API reference marks "Required: No" (2026-08-11, in
+            // production, twice in one evening). They are also mutually
+            // exclusive, so this is a choice and never both.
+            //
+            // A known position is the better anchor by far: it only *ranks*,
+            // so it puts the shop's own street above an identically-named
+            // place on another coast. The whole-globe box is what a shop with
+            // nothing to anchor on gets — see `WORLD_BOUNDING_BOX`.
+            ...(bias
+              ? { BiasPosition: [bias.longitude, bias.latitude] }
+              : { Filter: { BoundingBox: [...WORLD_BOUNDING_BOX] } }),
             // 1..100 per the API reference. Every request parameter here is
             // inside its documented range, and that is not a free-form style
             // note: AWS answers an out-of-range value with a flat

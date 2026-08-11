@@ -248,8 +248,37 @@ export function classifyLookupError(
   return { status: "failed", reason: "unknown" };
 }
 
+/**
+ * Where to look from — a longitude/latitude the provider ranks results around.
+ *
+ * Not an optimization. Amazon Location's `Suggest` **refuses** a request that
+ * carries no geographic anchor at all: with none of `BiasPosition`,
+ * `Filter.BoundingBox` or `Filter.Circle` set it answers
+ * `ValidationException` naming exactly those three fields, and the API
+ * reference marks all three "Required: No". Every example in the developer
+ * guide passes a `BiasPosition`; the reference is simply wrong, and it cost a
+ * release to find out (2026-08-11).
+ *
+ * A bias only *ranks*, it never excludes (AWS: "It doesn't restrict results,
+ * but biases them toward the specified area"), so a coarse anchor is safe and
+ * a good one is a real improvement: a shop searching for "Rainbow Reef" means
+ * the one near its own boats, not the one in another hemisphere.
+ */
+export type LookupBias = { longitude: number; latitude: number };
+
+/**
+ * The anchor for a shop that has given us nothing to anchor on — a new shop
+ * with no dive sites yet.
+ *
+ * `[westward lng, southern lat, eastward lng, northern lat]`, the whole globe.
+ * It exists because *something* must be sent (see {@link LookupBias}) and this
+ * is the only honest something: a made-up centre would silently rank a shop's
+ * own street below a same-named place near a coordinate nobody chose.
+ */
+export const WORLD_BOUNDING_BOX = [-180, -90, 180, 90] as const;
+
 export type AddressLookupProvider = {
-  suggest(query: string): Promise<AddressLookupResult>;
+  suggest(query: string, bias?: LookupBias | null): Promise<AddressLookupResult>;
 };
 
 export type AddressLookupConfig = {

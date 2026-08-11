@@ -138,6 +138,56 @@ describe("Amazon Location address suggestions", () => {
     expect(input.MaxQueryRefinements).toBeUndefined();
   });
 
+  /**
+   * The second production failure of the evening, and the reason these two are
+   * written as "one of the pair, never neither".
+   *
+   * `Suggest` refuses a request carrying no geographic anchor: with none of
+   * `BiasPosition`, `Filter.BoundingBox` or `Filter.Circle` set it answers
+   * `ValidationException` naming exactly those three — every one of which the
+   * API reference marks "Required: No". Nothing in the published constraints
+   * says this; only the field list in the error does.
+   */
+  it("ranks around the shop's own water when it knows where that is", async () => {
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef", {
+      longitude: -80.4,
+      latitude: 25.0117,
+    });
+    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+    // `[lng, lat]`, in that order — the reverse is a valid pair of numbers and
+    // a different hemisphere.
+    expect(input.BiasPosition).toEqual([-80.4, 25.0117]);
+    // Mutually exclusive with the bias, so exactly one of them travels.
+    expect(input.Filter).toBeUndefined();
+  });
+
+  it("searches the whole globe rather than nowhere when it has no anchor", async () => {
+    // A brand-new shop has no dive sites, so there is no honest centre to pick
+    // — and sending nothing is the one thing AWS refuses outright.
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
+    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+    expect(input.BiasPosition).toBeUndefined();
+    expect(input.Filter).toEqual({ BoundingBox: [-180, -90, 180, 90] });
+  });
+
+  it("always sends one of the two anchors, whether or not it has a position", async () => {
+    // The invariant the field list in that ValidationException named. Asserted
+    // over both paths at once so neither can lose its anchor alone.
+    for (const bias of [null, { longitude: -80.4, latitude: 25.0117 }]) {
+      const client = clientReturning({ ResultItems: [] });
+      await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef", bias);
+      const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+      const anchors = [
+        input.BiasPosition,
+        (input.Filter as { BoundingBox?: unknown })?.BoundingBox,
+        (input.Filter as { Circle?: unknown })?.Circle,
+      ].filter((anchor) => anchor !== undefined);
+      expect(anchors).toHaveLength(1);
+    }
+  });
+
   it("never spends a request the query is too long for", async () => {
     // The 200-character bound above is AWS's own `QueryText` limit, so a query
     // past it is a guaranteed `ValidationException` rather than a big bill.
