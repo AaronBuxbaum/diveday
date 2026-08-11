@@ -13,6 +13,15 @@ test.describe("full-shop data export", () => {
   test("staff download the whole shop as documented CSVs", async ({ page, request }) => {
     await page.goto("/shop/blue-mantis/settings/export");
     await expect(page.getByRole("heading", { name: "Data export" })).toBeVisible();
+
+    // The file list is the page's reference, not its work, so it waits behind
+    // a closed disclosure — 44 cards of it used to push Backups off the bottom
+    // of the page. Closed, the card still states how many files are in there;
+    // opening it is what the promise "one CSV per record type" is read from.
+    const bundle = page.getByRole("group").filter({ hasText: "What's in the bundle" });
+    await expect(bundle.getByText(/\d+ files, with a row count for each/)).toBeVisible();
+    await expect(page.getByText("people.csv")).toBeHidden();
+    await bundle.getByText("What's in the bundle").click();
     await expect(page.getByText("people.csv")).toBeVisible();
     await expect(page.getByText("waiver_records.csv")).toBeVisible();
 

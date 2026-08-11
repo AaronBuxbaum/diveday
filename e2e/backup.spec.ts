@@ -86,7 +86,14 @@ test.describe("backup settings", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: "Data export" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download export" })).toBeVisible();
-    await expect(page.getByText("waiver_records.csv")).toBeVisible();
+    // The bundle's file list is behind a closed disclosure now (its own spec,
+    // e2e/export.spec.ts, opens it). What this test is about is that both
+    // halves are read without navigating between them, so the assertion is
+    // that the download half is *here* — heading included — not that its
+    // reference list happens to be expanded.
+    await expect(
+      page.getByRole("heading", { level: 2, name: "What's in the bundle" }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
   });
 
