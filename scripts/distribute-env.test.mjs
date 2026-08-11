@@ -1,23 +1,34 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { ENV_KEYS, isManual, isStackProduced } from "../config/env-registry.mjs";
 
 const temporaryDirectories = [];
 
-function temporaryPath(name) {
+/** A working directory the scripts can treat as a repo root. */
+function workspace() {
   const directory = mkdtempSync(join(tmpdir(), "diveday-env-"));
   temporaryDirectories.push(directory);
-  return join(directory, name);
+  return directory;
 }
 
-function distribute(target, outputPath, source) {
-  execFileSync("node", ["scripts/distribute-env.mjs", target, outputPath], {
-    cwd: process.cwd(),
-    input: source,
-  });
-  return readFileSync(outputPath, "utf8");
+function distribute(target, cwd, source, outputName = `.env.${target}`) {
+  const run = spawnSync(
+    "node",
+    [join(process.cwd(), "scripts", "distribute-env.mjs"), target, outputName],
+    { cwd, input: source, encoding: "utf8" },
+  );
+  return { ...run, output: run.status === 0 ? readFileSync(join(cwd, outputName), "utf8") : "" };
 }
 
 function deployAndSync(directory, document) {
@@ -51,151 +62,165 @@ afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true });
 });
 
+/** What a deployed stack hands over: everything it mints, and nothing else. */
 const source = [
-  "AUTH_SECRET=",
-  "SECRET_ENCRYPTION_KEY=",
-  "CRON_SECRET=",
   "APP_SECRET_SEED=stable-root-material",
   "APP_HOST=https://dive.day",
+  "SES_AWS_ACCESS_KEY_ID=ses-id",
+  "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack",
+  "PLACES_AWS_SECRET_ACCESS_KEY=minted-secret",
+  "REG_SUIT_S3_BUCKET_NAME=diveday-vrt",
   "REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id",
   "REG_SUIT_AWS_SECRET_ACCESS_KEY=reg-suit-secret",
   "",
 ].join("\n");
 
 describe("distribute-env", () => {
-  it("derives independent app secrets locally and preserves non-stack choices", () => {
-    const path = temporaryPath(".env.local");
-    writeFileSync(path, "STRIPE_SECRET_KEY=already-configured\nAPP_HOST=https://custom.example\n");
+  it("takes the stack's value for a minted credential, whatever the target file said", () => {
+    // The regression this design removes. The old merge let a value already in
+    // .env.local win, so a key typed in by hand outlived every later deploy.
+    const cwd = workspace();
+    writeFileSync(join(cwd, ".env.local"), "PLACES_AWS_ACCESS_KEY_ID=typed-in-by-hand\n");
 
-    const output = distribute("local", path, `${source}STRIPE_SECRET_KEY=\n`);
+    const { status, output } = distribute("local", cwd, source);
 
-    expect(output).toContain("STRIPE_SECRET_KEY=already-configured");
-    expect(output).toContain("APP_HOST=https://custom.example");
-    expect(output).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
+    expect(status).toBe(0);
+    expect(output).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
+    expect(output).not.toContain("typed-in-by-hand");
+  });
+
+  it("refuses a .env.manual that speaks for a value the stack produces", () => {
+    // Refused rather than ignored: a value someone took the trouble to type is
+    // never silently discarded, because that silence is what hid the original
+    // bug for a week.
+    const cwd = workspace();
+    writeFileSync(join(cwd, ".env.manual"), "PLACES_AWS_ACCESS_KEY_ID=mine\n");
+
+    const { status, stderr } = distribute("local", cwd, source);
+
+    expect(status).toBe(1);
+    expect(stderr).toContain("PLACES_AWS_ACCESS_KEY_ID");
+    expect(stderr).toContain("no local override");
+    expect(existsSync(join(cwd, ".env.local"))).toBe(false);
+  });
+
+  it("carries the values only a human can supply, from .env.manual", () => {
+    const cwd = workspace();
+    writeFileSync(
+      join(cwd, ".env.manual"),
+      "STRIPE_SECRET_KEY=sk_from_1password\nDATABASE_URL=postgres://neon\n",
+    );
+
+    const local = distribute("local", cwd, source).output;
+    const vercel = distribute("vercel", cwd, source).output;
+
+    expect(local).toContain("STRIPE_SECRET_KEY=sk_from_1password");
+    expect(vercel).toContain("STRIPE_SECRET_KEY=sk_from_1password");
+    expect(vercel).toContain("DATABASE_URL=postgres://neon");
+  });
+
+  it("lets .env.manual override a checked-in constant, which is not a minted value", () => {
+    // Pointing APP_HOST at localhost for Stripe Connect testing is a legitimate
+    // thing to want, and the code already accepts it outside production. The
+    // refusal above is about credentials the stack mints, not about defaults.
+    const cwd = workspace();
+    writeFileSync(join(cwd, ".env.manual"), "APP_HOST=http://localhost:3000\n");
+
+    const { status, output } = distribute("local", cwd, source);
+
+    expect(status).toBe(0);
+    expect(output).toContain("APP_HOST=http://localhost:3000");
+  });
+
+  it("derives three independent app secrets from the seed", () => {
+    const output = distribute("local", workspace(), source).output;
     const auth = output.match(/^AUTH_SECRET=(.+)$/m)?.[1];
     const encryption = output.match(/^SECRET_ENCRYPTION_KEY=(.+)$/m)?.[1];
     const cron = output.match(/^CRON_SECRET=(.+)$/m)?.[1];
+
     expect(auth).toMatch(/^[A-Za-z0-9+/]{43}=$/);
     expect(encryption).toMatch(/^[A-Za-z0-9+/]{43}=$/);
     expect(cron).toMatch(/^[A-Za-z0-9+/]{43}=$/);
     expect(new Set([auth, encryption, cron])).toHaveLength(3);
   });
 
-  it("makes narrowly scoped Vercel and GitHub target files", () => {
-    const vercel = distribute(
-      "vercel",
-      temporaryPath(".env.vercel"),
-      `${source}STRIPE_SECRET_KEY=onepassword-managed\nSTRIPE_WEBHOOK_SECRET=onepassword-webhook\n`,
-    );
-    const github = distribute("github", temporaryPath(".env.github"), source);
+  it("refuses to distribute a document from before the stack was deployed", () => {
+    const { status, stderr } = distribute("local", workspace(), "APP_HOST=https://dive.day\n");
+    expect(status).toBe(1);
+    expect(stderr).toContain("APP_SECRET_SEED");
+  });
 
+  it("sends each target only what that target consumes", () => {
+    const cwd = workspace();
+    const vercel = distribute("vercel", cwd, source).output;
+    const github = distribute("github", cwd, source).output;
+
+    // The seed derives the app secrets on a workstation; a deployed environment
+    // gets the derived values and must never be able to re-derive them.
+    expect(vercel).not.toMatch(/^APP_SECRET_SEED=/m);
     expect(vercel).toContain("AUTH_SECRET=");
-    expect(vercel).toContain("APP_HOST=https://dive.day");
-    expect(vercel).not.toContain("APP_SECRET_SEED=");
-    expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
-    expect(vercel).not.toContain("REG_SUIT_AWS_ACCESS_KEY_ID");
-    expect(vercel).toContain("STRIPE_SECRET_KEY=onepassword-managed");
-    expect(vercel).toContain("STRIPE_WEBHOOK_SECRET=onepassword-webhook");
-
+    // Visual-regression credentials are CI's, not the application's.
+    expect(vercel).not.toMatch(/^REG_SUIT_/m);
     expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
     expect(github).not.toContain("AUTH_SECRET=");
+    // The deployer's own credentials are never any target's business.
+    expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
     expect(github).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
   });
 
-  it("writes all target files automatically after a successful deploy", () => {
-    const directory = mkdtempSync(join(tmpdir(), "diveday-infra-deploy-"));
-    temporaryDirectories.push(directory);
-    writeFileSync(`${directory}/.env.local`, "APP_HOST=https://custom.example\n");
+  it("writes a blank line locally and drops it for a remote target", () => {
+    // Locally the file shows the whole shape so `pnpm check:env` can report what
+    // is unset; pushing an empty value to Vercel would overwrite a variable set
+    // by hand in the console with nothing.
+    const cwd = workspace();
+    expect(distribute("local", cwd, source).output).toMatch(/^META_APP_ID=$/m);
+    expect(distribute("vercel", cwd, source).output).not.toMatch(/^META_APP_ID=/m);
+  });
+
+  it("writes all target files after a deploy, and never derives one from another", () => {
+    // .env.vercel used to be rendered from the freshly written .env.local, which
+    // is how a credential typed into a local file reached production and stayed
+    // there. Both come from the stack document now.
+    const directory = workspace();
+    writeFileSync(join(directory, ".env.local"), "PLACES_AWS_ACCESS_KEY_ID=stale-local-value\n");
 
     deployAndSync(directory, source);
 
-    const local = readFileSync(`${directory}/.env.local`, "utf8");
-    const vercel = readFileSync(`${directory}/.env.vercel`, "utf8");
-    const github = readFileSync(`${directory}/.env.github`, "utf8");
-    expect(local).toContain("APP_HOST=https://custom.example");
-    expect(local).toContain("AUTH_SECRET=");
-    expect(vercel).toContain("APP_HOST=https://custom.example");
-    expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
+    const local = readFileSync(join(directory, ".env.local"), "utf8");
+    const vercel = readFileSync(join(directory, ".env.vercel"), "utf8");
+    const github = readFileSync(join(directory, ".env.github"), "utf8");
+
+    expect(local).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
+    expect(vercel).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
+    expect(vercel).not.toContain("stale-local-value");
     expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
-    expect(readFileSync(`${directory}/aws-profile-used`, "utf8")).toBe("diveday-admin:us-east-1");
-  });
-
-  it("overwrites a minted AWS credential the local file disagrees with", () => {
-    // The regression that sent a hand-typed key to production. `stackManaged`
-    // named the SNS topic ARNs but not the IAM pairs minted beside them, so a
-    // value typed onto this line once outlived every later deploy — and since
-    // .env.vercel is rendered from the merged .env.local (infra-deploy.mjs),
-    // it was laundered from a local file into Vercel Production, where it read
-    // as a 403 from a service whose credential was sitting right there.
-    const path = temporaryPath(".env.local");
-    writeFileSync(
-      path,
-      [
-        "PLACES_AWS_ACCESS_KEY_ID=typed-in-by-hand",
-        "SES_AWS_SECRET_ACCESS_KEY=also-by-hand",
-        "SNS_AWS_REGION=us-west-1",
-        "",
-      ].join("\n"),
+    expect(readFileSync(join(directory, "aws-profile-used"), "utf8")).toBe(
+      "diveday-admin:us-east-1",
     );
+    // The deploy creates the one hand-edited file on its way through.
+    expect(existsSync(join(directory, ".env.manual"))).toBe(true);
+  });
+});
 
-    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
-      cwd: process.cwd(),
-      input: [
-        source,
-        "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack",
-        "SES_AWS_SECRET_ACCESS_KEY=minted-too",
-        "SNS_AWS_REGION=us-east-1",
-        "",
-      ].join("\n"),
-      encoding: "utf8",
-    });
-
-    const written = readFileSync(path, "utf8");
-    expect(run.status).toBe(0);
-    expect(written).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
-    expect(written).toContain("SES_AWS_SECRET_ACCESS_KEY=minted-too");
-    expect(written).toContain("SNS_AWS_REGION=us-east-1");
-    // Nothing was kept, so there is nothing to report.
-    expect(run.stderr).toBe("");
+describe("the registry every one of those files reads", () => {
+  it("gives each key exactly one producer", () => {
+    // The property the whole design rests on: nothing can be produced by two
+    // sources, so there is never a conflict to resolve.
+    for (const key of ENV_KEYS) {
+      expect(isManual(key) && isStackProduced(key)).toBe(false);
+    }
   });
 
-  it("never blanks a local value the stack does not carry", () => {
-    // An older deploy, or a service not wired up yet, leaves the key empty in
-    // the secret. Owning a name must not mean erasing what is there.
-    const path = temporaryPath(".env.local");
-    writeFileSync(path, "PLACES_AWS_ACCESS_KEY_ID=the-only-one-anybody-has\n");
-
-    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
-      cwd: process.cwd(),
-      input: `${source}PLACES_AWS_ACCESS_KEY_ID=\n`,
-      encoding: "utf8",
-    });
-
-    expect(run.status).toBe(0);
-    expect(readFileSync(path, "utf8")).toContain(
-      "PLACES_AWS_ACCESS_KEY_ID=the-only-one-anybody-has",
-    );
-  });
-
-  it("reports a local override of something else the stack also writes", () => {
-    // The residue `stackOwns` does not cover: values the stack produces that
-    // are not credentials, where a stale local copy is still silent. Choosing
-    // your own APP_HOST is legitimate — the line is a receipt, not a refusal.
-    const path = temporaryPath(".env.local");
-    writeFileSync(path, "APP_HOST=http://localhost:3000\nSTRIPE_SECRET_KEY=local-only\n");
-
-    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
-      cwd: process.cwd(),
-      input: `${source}STRIPE_SECRET_KEY=\n`,
-      encoding: "utf8",
-    });
-
-    const written = readFileSync(path, "utf8");
-    expect(run.status).toBe(0);
-    expect(run.stderr).toContain("APP_HOST");
-    // A key the stack does not carry at all is kept without comment.
-    expect(run.stderr).not.toContain("STRIPE_SECRET_KEY");
-    expect(written).toContain("APP_HOST=http://localhost:3000");
-    expect(written).toContain("STRIPE_SECRET_KEY=local-only");
+  it("declares every value the CDK stack writes", async () => {
+    // `fillEnvExample` refuses a key the template does not declare, so a section
+    // added to the stack without a registry row fails the synth. Assert it here
+    // too, where the message can say why.
+    const stack = readFileSync("infra/lib/infra-stack.ts", "utf8");
+    const written = [...stack.matchAll(/envValues\.([A-Z][A-Z0-9_]*)\s*=/g)].map((m) => m[1]);
+    for (const key of written) {
+      expect(ENV_KEYS, `${key} is written by the stack but missing from the registry`).toContain(
+        key,
+      );
+    }
   });
 });

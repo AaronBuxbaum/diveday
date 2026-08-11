@@ -1,127 +1,87 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import process from "node:process";
+#!/usr/bin/env node
+/**
+ * Checks the two structural facts about DiveDay's configuration, and then
+ * reports the checklist.
+ *
+ * Fatal, because they are the invariants the whole design rests on:
+ *
+ *  1. `.env.example` matches `config/env-registry.mjs`. It is generated, and the
+ *     CDK stack reads it at synth to build the credentials secret, so a drifted
+ *     copy silently changes what a deploy hands out.
+ *  2. `.env.manual` speaks only for values a human is the source of. A
+ *     stack-produced key there is a second opinion about a minted credential —
+ *     the exact shape that left production signing with an access key AWS had
+ *     never issued (ADR 20260812-env-provenance-registry).
+ *
+ * Then it prints what is unset and what each one switches off. That is a report,
+ * never a failure: every one of these is legitimately absent — a local run has
+ * no Stripe account, no Neon database, and nowhere to ship logs. The old version
+ * failed on "missing from `.env.local`" and carried a hand-written skip case per
+ * key to stop it failing on the ones that are optional by design. Those reasons
+ * are rows in the registry now, so this file no longer knows any of them.
+ */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { ENV_ENTRIES, envEntry, isManual, isStackProduced } from "../config/env-registry.mjs";
+import { readEnvExample, renderEnvExample } from "./render-env-example.mjs";
 
-const ROOT = process.cwd();
-const envExamplePath = path.join(ROOT, ".env.example");
-const envLocalPath = path.join(ROOT, ".env.local");
+// Resolved against the working directory, not this file: the deploy runs from
+// the repo root, and a test runs from a temporary one.
+const MANUAL_PATH = join(process.cwd(), ".env.manual");
+const ENV_LINE = /^([A-Z][A-Z0-9_]*)=(.*)$/;
 
-// Helper to extract environment variable keys from an env file
-function getEnvKeys(content) {
-  const keys = new Set();
-  const lines = content.split(/\r?\n/);
-  // Match key=value or key=, ignore comments
-  const keyRegex = /^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=/;
-  for (const line of lines) {
-    const match = line.match(keyRegex);
-    if (match) {
-      keys.add(match[1]);
-    }
-  }
-  return keys;
+const parse = (text) =>
+  Object.fromEntries(
+    text.split(/\r?\n/).flatMap((line) => {
+      const match = line.match(ENV_LINE);
+      return match ? [[match[1], match[2]]] : [];
+    }),
+  );
+
+const failures = [];
+
+if (readEnvExample() !== renderEnvExample()) {
+  failures.push(
+    ".env.example does not match config/env-registry.mjs. It is generated — run `node scripts/render-env-example.mjs --write`. (The CDK stack reads this file at synth to build the credentials secret, so a drifted copy changes what a deploy hands out.)",
+  );
 }
 
-async function run() {
-  let exampleContent;
-  try {
-    exampleContent = await readFile(envExamplePath, "utf8");
-  } catch {
-    console.error(`❌ Error: .env.example not found at ${envExamplePath}`);
-    process.exit(1);
-  }
+const manual = existsSync(MANUAL_PATH) ? parse(readFileSync(MANUAL_PATH, "utf8")) : null;
 
-  const exampleKeys = getEnvKeys(exampleContent);
-  if (exampleKeys.size === 0) {
-    console.log("env: No keys defined in .env.example");
-    process.exit(0);
-  }
-
-  let localContent;
-  try {
-    localContent = await readFile(envLocalPath, "utf8");
-  } catch {
-    // Local development and the test suite deliberately use embedded PGlite
-    // and safe fallbacks when no real credentials are configured. `.env.local`
-    // is therefore optional; only validate it when a developer has created it.
-    console.log("env: .env.local not found; local development uses documented fallbacks");
-    process.exit(0);
-  }
-
-  const localKeys = getEnvKeys(localContent);
-  const missingKeys = [];
-
-  for (const key of exampleKeys) {
-    // SNS SMS is dormant prep (ADR 20260802-sns-sms-adapter) — no real
-    // credentials exist anywhere yet. Remove once a shop actually needs it.
-    if (key.startsWith("SNS_") || key === "SMS_SNS_TOPIC_ARN") {
-      continue;
-    }
-    // The operational-alert destination is an override, not configuration
-    // (ADR 20260805-demo-try-alerts): unset, both alerts go to the
-    // ALERT_EMAIL mailbox compiled into src/lib/platform-mail.ts, which is
-    // the correct answer for every deployment that *is* DiveDay. Only a fork,
-    // a staging deploy, or a self-hosted instance has one to set.
-    if (key === "OPS_ALERT_EMAIL") {
-      continue;
-    }
-    // Provider usage guardrails are optional by design (ADR
-    // 20260806-provider-usage-guardrails): with no token the affected ceiling
-    // reports `not_configured` — which the monitor keeps distinct from `ok`
-    // everywhere it surfaces — and nothing else changes. A local run, a fork,
-    // or a deployment whose owner has not minted the read-only tokens
-    // legitimately has none.
-    if (key.startsWith("USAGE_")) {
-      continue;
-    }
-    // Log shipping is optional by design (ADR 20260806-cloudwatch-log-shipping):
-    // with no credentials `log()` writes the same JSON line to the console it
-    // always did and ships nothing. A local run has nowhere to ship to and
-    // should not be asked for a credential that would send a developer's own
-    // stdout into the production log group.
-    if (key.startsWith("CLOUDWATCH_")) {
-      continue;
-    }
-    // CloudWatch RUM is optional the same way (ADR
-    // 20260806-cloudwatch-rum-and-vitals): unset, no browser SDK is fetched and
-    // the Core Web Vitals half carries on without it. A local run has no app
-    // monitor to report to, and RUM refuses events from an unlisted origin
-    // anyway, so localhost could not report to the real one if it tried.
-    if (key.startsWith("NEXT_PUBLIC_RUM_")) {
-      continue;
-    }
-    // Address lookup is optional by design (ADR
-    // 20260804-aws-location-address-lookup): with no credentials the settings
-    // address card is exactly the five text boxes it has always been, so a
-    // local or self-hosted instance legitimately has none.
-    if (key.startsWith("PLACES_")) {
-      continue;
-    }
-    // WhatsApp is per-shop: the credentials live in shop_whatsapp_accounts, not
-    // here. Only the sealing key is environment configuration, and an instance
-    // with no shop using WhatsApp legitimately has none
-    // (ADR 20260802-whatsapp-cloud-api-per-shop).
-    if (key === "SECRET_ENCRYPTION_KEY" || key === "APP_SECRET_SEED" || key.startsWith("META_")) {
-      continue;
-    }
-    if (!localKeys.has(key)) {
-      missingKeys.push(key);
-    }
-  }
-
-  if (missingKeys.length > 0) {
-    console.error(
-      `❌ Error: The following environment variables defined in .env.example are missing from .env.local:\n` +
-        missingKeys.map((k) => `  - ${k}`).join("\n") +
-        "\n\nThese variables might be missing from the Vercel project or need to be pulled.\n" +
-        "Please add them to Vercel (or update your local configuration) and run `vercel env pull` to update .env.local.",
+if (manual) {
+  const trespassing = Object.keys(manual).filter((key) => manual[key] && isStackProduced(key));
+  if (trespassing.length > 0) {
+    failures.push(
+      `.env.manual sets ${trespassing.join(", ")}, which the deployed stack produces. There is no local override for a minted credential — delete those lines. If the deployed value is wrong, fix it in the stack and redeploy.`,
     );
-    process.exit(1);
   }
-
-  console.log("env: All entries from .env.example are present in .env.local");
+  const unknown = Object.keys(manual).filter((key) => !envEntry(key));
+  if (unknown.length > 0) {
+    failures.push(
+      `.env.manual sets ${unknown.join(", ")}, which nothing in DiveDay reads. Add it to config/env-registry.mjs or remove it.`,
+    );
+  }
 }
 
-run().catch((err) => {
-  console.error("❌ Error running env check:", err);
+if (failures.length > 0) {
+  for (const failure of failures) console.error(`env: ${failure}`);
   process.exit(1);
-});
+}
+
+if (!manual) {
+  console.log(
+    "env: no .env.manual; local development uses documented fallbacks (embedded PGlite, features reporting not_configured). Run `node scripts/env-manual.mjs` to create one.",
+  );
+  process.exit(0);
+}
+
+const blank = ENV_ENTRIES.filter((entry) => isManual(entry.key) && !manual[entry.key]);
+if (blank.length === 0) {
+  console.log("env: .env.manual is complete");
+  process.exit(0);
+}
+
+console.log(`env: .env.manual is valid; ${blank.length} value(s) unset —`);
+for (const entry of blank) {
+  console.log(`  ${entry.key}: ${entry.absent ?? "no documented effect"}`);
+}

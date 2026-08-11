@@ -55,7 +55,7 @@ this file is the checklist, not the argument.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
              Neon -> Organization -> API keys -> Create: an organization key, not a personal one, so the consumption endpoint can report every project.
     produces The four values GET /api/cron/usage needs in order to report a number instead of not_configured.
-    store    USAGE_VERCEL_TOKEN and USAGE_VERCEL_TEAM_ID (team_...), USAGE_NEON_API_KEY and USAGE_NEON_ORG_ID (org-...), in .env.local for a local run and in Vercel Production for the deployment. Each pair is all-or-nothing: a token with no id reads as not configured.
+    store    USAGE_VERCEL_TOKEN and USAGE_VERCEL_TEAM_ID (team_...), USAGE_NEON_API_KEY and USAGE_NEON_ORG_ID (org-...), in .env.manual for a local run and in Vercel Production for the deployment. .env.manual is the one configuration file a human edits; .env.local is generated over on every deploy. Each pair is all-or-nothing: a token with no id reads as not configured.
     note     Absent is a supported state and the monitor says so out loud -- the affected ceiling reports not_configured, which is deliberately never rendered as ok. The USAGE_ prefix is not cosmetic: VERCEL_ is the namespace Vercel injects its own system variables into.
 ```
 
