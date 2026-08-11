@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkInBooking } from "@/db/check-in";
+import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -20,10 +20,13 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     recordedByPersonId: session.user.personId,
   });
   if (outcome.ok) {
-    revalidateAndRedirect(
-      back,
-      `${back}?notice=${outcome.duplicate ? "already_checked_in" : "checked_in"}`,
-    );
+    // No success banner: the diver's own settled row — "Checked in ☑️", the
+    // re-tap hint — is the confirmation, beside the control that produced it
+    // (docs/design/forms-and-controls.md; design principle 9). A duplicate tap
+    // lands on the same settled row, which already says everything a banner
+    // would. Refusals below keep their notices — they have no row state to
+    // land on.
+    revalidateAndRedirect(back, back);
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
@@ -32,6 +35,35 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     redirect(`${back}?notice=not_ready&bid=${bookingId}&tid=${outcome.tripId}`);
   }
   redirect(`${back}?notice=${outcome.reason}`);
+}
+
+/**
+ * The re-tap half of the queue's one-tap row: a settled "Checked in ☑️" row
+ * tapped again reopens the arrival queue (design principle 7 — a
+ * high-frequency toggle gets re-tap undo, never a blocking confirm). The
+ * correction lands in the activity trail as its own event.
+ */
+export async function undoCheckInAction(shopSlug: string, formData: FormData) {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = `/shop/${shopSlug}/check-in`;
+  if (!bookingId) redirect(`${back}?notice=invalid`);
+
+  const outcome = await undoCheckInBooking(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    // Same rule as checking in: the row reverting to its tappable "Check in ○"
+    // state is the confirmation — no banner restating it from the top of the
+    // page.
+    revalidateAndRedirect(back, back);
+  }
+  revalidatePath(back);
+  redirect(
+    `${back}?notice=${outcome.reason === "not_checked_in" ? "not_bookable" : outcome.reason}`,
+  );
 }
 
 /**

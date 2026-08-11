@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { checkInBooking, listCheckInQueue, listWalkInTrips } from "./check-in";
+import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, personRoles, userAccounts } from "./schema";
@@ -142,6 +142,75 @@ describe("counter check-in", () => {
     // (checkIn.notice.notReady, task 70) — that link needs the trip id, not
     // just the refusal reason.
     expect(outcome).toMatchObject({ ok: false, reason: "not_ready", tripId: booking.tripId });
+  });
+
+  it("undoes a check-in with its own trail event, idempotently, and only for live staff", async () => {
+    const { db, shop, staff, booking, personName } = await context();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+    await completeWaiver(db, issued.token, {
+      signerName: personName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await expect(
+      checkInBooking(db, { shopId: shop.id, bookingId: booking.id, recordedByPersonId: staff.id }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const undone = await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    expect(undone).toMatchObject({ ok: true, bookingId: booking.id });
+
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("booked");
+
+    // The correction is its own event — the trail keeps both taps, never
+    // deletes one (design principle 7's re-tap contract).
+    const trail = await db
+      .select()
+      .from(activityEvents)
+      .where(eq(activityEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(2);
+
+    // A double-tap (a second device, a stale tab) finds the work already done.
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true, duplicate: true });
+
+    // Same defence-in-depth gate as the check-in writer: a non-staff actor is
+    // refused and the trail stays exactly as it was.
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId: booking.id,
+        recordedByPersonId: "00000000-0000-4000-8000-000000000000",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+    expect(
+      await db.select().from(activityEvents).where(eq(activityEvents.bookingId, booking.id)),
+    ).toHaveLength(2);
+  });
+
+  it("refuses to undo a booking that is cancelled rather than checked in", async () => {
+    const { db, shop, staff, booking } = await context();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    await expect(
+      undoCheckInBooking(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "not_checked_in" });
+    const [saved] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
+    expect(saved?.status).toBe("cancelled");
   });
 
   it("queries readiness for multiple trips at once using listTripsReadiness", async () => {

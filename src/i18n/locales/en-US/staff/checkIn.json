@@ -19,10 +19,14 @@
   "clearedTitle": "Everyone’s checked in for the day 🎉 — boarding is confirmed on each manifest.",
   "clearedBody": "Anything new — a walk-in, a late booking — shows up here as it arrives.",
   "clearedAction": "Open Today",
-  "checkedInBadge": "Checked in",
   "boardedBadge": "Boarded",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
+  "checkingIn": "Checking in…",
+  "checkedInCheck": "Checked in ☑️",
+  "undoAriaLabel": "Undo check-in for {name}",
+  "undoing": "Undoing…",
+  "tapToUndo": "Tap again to undo.",
   "departureProgress": "{checkedIn} of {total} checked in",
   "walkInAction": "Add a walk-in",
   "search": {
@@ -32,8 +36,6 @@
     "submit": "Search queue"
   },
   "notice": {
-    "checkedIn": "Diver checked in. Next diver is ready when you are.",
-    "alreadyCheckedIn": "That diver is already checked in.",
     "notReady": "Readiness changed. <guestsLink>Open Guests to resolve the blocker</guestsLink>, then try again.",
     "notBookable": "That booking is no longer available for check-in.",
     "notFound": "That booking could not be found.",

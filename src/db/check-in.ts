@@ -254,3 +254,66 @@ export async function checkInBooking(
     return { ok: true, bookingId: booking.id, personName: booking.personName };
   });
 }
+
+export type UndoCheckInOutcome =
+  | { ok: true; bookingId: string; personName: string; duplicate?: boolean }
+  | { ok: false; reason: "not_found" | "not_checked_in" | "staff_not_found" };
+
+/**
+ * Clear a counter check-in — the re-tap half of the queue's one-tap row
+ * (design principle 7: a high-frequency toggle gets re-tap undo, never a
+ * blocking confirm). The correction is its own activity-trail event, the same
+ * rule roll call follows: the trail keeps both taps, never deletes one.
+ *
+ * This only reopens the arrival queue. It never touches the manifest — a
+ * boarding recorded at roll call stands on its own record, exactly as a
+ * check-in never implied boarding in the first place.
+ */
+export async function undoCheckInBooking(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; recordedByPersonId: string; now?: Date },
+): Promise<UndoCheckInOutcome> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    if (!recordedBy) return { ok: false, reason: "staff_not_found" };
+
+    const [booking] = await tx
+      .select({
+        id: bookings.id,
+        status: bookings.status,
+        tripId: trips.id,
+        personName: people.fullName,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!booking) return { ok: false, reason: "not_found" };
+    // A double-tap of the undo (two devices, a stale tab) finds the work
+    // already done — same idempotence contract as checkInBooking.
+    if (booking.status === "booked") {
+      return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
+    }
+    if (booking.status !== "checked_in") return { ok: false, reason: "not_checked_in" };
+
+    const [updated] = await tx
+      .update(bookings)
+      .set({ status: "booked" })
+      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "checked_in")))
+      .returning({ id: bookings.id });
+    if (!updated) return { ok: false, reason: "not_checked_in" };
+
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      actorPersonId: recordedBy,
+      message: `${booking.personName}'s counter check-in was undone`,
+      occurredAt: now,
+    });
+    return { ok: true, bookingId: booking.id, personName: booking.personName };
+  });
+}
