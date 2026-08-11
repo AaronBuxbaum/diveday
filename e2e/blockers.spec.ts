@@ -2,15 +2,6 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
 
-/**
- * The shared window sentence, printed identically on Today and Check-in. A
- * fragment with no leading article: the sentence has been reworded once
- * already (it opens with "The next 7 days…" now rather than burying the phrase
- * mid-clause), and what this spec is pinning is that all three surfaces say the
- * *same* thing in the same place — not the wording itself.
- */
-const WINDOW_NOTE = /next 7 days of departures/;
-
 /** The by-departure view of the shop home's one work queue. */
 const BY_DEPARTURE = "/shop/blue-mantis?view=departures";
 
@@ -122,33 +113,45 @@ test("the old /blockers URL still works, and keeps the page it was deep-linked t
   }
 });
 
-test("Today and Check-in state the same window and link to each other", async ({ page }) => {
-  // Task 141: the readiness surfaces used to disclose three different,
-  // unrelated horizons ("the next 7 days", "the nearest 40 departures",
-  // "−6h → +36h"), so a diver cleared on one still appeared on another. They
-  // read one window now and say so in one sentence, in the same place.
-  await page.goto("/shop/blue-mantis");
-  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
-  const todayPivots = page.getByRole("navigation", { name: "The same list, seen another way" });
-  // Not ready is *not* a pivot from Today any more: it is a view of this very
-  // page, and the switch below is its control. Offering it twice on one screen
-  // is the duplicate control design principle 8 rules out.
-  await expect(todayPivots.getByRole("link", { name: "Not ready" })).toHaveCount(0);
-
-  await todayPivots.getByRole("link", { name: "Check-in" }).click();
-  await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
-  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
-  // Counter mode is a narrower lens on that same window, and says only that.
-  await expect(page.getByText(/Counter mode narrows that to arrivals/)).toBeVisible();
-
-  // From the counter, both of Today's sorts are still one tap away by name.
-  await page
-    .getByRole("navigation", { name: "The same list, seen another way" })
-    .getByRole("link", { name: "Not ready" })
-    .click();
-  await expect(page).toHaveURL(/\?view=departures$/);
+/**
+ * **One window, proved by the rows rather than by a sentence.**
+ *
+ * Task 141: the readiness surfaces used to disclose three different, unrelated
+ * horizons ("the next 7 days", "the nearest 40 departures", "−6h → +36h"), so a
+ * diver cleared on one still appeared on another. They read one window now
+ * (`src/lib/operational-window.ts`), and the arrivals lens never reaches past
+ * the shared horizon (`arrivalsWindowIsInsideHorizon`) — so somebody at the
+ * counter is always somebody Today also shows.
+ *
+ * They used to *say* so, in a sentence printed identically on both, with links
+ * between them. Both are gone: the sentence explained the data model to a
+ * staffer who came to clear blockers, and every link it carried named a
+ * permanent nav tab. What is worth pinning is the invariant itself, which this
+ * asserts the only way that cannot go stale — the same blocked diver, on both
+ * surfaces, reached the way staff actually reach them.
+ */
+test("a diver blocked on Today is the same diver waiting at the counter", async ({ page }) => {
+  await page.goto(BY_DEPARTURE);
   await expect(page.getByRole("heading", { name: "Not ready", level: 2 })).toBeVisible();
-  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
+  const queue = page.getByRole("region", { name: /Not ready/ });
+  const blocked = queue.getByText("Priya Sharma").first();
+  await expect(blocked).toBeVisible();
+
+  // Check-in is a nav tab, not a link on the page — which is the point of
+  // having removed the pivot.
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("link", { name: "Check-in" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
+  await expect(page.getByText("Priya Sharma").first()).toBeVisible();
+
+  // Counter mode names its own narrower lens, and only that: no restatement of
+  // the shared horizon, and nothing linking back to a tab.
+  await expect(page.getByText(/Counter mode shows arrivals from the last/)).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "The same list, seen another way" }),
+  ).toHaveCount(0);
 });
 
 test("the one-tap waiver send on the by-departure view reports success inline", async ({
