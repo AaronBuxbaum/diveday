@@ -29,8 +29,14 @@ try {
     environment: deployEnvironment,
     interactive: !process.env.CI,
   });
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
+} catch {
+  // Deliberately static, per CodeQL (clear-text logging): deployEnvironment is
+  // a {...process.env} spread, so nothing derived from it or the caught error
+  // is echoed here. ensureAwsLogin already printed the AWS CLI's own output
+  // straight to this terminal (stdio: "inherit" in aws-login.mjs).
+  console.error(
+    "Could not authenticate the AWS profile used for this deploy. Run `aws login` (or, in CI, check the OIDC role assumption step above) to see why, then rerun.",
+  );
   process.exit(1);
 }
 const deploy = spawnSync(command, ["deploy", ...cdkArguments], {
@@ -72,9 +78,17 @@ try {
     environment: syncEnvironment,
     interactive: !process.env.CI,
   });
-} catch (error) {
+} catch {
+  // Deliberately static, per CodeQL (clear-text logging): syncEnvironment is a
+  // {...process.env} spread, so nothing derived from it, the caught error, or
+  // syncProfile -- itself read from process.env, even though it only ever
+  // holds a profile name -- is echoed here. ensureAwsLogin already printed the
+  // AWS CLI's own output straight to this terminal. See
+  // scripts/import-vercel-env.mjs's identical fix.
   console.error(
-    `Infrastructure deployed, but the environment files were not synchronized. ${error instanceof Error ? error.message : error}`,
+    process.env.CI
+      ? "Infrastructure deployed, but the environment files were not synchronized: the job's own AWS session could not be verified. Confirm the deploy step's OIDC role assumption succeeded, then rerun this workflow."
+      : "Infrastructure deployed, but the environment files were not synchronized. Could not authenticate the administrator AWS profile for the post-deploy read (set INFRA_ENV_SYNC_PROFILE if it is not named diveday-admin). Run `aws login` yourself to see why, then rerun pnpm infra:deploy.",
   );
   process.exit(1);
 }
@@ -96,10 +110,13 @@ try {
     { encoding: "utf8", env: syncEnvironment },
   );
 } catch {
+  // Deliberately static, per CodeQL: no part of this message reads syncProfile
+  // or any other process.env-derived value -- see the ensureAwsLogin catch
+  // above and scripts/import-vercel-env.mjs's identical fix.
   console.error(
     process.env.CI
       ? "Infrastructure deployed, but the environment files were not synchronized. Confirm GitHubActionsCdkDeployRole's ReadCredentialsDocumentForPostDeployWizard statement (infra-stack.ts §18) is deployed, then rerun this workflow."
-      : `Infrastructure deployed, but the environment files were not synchronized. Configure AWS profile ${syncProfile} with access to diveday/env, then rerun pnpm infra:deploy.`,
+      : "Infrastructure deployed, but the environment files were not synchronized. Configure the administrator AWS profile (INFRA_ENV_SYNC_PROFILE, or diveday-admin by default) with access to diveday/env, then rerun pnpm infra:deploy.",
   );
   process.exit(1);
 }
