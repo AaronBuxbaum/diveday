@@ -26,12 +26,13 @@ function fingerprint(value) {
 // Stubs `aws sts get-caller-identity` (so ensureAwsLogin's verify succeeds
 // without a real session), `aws ssm get-parameter` (returns the seeded
 // checkpoint fixture, or exits ParameterNotFound when there is none), and
-// `aws ssm put-parameter` (records the --value and --name it was given, so a
-// test can assert both the fingerprint content and which parameter it named)
-// -- plus `pnpm exec vercel env add` (records the key it was called with).
+// `aws ssm put-parameter` (records both the raw --value argument -- expected
+// to be a `file://` reference, never the content itself -- and the resolved
+// content of the file it points at, plus the --name it was given) -- plus
+// `pnpm exec vercel env add` (records the key it was called with).
 function writeStubs(
   binDirectory,
-  { checkpointDocument, addLogPath, putValueLogPath, ssmCallsLogPath },
+  { checkpointDocument, addLogPath, putValueLogPath, putValueArgumentLogPath, ssmCallsLogPath },
 ) {
   const checkpointFixturePath = join(binDirectory, "checkpoint-fixture.env");
   if (checkpointDocument !== undefined) writeFileSync(checkpointFixturePath, checkpointDocument);
@@ -62,7 +63,11 @@ if [ "$1" = "ssm" ]; then
   if [ "$2" = "put-parameter" ]; then
     previous=""
     for arg in "$@"; do
-      if [ "$previous" = "--value" ]; then printf '%s' "$arg" > "${putValueLogPath}"; fi
+      if [ "$previous" = "--value" ]; then
+        printf '%s' "$arg" > "${putValueArgumentLogPath}"
+        path=$(printf '%s' "$arg" | sed 's#^file://##')
+        if [ -f "$path" ]; then cp "$path" "${putValueLogPath}"; fi
+      fi
       previous="$arg"
     done
     exit 0
@@ -91,8 +96,15 @@ function runImport(candidateLines, { environment = "production", checkpointDocum
   const binDirectory = temporaryDirectory("diveday-vercel-stub-");
   const addLogPath = join(binDirectory, "add.log");
   const putValueLogPath = join(binDirectory, "put-value.log");
+  const putValueArgumentLogPath = join(binDirectory, "put-value-argument.log");
   const ssmCallsLogPath = join(binDirectory, "ssm-calls.log");
-  writeStubs(binDirectory, { checkpointDocument, addLogPath, putValueLogPath, ssmCallsLogPath });
+  writeStubs(binDirectory, {
+    checkpointDocument,
+    addLogPath,
+    putValueLogPath,
+    putValueArgumentLogPath,
+    ssmCallsLogPath,
+  });
 
   const inputPath = join(binDirectory, ".env.vercel");
   writeFileSync(inputPath, `${candidateLines.join("\n")}\n`);
@@ -107,10 +119,13 @@ function runImport(candidateLines, { environment = "production", checkpointDocum
     ? readFileSync(addLogPath, "utf8").trim().split("\n").filter(Boolean)
     : [];
   const pushedValue = existsSync(putValueLogPath) ? readFileSync(putValueLogPath, "utf8") : null;
+  const pushedValueArgument = existsSync(putValueArgumentLogPath)
+    ? readFileSync(putValueArgumentLogPath, "utf8")
+    : null;
   const ssmCalls = existsSync(ssmCallsLogPath)
     ? readFileSync(ssmCallsLogPath, "utf8").trim().split("\n").filter(Boolean)
     : [];
-  return { stdout, added, pushedValue, ssmCalls };
+  return { stdout, added, pushedValue, pushedValueArgument, ssmCalls };
 }
 
 describe("import-vercel-env", () => {
@@ -176,6 +191,13 @@ exit 1
     const { pushedValue } = runImport(["A=super-secret"]);
     expect(pushedValue).toBe(`A=${fingerprint("super-secret")}`);
     expect(pushedValue).not.toContain("super-secret");
+  });
+
+  it("passes the checkpoint through a file, never as a literal CLI argument", () => {
+    const { pushedValueArgument, pushedValue } = runImport(["A=1"]);
+    expect(pushedValueArgument).toMatch(/^file:\/\//);
+    expect(pushedValueArgument).not.toContain(fingerprint("1"));
+    expect(pushedValue).toBe(`A=${fingerprint("1")}`);
   });
 
   it("names the checkpoint parameter for the requested environment", () => {

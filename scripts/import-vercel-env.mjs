@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { ensureAwsLogin } from "./aws-login.mjs";
 
 const [inputPath, environment = "production"] = process.argv.slice(2);
@@ -134,6 +136,16 @@ for (const [key, value] of changed) {
 const checkpointDocument = [...entries]
   .map(([key, value]) => `${key}=${fingerprint(value)}`)
   .join("\n");
+
+// A `--value` of literal argv text sits in `ps` output for any other user on
+// this machine to read, the exact reason `vercel env add` above goes through
+// stdin instead. Fingerprints aren't secrets, but this document is shaped
+// like one line-for-line, so it gets the same treatment: written to a
+// private temp file and loaded with the AWS CLI's own `file://` form, never
+// passed as a literal argument.
+const checkpointDirectory = mkdtempSync(join(tmpdir(), "diveday-vercel-checkpoint-"));
+const checkpointFile = join(checkpointDirectory, "checkpoint.env");
+writeFileSync(checkpointFile, checkpointDocument);
 const put = spawnSync(
   "aws",
   [
@@ -145,10 +157,11 @@ const put = spawnSync(
     "String",
     "--overwrite",
     "--value",
-    checkpointDocument,
+    `file://${checkpointFile}`,
   ],
   { env: adminEnvironment, stdio: ["ignore", "inherit", "inherit"] },
 );
+rmSync(checkpointDirectory, { recursive: true, force: true });
 if (put.status !== 0) process.exit(put.status ?? 1);
 
 console.log(
