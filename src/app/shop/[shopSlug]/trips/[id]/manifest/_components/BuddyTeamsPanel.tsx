@@ -1,4 +1,3 @@
-import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
@@ -75,29 +74,43 @@ export function BuddyTeamsPanel({
           when a refusal needs reading — a submit's answer must never hide
           behind the fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
-        <summary className="flex min-h-11 w-fit cursor-pointer list-none flex-wrap items-baseline gap-x-2 select-none [&::-webkit-details-marker]:hidden">
-          <DisclosureCaret className="self-center text-muted group-open/buddypanel:rotate-90" />
-          <h2 id="buddy-teams-heading" className="inline text-lg font-semibold">
-            {t("trips.manifest.buddyHeading")}
-          </h2>
-          <span className="text-sm text-muted">
-            {t("trips.manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
-            {unteamedDivers.length > 0
-              ? t("trips.manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
-              : ""}
+        {/* Two alignments, not one: the caret centres on the *block* of text
+            (`items-center`), while the heading and its count share a baseline
+            inside that block. Flattened into a single baseline row the caret
+            hung off the text's baseline like a stray comma — a 12px mark
+            baseline-aligned to an 18px heading sits well below its optical
+            centre, which is how it read as misaligned rather than as the
+            control it is. */}
+        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 select-none [&::-webkit-details-marker]:hidden">
+          <DisclosureCaret className="text-muted group-open/buddypanel:rotate-90" />
+          <span className="flex flex-wrap items-baseline gap-x-2">
+            <h2 id="buddy-teams-heading" className="text-lg font-semibold">
+              {t("trips.manifest.buddyHeading")}
+            </h2>
+            <span className="text-sm text-muted">
+              {t("trips.manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
+              {unteamedDivers.length > 0
+                ? t("trips.manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
+                : ""}
+            </span>
           </span>
         </summary>
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("trips.manifest.buddyDescription")}
         </p>
         <FormStatus className="mt-2">{panelError}</FormStatus>
-        {buddyTeamsList.length === 0 ? (
-          <EmptyState className="mt-3">
-            <h3 className="font-medium">{t("trips.manifest.buddyNoTeams")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("trips.manifest.buddyNoTeamsHint")}</p>
-          </EmptyState>
-        ) : (
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+        {/* No empty state when there are no teams. The one this used to render
+            — a 200px dashed card reading "No buddy teams yet. Tick two or more
+            people below to make one." — said, for the third time on four
+            consecutive lines, what the summary already says ("No teams yet · 3
+            divers not on a team") and what the description under it already
+            asks for. A panel opened on an empty roster instead goes straight to
+            the builder, which is the only thing there is to do here. */}
+        {buddyTeamsList.length > 0 ? (
+          // Bounded, because each row pushes "Dissolve team" to its far edge:
+          // full-bleed on a desktop manifest that put a destructive button a
+          // thousand pixels from the team it dissolves, aligned to nothing.
+          <ul className="mt-3 max-w-4xl divide-y divide-border rounded-lg border border-border bg-surface">
             {buddyTeamsList.map((team, index) => {
               // Members of *this* team can't join another, and neither can a
               // diver already on one — so the "add" picker offers whoever is
@@ -229,7 +242,7 @@ export function BuddyTeamsPanel({
               );
             })}
           </ul>
-        )}
+        ) : null}
         {/*
          * The builder: tick two or more. A multi-select checkbox list rather
          * than N paired dropdowns, because a team has no fixed size and the
@@ -244,13 +257,18 @@ export function BuddyTeamsPanel({
           // the builder opens when asked and costs nothing when it isn't.
           // A submit that came back refused must not hide its own answer behind
           // the fold — the disclosure arrives open whenever there is a worded
-          // refusal to read.
-          <details className="group/buddies mt-4" open={builderError ? true : undefined}>
+          // refusal to read. It also arrives open when there are no teams yet:
+          // the panel above it is empty then, so a second closed line is a fold
+          // in front of the only content this section has.
+          <details
+            className="group/buddies mt-4"
+            open={builderError || buddyTeamsList.length === 0 ? true : undefined}
+          >
             <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
               <DisclosureCaret className="text-muted group-open/buddies:rotate-90" />
               {t("trips.manifest.buddyNewTeamHeading")}
             </summary>
-            <form action={formBuddyTeamAction} className="mt-2">
+            <form action={formBuddyTeamAction} className="mt-2 max-w-4xl">
               <fieldset className="rounded-lg border border-border bg-surface p-4">
                 <p className="max-w-prose text-sm text-muted">
                   {t("trips.manifest.buddyNewTeamHint")}

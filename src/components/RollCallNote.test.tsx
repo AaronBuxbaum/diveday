@@ -8,20 +8,14 @@ import { RollCallNote, type RollCallNoteCopy } from "./RollCallNote";
 const BOOKING = "00000000-0000-4000-8000-000000000001";
 
 const COPY: RollCallNoteCopy = {
-  optionalNote: "Optional note",
+  optionalNote: "Note",
   message: {
-    manualOnly: "Saved on this device — added to the roll-call record when you set a status.",
+    manualOnly: "Saves with this diver’s roll-call result.",
     saving: "Saving…",
-    saved: "Saved to this roll-call record.",
-    queued: "Saved on this device — will send when you’re back online.",
-    error: "Couldn’t save to the record — still saved on this device. Try again.",
-    idle: "Saves automatically — on this device and to the roll-call record.",
-  },
-  statusPill: {
-    saving: "Saving…",
-    saved: "Saved",
-    queued: "Queued offline",
-    error: "Sync error",
+    saved: "Saved.",
+    queued: "Saved on this device — sends when you’re back online.",
+    error: "Couldn’t save — your note is still here. Try again.",
+    idle: "Saves as you type.",
   },
   notePlaceholder: "Late to the boat, medical question, kit issue…",
 };
@@ -50,7 +44,7 @@ function renderNote(props: Partial<Parameters<typeof RollCallNote>[0]> = {}) {
       {...props}
     />,
   );
-  return { saveNote, input: screen.getByLabelText("Optional note") };
+  return { saveNote, input: screen.getByLabelText("Note") };
 }
 
 describe("RollCallNote", () => {
@@ -61,7 +55,7 @@ describe("RollCallNote", () => {
     await userEvent.tab(); // blur flushes immediately
 
     await waitFor(() => expect(saveNote).toHaveBeenCalledWith(BOOKING, "departure", "kit issue"));
-    expect(await screen.findByText("Saved to this roll-call record.")).toBeInTheDocument();
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
     // A confirmed save leaves nothing pending on the device.
     expect(readNoteDraft(BOOKING, "departure")).toBeNull();
   });
@@ -84,10 +78,10 @@ describe("RollCallNote", () => {
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Optional note"), "late");
+    await userEvent.type(screen.getByLabelText("Note"), "late");
     await userEvent.tab();
 
-    expect(await screen.findByText(/will send when you’re back online/)).toBeInTheDocument();
+    expect(await screen.findByText(/sends when you’re back online/)).toBeInTheDocument();
     // The note is held on the device, flagged as not yet synced.
     expect(readNoteDraft(BOOKING, "departure")).toEqual({ value: "late", pending: true });
 
@@ -96,7 +90,7 @@ describe("RollCallNote", () => {
     window.dispatchEvent(new Event("online"));
 
     await waitFor(() => expect(saveNote).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Saved to this roll-call record.")).toBeInTheDocument();
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
     expect(readNoteDraft(BOOKING, "departure")).toBeNull();
   });
 
@@ -120,7 +114,7 @@ describe("RollCallNote", () => {
     await userEvent.type(input, "reg free-flow");
     await userEvent.tab();
 
-    expect(await screen.findByText(/still saved on this device\. Try again/)).toBeInTheDocument();
+    expect(await screen.findByText(/your note is still here\. Try again/)).toBeInTheDocument();
     // Held on the device and still pending, so a reload replays it.
     expect(readNoteDraft(BOOKING, "departure")).toEqual({
       value: "reg free-flow",
@@ -135,7 +129,7 @@ describe("RollCallNote", () => {
     await userEvent.type(input, "orphan note");
     await userEvent.tab();
 
-    await screen.findByText(/still saved on this device\. Try again/);
+    await screen.findByText(/your note is still here\. Try again/);
     // Pending is cleared so the reconnect listener won't loop on an unsavable note.
     expect(readNoteDraft(BOOKING, "departure")).toEqual({
       value: "orphan note",

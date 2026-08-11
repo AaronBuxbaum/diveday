@@ -26,7 +26,8 @@
       "offline-manifest-discarded",
       "offline-manifest-empty",
       "offline-manifest-list",
-      "offline-manifest-removed-other-shop"
+      "offline-manifest-removed-other-shop",
+      "offline-manifest-roll-call"
     ]
   },
   "/onboard": {
@@ -386,7 +387,8 @@
       "manifest",
       "manifest-buddy-divergence",
       "manifest-buddy-teams-panel",
-      "manifest-not-back-aboard"
+      "manifest-not-back-aboard",
+      "manifest-row-disclosures"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {

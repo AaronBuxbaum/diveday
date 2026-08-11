@@ -12,6 +12,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
@@ -1203,14 +1204,26 @@ export function OfflineManifestView() {
                         ))}
                       </ul>
                     ) : null}
-                    <details className="mt-3 max-w-xl rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
-                      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary">
-                        {t("shared.offlineManifest.single.addNoteSummary")}
+                    {/* The same disclosure the live manifest's rows carry, in
+                        the same clothes — the boat reads the two copies minutes
+                        apart, so a note behind a permanently-boxed blue link
+                        here and a quiet caret line there is one control wearing
+                        two faces. The box belongs to the open panel: shut on
+                        every diver it was a bordered card reading as an empty
+                        input the length of the roster. */}
+                    <details className="group/offlinenote mt-2 max-w-xl">
+                      <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+                        <DisclosureCaret className="group-open/offlinenote:rotate-90" />
+                        <span className="group-hover/summary:underline">
+                          {t("shared.offlineManifest.single.addNoteSummary")}
+                        </span>
                       </summary>
-                      <div className="mt-2">
+                      <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
+                        {/* Named for the screen reader only: the summary one
+                            line above already says "Add a note". */}
                         <label
                           htmlFor={`offline-roll-call-note-${diver.bookingId}`}
-                          className="text-sm font-semibold"
+                          className="sr-only"
                         >
                           {t("shared.offlineManifest.single.optionalNote")}
                         </label>
@@ -1225,9 +1238,9 @@ export function OfflineManifestView() {
                             }))
                           }
                           placeholder={t("shared.offlineManifest.single.notePlaceholder")}
-                          className={`${controlClass} mt-1`}
+                          className={controlClass}
                         />
-                        <p className="mt-1 text-xs text-muted">
+                        <p className="mt-1.5 text-xs text-muted">
                           {t("shared.offlineManifest.single.noteHint")}
                         </p>
                       </div>

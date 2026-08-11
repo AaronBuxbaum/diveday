@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { Badge } from "@/components/ui/badge";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -45,21 +46,56 @@ function DiverFacts({
   diver,
   locale,
   timezone,
+  columns,
   t,
 }: {
   diver: TripManifest["divers"][number];
   locale: string;
   timezone: string;
+  /**
+   * How much width these facts have, which differs by a factor of two between
+   * the two places they render — and the answer is not the same in both.
+   *
+   * `1` is the on-screen disclosure, one of two panels sharing the row's
+   * width: a second column there wrapped "Asha Sharma (sister) ·
+   * +1-305-555-0231" mid-number.
+   *
+   * `2` is paper, which has the whole page and no disclosure beside it. Single
+   * column there leaves the right half of a US-Letter sheet blank and stretches
+   * a nine-diver roster far enough to spill onto another page — more sheets for
+   * a boat to carry and lose, to buy width nothing needed.
+   */
+  columns: 1 | 2;
   t: StaffTranslator;
 }) {
   return (
-    <div className="grid gap-2 text-base sm:grid-cols-2">
+    <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
         <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
         <span className="mt-0.5 block text-muted">
-          {diver.emergencyContactName && diver.emergencyContactPhone
-            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-            : t("trips.manifest.notOnFile")}
+          {diver.emergencyContactName && diver.emergencyContactPhone ? (
+            columns === 1 ? (
+              <>
+                {diver.emergencyContactName} ·{" "}
+                {/* The number never breaks across lines *here*. In the
+                    half-width panel it wrapped at its own hyphens — "+1-305-"
+                    / "555-0241" — and a number a crew member reads aloud in an
+                    emergency is the last string on this page that should be
+                    reassembled by eye.
+                    Only here: the `<span>` splits one text run into two, which
+                    the browser then shapes independently, and on paper that
+                    re-drew every phone number a few sub-pixels over for a wrap
+                    that a full-width page never had. The printed manifest is
+                    the document a coastguard reads — it does not move for a
+                    problem it does not have. */}
+                <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+              </>
+            ) : (
+              `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+            )
+          ) : (
+            t("trips.manifest.notOnFile")
+          )}
         </span>
       </p>
       {/* Only when there is something to load or a note to read:
@@ -96,19 +132,23 @@ function DiverFacts({
 
 /**
  * The two disclosures a diver's row carries — "Contact & gear" and "Add a
- * note" — as one pair of class strings.
+ * note" — as one set of class strings.
  *
- * They stack one directly above the other, and they used to be written twice:
- * identical while shut, and nothing alike once open, because only the note grew
- * a bordered panel. Two controls that read as one kind at rest and two kinds
- * open is a hesitation the rail cannot afford, so the panel treatment belongs
- * to both — and lives here once rather than in two class strings that already
- * drifted apart.
+ * **Side by side, and the summary never moves.** They used to stack, which cost
+ * the row a second 44px line for a control most roll calls never touch; they
+ * are peers, so they share one line and each panel opens down its own grid
+ * column (an `auto`-flowed row would have pushed the neighbour sideways as one
+ * opened). And the panel treatment belongs to the *panel*: hung on the
+ * `<details>` as `open:` variants it grew the element's own margin and padding
+ * at the instant of the tap, so the summary line jumped ~20px down the screen
+ * out from under the finger that opened it.
  */
-const ROW_DISCLOSURE_CLASS =
-  "mt-1 max-w-xl print:hidden open:mt-3 open:rounded-xl open:border open:border-border/70 open:bg-surface-sunken/50 open:p-3";
+const ROW_DISCLOSURE_GRID_CLASS =
+  "mt-1 grid items-start gap-x-6 print:hidden sm:max-w-4xl sm:grid-cols-2";
 const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline";
+  "group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden";
+const ROW_DISCLOSURE_PANEL_CLASS =
+  "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
@@ -243,7 +283,15 @@ export function DiverRollCall({
               className={`${rowClass} transition-all duration-300`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
+                {/* `lg:flex-1` so this column is the same width on every row.
+                    Left to size itself, a flex child takes its content's width
+                    — and since the row's content is a name plus however many
+                    badges that diver happens to carry, every row got a
+                    different one. The two disclosures below split this column
+                    in half, so "Add a note" then started at a different x on
+                    each of nine rows, wandering left and right down the
+                    roster. */}
+                <div className="min-w-0 lg:flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
                       {String(index + 1).padStart(2, "0")}
@@ -351,94 +399,100 @@ export function DiverRollCall({
                       </Link>
                     </>
                   ) : null}
-                  {/* Reference facts, disclosed on demand. The row's job at
-                      the rail is the head count — nine emergency contacts and
-                      six rental lists at permanent height were dock-prep and
-                      break-glass reference standing between the captain and
-                      the next name (principles 9 and 10). One tap opens them;
-                      paper always carries them (the print-only block below —
-                      a closed details contributes nothing to print). */}
-                  <details className={`group/facts ${ROW_DISCLOSURE_CLASS}`}>
-                    {/* Muted, not action-blue: two of these per row down a
-                        nine-diver roster is eighteen links' worth of primary
-                        ink for rare paths, drowning the one link that earns
-                        it ("Resolve blockers"). The label names everything
-                        behind it — a door marked "Contact & gear" with a
-                        medical line behind it is a mislabeled door on a
-                        safety surface (design review 20260810). */}
-                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                      {diver.medicalWaiver
-                        ? t("trips.manifest.diverFactsSummaryWithMedical")
-                        : t("trips.manifest.diverFactsSummary")}
-                      <span
-                        aria-hidden="true"
-                        className="font-normal transition-transform duration-200 group-open/facts:rotate-45"
-                      >
-                        +
-                      </span>
-                    </summary>
-                    {/* Same `mt-2` the note panel's own root carries, so the
-                        two open panels sit the same distance below their
-                        summary line. */}
-                    <div className="mt-2">
-                      <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
-                    </div>
-                  </details>
-                  <div className="mt-3 hidden print:block">
-                    <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
+                  {/* The row's two secondary paths, on one line. Reference
+                      facts are disclosed on demand — nine emergency contacts
+                      and six rental lists at permanent height were dock-prep
+                      and break-glass reference standing between the captain
+                      and the next name (principles 9 and 10). One tap opens
+                      them; paper always carries them (the print-only block
+                      below — a closed details contributes nothing to print). */}
+                  <div className={ROW_DISCLOSURE_GRID_CLASS}>
+                    <details className="group/facts">
+                      {/* Muted, not action-blue: two of these per row down a
+                          nine-diver roster is eighteen links' worth of primary
+                          ink for rare paths, drowning the one link that earns
+                          it ("Resolve blockers"). The label names everything
+                          behind it — a door marked "Contact & gear" with a
+                          medical line behind it is a mislabeled door on a
+                          safety surface (design review 20260810). */}
+                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                        {/* The caret is what tells these lines apart from the
+                            "Resolve blockers" navigation link beside them:
+                            these disclose in place, that one leaves the page.
+                            It is the app's drawn chevron rather than the `+`
+                            that used to sit *after* the label — rotated 45° to
+                            a ✕ on open, that glyph took the summary's own
+                            `hover:underline` around with it, which is the
+                            underline-at-an-angle a review caught under an open
+                            "Contact & gear". Only the label underlines now. */}
+                        <DisclosureCaret className="group-open/facts:rotate-90" />
+                        <span className="group-hover/summary:underline">
+                          {diver.medicalWaiver
+                            ? t("trips.manifest.diverFactsSummaryWithMedical")
+                            : t("trips.manifest.diverFactsSummary")}
+                        </span>
+                      </summary>
+                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                        <DiverFacts
+                          diver={diver}
+                          locale={locale}
+                          timezone={timezone}
+                          columns={1}
+                          t={t}
+                        />
+                      </div>
+                    </details>
+                    {/* Closed, this is one quiet line — the same grammar as the
+                        facts disclosure beside it. The box only exists around
+                        an open note: rendered shut on every diver, the bordered
+                        sunken card read as an empty *input* repeated the length
+                        of the boat, which is nine boxes of chrome for an action
+                        most roll calls never take (design principles 8 and 10 —
+                        collapse the rare path; hierarchy before boxes). */}
+                    <details className="group/note">
+                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                        <DisclosureCaret className="group-open/note:rotate-90" />
+                        <span className="group-hover/summary:underline">
+                          {t("trips.manifest.addNoteSummary")}
+                        </span>
+                      </summary>
+                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                        <RollCallNote
+                          bookingId={diver.bookingId}
+                          checkpoint={checkpoint}
+                          formId={`not-boarded-${diver.bookingId}`}
+                          initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
+                          canAutoSave={!!rc && !rc.implied}
+                          saveNote={saveRollCallNoteAction}
+                          copy={{
+                            // The summary this sits under already reads "Add a
+                            // note", so the field's own label is the same word
+                            // twice, one line apart — it stays for the screen
+                            // reader and comes off the screen.
+                            optionalNote: t("shared.rollCallNote.optionalNote"),
+                            message: {
+                              manualOnly: t("shared.rollCallNote.message.manualOnly"),
+                              saving: t("shared.rollCallNote.message.saving"),
+                              saved: t("shared.rollCallNote.message.saved"),
+                              queued: t("shared.rollCallNote.message.queued"),
+                              error: t("shared.rollCallNote.message.error"),
+                              idle: t("shared.rollCallNote.message.idle"),
+                            },
+                            notePlaceholder: t("shared.rollCallNote.notePlaceholder"),
+                          }}
+                        />
+                      </div>
+                    </details>
                   </div>
-                  {/* Closed, this is one quiet line — the same grammar as the
-                      "Resolve blockers" link above it. The box only exists
-                      around an open note: rendered shut on every diver, the
-                      bordered sunken card read as an empty *input* repeated
-                      the length of the boat, which is nine boxes of chrome
-                      for an action most roll calls never take (design
-                      principles 8 and 10 — collapse the rare path; hierarchy
-                      before boxes). */}
-                  <details className={`group/note ${ROW_DISCLOSURE_CLASS}`}>
-                    {/* The plus glyph is what tells this line apart from the
-                        "Resolve blockers" navigation link it can stack under:
-                        this one discloses in place (rotating to a ✕ when
-                        open), that one leaves the page. `flex` suppresses the
-                        native marker, so without it the two would be
-                        indistinguishable. Same idiom as the divers page's
-                        add-diver summary. */}
-                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                      {t("trips.manifest.addNoteSummary")}
-                      <span
-                        aria-hidden="true"
-                        className="font-normal transition-transform duration-200 group-open/note:rotate-45"
-                      >
-                        +
-                      </span>
-                    </summary>
-                    <RollCallNote
-                      bookingId={diver.bookingId}
-                      checkpoint={checkpoint}
-                      formId={`not-boarded-${diver.bookingId}`}
-                      initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
-                      canAutoSave={!!rc && !rc.implied}
-                      saveNote={saveRollCallNoteAction}
-                      copy={{
-                        optionalNote: t("shared.rollCallNote.optionalNote"),
-                        message: {
-                          manualOnly: t("shared.rollCallNote.message.manualOnly"),
-                          saving: t("shared.rollCallNote.message.saving"),
-                          saved: t("shared.rollCallNote.message.saved"),
-                          queued: t("shared.rollCallNote.message.queued"),
-                          error: t("shared.rollCallNote.message.error"),
-                          idle: t("shared.rollCallNote.message.idle"),
-                        },
-                        statusPill: {
-                          saving: t("shared.rollCallNote.statusPill.saving"),
-                          saved: t("shared.rollCallNote.statusPill.saved"),
-                          queued: t("shared.rollCallNote.statusPill.queued"),
-                          error: t("shared.rollCallNote.statusPill.error"),
-                        },
-                        notePlaceholder: t("shared.rollCallNote.notePlaceholder"),
-                      }}
+                  <div className="mt-3 hidden print:block">
+                    <DiverFacts
+                      diver={diver}
+                      locale={locale}
+                      timezone={timezone}
+                      columns={2}
+                      t={t}
                     />
-                  </details>
+                  </div>
                   {rc && !rc.implied ? (
                     <p className="mt-3 text-sm text-muted">
                       {rc.note

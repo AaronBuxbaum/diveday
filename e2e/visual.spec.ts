@@ -1995,6 +1995,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-list", scheme);
       });
 
+      /**
+       * The saved copy actually *opened* — the roll call a crew member works
+       * with no signal, which until now had no baseline of any kind. The four
+       * other offline captures photograph the shell's states around it (the
+       * list, nothing-saved, discarded, another shop's), and none of them
+       * contains a diver row, so every control on the surface a boat falls back
+       * to was uncovered: the roster, the per-diver note disclosure, the
+       * board/not-boarded pair, the freshness pill. Found by a 2026-08-11 change
+       * that restyled the note disclosure here and moved no pixels in any
+       * baseline.
+       */
+      test(`the offline roll call renders true to the design (${scheme})`, async ({ page }) => {
+        // Board → trip → Manifest, then the saved copy.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).click();
+        await page.waitForURL(/offline-manifest/);
+        // The roster is what proves the record was read back and decrypted —
+        // the shell renders its chrome before the store resolves.
+        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await capture(page, "offline-manifest-roll-call", scheme);
+      });
+
       // The offline fallback a captain lands on after a failed reload with
       // no snapshot saved — the entire safety surface in that moment, so it
       // gets its own baseline rather than relying on the roll-call text
@@ -2436,6 +2460,42 @@ for (const scheme of ["light", "dark"] as const) {
             .first(),
         ).toBeVisible();
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * A diver row with both of its disclosures open — "Contact & gear" and
+       * "Add a note". The `manifest` capture above photographs nine rows at
+       * rest, which proves nothing about what a tap reveals, and this is where
+       * the row's geometry is: the two summaries share one line and each panel
+       * opens down its own grid column, so an open panel must not move its
+       * neighbour, and neither summary may shift under the finger that opened
+       * it. It is also the only baseline carrying the emergency contact, the
+       * rental list, and the note field's save line.
+       */
+      test(`a diver row's open disclosures render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        const row = page.locator("#roll-call-list li").first();
+        // By position, not by label: the facts summary reads "Contact & gear"
+        // or "Contact, gear & medical" depending on what that diver has on
+        // file, and "Contact" also matches the "Emergency contact" heading the
+        // panel reveals (twice — the print-only copy is in the DOM too).
+        const summaries = row.locator("summary");
+        await summaries.nth(0).click();
+        await summaries.nth(1).click();
+        // Both panels painted before the shot: the facts grid renders its
+        // emergency-contact heading, the note panel its input.
+        // Scoped to the disclosure: the print-only copy of the same facts is
+        // in the DOM on every row, carrying the identical heading.
+        await expect(row.locator("details").first().getByText("Emergency contact")).toBeVisible();
+        await expect(row.getByRole("textbox", { name: "Note" })).toBeVisible();
+        // The pointer is left on the summary by the click above, which would
+        // bank a hover-underlined label into the baseline.
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-row-disclosures", scheme);
       });
 
       /**

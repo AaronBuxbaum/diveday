@@ -13,7 +13,18 @@ type SaveNote = (
 type Status = "idle" | "saving" | "saved" | "queued" | "error";
 
 export type RollCallNoteCopy = {
+  /**
+   * The field's accessible name. Rendered `sr-only` — the disclosure this
+   * field lives behind is already labelled "Add a note", so on screen the
+   * label was that word again one line below itself.
+   */
   optionalNote: string;
+  /**
+   * What the save state says, in one line under the field. There used to be a
+   * second, shorter set of the same words in a pill above it — "Saving…" beside
+   * "Saving…", "Saved" beside "Saved to this roll-call record." — so the pill's
+   * dot is all that survives of it, as this line's own status mark.
+   */
   message: {
     manualOnly: string;
     saving: string;
@@ -21,12 +32,6 @@ export type RollCallNoteCopy = {
     queued: string;
     error: string;
     idle: string;
-  };
-  statusPill: {
-    saving: string;
-    saved: string;
-    queued: string;
-    error: string;
   };
   notePlaceholder: string;
 };
@@ -152,41 +157,10 @@ export function RollCallNote({
             : copy.message.idle;
 
   return (
-    <div className="mt-2">
-      <div className="flex items-center justify-between">
-        <label htmlFor={`roll-call-note-${bookingId}`} className="text-sm font-semibold">
-          {copy.optionalNote}
-        </label>
-        {canAutoSave && (
-          <div className="flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
-            <span
-              className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
-                status === "saving"
-                  ? "bg-warning animate-pulse"
-                  : status === "saved"
-                    ? "bg-success"
-                    : status === "queued"
-                      ? "bg-info animate-pulse"
-                      : status === "error"
-                        ? "bg-danger"
-                        : "bg-border-strong"
-              }`}
-              aria-hidden="true"
-            />
-            <span>
-              {status === "saving"
-                ? copy.statusPill.saving
-                : status === "saved"
-                  ? copy.statusPill.saved
-                  : status === "queued"
-                    ? copy.statusPill.queued
-                    : status === "error"
-                      ? copy.statusPill.error
-                      : ""}
-            </span>
-          </div>
-        )}
-      </div>
+    <div>
+      <label htmlFor={`roll-call-note-${bookingId}`} className="sr-only">
+        {copy.optionalNote}
+      </label>
       <input
         ref={inputRef}
         id={`roll-call-note-${bookingId}`}
@@ -195,7 +169,7 @@ export function RollCallNote({
         defaultValue={initialNote}
         maxLength={300}
         placeholder={copy.notePlaceholder}
-        className={`${controlClass} mt-1`}
+        className={controlClass}
         onChange={onChange}
         onBlur={
           canAutoSave
@@ -206,7 +180,26 @@ export function RollCallNote({
             : undefined
         }
       />
-      <p className="mt-1 text-xs text-muted" aria-live="polite">
+      <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
+        {/* The dot the status pill used to carry, now this line's own mark —
+            colour is never the message here, only a faster read of the words
+            beside it. */}
+        {canAutoSave ? (
+          <span
+            className={`size-2 shrink-0 rounded-full transition-colors duration-300 ${
+              status === "saving"
+                ? "animate-pulse bg-warning"
+                : status === "saved"
+                  ? "bg-success"
+                  : status === "queued"
+                    ? "animate-pulse bg-info"
+                    : status === "error"
+                      ? "bg-danger"
+                      : "bg-border-strong"
+            }`}
+            aria-hidden="true"
+          />
+        ) : null}
         {message}
       </p>
     </div>

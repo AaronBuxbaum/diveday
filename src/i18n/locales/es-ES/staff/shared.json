@@ -71,20 +71,14 @@
     "label": "Imprimir / guardar PDF"
   },
   "rollCallNote": {
-    "optionalNote": "Nota opcional",
+    "optionalNote": "Nota",
     "message": {
-      "manualOnly": "Guardada en este dispositivo — se añadirá al registro de pase de lista cuando marques un estado.",
+      "manualOnly": "Se guarda con el resultado del pase de lista de este buceador.",
       "saving": "Guardando…",
-      "saved": "Guardada en este registro de pase de lista.",
+      "saved": "Guardada.",
       "queued": "Guardada en este dispositivo — se enviará cuando vuelvas a estar en línea.",
-      "error": "No se pudo guardar en el registro — sigue guardada en este dispositivo. Inténtalo de nuevo.",
-      "idle": "Se guarda automáticamente — en este dispositivo y en el registro de pase de lista."
-    },
-    "statusPill": {
-      "saving": "Guardando…",
-      "saved": "Guardada",
-      "queued": "En cola sin conexión",
-      "error": "Error de sincronización"
+      "error": "No se pudo guardar — tu nota sigue aquí. Inténtalo de nuevo.",
+      "idle": "Se guarda mientras escribes."
     },
     "notePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…"
   },
