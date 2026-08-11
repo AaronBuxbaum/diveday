@@ -157,7 +157,6 @@ export function DiverRollCall({
               checkpoint: rollCallCheckpointText(t, checkpoint),
             })}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("trips.manifest.checkEachDiverDescription")}</p>
           {/* The control that isn't "Boarded" means something different once
               the boat is out, and the crew tapping it in the dark should be
               told which one they are looking at (DOM-H3). */}

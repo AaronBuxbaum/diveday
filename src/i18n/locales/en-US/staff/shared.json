@@ -1,7 +1,7 @@
 {
   "operationalWindow": {
-    "note": "Everything here covers the next {days} days of departures — Today and Check-in work from one shared list.",
-    "arrivalsLens": "Counter mode shows who could walk up right now: arrivals from the last {lookback} hours through the next {ahead} hours.",
+    "note": "The next {days} days of departures — Today and Check-in read one list.",
+    "arrivalsLens": "Counter mode narrows that to arrivals from the last {lookback} hours through the next {ahead}.",
     "pivotsLabel": "The same list, seen another way"
   },
   "skipToContent": "Skip to main content",

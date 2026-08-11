@@ -46,7 +46,7 @@
   },
   "certifications": {
     "heading": "Tarjetas de certificación",
-    "description": "La evidencia empieza pendiente. Busca el número de tarjeta con la agencia emisora y márcala como certificada — solo las tarjetas certificadas afectan a la preparación.",
+    "description": "Solo las tarjetas certificadas afectan a la preparación.",
     "addCard": "Añadir tarjeta",
     "agency": "Agencia",
     "level": "Nivel",
@@ -92,7 +92,6 @@
   "page": {
     "eyebrow": "Recepción",
     "title": "Buceadores",
-    "description": "Empieza por la persona. Sus tarjetas, ajuste de alquiler y reservas se mantienen juntos para que recepción siempre tenga el contexto correcto.",
     "matchingCount": "{count} coincidencias",
     "onFileCount": "{count} registrados",
     "noticeDuplicate": "Ya hay un buceador con ese correo en este centro.",
@@ -105,7 +104,7 @@
     "noticeNotAuthorized": "Eliminar o restaurar un buceador está limitado a propietarios y gerentes.",
     "noticeInvalid": "Revisa el nombre, correo y teléfono del buceador.",
     "addDiverSummary": "Añadir un buceador",
-    "addDiverBody": "Añade a un buceador a la lista antes de que reserve: basta con un nombre. Sus tarjetas, exenciones y reservas quedan unidas a esta ficha.",
+    "addDiverBody": "Basta con un nombre. Las tarjetas, las exenciones y las reservas cuelgan de esta ficha.",
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
     "optionalHint": "(opcional)",
@@ -168,7 +167,6 @@
   },
   "bookActivity": {
     "heading": "Reservar una actividad",
-    "description": "Añade este buceador a un curso o inmersión disponible, luego crea el pedido desde su reserva.",
     "courseOrDiveLabel": "Curso o inmersión",
     "chooseActivity": "Elige una actividad disponible",
     "booking": "Reservando…",
@@ -178,7 +176,6 @@
   },
   "payments": {
     "heading": "Pagos",
-    "description": "El estado de pago, los pedidos y los reembolsos se mantienen con el buceador para que la siguiente acción sea fácil de encontrar.",
     "newPayment": "Nuevo pago",
     "noPaymentsYet": "Aún no hay pagos — aparecerán aquí en cuanto este buceador reserve una salida o emitas un pedido.",
     "openPayment": "Abrir pago",
@@ -192,7 +189,7 @@
   },
   "remove": {
     "heading": "Eliminar de buceadores activos",
-    "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas. No se destruye nada y puedes deshacerlo.",
+    "description": "Las reservas, las tarjetas y las tallas se conservan, y puedes deshacerlo.",
     "removePersonSummary": "Eliminar a {name}",
     "addAgainNote": "Puedes añadirlos de nuevo más tarde como un nuevo registro activo.",
     "removing": "Eliminando…",
@@ -201,14 +198,14 @@
   "removed": {
     "badge": "Eliminado",
     "heading": "Este buceador está fuera de tus listas activas",
-    "body": "Queda fuera del registro, los selectores de reserva, las tablillas y la preparación de salidas. Sus reservas, tarjetas y tallas siguen registradas.",
+    "body": "Fuera de la lista, los selectores de reserva, los manifiestos y la preparación. Sus registros se conservan.",
     "restore": "Restaurar buceador",
     "restoring": "Restaurando…",
     "restoreRestricted": "Solo propietarios y gerentes pueden restaurar a un buceador."
   },
   "erase": {
     "heading": "Borrar datos personales",
-    "description": "Para un buceador que te pide que elimines lo que guardas sobre él. No es lo mismo que eliminarlo — esto destruye sus datos para siempre.",
+    "description": "Destruye para siempre los datos de este buceador. No es lo mismo que quitarlo de las listas.",
     "summary": "Borrar los datos personales de {name}",
     "destroyedNote": "Se destruye: su nombre, correo, teléfono, fecha de nacimiento, contacto de emergencia, seguro, números y fotos de sus tarjetas, respuestas médicas, tallas de alquiler, notas sobre él, comentarios de reseñas y las fotos que haya compartido.",
     "keptNote": "Se conserva: que firmó tu exención, qué versión firmó y cuándo — además de los viajes en los que estuvo y lo que se pagó, con su nombre eliminado de todo ello. Tus exenciones firmadas siguen siendo verificables.",
@@ -220,7 +217,7 @@
   },
   "rentalFit": {
     "heading": "Ajuste de alquiler",
-    "description": "Lo que este buceador toma del centro, y en qué talla. Es lo que construye la lista de preparación de la salida — nunca una reserva de equipo ni un sustituto de la revisión de ajuste en el muelle.",
+    "description": "La base de la lista de preparación: nunca una reserva ni un sustituto de la prueba de equipo en el muelle.",
     "changeRestricted": "Cambiar lo que este buceador pidió está limitado a propietarios, gerentes, instructores y divemasters. Si una talla no está disponible, márcalos para ajuste manual abajo.",
     "rentsFromShop": "Alquila del centro",
     "bcdSizeLabel": "Talla de BCD",
@@ -235,8 +232,8 @@
     "saveRentalFit": "Guardar ajuste de alquiler",
     "flaggedHeading": "Marcado para ajuste manual",
     "cantFillHeading": "¿No puedes cubrir alguna de estas tallas?",
-    "flaggedBody": "Marcado para ajuste manual — sigue contando en la lista de preparación, pero sin talla, y la tripulación lo ajusta con lo disponible en el check-in.",
-    "cantFillBody": "Márcalos para ajuste manual en el check-in. Su recuento se mantiene en la lista de equipaje pero la talla se retira, así nadie prepara una talla de la que el centro anda corto.",
+    "flaggedBody": "Siguen contando en la lista de preparación, pero sin talla: la tripulación los equipa con lo que haya a bordo.",
+    "cantFillBody": "Siguen contando en la lista de carga pero sin talla, para que nadie prepare una talla que falta.",
     "clearing": "Despejando…",
     "fitResolved": "Ajuste resuelto — vuelve a preparar sus tallas",
     "clearingRestricted": "Despejar esto está limitado a propietarios, gerentes, instructores y divemasters — ellos confirman que el buceador puede volver a prepararse con sus tallas indicadas.",
@@ -256,7 +253,7 @@
   },
   "specialty": {
     "heading": "Tarjetas de especialidad",
-    "description": "Las tarjetas de especialidad se guardan con el buceador. Una tarjeta de Nitrox verificada — confirmada aquí si fue importada — es necesaria antes de una carga de EANx o entrega de botella.",
+    "description": "Se necesita una tarjeta de Nitrox verificada antes de un llenado de EANx.",
     "addSpecialty": "Añadir especialidad",
     "specialtyLabel": "Especialidad",
     "nitroxOption": "Nitrox",

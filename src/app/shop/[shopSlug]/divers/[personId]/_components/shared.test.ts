@@ -9,7 +9,6 @@ import {
   isCardExpired,
   isImportedCard,
   needsImportConfirm,
-  paperWaiverBookingId,
   unpaidBookingCount,
 } from "./shared";
 
@@ -235,71 +234,5 @@ describe("cardsNeedingLookCount", () => {
         cards({ level: [confirmed], specialty: [confirmed], nitrox: [confirmed] }),
       ),
     ).toBe(0);
-  });
-});
-
-describe("paperWaiverBookingId", () => {
-  const NOW = new Date("2026-07-21T12:00:00Z");
-
-  /** Just enough of a diver profile for the anchor reader; nothing else is touched. */
-  function withBookings(
-    rows: { id: string; startsAt: string; tripStatus?: string; status?: string }[],
-  ): DiverProfile {
-    return {
-      bookings: rows.map((row) => ({
-        booking: { id: row.id, status: row.status ?? "booked" },
-        trip: { status: row.tripStatus ?? "scheduled", startsAt: new Date(row.startsAt) },
-      })),
-    } as unknown as DiverProfile;
-  }
-
-  it("anchors on the diver's soonest still-scheduled departure", () => {
-    expect(
-      paperWaiverBookingId(
-        withBookings([
-          { id: "later", startsAt: "2026-08-01T12:00:00Z" },
-          { id: "sooner", startsAt: "2026-07-25T12:00:00Z" },
-        ]),
-        NOW,
-      ),
-    ).toBe("sooner");
-  });
-
-  it("ignores a departure that has already left", () => {
-    // A release recorded here is filed against a seat, and `recordInPersonWaiver`
-    // will not touch a trip that is no longer scheduled — so a past boat is not
-    // an anchor, however recently it sailed.
-    expect(
-      paperWaiverBookingId(
-        withBookings([
-          { id: "gone", startsAt: "2026-07-20T12:00:00Z" },
-          { id: "ahead", startsAt: "2026-07-30T12:00:00Z" },
-        ]),
-        NOW,
-      ),
-    ).toBe("ahead");
-  });
-
-  it("ignores a cancelled seat and a cancelled trip", () => {
-    expect(
-      paperWaiverBookingId(
-        withBookings([
-          { id: "seat-off", startsAt: "2026-07-22T12:00:00Z", status: "cancelled" },
-          { id: "boat-off", startsAt: "2026-07-23T12:00:00Z", tripStatus: "cancelled" },
-          { id: "real", startsAt: "2026-07-24T12:00:00Z" },
-        ]),
-        NOW,
-      ),
-    ).toBe("real");
-  });
-
-  it("answers null when the diver has nothing booked ahead", () => {
-    // The honest answer, and the page's cue to offer no control at all rather
-    // than a button with nowhere to file the record
-    // (FU-20260811-paper-waiver-without-a-booking).
-    expect(paperWaiverBookingId(withBookings([]), NOW)).toBeNull();
-    expect(
-      paperWaiverBookingId(withBookings([{ id: "gone", startsAt: "2026-07-01T12:00:00Z" }]), NOW),
-    ).toBeNull();
   });
 });

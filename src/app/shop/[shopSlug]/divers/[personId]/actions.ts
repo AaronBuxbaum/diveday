@@ -43,11 +43,9 @@ import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
-import { paperWaiverBookingId } from "./_components/shared";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
 // form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
@@ -467,16 +465,14 @@ export async function setNeedsStaffFitAction(
  *
  * The third door onto one write path (`recordInPersonWaiver`) — the roster and
  * the check-in queue already have one — and the one a shop reaches when the
- * conversation is about the *person*: a diver phones ahead, or hands the
- * release over at the counter days before their boat, and the record is where
- * a staffer already is. Until now the only way to clear it from here was to
- * find one of their trips and go to it.
+ * conversation is about the *person* rather than a departure: a diver phones
+ * ahead, or hands the release over at the counter long before they book
+ * anything.
  *
- * The booking is derived here rather than taken from the form. This surface is
- * scoped to one person, so a submitted id is a fact the server can check
- * against the record it is already reading — and the honest failure for an id
- * that is not this diver's is a refusal, not a waiver filed against somebody
- * else's seat.
+ * No booking, by design. A signature is a fact about a person and a shop, so
+ * the record is filed against the diver in the URL and nothing else — the
+ * subject is this route's own path segment, never a form field
+ * (ADR 20260811-person-scoped-paper-waivers).
  */
 export async function markWaiverInPersonAction(
   shopSlug: string,
@@ -485,19 +481,9 @@ export async function markWaiverInPersonAction(
 ) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
-  const db = await getDb();
-  const diver = await getDiverProfile(db, staff.user.shopId, personId);
-  const bookingId = diver ? paperWaiverBookingId(diver, nowDate()) : null;
-  // Nothing to anchor to, or the page's own hidden field disagrees with what
-  // this diver actually holds: both are the same refusal, because both mean
-  // the seat this would be filed against is not one the reader was looking at.
-  if (!bookingId || bookingId !== String(formData.get("bookingId") ?? "")) {
-    revalidateAndRedirect(base, backTo(base, "waiver-error", "waiver"));
-    return;
-  }
-  const outcome = await recordInPersonWaiver(db, {
+  const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: staff.user.shopId,
-    bookingId,
+    subject: { personId },
     recordedByPersonId: staff.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });

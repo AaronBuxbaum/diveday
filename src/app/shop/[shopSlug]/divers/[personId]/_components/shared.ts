@@ -95,31 +95,6 @@ export function unpaidBookingCount(diver: DiverProfile): number {
 }
 
 /**
- * The booking a paper waiver recorded from *this record* is filed against —
- * the diver's soonest still-scheduled departure, or null when they have none.
- *
- * A signed release is a fact about a person and a shop: `shopWaiverStatus`
- * reads it that way, and one current signature clears every booking the diver
- * holds here. The write path is still booking-shaped (`recordInPersonWaiver`
- * issues against one real booking, because that is what a waiver link is
- * issued against), so this record has to name one — and the soonest departure
- * is the one the paper in the staffer's hand is almost certainly about.
- *
- * `null` is a real answer and the caller must handle it: a diver with nothing
- * booked has no anchor, and the control is not offered
- * (FU-20260811-paper-waiver-without-a-booking).
- */
-export function paperWaiverBookingId(diver: DiverProfile, now: Date): string | null {
-  const next = diver.bookings
-    .filter(
-      ({ booking, trip }) =>
-        trip.status === "scheduled" && booking.status !== "cancelled" && trip.startsAt >= now,
-    )
-    .sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime())[0];
-  return next?.booking.id ?? null;
-}
-
-/**
  * Certification cards a staffer still has to act on, counted the same way the
  * roster's "Needs attention" view and the Cards stat card both mean it: a card
  * awaiting review, plus an imported specialty or nitrox card whose gate stays

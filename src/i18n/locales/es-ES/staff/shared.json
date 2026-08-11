@@ -1,7 +1,7 @@
 {
   "operationalWindow": {
-    "note": "Todo lo que ves aquí cubre las salidas de los próximos {days} días: Hoy y Registro trabajan con una única lista.",
-    "arrivalsLens": "El modo mostrador muestra quién podría presentarse ahora mismo: llegadas desde hace {lookback} horas hasta las próximas {ahead} horas.",
+    "note": "Las salidas de los próximos {days} días: Hoy y Registro leen una única lista.",
+    "arrivalsLens": "El modo mostrador lo reduce a las llegadas desde hace {lookback} horas hasta las próximas {ahead}.",
     "pivotsLabel": "La misma lista, vista de otra forma"
   },
   "skipToContent": "Saltar al contenido principal",

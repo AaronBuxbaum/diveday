@@ -89,7 +89,7 @@ export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: 
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,
-    bookingId,
+    subject: { bookingId },
     recordedByPersonId: session.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });

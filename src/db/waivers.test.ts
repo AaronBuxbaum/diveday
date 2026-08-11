@@ -600,7 +600,7 @@ describe("staff records a paper / in-person signature", () => {
 
     const outcome = await recordInPersonWaiver(db, {
       shopId: shop.id,
-      bookingId: booking.id,
+      subject: { bookingId: booking.id },
       recordedByPersonId: staff.id,
       medicalAttested: true,
       now,
@@ -639,7 +639,7 @@ describe("staff records a paper / in-person signature", () => {
 
     const outcome = await recordInPersonWaiver(db, {
       shopId: shop.id,
-      bookingId: booking.id,
+      subject: { bookingId: booking.id },
       recordedByPersonId: staff.id,
       medicalAttested: true,
       now,
@@ -660,7 +660,7 @@ describe("staff records a paper / in-person signature", () => {
 
     await recordInPersonWaiver(db, {
       shopId: shop.id,
-      bookingId: booking.id,
+      subject: { bookingId: booking.id },
       recordedByPersonId: staff.id,
       medicalAttested: true,
       now,
@@ -674,7 +674,7 @@ describe("staff records a paper / in-person signature", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: booking.personId,
         medicalAttested: true,
         now,
@@ -684,7 +684,7 @@ describe("staff records a paper / in-person signature", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,
@@ -698,7 +698,7 @@ describe("staff records a paper / in-person signature", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: false,
         now,
@@ -766,7 +766,7 @@ describe("the in-person attestor must be live staff (defence in depth)", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,
@@ -796,7 +796,7 @@ describe("the in-person attestor must be live staff (defence in depth)", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,
@@ -814,7 +814,7 @@ describe("the in-person attestor must be live staff (defence in depth)", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,
@@ -836,7 +836,7 @@ describe("the in-person attestor must be live staff (defence in depth)", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,
@@ -861,7 +861,7 @@ describe("the in-person attestor must be live staff (defence in depth)", () => {
     expect(
       await recordInPersonWaiver(db, {
         shopId: shop.id,
-        bookingId: booking.id,
+        subject: { bookingId: booking.id },
         recordedByPersonId: staff.id,
         medicalAttested: true,
         now,

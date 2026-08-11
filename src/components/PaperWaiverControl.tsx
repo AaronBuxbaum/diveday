@@ -25,7 +25,12 @@ export function PaperWaiverControl({
 }: {
   // i18n-exempt: type annotation, not copy.
   action: (formData: FormData) => void | Promise<void>;
-  bookingId: string;
+  /**
+   * The seat this was recorded from, on the two surfaces that have one. Omitted
+   * on the diver's own record, where the subject is the person in the URL — the
+   * record is the same either way (ADR 20260811-person-scoped-paper-waivers).
+   */
+  bookingId?: string;
   t: StaffTranslator;
   className?: string;
 }) {
@@ -38,7 +43,7 @@ export function PaperWaiverControl({
         action={action}
         className="mt-2 max-w-md rounded-lg border border-border bg-surface-sunken/50 p-3"
       >
-        <input type="hidden" name="bookingId" value={bookingId} />
+        {bookingId ? <input type="hidden" name="bookingId" value={bookingId} /> : null}
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="medicalAttested" required className="mt-1 size-4 shrink-0" />
           <span>{t("shared.paperWaiver.medicalAttestationLabel")}</span>

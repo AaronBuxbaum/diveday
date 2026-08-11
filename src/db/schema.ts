@@ -2637,11 +2637,17 @@ export const waiverRecords = pgTable(
       .notNull()
       .references(() => shops.id),
     /**
-     * Null only for an imported record (`signatureMethod: "imported"`): a
-     * contact import creates people, not bookings, so there is no booking to
-     * issue against. Every other record is issued in the context of one real
-     * booking, even though `personId` is what actually satisfies the sign-once
-     * gate on other bookings.
+     * Where the shop was standing when the record was filed, when that was
+     * anywhere in particular. `personId` below is what actually satisfies the
+     * sign-once gate, on this booking and every other.
+     *
+     * Null on two paths, both of which have no seat to name: an imported
+     * record (`signatureMethod: "imported"` — a contact import creates people,
+     * not bookings), and a staff-attested paper release recorded from the
+     * diver's own record, where the conversation is about the person and they
+     * may hold no booking at all (ADR 20260811-person-scoped-paper-waivers).
+     * Every record a *token* can reach still carries one — see
+     * `requireTokenBookingId`.
      */
     bookingId: uuid("booking_id").references(() => bookings.id),
     /**

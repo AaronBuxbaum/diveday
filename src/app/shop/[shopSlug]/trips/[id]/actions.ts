@@ -865,7 +865,7 @@ export async function markWaiverInPersonAction(
   if (!bookingId) redirect(`${back}?notice=waiver-error`);
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: s.user.shopId,
-    bookingId,
+    subject: { bookingId },
     recordedByPersonId: s.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });

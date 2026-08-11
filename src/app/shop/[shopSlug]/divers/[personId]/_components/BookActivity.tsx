@@ -51,7 +51,6 @@ export function BookActivity({
           <h2 id="book-activity-heading" className="text-lg font-semibold">
             {t("divers.bookActivity.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("divers.bookActivity.description")}</p>
         </div>
       </div>
       <form
