@@ -37,7 +37,6 @@ export function CrewRollCall({
   crewRollCallAction,
   crewRollCallButtonCopy,
   buddyTeamLabel,
-  undoHintPersonId,
   t,
 }: {
   crew: TripManifest["crew"];
@@ -51,12 +50,6 @@ export function CrewRollCall({
   crewRollCallButtonCopy: RollCallButtonCopy;
   /** "Buddy team: Ana and Ben", already localized and list-formatted. */
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
-  /**
-   * The crew member whose row wears the re-tap undo hint — the page's most
-   * recently recorded result across divers *and* crew, or null when a diver
-   * row (or nobody) holds it. See `showUndoHint` on `RollCallControls`.
-   */
-  undoHintPersonId: string | null;
   t: StaffTranslator;
 }) {
   const crewAssigned = crew.length;
@@ -170,7 +163,6 @@ export function CrewRollCall({
                       action={crewRollCallAction}
                       copy={crewRollCallButtonCopy}
                       showBoardControl
-                      showUndoHint={member.id === undoHintPersonId}
                       t={t}
                     />
                   </div>

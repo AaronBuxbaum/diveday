@@ -203,7 +203,6 @@ export function PaymentsSection({
           <h2 id="payments-heading" className="text-lg font-semibold">
             {t("divers.payments.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("divers.payments.description")}</p>
         </div>
         {paymentsConnected ? (
           <Link

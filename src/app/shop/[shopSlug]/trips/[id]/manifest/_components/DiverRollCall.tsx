@@ -94,6 +94,22 @@ function DiverFacts({
   );
 }
 
+/**
+ * The two disclosures a diver's row carries — "Contact & gear" and "Add a
+ * note" — as one pair of class strings.
+ *
+ * They stack one directly above the other, and they used to be written twice:
+ * identical while shut, and nothing alike once open, because only the note grew
+ * a bordered panel. Two controls that read as one kind at rest and two kinds
+ * open is a hesitation the rail cannot afford, so the panel treatment belongs
+ * to both — and lives here once rather than in two class strings that already
+ * drifted apart.
+ */
+const ROW_DISCLOSURE_CLASS =
+  "mt-1 max-w-xl print:hidden open:mt-3 open:rounded-xl open:border open:border-border/70 open:bg-surface-sunken/50 open:p-3";
+const ROW_DISCLOSURE_SUMMARY_CLASS =
+  "flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline";
+
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
   divers,
@@ -107,7 +123,6 @@ export function DiverRollCall({
   saveRollCallNoteAction,
   rollCallButtonCopy,
   buddyTeamLabel,
-  undoHintBookingId,
   t,
 }: {
   divers: TripManifest["divers"];
@@ -131,12 +146,6 @@ export function DiverRollCall({
    */
   rollCallButtonCopy: (bookingId: string) => RollCallButtonCopy;
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
-  /**
-   * The booking whose row wears the re-tap undo hint — the page's most
-   * recently recorded result across divers *and* crew, or null when a crew
-   * row (or nobody) holds it. See `showUndoHint` on `RollCallControls`.
-   */
-  undoHintBookingId: string | null;
   t: StaffTranslator;
 }) {
   return (
@@ -148,7 +157,6 @@ export function DiverRollCall({
               checkpoint: rollCallCheckpointText(t, checkpoint),
             })}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("trips.manifest.checkEachDiverDescription")}</p>
           {/* The control that isn't "Boarded" means something different once
               the boat is out, and the crew tapping it in the dark should be
               told which one they are looking at (DOM-H3). */}
@@ -350,7 +358,7 @@ export function DiverRollCall({
                       the next name (principles 9 and 10). One tap opens them;
                       paper always carries them (the print-only block below —
                       a closed details contributes nothing to print). */}
-                  <details className="group/facts mt-1 max-w-xl print:hidden">
+                  <details className={`group/facts ${ROW_DISCLOSURE_CLASS}`}>
                     {/* Muted, not action-blue: two of these per row down a
                         nine-diver roster is eighteen links' worth of primary
                         ink for rare paths, drowning the one link that earns
@@ -358,7 +366,7 @@ export function DiverRollCall({
                         behind it — a door marked "Contact & gear" with a
                         medical line behind it is a mislabeled door on a
                         safety surface (design review 20260810). */}
-                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline">
+                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
                       {diver.medicalWaiver
                         ? t("trips.manifest.diverFactsSummaryWithMedical")
                         : t("trips.manifest.diverFactsSummary")}
@@ -369,6 +377,9 @@ export function DiverRollCall({
                         +
                       </span>
                     </summary>
+                    {/* Same `mt-2` the note panel's own root carries, so the
+                        two open panels sit the same distance below their
+                        summary line. */}
                     <div className="mt-2">
                       <DiverFacts diver={diver} locale={locale} timezone={timezone} t={t} />
                     </div>
@@ -384,7 +395,7 @@ export function DiverRollCall({
                       for an action most roll calls never take (design
                       principles 8 and 10 — collapse the rare path; hierarchy
                       before boxes). */}
-                  <details className="group/note mt-1 max-w-xl print:hidden open:mt-3 open:rounded-xl open:border open:border-border/70 open:bg-surface-sunken/50 open:p-3">
+                  <details className={`group/note ${ROW_DISCLOSURE_CLASS}`}>
                     {/* The plus glyph is what tells this line apart from the
                         "Resolve blockers" navigation link it can stack under:
                         this one discloses in place (rotating to a ✕ when
@@ -392,7 +403,7 @@ export function DiverRollCall({
                         native marker, so without it the two would be
                         indistinguishable. Same idiom as the divers page's
                         add-diver summary. */}
-                    <summary className="flex min-h-11 cursor-pointer items-center gap-1 text-base font-medium text-muted hover:text-primary hover:underline">
+                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
                       {t("trips.manifest.addNoteSummary")}
                       <span
                         aria-hidden="true"
@@ -461,7 +472,6 @@ export function DiverRollCall({
                   action={rollCallAction}
                   copy={rollCallButtonCopy(diver.bookingId)}
                   showBoardControl={boardingControlShown}
-                  showUndoHint={diver.bookingId === undoHintBookingId}
                   formId={`not-boarded-${diver.bookingId}`}
                   t={t}
                 />

@@ -46,7 +46,7 @@
   },
   "certifications": {
     "heading": "Certification cards",
-    "description": "Evidence starts pending. Look the card number up with the issuing agency, then mark it certified — only certified cards affect readiness.",
+    "description": "Only certified cards affect readiness.",
     "addCard": "Add card",
     "agency": "Agency",
     "level": "Level",
@@ -92,7 +92,6 @@
   "page": {
     "eyebrow": "Front desk",
     "title": "Divers",
-    "description": "Start with the person. Their cards, rental fit, and bookings stay together so the front desk always has the right context.",
     "matchingCount": "{count} matching",
     "onFileCount": "{count} on file",
     "noticeDuplicate": "A diver with that email is already in this shop.",
@@ -105,7 +104,7 @@
     "noticeNotAuthorized": "Removing or restoring a diver is limited to owners and managers.",
     "noticeInvalid": "Check the diver's name, email, and phone number.",
     "addDiverSummary": "Add a diver",
-    "addDiverBody": "Put a diver on the roster before they book — a name is enough to start. Their cards, waivers, and bookings all hang off this record.",
+    "addDiverBody": "A name is enough to start. Cards, waivers, and bookings hang off this record.",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
     "optionalHint": "(optional)",
@@ -168,7 +167,6 @@
   },
   "bookActivity": {
     "heading": "Book an activity",
-    "description": "Add this diver to an available course or dive, then create the order from their booking.",
     "courseOrDiveLabel": "Course or dive",
     "chooseActivity": "Choose an available activity",
     "booking": "Booking…",
@@ -178,7 +176,6 @@
   },
   "payments": {
     "heading": "Payments",
-    "description": "Payment status, orders, and refunds stay with the diver so the next action is easy to find.",
     "newPayment": "New payment",
     "noPaymentsYet": "No payments yet — they'll appear here once this diver books a trip or you raise an order.",
     "openPayment": "Open payment",
@@ -192,7 +189,7 @@
   },
   "remove": {
     "heading": "Remove from active divers",
-    "description": "They come off your active lists; bookings, cards, and sizes stay on file. Nothing is destroyed, and you can undo it.",
+    "description": "Bookings, cards, and sizes stay on file, and you can undo this.",
     "removePersonSummary": "Remove {name}",
     "addAgainNote": "You can add them again later as a new active record.",
     "removing": "Removing…",
@@ -201,14 +198,14 @@
   "removed": {
     "badge": "Removed",
     "heading": "This diver is off your active lists",
-    "body": "They stay out of the roster, booking pickers, manifests, and trip prep. Their bookings, cards, and sizes are still on file.",
+    "body": "Out of the roster, booking pickers, manifests, and trip prep. Their records stay on file.",
     "restore": "Restore diver",
     "restoring": "Restoring…",
     "restoreRestricted": "Only owners and managers can restore a diver."
   },
   "erase": {
     "heading": "Erase personal data",
-    "description": "For a diver who asks you to delete what you hold about them. This is not the same as removing them — it destroys their details for good.",
+    "description": "Destroys this diver's details for good. Not the same as removing them.",
     "summary": "Erase {name}'s personal data",
     "destroyedNote": "Destroyed: their name, email, phone, date of birth, emergency contact, insurance, card numbers and card photos, medical answers, rental sizes, notes about them, review comments, and any photos they shared.",
     "keptNote": "Kept: that they signed your release, which version they signed, and when — plus the trips they were on and what was paid, with their name gone from all of it. Your signed releases stay verifiable.",
@@ -220,7 +217,7 @@
   },
   "rentalFit": {
     "heading": "Rental fit",
-    "description": "What this diver takes from the shop, and in what size. It is what the trip prep list is built from — never an equipment reservation or a substitute for a dock-side fit check.",
+    "description": "What the trip prep list is built from — never a reservation, and never a substitute for a dock-side fit check.",
     "changeRestricted": "Changing what this diver asked for is limited to owners, managers, instructors, and divemasters. If a size isn't available, flag them for hands-on fitting below.",
     "rentsFromShop": "Rents from the shop",
     "bcdSizeLabel": "BCD size",
@@ -235,8 +232,8 @@
     "saveRentalFit": "Save rental fit",
     "flaggedHeading": "Flagged for hands-on fitting",
     "cantFillHeading": "Can't fill one of these sizes?",
-    "flaggedBody": "Flagged for hands-on fitting — they still count on the prep list, but without a size, and the crew fits them from what's aboard at check-in.",
-    "cantFillBody": "Flag them for hands-on fitting at check-in. Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of.",
+    "flaggedBody": "They still count on the prep list, but without a size — the crew fits them from what's aboard.",
+    "cantFillBody": "Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of.",
     "clearing": "Clearing…",
     "fitResolved": "Fit resolved — pack their sizes again",
     "clearingRestricted": "Clearing this is limited to owners, managers, instructors, and divemasters — they confirm the diver can be packed to their stated sizes again.",
@@ -256,7 +253,7 @@
   },
   "specialty": {
     "heading": "Specialty cards",
-    "description": "Specialty cards live with the diver. A verified Nitrox card — confirmed here if it was imported — is required before an EANx fill or tank handoff.",
+    "description": "A verified Nitrox card is required before an EANx fill.",
     "addSpecialty": "Add specialty",
     "specialtyLabel": "Specialty",
     "nitroxOption": "Nitrox",
@@ -328,6 +325,9 @@
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
     "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
     "invalid": "Check the details and try again.",
-    "cardRemovedToast": "Card removed."
+    "cardRemovedToast": "Card removed.",
+    "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",
+    "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
+    "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why."
   }
 }

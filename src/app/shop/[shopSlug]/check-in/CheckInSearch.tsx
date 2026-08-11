@@ -10,7 +10,7 @@ export function CheckInSearch({
   copy,
 }: {
   query: string;
-  copy: { label: string; hint: string; placeholder: string; submit: string };
+  copy: { label: string; placeholder: string; submit: string };
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,9 +23,12 @@ export function CheckInSearch({
   // staffer back at the top of the page every time.
   return (
     <QueryForm className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      {/* No hint line under the label. "A barcode scanner can type a booking
+          ID here" said in prose what the label's own first word ("Scan") and
+          the placeholder ("Name, email, or booking ID") already say between
+          them — three pieces of text for one input. */}
       <label className="min-w-0 flex-1 text-sm font-medium" htmlFor="check-in-search">
         {copy.label}
-        <span className="mt-1 block text-xs font-normal text-muted">{copy.hint}</span>
         <input
           ref={inputRef}
           id="check-in-search"
@@ -34,7 +37,7 @@ export function CheckInSearch({
           inputMode="search"
           defaultValue={query}
           placeholder={copy.placeholder}
-          className={`${controlClass} mt-2`}
+          className={`${controlClass} mt-1`}
         />
       </label>
       <button

@@ -8,6 +8,7 @@ import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-
 import {
   createWaiverToken,
   hashWaiverToken,
+  isCompletedWaiverCurrent,
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
@@ -329,12 +330,14 @@ export type TokenWaiverState =
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
- * `bookingId` is nullable on the schema only for an imported record
- * (ADR 20260724-import-waiver-acceptance) — no completion link is ever issued
- * for one, so it can never be reached through a token. Every record a token
- * flow touches was born from `issueWaiverRequest` or `recordInPersonWaiver`,
- * both of which always set a real booking; this narrows that invariant for
- * token-reached callers rather than threading a null check through each one.
+ * `bookingId` is nullable on the schema for the two records that have no seat
+ * to name: an imported one (ADR 20260724-import-waiver-acceptance) and a
+ * person-scoped paper release (ADR 20260811-person-scoped-paper-waivers).
+ * Neither is ever issued a completion link — a paper record's `tokenHash` is a
+ * random unusable value — so neither can be reached through a token. Every
+ * record a token flow touches came from `issueWaiverRequest`, which always
+ * sets a real booking; this narrows that invariant for token-reached callers
+ * rather than threading a null check through each one.
  */
 export function requireTokenBookingId(record: { bookingId: string | null }): string {
   if (!record.bookingId) {
@@ -677,6 +680,7 @@ export type InPersonWaiverOutcome =
       reason:
         | "booking_not_found"
         | "booking_unavailable"
+        | "person_not_found"
         | "template_not_found"
         | "staff_not_found"
         | "medical_attestation_required"
@@ -721,6 +725,141 @@ async function activeStaffAttestorId(
   return roles && isStaff(roles) ? personId : null;
 }
 
+/** The diver a paper release will be filed for, resolved from either subject. */
+type WaiverSigner = {
+  ok: true;
+  /** Null for a person-scoped record — there is no seat to stamp on it. */
+  bookingId: string | null;
+  personId: string;
+  fullName: string;
+};
+
+async function bookingSigner(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<WaiverSigner | Extract<InPersonWaiverOutcome, { ok: false }>> {
+  const [booking] = await tx
+    .select({
+      id: bookings.id,
+      personId: bookings.personId,
+      fullName: people.fullName,
+      tripStatus: trips.status,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!booking) return { ok: false, reason: "booking_not_found" };
+  if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
+  return {
+    ok: true,
+    bookingId: booking.id,
+    personId: booking.personId,
+    fullName: booking.fullName,
+  };
+}
+
+/**
+ * The diver themselves, with no seat in sight.
+ *
+ * Deliberately does *not* require a `diver` role row: a shop hands a release to
+ * whoever is about to get in the water, and the record is evidence of that act
+ * rather than a claim about how the person is filed. It does require a live
+ * record of this shop's — removed or erased people cannot be attested for, the
+ * same rule `activeStaffAttestorId` applies to the staffer signing it off.
+ */
+async function personSigner(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<WaiverSigner | Extract<InPersonWaiverOutcome, { ok: false }>> {
+  const [person] = await tx
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  if (!person) return { ok: false, reason: "person_not_found" };
+  return { ok: true, bookingId: null, personId: person.id, fullName: person.fullName };
+}
+
+/**
+ * The record that makes filing another one pointless, or null when there is
+ * none — the idempotency check, and the one place the two subjects differ.
+ *
+ * A booking asks "does this seat already have an answer?", because that is the
+ * question the roster and the counter are looking at. A person asks "does this
+ * diver still hold one?" — a lapsed signature is exactly what a shop standing
+ * there with a fresh sheet of paper is replacing, so it must not read as done.
+ */
+async function standingWaiverRecord(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId: string | null;
+    personId: string;
+    templateVersion: number;
+    now: Date;
+  },
+) {
+  if (input.bookingId) {
+    const current = await tx
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.bookingId, input.bookingId), isNull(waiverRecords.supersededAt)));
+    return current.find(
+      (record) => record.status === "completed" || record.status === "medical_review",
+    );
+  }
+  const held = await tx
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  return held.find(
+    (record) =>
+      record.status === "medical_review" ||
+      isCompletedWaiverCurrent(record, input.templateVersion, input.now),
+  );
+}
+
+/**
+ * Who a paper release is being recorded for.
+ *
+ * A signature is a fact about a **person and a shop** — one current record
+ * clears every booking the diver holds here (`effectiveWaiverForBooking`) — so
+ * a seat is context, not a requirement. Both shapes write the same record;
+ * `bookingId` only says where the shop was standing when they filed it.
+ *
+ * - `{ bookingId }` — the roster and the check-in queue, where the staffer is
+ *   already looking at one departure. The seat is stamped on the record, and
+ *   the booking's own live pending link is retired.
+ * - `{ personId }` — the diver's record, where the conversation is about the
+ *   diver: they phoned ahead, or handed the release over months before they
+ *   book anything. `bookingId` stays null, exactly as it does for an imported
+ *   record (ADR 20260811-person-scoped-paper-waivers).
+ */
+export type InPersonWaiverSubject = { bookingId: string } | { personId: string };
+
 /**
  * A staff member records that a diver signed the release on paper — a copy on
  * the boat or handed over on shore — for a diver the app never sees sign. The
@@ -734,16 +873,22 @@ async function activeStaffAttestorId(
  * `medicalAttested` — staff affirming they reviewed the paper medical form and
  * no answer needs physician sign-off. Without it the record is refused, and a
  * flagged medical must go through the diver-facing link, which captures the
- * questionnaire and routes to review. Guards otherwise match
- * `issueWaiverRequest`: the booking must be live, the actor a staff member of
- * the shop. Idempotent — a booking already signed or in medical review keeps its
- * existing record rather than stacking a second one.
+ * questionnaire and routes to review. The actor must be this shop's live staff
+ * either way; a booking subject must additionally be a live seat on a scheduled
+ * trip, the same guard `issueWaiverRequest` applies.
+ *
+ * Idempotent, and the two subjects mean subtly different things by it. A
+ * booking already signed or in medical review keeps its existing record rather
+ * than stacking a second one. A *person* is only "already done" if what they
+ * hold still stands — a current clean signature or an unresolved medical hold —
+ * because a lapsed release is precisely what the shop is standing there with a
+ * fresh sheet of paper to replace.
  */
 export async function recordInPersonWaiver(
   db: AppDb,
   input: {
     shopId: string;
-    bookingId: string;
+    subject: InPersonWaiverSubject;
     recordedByPersonId: string;
     medicalAttested: boolean;
     now?: Date;
@@ -751,39 +896,15 @@ export async function recordInPersonWaiver(
 ): Promise<InPersonWaiverOutcome> {
   const now = input.now ?? nowDate();
   if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
+  const bookingSubject = "bookingId" in input.subject ? input.subject.bookingId : null;
   return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
     const attestedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!attestedBy) return { ok: false, reason: "staff_not_found" };
 
-    const [booking] = await tx
-      .select({
-        id: bookings.id,
-        personId: bookings.personId,
-        fullName: people.fullName,
-        tripStatus: trips.status,
-      })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .limit(1);
-    if (!booking) return { ok: false, reason: "booking_not_found" };
-    if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
-
-    const current = await tx
-      .select()
-      .from(waiverRecords)
-      .where(and(eq(waiverRecords.bookingId, booking.id), isNull(waiverRecords.supersededAt)));
-    const alreadyDone = current.find(
-      (record) => record.status === "completed" || record.status === "medical_review",
-    );
-    if (alreadyDone) return { ok: true, recordId: alreadyDone.id, alreadySigned: true };
+    const signer = bookingSubject
+      ? await bookingSigner(tx, input.shopId, bookingSubject)
+      : await personSigner(tx, input.shopId, (input.subject as { personId: string }).personId);
+    if (!signer.ok) return signer;
 
     const [template] = await tx
       .select()
@@ -793,32 +914,46 @@ export async function recordInPersonWaiver(
       .limit(1);
     if (!template) return { ok: false, reason: "template_not_found" };
 
+    const standing = await standingWaiverRecord(tx, {
+      shopId: input.shopId,
+      bookingId: signer.bookingId,
+      personId: signer.personId,
+      templateVersion: template.version,
+      now,
+    });
+    if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
+
     const evidence = inPersonAttestationProvider.capture({
-      signerName: booking.fullName,
+      signerName: signer.fullName,
       agreed: true,
       signedAt: now,
     });
     if (!evidence) return { ok: false, reason: "invalid_signature" };
 
-    // Retire any live pending link so its bearer token can never complete a
-    // second record after the shop has already recorded the paper copy.
-    await tx
-      .update(waiverRecords)
-      .set({ supersededAt: now })
-      .where(
-        and(
-          eq(waiverRecords.bookingId, booking.id),
-          eq(waiverRecords.status, "pending"),
-          isNull(waiverRecords.supersededAt),
-        ),
-      );
+    // Retire this booking's live pending link so its bearer token can never
+    // complete a second record after the shop has recorded the paper copy.
+    // Person-scoped records leave other bookings' links alone: those are a
+    // different seat's paperwork, and a diver part-way through signing one
+    // online should not find it dead.
+    if (signer.bookingId) {
+      await tx
+        .update(waiverRecords)
+        .set({ supersededAt: now })
+        .where(
+          and(
+            eq(waiverRecords.bookingId, signer.bookingId),
+            eq(waiverRecords.status, "pending"),
+            isNull(waiverRecords.supersededAt),
+          ),
+        );
+    }
 
     const [record] = await tx
       .insert(waiverRecords)
       .values({
         shopId: input.shopId,
-        bookingId: booking.id,
-        personId: booking.personId,
+        bookingId: signer.bookingId,
+        personId: signer.personId,
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,

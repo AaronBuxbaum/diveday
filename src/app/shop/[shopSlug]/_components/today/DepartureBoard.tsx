@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
 import { formatTime, formatTimeRange } from "@/lib/format";
@@ -242,12 +243,7 @@ function DepartureCard({
           <details>: keyboard, screen-reader, and no-JS behavior for free. */}
       <details className="group/crew mt-3">
         <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-          <span
-            aria-hidden="true"
-            className="inline-block text-xs text-muted transition-transform duration-200 group-open/crew:rotate-90"
-          >
-            ▸
-          </span>
+          <DisclosureCaret className="text-muted group-open/crew:rotate-90" />
           {/* The affordance sits beside its object, not across the card. */}
           <span className="min-w-0 truncate text-muted">
             {localCrew.length > 0 ? fill(copy.crewLine, { names: crewNames }) : copy.noCrewAssigned}

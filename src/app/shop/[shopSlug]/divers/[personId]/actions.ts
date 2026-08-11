@@ -38,6 +38,7 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { recordInPersonWaiver } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
@@ -457,6 +458,47 @@ export async function setNeedsStaffFitAction(
   });
   const notice = !saved ? "invalid" : needed ? "fit-flagged" : "fit-cleared";
   revalidateAndRedirect(base, backTo(base, notice, "fit"));
+}
+
+/**
+ * "This diver signed on paper", recorded from their own record.
+ *
+ * The third door onto one write path (`recordInPersonWaiver`) — the roster and
+ * the check-in queue already have one — and the one a shop reaches when the
+ * conversation is about the *person* rather than a departure: a diver phones
+ * ahead, or hands the release over at the counter long before they book
+ * anything.
+ *
+ * No booking, by design. A signature is a fact about a person and a shop, so
+ * the record is filed against the diver in the URL and nothing else — the
+ * subject is this route's own path segment, never a form field
+ * (ADR 20260811-person-scoped-paper-waivers).
+ */
+export async function markWaiverInPersonAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const outcome = await recordInPersonWaiver(await getDb(), {
+    shopId: staff.user.shopId,
+    subject: { personId },
+    recordedByPersonId: staff.user.personId,
+    medicalAttested: formData.get("medicalAttested") === "on",
+  });
+  revalidateAndRedirect(
+    base,
+    backTo(
+      base,
+      outcome.ok
+        ? "waiver-paper-recorded"
+        : outcome.reason === "medical_attestation_required"
+          ? "waiver-medical-attestation"
+          : "waiver-error",
+      "waiver",
+    ),
+  );
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {

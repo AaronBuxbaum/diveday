@@ -24,6 +24,7 @@ import { DiverHeader } from "./_components/DiverHeader";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
+import { PaperWaiver } from "./_components/PaperWaiver";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RentalFit } from "./_components/RentalFit";
@@ -179,6 +180,18 @@ export default async function DiverDetailPage({
         className="mt-8"
       />
       <StatsSummary diver={diver} shop={shop} locale={locale} />
+      {/* Beside the stat row it answers, not filed under a section heading of
+          its own: the Waiver card is what tells a staffer the release is
+          outstanding, so the one thing they can do about it from this page
+          belongs directly beneath it. Renders nothing when there is nothing
+          to record. */}
+      <PaperWaiver
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        status={noticeForForm(diverNotice, "waiver")}
+      />
       <DiverSection id="cards">
         <CertificationCards
           diver={diver}

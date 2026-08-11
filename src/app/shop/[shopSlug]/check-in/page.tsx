@@ -86,13 +86,11 @@ export default async function CheckInPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ q?: string; notice?: string; bid?: string; tid?: string; u?: string }>;
+  searchParams: Promise<{ q?: string; notice?: string; bid?: string; tid?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  // `u` is the booking a check-in tap just settled — the one row that wears
-  // the re-tap undo hint this render (see checkInAction's redirect).
-  const { q, notice, bid, tid, u } = await searchParams;
+  const { q, notice, bid, tid } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
@@ -192,26 +190,28 @@ export default async function CheckInPage({
         </ShopNotice>
       ) : null}
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <CheckInSearch
-          query={query}
-          copy={{
-            label: t("checkIn.search.label"),
-            hint: t("checkIn.search.hint"),
-            placeholder: t("checkIn.search.placeholder"),
-            submit: t("checkIn.search.submit"),
-          }}
-        />
-      </section>
+      {/* No card around the search box. One input and a button do not need a
+          bordered, shadowed panel of their own — that box was 120px of chrome
+          between the page title and the first name, on the surface with a line
+          of divers waiting in front of it (design principle 10). */}
+      <CheckInSearch
+        query={query}
+        copy={{
+          label: t("checkIn.search.label"),
+          placeholder: t("checkIn.search.placeholder"),
+          submit: t("checkIn.search.submit"),
+        }}
+      />
 
       <section aria-label={t("checkIn.queueAriaLabel")} className="mt-8">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h2 className="text-xl font-semibold">{t("checkIn.readyHeading")}</h2>
-            <p className="mt-1 text-sm text-muted">
-              {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
-            </p>
-          </div>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          {/* The heading *is* the scope — "Ready at the counter" sat above a
+              list that includes everyone blocked, with a second line under it
+              naming what the list actually held. One honest line instead of a
+              slogan plus its correction. */}
+          <h2 className="text-xl font-semibold">
+            {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
+          </h2>
           {/* A count is a fact, not an alert (design principle 9) — quiet
               tabular text, so a pill on this page always means the
               exceptional state (Blocked, Boarded). */}
@@ -431,18 +431,6 @@ export default async function CheckInPage({
                                   <span className="text-base font-semibold whitespace-nowrap text-muted">
                                     {t("checkIn.undoing")}
                                   </span>
-                                }
-                                hint={
-                                  // Once, on the row the finger just left —
-                                  // not under every settled row (principle 9;
-                                  // the same rule the manifest's roll call
-                                  // follows). Re-tap works on every settled
-                                  // row; only the teaching sentence is scoped.
-                                  row.bookingId === u ? (
-                                    <span className="text-sm whitespace-nowrap text-muted">
-                                      {t("checkIn.tapToUndo")}
-                                    </span>
-                                  ) : undefined
                                 }
                               >
                                 {identity}

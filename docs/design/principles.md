@@ -99,9 +99,16 @@ output as considered as screen output.
 
 A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two shapes:
 
-- **High-frequency toggles** (board / not-board / aboard) use **re-tap**: tapping the confirmed
-  "Aboard ✓" state clears it, with a "Tap to undo" hint. The correction is its own event, so the
-  audit trail keeps it (never a delete).
+- **High-frequency toggles** (board / not-board / aboard, counter check-in) use **re-tap**:
+  tapping the confirmed "Aboard ☑️" state clears it. The correction is its own event, so the audit
+  trail keeps it (never a delete). **The settled control is the affordance — don't print a "tap
+  again to undo" line under it.** A button a finger just put into "Boarded ☑️" already reads as a
+  state you can leave, its accessible name already says "Undo", and a sentence repeating that under
+  every settled row is one line of chrome per person down a full boat (principle 9). The one
+  exception is a settled state whose control carries **no done-check to point at** — "Not back
+  aboard", where the sentence names the control instead ("Tap 'Not back aboard' again to undo"),
+  because the alternative is a crew member reading a danger-toned button as a claim they cannot
+  take back.
 - **Destructive or rare** actions (delete a diver) confirm *after* the fact with an **Undo
   banner** — the action lands immediately and the banner offers a one-tap reversal.
 

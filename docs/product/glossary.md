@@ -660,7 +660,10 @@ new domain concept, define it here in the same PR.
   these records, so recording one requires an explicit staff attestation that the paper medical form
   was reviewed and no answer needs physician sign-off. A flagged medical must instead go through the
   diver-facing link, which captures the questionnaire and routes to review — the medical block is
-  never a checkbox.
+  never a checkbox. Recorded from a **seat** (a trip's roster, the check-in queue) or from the
+  **diver** (their own record), which is the same record either way — a diver who has booked nothing
+  yet can still hand over a signed release, and the record simply names no booking. See
+  [20260811-person-scoped-paper-waivers](../architecture/decisions/20260811-person-scoped-paper-waivers.md).
 - **Imported waiver acceptance** — a contact-import row explicitly claiming a diver already accepted a
   waiver (medical clearance included) at a prior shop. DiveDay trusts that claim and writes the same
   immutable completed record any signature produces, marked `signatureMethod: "imported"` so it is

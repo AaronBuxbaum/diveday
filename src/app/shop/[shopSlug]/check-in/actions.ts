@@ -20,19 +20,18 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     recordedByPersonId: session.user.personId,
   });
   if (outcome.ok) {
-    // No success banner: the diver's own settled row — "Checked in ☑️", the
-    // re-tap hint — is the confirmation, beside the control that produced it
-    // (docs/design/forms-and-controls.md; design principle 9). A duplicate tap
-    // lands on the same settled row, which already says everything a banner
-    // would. Refusals below keep their notices — they have no row state to
-    // land on.
+    // No success banner: the diver's own settled row — "Checked in ☑️" where
+    // the finger just was — is the confirmation, beside the control that
+    // produced it (docs/design/forms-and-controls.md; design principle 9). A
+    // duplicate tap lands on the same settled row, which already says
+    // everything a banner would. Refusals below keep their notices — they
+    // have no row state to land on.
     //
-    // `u` marks the row the finger just left, so the "tap again to undo"
-    // hint prints once — on the row where a mis-tap correction is live —
-    // rather than repeating under every settled row on the page (design
-    // principle 9; FU-20260811-undo-hint-said-once). Re-tap works on every
-    // settled row regardless; only the sentence is scoped.
-    revalidateAndRedirect(back, `${back}?u=${encodeURIComponent(outcome.bookingId)}`);
+    // Nothing is carried back about *which* row settled, because nothing on
+    // the page needs it any more: the row used to wear a "tap again to undo"
+    // sentence, and a settled control that a finger just put into that state
+    // is its own affordance.
+    revalidateAndRedirect(back, back);
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
@@ -90,7 +89,7 @@ export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: 
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,
-    bookingId,
+    subject: { bookingId },
     recordedByPersonId: session.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });

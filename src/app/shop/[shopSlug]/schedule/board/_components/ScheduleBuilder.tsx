@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 
@@ -635,9 +636,7 @@ function AddPanel({
           {/* The affordance a ghost button has none of: which way this goes,
               before you press it. Decorative — `aria-expanded` is the state a
               screen reader is told. */}
-          <span aria-hidden="true" className="inline-block">
-            {expanded ? "▾" : "▸"}
-          </span>{" "}
+          <DisclosureCaret className={expanded ? "rotate-90" : ""} />{" "}
           {expanded ? copy.fewerOptions : copy.moreOptions}
         </button>
         {expanded ? null : (
