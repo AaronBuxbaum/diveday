@@ -26,7 +26,13 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     // lands on the same settled row, which already says everything a banner
     // would. Refusals below keep their notices — they have no row state to
     // land on.
-    revalidateAndRedirect(back, back);
+    //
+    // `u` marks the row the finger just left, so the "tap again to undo"
+    // hint prints once — on the row where a mis-tap correction is live —
+    // rather than repeating under every settled row on the page (design
+    // principle 9; FU-20260811-undo-hint-said-once). Re-tap works on every
+    // settled row regardless; only the sentence is scoped.
+    revalidateAndRedirect(back, `${back}?u=${encodeURIComponent(outcome.bookingId)}`);
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link

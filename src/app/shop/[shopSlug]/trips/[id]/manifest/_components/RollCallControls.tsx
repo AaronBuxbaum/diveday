@@ -3,6 +3,7 @@ import {
   RollCallButton,
   type RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isNotBackAboard, type RollCallCheckpoint, type RollCallRecord } from "@/lib/manifests";
 
@@ -14,39 +15,13 @@ export const BOAT_TARGET_CLASS =
   "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70";
 
 /**
- * One fill per roll-call state, shared by the diver rows and the crew rows so
- * the two lists can never disagree about what a colour means.
- *
- * The two *recorded* outcomes have to be told apart across a wet deck in
- * sunlight, which is why they are different hues rather than two washes of the
- * same one: aboard is green, left ashore is amber. They used to be `success/10`
- * and a plain slate `surface-sunken`, two pale neutrals that read as the same
- * card at arm's length. Awaiting takes the slate instead — nothing has been
- * said about that person yet.
- *
- * **Only one row on this page wears a ring**, and it is the one that means a
- * person is in the water. "Left ashore" is a *settled* outcome — the glossary
- * calls it benign and genuinely accounted for — so it gets the hue that
- * separates it from green and none of the alarm that separates red from
- * everything: a ringed amber sitting beside a ringed red reads as the same
- * class of emergency at arm's length in glare, and it would make the most
- * closed row on the page louder than `awaiting`, which is the state that still
- * needs a human (dive-domain review 20260804).
- *
- * Colour never carries this alone: every row states its status in words, on the
- * button beside it on screen and on the pill beside the name in print.
+ * The fills themselves live in the shared row-tone vocabulary
+ * (`src/components/row-tones.ts`), beside the counter queue's quieter map —
+ * one module so the two surfaces a staffer reads minutes apart can never
+ * drift into two meanings for one colour. Re-exported here because this file
+ * is where every roll-call consumer already looks for them.
  */
-export const ROLL_CALL_ROW_TONE = {
-  /** A stated "did not come back" — the loudest thing on the page, and the only ring. */
-  notBackAboard: "border-danger bg-danger/15 ring-1 ring-danger/40",
-  boarded: "border-success bg-success/20",
-  notBoarded: "border-warning bg-warning/15",
-  /** Carried forward from the dock rather than recorded here — same hue, quieter. */
-  notBoardedImplied: "border-dashed border-warning/60 bg-warning/5",
-  awaiting: "border-border-strong bg-surface-sunken",
-  /** Awaiting *and* blocked: readiness is the thing to fix before boarding. */
-  blocked: "border-danger bg-danger/5",
-} as const;
+export { ROLL_CALL_ROW_TONE };
 
 /**
  * What one roll-call record means at one checkpoint, as the booleans every row
@@ -136,6 +111,7 @@ export function RollCallControls({
   action,
   copy,
   showBoardControl,
+  showUndoHint,
   formId,
   t,
 }: {
@@ -153,6 +129,16 @@ export function RollCallControls({
    * !isDeparture`); crew carry no readiness, so their control is always shown.
    */
   showBoardControl: boolean;
+  /**
+   * Whether this row is the one wearing the re-tap undo hint — the most
+   * recently recorded result at this checkpoint, where a mis-tap correction
+   * is live. The hint teaches a *grammar*, not a per-row fact: printed under
+   * every settled row it repeated the identical sentence nine times down a
+   * full boat (design principle 9), so the page says it once, on the row the
+   * finger just left. Re-tap itself works on every settled row regardless —
+   * only the sentence moves (FU-20260811-undo-hint-said-once).
+   */
+  showUndoHint: boolean;
   /**
    * Form id, so a drafted roll-call note with no result to auto-save to yet can
    * ride the "not boarded" submit. Divers only — crew rows take no note.
@@ -261,7 +247,15 @@ export function RollCallControls({
         }
         copy={copy}
       />
-      {recordedHere ? (
+      {/* Not-back-aboard rows are exempt from the once-per-page scoping: that
+          control carries no done-check, so the page's one taught grammar
+          ("tap the ☑️ again") points at nothing there — and it is the
+          highest-consequence state on the page to leave wrong. A crew member
+          who notices row 4 is wrong after rattling through nine names must
+          not read a danger-toned "Not back aboard" button as a claim rather
+          than a toggle. Several at once is an emergency, not repetitive
+          chrome (dive-domain review 20260811). */}
+      {recordedHere && (showUndoHint || notBackAboard) ? (
         // The undo hint names the control it means. A not-back-aboard
         // result deliberately carries no done-check, so the generic
         // "tap the ✓ status again" would point at nothing on screen.

@@ -6,6 +6,7 @@ import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/Blocked
 import { EmptyState } from "@/components/EmptyState";
 import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
+import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -85,11 +86,13 @@ export default async function CheckInPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ q?: string; notice?: string; bid?: string; tid?: string }>;
+  searchParams: Promise<{ q?: string; notice?: string; bid?: string; tid?: string; u?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { q, notice, bid, tid } = await searchParams;
+  // `u` is the booking a check-in tap just settled — the one row that wears
+  // the re-tap undo hint this render (see checkInAction's redirect).
+  const { q, notice, bid, tid, u } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
@@ -379,10 +382,10 @@ export default async function CheckInPage({
                           data-testid={`check-in-card-${row.bookingId}`}
                           className={`border-l-4 ${
                             checkedIn
-                              ? "border-success bg-success/10"
+                              ? CHECK_IN_ROW_TONE.checkedIn
                               : ready
-                                ? "border-transparent"
-                                : "border-danger bg-danger/5"
+                                ? CHECK_IN_ROW_TONE.awaiting
+                                : CHECK_IN_ROW_TONE.blocked
                           }`}
                         >
                           {ready && !checkedIn ? (
@@ -430,9 +433,16 @@ export default async function CheckInPage({
                                   </span>
                                 }
                                 hint={
-                                  <span className="text-sm whitespace-nowrap text-muted">
-                                    {t("checkIn.tapToUndo")}
-                                  </span>
+                                  // Once, on the row the finger just left —
+                                  // not under every settled row (principle 9;
+                                  // the same rule the manifest's roll call
+                                  // follows). Re-tap works on every settled
+                                  // row; only the teaching sentence is scoped.
+                                  row.bookingId === u ? (
+                                    <span className="text-sm whitespace-nowrap text-muted">
+                                      {t("checkIn.tapToUndo")}
+                                    </span>
+                                  ) : undefined
                                 }
                               >
                                 {identity}
