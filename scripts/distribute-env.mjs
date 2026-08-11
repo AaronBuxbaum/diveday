@@ -96,6 +96,30 @@ if (target === "local") {
       !stackManaged.has(key) && existingValues[key] ? existingValues[key] : value,
     ]),
   );
+  // Say which values this deliberately did not update.
+  //
+  // Local choices win over the stack for everything outside `stackManaged`,
+  // which is what you want for a `DATABASE_URL` or a personal Stripe test key.
+  // But the stack also *mints* credentials this file then carries -- the
+  // per-service IAM pairs -- and for those the same rule means a value typed in
+  // once is pinned forever: every later run reads the real credential out of
+  // Secrets Manager and silently drops it. That is invisible in the file
+  // afterwards, and the failure it produces arrives much later and somewhere
+  // else (a 403 from a service whose key "is right there in the env").
+  // Overriding is still allowed -- it is a local dotenv and someone may have
+  // meant it -- but it is no longer silent.
+  const kept = Object.keys(resolvedValues).filter(
+    (key) =>
+      !stackManaged.has(key) &&
+      existingValues[key] &&
+      resolvedValues[key] &&
+      existingValues[key] !== resolvedValues[key],
+  );
+  if (kept.length > 0) {
+    console.warn(
+      `Kept the value already in ${outputPath} for ${kept.join(", ")} -- the deployed stack has a different one. Blank the line and re-run to take the stack's.`,
+    );
+  }
   rendered = replaceValues(source, mergedValues);
 } else {
   const included = Object.entries(resolvedValues)

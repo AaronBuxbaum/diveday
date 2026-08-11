@@ -126,6 +126,15 @@ Vercel, update GitHub visual-test secrets, and add SES DNS records through Verce
 `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The Vercel CLI is pinned in this
 repository's dev dependencies and is invoked with `pnpm exec vercel`, never downloaded ad hoc.
 
+`.env.local` is a **merge, not an overwrite**: a value already in the file wins over the deployed
+stack's for every key outside `distribute-env.mjs`'s small `stackManaged` set, so a `DATABASE_URL` or
+a personal Stripe test key survives a deploy. That rule also covers the per-service IAM credentials
+the stack mints, which means a key typed in by hand once is pinned — every later run reads the real
+one out of Secrets Manager and drops it, and the file looks correct afterwards. The run now prints
+`Kept the value already in .env.local for …` naming each such key; if one of them is a `*_AWS_*` pair
+the stack owns, blank that line and re-run. The `.env.vercel` and `.env.github` targets do not merge
+— they are rendered from the secret each time.
+
 Each of these three sync steps only pushes what actually changed, not the whole document every
 time — answering "yes" is safe to do on every deploy. Vercel variables (`import-vercel-env.mjs`)
 and DNS records (inline in `post-deploy-wizard.mjs`) diff against what's already live, by pulling

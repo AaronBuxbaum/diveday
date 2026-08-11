@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -118,5 +118,45 @@ describe("distribute-env", () => {
     expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
     expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
     expect(readFileSync(`${directory}/aws-profile-used`, "utf8")).toBe("diveday-admin:us-east-1");
+  });
+
+  it("says out loud which local values it kept over the stack's", () => {
+    // The rule that keeps local choices also pins credentials the stack
+    // *mints*: a key typed into .env.local once is never refreshed, every later
+    // run silently drops the real one, and the file looks fine afterwards. The
+    // failure surfaces days later as a 403 from a service whose credential is
+    // sitting right there in the env. Overriding stays allowed; it stops being
+    // silent.
+    const path = temporaryPath(".env.local");
+    writeFileSync(path, "PLACES_AWS_ACCESS_KEY_ID=typed-in-by-hand\n");
+
+    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
+      cwd: process.cwd(),
+      input: `${source}PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack\n`,
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("PLACES_AWS_ACCESS_KEY_ID");
+    expect(readFileSync(path, "utf8")).toContain("PLACES_AWS_ACCESS_KEY_ID=typed-in-by-hand");
+  });
+
+  it("stays quiet when the local file agrees with the stack, or has nothing to say", () => {
+    const path = temporaryPath(".env.local");
+    // One value identical to the stack's, one the stack does not carry at all.
+    writeFileSync(
+      path,
+      "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack\nSTRIPE_SECRET_KEY=local-only\n",
+    );
+
+    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
+      cwd: process.cwd(),
+      input: `${source}PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack\nSTRIPE_SECRET_KEY=\n`,
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(0);
+    expect(run.stderr).toBe("");
+    expect(readFileSync(path, "utf8")).toContain("STRIPE_SECRET_KEY=local-only");
   });
 });
