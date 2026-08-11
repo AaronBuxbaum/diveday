@@ -32,9 +32,16 @@ be forgotten, never usefully reconsidered.
   for a partial query typed a keystroke at a time". Both are; only `Suggest` returns "relevant
   places, points of interest". Everything else about the call is unchanged — same client, same
   `AdditionalFeatures: ["Core"]`, same guards, same debounce, same structured `Address` mapping — so
-  the swap changes only the *class of thing that can be found*. `MaxQueryRefinements: 0`, because
-  `Suggest` also answers with search terms to try next, and a row with no place behind it has nothing
-  to save.
+  the swap changes only the *class of thing that can be found*.
+- **No `MaxQueryRefinements`.** This ADR originally recorded `MaxQueryRefinements: 0` here, on the
+  reasoning that `Suggest` "also answers with search terms to try next, and a row with no place
+  behind it has nothing to save". Both halves were wrong, and the first was wrong in production: the
+  parameter's documented range is **1..10**, so `0` made every keystroke a `ValidationException` /
+  HTTP 400 and the box found nothing at all. The second half is why nothing is sent in its place —
+  query refinements arrive in their own top-level `QueryRefinements` array, which this adapter never
+  reads, not as rows inside `ResultItems`. What keeps an unpickable row out of the list is the
+  `Place.PlaceId` filter in the mapping. Every request parameter is asserted to be inside AWS's
+  documented range, against the reference rather than against the code's own choice.
 - **The IAM user holds `geo-places:Suggest` and nothing else** (infra §12), keeping the
   one-operation boundary 20260804 established. A stack still holding the old `Autocomplete` statement
   answers every keystroke with `AccessDeniedException`, so `cdk deploy` lands with or before the app
@@ -83,6 +90,19 @@ be forgotten, never usefully reconsidered.
 - Suggestion text is still third-party content rendered into React children, where it is escaped by
   default; nothing here uses `dangerouslySetInnerHTML`, and nothing should. The query is still a
   partial business address and is still never logged.
+- **A mocked provider client cannot tell you a request is malformed**, and this feature has now been
+  broken twice by exactly that blind spot: once by a missing `AdditionalFeatures: ["Core"]` (2026-08-09)
+  and once by an out-of-range `MaxQueryRefinements` (2026-08-11). Both times a test asserted the
+  request field and passed, because `{ send: vi.fn() }` accepts any object handed to it — the
+  assertion proved the adapter sends what the adapter sends. Request-shape tests here are therefore
+  written against the **API reference's stated constraints**, not against the value the code
+  happens to pass, and every parameter carries a comment naming its documented range.
+- **A failure now names the field AWS refused.** `ValidationException` carries a `Reason` enum and a
+  `FieldList` of `{ Name, Message }`; the log line takes `Reason` and the field `Name`s and never
+  `Message`, which is prose AWS composes around the value it rejected — for `QueryText` that value is
+  the shop's partly-typed address, the one thing this log may not carry. Before this, a malformed
+  request logged a flat `"reason":"rejected"`, indistinguishable from every other bad request, which
+  is how an out-of-range integer cost a production release.
 
 ## Alternatives considered
 

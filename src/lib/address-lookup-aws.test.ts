@@ -101,14 +101,50 @@ describe("Amazon Location address suggestions", () => {
     expect(client.send.mock.calls[0][0].constructor.name).toBe("SuggestCommand");
   });
 
-  it("asks for no query refinements, which are rows with nothing to save", async () => {
-    // `Suggest` also answers with search terms to try next. They carry no place
-    // and no address, so a picked one has nothing to write — they would only
-    // crowd real answers out of a five-row list.
+  /**
+   * The production bug this replaces, and the reason it is written as a range
+   * rather than as an equality.
+   *
+   * The adapter shipped `MaxQueryRefinements: 0` — "don't offer me query
+   * refinements" — and AWS documents that parameter's valid range as **1..10**.
+   * Every keystroke came back `ValidationException` / HTTP 400, so the box
+   * found nothing at all. The test that was here asserted `MaxQueryRefinements
+   * === 0` and passed the whole time: a mocked client accepts any request
+   * object, so an assertion that the adapter sends what the adapter sends
+   * proves only that, never that AWS would take it.
+   *
+   * So the assertion is now against the *documented constraint* instead of
+   * against the code's own choice. That is the only shape of request test a
+   * fake client can be wrong about in a useful direction.
+   */
+  it("sends no request parameter outside the range AWS documents for it", async () => {
     const client = clientReturning({ ResultItems: [] });
-    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
-    const command = client.send.mock.calls[0][0] as { input: Record<string, unknown> };
-    expect(command.input.MaxQueryRefinements).toBe(0);
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef Dive Center");
+    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+
+    // MaxResults: "Valid Range: Minimum value of 1. Maximum value of 100."
+    expect(input.MaxResults).toBeGreaterThanOrEqual(1);
+    expect(input.MaxResults).toBeLessThanOrEqual(100);
+    // QueryText: "Length Constraints: Minimum length of 1. Maximum length of 200."
+    expect(String(input.QueryText).length).toBeGreaterThanOrEqual(1);
+    expect(String(input.QueryText).length).toBeLessThanOrEqual(200);
+    // AdditionalFeatures: "Minimum number of 1 item. Maximum number of 5 items."
+    expect((input.AdditionalFeatures as string[]).length).toBeGreaterThanOrEqual(1);
+    expect((input.AdditionalFeatures as string[]).length).toBeLessThanOrEqual(5);
+    // MaxQueryRefinements: "Valid Range: Minimum value of 1. Maximum value of
+    // 10." Sending it at all buys nothing — refinements arrive in their own
+    // `QueryRefinements` array, which this adapter never reads — so the
+    // in-range value to send is no value.
+    expect(input.MaxQueryRefinements).toBeUndefined();
+  });
+
+  it("never spends a request the query is too long for", async () => {
+    // The 200-character bound above is AWS's own `QueryText` limit, so a query
+    // past it is a guaranteed `ValidationException` rather than a big bill.
+    const client = clientReturning({ ResultItems: [] });
+    const result = await awsAddressLookupProvider(config, { client }).suggest("x".repeat(201));
+    expect(result).toEqual({ status: "too_short" });
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it("drops a query-refinement row that arrives anyway", async () => {
@@ -203,6 +239,47 @@ describe("Amazon Location address suggestions", () => {
     const client = { send: vi.fn().mockRejectedValue(throttled) };
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
     expect(result).toEqual({ status: "rate_limited" });
+  });
+
+  it("names the request field AWS refused, so a malformed request isn't just 'rejected'", async () => {
+    // What `MaxQueryRefinements: 0` looked like in production: a flat
+    // `"reason":"rejected"` with nothing to act on, identical to every other
+    // malformed request. The field name is the whole fix.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const invalid = Object.assign(new Error("1 validation error detected"), {
+      name: "ValidationException",
+      Reason: "FieldValidationFailed",
+      FieldList: [
+        { Name: "MaxQueryRefinements", Message: "Member must be greater than or equal to 1" },
+      ],
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(invalid) };
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
+
+    const line = warn.mock.calls.at(-1)?.[0] as string;
+    expect(line).toContain("FieldValidationFailed");
+    expect(line).toContain("MaxQueryRefinements");
+    warn.mockRestore();
+  });
+
+  it("logs the refused field's name but never AWS's message about it", async () => {
+    // `Message` is prose AWS composes around the value it rejected, and for
+    // `QueryText` that value is the shop's partly-typed business address.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const invalid = Object.assign(new Error("1 validation error detected"), {
+      name: "ValidationException",
+      Reason: "FieldValidationFailed",
+      FieldList: [{ Name: "QueryText", Message: "Invalid value: 102 Ocean Drive, Key Largo" }],
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(invalid) };
+    await awsAddressLookupProvider(config, { client }).suggest("102 Ocean Drive");
+
+    const line = warn.mock.calls.at(-1)?.[0] as string;
+    expect(line).toContain("QueryText");
+    expect(line).not.toContain("Ocean");
+    warn.mockRestore();
   });
 
   it("never lets the query back out through the log line", async () => {

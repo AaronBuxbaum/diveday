@@ -40,6 +40,27 @@ import { log } from "./log";
  */
 type GeoPlacesLike = { send: (command: SuggestCommand) => Promise<unknown> };
 
+/**
+ * The nameable half of a `ValidationException`, or null when the error is not
+ * one.
+ *
+ * Field **names** and the `Reason` enum only. AWS's per-field `Message` is
+ * prose it composes around the value it rejected, which for `QueryText` is the
+ * shop's partially-typed business address — the one thing this module's log
+ * line is not allowed to carry (ADR 20260804-aws-location-address-lookup).
+ * The names are strings this file chose, so they give up nothing.
+ */
+function validationDetail(reason: unknown, fieldList: unknown): string | null {
+  const fields = Array.isArray(fieldList)
+    ? fieldList
+        .map((field) => (field as { Name?: unknown })?.Name)
+        .filter((fieldName): fieldName is string => typeof fieldName === "string")
+    : [];
+  const why = typeof reason === "string" ? reason : null;
+  if (!why && fields.length === 0) return null;
+  return [why, fields.join(",")].filter(Boolean).join(" ");
+}
+
 export function awsAddressLookupProvider(
   config: AddressLookupConfig,
   options: { client?: GeoPlacesLike } = {},
@@ -64,13 +85,29 @@ export function awsAddressLookupProvider(
         const response = (await client.send(
           new SuggestCommand({
             QueryText: query.trim(),
+            // 1..100 per the API reference. Every request parameter here is
+            // inside its documented range, and that is not a free-form style
+            // note: AWS answers an out-of-range value with a flat
+            // `ValidationException`, so the whole feature is dead until it is
+            // spotted. See `MaxQueryRefinements` immediately below.
             MaxResults: ADDRESS_SUGGESTION_LIMIT,
-            // `Suggest` answers with two kinds of row: places, and *query
-            // refinements* — search terms to try next, which carry no place and
-            // no address. A refinement can never be picked here (there is
-            // nothing to save), so asking for none keeps the whole answer
-            // pickable rather than mixing dead rows into a five-row list.
-            MaxQueryRefinements: 0,
+            // **`MaxQueryRefinements` is deliberately not sent.** It shipped as
+            // `0`, meaning "don't offer me query refinements", and its
+            // documented range is 1..10 — so every keystroke came back
+            // `ValidationException` / HTTP 400 and the box found nothing at
+            // all (2026-08-11, in production). A mocked client cannot catch
+            // that: it accepts any request object, so the test asserting `0`
+            // passed while proving only that the adapter sends what the
+            // adapter sends.
+            //
+            // Omitting it also costs nothing, because it never did the job it
+            // was added for. Refinements come back in their own top-level
+            // `QueryRefinements` array — suggested *search terms*, which this
+            // adapter never reads — not as rows inside `ResultItems`. What
+            // keeps an unpickable row out of the list is the `Place.PlaceId`
+            // filter in the mapping below, which is where it belonged all
+            // along.
+
             // Not optional, despite the name. The `Address` object comes back
             // holding a `Label` and *nothing else* unless `Core` is asked for
             // ("`Address` contains the result label and, if `["Core"]` is
@@ -166,6 +203,8 @@ export function awsAddressLookupProvider(
         const shape = error as {
           name?: unknown;
           code?: unknown;
+          Reason?: unknown;
+          FieldList?: unknown;
           $metadata?: { httpStatusCode?: unknown };
         };
         const name = typeof shape?.name === "string" ? shape.name : null;
@@ -180,6 +219,20 @@ export function awsAddressLookupProvider(
           code,
           status,
           reason: outcome.status === "rate_limited" ? "throttled" : outcome.reason,
+          // Which *field* AWS refused, and why, when it says so. A
+          // `ValidationException` carries a `Reason` enum
+          // (`FieldValidationFailed`, `UnknownField`, …) and a `FieldList` of
+          // `{ Name, Message }`, and only those two travel: `Name` is a
+          // request-parameter name we chose ourselves and `Reason` is a
+          // closed set, while `Message` is prose AWS composes and is exactly
+          // where a rejected `QueryText` gets echoed back — the one thing this
+          // log may never carry.
+          //
+          // Added because a bare `"reason":"rejected"` is what a wrong
+          // `MaxQueryRefinements` looked like from the outside, and it is
+          // indistinguishable from every other malformed request. One field
+          // name would have turned that into a one-line fix.
+          validation: validationDetail(shape.Reason, shape.FieldList),
         });
         return outcome;
       }
