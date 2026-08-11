@@ -52,6 +52,8 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -62,6 +64,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -72,6 +76,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -87,6 +93,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -106,6 +114,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -166,6 +176,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -251,6 +263,8 @@ jobs:
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -535,6 +549,8 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       changed: ${{ steps.filter.outputs.changed }}
     steps:
@@ -590,6 +606,8 @@ jobs:
     if: ${{ always() && (needs.db-surface-changes.outputs.changed == 'true' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     # The whole point of the job. Everything else in this repo's db suite runs on
     # PGlite, which is a genuinely good default — fast, hermetic, no service to
     # stand up — but it is single-connection and it is not the engine production

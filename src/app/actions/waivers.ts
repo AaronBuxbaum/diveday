@@ -75,7 +75,24 @@ export async function sendWaiversAction(
 
   // The blocked row itself moves to its awaiting state (a fresh link is now
   // pending) once the server data refreshes.
-  revalidatePath(SURFACE_PATH[surface](shopSlug, tripId));
+  let path: string | undefined;
+  switch (surface) {
+    case "today":
+      path = SURFACE_PATH.today(shopSlug);
+      break;
+    case "blockers":
+      path = SURFACE_PATH.blockers(shopSlug);
+      break;
+    case "check_in":
+      path = SURFACE_PATH.check_in(shopSlug);
+      break;
+    case "roster":
+      path = SURFACE_PATH.roster(shopSlug, tripId);
+      break;
+    default:
+      path = undefined;
+  }
+  if (path) revalidatePath(path);
   if (state.sent.length > 0) {
     await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface });
   }

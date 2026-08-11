@@ -41,11 +41,6 @@ export function ensureAwsLogin({
   }
 
   const region = environment.AWS_DEFAULT_REGION?.trim() || "us-east-1";
-  // Deliberately static, per CodeQL: same reasoning as the throw above. This
-  // branch is only reachable when `interactive` is true, which no
-  // CI-unattended caller ever passes -- but that correlation is a runtime
-  // fact this function's own code does not prove, so the log call is written
-  // as if `environment` could be credential-bearing regardless.
   log("AWS profile needs sign-in; opening aws login…");
   const login = spawn("aws", ["login", ...profileArguments(environment), "--region", region], {
     env: environment,

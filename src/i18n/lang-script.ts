@@ -19,8 +19,19 @@ import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "./settings";
  * closely enough that a browser's own language list and its `Accept-Language`
  * header agree in practice — same source, same order.
  */
+/**
+ * Escape characters that could break out of a `<script>` tag when JSON is
+ * embedded inline in HTML. `JSON.stringify` alone does not escape `<`, `>`,
+ * or `/`, so a value containing `</script>` would terminate the surrounding
+ * script block. These escapes are valid JavaScript Unicode escape sequences
+ * and are transparent to the JS engine.
+ */
+function escapeForScriptContext(json: string): string {
+  return json.replace(/</g, "\\u003C").replace(/>/g, "\\u003E").replace(/\//g, "\\u002F");
+}
+
 export function localeCorrectionScript(): string {
-  const supported = JSON.stringify(DIVER_LOCALES);
-  const fallback = JSON.stringify(DEFAULT_DIVER_LOCALE);
+  const supported = escapeForScriptContext(JSON.stringify(DIVER_LOCALES));
+  const fallback = escapeForScriptContext(JSON.stringify(DEFAULT_DIVER_LOCALE));
   return `(function(){try{var s=${supported};var d=document.documentElement;var langs=(navigator.languages&&navigator.languages.length)?navigator.languages:[navigator.language||${fallback}];var found=null;for(var i=0;i<langs.length;i++){if(s.indexOf(langs[i])!==-1){found=langs[i];break}}if(!found){for(var j=0;j<langs.length&&!found;j++){var p=(langs[j]||"").split("-")[0].toLowerCase();for(var k=0;k<s.length;k++){if(s[k].split("-")[0].toLowerCase()===p){found=s[k];break}}}}d.lang=found||${fallback}}catch(e){}})()`;
 }
