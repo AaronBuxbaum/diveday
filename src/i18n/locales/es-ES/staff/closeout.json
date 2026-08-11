@@ -49,8 +49,7 @@
     "heading": "Mañana, de un vistazo",
     "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
     "empty": "Mañana empieza despejado.",
-    "count": "{count, plural, one {# tarea espera en la cola de mañana.} other {# tareas esperan en la cola de mañana.}}",
-    "openToday": "Abrir Hoy"
+    "count": "{count, plural, one {# tarea espera en la cola de mañana.} other {# tareas esperan en la cola de mañana.}}"
   },
   "close": {
     "heading": "Cerrar el día",

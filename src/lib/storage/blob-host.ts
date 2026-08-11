@@ -1,10 +1,10 @@
 /**
  * Split out from `./index.ts` with no server-only imports (same reasoning as
  * `limits.ts`, CR-011): `index.ts` pulls in `sharp` via `process-image.ts`,
- * which has no business in a browser bundle. A "use client" component (e.g.
- * `DigitalCardFlip`) that only needs to ask "is this URL one our own blob
- * store could have produced?" imports this file directly instead of the
- * barrel, so that question never drags `sharp` along with it.
+ * which has no business in a browser bundle. A "use client" component that
+ * only needs to ask "is this URL one our own blob store could have produced?"
+ * imports this file directly instead of the barrel, so that question never
+ * drags `sharp` along with it.
  */
 
 /**

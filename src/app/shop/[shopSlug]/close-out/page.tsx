@@ -420,12 +420,11 @@ export default async function CloseOutPage({
                 </li>
               ))}
             </ul>
-            <Link
-              href={`/shop/${shopSlug}`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("closeout.tomorrow.openToday")}
-            </Link>
+            {/* No "Open Today" button. This card is a heads-up about the
+                morning, not a hand-off — and Today is a permanent tab in the
+                header and a permanent slot in the phone dock, one tap from
+                here and from everywhere else. A button that only repeats
+                standing chrome adds a control without adding a destination. */}
           </div>
         )}
       </section>

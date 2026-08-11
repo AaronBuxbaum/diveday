@@ -1,6 +1,7 @@
 # 20260804-card-evidence-is-the-number — A certification card's evidence is its number, not its photo
 
-- **Status:** Accepted
+- **Status:** Accepted; its display half superseded by
+  [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md)
 - **Date:** 2026-08-04
 
 ## Context
@@ -31,6 +32,11 @@ and one more field between a front-desk staffer and a captured card.
   photo face, the specialty row's "View card photo" link, the erasure retirement path, and the CSV
   export column all remain. Shops that captured photos before this keep seeing them; nothing that
   was stored is orphaned or silently hidden.
+  **Superseded 2026-08-11** by
+  [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md): both displays are gone,
+  and `cardImageUrl` has left the create path too. The column, the erasure retirement path, and the
+  CSV export column still remain — legacy photos stay exportable and stay erasable, they are simply
+  no longer shown.
 
 ## Alternatives considered
 

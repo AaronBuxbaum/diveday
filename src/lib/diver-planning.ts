@@ -18,13 +18,44 @@ export type DockDayStep =
  * English label here is exactly the kind of string a diver on a Spanish page
  * would have read in English forever (docs ADR 20260729-diver-copy-localization).
  */
+/**
+ * How long before departure the crew briefing starts, derived from the shop's
+ * arrival call so a short call time can never put the briefing before the
+ * diver was asked to arrive. Named and exported so the Settings row that sets
+ * the call can show the beat it produces, rather than each side doing this
+ * arithmetic and drifting.
+ */
+export function briefingLeadMinutes(dockCallMinutes = 30): number {
+  return Math.min(15, Math.floor(dockCallMinutes / 2));
+}
+
+/**
+ * The rhythm as *offsets*, with no departure to hang it on — what Settings
+ * shows beside the one field that sets it, so a shop can see that "30 minutes"
+ * is the whole of the timeline their divers read as "Your dock-day rhythm".
+ * The beats after departure (`boatRide`, `surfaceInterval`, `return`) are
+ * derived from a particular trip's own length, so they are not a shop setting
+ * and are deliberately absent here.
+ */
+export type DockDayRhythmStep = Extract<DockDayStep, "arrive" | "briefing" | "departure">;
+
+export function dockDayRhythmPreview(
+  dockCallMinutes = 30,
+): Array<{ step: DockDayRhythmStep; minutesBefore: number }> {
+  return [
+    { step: "arrive", minutesBefore: dockCallMinutes },
+    { step: "briefing", minutesBefore: briefingLeadMinutes(dockCallMinutes) },
+    { step: "departure", minutesBefore: 0 },
+  ];
+}
+
 export function dockDayTimeline(
   startsAt: Date,
   dockCallMinutes = 30,
   endsAt?: Date,
 ): Array<{ step: DockDayStep; at: Date }> {
   const at = (minutesBefore: number) => new Date(startsAt.getTime() - minutesBefore * 60_000);
-  const briefingBefore = Math.min(15, Math.floor(dockCallMinutes / 2));
+  const briefingBefore = briefingLeadMinutes(dockCallMinutes);
   return [
     { step: "arrive", at: at(dockCallMinutes) },
     { step: "briefing", at: at(briefingBefore) },

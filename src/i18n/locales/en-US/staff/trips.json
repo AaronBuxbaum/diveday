@@ -72,7 +72,6 @@
     "undoing": "Undoing…"
   },
   "detail": {
-    "eyebrow": "Trips",
     "viewBookingPage": "View booking page",
     "copyBookingLink": "Copy link",
     "linkCopied": "Copied!",
@@ -509,7 +508,6 @@
     "stillBlocked": "Diver is still blocked. <guestsLink>Open Guests to resolve the blocker</guestsLink>, then try again."
   },
   "prep": {
-    "eyebrow": "Trips",
     "diverCount": "{count, plural, one {# diver} other {# divers}}",
     "crewCount": "{count, plural, one {# diving crew member} other {# diving crew}}",
     "diveCount": "{count, plural, one {# dive} other {# dives}}",
@@ -552,7 +550,6 @@
     "rentalKitEmptyAction": "Open the guest list"
   },
   "guests": {
-    "eyebrow": "Trips",
     "cancelledBadge": "Cancelled",
     "courseSession": "Course session · {title}",
     "demandSignal": "This boat could take more",

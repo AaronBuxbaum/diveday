@@ -42,8 +42,7 @@
   "crewGaps": {
     "needCrew": "{count, plural, one {# departure in this window still needs crew.} other {# departures in this window still need crew.}}",
     "allCrewed": "Every departure in this window has its crew.",
-    "noDepartures": "No departures scheduled in this window.",
-    "action": "Assign crew on Today"
+    "noDepartures": "No departures scheduled in this window."
   },
   "notice": {
     "shiftSaved": "Shift saved.",

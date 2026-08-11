@@ -9,7 +9,7 @@ import type { DiverProfile } from "./shared";
 
 /**
  * The one control in the app that destroys data on purpose
- * (ADR 20260802-diver-data-erasure). Deliberately unlike "Remove from active
+ * (ADR 20260802-diver-data-erasure). Deliberately unlike "Archive
  * divers" directly above it, which is reversible and keeps everything:
  *
  * - it is rendered only for an owner (the page checks; the action re-checks),

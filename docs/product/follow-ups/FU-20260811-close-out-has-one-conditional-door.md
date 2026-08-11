@@ -21,7 +21,8 @@ would be an M.
    running late, or a day with no departures at all, there is no card — and on those exact days a
    staffer may still want to walk the close-out.
 2. **⌘K → "Close-out"** (`inPalette: true` in `src/lib/staff-destinations.ts`). It carries
-   `navGroup: null` and no `g`-key shortcut, so it is in no nav, no tab bar, and no shortcut sheet.
+   `navGroup: null`, so it is in no nav and no tab bar. (It had no `g`-key shortcut either; that
+   whole mechanism was removed on 2026-08-11 — ADR 20260811-command-palette-is-the-only-keyboard-route.)
 
 There is no third. A staffer who has never been handed the card by Today has no way to learn the
 page exists short of typing its name into the palette, which requires already knowing the word.
@@ -58,7 +59,7 @@ Pick one:
   departure — not only when every departure has ended — so an evening with a night dive still on
   the board still offers the handoff. Cheapest honest fix; leaves the header alone. This is my
   recommendation.
-- **Keep it, promote it.** Give `closeOut` a `g`-key shortcut and a row in the shortcut sheet, and
+- **Keep it, promote it.** Give `closeOut` a nav or dock slot of its own, and
   decide separately whether it earns a tab (which means demoting one).
 - **Retire it.** Fold the leftovers carry/dismiss into Today and delete the route, the
   `day_closeouts` trail, and ADR 20260804 (superseded). Do **not** do this without also deciding

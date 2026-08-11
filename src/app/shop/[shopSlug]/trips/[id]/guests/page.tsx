@@ -6,9 +6,7 @@ import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
@@ -25,17 +23,18 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
-import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
-import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
+import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { isRosterFilter, RosterSection } from "../_components/RosterSection";
 import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
+import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addInternalNoteAction,
@@ -229,11 +228,6 @@ async function TripGuestsBody({
     ...(showPromote ? ["last-minute-deal"] : []),
   ]);
   const pageNotice = tripNotice && guestSections.has(tripNotice.form) ? undefined : tripNotice;
-  const capacityLabelValue = capacityLabel(trip);
-  const capacityText =
-    capacityLabelValue.kind === "full"
-      ? t("shared.capacity.full")
-      : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
   const rentalFitByBooking = new Map(prepDivers.map((row) => [row.bookingId, row.fit] as const));
   const nitroxByBooking = new Map(
     prepDivers
@@ -259,33 +253,21 @@ async function TripGuestsBody({
   return (
     <>
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
-      <ShopPageHeader
-        eyebrow={t("trips.guests.eyebrow")}
+      <TripPageHeader
         title={trip.title}
-        meta={
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              {cancelled ? (
-                <Badge tone="danger">{t("trips.guests.cancelledBadge")}</Badge>
-              ) : (
-                // A sold-out boat is a win worth noticing, not a quiet state
-                // (design/principles.md #3) — "success" stands out where
-                // "neutral" would recede.
-                <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
-                  {capacityText}
-                </Badge>
-              )}
-              <span className="text-muted">
-                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-              </span>
-            </div>
-            {trip.course ? (
-              <p className="text-sm font-medium text-primary">
-                {t("trips.guests.courseSession", { title: trip.course.title })}
-              </p>
-            ) : null}
-          </div>
+        startsAt={trip.startsAt}
+        endsAt={trip.endsAt}
+        locale={locale}
+        timeZone={shop.timezone}
+        badge={
+          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.guests.cancelledBadge")} t={t} />
+        }
+        extraMeta={
+          trip.course ? (
+            <p className="text-sm font-medium text-primary">
+              {t("trips.guests.courseSession", { title: trip.course.title })}
+            </p>
+          ) : null
         }
       />
 

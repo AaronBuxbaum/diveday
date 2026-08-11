@@ -63,7 +63,7 @@ function renderList({
   importHref = "/shop/blue-mantis/settings/import" as string | null,
   page = emptyPage,
   // Owner/manager by default — the roster hands this down only to whoever may
-  // restore, and it is what makes the Removed view exist at all.
+  // unarchive, and it is what makes the Archived view exist at all.
   restoreAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
 } = {}) {
@@ -163,13 +163,13 @@ describe("DiverList roster views", () => {
       ["Missing contact", "/shop/blue-mantis/divers?filter=missing_contact"],
       // Last, and apart from the three: not a question about today, but the
       // only way to find a diver somebody removed.
-      ["Removed", "/shop/blue-mantis/divers?filter=removed"],
+      ["Archived", "/shop/blue-mantis/divers?filter=removed"],
     ]);
     // The per-browser saved views are gone entirely — no button, no chips.
     expect(screen.queryByRole("button", { name: /save this view/i })).toBeNull();
   });
 
-  it("hides the Removed view from a staffer who may not restore — no chip, no explanation", () => {
+  it("hides the Archived view from a staffer who may not unarchive — no chip, no explanation", () => {
     renderList({ filter: "diving_today", restoreAction: null });
     const views = screen.getByRole("navigation", { name: "Roster views" });
     expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
@@ -224,8 +224,8 @@ describe("DiverList removed view", () => {
   it("puts a restore on each row, named for the diver it restores", () => {
     renderList({ filter: "removed", page: removedPage });
     // One per layout (the phone cards and the table both render), each
-    // distinctly named so a screen reader is never offered two bare "Restore"s.
-    const buttons = screen.getAllByRole("button", { name: "Restore Archived Alex" });
+    // distinctly named so a screen reader is never offered two bare "Unarchive"s.
+    const buttons = screen.getAllByRole("button", { name: "Unarchive Archived Alex" });
     expect(buttons.length).toBeGreaterThan(0);
     for (const button of buttons) {
       const form = button.closest("form");

@@ -9,7 +9,6 @@ import {
   staffNavDestinations,
   staffPaletteDestinations,
   staffShopRoot,
-  staffShortcutDestinations,
   visibleStaffDestinations,
 } from "./staff-destinations";
 
@@ -51,15 +50,6 @@ describe("the staff destination registry", () => {
     }
   });
 
-  it("never gives two destinations the same keyboard shortcut", () => {
-    const keys = STAFF_DESTINATIONS.flatMap((destination) =>
-      destination.shortcut ? [destination.shortcut] : [],
-    );
-    expect(new Set(keys).size).toBe(keys.length);
-    // `g` starts the sequence, so it can never also end one.
-    expect(keys).not.toContain("g");
-  });
-
   it("keeps every destination reachable from at least one surface", () => {
     for (const destination of STAFF_DESTINATIONS) {
       expect(
@@ -89,7 +79,6 @@ describe("permission gating", () => {
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
-    const shortcuts = staffShortcutDestinations(crew).map((destination) => destination.id);
     const nav = [
       ...staffNavDestinations("primary", crew),
       ...staffNavDestinations("daily", crew),
@@ -99,7 +88,6 @@ describe("permission gating", () => {
     for (const id of gated) {
       expect(visible).not.toContain(id);
       expect(palette).not.toContain(id);
-      expect(shortcuts).not.toContain(id);
       expect(nav).not.toContain(id);
     }
   });
@@ -126,7 +114,7 @@ describe("permission gating", () => {
 describe("what each consumer derives", () => {
   it("lays the header out as five tabs and no More menu", () => {
     // The header holds only places a shop lives in *during a dive day*;
-    // everything demoted keeps its palette row, its shortcut, or a contextual
+    // everything demoted keeps its palette row or a contextual
     // door on the surface that owns it — Reports from Orders' header, Dive
     // sites and Waivers from Settings' cards, Close-out from Today's evening
     // handoff, Reviews as a Today queue row, and Settings itself from the
@@ -197,24 +185,6 @@ describe("what each consumer derives", () => {
     }
   });
 
-  it("gives the shortcut sheet its sequences, waivers only when permitted", () => {
-    expect(staffShortcutDestinations(owner).map((d) => `g ${d.shortcut}`)).toEqual([
-      "g t",
-      "g b",
-      "g d",
-      "g s",
-      "g a",
-      "g w",
-    ]);
-    expect(staffShortcutDestinations(crew).map((d) => d.shortcut)).toEqual([
-      "t",
-      "b",
-      "d",
-      "s",
-      "a",
-    ]);
-  });
-
   it("declares the global Add-a-booking door here rather than in the palette", () => {
     // It used to be a hand-written item inside CommandPalette.tsx — a
     // destination living in one consumer and nowhere else, which is the drift
@@ -257,14 +227,13 @@ describe("what each consumer derives", () => {
   });
 
   it("still reaches the by-departure view by name and by keystroke", () => {
-    // Not ready is off the header, so the palette row and `g b` are the only
-    // ways left to ask for it by name — and both must carry the view query,
-    // or they land on the urgency view and quietly do nothing.
+    // Not ready is off the header, so the palette row is the only way left to
+    // ask for it by name — and it must carry the view query, or it lands on
+    // the urgency view and quietly does nothing.
     const blockers = STAFF_DESTINATIONS.find((destination) => destination.id === "blockers");
     if (!blockers) throw new Error("registry lost the by-departure view");
     expect(blockers.navGroup).toBeNull();
     expect(blockers.inPalette).toBe(true);
-    expect(blockers.shortcut).toBe("b");
     expect(staffDestinationHref(staffShopRoot("blue-mantis"), blockers)).toBe(
       "/shop/blue-mantis?view=departures",
     );

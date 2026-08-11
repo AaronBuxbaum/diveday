@@ -115,13 +115,18 @@
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
     "dockCall": {
-      "heading": "Hora de presentación en el muelle",
-      "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar.",
-      "detail": "Tiempo para preparar el equipo, verificar titulaciones y dar el briefing. Aparece en las confirmaciones, en el ritmo del día y en cada recordatorio previo.",
-      "label": "Minutos antes de zarpar",
-      "submit": "Guardar hora de presentación",
+      "heading": "Ritmo del día de salida",
+      "description": "Con cuánta antelación llegan los buceadores y cuándo empieza el briefing.",
+      "detail": "Un solo número fija todo el ritmo: los buceadores lo ven como «Tu ritmo del día de salida» en su página de reserva, y se traslada a las confirmaciones y a cada recordatorio previo. El briefing sigue automáticamente a la hora de llegada, así que nunca puede caer antes de la hora a la que citaste a tus buceadores.",
+      "label": "Llegar estos minutos antes de la salida",
+      "submit": "Guardar el ritmo del día de salida",
       "submitting": "Guardando…",
-      "value": "{count} min antes de zarpar"
+      "value": "Llegar {count} min antes",
+      "stepArrive": "Llegada y registro",
+      "stepBriefing": "Briefing de la tripulación",
+      "stepDeparture": "Salida",
+      "minutesBefore": "{count} min antes",
+      "atDeparture": "A la hora"
     },
     "units": {
       "heading": "Unidades",

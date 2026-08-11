@@ -85,36 +85,38 @@ export function ForecastSection({
             : t("trip.forecastUpdateUnavailable")}
         </p>
       ) : automatedForecast ? (
-        <div className="mt-4">
-          {/* Open-Meteo's license (open-meteo.com/en/license) requires attribution
-              with a link back to them, not just the name in plain text. */}
-          <p className="text-base text-muted">
-            {t("trip.forecastSourcePrefix")}{" "}
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
-            >
-              Open-Meteo
-            </a>{" "}
-            {t("trip.forecastSourceSuffix")}
-          </p>
-          <p className="mt-2 text-xs text-muted">
-            {t("trip.forecastVisibilityNote")}{" "}
-            <time dateTime={automatedForecast.validAt.toISOString()}>
-              {t("trip.forecastValidFor", {
-                date: formatShortDate(automatedForecast.validAt, locale, shop.timezone),
-                time: automatedForecast.validAt.toLocaleTimeString(locale, {
-                  timeZone: shop.timezone,
-                  hour: "numeric",
-                  minute: "2-digit",
-                  timeZoneName: "short",
-                }),
-              })}
-            </time>
-          </p>
-        </div>
+        // One line of fine print, not a 16px paragraph above it. "Planning
+        // outlook from Open-Meteo" restated the eyebrow this card already
+        // wears ("Automated marine outlook") at nearly body weight, so the
+        // first thing a diver read under the numbers was where they came from
+        // rather than what they mean. The two things that paragraph carried
+        // that nothing else says — that the crew makes the final call, and who
+        // supplied the model — join the caveats they belong with. The credit
+        // stays a link: Open-Meteo's license (open-meteo.com/en/license)
+        // requires attribution *with* a link back, not the name in plain text.
+        <p className="mt-4 text-xs text-muted">
+          {t("trip.forecastCrewCall")} {t("trip.forecastVisibilityNote")}{" "}
+          <time dateTime={automatedForecast.validAt.toISOString()}>
+            {t("trip.forecastValidFor", {
+              date: formatShortDate(automatedForecast.validAt, locale, shop.timezone),
+              time: automatedForecast.validAt.toLocaleTimeString(locale, {
+                timeZone: shop.timezone,
+                hour: "numeric",
+                minute: "2-digit",
+                timeZoneName: "short",
+              }),
+            })}
+          </time>{" "}
+          · {t("trip.forecastCreditPrefix")}{" "}
+          <a
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Open-Meteo
+          </a>
+        </p>
       ) : null}
     </section>
   );

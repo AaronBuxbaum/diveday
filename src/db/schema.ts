@@ -2864,7 +2864,17 @@ export const certifications = pgTable(
     agency: certificationAgency("agency").notNull(),
     level: certificationLevel("level").notNull(),
     identifier: text("identifier").notNull(),
-    /** Storage seam comes later; this is a provider-neutral durable reference. */
+    /**
+     * **Legacy only — nothing writes this any more.** A shop verifies a card by
+     * looking its number up with the issuing agency, which is what "Mark
+     * certified" attests to; the upload only ever added a second, unverified
+     * artefact to hold, and the digital-card viewer that displayed it is gone
+     * too. Kept nullable so rows written before those removals still round-trip
+     * through export and still get their stored object retired by diver erasure
+     * (`src/db/anonymize.ts`) — dropping the column would strand those objects
+     * in the blob store with nothing left pointing at them. See
+     * docs/product/follow-ups/ for the drop-and-purge that finishes this.
+     */
     cardImageUrl: text("card_image_url"),
     /**
      * Date-only, no time-of-day or timezone (CR-009): a card is valid
@@ -2927,7 +2937,17 @@ export const specialtyCertifications = pgTable(
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
     identifier: text("identifier").notNull(),
-    /** Storage seam comes later; this is a provider-neutral durable reference. */
+    /**
+     * **Legacy only — nothing writes this any more.** A shop verifies a card by
+     * looking its number up with the issuing agency, which is what "Mark
+     * certified" attests to; the upload only ever added a second, unverified
+     * artefact to hold, and the digital-card viewer that displayed it is gone
+     * too. Kept nullable so rows written before those removals still round-trip
+     * through export and still get their stored object retired by diver erasure
+     * (`src/db/anonymize.ts`) — dropping the column would strand those objects
+     * in the blob store with nothing left pointing at them. See
+     * docs/product/follow-ups/ for the drop-and-purge that finishes this.
+     */
     cardImageUrl: text("card_image_url"),
     /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
     expiresAt: date("expires_at", { mode: "string" }),

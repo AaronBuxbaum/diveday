@@ -114,14 +114,15 @@ export function ShopIdentityMenu({
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
           <LogoMark className="size-5" />
         </span>
-        {/* No fixed clamp below `lg`. The 10rem one this replaces was sized
-            when the header still carried the wrapped tab rows and a standing
-            Sign out; with the tabs in the dock and Sign out behind this menu,
-            a 390px header has about 240px for the name, so the clamp was
-            ellipsing names with 80px of room to spare. Flex owns the width
-            now — the name truncates only when the row genuinely runs out. The
-            clamp returns at `lg`, where the tab strip shares this row. */}
-        <span className="min-w-0 truncate lg:max-w-40">{shopName}</span>
+        {/* No fixed clamp at any width. The 10rem one that survived at `lg`
+            was sized when the header still carried wrapped tab rows and a
+            standing Sign out, and it was ellipsing names — "Sandbar Pass
+            Aquatics" cut to "Sandbar Pass Aquat…" — on a 1440px header with
+            several hundred pixels of empty row to its right. Flex owns the
+            width instead: this item is `shrink` inside a row whose other
+            children are `shrink-0`, so the name truncates only when the row
+            genuinely runs out of space, which is the only time it should. */}
+        <span className="min-w-0 truncate">{shopName}</span>
         {/* The one visual cue that the identity block opens: a small caret,
             rotating with state (transform-only, ≤250ms, principle 5). */}
         <span

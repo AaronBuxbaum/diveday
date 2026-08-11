@@ -150,8 +150,8 @@
     "forecastCrewNote": "Previsión facilitada por la tripulación; las condiciones pueden cambiar. La decisión final se toma en el muelle.",
     "forecastUpdated": "Actualizado el {when}.",
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
-    "forecastSourcePrefix": "Previsión de planificación de",
-    "forecastSourceSuffix": "— la tripulación confirma las condiciones y decide en el muelle.",
+    "forecastCrewCall": "La tripulación confirma las condiciones y decide en el muelle.",
+    "forecastCreditPrefix": "Previsión de",
     "forecastVisibilityNote": "La visibilidad bajo el agua la aporta la tripulación.",
     "forecastValidFor": "Para el {date} · {time}",
     "timeline": {

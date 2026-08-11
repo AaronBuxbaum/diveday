@@ -1,13 +1,7 @@
-import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
-import {
-  type StaffDestinationLabels,
-  staffDestinationSuffix,
-  staffShopRoot,
-  staffShortcutDestinations,
-} from "@/lib/staff-destinations";
+import { type StaffDestinationLabels, staffShopRoot } from "@/lib/staff-destinations";
 import {
   type ShopNavCounts,
   type ShopNavGates,
@@ -23,10 +17,9 @@ async function signOutAction() {
 }
 
 /**
- * The one word each staff destination goes by. The nav tabs, the palette's
- * "Go to" rows, and the keyboard-shortcut sheet all read this record, so the
- * three can no longer call the same page different things — or, as before,
- * know about different pages entirely. Typed against `StaffDestinationId`, so
+ * The one word each staff destination goes by. The nav tabs and the palette's
+ * "Go to" rows both read this record, so the two can no longer call the same
+ * page different things — or, as before, know about different pages entirely. Typed against `StaffDestinationId`, so
  * adding a destination to the registry is a type error here until it has a word.
  */
 function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestinationLabels {
@@ -65,7 +58,7 @@ export function ShopNav({
   shopName: string;
   /** Today's next departure's boarding, when the shop has a boat out today. */
   boatBoardingHref?: string;
-  /** Owner/manager surfaces (H-14) to hide from nav, shortcuts, and search for everyone else. */
+  /** Owner/manager surfaces (H-14) to hide from the nav and search for everyone else. */
   navGates: ShopNavGates;
   /** Small pending-work counts for the Reviews/Blockers nav badges (task 83). */
   navCounts?: ShopNavCounts;
@@ -74,30 +67,6 @@ export function ShopNav({
   const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
   const destinationLabels = destinationLabelsFor(t);
-  const keyboardShortcutsCopy: KeyboardShortcutsCopy = {
-    buttonAriaLabel: t("shared.keyboardShortcuts.buttonAriaLabel"),
-    buttonTitle: t("shared.keyboardShortcuts.buttonTitle"),
-    dialogAriaLabel: t("shared.keyboardShortcuts.dialogAriaLabel"),
-    closeAriaLabel: t("shared.keyboardShortcuts.closeAriaLabel"),
-    heading: t("shared.keyboardShortcuts.heading"),
-    paletteLabel: t("shared.keyboardShortcuts.paletteLabel"),
-    helpLabel: t("shared.keyboardShortcuts.helpLabel"),
-    sequenceHint: t.rich("shared.keyboardShortcuts.sequenceHint", {
-      kbdG: (chunks) => <kbd>{chunks}</kbd>,
-      kbdS: (chunks) => <kbd>{chunks}</kbd>,
-    }),
-    // Derived from the destination registry, so the sheet lists exactly the
-    // sequences that work — including none for a surface this role can't see.
-    navShortcuts: staffShortcutDestinations(navGates).map((destination) => ({
-      key: destination.shortcut,
-      // Suffix *plus* any view query — `g b` selects Today's by-departure view,
-      // which the bare suffix (the shop root) would silently drop.
-      suffix: staffDestinationSuffix(destination),
-      goToLabel: t("shared.keyboardShortcuts.goToLabel", {
-        page: destinationLabels[destination.id],
-      }),
-    })),
-  };
   // Shared by the header tabs and the phone dock, so a badge can never say
   // different things in the two places the same destination renders.
   const badgeLabels = {
@@ -131,7 +100,13 @@ export function ShopNav({
               with. The inner `flex` keeps the button content-sized, so a short
               name leaves no header-wide tap target. From `lg` the tab strip is
               the flexible one and this sits at its own width again. */}
-          <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-none">
+          {/* `lg:flex-initial`, not `lg:flex-none`: at `lg` this sizes to the
+              name rather than to a share of the row, but it must still be
+              *able* to shrink, because the name itself no longer carries a
+              max-width clamp (see ShopIdentityMenu). `flex-none` pins
+              `flex-shrink: 0`, which would let a long shop name push the tab
+              strip instead of ellipsing. */}
+          <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-initial">
             <ShopIdentityMenu
               shopName={shopName}
               root={root}
@@ -169,7 +144,6 @@ export function ShopNav({
                 goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
               }}
             />
-            <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
           </div>
           <ShopNavLinks
             root={root}

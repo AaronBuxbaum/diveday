@@ -72,7 +72,7 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     ["Team", /\/settings\/team$/],
     // The global seat-a-diver door. It was hand-written into the palette
     // itself until it earned a registry entry of its own, so this row now
-    // proves the same list the nav and the shortcut sheet read.
+    // proves the same list the nav reads.
     ["Add a booking", /\/bookings\/new$/],
   ] as const) {
     await shortcuts.fill(query);

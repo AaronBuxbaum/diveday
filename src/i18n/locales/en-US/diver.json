@@ -150,8 +150,8 @@
     "forecastCrewNote": "Forecast supplied by the crew; conditions can change. The final call happens at the dock.",
     "forecastUpdated": "Updated {when}.",
     "forecastUpdateUnavailable": "Update time unavailable.",
-    "forecastSourcePrefix": "Planning outlook from",
-    "forecastSourceSuffix": "— the crew confirms conditions and makes the final call at the dock.",
+    "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
+    "forecastCreditPrefix": "Forecast by",
     "forecastVisibilityNote": "Underwater visibility comes from the crew.",
     "forecastValidFor": "For {date} · {time}",
     "timeline": {

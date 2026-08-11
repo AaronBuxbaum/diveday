@@ -22,7 +22,6 @@ import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -34,6 +33,7 @@ import {
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
+import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall } from "./_components/DiverRollCall";
@@ -222,47 +222,42 @@ export default async function TripManifestPage({
   return (
     <div>
       <SkipLink href="#roll-call-list" label={t("trips.manifest.skipToRollCall")} />
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7 print:mt-0">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            {manifest.trip.title}
-          </h1>
-          <p className="mt-1 text-muted">
-            {formatShortDate(manifest.trip.startsAt, locale, shop.timezone)} ·{" "}
-            {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, locale, shop.timezone)}
-          </p>
-          {/* One line about what this page *is*. What to do at each checkpoint
-              is said by the checkpoint nav and the "Active checkpoint" panel
-              below, both of which name the current one; saying it a third time
-              up here was the page explaining itself before it showed itself.
-              The "Live manifest · save an offline copy below" badge went with
-              it — the offline card is a backstop at the foot of the page now,
-              under its own heading, and pointing at it from up here would put
-              a piece of housekeeping between a captain and the head count. */}
-          <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
-            {t("trips.manifest.description")}
-          </p>
-        </div>
-        {/* `ms-auto` rather than the header's `justify-between` alone: once
-            this cluster wraps onto its own line, a lone flex item on that line
-            sits at the *start* of it, which is how Print / save PDF ended up
-            on the left here and on the right on every other trip tab. Print is
-            the last (rightmost) action on all of them. */}
-        <div className="flex shrink-0 flex-wrap items-center gap-3 ms-auto print:hidden">
-          {/* One tap to the hand-to-authorities document: the recorded
-              manifest, roll-call timeline, cert evidence, and waiver status
-              for this departure, print-ready with an integrity code. */}
-          {canExportIncidentRecord ? (
-            <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/incident-export`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("incidentExport.openLink")}
-            </Link>
-          ) : null}
-          <PrintButton label={t("shared.printButton.label")} />
-        </div>
-      </header>
+      {/* The same header the other three tabs wear (`TripPageHeader`). This
+          page used to hand-roll its own — a smaller `<h1>`, a rule underneath,
+          the date line at a different offset — so switching to the Manifest
+          redrew the top of the page for no reason a reader could act on.
+          Deliberately without the seats badge the others carry: the whole body
+          below is a live head count, and a "3 spots left" pill above a roll
+          call reading "6 of 9 aboard" invites reading the seat count as a
+          boarding count. */}
+      <TripPageHeader
+        title={manifest.trip.title}
+        startsAt={manifest.trip.startsAt}
+        endsAt={manifest.trip.endsAt}
+        locale={locale}
+        timeZone={shop.timezone}
+        // One line about what this page *is*. What to do at each checkpoint is
+        // said by the checkpoint nav and the "Active checkpoint" panel below,
+        // both of which name the current one; saying it a third time up here
+        // was the page explaining itself before it showed itself.
+        description={t("trips.manifest.description")}
+        actions={
+          <>
+            {/* One tap to the hand-to-authorities document: the recorded
+                manifest, roll-call timeline, cert evidence, and waiver status
+                for this departure, print-ready with an integrity code. */}
+            {canExportIncidentRecord ? (
+              <Link
+                href={`/shop/${shopSlug}/trips/${tripId}/incident-export`}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("incidentExport.openLink")}
+              </Link>
+            ) : null}
+            <PrintButton label={t("shared.printButton.label")} />
+          </>
+        }
+      />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
           first question either asks is how many people the boat left with —

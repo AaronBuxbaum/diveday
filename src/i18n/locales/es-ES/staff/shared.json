@@ -1,8 +1,6 @@
 {
   "operationalWindow": {
-    "note": "Las salidas de los próximos {days} días: Hoy y Registro leen una única lista.",
-    "arrivalsLens": "El modo mostrador lo reduce a las llegadas desde hace {lookback} horas hasta las próximas {ahead}.",
-    "pivotsLabel": "La misma lista, vista de otra forma"
+    "arrivalsLens": "El modo mostrador muestra las llegadas de las últimas {lookback} horas hasta las próximas {ahead}."
   },
   "skipToContent": "Saltar al contenido principal",
   "publicPreview": {
@@ -97,17 +95,6 @@
     "groupGoTo": "Ir a",
     "goToBoarding": "Embarque — el barco de hoy",
     "goToOfflineRollCall": "Abrir pase de lista sin conexión"
-  },
-  "keyboardShortcuts": {
-    "buttonAriaLabel": "Atajos de teclado",
-    "buttonTitle": "Atajos de teclado (presiona ?)",
-    "dialogAriaLabel": "Atajos de teclado",
-    "closeAriaLabel": "Cerrar",
-    "heading": "Atajos de teclado",
-    "paletteLabel": "Buscar buceadores, salidas y páginas",
-    "helpLabel": "Mostrar esta ayuda",
-    "sequenceHint": "Presiona las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el tablero.",
-    "goToLabel": "Ir a {page}"
   },
   "tripAdmission": {
     "level": "Esta salida exige {level}. La titulación más alta registrada de este buceador es {held}. Si tiene una tarjeta de {level}, añádela a su ficha; si no, resérvale una salida acorde a su nivel o el curso de {level}.",

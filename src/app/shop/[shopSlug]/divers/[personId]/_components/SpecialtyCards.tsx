@@ -136,16 +136,6 @@ export function SpecialtyCards({
                         </span>
                       ) : null}
                     </p>
-                    {card.cardImageUrl ? (
-                      <a
-                        href={card.cardImageUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
-                      >
-                        {t("divers.specialty.viewCardPhoto")}
-                      </a>
-                    ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={heldCardStatusTone(display)}>

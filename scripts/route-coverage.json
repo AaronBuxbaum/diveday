@@ -109,7 +109,6 @@
       "courses.spec.ts",
       "dive-sites.spec.ts",
       "first-ten-minutes.spec.ts",
-      "keyboard-shortcuts.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
       "promo-codes.spec.ts",
@@ -133,7 +132,6 @@
     "e2e": [
       "boat-loop.spec.ts",
       "first-ten-minutes.spec.ts",
-      "keyboard-shortcuts.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
       "role-lens.spec.ts",
@@ -190,7 +188,6 @@
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
-      "keyboard-shortcuts.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
       "role-permissions.spec.ts",

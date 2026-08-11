@@ -174,7 +174,6 @@ export type NewCertification = {
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
   expiresAt?: CalendarDate;
-  cardImageUrl?: string;
 };
 
 /**
@@ -193,11 +192,7 @@ export async function createCertification(db: AppDb, input: NewCertification) {
   try {
     const [certification] = await db
       .insert(certifications)
-      .values({
-        ...input,
-        identifier: input.identifier.trim(),
-        cardImageUrl: input.cardImageUrl?.trim() || null,
-      })
+      .values({ ...input, identifier: input.identifier.trim() })
       .returning();
     return certification ?? null;
   } catch (error) {
@@ -302,7 +297,6 @@ export type NewSpecialtyCertification = {
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
   expiresAt?: CalendarDate;
-  cardImageUrl?: string;
 };
 
 /**
@@ -320,11 +314,7 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
   try {
     const [certification] = await db
       .insert(specialtyCertifications)
-      .values({
-        ...input,
-        identifier: input.identifier.trim(),
-        cardImageUrl: input.cardImageUrl?.trim() || null,
-      })
+      .values({ ...input, identifier: input.identifier.trim() })
       .returning();
     return certification ?? null;
   } catch (error) {

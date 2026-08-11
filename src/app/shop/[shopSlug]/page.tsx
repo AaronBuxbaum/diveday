@@ -9,7 +9,6 @@ import { RoleOrientationCard } from "@/app/shop/[shopSlug]/_components/today/Rol
 import { TodayQueue } from "@/app/shop/[shopSlug]/_components/today/TodayQueue";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { FlashParams } from "@/components/FlashParams";
-import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getBlockerQueue, inHorizonReadiness } from "@/db/blockers";
@@ -34,7 +33,6 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
-import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -310,25 +308,15 @@ async function TodayBody({
                   })}`
                 : ""}
             </p>
-            {/* Today and Check-in read one shared window
-                (src/lib/operational-window.ts) and say so in the same
-                sentence, in the same place — a diver cleared here is cleared
-                at the counter (task 141, UX persona lens 17). Both of this
-                window's readiness *sorts* live on this page now, so the pivot
-                list names only Check-in: the switch below the departure board
-                is the control for the other view, and offering it twice on one
-                screen is the duplication principle 8 rules out. */}
-            <OperationalWindowNote
-              copy={{
-                note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
-                pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
-              }}
-              pivots={readinessPivots(shopSlug, ["today", "blockers"], {
-                today: t("shared.shopNavLinks.today"),
-                blockers: t("shared.shopNavLinks.blockers"),
-                check_in: t("shared.shopNavLinks.checkIn"),
-              })}
-            />
+            {/* No window sentence, and no pivot to Check-in. Today and
+                Check-in do still read one shared window
+                (src/lib/operational-window.ts), but saying so out loud —
+                "The next 7 days of departures — Today and Check-in read one
+                list." — explained the data model to someone who came here to
+                clear blockers, and the link under it offered a destination the
+                nav tabs and the phone dock already carry one tap away. A
+                cross-link earns its place by saving a reader something; one
+                that duplicates permanent chrome only adds a thing to read. */}
           </>
         }
       />

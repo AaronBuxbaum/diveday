@@ -1,13 +1,13 @@
 /**
  * Every place a staff member can go inside `/shop/<shopSlug>`, in one list.
  *
- * The header nav, the ⌘K command palette, and the `g`-sequence keyboard
- * shortcuts used to each keep their own hand-written list, and the three had
- * drifted: Orders and Walk-in existed only in the palette, Team only in the
- * nav, and the shortcut sheet knew about five destinations out of fourteen. A
- * destination that exists in one list and not another is a surface a shop can
- * only reach by luck, so all three now derive from this table and cannot
- * disagree by construction.
+ * The header nav and the ⌘K command palette used to each keep their own
+ * hand-written list, and the two had drifted: Orders and Walk-in existed only
+ * in the palette, Team only in the nav. A destination that exists in one list
+ * and not another is a surface a shop can only reach by luck, so both derive
+ * from this table and cannot disagree by construction. (A third consumer, a
+ * `g`-then-key shortcut sheet, has since been removed: ⌘K is the one keyboard
+ * route to everything here.)
  *
  * Paths, permission gates, and grouping only — never a word anyone reads.
  * `id` is the join key: each consumer hands in its own
@@ -54,8 +54,8 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  *
  * - `primary` — the tabs always on screen (Today, Check-in, Divers, Board,
  *   Orders). Every one is a place a shop lives in *during a dive day*;
- *   everything else earns its reach through the palette, a shortcut, or a
- *   contextual door on the surface that owns it.
+ *   everything else earns its reach through the palette or a contextual door
+ *   on the surface that owns it.
  * - `daily`/`setup` — inside "More". Both are empty today: the "More" menu
  *   was the IA admitting it hadn't decided, and the header no longer renders
  *   it when there is nothing to hold. The groups stay in the type so a future
@@ -128,8 +128,6 @@ export type StaffDestination = {
   readonly gate?: StaffDestinationGate;
   /** Pending-work count rendered beside the label. */
   readonly badge?: StaffDestinationBadge;
-  /** Second key of the `g`-then-key sequence, when it has one. */
-  readonly shortcut?: string;
   /**
    * Further path prefixes that should also read as "you are here" — detail
    * views and demoted destinations living outside this one's own subtree.
@@ -153,7 +151,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     navGroup: "primary",
     inPalette: true,
     badge: "blockers",
-    shortcut: "t",
     // Close-out is Today's evening mirror (ADR 20260804-day-closeout); its
     // door is Today's handoff card, so its page lights Today.
     alsoMatch: ["/close-out"],
@@ -161,9 +158,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
   // Not a page any more: Not ready is Today's by-departure *view*, selected by
   // a query param and served by the shop home. It keeps a registry entry
-  // because it is still somewhere staff go by name — ⌘K "Not ready" and `g b`
-  // both land on that view — and the registry is the only place a destination
-  // may be declared. `navGroup: null` is what takes it out of the header: a
+  // because it is still somewhere staff go by name — ⌘K "Not ready" lands on
+  // that view — and the registry is the only place a destination may be
+  // declared. `navGroup: null` is what takes it out of the header: a
   // tab beside Today that only re-renders Today's own queue is the duplicate
   // control principle 8 forbids, and the switch on the page is the honest
   // control for it.
@@ -173,9 +170,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     query: "?view=departures",
     navGroup: null,
     inPalette: true,
-    shortcut: "b",
   },
-  { id: "divers", suffix: "/divers", navGroup: "primary", inPalette: true, shortcut: "d" },
+  { id: "divers", suffix: "/divers", navGroup: "primary", inPalette: true },
   // Staff work a departure on /trips/[id], which is the board's detail view —
   // keep the board tab lit so they don't lose their place.
   {
@@ -183,7 +179,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     suffix: "/schedule/board",
     navGroup: "primary",
     inPalette: true,
-    shortcut: "s",
     // Trips are the board's detail views; staffing is crew coverage over the
     // same departure stream, reached from the board's world.
     alsoMatch: ["/trips", "/staffing"],
@@ -193,9 +188,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // answers for it everywhere else. It is *here* because the registry is the
   // only place a destination may be declared: it used to be a hand-written
   // palette item, which is exactly the drift this file exists to end.
-  { id: "addBooking", suffix: "/bookings/new", navGroup: null, inPalette: true, shortcut: "a" },
-  // A shortcut into Check-in rather than a destination of its own, so it stays
-  // out of the header and lives where someone types what they want.
+  { id: "addBooking", suffix: "/bookings/new", navGroup: null, inPalette: true },
+  // A way into Check-in rather than a destination of its own, so it stays out
+  // of the header and lives where someone types what they want.
   { id: "walkIn", suffix: "/check-in/walk-in", navGroup: null, inPalette: true },
   // The end-of-day ritual (ADR 20260804-day-closeout) — Today's evening
   // mirror. Every staff role may close the day: whoever is last out of the
@@ -231,16 +226,15 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     navGroup: null,
     inPalette: true,
     gate: "waivers",
-    shortcut: "w",
   },
   { id: "reports", suffix: "/reports", navGroup: null, inPalette: true, gate: "reports" },
   // Promo codes and Team are reachable from Settings' own Money and Your-shop
   // cards, and a destination that lives in two menus at once is the duplicate
   // control principle 8 forbids — the header used to carry both *and* Settings,
   // so "where do I add a colleague?" had two right answers. They keep their
-  // palette rows and their `g`-less shortcut-free presence here (the registry
-  // is the only place a destination may be declared); the header just stops
-  // being one of the two doors. Team is also literally a Settings sub-page.
+  // palette rows and their presence here (the registry is the only place a
+  // destination may be declared); the header just stops being one of the two
+  // doors. Team is also literally a Settings sub-page.
   { id: "promoCodes", suffix: "/promos", navGroup: null, inPalette: true, gate: "reports" },
   { id: "team", suffix: "/settings/team", navGroup: null, inPalette: true, gate: "team" },
   // The one page under `/settings` that is *not* shop configuration: a
@@ -288,8 +282,8 @@ export function staffShopRoot(shopSlug: string): string {
 /**
  * Everything below `/shop/<shopSlug>` for one destination — its path plus, for
  * a destination that is a *view* of another page, the query that selects it.
- * Consumers that build a URL from parts (the keyboard-shortcut sheet) use this
- * rather than `suffix`, so a view can never be navigated to without its query.
+ * Consumers that build a URL from parts use this rather than `suffix`, so a
+ * view can never be navigated to without its query.
  */
 export function staffDestinationSuffix(destination: StaffDestination): string {
   return `${destination.suffix}${destination.query ?? ""}`;
@@ -340,14 +334,4 @@ export function staffPaletteDestinations(
   gates: StaffDestinationGates,
 ): readonly StaffDestination[] {
   return visibleStaffDestinations(gates).filter((destination) => destination.inPalette);
-}
-
-/** The `g`-sequence shortcuts this viewer can actually use. */
-export function staffShortcutDestinations(
-  gates: StaffDestinationGates,
-): readonly (StaffDestination & { shortcut: string })[] {
-  return visibleStaffDestinations(gates).filter(
-    (destination): destination is StaffDestination & { shortcut: string } =>
-      destination.shortcut !== undefined,
-  );
 }

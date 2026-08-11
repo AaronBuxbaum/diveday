@@ -168,7 +168,6 @@ describe("trip readiness (in-memory PGlite)", () => {
       agency: "padi",
       level: "rescue",
       identifier: "PADI-RESCUE-123",
-      cardImageUrl: "https://cards.example/rescue-123.jpg",
     });
     if (!pending) throw new Error("expected certification to insert");
 

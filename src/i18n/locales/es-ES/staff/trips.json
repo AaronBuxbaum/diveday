@@ -72,7 +72,6 @@
     "undoing": "Deshaciendo…"
   },
   "detail": {
-    "eyebrow": "Salidas",
     "viewBookingPage": "Ver página de reserva",
     "copyBookingLink": "Copiar enlace",
     "linkCopied": "¡Copiado!",
@@ -509,7 +508,6 @@
     "stillBlocked": "El buceador sigue bloqueado. <guestsLink>Abre Buceadores para resolver el bloqueo</guestsLink> y vuelve a intentarlo."
   },
   "prep": {
-    "eyebrow": "Salidas",
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "crewCount": "{count, plural, one {# tripulante que bucea} other {# tripulantes que bucean}}",
     "diveCount": "{count, plural, one {# inmersión} other {# inmersiones}}",
@@ -552,7 +550,6 @@
     "rentalKitEmptyAction": "Abrir la lista de buceadores"
   },
   "guests": {
-    "eyebrow": "Salidas",
     "cancelledBadge": "Cancelada",
     "courseSession": "Sesión de curso · {title}",
     "demandSignal": "Este barco podría llevar más gente",
