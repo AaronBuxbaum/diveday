@@ -52,7 +52,7 @@
   },
   "how": {
     "heading": "Cómo funciona",
-    "weekly": "Una vez por semana, DiveDay arma tu paquete de exportación completo — cada CSV, el README, tus fotos — y lo entrega en tu bucket. Es el mismo paquete que la descarga de exportación de datos: lo que te llevarías al irte es lo que se respalda.",
+    "weekly": "Una vez por semana DiveDay arma tu paquete de exportación completo — cada CSV, el README, tus fotos — y lo entrega en tu bucket. Es el mismo paquete que la descarga de exportación de datos.",
     "contents": "Tu calendario de salidas viaja incluido como trips.ics, legible por cualquier app de calendario.",
     "sealed": "La clave de acceso secreta se sella antes de guardarse y se abre solo en el momento de la subida.",
     "failures": "Una entrega que falla queda registrada abajo y se reintenta en la siguiente pasada semanal: DiveDay nunca bombardea tu bucket con reintentos."

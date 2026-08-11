@@ -152,7 +152,7 @@ test.describe("the export is the owner's to produce", () => {
     const tripUrl = new URL(page.url());
     await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/incident-export`);
     await page.waitForURL(/\/manifest\?notice=incident_export_not_authorized$/);
-    await expect(page.getByText("only an owner can produce one")).toBeVisible();
+    await expect(page.getByText(/[Oo]nly an owner can produce/)).toBeVisible();
     // Not one fact of the document travels with the refusal.
     await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
     await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);

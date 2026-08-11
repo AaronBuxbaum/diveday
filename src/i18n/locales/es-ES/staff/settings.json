@@ -21,7 +21,7 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
-      "notConfigured": "Los pagos en línea aún no están activados en esta instalación de DiveDay. Quien administre tu alojamiento de DiveDay debe terminar la configuración de Stripe primero.",
+      "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay. Quien gestiona tu alojamiento completa la configuración de Stripe.",
       "disconnected": "Cuenta de Stripe desconectada.",
       "refreshed": "Estado de pagos actualizado desde Stripe.",
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
@@ -31,7 +31,7 @@
     "timezone": {
       "heading": "Zona horaria",
       "description": "La zona en la que se leen y se guardan todas las fechas y horas de DiveDay.",
-      "detail": "El tablero, el manifiesto y las horas que los buceadores ven en tus páginas de reserva la siguen. Cambiarla vuelve a leer tus salidas existentes en su nueva hora local; no las mueve.",
+      "detail": "El calendario, el manifiesto y las horas que ven los buceadores lo siguen. Cambiarlo relee las salidas existentes en su nueva hora local; no las mueve.",
       "label": "Zona horaria",
       "submitting": "Guardando…",
       "submit": "Guardar zona horaria",
@@ -72,7 +72,7 @@
     "contact": {
       "heading": "Datos de contacto públicos",
       "description": "El correo y el teléfono de recepción que se imprimen en tus páginas de cursos.",
-      "detail": "Un buceador que no encuentra una fecha recibe un correo ya redactado para escribirte. Usa una dirección que lea todo el equipo, no una personal. Vacía el campo de correo para retirar el formulario.",
+      "detail": "Un buceador que no encuentra fecha recibe un correo ya redactado para enviarte. Usa una dirección que lea todo el equipo. Vacía la casilla para retirar el formulario.",
       "emailLabel": "Correo de contacto",
       "phoneLabel": "Teléfono de contacto",
       "phoneHint": "(opcional)",
@@ -82,7 +82,7 @@
     "address": {
       "heading": "Dirección del centro",
       "description": "Donde un buceador se encuentra con el barco o entra en el local.",
-      "detail": "La dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
+      "detail": "La dirección comercial del centro, no la de alguien del equipo. Se publica para que los buscadores te ubiquen como un lugar real. Todos los campos son opcionales.",
       "searchLabel": "Busca tu dirección",
       "searchHint": "opcional — completa los campos de abajo",
       "searchPlaceholder": "Empieza a escribir la dirección de tu centro…",
@@ -125,7 +125,7 @@
     "dockCall": {
       "heading": "Hora de presentación en el muelle",
       "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar.",
-      "detail": "Tiempo para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
+      "detail": "Tiempo para preparar el equipo, verificar titulaciones y dar el briefing. Aparece en las confirmaciones, en el ritmo del día y en cada recordatorio previo.",
       "label": "Minutos antes de zarpar",
       "submit": "Guardar hora de presentación",
       "submitting": "Guardando…",
@@ -139,22 +139,22 @@
       "meters": "Metros (m)",
       "feet": "Pies (ft)",
       "temperatureLabel": "Mostrar la temperatura del agua en",
-      "temperatureDetail": "Se configura aparte de la unidad de profundidad — muchos centros publican pies y Celsius. Las temperaturas siempre se guardan en Celsius, así que cambiar esto solo afecta a lo que escribes y lees.",
+      "temperatureDetail": "Se configura aparte de la profundidad: muchos centros publican pies y Celsius. Siempre se guarda en Celsius, así que esto solo cambia lo que escribes y lees.",
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Cobrar y mostrar en",
-      "currencyDetail": "Cambiarla no convierte nada: una salida de 130 sigue siendo 130, solo que ahora son 130 de la nueva moneda. Los pedidos y pagos ya liquidados conservan la moneda con la que se cobraron.",
-      "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta conectada en {accountCurrency}. Stripe rechazará un pago en una moneda que esta cuenta no puede liquidar — elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
+      "currencyDetail": "No convierte nada: una salida de 130 sigue en 130, ahora en la nueva moneda. Los pedidos ya liquidados conservan la moneda en que se cobraron.",
+      "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta en {accountCurrency} y rechazará un pago que no pueda liquidar. Elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
       "submit": "Guardar unidades",
       "submitting": "Guardando…"
     },
     "paymentsGate": {
-      "notice": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes. Los ajustes de contacto, equipo y hora de muelle de arriba están abiertos a todo el personal."
+      "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
     },
     "rentals": {
       "heading": "Qué alquilamos",
       "description": "El equipo y los servicios que los buceadores pueden pedir en su equipo de alquiler.",
-      "detail": "Desmarca lo que no ofrezcas — un centro que no tiene GoPros nunca ofrece una, y desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no llenan nitrox, así que empieza desmarcado.",
+      "detail": "Desmarca lo que no ofrezcas: desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no cargan nitrox, así que empieza desmarcado.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
       "submitting": "Guardando…",
@@ -163,7 +163,7 @@
     "rentalPricing": {
       "heading": "Precios de alquiler",
       "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
-      "detail": "Pon precio al equipo completo (normalmente más barato) y a cada pieza por separado — cinco artículos cotiza el equipo completo, menos paga por pieza. Deja un campo en blanco para resolverlo en el mostrador.",
+      "detail": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
       "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, computadora de buceo)",
       "nitroxLabel": "Nitrox",
@@ -272,7 +272,7 @@
       "processorErasures": {
         "sectionLabel": "Borrados sin terminar en Stripe",
         "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Al borrar a un buceador aquí también se borra su cliente de Stripe. Estos no se completaron. Un registro de cliente se puede reintentar — el proceso de esta noche lo intentará de nuevo por su cuenta. Una factura no: Stripe copia el nombre y el correo en cada factura al emitirla, y eso solo se borra con una solicitud de eliminación de datos a Stripe. Envíala y luego márcalo como hecho.",
+        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: Stripe copia el nombre y el correo en cada factura, y solo una solicitud de eliminación de datos a Stripe lo borra. Preséntala y márcalo como hecho.",
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
@@ -329,7 +329,7 @@
     },
     "invite": {
       "heading": "Invitar a alguien",
-      "description": "Recibirá un correo para crear su propia contraseña. Si ya es un buceador de tu centro, invitarlo con el mismo correo añade acceso de personal a su registro existente en lugar de crear uno nuevo.",
+      "description": "Recibirá un correo para establecer su propia contraseña. Invitar con el mismo correo a alguien que ya es buceador añade acceso de personal a su ficha en vez de crear una segunda.",
       "fullNameLabel": "Nombre completo",
       "emailLabel": "Correo",
       "submit": "Enviar invitación",
@@ -361,25 +361,25 @@
   "export": {
     "eyebrow": "Ajustes",
     "title": "Exportar datos",
-    "description": "Descarga todo lo que este centro guarda en DiveDay como archivos CSV planos — buceadores, tarjetas, salidas, reservas, waivers firmados, tallas de alquiler, pedidos, listas de espera, puntos de inmersión y cursos. Es tuyo, cuando lo quieras — incluye un archivo de contactos listo para importar que el asistente de importación de otro sistema puede mapear directamente.",
+    "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, tarjetas, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
     "downloadButton": {
       "idle": "Descargar exportación",
       "acknowledged": "En camino — revisa tus descargas"
     },
     "bundle": {
       "heading": "Qué contiene el paquete",
-      "description": "Un ZIP con un README y un CSV para cada tipo de registro. Cada fecha y hora lleva su zona horaria, el dinero está en centavos, y tu historial archivado también viene incluido — nada se pierde si alguna vez te vas."
+      "description": "Un ZIP con un README y un CSV por tipo de registro. Cada fecha lleva su zona horaria, el dinero va en centavos y el historial archivado también viene."
     },
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiestos sin conexión, colas de reintento de notificaciones, la vinculación con la cuenta de Stripe, los historiales de cierre del día y de los equipos de compañeros, el estado de las cancelaciones por mal tiempo, los registros internos de conciliación de DiveDay y las URLs de imágenes pegadas que nunca se guardaron. Las notas del personal, el historial de actividad, los resultados de las notificaciones, los intentos de pago, los canjes de códigos y los interesados en cursos <mono>sí</mono> se exportan: son tus registros. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "import": {
     "eyebrow": "Ajustes",
     "title": "Importar contactos",
-    "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Consulta abajo exactamente qué se importa.",
+    "description": "Trae buceadores, tarjetas, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay. Abajo está lo que se transfiere.",
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
     "notice": {
       "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
@@ -448,7 +448,7 @@
     },
     "wizard": {
       "heading": "Subir un archivo de contactos",
-      "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de DiveDay. Un correo coincidente actualiza a ese buceador al reimportar; sin uno, siempre es un registro nuevo. No se escribe nada hasta que revisas la vista previa y confirmas.",
+      "intro": "Un CSV de tu sistema anterior o el propio <mono>contacts.csv</mono> de DiveDay. Si coincide el correo se actualiza ese buceador; si no, es una ficha nueva. No se escribe nada hasta que confirmes la vista previa.",
       "chooseFile": "Elegir archivo CSV",
       "chooseDifferentFile": "Elegir otro archivo",
       "columnTitle": "Columna “{header}”",
@@ -488,7 +488,7 @@
       },
       "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
-      "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} un waiver ya aceptado en un centro anterior. DiveDay confía en eso — incluida su exención médica — y marca el registro como “importado” para que nunca se confunda con una firma hecha aquí. Ver “Qué se importa” arriba.",
+      "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta “Qué se importa” arriba para ver qué significa eso y qué no.",
       "stats": {
         "diversInFile": "Buceadores en el archivo",
@@ -523,7 +523,7 @@
       "submitting": "Importando…",
       "result": {
         "summary": "Importado. {added} añadidos, {updated} actualizados.",
-        "cardsLine": "{cardsAdded, plural, one {# tarjeta} other {# tarjetas}}, {specialtyAdded, plural, one {# tarjeta de especialidad} other {# tarjetas de especialidad}} y {nitroxAdded, plural, one {# tarjeta de nitrox} other {# tarjetas de nitrox}} importadas y marcadas como importadas, con una confirmación de un toque en el registro de cada buceador.",
+        "cardsLine": "{cardsAdded, plural, one {# tarjeta} other {# tarjetas}}, {specialtyAdded, plural, one {# tarjeta de especialidad} other {# tarjetas de especialidad}} y {nitroxAdded, plural, one {# tarjeta de nitrox} other {# tarjetas de nitrox}} importadas y marcadas como importadas, con confirmación de un toque en cada buceador.",
         "rowsMergedNote": " {count} fila(s) añadieron tarjetas a un buceador que trajo una fila anterior.",
         "cardsSkippedNote": " {count} tarjeta(s) ya presentes en esos registros se dejaron sin tocar.",
         "rowsSkippedNote": " {count} fila(s) omitidas.",
@@ -540,16 +540,16 @@
     },
     "issues": {
       "emailInvalid": "El correo “{email}” no parece válido — importado sin correo.",
-      "expiryUnreadable": "La fecha de vencimiento “{value}” no se puede leer como fecha — la tarjeta se importa para revisión del personal en lugar de como verificada, para que nadie embarque con una fecha que hemos adivinado.",
+      "expiryUnreadable": "La fecha de reciclaje “{value}” no se puede leer como fecha: se importa para revisión del personal, no como verificada, para que nadie embarque con una fecha adivinada.",
       "expiryAssumedMonthFirst": "La fecha de vencimiento “{value}” se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
       "cardMarkedUnverified": "Tu archivo marca esta tarjeta como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
       "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
       "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de tarjeta en la fila — no se importó. Una tarjeta sin número no se puede verificar.",
-      "specialtyImportedVerified": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} como verificadas desde tus registros — marcadas como importadas. Una inmersión que la requiera espera hasta que el personal confirme que ha visto la tarjeta.",
+      "specialtyImportedVerified": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} como verificadas desde tus registros y marcadas como importadas. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
       "specialtyImportedPending": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} para revisión del personal — ver la nota anterior.",
       "agencyUnrecognized": "Agencia de certificación no reconocida — importada como “otra”.",
       "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna tarjeta de nivel. Añade esa tarjeta a mano si es una tarjeta aparte.",
-      "levelIsTechnical": "La certificación “{level}” es una calificación técnica o de entorno cerrado, no un peldaño de la escala recreativa — no se importó, y nunca se lee como un nivel cercano. DiveDay no controla estas; regístrala a mano si tu centro lo hace.",
+      "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo: no se importa ni se interpreta como un nivel cercano. Regístrala a mano si tu centro la exige.",
       "levelNotGated": "La certificación “{level}” no es un nivel que controlemos — tarjeta no importada. Añádela a mano si es una tarjeta real.",
       "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de tarjeta utilizable — tarjeta no importada. Una tarjeta sin número no se puede verificar.",
       "certImportedVerified": "Tarjeta importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
@@ -557,10 +557,10 @@
       "nitroxImported": "Tarjeta de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
       "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de tarjeta — añade y verifica una tarjeta de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación del waiver “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
-      "waiverImported": "Waiver importado como aceptado — confiado desde el centro anterior, incluyendo la autorización médica, y marcado “importado” para que nunca se confunda con un waiver firmado en DiveDay.",
+      "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
       "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
       "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer — el buceador se importa sin esta visita.",
-      "visitNoReference": "Visita importada sin referencia de reserva — una reimportación la relaciona por fecha, nombre e importe, así que dos reservas idénticas en un mismo día llegan como una sola visita.",
+      "visitNoReference": "Visita importada sin referencia de reserva: una reimportación coincide por fecha, nombre e importe, así que dos reservas idénticas el mismo día entran como una sola visita.",
       "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
       "noName": "Sin nombre — fila omitida.",
       "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las tarjetas, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
@@ -582,7 +582,7 @@
   "embed": {
     "eyebrow": "Ajustes",
     "title": "Widget para tu web",
-    "description": "Pega uno de estos en tu propia web para que los buceadores puedan explorar y reservar sin salir de tu sitio. Ambos apuntan al mismo calendario en directo — sin configuración aparte, sin sincronización que mantener.",
+    "description": "Pega uno de estos en tu web para que los buceadores exploren y reserven sin salir de ella. Ambos apuntan al mismo calendario en vivo: no hay nada que sincronizar.",
     "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
     "calendarEmbed": {
       "heading": "Widget de calendario",
@@ -593,11 +593,11 @@
     },
     "bookButton": {
       "heading": "Botón \"Reservar inmersión\"",
-      "description": "Un enlace sencillo con estilo de botón, sin iframe. Abre tu calendario de DiveDay en una pestaña nueva — la opción más simple, y la que conviene usar si cobras en línea, ya que una página de pago puede negarse a abrirse dentro del marco de otro sitio.",
+      "description": "Un enlace normal con aspecto de botón, sin iframe. Abre tu calendario en una pestaña nueva y es la opción a usar si cobras en línea, ya que una página de pago puede negarse a cargar dentro del marco de otro sitio.",
       "fieldLabel": "Código del botón",
       "buttonText": "Reservar inmersión"
     },
-    "footer": "Ambos fragmentos apuntan a <link>tu calendario público</link>. Editar una salida, añadir una fecha o cambiar tus precios de alquiler se refleja en el momento en que un buceador carga el widget — nada que volver a publicar.",
+    "footer": "Ambos fragmentos apuntan a <link>tu calendario público</link>. Los cambios en salidas, las nuevas fechas y los precios aparecen en cuanto un buceador carga el incrustado.",
     "snippetField": {
       "copy": "Copiar",
       "copied": "Copiado",

@@ -367,23 +367,23 @@
       "group": "{detail} {names}."
     },
     "detail": {
-      "missingDiver": "Alguien de este barco quedó marcado como no regresado a bordo tras la inmersión {dive}: {uncounted, plural, one {# de {total} buceadores que entraron al agua} other {# de {total} buceadores que entraron al agua}} sigue sin contarse desde entonces. Localizadlos primero y cerrad después el recuento.",
-      "missingDiverStale": "El recuento tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} buceadores quedó} other {# de {total} buceadores quedaron}} marcados como no regresados a bordo y nunca se localizaron. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida y dejad escrito qué pasó.",
-      "openRollCall": "Este barco ya volvió y el recuento tras la inmersión {dive} nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado registrado. Contad a todo el mundo antes de salir del muelle.",
-      "openRollCallUnderway": "Este barco sigue fuera y el recuento tras la inmersión {dive} se empezó y quedó a medias: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contactad con la tripulación ahora, mientras el barco sigue en el sitio de buceo.",
-      "openRollCallStale": "El recuento tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} buceadores sigue sin} other {# de {total} buceadores siguen sin}} resultado. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida.",
-      "missingCrew": "Un miembro de la tripulación de este barco quedó marcado como no regresado a bordo tras la inmersión {dive}: {uncounted, plural, one {# de {total} tripulantes que entraron al agua} other {# de {total} tripulantes que entraron al agua}} sigue sin contarse desde entonces. Localizadlos primero y cerrad después el recuento.",
-      "missingCrewStale": "El recuento de tripulación tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} tripulantes quedó} other {# de {total} tripulantes quedaron}} marcados como no regresados a bordo y nunca se localizaron. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida y dejad escrito qué pasó.",
-      "openCrewRollCall": "Este barco ya volvió y el recuento de tripulación tras la inmersión {dive} nunca se completó: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado registrado. Contad a todo el mundo antes de salir del muelle.",
-      "openCrewRollCallUnderway": "Este barco sigue fuera y el recuento de tripulación tras la inmersión {dive} se empezó y quedó a medias: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contactad con el barco ahora, mientras sigue en el sitio de buceo.",
-      "openCrewRollCallStale": "El recuento de tripulación tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} tripulantes sigue sin} other {# de {total} tripulantes siguen sin}} resultado. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida.",
-      "departureCountOpen": "El recuento en el muelle de este barco nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo pendiente, no un buceador en el agua: resolvedlo para que el próximo recuento parta de una lista real.",
-      "noRollCall": "En esta salida no se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; sencillamente no hay registro.",
+      "missingDiver": "{uncounted, plural, one {# de {total} buceadores no ha vuelto} other {# de {total} buceadores no han vuelto}} a bordo tras la inmersión {dive}. Encuéntralos y cierra el recuento.",
+      "missingDiverStale": "{uncounted, plural, one {# de {total} buceadores nunca se contabilizó} other {# de {total} buceadores nunca se contabilizaron}} tras la inmersión {dive}. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto y anota qué pasó.",
+      "openRollCall": "El barco ha vuelto y el recuento de la inmersión {dive} está sin terminar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
+      "openRollCallUnderway": "El barco sigue fuera y la inmersión {dive} está a medio contar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contacta con la tripulación ahora, mientras está en el sitio.",
+      "openRollCallStale": "El recuento de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} buceadores sigue sin} other {# de {total} buceadores siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto.",
+      "missingCrew": "{uncounted, plural, one {# de {total} tripulantes no ha vuelto} other {# de {total} tripulantes no han vuelto}} a bordo tras la inmersión {dive}. Encuéntralos y cierra el recuento.",
+      "missingCrewStale": "{uncounted, plural, one {# de {total} tripulantes nunca se contabilizó} other {# de {total} tripulantes nunca se contabilizaron}} tras la inmersión {dive}. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto y anota qué pasó.",
+      "openCrewRollCall": "El barco ha vuelto y el recuento de tripulación de la inmersión {dive} está sin terminar: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
+      "openCrewRollCallUnderway": "El barco sigue fuera y el recuento de tripulación de la inmersión {dive} está a medias: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contacta con el barco ahora, mientras está en el sitio.",
+      "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes sigue sin} other {# de {total} tripulantes siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto.",
+      "departureCountOpen": "El recuento en el muelle nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo, no un buceador en el agua: resuélvelo para que el próximo recuento parta de una lista real.",
+      "noRollCall": "No se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; no hay registro.",
       "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, así que la lista de preparación está incompleta.",
       "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
       "overRatio": "{booked} reservados, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
-      "overRatioIntro": "{booked} reservados en esta sesión de iniciación, pero la tripulación asignada solo cubre {capacity} — la ratio de Discover Scuba publicada por PADI, de {perInstructor} por instructor para la inmersión en aguas abiertas, que un asistente certificado no aumenta. Solo otro instructor añade plazas.",
+      "overRatioIntro": "{booked} reservados en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",
       "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "missingContactNamed": "No tiene contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
@@ -467,7 +467,7 @@
     "noSiteChosen": "Sin sitio elegido todavía",
     "diverFacingDetailsLabel": "Detalles para los buceadores",
     "detailsPlaceholder": "Lo que los buceadores deben saber sobre esta parte de la salida.",
-    "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, puntos de referencia y guía de vida marina — al briefing de esa inmersión. Deja el sitio de una inmersión en blanco cuando la tripulación lo elige en el muelle; la descripción y las condiciones de abajo se comparten en toda la jornada."
+    "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, referencias, guía de campo — al briefing de esa inmersión. Deja el sitio en blanco cuando la tripulación lo elija en el muelle."
   },
   "offlineManifest": {
     "freshnessCopy": {
@@ -502,12 +502,12 @@
       "headingEmpty": "Todavía no hay nada guardado en este dispositivo",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
-      "emptyHint": "Mientras tengas señal, abre cualquier página del centro — DiveDay mantiene actualizada por su cuenta la copia de este dispositivo de las salidas de los próximos dos días, así el pase de lista funciona hasta en el sitio de inmersión."
+      "emptyHint": "Mientras aún tengas señal, abre cualquier página del centro: DiveDay mantiene al día la copia de los próximos dos días en este dispositivo."
     },
     "single": {
       "eyebrow": "Manifiesto sin conexión",
       "emptyHeading": "Todavía no hay nada guardado en este teléfono",
-      "emptyHint": "Mientras tengas señal, abre el manifiesto en vivo de la salida — mantiene actualizada por su cuenta la copia de este dispositivo, así el pase de lista funciona hasta en el sitio de inmersión.",
+      "emptyHint": "Mientras aún tengas señal, abre el manifiesto en vivo de la salida: mantiene al día la copia de este dispositivo.",
       "removedOtherShopHeading": "Esa copia guardada se eliminó",
       "removedOtherShopMessage": "En esta tablet hay otro centro con la sesión iniciada.",
       "removedOtherShopHint": "Esta salida la guardó otro centro, así que su copia se eliminó de esta tablet cuando cambió el centro con la sesión iniciada aquí. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",
@@ -567,7 +567,7 @@
     },
     "discarded": {
       "heading": "Se eliminó un pase de lista que nunca se envió",
-      "body": "{count, plural, one {# cambio de pase de lista registrado} other {# cambios de pase de lista registrados}} en este dispositivo nunca llegó a DiveDay. La copia guardada a la que pertenecía cada uno lleva mucho tiempo pasada la fecha en que un manifiesto puede seguir en un dispositivo, así que se eliminó de aquí. Si alguna de estas salidas todavía necesita ese registro, hay que volver a ingresarlo en el manifiesto en vivo.",
+      "body": "{count, plural, one {# cambio de recuento registrado} other {# cambios de recuento registrados}} en este dispositivo nunca llegaron a DiveDay, y la copia guardada superó la fecha en que un manifiesto puede permanecer en un dispositivo. Vuelve a introducir en el manifiesto en vivo lo que siga haciendo falta.",
       "item": "{shop} · {trip} — {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
       "acknowledge": "Entendido"
     }

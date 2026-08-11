@@ -11,7 +11,7 @@
     "summaryAllDone": "{summary} · every date has departed or been cancelled.",
     "applying": "Applying…",
     "applyToSeries": "Apply this date's details to every upcoming date",
-    "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date's own time, crew, roster, and conditions stay put; a date already carrying more divers than the new capacity is left alone.",
+    "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions; one already over the new capacity is left alone.",
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",
     "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones. You can start it up again from here.",
@@ -28,11 +28,11 @@
     "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked — they keep their bookings and their history, and you'll want to tell them.} other {# of them have divers booked — they keep their bookings and their history, and you'll want to tell them.}} Leave this alone and the dates simply stay on the board.",
     "cancelling": "Cancelling…",
     "cancelAllUpcoming": "Cancel every upcoming date",
-    "cancelDescription": "{count, plural, one {Takes the remaining # date off the public schedule.} other {Takes the remaining # dates off the public schedule.}} Also stops the trip repeating, so the dates don't come back. Reinstate any single date from its own trip page."
+    "cancelDescription": "{count, plural, one {Takes the remaining # date off the public schedule.} other {Takes the remaining # dates off the public schedule.}} Also stops the repeat. Reinstate any single date from its own trip page."
   },
   "notices": {
     "seriesApplied": "Those details now apply to every upcoming date in this series.",
-    "seriesAppliedPartial": "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, or already had a roll call recorded past the new dive count, so those were left as they were — adjust them from their own trip pages.",
+    "seriesAppliedPartial": "Applied to the upcoming dates. A few already had more divers than the new capacity, or a roll call past the new dive count, so those were left as they were.",
     "seriesCancelled": "Cancelled every upcoming date in this series. Reinstate any single date from its own trip page.",
     "seriesRepeating": "This trip repeats again — the next few months of it are back on the board.",
     "seriesCadenceSaved": "Saved. The board matches the new days from here on.",

@@ -14,7 +14,7 @@
   "saveWaiver": "Guardar exención",
   "releaseTextHeading": "Texto de la exención",
   "releaseDescription": {
-    "current": "Esta es la exención que envía cada enlace nuevo. Guardarla la reemplaza para los enlaces nuevos — las exenciones ya firmadas conservan el texto exacto que se firmó.",
+    "current": "La exención que envía cada enlace nuevo. Guardar la sustituye para los enlaces nuevos; las ya firmadas conservan el texto que se firmó.",
     "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
   },
   "versionInfo": "Versión {version} · guardado el {date}",
@@ -26,7 +26,7 @@
   "signatures": {
     "eyebrow": "Ajustes",
     "title": "Firmas",
-    "description": "Todas las exenciones firmadas que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Las exenciones firmadas son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
+    "description": "Cada exención firmada archivada: quién firmó, en qué salida y cualquier seguimiento médico. Son a prueba de manipulación: un registro alterado se marca.",
     "signedRecordHeading": "Registro firmado",
     "heading": "Registros firmados",
     "noSignedRecords": "Todavía no hay registros firmados.",

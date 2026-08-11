@@ -51,14 +51,14 @@ test.describe("contact import", () => {
     await expect(page.getByText(/Left behind on purpose/)).toBeVisible();
     await expect(page.getByText(/Medical Notes/)).toBeVisible();
     await expect(
-      page.getByText(/trusted from the prior shop, including medical clearance/),
+      page.getByText(/trusted from the prior shop, medical clearance included/),
     ).toBeVisible();
     await expect(page.getByText("accepted · imported")).toBeVisible();
 
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
     await expect(
-      page.getByText(/imported and flagged imported, with a one-tap confirm on each/),
+      page.getByText(/imported, flagged imported, with a one-tap confirm on each/),
     ).toBeVisible();
     await expect(page.getByText(/1 waiver imported as accepted/)).toBeVisible();
 

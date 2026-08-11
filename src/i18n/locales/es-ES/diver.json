@@ -612,7 +612,7 @@
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
     "rateLimited": "Espera unos segundos e inténtalo de nuevo — no se ha perdido nada.",
     "medicalReview": "Gracias — una de tus respuestas médicas requiere una revisión más detenida y puede que necesites el visto bueno de un médico. No des por hecho que estás autorizado hasta que tu centro te lo confirme.",
-    "medicalReviewNext": "Una respuesta “sí” significa que necesitarás que un médico confirme por escrito que estás en condiciones de bucear antes de poder salir — esto es así en todos los centros, no solo en este. El centro se pondrá en contacto contigo sobre los siguientes pasos. Si tu salida es pronto, contacta con ellos ahora, ya que conseguir el visto bueno de un médico puede llevar unos días.",
+    "medicalReviewNext": "Un “sí” significa que un médico debe confirmar por escrito que estás apto para bucear antes de salir; eso es así en todos los centros, no solo en este. El centro se pondrá en contacto. Si tu salida es pronto, escríbeles ya: la autorización puede tardar unos días.",
     "medicalContactBoth": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <email>{emailAddress}</email>.",
@@ -642,7 +642,7 @@
     "signButton": "Firmar exención",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
-    "englishOnlyNotice": "Por ahora, esta exención y el cuestionario médico solo están disponibles en inglés. Si no te sientes cómodo/a leyendo texto legal o médico en inglés, trae a alguien que pueda ayudarte a leerlo con atención, o consulta con el centro antes de tu salida — no firmes nada que no encentros."
+    "englishOnlyNotice": "Esta exención y el formulario médico solo están disponibles en inglés por ahora. Si no te sientes cómodo leyendo textos legales o médicos en inglés, ven con alguien que pueda ayudarte a leerlo, o consulta antes con el centro: no firmes nada que no entiendas."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",
@@ -673,7 +673,7 @@
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
       "alreadyBooked": "Ya tienes tu propia plaza en esta salida, así que esta se queda con quien organiza el grupo.",
-      "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una tarjeta verificada en la ficha antes de que esta plaza pueda cambiar de manos. Contacta con el centro y lo resolverán."
+      "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una tarjeta verificada archivada antes de que la plaza cambie de manos. Contacta con el centro y lo resolverán."
     },
     "claimedNotice": "Esta plaza ya es tuya — todo lo que ves en esta página es sobre ti. Quien organiza el grupo puede ver que está reclamada.",
     "panelHeading": "Las plazas de tu grupo",
@@ -713,7 +713,7 @@
     "nitroxReserveWithPrice": "Reservar tanques compatibles con nitrox para mí — {price} por inmersión",
     "nitroxReserveNoPrice": "Reservar tanques compatibles con nitrox para mí — se cobra por inmersión",
     "nitroxVerifiedNote": "La tripulación reservará tanques compatibles con nitrox. Analizarás tus propios tanques y firmarás la mezcla en la estación de llenado, como siempre.",
-    "nitroxNeedsVerification": "Necesitamos una tarjeta de nitrox verificada antes de poder reservar tanques compatibles con nitrox. Envía al centro una foto de tu tarjeta o contacta con ellos para que la añadan. Mientras tanto, la tripulación planeará tanques de aire estándar.",
+    "nitroxNeedsVerification": "Necesitamos una tarjeta de nitrox verificada antes de reservar tanques compatibles. Envía al centro una foto de tu tarjeta y la añadirán. Hasta entonces, la tripulación planifica tanques de aire estándar.",
     "nitroxVerificationRequired": "Se necesita una tarjeta de nitrox verificada antes de que la tripulación pueda reservar tanques compatibles con nitrox.",
     "bcdSize": "Talla de chaleco",
     "finSizePlaceholder": "US 9 / EU 42",
@@ -991,13 +991,13 @@
     "concierge": {
       "eyebrow": "Una persona, no un asistente automático",
       "title": "Te ayudamos a cambiarte — y a salir — nosotros mismos.",
-      "description": "Envíanos lo que tengas — una exportación limpia o una década de pestañas desordenadas — y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si DiveDay alguna vez no encaja, tus datos son tuyos — te ayudamos a llevártelos todos de vuelta, igual de personalmente.",
+      "description": "Envíanos lo que tengas —una exportación limpia o una década de pestañas desordenadas— y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta con la misma cercanía.",
       "emailCta": "Escríbenos a {email}"
     },
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
       "title": "La puerta se abre en ambos sentidos.",
-      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías lo hacen concreto en ambas direcciones: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay — y cómo todo el centro se descarga de vuelta en un ZIP cuando lo pidas. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón.",
+      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que ya se les quedó corto, porque mudarse parece doloroso. Estas guías lo hacen concreto en ambos sentidos: cómo sacar a tus buceadores de lo que uses hoy, qué se transfiere exactamente, y cómo todo el centro se descarga de vuelta en un solo ZIP cuando quieras. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como verificar cada tarjeta antes de que salga el barco.",
       "readGuide": "Leer la guía →",
@@ -1021,7 +1021,7 @@
       "openSettingsTitle": "Abre Ajustes → Importar contactos",
       "openSettingsBody": "En tu centro de DiveDay, el propietario o gerente abre la página de importación y sube el CSV que exportaste.",
       "checkPreviewTitle": "Revisa la vista previa",
-      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, y qué deja atrás. Las filas con un correo coincidente actualizan al buceador existente en vez de duplicarlo; nada se importa hasta que confirmas.",
+      "checkPreviewBody": "DiveDay mapea tus columnas y muestra una vista previa antes de guardar nada: cómo quedó cada columna y qué deja fuera. Las filas con correo coinciden con un buceador existente, así que reimportar actualiza en vez de duplicar. No se importa nada hasta que confirmes.",
       "importReadyTitle": "Importar — tu plantilla está lista",
       "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato — las tarjetas llegan verificadas y marcadas como importadas, con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
       "openImportCta": "Abrir Importar en tu centro",
@@ -1038,7 +1038,7 @@
       "eyebrow": "Vienes de una hoja de cálculo",
       "title": "La hoja de cálculo te trajo hasta aquí.",
       "heroLede": "No marcará una tarjeta sin verificar, no perseguirá una exención sin firmar, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — buceadores, tarjetas, tallas — y se encarga del resto. Ningún sistema que arrancar; ya tienes el archivo.",
-      "wedgeIntro1": "Una hoja de cálculo es una buena memoria y un mal compañero de equipo. Guarda nombres y números, pero no puede hacer el trabajo que de verdad mantiene un día de buceo tranquilo y seguro — la parte que estás haciendo a mano ahora mismo, en tu cabeza y en una pila de papeles.",
+      "wedgeIntro1": "Una hoja de cálculo es buena memoria y mal compañero de equipo. Guarda nombres y números, pero no hace el trabajo que mantiene un día de buceo tranquilo y seguro: justo la parte que ahora haces a mano.",
       "wedgeIntro2": "Ese es el intercambio que hace que valga la pena DiveDay. No una lista más bonita — los trabajos que una lista no puede sostener:",
       "wedge": {
         "cardsChecked": {
@@ -1060,7 +1060,7 @@
       },
       "step1": "Paso 1",
       "columnsTitle": "¿Tu hoja tiene estas columnas?",
-      "columnsIntro": "Una fila por buceador, y columnas para lo que sabes de ellos. Tus encabezados no tienen que coincidir con nada — DiveDay reconoce los nombres habituales, previsualiza el archivo y marca lo que no reconoce antes de guardar. Si prefieres partir de una hoja limpia, descarga una que ya tenga la forma correcta.",
+      "columnsIntro": "Una fila por buceador y columnas con lo que sepas de cada uno. Tus encabezados no tienen que coincidir con nada: DiveDay reconoce los nombres habituales, muestra una vista previa y marca lo que no reconoce. O empieza con una hoja limpia ya con la forma correcta.",
       "downloadTemplate": "Descargar la plantilla inicial (CSV)",
       "columns": {
         "name": {
@@ -1117,7 +1117,7 @@
       "openSettingsTitle": "Abre Ajustes → Importar contactos",
       "openSettingsBody": "En tu centro de DiveDay, el propietario o gerente abre la página de importación y sube el CSV.",
       "checkPreviewTitle": "Revisa la vista previa",
-      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, y qué deja atrás, incluida cualquier fila que no pueda trasladar (una sin nombre, o un correo repetido). Nada se importa hasta que confirmas.",
+      "checkPreviewBody": "DiveDay mapea tus columnas y muestra una vista previa antes de guardar nada: cómo quedó cada columna, qué deja fuera y cualquier fila que no pueda traer (sin nombre o con un correo repetido). No se importa nada hasta que confirmes.",
       "importReadyTitle": "Importar — tu plantel está listo",
       "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato — las tarjetas llegan verificadas y marcadas como importadas, con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
       "openImportCta": "Abrir Importar en tu centro",
@@ -1232,7 +1232,7 @@
         "frontDesk": {
           "role": "Para la recepción",
           "title": "Una sola respuesta a “¿están listos?”",
-          "description": "Exención de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar.",
+          "description": "Exención, titulación, requisitos del sitio, pago y tallas de alquiler se juntan antes de que un problema llegue al muelle, y cuando algo no se puede verificar, DiveDay lo dice claramente en vez de dejarlo pasar.",
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
@@ -1241,7 +1241,7 @@
       "seeFullProduct": "Ver el producto completo",
       "exportEyebrow": "Tus registros",
       "exportTitle": "Tus registros entran limpios y salen igual.",
-      "exportDescription1": "Llegar es un archivo, no un proyecto: el importador mapea la hoja de cálculo o la exportación que ya llevas y muestra exactamente qué se traslada — y qué honestamente no — antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "exportDescription1": "Llegar es un archivo, no un proyecto: el importador mapea la hoja o exportación que ya llevas y muestra exactamente qué se transfiere —y qué no— antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
       "exportDescription2": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo, así que la salida está hecha con el mismo cuidado: un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
       "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
       "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
@@ -1330,7 +1330,7 @@
       "item6": "Soporte por correo — escribe y te responde una persona real"
     },
     "export": {
-      "claim": "Ajustes → Exportación de datos descarga un ZIP de archivos CSV simples y documentados — buceadores, reservas, registros de descargos, historial de pagos — encabezado por un archivo de contactos con el formato del asistente de importación de otro sistema, con cada foto guardada (imágenes de tarjetas, fotos de sitios de buceo, recuerdos de salidas) incluida como archivo real, no solo un enlace.",
+      "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados —buceadores, reservas, registros de exenciones, historial de pagos— encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (imágenes de tarjetas, fotos de sitios, recapitulaciones) viene como archivo real, no como enlace.",
       "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba."
     },
     "capabilities": {
@@ -1412,11 +1412,11 @@
           },
           "step3": {
             "title": "Una segunda importación actualiza tu lista de buceadores, no la duplica",
-            "detail": "Vuelve a ejecutar la exportación más adelante, cuando tu sistema antiguo tenga más reservas — DiveDay empareja a los buceadores existentes por correo y actualiza su ficha en vez de crear una segunda, y un historial de visitas repetido se pliega en vez de doblarse. Es seguro importar más de una vez mientras tu exportación mejora."
+            "detail": "Vuelve a exportar más adelante, cuando tu sistema anterior tenga más reservas. DiveDay reconoce a los buceadores existentes por correo y los actualiza en vez de crear una segunda ficha, y un historial de visitas repetido se fusiona en vez de duplicarse."
           },
           "step4": {
             "title": "Cuenta con una tarde, no con una semana",
-            "detail": "Exportar del sistema antiguo son minutos de trabajo, y la vista previa de la importación muestra exactamente qué va a entrar antes de que nada se guarde — revísala, corrige las filas marcadas e importa de verdad cuando se lea bien. Una sentada, no un plan de proyecto."
+            "detail": "Exportar desde el sistema anterior lleva minutos, y la vista previa muestra exactamente qué va a entrar antes de guardar nada. Revísala, corrige las filas marcadas e importa de verdad. Una sentada, no un plan de proyecto."
           }
         },
         "coexist": {
@@ -2104,7 +2104,7 @@
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}"
     },
     "whatsappTemplate": {
-      "body": "¡Hola! Un aviso de {{1}}: {{2}}",
+      "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."

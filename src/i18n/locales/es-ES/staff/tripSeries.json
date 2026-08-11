@@ -11,7 +11,7 @@
     "summaryAllDone": "{summary} · todas las fechas ya zarparon o se cancelaron.",
     "applying": "Aplicando…",
     "applyToSeries": "Aplicar los detalles de esta fecha a todas las fechas próximas",
-    "applyDescription": "Copia el título, la descripción, la capacidad, el precio y el plan de inmersión de esta fecha en cada fecha próxima. La hora, la tripulación, el listado y las condiciones propias de cada fecha se mantienen; una fecha que ya lleve más buceadores que la nueva capacidad se deja como está.",
+    "applyDescription": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, tripulación, listado y condiciones; una que ya supere la nueva capacidad se deja como está.",
     "saving": "Guardando…",
     "stopRepeating": "Dejar de repetir",
     "stopRepeatingDescription": "Mantiene todas las fechas que ya están en el calendario y deja de añadir nuevas. Puedes volver a activarla desde aquí.",
@@ -28,11 +28,11 @@
     "offCadenceDescriptionBooked": "{count, plural, one {# de ellas lleva buceadores con reserva — conservan su reserva y su historial, y te conviene avisarles.} other {# de ellas llevan buceadores con reserva — conservan su reserva y su historial, y te conviene avisarles.}} Si no haces nada, las fechas simplemente se quedan en el calendario.",
     "cancelling": "Cancelando…",
     "cancelAllUpcoming": "Cancelar todas las fechas próximas",
-    "cancelDescription": "{count, plural, one {Quita del calendario público la # fecha que queda.} other {Quita del calendario público las # fechas que quedan.}} También deja de repetir la salida, así que las fechas no vuelven. Reactiva cualquier fecha concreta desde su propia página de salida."
+    "cancelDescription": "{count, plural, one {Quita del calendario público la # fecha restante.} other {Quita del calendario público las # fechas restantes.}} También detiene la repetición. Puedes reactivar cualquier fecha desde su propia página."
   },
   "notices": {
     "seriesApplied": "Esos detalles ahora se aplican a todas las próximas fechas de esta serie.",
-    "seriesAppliedPartial": "Aplicado a las próximas fechas de esta serie. Algunas ya tenían más buceadores que la nueva capacidad, o ya tenían un pase de lista registrado más allá del nuevo número de inmersiones, así que se dejaron como estaban — ajústalas desde sus propias páginas de salida.",
+    "seriesAppliedPartial": "Aplicado a las próximas fechas. Algunas ya tenían más buceadores que la nueva capacidad, o un recuento más allá del nuevo número de inmersiones, así que se dejaron como estaban.",
     "seriesCancelled": "Se canceló cada próxima fecha de esta serie. Reactiva cualquier fecha concreta desde su propia página de salida.",
     "seriesRepeating": "Esta salida vuelve a repetirse — los próximos meses ya están de nuevo en el calendario.",
     "seriesCadenceSaved": "Guardado. El calendario sigue los nuevos días a partir de ahora.",

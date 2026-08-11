@@ -1,9 +1,9 @@
 {
   "title": "Incident-ready export",
   "openLink": "Incident-ready export",
-  "ownerOnlyNotice": "The incident-ready export is the shop's own account of a departure, so only an owner can produce one. Everything it draws on — the roll call, the timeline, each diver's status — is on this manifest.",
+  "ownerOnlyNotice": "Only an owner can produce the incident-ready export. Everything it draws on — roll call, timeline, each diver's status — is on this manifest.",
   "backToManifest": "Back to manifest",
-  "description": "One document of what was recorded for this departure — boarding, the roll-call timeline, certification evidence, and waiver status — ready to print and hand to authorities or insurers.",
+  "description": "What was recorded for this departure — boarding, roll-call timeline, certification evidence, waiver status — ready to print for authorities or insurers.",
   "factsOnly": "This document reports recorded facts with their timestamps. It does not assess, certify, or imply any safety judgment.",
   "generatedLine": "Generated {date} by {name}",
   "shopTimeLabel": "All times are shop-local ({timezone})",
@@ -14,7 +14,7 @@
   "summaryAwaiting": "No result recorded",
   "summaryCrewAssigned": "Crew assigned",
   "rosterHeading": "Divers and roll call",
-  "rosterDescription": "Every active booking on this departure’s manifest, with the recorded result at each checkpoint. A checkpoint with no recorded result reads “Awaiting roll call” — an absence is stated, never left blank. Buddy team is the grouping staff recorded in DiveDay for this departure, not for each dive; a team has two or more members and may include a crew member, who is marked as such. A blank is not a statement that anyone dived alone — many shops record no teams at all.",
+  "rosterDescription": "Every active booking with its result at each checkpoint. “Awaiting roll call” means no result was recorded — an absence is stated, never left blank. Buddy team is the grouping recorded for this departure, not per dive; a blank is not a statement that anyone dived alone.",
   "colDiver": "Diver",
   "colEmergencyContact": "Emergency contact",
   "colBuddy": "Buddy team",
@@ -33,7 +33,7 @@
   "colCrewMember": "Crew member",
   "colRoles": "Roles",
   "evidenceHeading": "Certification evidence and waiver status",
-  "evidenceDescription": "Cards as held on the shop’s records when this document was generated, with their review dates. Waiver status only — medical questionnaire answers are never part of this document.",
+  "evidenceDescription": "Cards as held when this document was generated, with review dates. Waiver status only — medical answers are never part of this document.",
   "certNone": "No certification evidence on file.",
   "certLevelLine": "{agency} · {level} · card no. {identifier}",
   "certSpecialtyLine": "{agency} · {specialty} · card no. {identifier}",
@@ -51,7 +51,7 @@
   "waiverExpired": "The waiver link expired unsigned.",
   "waiverMedicalReview": "Medical review flagged as required — status only; the questionnaire’s answers are not part of this document.",
   "timelineHeading": "Roll-call timeline",
-  "timelineDescription": "Every roll-call entry recorded for this departure, oldest first, corrections included — entries are append-only, so a correction adds a line and never rewrites one.",
+  "timelineDescription": "Every roll-call entry for this departure, oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
   "timelineEmpty": "No roll-call entries have been recorded for this departure.",
   "crewTag": "crew",
   "timelineOfflineTag": "Recorded offline, synced later",
@@ -65,5 +65,5 @@
   "recordedByName": "Recorded by {name}",
   "noteLine": "Note: {note}",
   "footerHashLabel": "Integrity code (SHA-256)",
-  "footerHashExplainer": "Computed from this document’s recorded facts. Generating the export again from unchanged records reproduces the same code, so two copies can be checked against each other."
+  "footerHashExplainer": "Computed from this document's recorded facts. Re-generating from unchanged records reproduces the same code, so two copies can be checked against each other."
 }

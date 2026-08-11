@@ -233,7 +233,9 @@ test.describe("as owner", () => {
     await expect(
       requirements.getByText(/requires Advanced Open Water or higher and Deep specialty/),
     ).toBeVisible();
-    await expect(requirements.getByText(/so it never blocks enrolment/)).toBeVisible();
+    // One site or several, singular or plural — the carve-out is the clause
+    // that has to survive a copy trim, not the sentence carrying it.
+    await expect(requirements.getByText(/never blocks? enrolment/)).toBeVisible();
     // A course session's rules are frozen; there is no form to tighten them.
     await expect(requirements.getByRole("button", { name: "Save requirements" })).toHaveCount(0);
   });
