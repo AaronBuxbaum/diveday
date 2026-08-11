@@ -286,7 +286,7 @@
       "settings-findability.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
-    "visual": ["settings-payments", "settings-trial"]
+    "visual": ["settings-address", "settings-payments", "settings-trial"]
   },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],

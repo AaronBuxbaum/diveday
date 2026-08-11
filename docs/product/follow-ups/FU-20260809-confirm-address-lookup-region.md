@@ -25,7 +25,8 @@ Every part of that is load-bearing. An AWS endpoint **answered**, with a status 
 name, so the host resolved and `PLACES_AWS_REGION` names a region that serves the Places API — the
 region hypothesis this entry was originally opened for is dead. `UnrecognizedClientException` is the
 signature-layer refusal, not the authorization one: AWS does not know the access key id at all. A
-key that existed but lacked `geo-places:Autocomplete` would be `AccessDeniedException`, and a key
+key that existed but lacked the geo-places action the app calls would be `AccessDeniedException`,
+and a key
 whose secret did not match would be `SignatureDoesNotMatch`.
 
 So the deployment holds a `PLACES_AWS_ACCESS_KEY_ID` that no longer exists in account
@@ -68,8 +69,11 @@ something a session should be doing unattended in any case.
    remaining fix. Suspect it first whenever the failure timestamp sits shortly after a stack deploy;
    that ordering is the signature of this, not of a bad value.
 4. Confirm from the box: four characters into the address search should list real places, and
-   picking one should fill all five boxes. If the reason changes to `denied` with
-   `AccessDeniedException`, the credential is now valid and §12's policy is the next thing to read.
+   picking one should save that address on the settings card (the five text boxes it used to fill
+   are gone — ADR 20260811-address-is-one-search-box). If the reason changes to `denied` with
+   `AccessDeniedException`, the credential is now valid and §12's policy is the next thing to read —
+   note that policy moved from `geo-places:Autocomplete` to `geo-places:Suggest` on 2026-08-11, so a
+   stack that has not been redeployed since will deny every request on its own.
 
 Not proposing any application change. The code path is proven — it reached AWS, signed a request,
 and reported the refusal accurately — and nothing an app can do fixes a credential the account does
@@ -87,8 +91,13 @@ An AWS endpoint answered, so the region is fine. UnrecognizedClientException mea
 in PLACES_AWS_ACCESS_KEY_ID is not a key that exists in account 417160702652.
 
 Read first: section 12 of infra/lib/infra-stack.ts (the diveday-places-lookup IAM user, its
-geo-places:Autocomplete policy, and mintAccessKey's credentialSerial), and
-docs/architecture/decisions/20260804-aws-location-address-lookup.md.
+geo-places:Suggest policy, and mintAccessKey's credentialSerial), and
+docs/architecture/decisions/20260804-aws-location-address-lookup.md plus its amendment
+docs/architecture/decisions/20260811-address-is-one-search-box.md.
+
+Note the policy statement changed from geo-places:Autocomplete to geo-places:Suggest on 2026-08-11.
+A stack deployed before that answers every keystroke with AccessDeniedException regardless of the
+credential, so confirm cdk deploy has run since before spending time on the key itself.
 
 Already checked on 2026-08-11, so do not redo it: the diveday-infra stack is current (last updated
 17:57:55Z) and the diveday-places-lookup user has existed since 2026-08-05. The account is fine; the

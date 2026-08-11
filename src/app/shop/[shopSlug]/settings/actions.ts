@@ -118,8 +118,9 @@ const contactSchema = z.object({
 });
 
 const addressSchema = z.object({
-  // Every field is optional and clears independently on empty — a shop can
-  // publish just a country, or walk the whole address back to nothing.
+  // Every field is optional and clears independently on empty — a geocoded
+  // place may carry no postcode, and an all-empty submission is the card's
+  // Remove control walking the whole address back to nothing.
   addressStreet: z.string().trim().max(200),
   addressLocality: z.string().trim().max(120),
   addressRegion: z.string().trim().max(120),
@@ -367,10 +368,18 @@ export async function saveContactAction(formData: FormData) {
 }
 
 /**
- * The shop's physical business address — where a diver actually meets the
- * boat or walks into the storefront. Published in structured data so search
- * engines can place the shop as a real venue; every field clears
- * independently on an empty box.
+ * The shop's physical business address. Published in structured data so search
+ * engines can place the shop as a real venue.
+ *
+ * Called by the address card's *pick*, not by a Save button — the card is one
+ * search box and choosing a place is the whole of the intent (ADR
+ * 20260811-address-is-one-search-box). It still takes `FormData` and still
+ * revalidates the same schema: a server action's arguments are
+ * attacker-controlled whatever calls it, and the same shape keeps the
+ * hand-crafted-POST case and the honest one on one path.
+ *
+ * An all-empty address is the Remove control, and it says so rather than
+ * reporting "saved" for a thing that is now gone.
  */
 export async function saveAddressAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -383,7 +392,9 @@ export async function saveAddressAction(formData: FormData) {
   const settings = `/shop/${session.user.shopSlug}/settings`;
   if (!parsed.success) redirect(`${settings}?notice=address_invalid&saved=address`);
   await setShopAddress(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(settings, `${settings}?notice=address_saved&saved=address`);
+  const emptied = Object.values(parsed.data).every((value) => value.length === 0);
+  const notice = emptied ? "address_removed" : "address_saved";
+  revalidateAndRedirect(settings, `${settings}?notice=${notice}&saved=address`);
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */

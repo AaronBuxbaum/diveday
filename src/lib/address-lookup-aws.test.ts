@@ -8,18 +8,34 @@ function clientReturning(response: unknown) {
   return { send: vi.fn().mockResolvedValue(response) };
 }
 
-const fullResult = {
-  PlaceId: "place-1",
-  Title: "102 Ocean Drive, Key Largo, FL 33037, United States",
-  Address: {
-    AddressNumber: "102",
-    Street: "Ocean Drive",
-    Locality: "Key Largo",
-    Region: { Code: "FL", Name: "Florida" },
-    PostalCode: "33037",
-    Country: { Code2: "US" },
-  },
+const CORE_ADDRESS = {
+  Label: "102 Ocean Drive, Key Largo, FL 33037, United States",
+  AddressNumber: "102",
+  Street: "Ocean Drive",
+  Locality: "Key Largo",
+  Region: { Code: "FL", Name: "Florida" },
+  PostalCode: "33037",
+  Country: { Code2: "US" },
 };
+
+/** A plain address row: the title *is* the address line. */
+const fullResult = {
+  Title: "102 Ocean Drive, Key Largo, FL 33037, United States",
+  SuggestResultItemType: "Place",
+  Place: { PlaceId: "place-1", Address: CORE_ADDRESS },
+};
+
+/** A business row: the title is the shop's name, the address sits beneath it. */
+const businessResult = {
+  Title: "Rainbow Reef Dive Center",
+  SuggestResultItemType: "Place",
+  Place: { PlaceId: "poi-1", PlaceType: "PointOfInterest", Address: CORE_ADDRESS },
+};
+
+const withAddress = (address: Record<string, unknown>) => ({
+  ...fullResult,
+  Place: { ...fullResult.Place, Address: address },
+});
 
 describe("Amazon Location address suggestions", () => {
   it("maps a result into a pickable suggestion with the five columns filled", async () => {
@@ -32,6 +48,9 @@ describe("Amazon Location address suggestions", () => {
         {
           id: "place-1",
           label: "102 Ocean Drive, Key Largo, FL 33037, United States",
+          // The title already *is* the address line; repeating it underneath
+          // itself would be noise.
+          detail: undefined,
           address: {
             addressStreet: "102 Ocean Drive",
             addressLocality: "Key Largo",
@@ -44,11 +63,68 @@ describe("Amazon Location address suggestions", () => {
     });
   });
 
-  it("prefers the short region code, which is what fits a one-line address", async () => {
+  /**
+   * The bug this file exists to keep fixed. The card shipped on `Autocomplete`,
+   * which "completes partial queries with valid address completion" and answers
+   * streets only — so a shop typing its own name got a working search box that
+   * never found it, which is how the lookup was reported as broken while every
+   * request succeeded (2026-08-11). A shop recalls "Rainbow Reef Dive Center"
+   * instantly and its own postcode slowly, so the name is the query that
+   * matters most.
+   */
+  it("finds a business by name, and keeps its name and its street apart", async () => {
+    const client = clientReturning({ ResultItems: [businessResult] });
+    const result = await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
+
+    expect(result.status === "ok" && result.suggestions[0]).toEqual({
+      id: "poi-1",
+      // What the shop owner typed and therefore what they must recognize.
+      label: "Rainbow Reef Dive Center",
+      // The only thing that tells one franchise location from the next.
+      detail: "102 Ocean Drive, Key Largo, FL 33037, United States",
+      address: {
+        addressStreet: "102 Ocean Drive",
+        addressLocality: "Key Largo",
+        addressRegion: "FL",
+        addressPostalCode: "33037",
+        addressCountry: "US",
+      },
+    });
+  });
+
+  it("asks the operation that answers places, not the one that only completes addresses", async () => {
+    // `Autocomplete` cannot return a point of interest at all, so no amount of
+    // mapping below it would have found a shop by name. Asserting the command
+    // is what keeps the fix from being undone by a plausible-looking swap.
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
+    expect(client.send.mock.calls[0][0].constructor.name).toBe("SuggestCommand");
+  });
+
+  it("asks for no query refinements, which are rows with nothing to save", async () => {
+    // `Suggest` also answers with search terms to try next. They carry no place
+    // and no address, so a picked one has nothing to write — they would only
+    // crowd real answers out of a five-row list.
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef");
+    const command = client.send.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(command.input.MaxQueryRefinements).toBe(0);
+  });
+
+  it("drops a query-refinement row that arrives anyway", async () => {
     const client = clientReturning({
       ResultItems: [
-        { ...fullResult, Address: { ...fullResult.Address, Region: { Name: "Florida" } } },
+        { Title: "dive shops near me", SuggestResultItemType: "Query", Query: { QueryId: "q1" } },
+        businessResult,
       ],
+    });
+    const result = await awsAddressLookupProvider(config, { client }).suggest("dive shop");
+    expect(result.status === "ok" && result.suggestions.map((s) => s.id)).toEqual(["poi-1"]);
+  });
+
+  it("prefers the short region code, which is what fits a one-line address", async () => {
+    const client = clientReturning({
+      ResultItems: [withAddress({ ...CORE_ADDRESS, Region: { Name: "Florida" } })],
     });
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
     expect(result.status === "ok" && result.suggestions[0].address.addressRegion).toBe("Florida");
@@ -58,12 +134,7 @@ describe("Amazon Location address suggestions", () => {
     // Inside a big city the town a diver would post a letter to often lands in
     // `District` rather than `Locality`.
     const client = clientReturning({
-      ResultItems: [
-        {
-          ...fullResult,
-          Address: { ...fullResult.Address, Locality: undefined, District: "Brooklyn" },
-        },
-      ],
+      ResultItems: [withAddress({ ...CORE_ADDRESS, Locality: undefined, District: "Brooklyn" })],
     });
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
     expect(result.status === "ok" && result.suggestions[0].address.addressLocality).toBe(
@@ -74,8 +145,8 @@ describe("Amazon Location address suggestions", () => {
   it("drops a result with nothing to key or read, rather than rendering a blank row", async () => {
     const client = clientReturning({
       ResultItems: [
-        { PlaceId: undefined, Title: "no id" },
-        { PlaceId: "p", Title: undefined },
+        { Title: "no id", SuggestResultItemType: "Place", Place: { Address: CORE_ADDRESS } },
+        { SuggestResultItemType: "Place", Place: { PlaceId: "p", Address: CORE_ADDRESS } },
       ],
     });
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
@@ -91,7 +162,7 @@ describe("Amazon Location address suggestions", () => {
 
   it("degrades rather than throwing when the geocoder is down", async () => {
     // A geocoder being unavailable must never take the settings page with it:
-    // the five boxes still work and the staffer types the address.
+    // the card says so and the shop's stored address is left alone.
     const client = { send: vi.fn().mockRejectedValue(new Error("boom")) };
     const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
     expect(result).toEqual({ status: "failed", reason: "unknown" });
@@ -160,30 +231,29 @@ describe("Amazon Location address suggestions", () => {
     expect(command.input.MaxResults).toBe(5);
   });
 
-  it("asks for the structured address breakdown, which Autocomplete withholds by default", async () => {
-    // The regression this file missed for a release: `Autocomplete` returns
-    // the place id, the place type and a one-line label unless
-    // `AdditionalFeatures: ["Core"]` is asked for, and every test above hands
-    // the adapter a response that already has an `Address` on it — so the
-    // mapping was proven while the request that earns the mapping was not.
-    // Without this the lookup succeeds, lists real places, and fills the
-    // shop's five boxes with five empty strings.
+  it("asks for the structured address breakdown, which the API withholds by default", async () => {
+    // The regression this file missed for a release: the `Address` object comes
+    // back holding a `Label` and nothing else unless `AdditionalFeatures:
+    // ["Core"]` is asked for, and every test above hands the adapter a response
+    // that already has a full `Address` on it — so the mapping was proven while
+    // the request that earns the mapping was not. Without this the lookup
+    // succeeds, lists real places, and saves an empty address over the shop's.
     const client = clientReturning({ ResultItems: [] });
     await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
     const command = client.send.mock.calls[0][0] as { input: Record<string, unknown> };
     expect(command.input.AdditionalFeatures).toEqual(["Core"]);
   });
 
-  it("drops a label-only result rather than offering one that blanks the address", async () => {
+  it("drops a label-only result rather than offering one that wipes the address", async () => {
     // What a response looks like when the breakdown is missing: readable in the
-    // list, and five empty boxes the moment it is picked, because a pick
-    // replaces the whole address.
+    // list, and an emptied address the moment it is picked, because a pick
+    // replaces every column and saves.
     const client = clientReturning({
       ResultItems: [
         {
-          PlaceId: "label-only",
           Title: "Key Largo, FL, United States",
-          Address: { Label: "Key Largo, FL, United States" },
+          SuggestResultItemType: "Place",
+          Place: { PlaceId: "label-only", Address: { Label: "Key Largo, FL, United States" } },
         },
         fullResult,
       ],

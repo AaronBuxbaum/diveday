@@ -875,12 +875,13 @@ exports.handler = async (event) => {
     });
 
     // 12. Address lookup for the settings address card - see ADR
-    // 20260804-aws-location-address-lookup. Amazon Location Service's
-    // geo-places Autocomplete, called *server-side* from a Next.js server
-    // action, which is the whole reason this is an IAM user rather than the
-    // browser API key a Google Places widget would need: the credential never
-    // reaches a browser, so there is nothing to referrer-restrict and nothing
-    // spendable sitting in client JavaScript.
+    // 20260804-aws-location-address-lookup, amended by ADR
+    // 20260811-address-is-one-search-box. Amazon Location Service's geo-places
+    // Suggest, called *server-side* from a Next.js server action, which is the
+    // whole reason this is an IAM user rather than the browser API key a Google
+    // Places widget would need: the credential never reaches a browser, so
+    // there is nothing to referrer-restrict and nothing spendable sitting in
+    // client JavaScript.
     //
     // Its own user, not the SES or SNS one: least privilege means a geocoding
     // key can never send mail, and a mail key can never spend the geocoding
@@ -890,10 +891,19 @@ exports.handler = async (event) => {
     });
     placesLookupUser.addToPolicy(
       new iam.PolicyStatement({
-        // Autocomplete only. Not Geocode, not GetPlace, not SearchText, and
-        // nothing from the maps or routes families - the app calls exactly one
-        // operation, so that is exactly what this identity can do.
-        actions: ["geo-places:Autocomplete"],
+        // Suggest only. Not Autocomplete, not Geocode, not GetPlace, not
+        // SearchText, and nothing from the maps or routes families - the app
+        // calls exactly one operation, so that is exactly what this identity
+        // can do.
+        //
+        // It was `geo-places:Autocomplete` until 2026-08-11. **A stack still
+        // holding the old statement answers every keystroke with
+        // AccessDeniedException** once the app switches operations, which the
+        // card reports as the same "address lookup isn't available right now"
+        // an outage does - so `cdk deploy` has to land with (or before) the app
+        // release, not after it. Nothing else in the app calls Autocomplete, so
+        // the reverse order is safe: this policy may be widened early.
+        actions: ["geo-places:Suggest"],
         // The geo-places API is resource-less for this call shape (there is no
         // place-index resource to scope to in the standalone Places API), so
         // the action list above is the actual boundary.

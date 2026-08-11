@@ -51,14 +51,13 @@ import {
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { SettingsDoorRow, SettingsRow, SettingsRowList } from "./_components/SettingsRows";
-import { AddressFields } from "./AddressFields";
+import { AddressSearch } from "./AddressSearch";
 import {
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
-  saveAddressAction,
   saveContactAction,
   saveDockCallAction,
   savePackingAction,
@@ -98,6 +97,7 @@ function noticeMessages(
     contact_saved: { tone: "success", text: t("settings.main.notice.contactSaved") },
     contact_invalid: { tone: "danger", text: t("settings.main.notice.contactInvalid") },
     address_saved: { tone: "success", text: t("settings.main.notice.addressSaved") },
+    address_removed: { tone: "success", text: t("settings.main.notice.addressRemoved") },
     address_invalid: { tone: "danger", text: t("settings.main.notice.addressInvalid") },
     review_url_saved: { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
     review_url_invalid: { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
@@ -576,58 +576,45 @@ export default async function SettingsPage({
             </FieldGrid>
           </SettingsRow>
 
+          {/* One search box, no Save: picking a place *is* the save (ADR
+              20260811-address-is-one-search-box). The five free-text boxes that
+              used to sit under the lookup are gone — they were the source of
+              every mangled address the lookup was introduced to prevent. */}
           <SettingsRow
             heading={t("settings.main.address.heading")}
             value={addressValue}
-            description={t("settings.main.address.description")}
             detail={t("settings.main.address.detail")}
             open={activeSection === "address"}
           >
             <SectionNotice banner={banner} section="address" active={activeSection} />
-            <FieldGrid as="form" action={saveAddressAction} columns={2} className="mt-4">
-              <AddressFields
-                initial={{
-                  addressStreet: shop.addressStreet ?? "",
-                  addressLocality: shop.addressLocality ?? "",
-                  addressRegion: shop.addressRegion ?? "",
-                  addressPostalCode: shop.addressPostalCode ?? "",
-                  addressCountry: shop.addressCountry ?? "",
-                }}
-                // No geocoder credentials is the ordinary local and self-hosted
-                // case: the search box is simply absent and the row is the five
-                // boxes it has always been (src/lib/address-lookup.ts).
-                enabled={addressLookupEnabled}
-                copy={{
-                  searchLabel: t("settings.main.address.searchLabel"),
-                  searchHint: t("settings.main.address.searchHint"),
-                  searchPlaceholder: t("settings.main.address.searchPlaceholder"),
-                  searching: t("settings.main.address.searching"),
-                  noMatches: t("settings.main.address.noMatches"),
-                  lookupFailed: t("settings.main.address.lookupFailed"),
-                  lookupResting: t("settings.main.address.lookupResting"),
-                  suggestionsLabel: t("settings.main.address.suggestionsLabel"),
-                  streetLabel: t("settings.main.address.streetLabel"),
-                  streetPlaceholder: t("settings.main.address.streetPlaceholder"),
-                  localityLabel: t("settings.main.address.localityLabel"),
-                  localityPlaceholder: t("settings.main.address.localityPlaceholder"),
-                  regionLabel: t("settings.main.address.regionLabel"),
-                  regionPlaceholder: t("settings.main.address.regionPlaceholder"),
-                  postalCodeLabel: t("settings.main.address.postalCodeLabel"),
-                  postalCodePlaceholder: t("settings.main.address.postalCodePlaceholder"),
-                  countryLabel: t("settings.main.address.countryLabel"),
-                  countryHint: t("settings.main.address.countryHint"),
-                  countryPlaceholder: t("settings.main.address.countryPlaceholder"),
-                }}
-              />
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.address.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.address.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
+            <AddressSearch
+              initial={{
+                addressStreet: shop.addressStreet ?? "",
+                addressLocality: shop.addressLocality ?? "",
+                addressRegion: shop.addressRegion ?? "",
+                addressPostalCode: shop.addressPostalCode ?? "",
+                addressCountry: shop.addressCountry ?? "",
+              }}
+              // No geocoder credentials is the ordinary local and self-hosted
+              // case: the card says so in a sentence rather than offering a box
+              // that answers nothing (src/lib/address-lookup.ts).
+              enabled={addressLookupEnabled}
+              copy={{
+                searchLabel: t("settings.main.address.searchLabel"),
+                searchPlaceholder: t("settings.main.address.searchPlaceholder"),
+                searching: t("settings.main.address.searching"),
+                saving: t("settings.main.address.saving"),
+                noMatches: t("settings.main.address.noMatches"),
+                lookupFailed: t("settings.main.address.lookupFailed"),
+                lookupResting: t("settings.main.address.lookupResting"),
+                notConfigured: t("settings.main.address.notConfigured"),
+                suggestionsLabel: t("settings.main.address.suggestionsLabel"),
+                currentLabel: t("settings.main.address.currentLabel"),
+                noneSet: t("settings.main.address.noneSet"),
+                removeLabel: t("settings.main.address.remove"),
+                removing: t("settings.main.address.removing"),
+              }}
+            />
           </SettingsRow>
 
           {/* One of the few rows another surface links straight to: the Reviews
