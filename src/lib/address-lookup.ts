@@ -114,6 +114,39 @@ export function hasAddressParts(address: ShopAddressFields): boolean {
 }
 
 /**
+ * Why a lookup failed, in the only detail coarse enough to hand to a browser.
+ *
+ * `failed` used to be one opaque word. A deployment holding a credential the
+ * geocoder rejects, one whose IAM policy is missing the operation, and one
+ * pointed at a region that does not serve the API all produced exactly that
+ * word — identical in the box, identical in the network panel, and separable
+ * only from a CloudWatch line that nobody reporting the bug can read. So a
+ * reproducible outage sat open as a question for days (FU-20260809), and a
+ * second report of it arrived carrying the response body `{"status":"failed"}`
+ * and no way to act on it.
+ *
+ * These are **categories**, never the provider's own message: an AWS error can
+ * echo the query back, and the query is a partial business address. A category,
+ * a transport code and an HTTP status say which of the three cases it is
+ * without repeating anything the shop typed.
+ *
+ * The words a staffer reads do not change with the reason — the boxes below
+ * still work and the address still gets typed, which is the only thing the
+ * screen has to say. This is for whoever has to fix the deployment.
+ */
+export type AddressLookupFailureReason =
+  /** The actor no longer holds the settings gate. Nothing to do with the geocoder. */
+  | "not_permitted"
+  /** Credentials rejected, expired, or missing `geo-places:Autocomplete`. */
+  | "denied"
+  /** No answer came back at all — most often a region that does not serve the API. */
+  | "unreachable"
+  /** The provider understood the request and refused it. */
+  | "rejected"
+  /** Anything else, including the provider's own 5xx. */
+  | "unknown";
+
+/**
  * The result of asking for suggestions. `not_configured` is a first-class
  * answer, not an error: a deployment with no geocoder credentials is the
  * ordinary local and self-hosted case, and the card falls back to the plain
@@ -131,7 +164,71 @@ export type AddressLookupResult =
   | { status: "not_configured" }
   | { status: "too_short" }
   | { status: "rate_limited" }
-  | { status: "failed" };
+  | { status: "failed"; reason: AddressLookupFailureReason };
+
+/** What an adapter can read off a thrown provider error without reading its message. */
+export type LookupErrorShape = {
+  /** The exception's class name, e.g. `AccessDeniedException`. */
+  name?: string | null;
+  /** A transport-level code, e.g. `ENOTFOUND` when a region resolves to nothing. */
+  code?: string | null;
+  /** The HTTP status the provider answered with, or null when nothing answered. */
+  status?: number | null;
+};
+
+/** Names and codes that mean "the provider is asking us to slow down". */
+const THROTTLE_PATTERN = /throttl|toomanyrequests|requestlimitexceeded|slowdown/i;
+
+/**
+ * Names that mean the credential itself was refused — wrong key, expired key,
+ * or a key whose policy does not carry the operation.
+ */
+const DENIED_PATTERN =
+  /accessdenied|unrecognizedclient|invalidsignature|incompletesignature|missingauthentication|expiredtoken|invalidclienttokenid|authfailure|unauthorized|notauthorized/i;
+
+/**
+ * Transport codes that mean nothing ever answered. A region that does not serve
+ * the API is the loud case: the SDK builds a host out of the region name, and a
+ * name no such host exists for fails here rather than at any HTTP status.
+ */
+const UNREACHABLE_PATTERN =
+  /enotfound|eai_again|econnrefused|econnreset|etimedout|epipe|timeouterror|networkingerror|unknownendpoint|networkerror/i;
+
+/**
+ * A thrown provider error, sorted into what a person can act on.
+ *
+ * Provider-neutral on purpose: it takes the three facts every SDK exposes
+ * rather than an AWS error, so the adapter stays the only file that knows whose
+ * geocoder this is.
+ *
+ * Throttling comes back as `rate_limited`, not as a failure. The app already
+ * has a temporary, self-healing state with its own sentence for exactly this —
+ * it was just wired only to DiveDay's own per-staffer limiter, so the
+ * provider's identical answer arrived as the dead-end "not available right
+ * now" the state exists to avoid.
+ */
+export function classifyLookupError(
+  shape: LookupErrorShape,
+): { status: "rate_limited" } | { status: "failed"; reason: AddressLookupFailureReason } {
+  const name = shape.name ?? "";
+  const code = shape.code ?? "";
+  const status = shape.status ?? null;
+  const signature = `${name} ${code}`;
+
+  if (status === 429 || THROTTLE_PATTERN.test(signature)) return { status: "rate_limited" };
+  if (status === 401 || status === 403 || DENIED_PATTERN.test(signature)) {
+    return { status: "failed", reason: "denied" };
+  }
+  // A transport code only counts when nothing answered: a provider may attach
+  // one to a perfectly ordinary refusal.
+  if (status === null && UNREACHABLE_PATTERN.test(signature)) {
+    return { status: "failed", reason: "unreachable" };
+  }
+  if (status !== null && status >= 400 && status < 500) {
+    return { status: "failed", reason: "rejected" };
+  }
+  return { status: "failed", reason: "unknown" };
+}
 
 export type AddressLookupProvider = {
   suggest(query: string): Promise<AddressLookupResult>;

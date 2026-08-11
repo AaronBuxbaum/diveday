@@ -39,8 +39,20 @@ import {
 const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
-/** Scopes every GitHub Actions OIDC trust condition below (§18) to this repo. */
-const GITHUB_REPO = "aaronbuxbaum/diveday";
+/**
+ * Scopes every GitHub Actions OIDC trust condition below (§18) to this repo.
+ *
+ * Spelled with GitHub's own casing, and it has to be. This string lands in an
+ * IAM `StringLike` on `token.actions.githubusercontent.com:sub`, GitHub mints
+ * that claim as `repo:AaronBuxbaum/diveday:<context>` using the account name as
+ * the account holder wrote it, and `StringLike` is case-sensitive with no
+ * ignore-case variant to reach for. Lower-cased here, the condition matches
+ * nothing: every credentialed CI step fails with `Not authorized to perform
+ * sts:AssumeRoleWithWebIdentity`, which reads like a missing role or an
+ * unfinished setup step rather than a spelling. GitHub's URLs and API are
+ * case-insensitive, so nothing else in the repo notices.
+ */
+const GITHUB_REPO = "AaronBuxbaum/diveday";
 /** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
 const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
@@ -890,7 +902,18 @@ exports.handler = async (event) => {
     );
 
     const placesLookupKey = mintAccessKey("PlacesLookupUserAccessKey", placesLookupUser);
-    envValues.PLACES_AWS_REGION = this.region;
+    // Named, not inherited. Every other AWS credential here takes `this.region`,
+    // which is whatever region the human who ran `cdk deploy` had configured -
+    // an accident, not a decision. That is harmless for SES, SNS and CloudWatch,
+    // which are served everywhere. Amazon Location's Places API is not: the SDK
+    // builds `geo-places.<region>.amazonaws.com` out of this string and there is
+    // no ruleset check behind it, so a region that does not serve the API fails
+    // in DNS on every keystroke - no HTTP status, no AWS exception name, nothing
+    // to read but "address lookup isn't available right now". The address card
+    // is the one feature whose whole surface a moved stack could silently take
+    // out, so it says which region it calls.
+    const PLACES_LOOKUP_REGION = "us-east-1";
+    envValues.PLACES_AWS_REGION = PLACES_LOOKUP_REGION;
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addressLookupConfigFromEnvironment,
+  classifyLookupError,
   isAddressLookupConfigured,
   isLookupWorthy,
   MAX_ADDRESS_QUERY_LENGTH,
@@ -93,5 +94,72 @@ describe("configuration", () => {
     expect(
       addressLookupConfigFromEnvironment({ ...full, PLACES_AWS_ACCESS_KEY_ID: "   " }),
     ).toBeNull();
+  });
+});
+
+/**
+ * The three deployment mistakes that produce an identical dead lookup, and the
+ * one provider answer that is not a mistake at all. Sorting them is the whole
+ * point: `failed` on its own sent a reproducible outage round-trip through a
+ * follow-up register and a second bug report without ever naming its cause.
+ */
+describe("sorting a thrown provider error into something actionable", () => {
+  it("calls a rejected or under-permitted credential denied", () => {
+    expect(classifyLookupError({ name: "AccessDeniedException", status: 403 })).toEqual({
+      status: "failed",
+      reason: "denied",
+    });
+    // The key is not one this account knows — a stale or mistyped paste.
+    expect(classifyLookupError({ name: "UnrecognizedClientException", status: 403 })).toEqual({
+      status: "failed",
+      reason: "denied",
+    });
+    // A 403 with a name nobody has seen before is still a 403.
+    expect(classifyLookupError({ name: "SomeNewException", status: 403 })).toEqual({
+      status: "failed",
+      reason: "denied",
+    });
+  });
+
+  it("calls a host that never answered unreachable — which is what a wrong region looks like", () => {
+    // The SDK builds `geo-places.<region>.amazonaws.com` out of the configured
+    // region, so a region that does not serve the API fails in DNS: there is no
+    // HTTP status to read, and no AWS exception name either.
+    expect(classifyLookupError({ name: "Error", code: "ENOTFOUND", status: null })).toEqual({
+      status: "failed",
+      reason: "unreachable",
+    });
+    expect(classifyLookupError({ name: "TimeoutError" })).toEqual({
+      status: "failed",
+      reason: "unreachable",
+    });
+  });
+
+  it("does not read a transport code as unreachable when the provider did answer", () => {
+    // An SDK can hang a code off an ordinary refusal; something that answered
+    // 400 is reachable by definition.
+    expect(
+      classifyLookupError({ name: "ValidationException", code: "ECONNRESET", status: 400 }),
+    ).toEqual({ status: "failed", reason: "rejected" });
+  });
+
+  it("reports the provider's own throttle as resting, not as broken", () => {
+    // The temporary, self-healing state already exists and has its own
+    // sentence; it was wired only to DiveDay's per-staffer limiter, so the
+    // provider saying the identical thing arrived as a dead end.
+    expect(classifyLookupError({ name: "ThrottlingException", status: 400 })).toEqual({
+      status: "rate_limited",
+    });
+    expect(classifyLookupError({ name: "TooManyRequestsException", status: 429 })).toEqual({
+      status: "rate_limited",
+    });
+  });
+
+  it("falls back to unknown rather than guessing", () => {
+    expect(classifyLookupError({ name: "InternalServerException", status: 500 })).toEqual({
+      status: "failed",
+      reason: "unknown",
+    });
+    expect(classifyLookupError({})).toEqual({ status: "failed", reason: "unknown" });
   });
 });

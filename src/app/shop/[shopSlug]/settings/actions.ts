@@ -503,12 +503,22 @@ export async function saveTimezoneAction(formData: FormData) {
  * Everything it returns is provider text that ends up in React children and
  * `value` attributes — escaped by default, and never `dangerouslySetInnerHTML`.
  * The query itself is a partial business address and is never logged.
+ *
+ * A failure carries a `reason` (`src/lib/address-lookup.ts`). It changes
+ * nothing a staffer reads — the sentence is the same one either way, and a dive
+ * shop cannot act on `AccessDeniedException` — but it is what turns the
+ * response body in a developer's network panel from "it says failed" into the
+ * name of the deployment mistake. It is a category, never the provider's
+ * message.
  */
 export async function suggestAddressAction(query: string): Promise<AddressLookupResult> {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
-    return { status: "failed" };
+    // The staffer reads the same sentence either way — the boxes below still
+    // work — but the reason separates a demoted actor from a sick geocoder for
+    // whoever is looking at the response.
+    return { status: "failed", reason: "not_permitted" };
   }
   if (typeof query !== "string" || !isLookupWorthy(query)) return { status: "too_short" };
 
