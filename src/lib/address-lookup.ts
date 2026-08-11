@@ -1,11 +1,19 @@
 /**
  * Looking a shop's address up instead of typing it.
  *
- * The settings address card is five free-text boxes, and a shop filling them in
- * by hand gets to invent its own spelling of its own town, put the postcode in
- * the region box, and write "USA" where the column wants `US`. That address is
- * published — it feeds the structured data search engines read the shop's
- * venue from — so the cost of a typo is not cosmetic.
+ * The settings address card used to be five free-text boxes, and a shop filling
+ * them in by hand got to invent its own spelling of its own town, put the
+ * postcode in the region box, and write "USA" where the column wants `US`. That
+ * address is published — it feeds the structured data search engines read the
+ * shop's venue from — so the cost of a typo is not cosmetic. The boxes are
+ * gone: the card is one search box, and picking a place *is* the save (ADR
+ * 20260811-address-is-one-search-box).
+ *
+ * A shop searches for **itself**, by name — "Rainbow Reef Dive Center" — far
+ * more readily than it recites its own street address, so the lookup has to
+ * answer business names as well as addresses. That is a property of the query,
+ * not of the UI, and it is why the adapter calls its provider's place/POI
+ * operation rather than its address-completion one.
  *
  * This module is the provider-neutral half: the shape of a suggestion, what
  * counts as a query worth spending a billed request on, and how a looked-up
@@ -32,9 +40,19 @@ export type ShopAddressFields = {
 export type PlaceSuggestion = {
   /** The provider's opaque id — never stored, only a React key. */
   id: string;
-  /** The provider's own one-line rendering, which is what the staffer reads. */
+  /**
+   * What the row is called. For a business this is its **name** — "Rainbow Reef
+   * Dive Center" — which is what a shop owner types and therefore what they
+   * need to recognize in the list.
+   */
   label: string;
-  /** The parts that land in the five boxes when this row is picked. */
+  /**
+   * The address line under the name, when the name is not already an address.
+   * A shop's own name matches several franchise locations; the street beneath
+   * it is the only thing that tells them apart.
+   */
+  detail?: string;
+  /** The address this row saves when it is picked. */
   address: ShopAddressFields;
 };
 
@@ -80,9 +98,9 @@ export type LookedUpAddress = {
  * because that is what the column is and what a diver reads on a business card.
  *
  * Every field falls back to empty rather than being omitted: picking a
- * suggestion must *replace* the whole address, not merge into it. A place with
- * no postcode has to clear the postcode box, or the shop is left holding half
- * of one address and half of another — which is worse than either.
+ * suggestion *replaces* the whole address, never merges into it. A place with
+ * no postcode has to clear the stored postcode, or the shop is left holding
+ * half of one address and half of another — which is worse than either.
  *
  * The country is normalized to upper-case alpha-2, which is what the settings
  * schema caps at two characters and what the structured data publishes.
@@ -104,10 +122,10 @@ export function toShopAddressFields(parts: LookedUpAddress): ShopAddressFields {
 /**
  * Whether a folded address carries anything at all.
  *
- * Picking a suggestion replaces every one of the five columns, so an address
- * with no parts in it is not a thin answer — it is one that empties the boxes
- * the shop already filled in. Adapters use this to drop such a result instead
- * of offering it.
+ * Picking a suggestion replaces every one of the five columns *and saves*, so
+ * an address with no parts in it is not a thin answer — it is one that wipes
+ * the address the shop already had. Adapters use this to drop such a result
+ * instead of offering it.
  */
 export function hasAddressParts(address: ShopAddressFields): boolean {
   return Object.values(address).some((value) => value.length > 0);
