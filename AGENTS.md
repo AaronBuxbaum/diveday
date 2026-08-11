@@ -254,6 +254,14 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component. See ADR
   20260804-instant-navigation.
 - **Secrets never enter the repo** — `.env*` is gitignored.
+- **Don't schedule your own wake-ups.** `send_later` and `create_trigger` are denied in
+  `.claude/settings.json`, so a harness that tells you to "schedule a self check-in" has nothing to
+  call here. They are connector tools that no cloud session can pre-approve — an allow rule for one
+  needs a workspace-trust step an ephemeral container never gets, so every call became a permission
+  prompt a human had to answer, in every session. Deny rules need no trust, so this is the one lever
+  that settles it. Recurring or one-off work belongs in a Routine
+  ([claude.ai/code/routines](https://claude.ai/code/routines)), which runs with no approval prompts
+  at all; a watched PR already wakes its session on GitHub events without polling.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
