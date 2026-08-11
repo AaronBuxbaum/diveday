@@ -28,9 +28,11 @@ is case-sensitive with no ignore-case variant. Both CI roles' trust conditions t
 nothing, from any branch.
 
 The stack itself is not stale — checked on 2026-08-11, `diveday-infra` was last updated at 17:57:55Z
-that day — so the roles do exist and the spelling is the whole story. If that deploy came from a
-`main` carrying the fix below, the trust policies are already correct and this entry may need
-nothing but a re-run to confirm and close.
+that day — so the roles exist. **That deploy did not fix this.** PR #463 touched `infra/` at 20:36
+the same evening, three hours later, and the job failed at the identical step with the identical
+message. So the deployed trust policies still carry the old spelling: either the 17:57 deploy ran
+from a checkout without the casing fix (it landed on `main` shortly before, so a workstation that had
+not pulled would miss it), or the casing is not the whole story.
 
 ## Why it isn't already done
 
@@ -41,12 +43,19 @@ admin credential, which no agent session has.
 
 ## Proposed change
 
-0. Re-run the `Infra / cdk synth + diff` job first. The stack was deployed at 17:57:55Z on
-   2026-08-11; if that deploy came from a `main` that already carried the casing fix, the trust
-   policies are correct and the job will now get credentials — in which case confirm and delete this
-   entry without deploying anything.
-1. Otherwise run `pnpm infra:deploy` from a workstation carrying the `diveday-admin` profile (see
-   [docs/engineering/infrastructure-runbook.md](../../engineering/infrastructure-runbook.md)).
+0. Read the deployed trust policy before deploying anything, so the next attempt is not another
+   guess:
+   ```
+   aws iam get-role --role-name diveday-github-actions-cdk-diff \
+     --query 'Role.AssumeRolePolicyDocument' --output json
+   ```
+   A `sub` condition reading `repo:aaronbuxbaum/diveday:*` (lower-cased) confirms the casing
+   diagnosis and step 1 fixes it. `repo:AaronBuxbaum/diveday:*` means the fix is already deployed and
+   the cause is elsewhere — go to step 3.
+1. Run `pnpm infra:deploy` from a workstation carrying the `diveday-admin` profile, **on a checkout
+   that includes the casing fix** (`git log --oneline -1 -- infra/lib/infra-stack.ts` should show it;
+   the 17:57:55Z deploy on 2026-08-11 apparently predated it). See
+   [docs/engineering/infrastructure-runbook.md](../../engineering/infrastructure-runbook.md).
 2. Re-run the `Infra / cdk synth + diff` job on any open `infra/`-touching PR and confirm it now gets
    credentials and posts its diff comment. The same deploy should make the settings address
    type-ahead work again — check it, and close
@@ -78,8 +87,12 @@ case-sensitive. What remains is that AWS still holds the policies built from the
 only a deploy replaces them — CI cannot do it, because the deploy job would have to assume the role
 whose trust policy is the thing being repaired.
 
-Do this: run `pnpm infra:deploy` from a workstation with the diveday-admin profile, then re-run the
-Infra / cdk synth + diff job on an open infra/-touching PR. If it still fails, check that the
+Do this: first read the deployed trust policy — `aws iam get-role --role-name
+diveday-github-actions-cdk-diff --query 'Role.AssumeRolePolicyDocument'`. A lower-cased
+repo:aaronbuxbaum/diveday:* sub condition confirms the diagnosis. Then run `pnpm infra:deploy` from a
+workstation with the diveday-admin profile, on a checkout that actually contains the casing fix — a
+deploy at 17:57:55Z on 2026-08-11 did not fix it, and a PR three hours later failed identically — and
+re-run the Infra / cdk synth + diff job on an open infra/-touching PR. If it still fails, check that the
 deployed GitHubActionsOidcProvider exists and carries sts.amazonaws.com as a client id — AWS returns
 the identical error for a missing role, a missing provider and a non-matching condition.
 
