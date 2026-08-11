@@ -27,10 +27,7 @@ import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "./settings";
  * and are transparent to the JS engine.
  */
 function escapeForScriptContext(json: string): string {
-  return json
-    .replace(/</g, "\\u003C")
-    .replace(/>/g, "\\u003E")
-    .replace(/\//g, "\\u002F");
+  return json.replace(/</g, "\\u003C").replace(/>/g, "\\u003E").replace(/\//g, "\\u002F");
 }
 
 export function localeCorrectionScript(): string {
