@@ -127,13 +127,24 @@ Vercel, update GitHub visual-test secrets, and add SES DNS records through Verce
 repository's dev dependencies and is invoked with `pnpm exec vercel`, never downloaded ad hoc.
 
 `.env.local` is a **merge, not an overwrite**: a value already in the file wins over the deployed
-stack's for every key outside `distribute-env.mjs`'s small `stackManaged` set, so a `DATABASE_URL` or
-a personal Stripe test key survives a deploy. That rule also covers the per-service IAM credentials
-the stack mints, which means a key typed in by hand once is pinned — every later run reads the real
-one out of Secrets Manager and drops it, and the file looks correct afterwards. The run now prints
-`Kept the value already in .env.local for …` naming each such key; if one of them is a `*_AWS_*` pair
-the stack owns, blank that line and re-run. The `.env.vercel` and `.env.github` targets do not merge
-— they are rendered from the secret each time.
+stack's, so a `DATABASE_URL`, a personal Stripe test key, or an `APP_HOST` pointing at localhost
+survives a deploy. Two exceptions, both in `distribute-env.mjs`'s `stackOwns`: the explicit
+`stackManaged` set (the derived app secrets, the SNS topic ARNs), and **every per-service AWS
+credential the stack mints** — anything matching `*_AWS_REGION` / `*_AWS_ACCESS_KEY_ID` /
+`*_AWS_SECRET_ACCESS_KEY`. Those always take the deployed value, with no local override, because
+they are an IAM user's credentials rather than a preference and a private copy is a stale copy
+waiting to happen. Neither exception can blank a line the stack has no value for.
+
+That matters more than it looks, because `.env.vercel` and `.env.github` are rendered from the
+**merged `.env.local`**, not from the secret (see `infra-deploy.mjs`). Before the `*_AWS_*` rule, a
+credential typed into `.env.local` by hand was pinned there forever and then carried into Vercel
+Production by the import step — which is how the deployed address lookup spent a week signing with
+an access key AWS had never issued.
+
+Whatever is kept rather than replaced is printed: `Kept the value already in .env.local for …`. That
+line is a receipt for choices you are expected to make, and the safety net for the values the stack
+writes that are not credentials (a RUM monitor id, a log group name) — blank the line and re-run to
+take the stack's.
 
 Each of these three sync steps only pushes what actually changed, not the whole document every
 time — answering "yes" is safe to do on every deploy. Vercel variables (`import-vercel-env.mjs`)

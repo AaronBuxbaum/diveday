@@ -52,6 +52,33 @@ const stackManaged = new Set([
   "REG_SUIT_AWS_SECRET_ACCESS_KEY",
 ]);
 
+/**
+ * The per-service AWS credential triples the stack mints -- `SES_AWS_*`,
+ * `SNS_AWS_*`, `PLACES_AWS_*`, `CLOUDWATCH_AWS_*`, and whatever the next
+ * section adds.
+ *
+ * Matched by shape rather than listed, because the list is what failed. The
+ * set above named the SNS *topic ARNs* the stack writes but not the IAM pairs
+ * it mints beside them, so `PLACES_AWS_ACCESS_KEY_ID` fell through the local
+ * merge: a key typed onto that line once outlived every later deploy, which
+ * read the real one out of Secrets Manager and dropped it. A name-shaped rule
+ * cannot be forgotten the next time a service is added.
+ *
+ * There is no local override for these on purpose. They are credentials an
+ * IAM user holds, not a developer preference -- a private copy is a stale copy
+ * waiting to happen, and this file is the only place it could come from.
+ */
+const MINTED_AWS_CREDENTIAL = /_AWS_(REGION|ACCESS_KEY_ID|SECRET_ACCESS_KEY)$/;
+
+/**
+ * Whether the deployed stack, rather than the file already on disk, decides
+ * this value. Gated on the stack actually having one: a key the stack does not
+ * carry (an older deploy, a service not wired up yet) must never blank what is
+ * already there.
+ */
+const stackOwns = (key) =>
+  Boolean(resolvedValues[key]) && (stackManaged.has(key) || MINTED_AWS_CREDENTIAL.test(key));
+
 const localOnly = new Set([
   "APP_SECRET_SEED",
   "REG_SUIT_S3_BUCKET_NAME",
@@ -93,24 +120,21 @@ if (target === "local") {
   const mergedValues = Object.fromEntries(
     Object.entries(resolvedValues).map(([key, value]) => [
       key,
-      !stackManaged.has(key) && existingValues[key] ? existingValues[key] : value,
+      !stackOwns(key) && existingValues[key] ? existingValues[key] : value,
     ]),
   );
-  // Say which values this deliberately did not update.
+  // Say which values this kept instead of the stack's.
   //
-  // Local choices win over the stack for everything outside `stackManaged`,
-  // which is what you want for a `DATABASE_URL` or a personal Stripe test key.
-  // But the stack also *mints* credentials this file then carries -- the
-  // per-service IAM pairs -- and for those the same rule means a value typed in
-  // once is pinned forever: every later run reads the real credential out of
-  // Secrets Manager and silently drops it. That is invisible in the file
-  // afterwards, and the failure it produces arrives much later and somewhere
-  // else (a 403 from a service whose key "is right there in the env").
-  // Overriding is still allowed -- it is a local dotenv and someone may have
-  // meant it -- but it is no longer silent.
+  // What is left after `stackOwns` are the ones a person is expected to choose
+  // -- `DATABASE_URL`, a personal Stripe test key, an `APP_HOST` pointing at
+  // localhost -- so keeping them is right and this line is a receipt, not a
+  // warning. It matters for the residue: values the stack also writes that are
+  // *not* credentials (a RUM monitor id, a log group name). A stale one of
+  // those is silent in the file and surfaces much later somewhere else, which
+  // is exactly how a hand-typed `PLACES_AWS_ACCESS_KEY_ID` reached production.
   const kept = Object.keys(resolvedValues).filter(
     (key) =>
-      !stackManaged.has(key) &&
+      !stackOwns(key) &&
       existingValues[key] &&
       resolvedValues[key] &&
       existingValues[key] !== resolvedValues[key],
