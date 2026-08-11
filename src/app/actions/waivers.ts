@@ -75,7 +75,10 @@ export async function sendWaiversAction(
 
   // The blocked row itself moves to its awaiting state (a fresh link is now
   // pending) once the server data refreshes.
-  revalidatePath(SURFACE_PATH[surface](shopSlug, tripId));
+  const path = Object.prototype.hasOwnProperty.call(SURFACE_PATH, surface)
+    ? SURFACE_PATH[surface](shopSlug, tripId)
+    : undefined;
+  if (path) revalidatePath(path);
   if (state.sent.length > 0) {
     await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface });
   }

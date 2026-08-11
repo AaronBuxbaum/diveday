@@ -29,13 +29,13 @@ export function ensureAwsLogin({
   } catch {
     if (!interactive) {
       throw new Error(
-        `AWS profile ${environment.AWS_PROFILE || "default"} is not signed in. Run this command in an interactive terminal so it can open aws login.`,
+        "AWS profile is not signed in. Run this command in an interactive terminal so it can open aws login.",
       );
     }
   }
 
   const region = environment.AWS_DEFAULT_REGION?.trim() || "us-east-1";
-  log(`AWS profile ${environment.AWS_PROFILE || "default"} needs sign-in; opening aws login…`);
+  log("Opening aws login…");
   const login = spawn("aws", ["login", ...profileArguments(environment), "--region", region], {
     env: environment,
     stdio: "inherit",
