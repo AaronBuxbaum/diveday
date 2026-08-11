@@ -74,15 +74,25 @@ function DiverFacts({
         <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
         <span className="mt-0.5 block text-muted">
           {diver.emergencyContactName && diver.emergencyContactPhone ? (
-            <>
-              {diver.emergencyContactName} ·{" "}
-              {/* The number never breaks across lines. In a half-width panel
-                  it wrapped at its own hyphens — "+1-305-" / "555-0241" — and
-                  a number a crew member is reading aloud in an emergency is
-                  the last string on this page that should be reassembled by
-                  eye. */}
-              <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
-            </>
+            columns === 1 ? (
+              <>
+                {diver.emergencyContactName} ·{" "}
+                {/* The number never breaks across lines *here*. In the
+                    half-width panel it wrapped at its own hyphens — "+1-305-"
+                    / "555-0241" — and a number a crew member reads aloud in an
+                    emergency is the last string on this page that should be
+                    reassembled by eye.
+                    Only here: the `<span>` splits one text run into two, which
+                    the browser then shapes independently, and on paper that
+                    re-drew every phone number a few sub-pixels over for a wrap
+                    that a full-width page never had. The printed manifest is
+                    the document a coastguard reads — it does not move for a
+                    problem it does not have. */}
+                <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+              </>
+            ) : (
+              `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+            )
           ) : (
             t("trips.manifest.notOnFile")
           )}
@@ -273,7 +283,15 @@ export function DiverRollCall({
               className={`${rowClass} transition-all duration-300`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
+                {/* `lg:flex-1` so this column is the same width on every row.
+                    Left to size itself, a flex child takes its content's width
+                    — and since the row's content is a name plus however many
+                    badges that diver happens to carry, every row got a
+                    different one. The two disclosures below split this column
+                    in half, so "Add a note" then started at a different x on
+                    each of nine rows, wandering left and right down the
+                    roster. */}
+                <div className="min-w-0 lg:flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
                       {String(index + 1).padStart(2, "0")}
