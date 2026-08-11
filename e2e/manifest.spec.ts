@@ -61,7 +61,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // that used to restate the panel's own count is gone. The count itself is
   // asserted below, on the panel's count row.
   await expect(
-    page.getByText(/blocked\. They remain on this manifest and cannot board/),
+    page.getByText(/still on this manifest, but cannot board/),
   ).toBeVisible();
   // Her own row heading, not a bare text match: every unteamed diver's name
   // also appears on the buddy-team builder's checkbox below (ADR

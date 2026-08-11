@@ -273,7 +273,7 @@ test.describe("as owner", () => {
     // `FlashParams` strips both `notice`, `count`, and `form`.
     const outcome = page.getByRole("status").filter({ hasText: "Requirements updated." });
     await expect(outcome).toContainText(
-      "Requirements updated. 1 diver already booked on this trip no longer meets them",
+      "Requirements updated. 1 booked diver no longer meets them",
     );
     // And it lands *in the requirements section*, beside the button that was
     // pressed. Overview carries six independent forms down a long page; this

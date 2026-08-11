@@ -642,7 +642,7 @@
     "signButton": "Firmar exención",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
-    "englishOnlyNotice": "Esta exención y el formulario médico solo están disponibles en inglés por ahora. Si no te sientes cómodo leyendo textos legales o médicos en inglés, ven con alguien que pueda ayudarte a leerlo, o consulta antes con el centro: no firmes nada que no entiendas."
+    "englishOnlyNotice": "Esta exención y el cuestionario médico solo están disponibles en inglés por ahora. Si no te sientes cómodo leyendo textos legales o médicos en inglés, ven con alguien que pueda ayudarte a leerlo, o consulta antes con el centro: no firmes nada que no entiendas."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",
