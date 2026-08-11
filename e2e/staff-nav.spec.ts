@@ -138,3 +138,69 @@ test.describe("phone dock", () => {
     await expect(page).toHaveURL(/\/settings$/);
   });
 });
+
+/**
+ * The other half of what the dock bought: with the tabs off the header, a
+ * phone header holds only the logo, the shop's name, and two icon buttons, so
+ * the name gets the width the tab rows used to take. It kept a 10rem clamp
+ * from before that — a shop whose name ran past about twenty characters read
+ * as "Blue Horizon Dive Ch…" with 80px of empty header beside it.
+ *
+ * Driven against a freshly onboarded shop because the seeded demo shop's name
+ * is short enough to fit either way — the clamp is invisible until a name is
+ * long enough to hit it.
+ */
+test.describe("a long shop name on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("uses the width the phone dock freed, and keeps the header one row", async ({ page }) => {
+    const unique = `long-name-${Date.now()}`;
+    await page.goto("/onboard");
+    await page
+      .locator('input[name="shopName"]')
+      .filter({ visible: true })
+      .fill("Blue Horizon Dive Charters");
+    await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+    await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+    await page
+      .locator('input[name="ownerEmail"]')
+      .filter({ visible: true })
+      .fill(`${unique}@example.com`);
+    await page
+      .locator('input[name="ownerPassword"]')
+      .filter({ visible: true })
+      .fill("trial-pass-123");
+    await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
+
+    const name = page
+      .locator("header [data-identity-menu] span")
+      .filter({ hasText: /Blue Horizon/ });
+    await expect(name).toHaveText("Blue Horizon Dive Charters");
+    // Rendered whole, and wider than the 10rem clamp that used to cut it.
+    const width = await name.evaluate((el) => ({
+      shown: el.clientWidth,
+      wants: el.scrollWidth,
+    }));
+    expect(width.shown).toBe(width.wants);
+    expect(width.shown).toBeGreaterThan(160);
+
+    // Taking the width must not cost a second header row: past the point where
+    // the name genuinely runs out of room it truncates, and the flex row never
+    // wraps the search buttons under it.
+    const trigger = page.locator("header [data-identity-menu]");
+    const search = page.locator("header").getByRole("button", { name: "Search" });
+    const [triggerBox, searchBox] = await Promise.all([
+      trigger.boundingBox(),
+      search.boundingBox(),
+    ]);
+    if (!triggerBox || !searchBox) throw new Error("header controls have no box");
+    expect(Math.abs(triggerBox.y - searchBox.y)).toBeLessThan(triggerBox.height);
+    expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(searchBox.x);
+    // And nothing spilled sideways off the phone.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(0);
+  });
+});

@@ -96,7 +96,11 @@ export function ShopIdentityMenu({
   }, [pathname]);
 
   return (
-    <div ref={rootRef} className="relative min-w-0 shrink">
+    // `flex`, so the trigger below is a flex item and shrinks when the header
+    // is tight. A `<button>` sizes to fit its content even at `display: flex`,
+    // so as a block child it would simply overflow this box instead of letting
+    // the name inside it truncate.
+    <div ref={rootRef} className="relative flex min-w-0 shrink">
       <button
         type="button"
         ref={triggerRef}
@@ -110,7 +114,14 @@ export function ShopIdentityMenu({
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
           <LogoMark className="size-5" />
         </span>
-        <span className="max-w-40 truncate">{shopName}</span>
+        {/* No fixed clamp below `lg`. The 10rem one this replaces was sized
+            when the header still carried the wrapped tab rows and a standing
+            Sign out; with the tabs in the dock and Sign out behind this menu,
+            a 390px header has about 240px for the name, so the clamp was
+            ellipsing names with 80px of room to spare. Flex owns the width
+            now — the name truncates only when the row genuinely runs out. The
+            clamp returns at `lg`, where the tab strip shares this row. */}
+        <span className="min-w-0 truncate lg:max-w-40">{shopName}</span>
         {/* The one visual cue that the identity block opens: a small caret,
             rotating with state (transform-only, ≤250ms, principle 5). */}
         <span

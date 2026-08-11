@@ -122,7 +122,16 @@ export function ShopNav({
               time (principle 10), and Settings in particular was costing a
               sixth of the phone dock. Home stays one tap away as Today, in
               the tabs and the dock. */}
-          <div className="lg:order-1">
+          {/* Below `lg` it is also the row's one flexible item, so a long shop
+              name gets the width the tabs vacated. `flex-1` rather than a bare
+              `min-w-0`: this row wraps, and wrapping is decided on an item's
+              *hypothetical* size, which a zero minimum doesn't shrink — an
+              uncapped name pushed the header into a second row at 360px
+              instead of ellipsing, where a zero flex basis has nothing to push
+              with. The inner `flex` keeps the button content-sized, so a short
+              name leaves no header-wide tap target. From `lg` the tab strip is
+              the flexible one and this sits at its own width again. */}
+          <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-none">
             <ShopIdentityMenu
               shopName={shopName}
               root={root}
