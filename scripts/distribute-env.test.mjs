@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -118,5 +118,84 @@ describe("distribute-env", () => {
     expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
     expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
     expect(readFileSync(`${directory}/aws-profile-used`, "utf8")).toBe("diveday-admin:us-east-1");
+  });
+
+  it("overwrites a minted AWS credential the local file disagrees with", () => {
+    // The regression that sent a hand-typed key to production. `stackManaged`
+    // named the SNS topic ARNs but not the IAM pairs minted beside them, so a
+    // value typed onto this line once outlived every later deploy — and since
+    // .env.vercel is rendered from the merged .env.local (infra-deploy.mjs),
+    // it was laundered from a local file into Vercel Production, where it read
+    // as a 403 from a service whose credential was sitting right there.
+    const path = temporaryPath(".env.local");
+    writeFileSync(
+      path,
+      [
+        "PLACES_AWS_ACCESS_KEY_ID=typed-in-by-hand",
+        "SES_AWS_SECRET_ACCESS_KEY=also-by-hand",
+        "SNS_AWS_REGION=us-west-1",
+        "",
+      ].join("\n"),
+    );
+
+    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
+      cwd: process.cwd(),
+      input: [
+        source,
+        "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack",
+        "SES_AWS_SECRET_ACCESS_KEY=minted-too",
+        "SNS_AWS_REGION=us-east-1",
+        "",
+      ].join("\n"),
+      encoding: "utf8",
+    });
+
+    const written = readFileSync(path, "utf8");
+    expect(run.status).toBe(0);
+    expect(written).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
+    expect(written).toContain("SES_AWS_SECRET_ACCESS_KEY=minted-too");
+    expect(written).toContain("SNS_AWS_REGION=us-east-1");
+    // Nothing was kept, so there is nothing to report.
+    expect(run.stderr).toBe("");
+  });
+
+  it("never blanks a local value the stack does not carry", () => {
+    // An older deploy, or a service not wired up yet, leaves the key empty in
+    // the secret. Owning a name must not mean erasing what is there.
+    const path = temporaryPath(".env.local");
+    writeFileSync(path, "PLACES_AWS_ACCESS_KEY_ID=the-only-one-anybody-has\n");
+
+    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
+      cwd: process.cwd(),
+      input: `${source}PLACES_AWS_ACCESS_KEY_ID=\n`,
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(0);
+    expect(readFileSync(path, "utf8")).toContain(
+      "PLACES_AWS_ACCESS_KEY_ID=the-only-one-anybody-has",
+    );
+  });
+
+  it("reports a local override of something else the stack also writes", () => {
+    // The residue `stackOwns` does not cover: values the stack produces that
+    // are not credentials, where a stale local copy is still silent. Choosing
+    // your own APP_HOST is legitimate — the line is a receipt, not a refusal.
+    const path = temporaryPath(".env.local");
+    writeFileSync(path, "APP_HOST=http://localhost:3000\nSTRIPE_SECRET_KEY=local-only\n");
+
+    const run = spawnSync("node", ["scripts/distribute-env.mjs", "local", path], {
+      cwd: process.cwd(),
+      input: `${source}STRIPE_SECRET_KEY=\n`,
+      encoding: "utf8",
+    });
+
+    const written = readFileSync(path, "utf8");
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("APP_HOST");
+    // A key the stack does not carry at all is kept without comment.
+    expect(run.stderr).not.toContain("STRIPE_SECRET_KEY");
+    expect(written).toContain("APP_HOST=http://localhost:3000");
+    expect(written).toContain("STRIPE_SECRET_KEY=local-only");
   });
 });
