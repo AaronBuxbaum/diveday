@@ -58,9 +58,13 @@ adminEnvironment.AWS_DEFAULT_REGION ||= "us-east-1";
 
 try {
   ensureAwsLogin({ environment: adminEnvironment, interactive: !process.env.CI });
-} catch (error) {
+} catch {
+  // Deliberately static: no part of this message is read from adminEnvironment
+  // or the caught error, both of which can carry values sourced from
+  // process.env. ensureAwsLogin already printed whatever the AWS CLI itself
+  // reported straight to this terminal (`stdio: "inherit"` in aws-login.mjs).
   console.error(
-    `Could not authenticate the ${adminEnvironment.AWS_PROFILE} AWS profile that holds the Vercel sync checkpoint. ${error instanceof Error ? error.message : error}`,
+    "Could not authenticate the AWS profile that holds the Vercel sync checkpoint. Run `aws login --profile diveday-admin` (or set INFRA_ENV_SYNC_PROFILE to the profile you use) in an interactive terminal, then rerun this command.",
   );
   process.exit(1);
 }
@@ -87,10 +91,13 @@ function readCheckpoint() {
     // A missing parameter is the ordinary first-sync case, not a failure --
     // any other reason (permissions, network, a renamed parameter) must not
     // be swallowed into "nothing synced yet", which is exactly the silence
-    // that would hide a real problem.
+    // that would hide a real problem. `stderr` is only ever tested here, not
+    // logged: the command ran with a profile whose environment is a spread of
+    // process.env, so its output must never be echoed back out wholesale --
+    // rerunning the same `aws` command directly shows the real error.
     if (!/ParameterNotFound/.test(stderr)) {
       console.warn(
-        `Could not read the ${environment} Vercel sync checkpoint from ${parameterName} (${stderr.trim() || (error instanceof Error ? error.message : error)}); pushing every value instead of only what changed.`,
+        `Could not read the ${environment} Vercel sync checkpoint from ${parameterName}; pushing every value instead of only what changed. Run \`aws ssm get-parameter --name ${parameterName}\` yourself to see why.`,
       );
     }
     return new Map();
