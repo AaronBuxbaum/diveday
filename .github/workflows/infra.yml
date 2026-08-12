@@ -161,33 +161,32 @@ jobs:
         # quiet `aws sts get-caller-identity` that immediately succeeds.
         run: pnpm infra:diff
 
-  # TEMPORARY -- deploy has skipped on every dispatch with command: deploy so
-  # far, even with diff succeeding and command confirmed as "deploy" both via
-  # the Actions UI and a direct API dispatch. This job always runs (needs:
-  # diff, if: always()) and prints the exact three values deploy's own if:
-  # evaluates, so we can see which one isn't what we expect instead of
-  # guessing. Remove once the cause is confirmed.
-  debug-deploy-condition:
-    name: Debug deploy job's condition inputs
-    needs: diff
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - run: |
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "inputs.command: ${{ inputs.command }}"
-          echo "needs.diff.result: ${{ needs.diff.result }}"
-          echo "full condition: ${{ github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}"
-
   deploy:
     name: cdk deploy
     needs: diff
-    # `needs.diff.result == 'success'`, not just `needs: diff`: a job's own
-    # `if:` fully replaces the default success-gating, so without this a
-    # failed synth/diff would not stop the deploy from proceeding straight
-    # to the reviewer-approval gate.
-    if: github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success'
+    # Three things this condition has to do at once, each learned the hard way:
+    #
+    # `always() &&` -- skip propagation is *transitive*, and a job's own `if:`
+    # does not override it. `infra-changed` is skipped on every
+    # workflow_dispatch (its condition is pull_request-only); `diff` survives
+    # that only because of the same wrapper; and `deploy` still inherited the
+    # skip *through* `diff` even with `diff` succeeding. Fixing `diff` alone
+    # (2026-08-12) left this job silently skipping on every `command: deploy`
+    # dispatch, with no error anywhere -- proved by a temporary debug job whose
+    # only difference from this one was `if: always()`: it ran, printing
+    # `github.event_name: workflow_dispatch`, `inputs.command: deploy`,
+    # `needs.diff.result: success`, `full condition: true`, while this job,
+    # same run, same `needs:`, reported "This job was skipped".
+    #
+    # `needs.diff.result == 'success'` -- `always()` means this job's `if:`
+    # fully replaces the default success-gating, so without this a failed
+    # synth/diff would not stop the deploy from proceeding straight to the
+    # reviewer-approval gate. (It also has to survive `always()` itself, which
+    # would otherwise run this job even when `diff` failed outright.)
+    #
+    # `inputs.command == 'deploy'` -- `diff` runs for both commands, so this is
+    # what keeps a `command: diff` dispatch from deploying.
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The approval gate. GitHub only issues an OIDC token for a job that
