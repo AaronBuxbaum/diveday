@@ -740,6 +740,32 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     expect(catalog.some((entry) => !entry.nitroxCompatible)).toBe(true);
   });
 
+  it("names the entry-level courses that must ship air-only, rather than trusting the rule", async () => {
+    // The loop above checks that the catalog *agrees with the rule*, which
+    // stays true if the rule itself is later loosened. These four are the
+    // courses whose answer was asked for by name, so they are asserted by name:
+    // Discover Scuba and Try Scuba are tasters, and both Open Water courses
+    // certify students who are diving on air throughout. A change that flips
+    // any of them has to be deliberate enough to edit this list.
+    const { db, shop } = await courseContext();
+    const byTitle = new Map(
+      (await listActiveCourses(db, shop.id)).map((entry) => [entry.title, entry]),
+    );
+    for (const title of [
+      "Discover Scuba Diving",
+      "Open Water Diver",
+      "Try Scuba",
+      "SSI Open Water Diver",
+    ]) {
+      expect({ title, nitrox: byTitle.get(title)?.nitroxCompatible }).toEqual({
+        title,
+        nitrox: false,
+      });
+    }
+    // And the course that is *about* enriched air is not swept up with them.
+    expect(byTitle.get("Nitrox Diver")?.nitroxCompatible).toBe(true);
+  });
+
   /**
    * The prerequisite gate is a **card** check, not a level check: the diver's
    * card has to be verified, not past its refresher-due date, and still on the
