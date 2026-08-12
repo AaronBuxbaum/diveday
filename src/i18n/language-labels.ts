@@ -49,7 +49,7 @@ export function languageNameIn(code: string, locale: string): string | null {
 
 /**
  * A locale's name for itself, ready to put on a switcher — `"en-US"` →
- * "English", `"es-ES"` → "español".
+ * "English", `"es-ES"` → "Español".
  *
  * The *primary subtag* is what gets named, not the whole tag: CLDR renders
  * `en-US` as "American English" and `es-ES` as "español de España", which is
@@ -57,8 +57,30 @@ export function languageNameIn(code: string, locale: string): string | null {
  * language, so the region is an implementation detail of which bundle, never a
  * choice the reader is making. Falls back to the tag itself if the runtime has
  * no name at all, which is still better than a blank button.
+ *
+ * **Sentence-cased, and only here.** CLDR follows each language's own
+ * orthography, and Spanish does not capitalise the names of languages while
+ * English does — so the raw endonyms put "English" beside "español" on the same
+ * two-button switcher, which reads as one of them being broken rather than as a
+ * point of grammar. A switcher label is a *name on a control*, the position
+ * where both languages capitalise, so the first letter is raised through the
+ * label's own locale (`toLocaleUpperCase`, not `toUpperCase` — Turkish dotted
+ * i, should a Turkish bundle ever land). Everything mid-sentence keeps CLDR's
+ * casing: `languageEndonym` and `languageNameIn` above are untouched, because
+ * "…no está en español todavía" must not grow a capital.
+ *
+ * Not flags. A flag is a country, and a language is not: Spanish is not Spain
+ * (the great majority of its speakers are in the Americas, and DiveDay's launch
+ * shops sell to them), English is neither the US nor the UK, and no single
+ * banner can stand for either without telling some reader this app is not for
+ * them. The name of the language, written the way that language writes it, is
+ * the one label every reader of it recognises.
  */
 export function localeEndonym(locale: string): string {
   const language = locale.split("-")[0];
-  return languageNameIn(language, locale) ?? languageEndonym(language) ?? locale;
+  const name = languageNameIn(language, locale) ?? languageEndonym(language) ?? locale;
+  // `[...name]` splits by code point, so a first letter outside the BMP is
+  // raised whole rather than by its leading surrogate half.
+  const [first, ...rest] = [...name];
+  return first ? `${first.toLocaleUpperCase(locale)}${rest.join("")}` : name;
 }

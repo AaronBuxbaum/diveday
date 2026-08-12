@@ -346,17 +346,18 @@ export default async function EditCoursePage({
                 ),
               })}
             </p>
+            {/* No "this is a taster session" tick box. Which courses are
+                tasters is not something a shop tells DiveDay — DiveDay ships
+                the catalogue and already knows (`isIntroCourse` on the
+                published templates, src/db/course-templates.ts): Discover
+                Scuba and Try Scuba are, and an Advanced Open Water is not.
+                Worse, it was a safety control wearing a checkbox: the flag
+                picks the tighter 2:1 in-water ratio (src/lib/course-ratios.ts,
+                HD-6), so the box existed only to let someone quietly turn that
+                cap off on a course full of people who have never breathed
+                underwater. The column stays; the way to set it is to be one of
+                those courses. */}
             <FieldGrid columns={1} className="mt-4 gap-y-5">
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="isIntroCourse"
-                  value="true"
-                  defaultChecked={course.isIntroCourse}
-                  className="size-4"
-                />
-                {t("courses.edit.introCourseLabel")}
-              </label>
               <Field label={t("courses.edit.prerequisiteLabel")}>
                 <textarea
                   id="prerequisiteNote"

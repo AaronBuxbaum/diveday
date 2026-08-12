@@ -819,14 +819,24 @@ export function ScheduleBuilder({
   // first mount is exempt. The race itself can't be scripted deterministically
   // (nothing schedules a click between commit and passive effects), which is
   // why no regression test accompanies this.
+  //
+  // It resets to *what the URL asks for*, not to null. Closing unconditionally
+  // was not idempotent, and an effect that isn't gets run twice on every mount
+  // in development (React StrictMode): first pass armed the ref, second pass
+  // immediately shut the panel the first pass had just been told to open. That
+  // took out every cross-route door to this form at once — the catalogue's
+  // "schedule a session of this course", the `/trips/new` 308, a pasted
+  // `?add=full` — each of which lands as a fresh mount carrying `openAdd`.
+  // Re-deriving from `openAdd` makes a second run a no-op and still resets a
+  // stale panel on a genuine re-navigation, which is what the reset is for.
   const pathnameEffectRan = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the panel, which is the point.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change re-derives the panel from the URL, which is the point.
   useEffect(() => {
     if (!pathnameEffectRan.current) {
       pathnameEffectRan.current = true;
       return;
     }
-    setOpen(null);
+    setOpen(openAdd === "closed" ? null : "add:top");
   }, [pathname]);
 
   return (

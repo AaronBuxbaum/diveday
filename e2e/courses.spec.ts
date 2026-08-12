@@ -256,14 +256,13 @@ test.describe("staff", () => {
     // included above it, not a row of inputs with their own Add/Remove pair.
     await page.getByLabel("Day 4 — what happens").fill("Scenario retest\nDebrief and paperwork");
     await page.getByLabel("FAQ").fill("Do I need my own gear?\nNo — we provide everything.");
-    // Off by default on a real certification course; the checkbox persists
-    // through a save/reload the same as every other field on this form.
-    const introCheckbox = page.getByRole("checkbox", { name: /taster session/ });
-    await expect(introCheckbox).not.toBeChecked();
-    await introCheckbox.check();
+    // No "this is a taster session" box to tick. Which courses are tasters is
+    // DiveDay's own catalogue fact, not a shop's claim, and the flag picks the
+    // tighter 2:1 in-water ratio — a checkbox on the marketing form was a way
+    // to switch that cap off on a boat full of first-timers.
+    await expect(page.getByRole("checkbox", { name: /taster session/ })).toHaveCount(0);
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
-    await expect(page.getByRole("checkbox", { name: /taster session/ })).toBeChecked();
 
     // The editor is a save form and nothing else: visibility lives on the
     // roster's eye toggle, and the "Live at" link above already opens the page

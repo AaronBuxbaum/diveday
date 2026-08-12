@@ -2,24 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
   COURSE_INQUIRY_EXPERIENCE,
   COURSE_INQUIRY_EXPERIENCE_KEYS,
   type CourseInquiryExperience,
-  courseInquiryBody,
-  courseInquiryMailto,
-  courseInquirySubject,
   telHref,
 } from "@/lib/course-inquiry";
 import type { CourseInquiryFormState } from "../actions";
-
-/** Keeps a typed number sane (no "0 divers", no "400 divers"); an empty box is left alone. */
-function clampDivers(value: number): number {
-  return Math.min(12, Math.max(1, Math.round(value)));
-}
 
 export interface CourseInquiryCopy {
   getInTouch: string;
@@ -42,10 +33,6 @@ export interface CourseInquiryCopy {
   chooseOne: string;
   anythingElse: string;
   messagePlaceholder: string;
-  openInEmailApp: string;
-  copyMessage: string;
-  copied: string;
-  copyFailed: string;
   orWriteTo: string;
   callLabel: string;
   send: string;
@@ -63,11 +50,15 @@ export interface CourseInquiryCopy {
  * Submitting records the inquiry server-side (a new `course_inquiries` row,
  * via `submitInquiry`) and best-effort notifies the shop's own inbox, so a
  * diver on a phone with no mail client configured no longer loses the lead
- * entirely (docs/product/archive/ux-personas-20260730-findings.md task 7). The
- * `mailto:` composer stays beside it as a fallback that needs no server
- * round trip at all — the message still leaves from the diver's own address
- * (src/lib/course-inquiry.ts explains why) for anyone who prefers that, or
- * if the server send is ever unavailable.
+ * entirely (docs/product/archive/ux-personas-20260730-findings.md task 7).
+ *
+ * That is now the only way to send it. The `mailto:` composer and the
+ * copy-the-message button that stood beside it have gone: both handed the
+ * diver a draft to send themselves, which is a worse outcome than the row this
+ * writes — the shop is not notified, nothing is recorded against the course,
+ * and a phone with no mail client configured is exactly the case the server
+ * send was added for. The shop's own address and phone number stay under the
+ * button as live links for anyone who would rather write it themselves.
  *
  * `submitInquiry` is bound to its shop/course by the page (the same shape
  * RentalFitForm's own `action` prop takes) so this component never carries
@@ -79,8 +70,6 @@ export interface CourseInquiryCopy {
  */
 export function CourseInquiry({
   submitInquiry,
-  courseTitle,
-  shopName,
   contactEmail,
   contactPhone,
   copy,
@@ -89,8 +78,6 @@ export function CourseInquiry({
     prevState: CourseInquiryFormState,
     formData: FormData,
   ) => Promise<CourseInquiryFormState>;
-  courseTitle: string;
-  shopName: string;
   contactEmail: string;
   contactPhone: string | null;
   copy: CourseInquiryCopy;
@@ -108,29 +95,11 @@ export function CourseInquiry({
   const [diversInput, setDiversInput] = useState("1");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [experienceMissing, setExperienceMissing] = useState(false);
   const [contactMissing, setContactMissing] = useState(false);
 
-  // Cleared to blank is still a real answer — an emptied box means "I would
-  // rather not say" and is never snapped back to the default.
-  const divers = diversInput === "" ? null : clampDivers(Number(diversInput));
-  const inquiry = {
-    courseTitle,
-    shopName,
-    name,
-    timing,
-    divers,
-    experience,
-    message,
-  };
-  const subject = courseInquirySubject(t, inquiry);
-  const body = courseInquiryBody(t, inquiry);
-
   /**
-   * What every submission path requires, whichever button the diver reached
-   * for — the mailto composer, the copy button, and the server-recorded send
-   * all run this first.
+   * What a submission requires before it is worth sending.
    *
    * Two things: where the diver is up to, because it is the field the shop
    * reads before anything else they typed, and *some* way to answer them.
@@ -147,14 +116,6 @@ export function CourseInquiry({
     setExperienceMissing(!hasExperience);
     setContactMissing(!hasContact);
     return hasExperience && hasContact;
-  }
-
-  async function copyMessage() {
-    const ok = await copyToClipboard(`${subject}\n\n${body}`);
-    setCopyStatus(ok ? "copied" : "failed");
-    // Long enough to read, short enough that the button is ready again
-    // before a diver who mis-copied reaches for it.
-    setTimeout(() => setCopyStatus("idle"), 4000);
   }
 
   function sendInquiry() {
@@ -337,13 +298,18 @@ export function CourseInquiry({
           </Field>
         </FieldGrid>
 
-        {/* The buttons and the shop's own details, and nothing between them
-            and the fields. There used to be a "your message so far" preview
-            of the composed subject and body here; it showed a diver their own
-            answers written back to them a second time, which is a paragraph to
-            re-read rather than a fact to check. The composed message still
-            goes to the mail app and the clipboard exactly as before — it just
-            no longer occupies half the section on its way there. */}
+        {/* One button, and then the shop's own details.
+            "Open in your email app" and "Copy message" used to stand beside
+            Send as equal secondary buttons, and both were escape hatches from
+            a form that no longer needs one: Send records the inquiry against
+            the course and notifies the shop, which is strictly more than a
+            mailto can do — it composes a draft the diver still has to send
+            themselves, from an app half of them have never configured on the
+            phone they are holding, and DiveDay never learns whether it left.
+            Copy was the same fallback one step further from a reply. Three
+            buttons also made the real one a third of the choice.
+            A diver who would rather write it themselves still can: the shop's
+            address and phone number are the line underneath, both live links. */}
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -353,30 +319,6 @@ export function CourseInquiry({
             className={buttonClass()}
           >
             {pending ? copy.sending : copy.send}
-          </button>
-          <a
-            href={courseInquiryMailto(t, contactEmail, inquiry)}
-            onClick={(event) => {
-              if (!requireAnswerable()) event.preventDefault();
-            }}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {copy.openInEmailApp}
-          </a>
-          <button
-            type="button"
-            onClick={() => {
-              if (requireAnswerable()) copyMessage();
-            }}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            <span aria-live="polite">
-              {copyStatus === "copied"
-                ? copy.copied
-                : copyStatus === "failed"
-                  ? copy.copyFailed
-                  : copy.copyMessage}
-            </span>
           </button>
         </div>
         <p className="mt-4 text-sm text-muted">

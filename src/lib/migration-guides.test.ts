@@ -18,10 +18,12 @@ function en(key: DiverMessageKey, values?: { competitor: string }): string {
 }
 
 describe("migration guides", () => {
-  it("exposes every guide's slug, with EVE first and the named incumbents present", () => {
+  it("exposes every guide's slug, with FareHarbor first and the named incumbents present", () => {
     expect(MIGRATION_GUIDE_SLUGS).toEqual(MIGRATION_GUIDES.map((g) => g.slug));
-    // EVE ships first, and the named incumbents from the strategy are all present.
-    expect(MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
+    // FareHarbor leads the list — the incumbent a dive shop is likeliest to
+    // already be on, and the one the hub pairs with its spreadsheet card at the
+    // top of the page. The named incumbents from the strategy are all present.
+    expect(MIGRATION_GUIDE_SLUGS[0]).toBe("fareharbor");
     for (const slug of ["eve", "diveshop360", "smartwaiver", "fareharbor", "rezdy"]) {
       expect(MIGRATION_GUIDE_SLUGS).toContain(slug);
     }

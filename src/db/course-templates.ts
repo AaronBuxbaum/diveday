@@ -13,6 +13,20 @@ import type { CertificationLevel } from "@/lib/readiness";
  * Imported copies are independent (src/db/courses.ts); bumping a version here
  * never rewrites a shop's page, and never relaxes a cert gate under a course a
  * shop is already teaching.
+ *
+ * **Every depth is written as a pair — "18 meters (60 feet)" — never one
+ * number.** This is prose, not a measurement: it lands in the shop's row as
+ * free text a human edits, so nothing downstream can convert it into the
+ * shop's own `depth_unit` the way `depthText` converts a stored figure
+ * (src/lib/depth-units.ts). A Florida shop reading feet on every other surface
+ * in the app was being told "No deeper than 12 meters" by its own course page.
+ * Stating both is also how the agencies themselves publish these limits, and
+ * why `DepthCeiling` in src/lib/depth-ceiling.ts stores a pair rather than a
+ * conversion — 60 ft is not 18.288 m to a dive professional, it is the same
+ * standard written the other way. The numbers here use that same table, so a
+ * page and a roster warning can never quote different limits. The swim test is
+ * the one exception and reads "200-meter/yard", which is PADI's own wording:
+ * the two distances are treated as equivalent rather than converted.
  */
 export type CourseTemplate = {
   slug: string;
@@ -101,7 +115,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "Briefing: how the gear works and how to breathe on it",
             "Confined water: mask clearing, regulator recovery, moving around",
-            "One shallow open-water dive, maximum 12 meters, with your instructor",
+            "One shallow open-water dive, maximum 12 meters (40 feet), with your instructor",
             "Debrief, and what Open Water would look like next",
           ],
         },
@@ -115,7 +129,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep will I go?",
           answer:
-            "No deeper than 12 meters, and only as deep as you are happy with. Most first dives stay much shallower.",
+            "No deeper than 12 meters (40 feet), and only as deep as you are happy with. Most first dives stay much shallower.",
         },
         {
           question: "Am I certified afterwards?",
@@ -146,7 +160,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "How to become a certified PADI Open Water Diver",
       overview:
-        "The Open Water Diver certification is the one that opens the door: qualified to dive to 18 meters with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
+        "The Open Water Diver certification is the one that opens the door: qualified to dive to 18 meters (60 feet) with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Blue Tang Pickles 20080310.jpg",
@@ -157,7 +171,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 10,
       prerequisiteNote:
-        "No certification required. Divers aged 10–11 certify as Junior Open Water Divers, dive to a maximum of 12 meters, and must dive with a PADI Professional or a certified parent or guardian; divers aged 12–14 dive to 18 meters with any certified adult. Those restrictions lift at 15. Every student completes a medical questionnaire first; some answers need a physician's sign-off before getting in the water.",
+        "No certification required. Divers aged 10–11 certify as Junior Open Water Divers, dive to a maximum of 12 meters (40 feet), and must dive with a PADI Professional or a certified parent or guardian; divers aged 12–14 dive to 18 meters (60 feet) with any certified adult. Those restrictions lift at 15. Every student completes a medical questionnaire first; some answers need a physician's sign-off before getting in the water.",
       includes: [
         "All PADI learning materials and certification fees",
         "Complete rental gear for the whole course",
@@ -193,7 +207,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           endTime: "16:00",
           items: [
             "Knowledge review 5 and the final exam",
-            "Open water dives 3–4, to a maximum of 18 meters",
+            "Open water dives 3–4, to a maximum of 18 meters (60 feet)",
             "Navigation, buoyancy control, and a debrief",
             "Certification paperwork",
           ],
@@ -203,7 +217,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep can I dive once I am certified?",
           answer:
-            "18 meters (60 feet) as an Open Water Diver, in conditions as good as or better than those you trained in. Advanced Open Water Diver extends that to 30 meters.",
+            "18 meters (60 feet) as an Open Water Diver, in conditions as good as or better than those you trained in. Advanced Open Water Diver extends that to 30 meters (100 feet).",
         },
         {
           question: "Do I need to be a strong swimmer?",
@@ -218,7 +232,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "What is the minimum age?",
           answer:
-            "10 years old. Divers aged 10–11 certify as Junior Open Water Divers, dive to 12 meters, and must be accompanied by a PADI Professional or a certified parent or guardian. Divers aged 12–14 dive to 18 meters with any certified adult. Both restrictions lift at 15.",
+            "10 years old. Divers aged 10–11 certify as Junior Open Water Divers, dive to 12 meters (40 feet), and must be accompanied by a PADI Professional or a certified parent or guardian. Divers aged 12–14 dive to 18 meters (60 feet) with any certified adult. Both restrictions lift at 15.",
         },
         {
           question: "Can I do the theory before I arrive?",
@@ -254,7 +268,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Five dives that take you deeper, further, and more confidently",
       overview:
-        "Advanced Open Water Diver is not a repeat of Open Water with harder skills — it is five dives, each a first taste of a different specialty, done under instructor supervision.\n\nTwo are required: a deep dive, which extends your limit to 30 meters (21 meters for divers aged 12–14), and an underwater navigation dive. You choose the other three from what the site and the season offer — night, wreck, drift, buoyancy, naturalist, and others.\n\nThere is no final exam. There is a short knowledge review before each dive, and the dives themselves count as training dives.",
+        "Advanced Open Water Diver is not a repeat of Open Water with harder skills — it is five dives, each a first taste of a different specialty, done under instructor supervision.\n\nTwo are required: a deep dive, which extends your limit to 30 meters (100 feet), or 21 meters (70 feet) for divers aged 12–14, and an underwater navigation dive. You choose the other three from what the site and the season offer — night, wreck, drift, buoyancy, naturalist, and others.\n\nThere is no final exam. There is a short knowledge review before each dive, and the dives themselves count as training dives.",
       heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
       galleryPhotos: bundledGallery(
         "Yellowtail Snappers Molasses Reef 1999.jpg",
@@ -264,7 +278,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 12,
       prerequisiteNote:
-        "PADI Open Water Diver (or a qualifying certification from another agency) — we verify the card before the first dive. Divers aged 12–14 certify as Junior Advanced Open Water Divers and are limited to 21 meters, including on the deep dive; the full 30 meters comes at 15.",
+        "PADI Open Water Diver (or a qualifying certification from another agency) — we verify the card before the first dive. Divers aged 12–14 certify as Junior Advanced Open Water Divers and are limited to 21 meters (70 feet), including on the deep dive; the full 30 meters (100 feet) comes at 15.",
       includes: [
         "All PADI learning materials and certification fees",
         "Five supervised adventure dives",
@@ -278,7 +292,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           endTime: "15:00",
           items: [
             "Knowledge reviews for the day's dives",
-            "Deep adventure dive — maximum 30 meters, or 21 meters for divers aged 12–14",
+            "Deep adventure dive — maximum 30 meters (100 feet), or 21 meters (70 feet) for divers aged 12–14",
             "Underwater navigation dive: natural references and compass",
           ],
         },
@@ -302,7 +316,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep will the deep dive go?",
           answer:
-            "To a maximum of 30 meters — 21 meters if you are 12–14 — and only after your instructor has briefed gas planning, narcosis, and the ascent plan.",
+            "To a maximum of 30 meters (100 feet) — 21 meters (70 feet) if you are 12–14 — and only after your instructor has briefed gas planning, narcosis, and the ascent plan.",
         },
         {
           question: "Can I fly afterwards?",
@@ -692,7 +706,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep do night dives go?",
           answer:
-            "Shallower than daytime dives — our night training dives stay well within 18 meters. Your certification limit still applies, and after dark there is nothing at depth you cannot see at 12 meters.",
+            "Shallower than daytime dives — our night training dives stay well within 18 meters (60 feet). Your certification limit still applies, and after dark there is nothing at depth you cannot see at 12 meters (40 feet).",
         },
         {
           question: "Do I need to buy a light?",
@@ -722,13 +736,13 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Deep Diver",
     agency: "padi",
-    description: "Four dives that extend your limit to 40 meters, done properly.",
+    description: "Four dives that extend your limit to 40 meters (130 feet), done properly.",
     minimumCertificationLevel: "advanced_open_water",
     content: {
       ...blank,
-      summary: "How to dive between 18 and 40 meters and come back with a plan intact",
+      summary: "How to dive between 18 and 40 meters (60 and 130 feet) and come back with a plan intact",
       overview:
-        "Deep diving is not about being brave. It is about how little margin you have: air goes faster, no-decompression limits shrink, narcosis is real, and the surface is further away when something goes wrong.\n\nThe course is four dives, the deepest to a maximum of 40 meters — the limit of recreational diving, and the deepest this certification will ever take you. You will plan gas and time before you get wet, practice using a safety cylinder on a line, and see for yourself what narcosis does to you by running a simple task at depth and again at the surface.\n\nColor disappears with depth too. Bring a light and watch what red does at 30 meters.",
+        "Deep diving is not about being brave. It is about how little margin you have: air goes faster, no-decompression limits shrink, narcosis is real, and the surface is further away when something goes wrong.\n\nThe course is four dives, the deepest to a maximum of 40 meters (130 feet) — the limit of recreational diving, and the deepest this certification will ever take you. You will plan gas and time before you get wet, practice using a safety cylinder on a line, and see for yourself what narcosis does to you by running a simple task at depth and again at the surface.\n\nColor disappears with depth too. Bring a light and watch what red does at 30 meters (100 feet).",
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
@@ -746,7 +760,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "PADI Advanced Open Water Diver or higher, and at least 15 years old. That is where we set this course; PADI's own requirement is Adventure Diver, which is a lower rung than our system can record. If you hold Adventure Diver, talk to us before you book — the gate is ours, not the agency's. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
       includes: [
         "All PADI learning materials and certification fees",
-        "Four training dives, the last to a maximum of 40 meters",
+        "Four training dives, the last to a maximum of 40 meters (130 feet)",
         "Safety cylinder and line",
         "Tanks, weights, and boat",
       ],
@@ -763,8 +777,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           endTime: "15:00",
           items: [
             "Knowledge development: gas planning, narcosis, decompression, and contingencies",
-            "Dive 1: to 18–30 meters, with a narcosis comparison task",
-            "Dive 2: to 30 meters, buddy contact and turn-pressure discipline",
+            "Dive 1: to 18–30 meters (60–100 feet), with a narcosis comparison task",
+            "Dive 2: to 30 meters (100 feet), buddy contact and turn-pressure discipline",
             "Debrief: what your air consumption actually did",
           ],
         },
@@ -773,8 +787,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           startTime: "08:00",
           endTime: "14:00",
           items: [
-            "Dive 3: to 30–40 meters, with a safety cylinder staged on the line",
-            "Dive 4: to a maximum of 40 meters, planned and led by you",
+            "Dive 3: to 30–40 meters (100–130 feet), with a safety cylinder staged on the line",
+            "Dive 4: to a maximum of 40 meters (130 feet), planned and led by you",
             "Simulated emergency decompression stop on the safety cylinder, and ascent discipline",
             "Logbook signing and certification paperwork",
           ],
@@ -789,7 +803,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "Should I dive Nitrox on deep dives?",
           answer:
-            "It helps with nitrogen loading, but the oxygen limit gets shallower as the mix gets richer, and at 40 meters most shops' standard blends are already past their limit, so air is usually what you breathe. Take the Nitrox course and plan each dive on its own numbers.",
+            "It helps with nitrogen loading, but the oxygen limit gets shallower as the mix gets richer, and at 40 meters (130 feet) most shops' standard blends are already past their limit, so air is usually what you breathe. Take the Nitrox course and plan each dive on its own numbers.",
         },
         {
           question: "What does narcosis feel like?",
@@ -820,7 +834,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Dive wrecks with a survey, a line, and a way out",
       overview:
-        "Wrecks are the best artificial reefs there are, and the most unforgiving places to improvise. Sharp steel, silt that hangs for an hour once you disturb it, and overheads that take away your straight route to the surface.\n\nThe course is four dives. You survey and map a wreck from the outside first, learn to look for hazards and entry points before you take any, then practice running and following a penetration line so that a lost visibility situation has a rope answer rather than a guessing answer. Only the fourth dive involves limited penetration, and only inside the light zone.\n\nRecreational wreck penetration stays shallow and short: your depth plus the distance you swim inside stays within 40 meters of the surface, and you stay on a continuous guideline back to the exit. Deeper or further is technical wreck training, which is a different course.",
+        "Wrecks are the best artificial reefs there are, and the most unforgiving places to improvise. Sharp steel, silt that hangs for an hour once you disturb it, and overheads that take away your straight route to the surface.\n\nThe course is four dives. You survey and map a wreck from the outside first, learn to look for hazards and entry points before you take any, then practice running and following a penetration line so that a lost visibility situation has a rope answer rather than a guessing answer. Only the fourth dive involves limited penetration, and only inside the light zone.\n\nRecreational wreck penetration stays shallow and short: your depth plus the distance you swim inside stays within 40 meters (130 feet) of the surface, and you stay on a continuous guideline back to the exit. Deeper or further is technical wreck training, which is a different course.",
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
@@ -834,7 +848,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         // app's ladder has no Adventure Diver rung, so the gate above sits at
         // Advanced Open Water. Name it as ours so an Adventure Diver knows to
         // ask rather than assume the agency turned them away.
-        "PADI Advanced Open Water Diver or higher, and at least 15 years old. That is where we set this course; PADI's own requirement is Adventure Diver, a rung our system cannot record. If you hold Adventure Diver, talk to us — the gate is ours, not the agency's. Deep Diver is not required, but wrecks below 18 meters are a good reason to have it. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+        "PADI Advanced Open Water Diver or higher, and at least 15 years old. That is where we set this course; PADI's own requirement is Adventure Diver, a rung our system cannot record. If you hold Adventure Diver, talk to us — the gate is ours, not the agency's. Deep Diver is not required, but wrecks below 18 meters (60 feet) are a good reason to have it. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
       includes: [
         "All PADI learning materials and certification fees",
         "Four training dives",
@@ -874,12 +888,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How far inside a wreck will I go?",
           answer:
-            "Not far, and only on the last dive. Recreational wreck penetration stays inside the light zone, on a continuous guideline to the exit, with your depth plus penetration distance within 40 meters of the surface.",
+            "Not far, and only on the last dive. Recreational wreck penetration stays inside the light zone, on a continuous guideline to the exit, with your depth plus penetration distance within 40 meters (130 feet) of the surface.",
         },
         {
           question: "Do I need Deep Diver first?",
           answer:
-            "No. But many good wrecks sit below 18 meters, and your depth limit follows your certification, not the wreck. If the sites you want are deep, take Deep Diver too.",
+            "No. But many good wrecks sit below 18 meters (60 feet), and your depth limit follows your certification, not the wreck. If the sites you want are deep, take Deep Diver too.",
         },
         {
           question: "Can I take something off the wreck?",

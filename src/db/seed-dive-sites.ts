@@ -201,7 +201,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         maxDepthMeters: 15,
         currentNote: "Mild, but the site sits in open water — the crew calls the drop.",
         divePlan:
-          "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters.",
+          "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters (30 feet).",
         landmarks: ["Bow section", "Collapsed midships plates"],
         imageUrls: [
           commonsImage("Grouper 2 Molasses Reef 1999.jpg"),
@@ -557,7 +557,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
     christ
       ? {
           diveSiteId: christ.id,
-          caption: "Eight meters down, hands up, sunlight all the way to the sand.",
+          caption: "Eight meters down — 25 feet — hands up, sunlight all the way to the sand.",
           imageUrl: commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
           isPublished: true,
         }

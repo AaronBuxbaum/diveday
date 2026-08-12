@@ -94,7 +94,7 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
           shopId,
           agency: "padi",
           title: "Deep Diver",
-          description: "Four dives that extend your range to 40 meters.",
+          description: "Four dives that extend your range to 40 meters (130 feet).",
           priceCents: 42500,
           eLearningPriceCents: 17500,
           minimumCertificationLevel: "advanced_open_water" as const,

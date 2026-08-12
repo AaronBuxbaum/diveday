@@ -151,7 +151,6 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     excludes: parseLines(value.excludes),
     scheduleDays,
     faqs: parseFaqs(value.faqs),
-    isIntroCourse: formData.get("isIntroCourse") === "true",
   });
   // Pricing is a separate concern from the marketing copy, but the editor saves
   // both in one submit, so both land together.

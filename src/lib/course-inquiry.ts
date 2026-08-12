@@ -3,17 +3,18 @@ import type { DiverMessageKey } from "@/i18n/messages";
 /**
  * The "get in touch" composer behind a course page.
  *
- * A diver who cannot find a date that works has, until now, been told to "get
- * in touch" and left to write the email themselves — which means the shop
- * receives "hi do you run open water in august?" and spends two round trips
- * asking who, how many, and when. This module turns the four answers a shop
- * always ends up asking for into a message the diver sends from their own mail
- * client.
+ * A diver who cannot find a date that works was once told to "get in touch"
+ * and left to write the email themselves — which means the shop receives "hi
+ * do you run open water in august?" and spends two round trips asking who, how
+ * many, and when. This module holds the shape of the four answers a shop
+ * always ends up asking for, so the composer can collect them once.
  *
- * Deliberately a mailto composer and not a send: the message leaves from the
- * diver's own address, so the shop can simply reply, the thread lives in the
- * diver's sent mail, and a public page gains no unauthenticated send button for
- * a spammer to point at the shop.
+ * It used to compose a `mailto:` from them as well, so the message left from
+ * the diver's own address. That has gone with the buttons that carried it
+ * (`CourseInquiry.tsx`): the form records the inquiry against the course and
+ * notifies the shop, which is strictly more than a draft in an app the diver
+ * may never have configured. Codes and shapes only now — no prose, and no URL
+ * building.
  */
 
 /**
@@ -62,85 +63,6 @@ export type CourseInquiry = {
   /** Anything else they want to say. */
   message: string;
 };
-
-/**
- * The one call signature both the server-side `DiverTranslator` and the
- * client-side `useTranslations()` result satisfy — this module composes the
- * message in either context (the subject/body redraw on every keystroke, so
- * they run in the Client Component, under `DiverIntlProvider`) without
- * importing either translator type and coupling to one call site.
- */
-export type CourseInquiryTranslate = (
-  key: DiverMessageKey,
-  params?: Record<string, string | number>,
-) => string;
-
-/**
- * The subject line: one ICU template with a single named placeholder — never
- * string concatenation, so a translation can reorder "Course inquiry" and the
- * title however the target language reads best.
- */
-export function courseInquirySubject(
-  t: CourseInquiryTranslate,
-  inquiry: Pick<CourseInquiry, "courseTitle">,
-): string {
-  return t("inquiry.subject", { courseTitle: inquiry.courseTitle.trim() });
-}
-
-/**
- * The message body. Plain text with one fact per line, because the shop reads
- * this on a phone between boats: the answers first, in a fixed order, and the
- * diver's own words last where a long paragraph cannot bury them.
- *
- * The whole body is one ICU template (`inquiry.body`) — the note and the
- * sign-off name are each an ICU `select` branch keyed by a `hasNote`/`hasName`
- * flag, so a missing optional field removes its own blank line instead of
- * leaving one for the shop to puzzle over. Every value handed to the template
- * is already a finished word (the experience option and the "Not said"
- * placeholder are resolved through their own keys first) — the template never
- * receives a raw code.
- */
-export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInquiry): string {
-  const name = inquiry.name.trim();
-  const timing = inquiry.timing.trim();
-  const note = inquiry.message.trim();
-  const notSaid = t("inquiry.notSaid");
-  const experience = inquiry.experience
-    ? t(COURSE_INQUIRY_EXPERIENCE_KEYS[inquiry.experience])
-    : notSaid;
-  return t("inquiry.body", {
-    shopName: inquiry.shopName.trim(),
-    courseTitle: inquiry.courseTitle.trim(),
-    timing: timing || notSaid,
-    divers: inquiry.divers ?? notSaid,
-    experience,
-    hasNote: note ? "yes" : "no",
-    note,
-    hasName: name ? "yes" : "no",
-    name,
-  });
-}
-
-/**
- * A mailto: URL the browser hands to the diver's mail client.
- *
- * Newlines and every other reserved character go through encodeURIComponent —
- * a raw newline in a mailto truncates the body at the first line in some
- * clients, which would send the shop a greeting and nothing else.
- */
-export function courseInquiryMailto(
-  t: CourseInquiryTranslate,
-  to: string,
-  inquiry: CourseInquiry,
-): string {
-  const query = new URLSearchParams({
-    subject: courseInquirySubject(t, inquiry),
-    body: courseInquiryBody(t, inquiry),
-  });
-  // URLSearchParams encodes spaces as "+", which mail clients render literally
-  // in a subject line; mailto wants percent-encoding throughout.
-  return `mailto:${encodeURIComponent(to.trim())}?${query.toString().replace(/\+/g, "%20")}`;
-}
 
 /** Digits only, so a printed number like "+1 (305) 555-0134" still dials. */
 export function telHref(phone: string): string {

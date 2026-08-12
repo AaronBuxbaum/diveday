@@ -26,10 +26,6 @@ const copy: CourseInquiryCopy = {
   chooseOne: "Choose one",
   anythingElse: "Anything else",
   messagePlaceholder: "We are ashore on Tuesday.",
-  openInEmailApp: "Open in your email app",
-  copyMessage: "Copy message",
-  copied: "Copied",
-  copyFailed: "Couldn't copy — the mail button beside it does the same job",
   orWriteTo: "Or write to",
   callLabel: "call",
   send: "Send inquiry",
@@ -47,8 +43,6 @@ function renderInquiry(
   return renderDiver(
     <CourseInquiry
       submitInquiry={submitInquiry}
-      courseTitle="Open Water Diver"
-      shopName="Blue Mantis Divers"
       contactEmail="hello@example.com"
       contactPhone="+1 305 555 0134"
       copy={copy}
@@ -83,33 +77,22 @@ afterEach(() => {
 });
 
 describe("CourseInquiry — experience is required (task 8)", () => {
-  it("blocks the mailto composer and shows an inline error when no experience is picked", () => {
+  it("blocks the send and shows an inline error when no experience is picked", () => {
     const submitInquiry = vi.fn();
     renderInquiry(submitInquiry);
 
-    const mailLink = screen.getByRole("link", { name: "Open in your email app" });
-    fireEvent.click(mailLink);
+    fillEmail();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
-  });
-
-  it("blocks the copy-message button when no experience is picked", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
-    const submitInquiry = vi.fn();
-    renderInquiry(submitInquiry);
-
-    fireEvent.click(screen.getByRole("button", { name: "Copy message" }));
-
-    expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
-    expect(writeText).not.toHaveBeenCalled();
+    expect(submitInquiry).not.toHaveBeenCalled();
   });
 
   it("clears the inline error once an experience level is picked", () => {
     const submitInquiry = vi.fn();
     renderInquiry(submitInquiry);
 
-    fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
     expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
 
     pickExperience();
@@ -118,14 +101,15 @@ describe("CourseInquiry — experience is required (task 8)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("lets the mailto composer through once an experience level is picked", () => {
-    const submitInquiry = vi.fn();
+  it("lets the send through once an experience level is picked", async () => {
+    const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
     fillEmail();
     pickExperience();
-    fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
     expect(
       screen.queryByText("Let us know where you are up to before sending."),
     ).not.toBeInTheDocument();
@@ -150,8 +134,8 @@ describe("CourseInquiry — server-recorded submission", () => {
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.getByText("Inquiry sent")).toBeInTheDocument());
-    // The mailto/phone fallback the task asked to keep is still on screen
-    // after a successful server-recorded send.
+    // The shop's own address and phone stay on screen after a successful
+    // server-recorded send — the one way left to write to them directly.
     expect(screen.getByText("hello@example.com")).toBeInTheDocument();
   });
 
@@ -188,8 +172,7 @@ describe("CourseInquiry — server-recorded submission", () => {
 
 describe("CourseInquiry — a lead the shop can answer", () => {
   // A question with no email and no phone is a lead nobody can reply to, so
-  // every path out of the composer refuses it — including the two that never
-  // touch the server.
+  // the composer refuses to send it at all.
   it("refuses the server send when neither an email nor a phone is given", () => {
     const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
@@ -201,17 +184,6 @@ describe("CourseInquiry — a lead the shop can answer", () => {
       screen.getByText("Leave an email or a phone number so we can reply."),
     ).toBeInTheDocument();
     expect(submitInquiry).not.toHaveBeenCalled();
-  });
-
-  it("refuses the mailto composer when neither an email nor a phone is given", () => {
-    renderInquiry(vi.fn());
-
-    pickExperience();
-    fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
-
-    expect(
-      screen.getByText("Leave an email or a phone number so we can reply."),
-    ).toBeInTheDocument();
   });
 
   it("accepts a phone number on its own — either one, never both", async () => {
@@ -277,29 +249,37 @@ describe("CourseInquiry — how many divers", () => {
   });
 });
 
-describe("CourseInquiry — the composed message", () => {
-  // The "your message so far" preview is gone; the buttons that carry that
-  // message out of the page are not.
-  it("shows no message preview, only the buttons and the shop's own details", () => {
+describe("CourseInquiry — one way out of the form", () => {
+  // Send is the whole choice. "Open in your email app" and "Copy message"
+  // stood beside it as equal secondary buttons and both handed the diver a
+  // draft to send themselves — no row recorded, no shop notified, and a
+  // silent dead end on a phone with no mail client configured. What replaces
+  // them is what was always underneath: the shop's own address and number.
+  it("offers Send and the shop's own details, and no draft-it-yourself escape hatch", () => {
     renderInquiry(vi.fn());
 
-    expect(screen.queryByRole("region", { name: /message so far/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open in your email app" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy message" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /email app/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /copy/i })).not.toBeInTheDocument();
     expect(screen.getByText("hello@example.com")).toBeInTheDocument();
+    expect(screen.getByText("+1 305 555 0134")).toBeInTheDocument();
   });
 
-  it("still carries every answer into the mailto body", () => {
-    renderInquiry(vi.fn());
+  it("carries every answer to the server instead", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
 
     fillEmail();
     fireEvent.change(screen.getByLabelText(/When suits you/), {
       target: { value: "any weekend this autumn" },
     });
     pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
-    const href = screen.getByRole("link", { name: "Open in your email app" }).getAttribute("href");
-    expect(decodeURIComponent(href ?? "")).toContain("When: any weekend this autumn");
-    expect(decodeURIComponent(href ?? "")).toContain("How many divers: 1");
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    const formData = submitInquiry.mock.calls[0]?.[1];
+    expect(formData.get("timing")).toBe("any weekend this autumn");
+    expect(formData.get("divers")).toBe("1");
+    expect(formData.get("experience")).toBe("never");
   });
 });

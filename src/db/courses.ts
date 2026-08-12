@@ -26,8 +26,15 @@ export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
 /**
  * The diver-facing page, edited on its own screen and saved in one shot. The
  * minimum age is the agency's and never edited here, so it is not in the patch.
+ *
+ * Neither is `isIntroCourse`. It rides along on {@link CourseContent} because
+ * that is the shape a published template carries, but it is not prose a shop
+ * writes: DiveDay ships the catalogue and knows which entries are tasters, and
+ * the flag picks the tighter in-water ratio a taster is held to
+ * (src/lib/course-ratios.ts). Out of the patch means the page editor cannot
+ * send it at all — a safety cap is not a side effect of saving marketing copy.
  */
-export type CourseContentPatch = Omit<CourseContent, "minimumAge">;
+export type CourseContentPatch = Omit<CourseContent, "minimumAge" | "isIntroCourse">;
 
 /**
  * Progression order: the sequence a shop teaches its catalog in, read off the
@@ -257,8 +264,9 @@ export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
 }
 
 /**
- * Saves the whole marketing page at once. Pricing, the cert gate, and the
- * agency's minimum age are untouched — those are not marketing prose.
+ * Saves the whole marketing page at once. Pricing, the cert gate, the agency's
+ * minimum age, and the taster flag are untouched — none of those are marketing
+ * prose, and the last one is a safety cap (see {@link CourseContentPatch}).
  */
 export async function updateCourseContent(
   db: AppDb,
@@ -281,7 +289,6 @@ export async function updateCourseContent(
       excludes: input.excludes,
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
-      isIntroCourse: input.isIntroCourse,
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

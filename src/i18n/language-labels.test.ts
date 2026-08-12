@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { languageEndonym, languageNameIn } from "./language-labels";
+import { languageEndonym, languageNameIn, localeEndonym } from "./language-labels";
 import { unsupportedLanguage } from "./negotiate";
+import { DIVER_LOCALES } from "./settings";
 
 describe("languageEndonym", () => {
   it("names a language the way its own speakers write it", () => {
@@ -37,5 +38,36 @@ describe("languageNameIn", () => {
 
   it("answers null rather than echoing an unnamed code", () => {
     expect(languageNameIn("qtz", "en-US")).toBeNull();
+  });
+});
+
+describe("localeEndonym", () => {
+  it("sentence-cases the name, so a switcher's options are not half-capitalised", () => {
+    // CLDR follows each language's own orthography — English capitalises the
+    // names of languages and Spanish does not — which put "English" beside
+    // "español" on the same row of buttons and read as a bug.
+    expect(localeEndonym("en-US")).toBe("English");
+    expect(localeEndonym("es-ES")).toBe("Español");
+  });
+
+  it("names the language, never the region", () => {
+    // Not "American English"/"español de España": DiveDay carries one bundle
+    // per language, so the region is not a choice the reader is making.
+    expect(localeEndonym("en-GB")).toBe("English");
+  });
+
+  it("gives every language DiveDay carries a capitalised label", () => {
+    // The switcher is generated from this list (ShopNav, the public shop
+    // header, the command palette), so a language added later cannot quietly
+    // arrive lowercase beside the others.
+    for (const locale of DIVER_LOCALES) {
+      const label = localeEndonym(locale);
+      expect(label).not.toBe("");
+      expect(label).toBe(`${[...label][0].toLocaleUpperCase(locale)}${label.slice(1)}`);
+    }
+  });
+
+  it("falls back to the tag rather than rendering a blank button", () => {
+    expect(localeEndonym("qtz")).toBe("Qtz");
   });
 });
