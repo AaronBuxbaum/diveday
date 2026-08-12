@@ -268,18 +268,20 @@ Not knowing something is a fine answer with this audience. An invented one costs
 
 ## Flagged — settle before the offer is stated on a call
 
-- **Six free months is a new commercial term.** What was on the books is *free through the pilot*
-  for design partners ([rollout.md](../rollout.md#the-offer-write-it-down-say-it-the-same-way-every-time))
-  and a three-week self-serve trial. Recorded as an H-12 amendment on 2026-08-12; the legal/tax
-  dependency H-12 carries for binding commercial commitments is **still open**.
-- **The product contradicts the offer on day 22.** `TRIAL_DURATION_DAYS = 21` in `src/lib/trial.ts`,
-  and the shop's own Settings then renders "Your trial ended {endDate}." A shop told *six months*
-  reads that in three weeks. Keeping the term out of the first email buys time on this; it does not
-  fix it, and the first shop to accept will hit it.
-- **"Six months" has no clock anywhere in the app.** No column, no timer, no reminder. Decide
-  whether it starts at signup, at import, or at the first real trip, write it down, and use the
-  same words every time
-  ([FU-20260812](../follow-ups/FU-20260812-six-month-term-has-no-product-clock.md)).
+**The six-month term is defined in exactly one place: H-12's 2026-08-12 amendment**
+([human-decisions.md](../human-decisions.md#decision-register)). What it covers, what it leaves
+open (the still-live legal/tax dependency, the missing start-event decision, the day-22 Settings
+contradiction), and the 25-shop cohort cap all live there, and this page does not restate them —
+a term described in two documents is a term that will drift in one of them. Read that row before
+the first time the offer is spoken aloud.
+
+What that means *here*, and only here:
+
+- **Keeping the term out of the first email buys time on the open questions; it does not close
+  them.** The first shop that accepts will hit every one of them, so the H-12 row needs to be
+  settled before a reply turns into a yes, not before a send.
+- **Whatever start event H-12 lands on gets said the same way every time.** The improvise trap
+  above exists because the second shop asking will otherwise get a different answer than the first.
 - **The C-card and waiver wording is safety-adjacent copy** and carries the same
   `dive-domain-expert` bar as any other surface. Reviewed 2026-08-12; re-run that review if the
   Saturday or water paragraph is rewritten.
