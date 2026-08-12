@@ -89,6 +89,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", { name: "Your records come in clean, and leave the same way." }),
   ).toBeVisible();
+  // Both directions are shown, not just described: the importer's preview for
+  // arriving, the export inventory for leaving. This band is the portability
+  // wedge — the strongest claim DiveDay has against any incumbent — and it made
+  // that claim in two paragraphs and a checklist until 2026-08-12. Asserting the
+  // mockup keeps it from quietly reverting to prose.
+  await expect(page.getByRole("img", { name: /import preview/i })).toBeVisible();
+  await expect(page.getByText("In the export")).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
@@ -239,24 +246,33 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await page.goto("/");
   await page.getByRole("contentinfo").getByRole("link", { name: "About" }).click();
 
-  // This headline has walked into three different failures, so it is pinned
-  // against all three. "Built by divers, for divers." was true of every
+  // This headline has walked into four different failures, so it is pinned
+  // against all of them. "Built by divers, for divers." was true of every
   // dive-adjacent vendor on earth — a rival could paste it unchanged, making it
   // an eyebrow in a headline's clothes. "One person owns every line of code
   // running on this boat." conceded smallness so hard it read as a vendor with
   // no infrastructure behind it — the fear this page exists to answer, not
   // feed. "Small enough to answer you." then spent the site's most valuable
-  // line on the company's *size*, which is the one thing about DiveDay a buyer
-  // has no reason to want.
+  // line on the company's *size*, the one thing about DiveDay a buyer has no
+  // reason to want. "We'd rather be checked than believed." fixed the register
+  // but picked a fight: it presumes the reader's distrust and answers it with a
+  // dare, which is a strange way to open a page about who you are.
   //
-  // What survives all three is a claim about posture that the page can prove
-  // two sections down: the four rules, each with the demo action that settles
-  // it. The Stripe half is asserted beside it because the headline alone would
-  // be the second failure again.
+  // What survives all four states the reassurance as a fact about the shop's
+  // operation rather than a posture about us, and the sentence under it is the
+  // proof — the shop's own Stripe account, the ZIP, roll call with no signal.
+  // The Stripe half is asserted beside the headline because the headline alone
+  // would be the second failure again.
   await expect(
-    page.getByRole("heading", { name: "We'd rather be checked than believed." }),
+    page.getByRole("heading", { name: "Your season doesn't hang on us." }),
   ).toBeVisible();
-  await expect(page.getByText(/payments run through your own Stripe account/)).toBeVisible();
+  // Case-insensitive on purpose. The claim is "the money is in the shop's own
+  // account"; whether the sentence happens to start with it is not part of the
+  // claim, and pinning the capital broke this line when the hero was reordered
+  // for reasons that had nothing to do with what it asserts. The *words* stay
+  // pinned — that is the point of the marketing specs — but incidental form
+  // does not.
+  await expect(page.getByText(/payments run through your own Stripe account/i)).toBeVisible();
 
   // The page earns trust by conceding, not by claiming: the honest-no block is
   // the load-bearing part. (It used to also pin "Aaron Buxbaum, founder" from

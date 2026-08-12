@@ -6,6 +6,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
+import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import {
   CaptainPhoneFrame,
   FeatureGroupsGrid,
@@ -308,28 +309,41 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.home.switchingLink", { competitors })}
             </Link>
           </div>
-          <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-            <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.home.inExportEyebrow")}
-            </p>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
-              <li className="flex gap-3">
-                <span className="font-semibold text-primary">✓</span>
-                <span>{t("marketing.home.exportItem1")}</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="font-semibold text-primary">✓</span>
-                <span>{t("marketing.home.exportItem2")}</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="font-semibold text-primary">✓</span>
-                <span>{t("marketing.home.exportItem3")}</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="font-semibold text-primary">✓</span>
-                <span>{t("marketing.home.exportItem4")}</span>
-              </li>
-            </ul>
+          {/* The band's two directions, each with something to look at rather
+              than only a paragraph: the importer's real preview step for
+              arriving, the export inventory for leaving. Same order the copy
+              argues in (docs/product/marketing.md — arriving first, leaving
+              second), which is why the mockup sits above the card. */}
+          <div className="space-y-5">
+            <MarketingMockup
+              label={t("marketing.home.importMockupLabel")}
+              className="shadow-xl shadow-foreground/5"
+            >
+              <ImportPreviewFallback locale={locale} />
+            </MarketingMockup>
+            <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+              <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.home.inExportEyebrow")}
+              </p>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>{t("marketing.home.exportItem1")}</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>{t("marketing.home.exportItem2")}</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>{t("marketing.home.exportItem3")}</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-semibold text-primary">✓</span>
+                  <span>{t("marketing.home.exportItem4")}</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
