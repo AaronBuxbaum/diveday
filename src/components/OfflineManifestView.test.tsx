@@ -1588,3 +1588,70 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The offline roll call and the live manifest are read minutes apart by the
+ * same captain — at the dock on one, underway on the other — so a row that
+ * folds its reference facts there and stands them open here is one job wearing
+ * two layouts (FU-20260810-offline-manifest-checklist-grammar). These pin the
+ * grammar itself, not just that the facts are somewhere in the DOM: a closed
+ * `<details>` still renders its children, so a `getByText` assertion passes
+ * identically before and after this change and proves nothing about it.
+ */
+describe("the row grammar the live manifest already reads", () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+  });
+
+  it("puts a diver's contact and gear behind the same disclosure, under the same words", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const summary = screen.getAllByText("Contact & gear")[0];
+    if (!summary) throw new Error("no facts disclosure");
+    const details = summary.closest("details");
+    expect(details).not.toBeNull();
+    // Shut at rest, and holding the facts rather than sitting beside them.
+    expect(details?.open).toBe(false);
+    expect(within(details as HTMLElement).getByText("Anil Shah · +1-305-555-0177")).toBeTruthy();
+  });
+
+  it("drops the box off the exception control while boarding is still on offer", async () => {
+    // Most people board, so an unrecorded "Mark not boarded" beside a live
+    // "Mark boarded" is the exception at less than equal weight — no border,
+    // no fill, full dock-sized target (design principle 8, and the rule
+    // RollCallControls already applies on the live page).
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
+    if (!exception) throw new Error("no exception control");
+    expect(exception.className).not.toContain("border");
+    // Demoted by losing its box, never its legibility: no `text-muted` on the
+    // surface with the harshest viewing conditions.
+    expect(exception.className).not.toContain("text-muted");
+    // Still the full boat-sized target.
+    expect(exception.className).toContain("min-h-14");
+  });
+
+  it("gives the box back when the exception control is the row's only one", async () => {
+    // A blocked diver at the dock cannot board, so this is the whole row —
+    // and a lone control with no box reads as decoration.
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { readiness: "blocked" }),
+    );
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    expect(screen.queryByRole("button", { name: "Mark boarded" })).not.toBeInTheDocument();
+    const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
+    if (!exception) throw new Error("no exception control");
+    expect(exception.className).toContain("border");
+  });
+});
