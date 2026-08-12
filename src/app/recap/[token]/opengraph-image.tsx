@@ -55,10 +55,10 @@ const WORDMARK = (
       <div
         style={{
           position: "absolute",
-          left: 3,
-          top: 20,
-          width: 17,
-          height: 17,
+          left: 4,
+          top: 24,
+          width: 20,
+          height: 20,
           borderRadius: 9999,
           backgroundColor: "#22d3ee",
           display: "flex",
@@ -67,10 +67,10 @@ const WORDMARK = (
       <div
         style={{
           position: "absolute",
-          left: 20,
-          top: 9,
-          width: 11,
-          height: 11,
+          left: 24,
+          top: 11,
+          width: 14,
+          height: 14,
           borderRadius: 9999,
           backgroundColor: "#22d3ee",
           opacity: 0.75,
@@ -80,10 +80,10 @@ const WORDMARK = (
       <div
         style={{
           position: "absolute",
-          left: 29,
-          top: 4,
-          width: 7,
-          height: 7,
+          left: 35,
+          top: 5,
+          width: 8,
+          height: 8,
           borderRadius: 9999,
           backgroundColor: "#ff8a7e",
           display: "flex",

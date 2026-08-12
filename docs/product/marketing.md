@@ -258,7 +258,10 @@ substrate:
   convention and so does not spread `sharedLinkCard`) and every route under `/s/`. Until 2026-08-12
   the result read backwards from outside — a page with nothing to say about itself carried
   `og:site_name` by inheritance and no `og:url`, while the homepage and every shop page carried
-  `og:url` and no site name at all. `e2e/seo.spec.ts` and `e2e/marketing.spec.ts` assert the pair now.
+  `og:url` and no site name at all. `e2e/seo.spec.ts` and `e2e/marketing.spec.ts` assert the pair on
+  the routes they name, and `pnpm check:open-graph` (`scripts/check-open-graph.mjs`, part of
+  `check:repo`) refuses any `openGraph` block under `src/app` that does not spread one of the two —
+  those e2e route lists are hand-maintained, so a page added tomorrow is not on them.
   `og:url` stays absent on bearer-token pages by design: there the URL *is* the credential, and an
   unfurl renders for bystanders who never clicked the link.
 - Site-level `robots` and `sitemap` cover the public surface; tokened pages (`/waivers/*`,

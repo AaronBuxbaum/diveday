@@ -16,8 +16,14 @@ That duplication is what let the mark be wrong everywhere at once and stay wrong
 rendered a single cyan circle where the brand mark (`src/components/Logo.tsx`, `LogoMark`) is three
 ascending bubbles with a coral top. Nobody spotted it because the cards only ever render in someone
 else's chat window, and because there was no single place where "this is the logo" was written down —
-four copies of a bullet look like a decision. This change fixed all four by hand, which restores the
-mark but leaves the same four-way drift risk: the next person to adjust the geometry will adjust one.
+four copies of a bullet look like a decision.
+
+The drift risk is not hypothetical, and it did not wait: **it happened inside the very change that
+fixed the mark.** A follow-up pass that rescaled the mark from a 40px box to a 48px one landed on the
+root card only — the other three kept the 40px circle coordinates inside a 48px container, so their
+bubbles rendered undersized and off-position, and every card still looked individually plausible. It
+took a reviewer diffing the four files against each other to catch it. Four hand-copied marks cannot
+be kept in step by care; the geometry has to have one home.
 
 ## Why it isn't already done
 

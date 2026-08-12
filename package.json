@@ -44,6 +44,7 @@
     "check:copy": "node scripts/check-copy.mjs",
     "check:domain-strings": "node scripts/check-domain-strings.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "check:open-graph": "node scripts/check-open-graph.mjs",
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
