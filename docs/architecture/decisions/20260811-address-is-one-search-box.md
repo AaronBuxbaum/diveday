@@ -46,16 +46,31 @@ be forgotten, never usefully reconsidered.
   one-operation boundary 20260804 established. A stack still holding the old `Autocomplete` statement
   answers every keystroke with `AccessDeniedException`, so `cdk deploy` lands with or before the app
   release. Widening early is safe; nothing else calls `Autocomplete`.
-- **Every request carries a geographic anchor, and the shop's own dive sites are it.** `Suggest`
-  refuses a request with none of `BiasPosition` / `Filter.BoundingBox` / `Filter.Circle` —
-  `ValidationException` naming exactly those three, all of which the API reference marks
-  "Required: No". They are mutually exclusive, so it is one of them, never both. The anchor is
-  `shopSearchAnchor` (`src/db/dive-sites.ts`): the forecast coordinate of the shop's
-  alphabetically-first sited dive site, which is the only lat/lng this app stores for a shop and a
-  good one — a storefront is near the water it takes people to. A bias only *ranks*, so this puts
-  the shop's own street above an identically-named place on another coast rather than excluding
-  anything. A shop with no sited water yet gets `WORLD_BOUNDING_BOX` instead of an invented centre.
-  Ordered by name so the anchor cannot wobble between keystrokes and reshuffle a list mid-read.
+- **Every request carries a geographic anchor**, because `Suggest` refuses one with none of
+  `BiasPosition` / `Filter.BoundingBox` / `Filter.Circle` — `ValidationException` naming exactly
+  those three, all of which the API reference marks "Required: No". They are mutually exclusive, so
+  it is one of them, never both. A bias only *ranks* and never excludes, which is what makes a rough
+  anchor both safe and worth having: it puts the shop's own street above an identically-named place
+  on another coast. The anchor is resolved best-signal-first:
+  1. **A dive site's own coordinate** (`shopSearchAnchor`, `src/db/dive-sites.ts`) — the most
+     precise thing this app holds, since a storefront is near the water it takes people to. Taken
+     from the alphabetically-first sited site so the anchor cannot wobble between keystrokes and
+     reshuffle a list mid-read.
+  2. **The shop's timezone** (`timeZoneAnchor`, `src/lib/timezones.ts`). Coarse — a longitude band,
+     not a street — but `shops.timezone` is `notNull`, so every shop has one. This tier exists
+     because tier 1 is frequently *absent*: the coordinate it reads is the optional **offshore
+     marine-forecast point** ("Leave both blank to keep crew-only conditions"), so a shop that never
+     wanted forecasts has none, and the search was completely unbiased for exactly the shops that
+     had done the least setup.
+  3. **`WORLD_BOUNDING_BOX`**, only for a timezone the table has never placed. An invented centre
+     would silently rank a shop's own street below a same-named place near a coordinate nobody
+     chose.
+- **A saved country confines results outright.** `Filter.IncludeCountries` is a different field from
+  the mutually-exclusive anchors and rides alongside a bias (Amazon Location's own guide shows the
+  pair). It is taken *only* from an address the shop already saved — a shop that has said it is in
+  `MX` is not looking for its storefront in Malta — and only when that stored value is really ISO
+  alpha-2, since the column is free text that predates the lookup and passing `us` or `M` through
+  would turn the shop's own stale data into a rejected request.
 - **A suggestion shows the place's name with its address beneath it.** For a business those are two
   different facts, and the second is the only thing separating one franchise location from the next.
   For a plain address result they are the same string and the second line is omitted.

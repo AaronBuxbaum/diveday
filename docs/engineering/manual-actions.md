@@ -49,7 +49,28 @@ this file is the checklist, not the argument.
 ## Credentials
 
 ```text
-[5] Mint the Vercel and Neon usage read tokens
+[5] Mint a GitHub token for the CI deploy job's own gh CLI calls
+    when     once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked
+    why      The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets, variables, or environments -- those need the Administration/Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it. The wizard's GitHub steps (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs, sync-github-cdk-ci-environment.mjs) run under the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.
+    run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write), Variables (read/write), and Environments (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use.
+             gh secret set INFRA_DEPLOY_GH_TOKEN
+    produces .github/workflows/infra.yml's deploy job can export it as GH_TOKEN so the gh CLI the post-deploy wizard shells out to is authenticated with admin-level repository access, matching what a workstation operator's own `gh auth login` already provides.
+    store    GitHub repo Settings -> Secrets and variables -> Actions -> Secrets -> INFRA_DEPLOY_GH_TOKEN.
+    verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the run's log shows the wizard's GitHub steps succeeding rather than gh reporting 403/Resource not accessible.
+    note     This token is a materially broader credential than AWS_CDK_DIFF_ROLE_ARN/AWS_CDK_DEPLOY_ROLE_ARN (identifiers, not secrets) -- it can rewrite this repository's Actions secrets, variables, and environment protection rules. It is reachable only from the deploy job, which is itself gated by the infra-deploy environment's required-reviewer approval (ADR 20260811-ci-deploy-full-wizard).
+
+[6] Mint a Vercel token and link the project for the CI deploy job
+    when     once, before the first CI-run post-deploy wizard, and again if the token is revoked
+    why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
+    run      Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
+             gh secret set INFRA_DEPLOY_VERCEL_TOKEN
+             vercel link (once, on any workstation, against the same project) to read .vercel/project.json's orgId/projectId, then: gh variable set VERCEL_ORG_ID --body <orgId>; gh variable set VERCEL_PROJECT_ID --body <projectId>
+    produces The deploy job can export VERCEL_TOKEN/VERCEL_ORG_ID/VERCEL_PROJECT_ID so every `vercel` CLI call in the wizard runs unattended against the right project instead of prompting to link one.
+    store    GitHub repo Settings -> Secrets and variables -> Actions -> Secrets (INFRA_DEPLOY_VERCEL_TOKEN) and -> Variables (VERCEL_ORG_ID, VERCEL_PROJECT_ID).
+    verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
+    note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
+
+[7] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -62,14 +83,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[6] Request SES production access
+[8] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[7] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[9] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -78,7 +99,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[8] Confirm the observability alarm subscription email
+[10] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
@@ -91,7 +112,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[9] Confirm the usage monitor reports numbers and reaches a real inbox
+[11] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

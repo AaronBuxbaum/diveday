@@ -151,8 +151,7 @@ describe("Amazon Location address suggestions", () => {
   it("ranks around the shop's own water when it knows where that is", async () => {
     const client = clientReturning({ ResultItems: [] });
     await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef", {
-      longitude: -80.4,
-      latitude: 25.0117,
+      bias: { longitude: -80.4, latitude: 25.0117 },
     });
     const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
     // `[lng, lat]`, in that order — the reverse is a valid pair of numbers and
@@ -177,7 +176,7 @@ describe("Amazon Location address suggestions", () => {
     // over both paths at once so neither can lose its anchor alone.
     for (const bias of [null, { longitude: -80.4, latitude: 25.0117 }]) {
       const client = clientReturning({ ResultItems: [] });
-      await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef", bias);
+      await awsAddressLookupProvider(config, { client }).suggest("Rainbow Reef", { bias });
       const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
       const anchors = [
         input.BiasPosition,
@@ -186,6 +185,32 @@ describe("Amazon Location address suggestions", () => {
       ].filter((anchor) => anchor !== undefined);
       expect(anchors).toHaveLength(1);
     }
+  });
+
+  it("confines results to a country the shop has already claimed", async () => {
+    // `IncludeCountries` excludes rather than ranks, so it only ever comes from
+    // an address the shop itself saved — and it is not one of the mutually
+    // exclusive anchors, so it rides *with* the bias rather than replacing it.
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Barefoot Di", {
+      bias: { longitude: -80.4, latitude: 25.0117 },
+      country: "US",
+    });
+    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+    expect(input.BiasPosition).toEqual([-80.4, 25.0117]);
+    expect(input.Filter).toEqual({ IncludeCountries: ["US"] });
+  });
+
+  it("keeps the whole-globe box and the country filter in one Filter object", async () => {
+    // Both live inside `Filter`, so assembling them separately would have the
+    // second silently overwrite the first and drop the anchor.
+    const client = clientReturning({ ResultItems: [] });
+    await awsAddressLookupProvider(config, { client }).suggest("Barefoot Di", { country: "MX" });
+    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+    expect(input.Filter).toEqual({
+      BoundingBox: [-180, -90, 180, 90],
+      IncludeCountries: ["MX"],
+    });
   });
 
   it("never spends a request the query is too long for", async () => {

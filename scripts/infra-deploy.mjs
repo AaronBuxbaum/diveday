@@ -11,7 +11,22 @@ import { runPostDeployWizard } from "./post-deploy-wizard.mjs";
 
 const repoRoot = process.cwd();
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const cdkArguments = process.argv.slice(2).filter((argument) => argument !== "--no-wizard");
+// Never a bare `process.env.CI`: it is a generic convention many local dev
+// tools set (`act`, several test runners, a shell profile left from a past
+// debugging session) -- gating unattended, no-confirmation wizard behavior on
+// it would let an ordinary workstation shell that happens to export CI=true,
+// combined with a live AWS session, silently push to Vercel Production and
+// mutate the infra-deploy GitHub Environment's protection rules with no human
+// confirmation at all. `--ci-unattended` is passed only by
+// .github/workflows/infra.yml's deploy job -- nothing ambient can supply a CLI
+// argument by accident the way it can an environment variable (security
+// review on ADR 20260811-ci-deploy-full-wizard; an env-var-based signal,
+// ACTIONS_ID_TOKEN_REQUEST_URL, was tried first and rejected after CI itself
+// proved it is present on ordinary non-deploy Actions jobs too).
+const isCiDeploy = process.argv.includes("--ci-unattended");
+const cdkArguments = process.argv
+  .slice(2)
+  .filter((argument) => argument !== "--no-wizard" && argument !== "--ci-unattended");
 const cdk = join(repoRoot, "node_modules", ".bin", "cdk");
 const command = existsSync(cdk) ? cdk : "cdk";
 const hasLegacyDeployerCredentials =
@@ -27,10 +42,16 @@ deployEnvironment.AWS_DEFAULT_REGION ||= "us-east-1";
 try {
   ensureAwsDeploymentLogin({
     environment: deployEnvironment,
-    interactive: !process.env.CI,
+    interactive: !isCiDeploy,
   });
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
+} catch {
+  // Deliberately static, per CodeQL (clear-text logging): deployEnvironment is
+  // a {...process.env} spread, so nothing derived from it or the caught error
+  // is echoed here. ensureAwsLogin already printed the AWS CLI's own output
+  // straight to this terminal (stdio: "inherit" in aws-login.mjs).
+  console.error(
+    "Could not authenticate the AWS profile used for this deploy. Run `aws login` (or, in CI, check the OIDC role assumption step above) to see why, then rerun.",
+  );
   process.exit(1);
 }
 const deploy = spawnSync(command, ["deploy", ...cdkArguments], {
@@ -40,31 +61,49 @@ const deploy = spawnSync(command, ["deploy", ...cdkArguments], {
 
 if (deploy.status !== 0) process.exit(deploy.status ?? 1);
 
-// The deployer deliberately cannot read the hand-off secret. Use the local
-// administrator profile only for this post-deploy read, and strip ambient AWS
-// keys because AWS gives them precedence over AWS_PROFILE.
+// The deployer deliberately cannot read the hand-off secret, so a workstation
+// run switches to the local administrator profile for this post-deploy read,
+// stripping ambient AWS keys because AWS gives them precedence over
+// AWS_PROFILE. In CI there is no diveday-admin profile to switch to -- the
+// job's own OIDC-assumed GitHubActionsCdkDeployRole is instead granted a
+// narrow, resource-scoped read on exactly this secret (infra-stack.ts §18,
+// ADR 20260811-ci-deploy-full-wizard), so the ambient credentials already
+// assumed for the deploy above are reused as-is rather than swapped out.
+const syncEnvironment = { ...process.env };
 const syncProfile = process.env.INFRA_ENV_SYNC_PROFILE?.trim() || "diveday-admin";
-const syncEnvironment = { ...process.env, AWS_PROFILE: syncProfile };
-delete syncEnvironment.AWS_ACCESS_KEY_ID;
-delete syncEnvironment.AWS_SECRET_ACCESS_KEY;
-delete syncEnvironment.AWS_SESSION_TOKEN;
+if (!isCiDeploy) {
+  syncEnvironment.AWS_PROFILE = syncProfile;
+  delete syncEnvironment.AWS_ACCESS_KEY_ID;
+  delete syncEnvironment.AWS_SECRET_ACCESS_KEY;
+  delete syncEnvironment.AWS_SESSION_TOKEN;
+}
 // The stack's current home is us-east-1. A profile may override this, but a
 // newly configured administrator profile must not make the handoff fail with
 // AWS CLI's unhelpful NoRegion error.
 syncEnvironment.AWS_DEFAULT_REGION ||= "us-east-1";
 
 // A legacy deployer key may have completed the CDK deploy above, but it is
-// deliberately stripped from this administrator-only handoff. Authenticate the
-// administrator profile separately so the first run creates diveday-admin and
-// opens the browser instead of failing after the infrastructure has changed.
+// deliberately stripped from this administrator-only handoff on a workstation.
+// Authenticate the administrator profile separately so the first run creates
+// diveday-admin and opens the browser instead of failing after the
+// infrastructure has changed. In CI, ensureAwsLogin runs non-interactively
+// against the already-valid OIDC session and returns immediately.
 try {
   ensureAwsLogin({
     environment: syncEnvironment,
-    interactive: !process.env.CI,
+    interactive: !isCiDeploy,
   });
-} catch (error) {
+} catch {
+  // Deliberately static, per CodeQL (clear-text logging): syncEnvironment is a
+  // {...process.env} spread, so nothing derived from it, the caught error, or
+  // syncProfile -- itself read from process.env, even though it only ever
+  // holds a profile name -- is echoed here. ensureAwsLogin already printed the
+  // AWS CLI's own output straight to this terminal. See
+  // scripts/import-vercel-env.mjs's identical fix.
   console.error(
-    `Infrastructure deployed, but the environment files were not synchronized. ${error instanceof Error ? error.message : error}`,
+    isCiDeploy
+      ? "Infrastructure deployed, but the environment files were not synchronized: the job's own AWS session could not be verified. Confirm the deploy step's OIDC role assumption succeeded, then rerun this workflow."
+      : "Infrastructure deployed, but the environment files were not synchronized. Could not authenticate the administrator AWS profile for the post-deploy read (set INFRA_ENV_SYNC_PROFILE if it is not named diveday-admin). Run `aws login` yourself to see why, then rerun pnpm infra:deploy.",
   );
   process.exit(1);
 }
@@ -86,8 +125,13 @@ try {
     { encoding: "utf8", env: syncEnvironment },
   );
 } catch {
+  // Deliberately static, per CodeQL: no part of this message reads syncProfile
+  // or any other process.env-derived value -- see the ensureAwsLogin catch
+  // above and scripts/import-vercel-env.mjs's identical fix.
   console.error(
-    `Infrastructure deployed, but the environment files were not synchronized. Configure AWS profile ${syncProfile} with access to diveday/env, then rerun pnpm infra:deploy.`,
+    isCiDeploy
+      ? "Infrastructure deployed, but the environment files were not synchronized. Confirm GitHubActionsCdkDeployRole's ReadCredentialsDocumentForPostDeployWizard statement (infra-stack.ts §18) is deployed, then rerun this workflow."
+      : "Infrastructure deployed, but the environment files were not synchronized. Configure the administrator AWS profile (INFRA_ENV_SYNC_PROFILE, or diveday-admin by default) with access to diveday/env, then rerun pnpm infra:deploy.",
   );
   process.exit(1);
 }
@@ -118,7 +162,9 @@ distribute("vercel", ".env.vercel", document);
 distribute("github", ".env.github", document);
 console.log("Created .env.local, .env.vercel, and .env.github from diveday/env and .env.manual.");
 
-if (stdin.isTTY && stdout.isTTY && !process.env.CI && !process.argv.includes("--no-wizard")) {
+if (process.argv.includes("--no-wizard")) {
+  console.log("Skipped the post-deploy wizard (--no-wizard).");
+} else if (stdin.isTTY && stdout.isTTY && !isCiDeploy) {
   const terminal = createInterface({ input: stdin, output: stdout });
   try {
     await runPostDeployWizard({
@@ -130,6 +176,25 @@ if (stdin.isTTY && stdout.isTTY && !process.env.CI && !process.argv.includes("--
   } finally {
     terminal.close();
   }
+} else if (isCiDeploy) {
+  // No terminal to prompt and nobody watching one: the required-reviewer
+  // approval on the infra-deploy GitHub Environment is what "unblocked
+  // manually" already means by the time this process runs at all (its OIDC
+  // token could not have been minted otherwise), so every wizard question is
+  // answered yes rather than skipping the wizard outright (ADR
+  // 20260811-ci-deploy-full-wizard). A step whose own command fails (a stale
+  // Vercel token, a revoked GitHub PAT) throws and exits this process
+  // non-zero, the same as any other failed deploy step.
+  console.log(
+    "CI deploy: running the post-deploy wizard non-interactively, answering yes to every question.",
+  );
+  await runPostDeployWizard({
+    ask: async () => "yes",
+    cdkArguments,
+    credentialsDocument: document,
+    syncEnvironment,
+    ciUnattended: true,
+  });
 } else {
   console.log("Run this command in a terminal to use the optional post-deploy wizard.");
 }

@@ -28,14 +28,20 @@ export function ensureAwsLogin({
     return false;
   } catch {
     if (!interactive) {
+      // Deliberately static, per CodeQL (clear-text logging): `environment` is
+      // not always a stripped-of-secrets object by the time it reaches this
+      // function -- a CI-unattended caller (ADR 20260811-ci-deploy-full-wizard)
+      // passes one that still carries the real OIDC session credentials, so
+      // nothing derived from it is echoed here even for a property as
+      // unremarkable as a profile name.
       throw new Error(
-        `AWS profile ${environment.AWS_PROFILE || "default"} is not signed in. Run this command in an interactive terminal so it can open aws login.`,
+        "AWS profile is not signed in. Run this command in an interactive terminal so it can open aws login.",
       );
     }
   }
 
   const region = environment.AWS_DEFAULT_REGION?.trim() || "us-east-1";
-  log(`AWS profile ${environment.AWS_PROFILE || "default"} needs sign-in; opening aws login…`);
+  log("AWS profile needs sign-in; opening aws login…");
   const login = spawn("aws", ["login", ...profileArguments(environment), "--region", region], {
     env: environment,
     stdio: "inherit",

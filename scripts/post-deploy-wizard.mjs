@@ -35,6 +35,12 @@ export async function runPostDeployWizard({
   cdkArguments,
   credentialsDocument,
   log = console.log,
+  // Forwarded to import-vercel-env.mjs as `--ci-unattended` so it makes the
+  // same CI-vs-workstation AWS-credential choice its caller already made,
+  // without needing to re-derive it from the ambient environment itself (see
+  // infra-deploy.mjs's isCiDeploy comment for why an ambient signal is unsafe
+  // here). Never true when called from the interactive branch.
+  ciUnattended = false,
 }) {
   const run = (command, arguments_, options = {}) =>
     execute(command, arguments_, { stdio: "inherit", ...options });
@@ -63,6 +69,7 @@ export async function runPostDeployWizard({
       join(scriptDirectory, "import-vercel-env.mjs"),
       ".env.vercel",
       "production",
+      ...(ciUnattended ? ["--ci-unattended"] : []),
     ]);
   }
 
@@ -109,7 +116,16 @@ export async function runPostDeployWizard({
   if (
     yes(
       await ask(
-        "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
+        // "Yourself" on a workstation: the gh CLI's authenticated user, who
+        // just typed this answer. In the CI-unattended run this is instead
+        // whoever the INFRA_DEPLOY_GH_TOKEN PAT belongs to -- not necessarily
+        // the human who approved this specific deploy -- so the question does
+        // not claim otherwise here (security review on ADR
+        // 20260811-ci-deploy-full-wizard). sync-github-cdk-ci-environment.mjs
+        // itself always logs the exact user id it adds.
+        ciUnattended
+          ? "Create/update the infra-deploy GitHub Environment with the INFRA_DEPLOY_GH_TOKEN identity as its required reviewer? [y/N] "
+          : "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
       ),
     )
   ) {
