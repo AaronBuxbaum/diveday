@@ -1,7 +1,7 @@
 # Pilot-recruiting kit
 
-The four things the founder carries into Phase 1: the leave-behind, the list of who to call, the
-script for the first call, and the run sheet for the boat day. Written 2026-08-02 against the
+What the founder carries into Phase 1: the leave-behind, the list of who to call, the script for
+the first call, the email that opens a cold one, and the run sheet for the boat day. Written 2026-08-02 against the
 Phase-0 state, for review action item 24 in the archived
 [comprehensive-review-20260802.md](../archive/comprehensive-review-20260802.md) — now tracked as
 [human-decisions.md](../human-decisions.md) H-31/H-32.
@@ -19,6 +19,7 @@ those rows has sat.
 | [Design-partner one-pager](../stakeholders/design-partner-one-pager.md) | The leave-behind: what DiveDay is, the offer, the three shop profiles, what happens next | Pilot commitments → V-04 and [rollout.md](../rollout.md) |
 | [Florida call list](florida-call-list.md) | **A template.** Research criteria, columns, and how to source ten candidate shops | The filled list stays out of this repo; a booked conversation is the output |
 | [First-call script](first-call-script.md) | Call one: discovery designed to disconfirm, not a pitch | A written call note per conversation; anything that changes the product goes to [story-backlog.md](../features/story-backlog.md) |
+| [Cold email template](cold-email-template.md) | Opening a shop the founder has no warm route into: the written cousin of the first-call script, aiming at a one-line reply or a forward | A reply is a call note in the script's format; a changed assumption is H-31 evidence |
 | [V-02 field-test run sheet](v-02-field-test-run-sheet.md) | The printable checklist for the boat day — "the single most important pre-pilot task" | V-02 in the [verification queue](../human-decisions.md#human-verification-queue) |
 
 The stakeholder playbooks stay the authority on *who and how* for each conversation

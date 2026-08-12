@@ -44,7 +44,12 @@ What to have prepared per conversation:
   columns, and the public directories to source from — the rows are researched by hand, never
   invented) and the [first-call script](../pilot-kit/first-call-script.md), which is discovery
   written to disconfirm rather than to sell. Call one exists to find out whether the buyer DiveDay
-  was designed against is real; every persona to date is synthetic.
+  was designed against is real; every persona to date is synthetic. For a shop with no warm route
+  in, the [cold email template](../pilot-kit/cold-email-template.md) is the opener — hand-sent, one
+  at a time, aiming at a reply or a forward rather than a meeting. It states **no offer**, on the
+  same "only if they ask" principle as the first call's §E; the six-month free term authorized by
+  [H-12's 2026-08-12 amendment](../human-decisions.md#decision-register) belongs to the reply and
+  the call.
 
 ### Pilot shops' front-desk staff and captains (Phase 1, week 0)
 
