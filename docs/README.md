@@ -57,6 +57,7 @@ context. When an assessment's recommendations ship, delete them from it and reco
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
+| [assessments/paid-acquisition-assessment.md](product/assessments/paid-acquisition-assessment.md) | 2026-08-12 channel-by-channel verdict on paid advertising, the corrected US/Florida market size, and why the cohort is a list rather than an audience |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
