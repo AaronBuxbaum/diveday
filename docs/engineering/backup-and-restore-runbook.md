@@ -9,7 +9,7 @@ a scheduled logical export built on the existing per-shop export seam
 `infra/lib/infra-stack.ts` §11. The reasoning for both is
 [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
 
-A third, complementary layer shipped 2026-08-04 and is *running*, unlike §2's scheduler: the
+A third, complementary layer shipped 2026-08-04 (§2's own scheduler followed on 2026-08-12): the
 **shop-owned weekly backup** (§2b below) — the same export bundle, delivered by cron to a bucket
 each shop configures under its own credentials. It is a per-shop product feature for
 vendor-independence ("your data is yours" even if DiveDay disappears), not a substitute for either
@@ -128,22 +128,63 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 | Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
 
 The uploader's access key is minted by `cdk deploy` and delivered in the credentials secret
-([§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret)), in its
-"Not .env values" section — because the `TODO(owner)` below has not been answered, so it has no
-destination yet. Leave it there until it does, then move it into that runner's secret settings —
-never the repo.
+([§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret)) as the
+four `PLATFORM_BACKUP_*` values, which `pnpm infra:deploy` writes into `.env.vercel` like any other
+application credential. It rode in the "Not .env values" section until 2026-08-12, while the runner
+was undecided.
+
+Shipping it to a third-party environment is acceptable *because* of how narrow it is: `s3:PutObject`
+and `s3:AbortMultipartUpload` on this bucket's objects, nothing else. It cannot list the bucket, read
+an object back, or delete one — so a leak of the Vercel environment cannot become a download of every
+shop's exported waivers. That is also why the freshness check below has to run somewhere else.
 
 ```bash
 AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
   --secret-id diveday/env --query SecretString --output text
 ```
 
-> `TODO(owner)` — **Decide what runs the export on a schedule and wire it up.** The seam and the
-> destination exist; nothing calls one from the other yet. The two candidates are a new authenticated
-> route on the existing daily Vercel Cron tick (`vercel.json`'s `crons` already drives
-> `/api/cron/reminders`), or a GitHub Actions scheduled workflow holding the uploader credentials.
-> Record the choice here with its cadence. Until this is done, the second layer is a documented
-> capability, not a running backup — say so honestly in any status report.
+### The runner (running since 2026-08-12)
+
+`GET /api/cron/platform-backup`, **Mondays 05:00 UTC** (`vercel.json`), decided in
+[ADR 20260812-platform-backup-runner](../architecture/decisions/20260812-platform-backup-runner.md).
+For every non-demo shop it builds the bundle above and PUTs it to `exports/<YYYY-MM-DD>/<slug>.zip`.
+Implementation is `src/features/backup-export/platform-backup.ts`; the bundle itself is assembled by
+that module's `bundle.ts`, shared byte for byte with the shop-owned pass in §2b.
+
+| Property | Reality |
+| --- | --- |
+| Cadence | Weekly, Mondays 05:00 UTC — an hour after the shop-owned pass, so the two never contend for the same function slot |
+| Idempotency | By object key only. There is no ledger table: the key is deterministic per run date, and the bucket is versioned, so a re-run overwrites additively. A retried pass redoes work rather than skipping it |
+| Scope | Non-demo shops. The seeded `blue-mantis` fixture is flagged `isDemo`, so **a local or e2e run of this pass stores nothing** — that is correct, and it means the pass cannot be smoke-tested against the seed |
+| Bound | A soft deadline at 240s of the 300s ceiling stops the pass *starting* new shops; one already in flight finishes. A stopped pass reports `skipped` in its log line and response, answers 200, and is not an incident — shop order is stable, so the next run reaches the same shops first |
+| Failure handling | Per shop, coded, never thrown: one shop's failure never costs another its backup. A pass with any failure answers 500 and checks in to Sentry as `error` |
+| Unconfigured | Without the four `PLATFORM_BACKUP_*` values the route answers **501** and stores nothing — and deliberately does *not* check in to Sentry, so a deployment that was never given the credential cannot read as a healthy weekly backup forever |
+| Monitors | Sentry cron monitor `diveday-platform-backup`; the `cron_platform_backup.pass_failed` log code feeds the existing `CronPassFailures` CloudWatch alarm |
+
+**What this does not tell you is whether a bundle is actually there.** The uploader is write-only, so
+the route knows only that each PUT was accepted. That question is answered by the watchdog below.
+
+### The watchdog: is the backup actually landing?
+
+`diveday-backup-freshness-check`, a Lambda on an EventBridge Scheduler rule (**Tuesdays 06:00 UTC**,
+`infra/lib/infra-stack.ts` §19). One `ListObjectsV2` over `exports/`, and an email to the
+observability topic when the newest run is **missing**, **older than 8 days**, or **has no bundles
+under it**.
+
+It lives in AWS rather than in the app for two reasons that are each sufficient on their own: the
+application literally cannot see the bucket (the uploader has no `ListBucket`, which is what stops a
+leaked deployment credential reading a shop's exported waivers back out), and an alarm that runs on
+Vercel cannot fire when the failure *is* Vercel — a suspended project takes the cron, its log line,
+and its Sentry check-in with it, and silence looks identical to a quiet healthy week.
+
+Test it by hand without waiting for Tuesday:
+
+```bash
+AWS_PROFILE=diveday-admin aws lambda invoke \
+  --function-name diveday-backup-freshness-check /dev/stdout
+```
+
+It answers `{"status":"ok"|"stale"|"empty"|"never_run", ...}` and only emails on the last three.
 
 > `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
 > `BLOB_READ_WRITE_TOKEN`, and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.
@@ -232,10 +273,13 @@ log below. It should take under an hour.
 
 ## What this runbook does not cover
 
-- **§2's DiveDay-side scheduled export is not running yet.** Bucket, IAM, and seam exist; the
-  scheduler does not (see the `TODO(owner)` above). Do not describe DiveDay as having offsite
-  backups until it does — §2b runs weekly but covers only shops that opted in, under credentials
-  DiveDay cannot use for its own recovery.
+- **§2's scheduled export runs weekly since 2026-08-12, but nobody has restored from one.** The
+  quarterly restore-test log below still reads `never`. A backup nobody has restored is a
+  hypothesis; what changed is that there is now evidence it is being *written* (the watchdog), not
+  evidence it can be *read*. Run the test in §4 before describing recovery as proven.
+- **The export's two gaps are unchanged by the runner.** Credentials are never exported, so a
+  restore from bundles alone yields every shop record and nobody who can sign in; and a photo that
+  fails to fetch is still dropped silently. Both are stated in §2 above and neither got better.
 - **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
   in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
   write-only uploader is the mitigation, and it is a partial one.

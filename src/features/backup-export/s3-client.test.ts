@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeS3KeyPath, putS3Object, signS3Request } from "./s3-client";
+import { encodeS3KeyPath, putS3Object, s3ObjectUrl, signS3Request } from "./s3-client";
 
 /**
  * The signing path is pinned to AWS's published SigV4 example requests
@@ -190,5 +190,77 @@ describe("putS3Object", () => {
       timeoutMs: 5,
     });
     expect(result).toEqual({ ok: false, errorCode: "network_unreachable" });
+  });
+});
+
+/**
+ * Two addressing styles, deliberately. Path-style is the portable one the
+ * shop-owned destinations need (R2, B2, MinIO); virtual-hosted is what AWS S3
+ * itself wants, and is what the platform backup uses because AWS has deprecated
+ * path-style and a backup is the last path that should rest on a deprecation
+ * staying unenforced.
+ */
+describe("s3ObjectUrl", () => {
+  it("defaults to path-style, keeping the shop-owned destinations portable", () => {
+    const url = s3ObjectUrl({
+      endpoint: "https://backups.example.com",
+      bucket: "shop-backups",
+      key: "diveday/bundle.zip",
+    });
+    expect(url.toString()).toBe("https://backups.example.com/shop-backups/diveday/bundle.zip");
+  });
+
+  it("moves the bucket into the host when asked for virtual-hosted", () => {
+    const url = s3ObjectUrl({
+      endpoint: "https://s3.us-east-1.amazonaws.com",
+      bucket: "diveday-backups",
+      key: "exports/2026-08-12/blue-mantis.zip",
+      addressing: "virtual-hosted",
+    });
+    expect(url.toString()).toBe(
+      "https://diveday-backups.s3.us-east-1.amazonaws.com/exports/2026-08-12/blue-mantis.zip",
+    );
+    // The bucket must appear once, in the host, and not also in the path.
+    expect(url.pathname).toBe("/exports/2026-08-12/blue-mantis.zip");
+  });
+
+  it("still encodes the key's segments under virtual-hosted addressing", () => {
+    const url = s3ObjectUrl({
+      endpoint: "https://s3.us-east-1.amazonaws.com",
+      bucket: "diveday-backups",
+      key: "exports/2026-08-12/blue mantis & co.zip",
+      addressing: "virtual-hosted",
+    });
+    expect(url.pathname).toBe("/exports/2026-08-12/blue%20mantis%20%26%20co.zip");
+  });
+});
+
+describe("putS3Object — virtual-hosted addressing", () => {
+  it("signs over the bucket-qualified host, which is what S3 verifies", async () => {
+    const calls: { url: string; headers: Headers }[] = [];
+    const fetchImpl = vi.fn(async (url: URL | RequestInfo, init?: RequestInit) => {
+      calls.push({ url: String(url), headers: new Headers(init?.headers) });
+      return new Response(null, { status: 200 });
+    });
+
+    const result = await putS3Object({
+      ...PUT_INPUT,
+      endpoint: "https://s3.us-east-1.amazonaws.com",
+      region: "us-east-1",
+      bucket: "diveday-backups",
+      key: "exports/2026-08-12/blue-mantis.zip",
+      addressing: "virtual-hosted",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(calls[0]?.url).toBe(
+      "https://diveday-backups.s3.us-east-1.amazonaws.com/exports/2026-08-12/blue-mantis.zip",
+    );
+    // A signature computed over the wrong host is the failure this guards: the
+    // signed host header has to be the bucket-qualified one actually sent.
+    expect(calls[0]?.headers.get("host")).toBe("diveday-backups.s3.us-east-1.amazonaws.com");
+    expect(calls[0]?.headers.get("authorization")).toContain("SignedHeaders=");
+    expect(calls[0]?.headers.get("authorization")).toContain("host");
   });
 });

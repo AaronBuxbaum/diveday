@@ -140,6 +140,24 @@ export type PutObjectResult = { ok: true } | { ok: false; errorCode: BackupUploa
 
 const UPLOAD_TIMEOUT_MS = 120_000;
 
+/**
+ * How the bucket is named in the request URL.
+ *
+ * - `path` (default) puts it in the path: `https://endpoint/bucket/key`. The
+ *   portable choice, and the only one that works unchanged across Cloudflare
+ *   R2, Backblaze B2 and MinIO, so it stays the default for the shop-owned
+ *   destinations this client was built for.
+ * - `virtual-hosted` puts it in the host: `https://bucket.endpoint-host/key`.
+ *   What AWS S3 itself wants -- AWS has deprecated path-style addressing, and
+ *   although it still answers such requests today, a *backup* is the last path
+ *   that should depend on a deprecation staying unenforced.
+ *
+ * SigV4 needs no special handling either way: `signS3Request` reads `host` off
+ * the URL it is given and signs the path as sent, so moving the bucket from one
+ * to the other changes the canonical request correctly and automatically.
+ */
+export type S3Addressing = "path" | "virtual-hosted";
+
 export type PutObjectInput = {
   /** HTTPS origin of the S3-compatible API, e.g. "https://<account>.r2.cloudflarestorage.com". */
   endpoint: string;
@@ -151,15 +169,36 @@ export type PutObjectInput = {
   contentType: string;
   credentials: S3Credentials;
   now: Date;
+  addressing?: S3Addressing;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
 
+/** The request URL for one object under the chosen addressing style. */
+export function s3ObjectUrl(input: {
+  endpoint: string;
+  bucket: string;
+  key: string;
+  addressing?: S3Addressing;
+}): URL {
+  const base = input.endpoint.replace(/\/+$/, "");
+  const encodedKey = encodeS3KeyPath(input.key);
+  if (input.addressing !== "virtual-hosted") {
+    return new URL(`${base}/${encodeRfc3986(input.bucket)}/${encodedKey}`);
+  }
+  // The bucket becomes a host label, so it is never percent-encoded: an S3
+  // bucket name is already restricted to DNS-safe characters, and encoding one
+  // would produce a host that does not resolve rather than a signing error.
+  const url = new URL(base);
+  url.host = `${input.bucket}.${url.host}`;
+  url.pathname = `/${encodedKey}`;
+  return url;
+}
+
 /** PUT one object. Never throws — every failure is a code the caller records. */
 export async function putS3Object(input: PutObjectInput): Promise<PutObjectResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const base = input.endpoint.replace(/\/+$/, "");
-  const url = new URL(`${base}/${encodeRfc3986(input.bucket)}/${encodeS3KeyPath(input.key)}`);
+  const url = s3ObjectUrl(input);
 
   const headers = signS3Request({
     method: "PUT",

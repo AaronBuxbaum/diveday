@@ -29,7 +29,17 @@ export {
   type SaveBackupDestinationResult,
   saveShopBackupDestination,
 } from "./destination-store";
-export { backupPeriodKey } from "./period";
+export { backupPeriodKey, backupRunDate, platformBackupObjectKey } from "./period";
+export {
+  listShopsForPlatformBackup,
+  type PlatformBackupConfig,
+  type PlatformBackupErrorCode,
+  type PlatformBackupResult,
+  type PlatformBackupShop,
+  platformBackupConfigFromEnvironment,
+  type RunPlatformBackupInput,
+  runPlatformBackup,
+} from "./platform-backup";
 export {
   type BackupRunErrorCode,
   type RunShopBackupInput,

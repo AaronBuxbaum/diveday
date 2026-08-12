@@ -8,12 +8,26 @@
  * deliberately no way to add a graph without also deciding what a bad value is
  * and who answers it.
  *
- * Why a registry rather than a metric per event code: a CloudWatch custom
- * metric costs about $0.30/month and this app emits ~40 distinct event codes.
- * A filter per code would quietly cost more per month than the entire AWS
- * budget the stack sets (S7), for a set of graphs nobody chose. So the metrics
- * are the handful worth alarming on, and every other code stays queryable --
- * for free -- through the Logs Insights queries below. See
+ * Why a registry rather than a metric per event code, priced honestly:
+ *
+ * CloudWatch's *always free* tier -- not a 12-month one, and not dependent on
+ * the account's age or plan -- is 10 custom metrics, 10 standard-resolution
+ * alarms, 3 dashboards, and 5 GB of log ingestion/archive/Insights scan per
+ * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
+ * dashboard, $0.50/GB ingested and $0.12/GB scanned.
+ *
+ * This registry currently declares 12 metrics (7 log signals + 5 web vitals)
+ * and 10 alarms (7 + the 3 alarmed vitals), so it sits 2 metrics over the free
+ * allowance at about $0.60/month, with the alarm count exactly at the line.
+ * Adding a counted signal therefore costs $0.40/month -- $0.30 for the metric
+ * and $0.10 for the alarm -- which is the real number to weigh, not zero and
+ * not the free-tier cliff it looks like from the alarm count alone.
+ *
+ * The rationing still holds at those prices: this app emits ~40 distinct event
+ * codes, so a filter per code would be ~$12/month plus ~$4 of alarms, for a set
+ * of graphs nobody chose. So the metrics are the handful worth alarming on, and
+ * every other code stays queryable through the Logs Insights queries below --
+ * cheap rather than free, since a query scans the group it reads. See
  * docs/engineering/cloudwatch-observability-runbook.md.
  *
  * The `events` codes are the exact strings `log()` is called with in `src/`,
@@ -109,6 +123,13 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "cron_retention.prune_failed",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",
+      // Added to this signal rather than given its own: a new counted signal is
+      // $0.40/month (see the pricing note at the top of this file), and "a
+      // scheduled pass failed" is already exactly what this alarm means. The
+      // *platform* backup's distinct failure mode -- passes that succeed while
+      // nothing actually lands in the bucket -- is not visible from a log line
+      // at all, and is watched from the AWS side instead (infra-stack.ts S19).
+      "cron_platform_backup.pass_failed",
       "cron_trip_series.roll_failed",
     ],
     threshold: 1,

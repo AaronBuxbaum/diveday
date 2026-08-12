@@ -229,7 +229,8 @@ The stack provisions two **alert-only** mechanisms — see
 [ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md) for
 the full reasoning. Neither one ever disables or throttles a resource; both only send email.
 
-- **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $5, with five graduated email
+- **`AWS::Budgets::Budget`** — a monthly `COST` budget, default $30 (raised from $5 on 2026-08-12,
+  see the ADR's amendment), with five graduated email
   notifications: 50% and 80% of actual spend, 100% of *forecasted* spend (an early warning before
   the month even ends), 100% of actual spend, and 200% of actual spend as the "this is outside
   normal bands" siren. It has no fixed name (see the troubleshooting note below for why); find the
@@ -277,11 +278,16 @@ Anomaly Detection does**: it depends on Cost Explorer, which is a one-time conso
 API, and reports nothing until it has accumulated spend history. That is a prerequisite in
 [manual-actions.md](manual-actions.md), not something the stack handles.
 
-**What this account costs when idle:** two Secrets Manager secrets, $0.80/month
-([§10](#10-the-credentials-secret)). Everything else here is per-use or free at this volume. That is
-the number the `monthlyBudgetLimit` default of `5` is set against — if you add secrets, move the
-limit with them, or the 50% and 80% notifications start firing every month on fixed cost and the
-guardrail becomes noise.
+**What this account costs when idle:** two Secrets Manager secrets at $0.80/month
+([§10](#10-the-credentials-secret)) plus two CloudWatch custom metrics past the always-free ten at
+$0.60/month ([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) — about
+**$1.40/month** of cost that exists whether or not anyone uses DiveDay. Everything else here is
+per-use or genuinely free at this volume.
+
+That $1.40 is the number the `monthlyBudgetLimit` default of `30` is set against. It was `5` until
+2026-08-12, at which point the fixed floor was over a quarter of the cap and the 50% and 80%
+notifications were on course to fire every month on cost that never changes — the exact "guardrail
+becomes noise" failure the ADR was written to prevent. If you add fixed cost, move the limit with it.
 
 ---
 
@@ -603,10 +609,11 @@ sharp edge worth knowing before deleting a user.
 
 ### Why two secrets, not ten
 
-Secrets Manager bills $0.40 per secret per month. Eight credential secrets plus three app-secret
-secrets would be $4.40 against the ~$5/month this account is budgeted for
-([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md)),
-which would make the budget's 50% and 80% notifications permanent noise. Two secrets cost $0.80:
+Secrets Manager bills $0.40 per secret per month and has no free tier. Eight credential secrets plus
+three app-secret secrets would be $4.40 of fixed monthly cost — against the $5 budget this section
+was written for that was permanent noise in the 50% and 80% notifications, and against today's $30
+([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md), as
+amended 2026-08-12) it is affordable but still eleven documents to keep straight. Two secrets cost $0.80:
 one hand-off document and one stable root from which HKDF derives three independent app values. What
 that costs is granularity: whoever can read the hand-off document reads all of it, a distinction that
 is theoretical on this single-operator account.

@@ -1,6 +1,7 @@
 # 20260802-aws-cost-guardrails — Alert-only AWS Budgets + Cost Anomaly Detection on the infra stack
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-12** (budget default $5 → $30 — see
+  [Amendment](#amendment-2026-08-12--the-budget-default-moves-to-30))
 - **Date:** 2026-08-02
 
 ## Context
@@ -64,3 +65,34 @@ fine in the repo). Costs nothing extra to run — Budgets and Cost Anomaly Detec
 Revisit if: the account grows past solo-operator scale and needs per-team or per-environment budgets,
 or if daily-digest anomaly latency proves too slow and the SNS/`IMMEDIATE` path from the alternatives
 above becomes worth the added resource.
+
+## Amendment 2026-08-12 — the budget default moves to $30
+
+`monthlyBudgetLimit` now defaults to `30`, not `5`. Nothing else in this decision changes: the
+mechanisms, the five thresholds, and the alert-only posture are all as accepted.
+
+**Why.** The original $5 was set when the account held an S3 bucket and four IAM users, all of which
+are free. It has since acquired fixed monthly cost that exists whether or not anyone uses DiveDay:
+the credentials secret and the app-secret seed at $0.40 each
+([20260805-cdk-minted-credentials-and-manual-actions](20260805-cdk-minted-credentials-and-manual-actions.md)),
+and two CloudWatch custom metrics past the always-free ten at $0.30 each
+([20260806-cloudwatch-log-shipping](20260806-cloudwatch-log-shipping.md),
+[20260806-cloudwatch-rum-and-vitals](20260806-cloudwatch-rum-and-vitals.md)). That is ~$1.40/month of
+floor against a $5 cap — 28% — so the 50% notification was roughly two normal months of SES and SNS
+away from firing on nothing at all, and the 80% one was reachable in a busy month.
+
+A budget whose thresholds fire on cost that never changes teaches its reader to ignore it, which is
+the failure this ADR's own Consequences section exists to prevent. Raising the cap restores the
+thresholds' meaning: at $30 the fixed floor is under 5%, so a 50% notification once again means
+something is growing that was not growing before.
+
+**What this does not change.** It is still alert-only, and it is still a figure a human picked rather
+than a figure AWS published — the same posture `src/lib/cost-guardrails.ts` documents for its own
+ceilings. The number should move again when the fixed floor does; the runbook's "what this account
+costs when idle" line is where that floor is tracked.
+
+**What it does not license.** The one line here that can grow without bound is CloudWatch RUM, whose
+1,000,000 events is a one-time trial rather than an always-free allowance, and whose sample rate
+defaults to every session. A larger cap is more room for that to run, not a reason to stop watching
+it — see the cost table in
+[cloudwatch-observability-runbook.md](../../engineering/cloudwatch-observability-runbook.md).
