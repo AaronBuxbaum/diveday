@@ -10,9 +10,9 @@ import { fill } from "@/i18n/fill";
  *
  * Pure progressive enhancement: this wraps the server-rendered
  * `RadioQuestion` fieldsets as `children` without changing their markup, so
- * with JavaScript disabled the questions and the form around them submit
- * exactly as they do today — only the bar itself, which needs `useState` to
- * animate, never appears. Nothing here reads `FormData`, gates the submit
+ * before hydration the questions and the form around them submit exactly as
+ * they do today — only the bar itself, which needs `useState` to animate, is
+ * not there yet. Nothing here reads `FormData`, gates the submit
  * button, or replaces the radios' own `required` validation.
  *
  * Answered state is derived from `change` events on the `q_*` radio groups

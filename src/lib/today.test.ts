@@ -96,7 +96,7 @@ describe("diverBlockerAction", () => {
 
   it("sends waiver work in place, keeping the verb and the booking payload", () => {
     const result = diverBlockerAction(input, "blue-reef", NOW);
-    // href stays as the no-JS fallback to the roster row.
+    // href stays the row's real destination, the roster row.
     expect(result?.href).toBe("/shop/blue-reef/trips/t1/guests#booking-b1");
     expect(result?.actionLabel).toBe("Send waiver");
     expect(result?.waiver).toEqual({ bookingIds: ["b1"] });

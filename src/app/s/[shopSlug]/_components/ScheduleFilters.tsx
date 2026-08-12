@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
@@ -11,21 +10,25 @@ export type ScheduleFiltersCopy = {
   funDive: string;
   course: string;
   hasSpace: string;
-  apply: string;
 };
 
 /**
- * The schedule's filter row. Changing a filter *is* the ask — so with JS on,
- * any change submits the form itself and no Apply button renders at all
+ * The schedule's filter row. Changing a filter *is* the ask, so any change
+ * submits the form itself and no Apply button renders at all
  * (design/principles.md #10: the action rides on the control, not on a
- * second button the reader must map back to it). With JS off, the
- * `<noscript>` Apply button keeps the server-fed GET reload working. The
- * button used to render for everyone and be removed on hydration, so every
- * real visitor watched it flash in and out beside "Has space"; `<noscript>`
- * trades that flash for a tiny pre-hydration beat where a very fast tap on a
- * filter does nothing yet. The form remains a plain GET either way: the URL
- * carries the filters, and the list below re-renders server-side,
- * pixel-stable for visual regression.
+ * second button the reader must map back to it).
+ *
+ * There is no Apply button for anyone. One used to render for every visitor
+ * and be removed on hydration, so a real diver watched it flash in and out
+ * beside "Has space"; it then moved into `<noscript>`, which traded the flash
+ * for a fallback nobody could reach — a scripting-disabled browser never
+ * relocates this page out of its hidden streaming div, so it sees the skeleton
+ * and not the form (ADR 20260812-javascript-is-required). What remains is the
+ * genuine cost, and it is small: a tap landing in the beat before hydration
+ * does nothing yet.
+ *
+ * The form remains a plain GET: the URL carries the filters, and the list
+ * below re-renders server-side, pixel-stable for visual regression.
  *
  * `QueryForm`, not a bare `<form method="get">`: auto-submit on change plus a
  * native GET submit meant one tap of "Has space" tore the document down and
@@ -84,15 +87,6 @@ export function ScheduleFilters({
         />
         {copy.hasSpace}
       </label>
-      {/* React deliberately skips hydrating <noscript> children (a
-          scripting-enabled browser parses them as one text node), so real
-          JSX here is safe and never mismatches. Nothing inside can run JS
-          anyway — a plain submit button is the whole no-JS story. */}
-      <noscript>
-        <button type="submit" className={buttonClass({ variant: "secondary" })}>
-          {copy.apply}
-        </button>
-      </noscript>
     </QueryForm>
   );
 }

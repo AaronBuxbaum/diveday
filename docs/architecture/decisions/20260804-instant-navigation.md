@@ -2,6 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-04
+- **Amended:** 2026-08-12 — a consequence of this decision that nobody had written down: a page whose
+  content sits behind a `loading.tsx` Suspense boundary streams inside a hidden staging div that an
+  inline script relocates, so a browser with scripting disabled sees the skeleton and never the page.
+  Since this ADR requires that boundary of every route, it makes JavaScript a requirement of the whole
+  app. That is now stated, and the fallbacks written against the opposite assumption are gone —
+  20260812-javascript-is-required.
 
 ## Context
 

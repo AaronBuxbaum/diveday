@@ -6,8 +6,8 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * The orders filter band is a `<form method="get">`, and a native GET submit
  * is a full document navigation — the browser tears the page down, re-runs the
  * shell, and lands at scroll top. `QueryForm` keeps the form a real GET form
- * (so it still works before hydration and with JavaScript off) and turns the
- * submit into a router navigation. This is the assertion that the difference
+ * (so a submit landing before hydration is not lost) and turns the submit into
+ * a router navigation. This is the assertion that the difference
  * is real: it needs a live viewport with content below the fold, which is
  * neither a screenshot nor a unit test.
  *

@@ -21,7 +21,7 @@ export type ResendConfirmationCopy = {
 /**
  * One-tap re-send of a failed booking confirmation on the Today queue. Posts the
  * shared server action in place and reports the outcome inline, so the row is a
- * fix rather than a dead link. Degrades to a plain form post without JavaScript.
+ * fix rather than a dead link. Falls back to a plain form post before hydration.
  */
 export function ResendConfirmationControl({
   shopSlug,

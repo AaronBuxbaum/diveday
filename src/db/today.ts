@@ -1261,8 +1261,9 @@ export async function getTodayWork(
         departure,
         aboutDeparture: true,
         detail: waitlistSeatDetailText(t, openSeats, waiting),
-        // One tap invites the next in line straight from the queue; the href is
-        // the no-JS fallback to the trip's wait-list section.
+        // One tap invites the next in line straight from the queue; the href
+        // stays the row's real destination — a pre-hydration tap, a middle-click
+        // or an open-in-new-tab lands on the trip's wait-list section.
         actionLabel: inviteFromWaitlistActionText(t),
         href: `${tripHref}/guests#waitlist`,
         invite: {
@@ -1296,7 +1297,8 @@ export async function getTodayWork(
       detail: emailDeliveryDetailText(t, isWaiver, issue.delivery.status, issue.attempts),
       // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
       // (a fresh link, since the token is never stored); a confirmation retries
-      // from the stored booking. `href` is the no-JS fallback to the roster row.
+      // from the stored booking. `href` stays the row's real destination, the
+      // roster row — for a pre-hydration tap, a middle-click, or a new tab.
       actionLabel: emailResendActionText(t, isWaiver),
       ...(isWaiver
         ? { waiver: { bookingIds: [issue.booking.id] } }

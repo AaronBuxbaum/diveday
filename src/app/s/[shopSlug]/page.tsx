@@ -381,9 +381,10 @@ export default async function SchedulePage({
 
       {hasUpcoming ? (
         // Server-fed, same house pattern as the roster search in
-        // AddDiverSection.tsx: a GET reload carries the filters and the list
-        // below re-renders filtered. Once hydrated, changing a filter submits
-        // itself — the Apply button is the no-JS fallback, not a second step.
+        // AddDiverSection.tsx: the URL carries the filters and the list below
+        // re-renders filtered. Changing a filter submits the form itself —
+        // there is no Apply button for anyone (ADR
+        // 20260812-javascript-is-required).
         <ScheduleFilters
           embed={isEmbed}
           month={month ?? null}
@@ -395,7 +396,6 @@ export default async function SchedulePage({
             funDive: t("schedule.filters.funDive"),
             course: t("schedule.filters.course"),
             hasSpace: t("schedule.filters.hasSpace"),
-            apply: t("schedule.filters.apply"),
           }}
         />
       ) : null}

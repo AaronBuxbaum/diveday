@@ -17,8 +17,9 @@ import { type FormEvent, type ReactNode, useTransition } from "react";
  * happened on every staff search box. On the public schedule the filters
  * auto-submit on change, so it fired on a single tap of a checkbox.
  *
- * This keeps the form a real GET form — with JavaScript off, or before
- * hydration, it submits natively and everything still works — and once
+ * This keeps the form a real GET form — before hydration it submits natively
+ * and everything still works, so a tap landing in that beat is not lost — and
+ * once
  * hydrated intercepts the submit to do the same navigation through the router
  * instead: same URL, same server render, but a client transition that keeps
  * the shell mounted and the viewport where it was (`scroll: false`).

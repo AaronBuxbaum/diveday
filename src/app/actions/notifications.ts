@@ -14,7 +14,7 @@ import type { ResendState } from "./notification-resend-types";
  * a waiver issues a fresh link through the shared WP-1 path instead.
  *
  * Auth and shop ownership are re-checked server-side; the caller only supplies a
- * booking id. Degrades to a plain form post without JavaScript.
+ * booking id. Falls back to a plain form post before hydration.
  */
 export async function resendConfirmationAction(
   shopSlug: string,
