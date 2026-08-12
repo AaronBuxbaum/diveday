@@ -8,7 +8,7 @@
 - **Kind:** half-done
 - **Effort:** S
 - **Touches:** `infra/lib/infra-stack.ts` (§12, where the credential is minted), `.env.example`
-  (the `PLACES_AWS_*` names the deployment must hold),
+  (the PLACES_AWS_* names the deployment must hold),
   `docs/architecture/decisions/20260804-aws-location-address-lookup.md`
 
 ## What I noticed
@@ -114,6 +114,9 @@ Do not change application code. The app reached AWS, signed correctly, and repor
 accurately; there is nothing for it to fix.
 
 Done means: typing four characters into the address search on /shop/<slug>/settings lists real
-places and picking one fills all five address boxes, stated as an observation of the deployed site.
+places and picking one saves that address onto the settings card, stated as an observation of the
+deployed site. (The card is one search box now — the five text boxes it used to fill are gone,
+ADR 20260811-address-is-one-search-box — so a working lookup is the *only* way to set an address
+there, which is what makes this worth doing rather than working around.)
 Delete docs/product/follow-ups/FU-20260809-confirm-address-lookup-region.md as part of the change.
 ```
