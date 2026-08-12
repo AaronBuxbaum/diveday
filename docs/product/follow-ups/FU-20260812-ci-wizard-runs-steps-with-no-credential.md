@@ -22,7 +22,8 @@ VERCEL_PROJECT_ID:
 
 All four are empty — the `ci-github-admin-token` and `ci-vercel-deploy-token` manual actions (§17 of
 `infra/lib/infra-stack.ts`, rendered into `docs/engineering/manual-actions.md`) have not been done, so
-the repository secrets they populate do not exist and the workflow passes through blanks.
+the `infra-deploy` environment secrets they populate do not exist and the workflow passes
+through blanks.
 
 The actual failure message was about something else entirely (`Command \`vercel deploy\` requires
 confirmation. Use option "--yes" to confirm.`, fixed in the same change as this follow-up). With that
@@ -53,8 +54,9 @@ Either, but decide which:
 1. **Pre-flight, matching the existing role-ARN pattern.** Add a step to the `deploy` job in
    `.github/workflows/infra.yml`, before `pnpm infra:deploy`, that fails with an
    `::error::`-annotated message naming `ci-github-admin-token`/`ci-vercel-deploy-token` when
-   `secrets.INFRA_DEPLOY_GH_TOKEN`/`secrets.INFRA_DEPLOY_VERCEL_TOKEN` (or the two `vars.VERCEL_*`)
-   are empty. Refuses before touching AWS at all, so a deploy is never half-done for this reason.
+   any of the four `infra-deploy` environment secrets (`GH_TOKEN`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+   `VERCEL_PROJECT_ID`) is empty. Refuses before touching AWS at all, so a deploy is never half-done
+   for this reason.
 2. **Check inside the wizard**, in `scripts/post-deploy-wizard.mjs`, immediately before each step that
    shells out to `gh`/`vercel`: if the credential that step needs is absent, throw with the manual
    action's name rather than letting the CLI fail. Keeps the check next to the thing that needs it,
@@ -69,7 +71,8 @@ to Vercel.
 ```text
 DiveDay's `Infra` workflow's `deploy` job runs `pnpm infra:deploy ... --ci-unattended`, whose
 post-deploy wizard shells out to the `gh` and `vercel` CLIs using GH_TOKEN / VERCEL_TOKEN /
-VERCEL_ORG_ID / VERCEL_PROJECT_ID, supplied as job env from repository secrets and variables. Those
+VERCEL_ORG_ID / VERCEL_PROJECT_ID, supplied as job env from secrets on the `infra-deploy` GitHub
+Environment, each named for the variable it becomes. Those
 secrets do not exist yet -- the `ci-github-admin-token` and `ci-vercel-deploy-token` manual actions
 (section 17 of infra/lib/infra-stack.ts, rendered into docs/engineering/manual-actions.md) have not
 been done -- so the workflow passes empty strings and the wizard fails inside the CLI with an

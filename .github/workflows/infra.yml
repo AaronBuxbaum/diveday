@@ -228,9 +228,21 @@ jobs:
       # this behavior -- deliberately not an ambient env var like CI, which a
       # local dev tool could set by convention (ADR 20260811-ci-deploy-full-wizard);
       # only this one `run:` line ever passes it.
+      #
+      # All four are `secrets.` on the `infra-deploy` *environment*, named for
+      # the variable each one becomes, rather than repository-level secrets and
+      # variables under longer INFRA_DEPLOY_-prefixed names. The environment is
+      # already this job's approval gate, so scoping them to it means they do
+      # not exist for any other job in this repository -- and the names being
+      # identical on both sides of the `:` is what stops the two from drifting
+      # apart. VERCEL_ORG_ID/VERCEL_PROJECT_ID are identifiers rather than
+      # credentials and would be fine as variables; they are secrets here only
+      # so that all four live in one place. The cost is that they are redacted
+      # from logs, so a wrong one reads as an empty string in a failure message
+      # rather than as itself.
       - run: pnpm infra:deploy DiveDay --require-approval never --ci-unattended
         env:
-          GH_TOKEN: ${{ secrets.INFRA_DEPLOY_GH_TOKEN }}
-          VERCEL_TOKEN: ${{ secrets.INFRA_DEPLOY_VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
