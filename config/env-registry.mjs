@@ -4,7 +4,7 @@
  * **whether being absent is legitimate**.
  *
  * This file exists because those facts used to live in four places that nothing
- * kept in agreement — the key list in `.env.example`, the produced-here list in
+ * kept in agreement -- the key list in `.env.example`, the produced-here list in
  * `infra/lib/infra-stack.ts`, the may-be-overridden-locally sets in
  * `scripts/distribute-env.mjs`, and a growing pile of hand-written skip cases in
  * `scripts/check-env.mjs`. `PLACES_AWS_ACCESS_KEY_ID` was in three of them and
@@ -16,7 +16,7 @@
  * Plain `.mjs` rather than TypeScript because all three consumers must import
  * it: the `scripts/*.mjs` tooling runs under bare `node`, `infra/` is a separate
  * CDK app with its own tsconfig, and `src/` is the Next application. Types come
- * from inference — the exported literal is `const`-asserted by the `.d.mts`
+ * from inference -- the exported literal is `const`-asserted by the `.d.mts`
  * beside it.
  *
  * ## Adding a variable
@@ -30,14 +30,14 @@
 /**
  * Who produces a value.
  *
- * - `stack` — `infra/lib/infra-stack.ts` mints or names it. There is no local
+ * - `stack` -- `infra/lib/infra-stack.ts` mints or names it. There is no local
  *   override, deliberately: an IAM access key is not a preference, and a
  *   private copy is a stale copy waiting to happen.
- * - `derived` — `scripts/distribute-env.mjs` computes it from `APP_SECRET_SEED`
+ * - `derived` -- `scripts/distribute-env.mjs` computes it from `APP_SECRET_SEED`
  *   through HKDF. Stack-produced by another name.
- * - `manual` — no system can mint it. A human pastes it from a third-party
+ * - `manual` -- no system can mint it. A human pastes it from a third-party
  *   console or 1Password. These, and only these, are what `.env.manual` holds.
- * - `constant` — a non-secret identifier of this deployment, checked in. Kept
+ * - `constant` -- a non-secret identifier of this deployment, checked in. Kept
  *   here rather than in `.env.manual` because nobody should ever be asked to
  *   type it.
  */
@@ -45,7 +45,7 @@
 /**
  * Where a value is sent. `local` is the generated `.env.local` a dev run reads,
  * `vercel` the deployed environment, `github` the Actions secrets the visual
- * suite needs. A value appears in a target only if that target consumes it —
+ * suite needs. A value appears in a target only if that target consumes it --
  * `APP_SECRET_SEED` never leaves a workstation, and the `REG_SUIT_*` credentials
  * are CI's, not the application's.
  */
@@ -97,10 +97,10 @@ export const ENV_GROUPS = [
       "Transactional email through AWS SES (ADR 20260803-ses-sole-email-provider,",
       "superseding 20260802-ses-adapter-and-webhook). The friendly sender name is",
       'supported (for example, "Blue Mantis <bookings@ses.dive.day>"). Keep all four',
-      "values server-only — none may use a NEXT_PUBLIC_ prefix. Credentials belong to",
+      "values server-only -- none may use a NEXT_PUBLIC_ prefix. Credentials belong to",
       "the diveday-ses-sender IAM user, never the cdk-deployer or reg-suit-bot ones.",
       "Also requires the AWS-side production-access request and DKIM DNS verification",
-      "for ses.dive.day — see docs/engineering/infrastructure-runbook.md.",
+      "for ses.dive.day -- see docs/engineering/infrastructure-runbook.md.",
     ],
     keys: [
       {
@@ -131,7 +131,7 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Where the two operational alerts land — a trial started (new_account_alert)",
+      "Where the two operational alerts land -- a trial started (new_account_alert)",
       "and someone tried the live demo (demo_started_alert), ADR",
       "20260805-demo-try-alerts. Not a secret: an address, not a credential.",
     ],
@@ -163,7 +163,7 @@ export const ENV_GROUPS = [
   {
     doc: [
       "Canonical public origin used to build private waiver/readiness/recap links and",
-      "the Stripe Connect OAuth callback. Must be a bare HTTPS origin — scheme",
+      "the Stripe Connect OAuth callback. Must be a bare HTTPS origin -- scheme",
       "https://, no username/password, no path, query, or fragment. http://localhost",
       "or http://127.0.0.1 is accepted outside production only. The server fails to",
       "start if this is set to a malformed value.",
@@ -182,14 +182,14 @@ export const ENV_GROUPS = [
     doc: [
       "Stripe Connect: shops bring their own Standard Stripe account (ADR",
       "20260719-stripe-connect-orders). STRIPE_SECRET_KEY is the *platform* account's",
-      "secret key — once a shop completes OAuth this key acts on its behalf via a",
+      "secret key -- once a shop completes OAuth this key acts on its behalf via a",
       "Stripe-Account header, so no per-shop credential is stored.",
       "STRIPE_CONNECT_CLIENT_ID comes from the platform's Connect OAuth settings;",
       "register the APP_HOST /api/stripe/connect/callback URL there as the single redirect",
       "URL for every shop. STRIPE_WEBHOOK_SECRET signs /api/webhooks/stripe,",
       'configured against that URL with "listen to events on Connected accounts"',
       "enabled. Keep the two secrets in 1Password. They never enter the AWS",
-      "credentials secret — they reach Vercel from .env.manual.",
+      "credentials secret -- they reach Vercel from .env.manual.",
     ],
     keys: [
       {
@@ -250,7 +250,7 @@ export const ENV_GROUPS = [
   {
     doc: [
       "Amazon Location Service, for the settings address type-ahead (ADR",
-      "20260804-aws-location-address-lookup). Server-side only — there is no browser",
+      "20260804-aws-location-address-lookup). Server-side only -- there is no browser",
       "key, so nothing to referrer-restrict. Its own IAM user rather than the",
       "SES/SNS ones (least privilege: geo-places:Autocomplete and nothing else).",
     ],
@@ -278,8 +278,8 @@ export const ENV_GROUPS = [
   {
     doc: [
       "SMS delivery receipts (ADR 20260802-sms-delivery-receipts). SNS has no",
-      "delivery webhook for a direct-to-phone Publish — receipts go to CloudWatch",
-      "Logs — so an AWS-side forwarder republishes each one to this topic, which",
+      "delivery webhook for a direct-to-phone Publish -- receipts go to CloudWatch",
+      "Logs -- so an AWS-side forwarder republishes each one to this topic, which",
       "/api/webhooks/sms verifies with the same SNS envelope check the SES webhook",
       "uses. SmsDeliveryReceiptsTopicArn from the CDK stack.",
     ],
@@ -307,7 +307,7 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: LOCAL_AND_VERCEL,
         absent:
-          'the settings page shows "coming soon" and no shop can connect — Embedded Signup requires Meta app review and business verification first',
+          'the settings page shows "coming soon" and no shop can connect -- Embedded Signup requires Meta app review and business verification first',
       },
       {
         key: "META_APP_SECRET",
@@ -331,11 +331,11 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Encryption key for third-party credentials DiveDay stores on a shop's behalf —",
+      "Encryption key for third-party credentials DiveDay stores on a shop's behalf --",
       "today, each shop's WhatsApp access token (ADR",
       "20260802-whatsapp-cloud-api-per-shop). Derived from APP_SECRET_SEED. Rotating",
       "it without re-sealing the existing rows degrades every connected shop back to",
-      "SMS — read the WhatsApp runbook before rotating.",
+      "SMS -- read the WhatsApp runbook before rotating.",
     ],
     keys: [
       {
@@ -349,8 +349,8 @@ export const ENV_GROUPS = [
   {
     doc: [
       "Error monitoring (ADR 20260727-sentry-error-monitoring-q7fk2p,",
-      "docs/engineering/monitoring-runbook.md). A Sentry DSN is not a secret — it is",
-      "meant to ship in client bundles — so this one value covers server and browser.",
+      "docs/engineering/monitoring-runbook.md). A Sentry DSN is not a secret -- it is",
+      "meant to ship in client bundles -- so this one value covers server and browser.",
     ],
     keys: [
       {
@@ -371,7 +371,7 @@ export const ENV_GROUPS = [
       "where it stays queryable for a month and where the metric filters in",
       "infra/lib/observability.ts count the codes worth alarming on. Its own IAM user",
       "(least privilege: CreateLogStream and PutLogEvents on that one group, no read",
-      "access to any of it). All four or nothing — a partial set reads as unset.",
+      "access to any of it). All four or nothing -- a partial set reads as unset.",
     ],
     keys: [
       {
@@ -379,7 +379,7 @@ export const ENV_GROUPS = [
         from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent:
-          "the console line is unchanged and nothing is shipped — the normal state locally, where there is nowhere to ship to and a developer's own stdout should not reach the production log group",
+          "the console line is unchanged and nothing is shipped -- the normal state locally, where there is nowhere to ship to and a developer's own stdout should not reach the production log group",
       },
       {
         key: "CLOUDWATCH_AWS_ACCESS_KEY_ID",
@@ -403,7 +403,7 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Amazon CloudWatch RUM — real-user session, geography, and device context to go",
+      "Amazon CloudWatch RUM -- real-user session, geography, and device context to go",
       "with the Core Web Vitals metrics (ADR 20260806-cloudwatch-rum-and-vitals). All",
       "five are NEXT_PUBLIC_ because the browser is the only consumer, and none is a",
       "secret: the Cognito identity pool hands the same credential to every visitor",
@@ -417,7 +417,7 @@ export const ENV_GROUPS = [
         from: "stack",
         targets: LOCAL_AND_VERCEL,
         absent:
-          "no SDK is ever fetched and the page is unchanged — the Core Web Vitals half needs none of this and keeps working on its own",
+          "no SDK is ever fetched and the page is unchanged -- the Core Web Vitals half needs none of this and keeps working on its own",
       },
       {
         key: "NEXT_PUBLIC_RUM_IDENTITY_POOL_ID",
@@ -508,9 +508,9 @@ export const ENV_GROUPS = [
   {
     doc: [
       "reg-suit visual regression testing via S3. The reg-suit-bot IAM user",
-      "(infra/lib/infra-stack.ts §2). CI reads the same values as GitHub Actions",
+      "(infra/lib/infra-stack.ts S2). CI reads the same values as GitHub Actions",
       "repository secrets; locally they are only for running `pnpm visual`. Never sent",
-      "to Vercel — the application does not read them.",
+      "to Vercel -- the application does not read them.",
     ],
     keys: [
       {
@@ -597,7 +597,7 @@ export const goesTo = (key, target) => Boolean(byKey.get(key)?.targets.includes(
  * Whether `.env.manual` may speak for this key.
  *
  * Everything a human is the source of, plus the checked-in constants. A
- * constant is a *default*, not a minted value — pointing `APP_HOST` at
+ * constant is a *default*, not a minted value -- pointing `APP_HOST` at
  * `http://localhost:3000` for local Stripe Connect testing is a legitimate
  * thing to want, and the code already accepts it outside production. What may
  * never be overridden is a credential the stack mints, which is a different
