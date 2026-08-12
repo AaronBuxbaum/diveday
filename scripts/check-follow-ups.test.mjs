@@ -106,6 +106,38 @@ describe("metadata", () => {
     const untouched = valid.replace(/- \*\*Touches:\*\*.*\n/, "- **Touches:** the booking form\n");
     expect(problemsFor(untouched).join()).toMatch(/Touches/);
   });
+
+  it("reads the paths on a Touches line's wrapped continuation lines", () => {
+    // Authors wrap these lines at 100 columns, so a long Touches list puts real
+    // paths on line two and beyond. Stopping at the first newline reported them
+    // to the caller as absent — which is how a follow-up shipped pointing at
+    // `docs/adr/…`, a directory this repo has never had, without the existence
+    // check ever seeing the string.
+    const wrapped = valid.replace(
+      "- **Touches:** `src/lib`, `docs/product/follow-ups`",
+      "- **Touches:** `src/lib`,\n  `docs/product/follow-ups`,\n  `scripts/check-follow-ups.mjs`",
+    );
+    expect(findEntryProblems(FILENAME, wrapped).touched).toEqual([
+      "src/lib",
+      "docs/product/follow-ups",
+      "scripts/check-follow-ups.mjs",
+    ]);
+    expect(problemsFor(wrapped)).toEqual([]);
+  });
+
+  it("stops a wrapped field at the next bullet", () => {
+    // The continuation sweep must not swallow the sibling fields under it, or
+    // `**Kind:**` would arrive carrying Effort and Touches and fail its set test.
+    const wrapped = valid.replace(
+      "- **Kind:** improvement",
+      "- **Kind:** improvement\n  and a wrapped note about why",
+    );
+    expect(problemsFor(wrapped).join()).toMatch(/Kind/);
+    expect(findEntryProblems(FILENAME, wrapped).touched).toEqual([
+      "src/lib",
+      "docs/product/follow-ups",
+    ]);
+  });
 });
 
 describe("substance", () => {

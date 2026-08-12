@@ -45,8 +45,23 @@ const PLACEHOLDERS = ["short-slug", "YYYY-MM-DD", "TODO", "TBD", "src/lib/exampl
 const straight = (text) => text.replace(/[‘’]/g, "'");
 const words = (text) => text.split(/\s+/).filter(Boolean).length;
 
+/**
+ * One `- **Label:** …` line, **including its wrapped continuation lines** — the
+ * indented lines under it, up to the next bullet or blank line, joined with a
+ * space.
+ *
+ * Reading only the first line is what let a broken path ship: a `**Touches:**`
+ * long enough to wrap put `docs/adr/20260804-day-closeout.md` on line two,
+ * where the existence check below never saw it, and the entry pointed a cold
+ * reader at a file that has never existed at that path (the ADRs live in
+ * `docs/architecture/decisions/`). Every field here is prose an author wraps at
+ * 100 columns, so a parser that stops at the newline is reading half of them.
+ */
 function metadata(contents, label) {
-  return contents.match(new RegExp(`^- \\*\\*${label}:\\*\\*\\s*(.+)$`, "m"))?.[1]?.trim() ?? null;
+  const match = contents.match(
+    new RegExp(`^- \\*\\*${label}:\\*\\*\\s*(.+(?:\\n[ \\t]+.+)*)$`, "m"),
+  );
+  return match?.[1].replace(/\s*\n[ \t]+/g, " ").trim() ?? null;
 }
 
 /**

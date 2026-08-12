@@ -6,7 +6,7 @@
 - **Kind:** question
 - **Effort:** S
 - **Touches:** `src/lib/staff-destinations.ts`, `src/app/shop/[shopSlug]/page.tsx`,
-  `src/app/shop/[shopSlug]/close-out/`, `docs/adr/20260804-day-closeout.md`
+  `src/app/shop/[shopSlug]/close-out/`, `docs/architecture/decisions/20260804-day-closeout.md`
 
 S is the recommended fix — changing when Today's card renders. Retiring the surface instead
 would be an M.
@@ -75,7 +75,7 @@ each appear sometimes is worse than one that always does.
 Decide and implement the close-out surface's door, in the DiveDay repo.
 
 Read first, in order:
-  - docs/adr/20260804-day-closeout.md (why the surface exists and what "ritual, not a gate" means)
+  - docs/architecture/decisions/20260804-day-closeout.md (why the surface exists and what "ritual, not a gate" means)
   - src/app/shop/[shopSlug]/page.tsx — the `lastBoatIsIn(departures, now)` branch near the bottom
   - src/lib/today.ts — `lastBoatIsIn`
   - src/lib/staff-destinations.ts — the `closeOut` entry and the five-primary-tab ceiling comment
@@ -92,9 +92,9 @@ when all of them have. That means a new predicate beside `lastBoatIsIn` in src/l
 `lastBoatIsIn` if anything else still reads it; delete it if not), its own unit tests in
 src/lib/today.test.ts covering: no departures, one ended and one still out, all ended, none ended.
 Update the card's comment in src/app/shop/[shopSlug]/page.tsx to say what it now keys on, and
-amend docs/adr/20260804-day-closeout.md with a dated note recording the change.
+amend docs/architecture/decisions/20260804-day-closeout.md with a dated note recording the change.
 
 Done when: the new predicate has tests for all four cases, `pnpm check` is green, and
-`pnpm e2e e2e/close-out.spec.ts --reporter=line` passes if that spec exists (check e2e/ first).
+`pnpm e2e e2e/closeout.spec.ts --reporter=line` passes.
 Delete docs/product/follow-ups/FU-20260811-close-out-has-one-conditional-door.md as part of the change.
 ```
