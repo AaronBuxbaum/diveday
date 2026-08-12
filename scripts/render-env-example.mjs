@@ -23,14 +23,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const ENV_EXAMPLE_PATH = join(root, ".env.example");
 
 const HEADER = [
-  "# Generated from config/env-registry.mjs — do not edit by hand.",
+  "# Generated from config/env-registry.mjs -- do not edit by hand.",
   "# Run `node scripts/render-env-example.mjs --write` after changing the registry.",
   "#",
   "# This file is the *shape* of DiveDay's configuration, not a file you fill in.",
   "# Nothing here is read at runtime. Two files are:",
   "#",
   "#   .env.manual  the only file a human edits. It holds exactly the values no",
-  "#                system can mint — a Stripe key, a Neon URL, a Meta app secret.",
+  "#                system can mint -- a Stripe key, a Neon URL, a Meta app secret.",
   "#                `pnpm check:env` prints what is still blank and what each one",
   "#                switches off. Create it with `node scripts/env-manual.mjs`.",
   "#",

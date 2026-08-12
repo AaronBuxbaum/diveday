@@ -74,7 +74,15 @@ export async function runPostDeployWizard({
   }
 
   if (yes(await ask("Deploy the linked Vercel project to Production? [y/N] "))) {
-    run("pnpm", ["exec", "vercel", "--prod"]);
+    // `--yes` only when unattended: the Vercel CLI refuses to deploy without an
+    // interactive confirmation ("Command `vercel deploy` requires confirmation.
+    // Use option \"--yes\" to confirm."), which in CI is a prompt with nobody to
+    // answer it -- the whole run fails there, after the stack has already
+    // deployed. The question above is that confirmation, and in the unattended
+    // branch it was already answered yes by the caller. A workstation run keeps
+    // the CLI's own prompt: it is the only thing standing between a mistyped
+    // `y` here and a Production deploy.
+    run("pnpm", ["exec", "vercel", "--prod", ...(ciUnattended ? ["--yes"] : [])]);
   }
 
   if (yes(await ask("Update GitHub Actions secrets for visual regression? [y/N] "))) {

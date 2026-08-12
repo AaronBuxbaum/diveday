@@ -53,9 +53,9 @@ this file is the checklist, not the argument.
     when     once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked
     why      The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets, variables, or environments -- those need the Administration/Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it. The wizard's GitHub steps (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs, sync-github-cdk-ci-environment.mjs) run under the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.
     run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write), Variables (read/write), and Environments (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use.
-             gh secret set INFRA_DEPLOY_GH_TOKEN
+             gh secret set GH_TOKEN --env infra-deploy
     produces .github/workflows/infra.yml's deploy job can export it as GH_TOKEN so the gh CLI the post-deploy wizard shells out to is authenticated with admin-level repository access, matching what a workstation operator's own `gh auth login` already provides.
-    store    GitHub repo Settings -> Secrets and variables -> Actions -> Secrets -> INFRA_DEPLOY_GH_TOKEN.
+    store    GitHub repo Settings -> Environments -> infra-deploy -> Environment secrets -> GH_TOKEN. On the environment rather than the repository, so it exists only for the one job the required-reviewer approval already gates.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the run's log shows the wizard's GitHub steps succeeding rather than gh reporting 403/Resource not accessible.
     note     This token is a materially broader credential than AWS_CDK_DIFF_ROLE_ARN/AWS_CDK_DEPLOY_ROLE_ARN (identifiers, not secrets) -- it can rewrite this repository's Actions secrets, variables, and environment protection rules. It is reachable only from the deploy job, which is itself gated by the infra-deploy environment's required-reviewer approval (ADR 20260811-ci-deploy-full-wizard).
 
@@ -63,10 +63,10 @@ this file is the checklist, not the argument.
     when     once, before the first CI-run post-deploy wizard, and again if the token is revoked
     why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
     run      Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
-             gh secret set INFRA_DEPLOY_VERCEL_TOKEN
-             vercel link (once, on any workstation, against the same project) to read .vercel/project.json's orgId/projectId, then: gh variable set VERCEL_ORG_ID --body <orgId>; gh variable set VERCEL_PROJECT_ID --body <projectId>
+             gh secret set VERCEL_TOKEN --env infra-deploy
+             vercel link (once, on any workstation, against the same project) to read .vercel/project.json's orgId/projectId, then: gh secret set VERCEL_ORG_ID --env infra-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env infra-deploy --body <projectId>
     produces The deploy job can export VERCEL_TOKEN/VERCEL_ORG_ID/VERCEL_PROJECT_ID so every `vercel` CLI call in the wizard runs unattended against the right project instead of prompting to link one.
-    store    GitHub repo Settings -> Secrets and variables -> Actions -> Secrets (INFRA_DEPLOY_VERCEL_TOKEN) and -> Variables (VERCEL_ORG_ID, VERCEL_PROJECT_ID).
+    store    GitHub repo Settings -> Environments -> infra-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. The two ids are identifiers rather than credentials and would work as variables; they are secrets here so all four of the deploy job's wizard values live in one place, at the cost of being redacted from logs.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
     note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
 
