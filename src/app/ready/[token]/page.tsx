@@ -990,6 +990,10 @@ export default async function DiverReadinessPage({
               // where the whole itinerary is laid out.
               multiDay={false}
               siteBottomTimes={siteBottomTimes}
+              // This page renders no conditions card at all, so the suit line
+              // has nowhere else to land — and the morning of a dive is exactly
+              // when a diver is deciding what to put in the car.
+              temperatureStatedAbove={false}
               locale={locale}
             />
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />

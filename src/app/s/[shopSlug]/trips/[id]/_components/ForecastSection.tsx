@@ -1,24 +1,10 @@
-import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText } from "@/i18n/unit-labels";
-import { type ExposureSuit, exposureSuitFor } from "@/lib/diver-planning";
+import { exposureSuitFor } from "@/lib/diver-planning";
 import { seaStateReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { AutomatedForecast, Shop, Trip } from "./types";
-
-/**
- * `exposureSuitFor` returns a band code (src/lib/diver-planning.ts); this is
- * where each one becomes the sentence under the reading. Thicknesses are
- * written in millimetres in every locale because that is how neoprene is sold
- * everywhere, including the markets that read feet and Fahrenheit.
- */
-const EXPOSURE_SUIT_KEYS: Record<ExposureSuit, DiverMessageKey> = {
-  swimwear: "trip.exposureSuit.swimwear",
-  shorty: "trip.exposureSuit.shorty",
-  wetsuit5mm: "trip.exposureSuit.wetsuit5mm",
-  wetsuit7mm: "trip.exposureSuit.wetsuit7mm",
-  drysuit: "trip.exposureSuit.drysuit",
-};
 
 export function ForecastSection({
   shop,
