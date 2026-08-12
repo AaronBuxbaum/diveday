@@ -15,6 +15,7 @@ import {
   removeStaffMember,
   type StaffMutationResult,
   setStaffAccountStatus,
+  setStaffEmergencyContact,
   setStaffRoles,
 } from "@/db/staff-accounts";
 import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
@@ -221,6 +222,37 @@ export async function saveAllStaffRolesAction(formData: FormData) {
   }
 
   revalidateAndRedirect(path, `${path}?notice=${failureReason ?? "changes_saved"}`);
+}
+
+/**
+ * One staff member's emergency contact, from the team page.
+ *
+ * Behind the same `teamManagementBlock` gate as every other mutation here: an
+ * emergency contact is personal data about a colleague, so it sits with role
+ * and account management rather than being readable-and-writable by anyone who
+ * can open the settings page.
+ */
+export async function saveStaffEmergencyContactAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const blocked = await teamManagementBlock(session);
+  if (blocked) redirect(blocked);
+
+  const personId = String(formData.get("personId") ?? "");
+  if (!personId) redirect(path);
+
+  const result = await setStaffEmergencyContact(await getDb(), {
+    shopId: session.user.shopId,
+    personId,
+    name: String(formData.get("emergencyContactName") ?? ""),
+    phone: String(formData.get("emergencyContactPhone") ?? ""),
+  });
+  // `contactFor` names the row that produced this, so the outcome renders in
+  // that card's own action row rather than as a banner at the top of a page of
+  // staff — the same routing the invite form's refusals already get, and what
+  // docs/design/forms-and-controls.md asks of a form-level result.
+  const notice = result.ok ? "contact_saved" : result.reason;
+  revalidateAndRedirect(path, `${path}?notice=${notice}&contactFor=${personId}#staff-${personId}`);
 }
 
 export async function setStaffStatusAction(formData: FormData) {

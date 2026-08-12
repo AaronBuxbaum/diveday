@@ -175,6 +175,20 @@ export type ManifestCrewMember = {
    */
   roles: string[];
   /**
+   * Who to call for **this crew member**, carried for exactly the reason a
+   * diver's is: the glossary defines a manifest as every person on the boat
+   * with their emergency contacts, and the printed sheet is what a coastguard
+   * reads. Before these two fields the paper answered "who do we call?" for
+   * nine paying divers and for neither of the two staff most reliably in the
+   * water (dive-domain review 20260810).
+   *
+   * Null is the ordinary state, not an error: nobody is asked for these at
+   * hire. The row says so in words on paper rather than leaving a blank, so a
+   * gap reads as a gap at the dock instead of at the hospital.
+   */
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  /**
    * Their result at this checkpoint, read through the same predicates a diver's
    * is (`isRollCallAccountedFor`, `carryForwardNotBoarded`). Absent means
    * nobody has said, which keeps the checkpoint open.

@@ -806,6 +806,89 @@ describe("age and birthdays are measured on the day of the dive", () => {
  * checkpoint from reading complete. See ADR
  * 20260802-crew-roll-call-attestation.
  */
+describe("crew emergency contacts (in-memory PGlite)", () => {
+  // The glossary defines a manifest as every person on the boat *with* their
+  // emergency contacts, and the printed sheet is what a coastguard reads.
+  // Before this, `TripManifest["crew"]` carried no contact fields at all, so
+  // the paper answered "who do we call?" for nine paying divers and for
+  // neither of the two staff most reliably in the water (dive-domain review
+  // 20260810). Crew are `people` rows, so nothing had to be stored — the
+  // columns were already there and simply never read.
+  it("carries each crew member's emergency contact off their person record", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .update(people)
+      .set({
+        emergencyContactName: "Marta Okonkwo (sister)",
+        emergencyContactPhone: "+1-305-555-0114",
+      })
+      .where(eq(people.id, staff.id));
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "captain" })
+      .onConflictDoNothing();
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    expect(member).toMatchObject({
+      emergencyContactName: "Marta Okonkwo (sister)",
+      emergencyContactPhone: "+1-305-555-0114",
+    });
+  });
+
+  it("reads null for a crew member nobody has been asked about", async () => {
+    // The ordinary state, and it must stay expressible: nobody is asked for a
+    // crew contact at hire, and the row says "Not on file" in words rather
+    // than printing a blank the reader has to interpret.
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: null, emergencyContactPhone: null })
+      .where(eq(people.id, staff.id));
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "captain" })
+      .onConflictDoNothing();
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    expect(member).toMatchObject({
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+    });
+  });
+
+  it("keeps crew contacts out of the offline snapshot", async () => {
+    // The dock copy is an explicit allow-list, and it stays that way: a crew
+    // contact is personal data about a colleague retained on personal phones
+    // for up to 14 days, and whether it belongs there is its own decision
+    // (H-21's lesson — `age`, `minor` and `birthday` reached that payload by
+    // riding along on a type). The live manifest gained two fields here; the
+    // snapshot deliberately gained none.
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Marta Okonkwo", emergencyContactPhone: "+1-305-555-0114" })
+      .where(eq(people.id, staff.id));
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "captain" })
+      .onConflictDoNothing();
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    if (!manifest) throw new Error("manifest missing");
+    const payload = serializeManifests(
+      [manifest],
+      { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+      (blocker) => blocker.code,
+    );
+    const crew = JSON.stringify(payload.manifests[0]?.crew);
+    expect(crew).toContain(staff.fullName);
+    expect(crew).not.toContain("Marta Okonkwo");
+    expect(crew).not.toContain("555-0114");
+  });
+});
+
 describe("crew aboard attestation (in-memory PGlite)", () => {
   // Since ADR 20260803-per-person-crew-roll-call the attested count is one of
   // two crew halves: every crew member the trip *names* also needs a result of

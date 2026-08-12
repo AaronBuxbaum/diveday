@@ -13,6 +13,19 @@ export type StaffMember = {
   roles: Role[];
   userAccountId: string;
   accountStatus: "invited" | "active" | "disabled";
+  /**
+   * Who to call for this staff member. Optional at every point — nobody is
+   * asked for one at invite, and a shop that never fills these in loses nothing
+   * it had before.
+   *
+   * It is on the *team* page rather than a new hiring flow because the boat
+   * manifest prints it: the printed sheet a coastguard reads used to answer
+   * "who do we call?" for every paying diver and for neither of the two staff
+   * most reliably in the water (dive-domain review 20260810), and a fact that
+   * has to reach paper needs somewhere a human can put it.
+   */
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
 };
 
 /** Every non-deleted person in the shop holding at least one staff role, name-sorted. */
@@ -22,6 +35,8 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       personId: people.id,
       fullName: people.fullName,
       email: people.email,
+      emergencyContactName: people.emergencyContactName,
+      emergencyContactPhone: people.emergencyContactPhone,
       role: personRoles.role,
       userAccountId: userAccounts.id,
       accountStatus: userAccounts.status,
@@ -52,9 +67,72 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       roles: [row.role as Role],
       userAccountId: row.userAccountId,
       accountStatus: row.accountStatus,
+      emergencyContactName: row.emergencyContactName,
+      emergencyContactPhone: row.emergencyContactPhone,
     });
   }
   return [...byPerson.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
+}
+
+/**
+ * Its own result type rather than a widened `StaffMutationResult`: `half_filled`
+ * cannot happen to any other staff mutation, and adding it to the shared union
+ * would make every existing caller handle a reason it can never receive.
+ */
+export type StaffEmergencyContactResult =
+  | { ok: true }
+  | { ok: false; reason: "half_filled" | "not_found" };
+
+/**
+ * Set (or clear) one staff member's emergency contact.
+ *
+ * Scoped by `shopId` and by holding a staff role, so this cannot be pointed at
+ * an arbitrary `people` row: a shop's diver records are edited from the diver
+ * record, and only the team page's own subjects are reachable here.
+ *
+ * Both halves move together and an empty string stores `null`. A name with no
+ * number is the shape that fails at the moment it is needed, so the pair is
+ * written whole or cleared whole rather than left half-filled.
+ */
+export async function setStaffEmergencyContact(
+  db: DbExecutor,
+  {
+    shopId,
+    personId,
+    name,
+    phone,
+  }: { shopId: string; personId: string; name: string; phone: string },
+): Promise<StaffEmergencyContactResult> {
+  const trimmedName = name.trim();
+  const trimmedPhone = phone.trim();
+  if (Boolean(trimmedName) !== Boolean(trimmedPhone)) return { ok: false, reason: "half_filled" };
+
+  const updated = await db
+    .update(people)
+    .set({
+      emergencyContactName: trimmedName || null,
+      emergencyContactPhone: trimmedPhone || null,
+    })
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        // Only a person who actually holds a staff role — the team page's own
+        // subjects. Without this the action is a general-purpose writer for any
+        // `people` row in the shop, reached by editing one hidden field.
+        inArray(
+          people.id,
+          db
+            .select({ id: personRoles.personId })
+            .from(personRoles)
+            .where(inArray(personRoles.role, [...STAFF_ROLES])),
+        ),
+      ),
+    )
+    .returning({ id: people.id });
+
+  return updated.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
 }
 
 /** Case-insensitive, mirrors `people_shop_email_unique` (schema.ts). */

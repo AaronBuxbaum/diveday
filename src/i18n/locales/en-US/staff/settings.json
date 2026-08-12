@@ -324,7 +324,9 @@
       "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
       "lastOwner": "Can't do that — the shop needs at least one owner. Make someone else an owner first.",
       "notFound": "That person isn't on this shop's team.",
-      "notAuthorized": "Team management is limited to owners and managers."
+      "notAuthorized": "Team management is limited to owners and managers.",
+      "contactSaved": "Emergency contact saved.",
+      "contactHalfFilled": "An emergency contact needs both a name and a number — a name alone is nobody to call."
     },
     "statusBadge": {
       "invited": "Invited",
@@ -370,6 +372,14 @@
       "disableAriaLabel": "Disable {name}",
       "archiveAriaLabel": "Archive {name}",
       "archivedToast": "Archived {name}. Their record and history stay."
+    },
+    "emergencyContact": {
+      "summaryOnFile": "Emergency contact: {name}",
+      "summaryEmpty": "Add an emergency contact",
+      "nameLabel": "Emergency contact name",
+      "phoneLabel": "Emergency contact phone",
+      "save": "Save contact",
+      "saving": "Saving…"
     }
   },
   "export": {
