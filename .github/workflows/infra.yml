@@ -108,13 +108,18 @@ jobs:
     name: cdk synth + diff
     needs: infra-changed
     # A skipped `infra-changed` (every workflow_dispatch run) must not skip
-    # this job by propagation — it has its own condition below, same pattern
-    # ci.yml's real-postgres/visual-report jobs use against their own gates.
+    # this job by propagation. GitHub's actual rule (confirmed the hard way —
+    # every workflow_dispatch run of this workflow silently no-op'd until this
+    # was added): a job whose `needs:` job was itself skipped is skipped by
+    # default regardless of this job's own `if:`, unless that `if:` is
+    # wrapped in `always()`. ci.yml's real-postgres/visual-report jobs
+    # (`db-surface-changes` gate) already carry this wrapper; this job's
+    # condition below was written without it.
     # `command: deploy` also lands here, not just `command: diff`: the
     # `deploy` job below `needs: diff`, so its required-reviewer approval
     # gate comes after a fresh synth+diff is already visible in this run,
     # not blind against whatever a past PR's diff comment happened to show.
-    if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true') }}
+    if: ${{ always() && ((github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
