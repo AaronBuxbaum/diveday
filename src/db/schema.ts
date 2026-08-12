@@ -156,10 +156,34 @@ export const shops = pgTable(
      * reminder. Defaults to 30.
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
+    /**
+     * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
+     * Before these columns existed the whole day was inferred from
+     * `dock_call_minutes` alone — the briefing was half of it capped at 15, and
+     * the two beats on the water were the trip window's own thirds — so a shop
+     * that briefs on the boat, kits up on board, or runs one tank read DiveDay
+     * telling their divers a day they don't run.
+     *
+     * Zero is meaningful on the four that allow it: it takes the beat out of
+     * the day rather than putting it at the departure. `bottom_time_minutes` is
+     * the one with no such reading, so its CHECK floors it above zero.
+     */
+    gearSetupMinutes: integer("gear_setup_minutes").notNull().default(0),
+    briefingMinutes: integer("briefing_minutes").notNull().default(15),
+    boatRideMinutes: integer("boat_ride_minutes").notNull().default(20),
+    bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
+    surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
     isDemo: boolean("is_demo").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`)],
+  (table) => [
+    check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    check("shops_gear_setup_minutes_nonnegative", sql`${table.gearSetupMinutes} >= 0`),
+    check("shops_briefing_minutes_nonnegative", sql`${table.briefingMinutes} >= 0`),
+    check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
+    check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
+    check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
+  ],
 );
 
 export type MedicalJurisdiction = (typeof medicalJurisdiction.enumValues)[number];

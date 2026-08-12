@@ -47,7 +47,7 @@ const {
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveAddressAction,
-  saveDockCallAction,
+  saveDockDayRhythmAction,
   savePackingAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -68,6 +68,26 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
   vi.mocked(requireStaffSession).mockResolvedValue(
     staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }),
   );
+}
+
+/**
+ * A complete, valid rhythm submission. All six fields every time, because the
+ * action parses them as one record — a partial post is exactly what it refuses.
+ */
+function dockDayForm(overrides: Record<string, string> = {}) {
+  const formData = new FormData();
+  const defaults: Record<string, string> = {
+    dockCallMinutes: "90",
+    gearSetupMinutes: "0",
+    briefingMinutes: "15",
+    boatRideMinutes: "20",
+    bottomTimeMinutes: "45",
+    surfaceIntervalMinutes: "60",
+  };
+  for (const [field, value] of Object.entries({ ...defaults, ...overrides })) {
+    formData.set(field, value);
+  }
+  return formData;
 }
 
 function unitsForm(values: { depthUnit?: string; temperatureUnit?: string; currency?: string }) {
@@ -195,9 +215,7 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not_authorized`,
     );
 
-    const dock = new FormData();
-    dock.set("dockCallMinutes", "90");
-    expect(await redirectedTo(() => saveDockCallAction(dock))).toBe(
+    expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
       `/shop/${shop.slug}/settings?notice=not_authorized`,
     );
 
@@ -210,9 +228,7 @@ describe("every settings mutation refuses the daily crew", () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
 
-    const dock = new FormData();
-    dock.set("dockCallMinutes", "90");
-    expect(await redirectedTo(() => saveDockCallAction(dock))).toBe(
+    expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
       `/shop/${shop.slug}/settings?notice=dock_saved&saved=dockCall`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);

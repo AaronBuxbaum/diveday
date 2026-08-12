@@ -37,14 +37,34 @@ export function PackingSection({
   shop,
   trip,
   rentalFit,
+  day,
+  multiDay,
   locale,
 }: {
   shop: Shop;
   trip: Trip;
   rentalFit?: RentalFit;
+  /**
+   * The one meeting day this rhythm is laid over. Defaults to the trip's own
+   * window, which for a single-day departure is the same thing.
+   *
+   * It is emphatically *not* the same thing on a course weekend: `trip.endsAt`
+   * on a three-day Open Water is the last day's 5:00 PM, so laying the rhythm
+   * over the trip row printed a day that departed at day one's 8:00 AM and came
+   * home at day three's 5:00 PM — a nine-hour morning nobody sells.
+   */
+  day?: { startsAt: Date; endsAt: Date };
+  /** Whether this departure meets on more than one day — the rhythm repeats. */
+  multiDay: boolean;
   locale: string;
 }) {
-  const packing = packingConfidence(shop.packingList, rentalFit ?? null, trip.waterTemperatureC);
+  const window = day ?? trip;
+  const packing = packingConfidence(
+    shop.packingList,
+    rentalFit ?? null,
+    trip.waterTemperatureC,
+    shop.briefingMinutes > 0,
+  );
   const t = diverTranslator(locale);
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5">
@@ -92,10 +112,15 @@ export function PackingSection({
         </div>
       </div>
       <h3 className="mt-5 font-semibold">{t("trip.dockDayRhythm")}</h3>
+      {/* The shop's own minutes laid over this departure's clock, for this
+          departure's own dive count — not the trip window's thirds, which is
+          what this list used to be. A multi-day course runs the same shape each
+          day, and says so rather than implying it only happens once. */}
+      {multiDay ? <p className="mt-1 text-sm text-muted">{t("trip.dockDayEachDay")}</p> : null}
       <ol className="mt-2 space-y-1 text-sm text-muted">
-        {dockDayTimeline(trip.startsAt, shop.dockCallMinutes, trip.endsAt).map((entry) => (
-          <li key={entry.step}>
-            {t(`trip.timeline.${entry.step}`)} ·{" "}
+        {dockDayTimeline(window.startsAt, shop, window.endsAt, trip.plannedDives).map((entry) => (
+          <li key={`${entry.step}-${entry.number ?? 0}`}>
+            {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })} ·{" "}
             {entry.at.toLocaleTimeString(locale, {
               hour: "numeric",
               minute: "2-digit",

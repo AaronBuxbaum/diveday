@@ -121,6 +121,13 @@ test.describe("staff", () => {
   test("a crew conditions hold pauses public booking and explains the final-call state", async ({
     page,
   }) => {
+    // The same aggregate-cost budget the three sibling tests in this file
+    // already carry, and for the same reason: create a trip, cross to the
+    // board, open the trip, open a disclosure, publish, sign out, land on the
+    // public page. Seven sequential navigations, no stuck step — this was the
+    // one test of that shape here that never got the raise, so it sat just
+    // inside the default 15s alone and just outside it under worker load.
+    test.setTimeout(30_000);
     const title = `Weather Watch ${e2eNow().getTime()}`;
     await createTrip(page, {
       title,

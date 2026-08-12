@@ -1,6 +1,7 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { hasRoute, type RoutePoint, routeMapQuery, routePathD } from "@/lib/dive-site-route";
 import { googleMapsUrl, googleSatelliteEmbedUrl } from "@/lib/maps";
+import { MapEmbed } from "./MapEmbed";
 
 /** The slice of a dive site this draws — structural, so callers pass the row. */
 export type DiveSiteRouteMap = {
@@ -45,27 +46,21 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
 
   return (
     <figure className="overflow-hidden border-b border-border bg-surface-sunken">
-      <div className="relative h-64 overflow-hidden sm:h-80">
-        <iframe
-          title={t("site.satelliteMapTitle", { site: site.name })}
-          src={googleSatelliteEmbedUrl(query, site.routeZoom)}
-          // Never pannable, for the same reason the staff route editor's own
-          // frame isn't (`dive-sites/_components/RouteEditor.tsx`): the route
-          // is an SVG in *frame* coordinates laid over this embed, so the
-          // instant a reader drags the map the drawn path stops describing the
-          // reef under it — the line stays put while the water moves. A diver
-          // reading a briefing has no way to tell they have done that, and
-          // nothing puts the frame back except a reload.
-          //
-          // `tabIndex={-1}` because a frame that cannot be interacted with
-          // should not be a stop in the tab order either. Exploring the site
-          // for real is the "Open map" link in the caption, which opens Google
-          // Maps properly rather than a 256px-tall pretend one.
-          tabIndex={-1}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+      {/* Never pannable, for the same reason the staff route editor's own frame
+          isn't (`dive-sites/_components/RouteEditor.tsx`): the route is an SVG
+          in *frame* coordinates laid over this embed, so the instant a reader
+          drags the map the drawn path stops describing the reef under it — the
+          line stays put while the water moves. A diver reading a briefing has
+          no way to tell they have done that, and nothing puts the frame back
+          except a reload. Exploring the site for real is the "Open map" link in
+          the caption, which opens Google Maps properly rather than a 256px-tall
+          pretend one — which is also why `MapEmbed` can crop the provider's own
+          controls away without taking anything from the reader. */}
+      <MapEmbed
+        title={t("site.satelliteMapTitle", { site: site.name })}
+        src={googleSatelliteEmbedUrl(query, site.routeZoom)}
+        className="h-64 sm:h-80"
+      >
         <svg
           viewBox="0 0 100 100"
           className="pointer-events-none absolute inset-0 h-full w-full"
@@ -103,7 +98,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
         <div className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
           {t("site.satelliteViewIllustrative")}
         </div>
-      </div>
+      </MapEmbed>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">
         <div>
           {/* Both lines are the shop's own words about its own reef, so an

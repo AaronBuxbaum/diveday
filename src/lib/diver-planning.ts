@@ -1,79 +1,236 @@
 import type { RentableItemKind } from "@/lib/rentals";
 
-/** The fixed beats of a dock day; the component looks each one up in `trip.timeline.*`. */
+/**
+ * The beats of a dock day; the component looks each one up in
+ * `trip.timeline.*`. `dive` and `surfaceInterval` repeat, so both carry a
+ * number — a two-tank morning has a Dive 1 and a Dive 2, and calling them the
+ * same thing was how the old timeline got away with printing one of each.
+ */
 export type DockDayStep =
   | "arrive"
+  | "gearSetup"
   | "briefing"
   | "departure"
   | "boatRide"
+  | "dive"
   | "surfaceInterval"
   | "return";
 
 /**
- * The diver's dock-day rhythm. `dockCallMinutes` is the shop's arrival call
- * (default 30); the crew briefing sits between arrival and departure, so a
- * short call time never puts the briefing before the diver is asked to arrive.
+ * **The shop's own day, in minutes.** Every field here is a number a shop sets
+ * in Settings; nothing about the rhythm is inferred any more.
  *
- * Returns message *keys*, not prose: `src/lib` never renders, and a compiled-in
- * English label here is exactly the kind of string a diver on a Spanish page
- * would have read in English forever (docs ADR 20260729-diver-copy-localization).
+ * It used to be. One field — the arrival call — produced the whole timeline: the
+ * briefing was `min(15, dockCall / 2)`, and the two beats on the water were
+ * literally the trip window's thirds, so "Boat ride and dives" landed at 1/3
+ * and "Surface interval" at 2/3 of the day no matter how far the site was, how
+ * long the dives ran, or whether there were two of them at all. A one-tank
+ * check-out dive printed a surface interval it would never have. A shop that
+ * doesn't brief at the dock, or that kits up on the boat, or that walks into
+ * the water off a beach, had no way to say so and read DiveDay telling their
+ * divers otherwise.
+ *
+ * Two kinds of number, and the difference is the whole model:
+ *
+ * - **before departure**, a beat is *how many minutes ahead of the lines coming
+ *   off* it happens. `0` means the shop does not run that beat and it drops out
+ *   of the day entirely — that is the switch for "we don't brief" and "kit up
+ *   on board".
+ * - **after departure**, a beat is a *duration*, and the day is laid end to end
+ *   from them: ride out, dive, surface interval, dive, … for as many dives as
+ *   the departure actually plans.
+ *
+ * Nothing here is a sentence. `src/lib` returns steps and numbers; the surface
+ * looks each step up in the reader's own language (docs ADR
+ * 20260729-diver-copy-localization).
  */
+export type DockDayRhythm = {
+  /** Minutes before departure divers are asked to be at the dock. */
+  dockCallMinutes: number;
+  /** Minutes before departure gear set-up starts; 0 — the shop kits up on board. */
+  gearSetupMinutes: number;
+  /** Minutes before departure the briefing starts; 0 — the shop doesn't brief at the dock. */
+  briefingMinutes: number;
+  /** How long the ride out to the first site takes; 0 — a shore entry. */
+  boatRideMinutes: number;
+  /** How long one dive spends in the water. */
+  bottomTimeMinutes: number;
+  /** How long between two dives; 0 — back-to-back. Never used on a one-dive day. */
+  surfaceIntervalMinutes: number;
+};
+
 /**
- * How long before departure the crew briefing starts, derived from the shop's
- * arrival call so a short call time can never put the briefing before the
- * diver was asked to arrive. Named and exported so the Settings row that sets
- * the call can show the beat it produces, rather than each side doing this
- * arithmetic and drifting.
+ * What a shop's day looks like before anybody has changed it — and, because the
+ * columns carry these as their defaults, what every existing shop reads as on
+ * the morning this shipped. Chosen to sit as close to the old derived timeline
+ * as a fixed set of numbers can: a 30-minute call with a 15-minute briefing is
+ * exactly what `min(15, dockCall / 2)` produced at the default call, and no
+ * set-up beat because there never was one.
  */
-export function briefingLeadMinutes(dockCallMinutes = 30): number {
-  return Math.min(15, Math.floor(dockCallMinutes / 2));
+export const DEFAULT_DOCK_DAY_RHYTHM: DockDayRhythm = {
+  dockCallMinutes: 30,
+  gearSetupMinutes: 0,
+  briefingMinutes: 15,
+  boatRideMinutes: 20,
+  bottomTimeMinutes: 45,
+  surfaceIntervalMinutes: 60,
+};
+
+/**
+ * What each field will accept, in one place: the Settings form's `min`/`max`
+ * attributes, the server action that refuses a forged submission, and the
+ * table's own CHECK constraints all read from here, so a bound can never be
+ * loosened on the form alone.
+ *
+ * `bottomTimeMinutes` has a floor above zero because it is the one beat with no
+ * "we don't do that" reading — a dive trip has dives. The rest floor at zero,
+ * which *is* the switch that takes the beat out of the day.
+ */
+export const DOCK_DAY_LIMITS = {
+  dockCallMinutes: { min: 5, max: 180 },
+  gearSetupMinutes: { min: 0, max: 180 },
+  briefingMinutes: { min: 0, max: 180 },
+  boatRideMinutes: { min: 0, max: 480 },
+  bottomTimeMinutes: { min: 5, max: 180 },
+  surfaceIntervalMinutes: { min: 0, max: 480 },
+} as const satisfies Record<keyof DockDayRhythm, { min: number; max: number }>;
+
+/** The rhythm's fields in the order a shop reads and edits them. */
+export const DOCK_DAY_FIELDS = [
+  "dockCallMinutes",
+  "gearSetupMinutes",
+  "briefingMinutes",
+  "boatRideMinutes",
+  "bottomTimeMinutes",
+  "surfaceIntervalMinutes",
+] as const satisfies ReadonlyArray<keyof DockDayRhythm>;
+
+/**
+ * A submitted rhythm, or `null` if any field is not a whole number inside its
+ * own bounds. Null rather than a clamp on purpose: the caller refuses the whole
+ * save and says so, so a forged form can never quietly write a day that the
+ * table's CHECK constraints would have rejected anyway.
+ */
+export function parseDockDayRhythm(values: Partial<Record<keyof DockDayRhythm, unknown>>) {
+  const parsed = {} as DockDayRhythm;
+  for (const field of DOCK_DAY_FIELDS) {
+    const minutes = Number(values[field]);
+    const { min, max } = DOCK_DAY_LIMITS[field];
+    if (!Number.isInteger(minutes) || minutes < min || minutes > max) return null;
+    parsed[field] = minutes;
+  }
+  return parsed;
 }
 
-/**
- * The rhythm as *offsets*, with no departure to hang it on — what Settings
- * shows beside the one field that sets it, so a shop can see that "30 minutes"
- * is the whole of the timeline their divers read as "Your dock-day rhythm".
- * The beats after departure (`boatRide`, `surfaceInterval`, `return`) are
- * derived from a particular trip's own length, so they are not a shop setting
- * and are deliberately absent here.
- */
-export type DockDayRhythmStep = Extract<DockDayStep, "arrive" | "briefing" | "departure">;
+/** One beat and where it falls relative to departure; negative is before it. */
+export type DockDayOffset = { step: DockDayStep; number?: number; minutesFromDeparture: number };
 
-export function dockDayRhythmPreview(
-  dockCallMinutes = 30,
-): Array<{ step: DockDayRhythmStep; minutesBefore: number }> {
-  return [
-    { step: "arrive", minutesBefore: dockCallMinutes },
-    { step: "briefing", minutesBefore: briefingLeadMinutes(dockCallMinutes) },
-    { step: "departure", minutesBefore: 0 },
+/**
+ * The whole day as offsets from departure, with no departure to hang it on.
+ *
+ * This is the single description of the shape — `dockDayTimeline` maps it onto
+ * one departure's clock, and Settings renders it as-is beside the fields that
+ * produce it, so a shop reading "Briefing · 15 min before" is reading the same
+ * arithmetic their divers will. `return` is deliberately absent: a trip's own
+ * return time is a published promise, not something these numbers get a vote in.
+ *
+ * Beats before departure are clamped to the arrival call. That invariant is
+ * older than this function and worth keeping: a briefing that starts before the
+ * diver was asked to be there is a briefing they were set up to miss.
+ */
+export function dockDayOffsets(rhythm: DockDayRhythm, plannedDives = 2): DockDayOffset[] {
+  const beforeDeparture: DockDayOffset[] = [
+    { step: "arrive", minutesFromDeparture: -rhythm.dockCallMinutes },
   ];
+  for (const [step, minutes] of [
+    ["gearSetup", rhythm.gearSetupMinutes],
+    ["briefing", rhythm.briefingMinutes],
+  ] as const) {
+    if (minutes > 0) {
+      beforeDeparture.push({
+        step,
+        minutesFromDeparture: -Math.min(minutes, rhythm.dockCallMinutes),
+      });
+    }
+  }
+  // Stable, so a beat clamped onto the arrival call still reads after "Arrive".
+  beforeDeparture.sort((a, b) => a.minutesFromDeparture - b.minutesFromDeparture);
+
+  const afterDeparture: DockDayOffset[] = [];
+  let cursor = 0;
+  if (rhythm.boatRideMinutes > 0) {
+    afterDeparture.push({ step: "boatRide", minutesFromDeparture: 0 });
+    cursor += rhythm.boatRideMinutes;
+  }
+  const dives = Math.max(1, Math.trunc(plannedDives));
+  for (let number = 1; number <= dives; number++) {
+    if (number > 1 && rhythm.surfaceIntervalMinutes > 0) {
+      afterDeparture.push({
+        step: "surfaceInterval",
+        number: number - 1,
+        minutesFromDeparture: cursor,
+      });
+      cursor += rhythm.surfaceIntervalMinutes;
+    }
+    afterDeparture.push({ step: "dive", number, minutesFromDeparture: cursor });
+    cursor += rhythm.bottomTimeMinutes;
+  }
+
+  return [...beforeDeparture, { step: "departure", minutesFromDeparture: 0 }, ...afterDeparture];
 }
 
+/** The beats that happen once the lines are off — the half a return time bounds. */
+const ON_THE_WATER = new Set<DockDayStep>(["boatRide", "dive", "surfaceInterval"]);
+
+/**
+ * One departure's day on the clock: the shop's rhythm laid over this trip's own
+ * `startsAt`, `endsAt` and dive count.
+ *
+ * The published return time wins over the shop's minutes. A shop whose stated
+ * dives don't fit the window they sold has a scheduling problem, and answering
+ * it by printing "Dive 3 · 5:40 PM" under a trip that returns at 5:00 PM would
+ * make the page argue with itself in front of the diver.
+ *
+ * The day is **truncated** at the first beat that doesn't fit, not filtered
+ * beat by beat. The water half is a chain — ride, dive, surface, dive — so
+ * dropping only the members that overrun leaves the ones before them dangling:
+ * a surface interval at 4:35 with no second dive after it reads as a boat that
+ * surfaced and gave up. Cutting the chain at the point it stops fitting says
+ * the true thing, which is that the published return is where the day ends.
+ *
+ * Without an `endsAt` there is nothing to bound the water half at all, so only
+ * the dock beats render.
+ */
 export function dockDayTimeline(
   startsAt: Date,
-  dockCallMinutes = 30,
+  rhythm: DockDayRhythm,
   endsAt?: Date,
-): Array<{ step: DockDayStep; at: Date }> {
-  const at = (minutesBefore: number) => new Date(startsAt.getTime() - minutesBefore * 60_000);
-  const briefingBefore = briefingLeadMinutes(dockCallMinutes);
-  return [
-    { step: "arrive", at: at(dockCallMinutes) },
-    { step: "briefing", at: at(briefingBefore) },
-    { step: "departure", at: startsAt },
-    ...(endsAt
-      ? ([
-          {
-            step: "boatRide",
-            at: new Date(startsAt.getTime() + (endsAt.getTime() - startsAt.getTime()) / 3),
-          },
-          {
-            step: "surfaceInterval",
-            at: new Date(startsAt.getTime() + ((endsAt.getTime() - startsAt.getTime()) * 2) / 3),
-          },
-          { step: "return", at: endsAt },
-        ] as const)
-      : []),
-  ];
+  plannedDives = 2,
+): Array<{ step: DockDayStep; number?: number; at: Date }> {
+  const beats: Array<{ step: DockDayStep; number?: number; at: Date }> = [];
+  for (const offset of dockDayOffsets(rhythm, plannedDives)) {
+    // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at
+    // offset zero alongside the departure itself, and it is still a beat on the
+    // water that only a stated return time can bound.
+    const onTheWater = ON_THE_WATER.has(offset.step);
+    if (onTheWater && !endsAt) continue;
+    const at = new Date(startsAt.getTime() + offset.minutesFromDeparture * 60_000);
+    if (onTheWater && endsAt && at >= endsAt) break;
+    beats.push({ step: offset.step, number: offset.number, at });
+  }
+  // A ride out and a surface interval are both *between* things: each one only
+  // means something because of the dive that follows it. Truncating the chain
+  // can leave one at the end with nothing on the other side — "Surface interval
+  // · 4:35 PM, Expected return · 5:00 PM" reads as a boat that surfaced and
+  // gave up — so the tail is walked back to the last beat that stands alone.
+  while (
+    beats.length > 0 &&
+    (beats.at(-1)?.step === "surfaceInterval" || beats.at(-1)?.step === "boatRide")
+  ) {
+    beats.pop();
+  }
+  if (endsAt) beats.push({ step: "return", at: endsAt });
+  return beats;
 }
 
 export type SitePlanningFacts = {
@@ -129,6 +286,13 @@ export function packingConfidence(
   shopItems: string[],
   rental: null | Record<string, boolean | string | null>,
   waterTemperatureC: number | null,
+  /**
+   * Whether the shop runs a briefing at all (`briefingMinutes > 0`). "Crew
+   * briefing" used to be an unconditional entry under *Provided*, which put the
+   * page in the position of promising one three inches under a rhythm that no
+   * longer had a briefing in it.
+   */
+  briefs = true,
 ): {
   bring: string[];
   rented: RentableItemKind[];
@@ -145,7 +309,7 @@ export function packingConfidence(
   return {
     bring: shopItems,
     rented,
-    provided: ["tanksAndWeights", "crewBriefing"],
+    provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
     temperatureTip,
   };
 }

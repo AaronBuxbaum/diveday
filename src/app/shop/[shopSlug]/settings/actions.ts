@@ -18,7 +18,7 @@ import {
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
-  setShopDockCallMinutes,
+  setShopDockDayRhythm,
   setShopPackingList,
   setShopRentalItems,
   setShopRentalPricing,
@@ -37,6 +37,7 @@ import {
   isLookupWorthy,
   toFilterCountry,
 } from "@/lib/address-lookup";
+import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -241,8 +242,16 @@ export async function saveUnitsAction(formData: FormData) {
   revalidateAndRedirect(settings, `${settings}?notice=units_saved&saved=units`);
 }
 
-/** How many minutes before departure divers are asked to be at the dock. */
-export async function saveDockCallAction(formData: FormData) {
+/**
+ * The shop's whole dock-day rhythm: the arrival call plus the five minute
+ * amounts the rest of the day is built from (src/lib/diver-planning.ts).
+ *
+ * One save for all six, and `parseDockDayRhythm` refuses the lot if any one of
+ * them is not a whole number inside its own bounds — the same bounds the form's
+ * `min`/`max` carry and the same the table's CHECK constraints enforce, read
+ * from the one table rather than retyped here.
+ */
+export async function saveDockDayRhythmAction(formData: FormData) {
   const session = await requireStaffSession();
   const notAllowed = await settingsBlock(session);
   if (notAllowed) {
@@ -250,11 +259,13 @@ export async function saveDockCallAction(formData: FormData) {
     return;
   }
   const settings = `/shop/${session.user.shopSlug}/settings`;
-  const minutes = Number(formData.get("dockCallMinutes"));
-  if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
+  const rhythm = parseDockDayRhythm(
+    Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formData.get(field)])),
+  );
+  if (!rhythm) {
     redirect(`${settings}?notice=dock_invalid&saved=dockCall`);
   }
-  await setShopDockCallMinutes(await getDb(), session.user.shopId, minutes);
+  await setShopDockDayRhythm(await getDb(), session.user.shopId, rhythm);
   revalidateAndRedirect(settings, `${settings}?notice=dock_saved&saved=dockCall`);
 }
 

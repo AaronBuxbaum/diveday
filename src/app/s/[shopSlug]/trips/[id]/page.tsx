@@ -23,7 +23,12 @@ import { getShopReviewAggregate } from "@/db/reviews";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
+import {
+  getTripWithBooked,
+  getWaitlistEntryForTrip,
+  listTripDives,
+  listTripScheduleDays,
+} from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -161,9 +166,12 @@ export default async function TripDetailPage({
       manageHref={`/shop/${shopSlug}/trips/${tripId}`}
     />
   ) : null;
-  const [trip, tripDives] = await Promise.all([
+  const [trip, tripDives, meetingDays] = await Promise.all([
     getTripWithBooked(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
+    // Shop-scoped by the query's own join on `trips.shop_id`, like every other
+    // read on this page. A departure always has at least one of these rows.
+    listTripScheduleDays(db, shop.id, tripId),
   ]);
   if (!trip) notFound();
   // A cancelled trip gets its own soft landing (task 13) rather than the same
@@ -392,7 +400,7 @@ export default async function TripDetailPage({
           </Link>
         )}
 
-        <TripHeader shop={shop} trip={trip} locale={locale} />
+        <TripHeader shop={shop} trip={trip} meetingDays={meetingDays} locale={locale} />
         {trip.conditionsHold ? (
           <div role="status" className="mt-5 rounded-lg border border-warning/40 bg-warning/10 p-4">
             <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
@@ -516,7 +524,14 @@ export default async function TripDetailPage({
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
           </section>
         ) : null}
-        <PackingSection shop={shop} trip={trip} rentalFit={rentalFit} locale={locale} />
+        <PackingSection
+          shop={shop}
+          trip={trip}
+          rentalFit={rentalFit}
+          day={meetingDays[0]}
+          multiDay={meetingDays.length > 1}
+          locale={locale}
+        />
         <DiveBriefingsSection briefings={diveBriefings} trip={trip} locale={locale} />
       </main>
     </DiverIntlProvider>

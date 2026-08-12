@@ -1,32 +1,141 @@
 import { describe, expect, it } from "vitest";
 import {
   conditionsChangedSinceBooking,
+  DEFAULT_DOCK_DAY_RHYTHM,
+  type DockDayRhythm,
+  dockDayOffsets,
   dockDayTimeline,
   packingConfidence,
+  parseDockDayRhythm,
   siteFit,
 } from "./diver-planning";
 
-describe("diver planning", () => {
+const rhythm = (overrides: Partial<DockDayRhythm> = {}): DockDayRhythm => ({
+  ...DEFAULT_DOCK_DAY_RHYTHM,
+  ...overrides,
+});
+
+/** `step` alone loses the difference between Dive 1 and Dive 2 — keep both. */
+const beats = (entries: Array<{ step: string; number?: number }>) =>
+  entries.map(({ step, number }) => (number === undefined ? step : `${step}${number}`));
+
+describe("dock-day rhythm", () => {
+  const start = new Date("2026-07-18T12:00:00Z");
+  const end = new Date("2026-07-18T17:00:00Z");
+
   it("gives dock times relative to the trip start", () => {
-    const start = new Date("2026-07-18T12:00:00Z");
-    expect(dockDayTimeline(start)[0]?.at.toISOString()).toBe("2026-07-18T11:30:00.000Z");
+    expect(dockDayTimeline(start, rhythm())[0]?.at.toISOString()).toBe("2026-07-18T11:30:00.000Z");
   });
 
   it("uses the shop's dock call time for the arrival step", () => {
-    const start = new Date("2026-07-18T12:00:00Z");
-    const timeline = dockDayTimeline(start, 45);
+    const timeline = dockDayTimeline(start, rhythm({ dockCallMinutes: 45 }));
     expect(timeline[0]?.at.toISOString()).toBe("2026-07-18T11:15:00.000Z");
-    // The briefing never lands before the arrival, even for a short call time.
-    const short = dockDayTimeline(start, 10);
+  });
+
+  it("never lets a dock beat land before the diver was asked to arrive", () => {
+    // A 10-minute call with a 30-minute briefing is a shop typing a day that
+    // doesn't fit; the briefing clamps onto the arrival rather than preceding it.
+    const short = dockDayTimeline(start, rhythm({ dockCallMinutes: 10, briefingMinutes: 30 }));
+    expect(short[0]?.step).toBe("arrive");
+    expect(short[1]?.step).toBe("briefing");
     expect(short[1]?.at.getTime()).toBeGreaterThanOrEqual(short[0]?.at.getTime() ?? 0);
   });
 
-  it("ends a full dock-day timeline at the expected return", () => {
-    const start = new Date("2026-07-18T12:00:00Z");
-    const end = new Date("2026-07-18T17:00:00Z");
-    const timeline = dockDayTimeline(start, 30, end);
-    expect(timeline.map(({ step }) => step)).toContain("surfaceInterval");
+  it("lays the water half out from the shop's own durations, in order", () => {
+    const timeline = dockDayTimeline(start, rhythm(), end, 2);
+    expect(beats(timeline)).toEqual([
+      "arrive",
+      "briefing",
+      "departure",
+      "boatRide",
+      "dive1",
+      "surfaceInterval1",
+      "dive2",
+      "return",
+    ]);
+    // 20 min out, 45 min under, 60 min on the surface: dive two starts at 2:05.
+    expect(timeline[6]?.at.toISOString()).toBe("2026-07-18T14:05:00.000Z");
     expect(timeline.at(-1)?.at).toEqual(end);
+  });
+
+  it("gives a one-dive trip no surface interval", () => {
+    const timeline = dockDayTimeline(start, rhythm(), end, 1);
+    expect(beats(timeline)).not.toContain("surfaceInterval1");
+    expect(beats(timeline)).toContain("dive1");
+  });
+
+  it("drops the beats a shop turned off rather than stacking them on departure", () => {
+    // Briefs on the boat, kits up on board, walks in off the beach.
+    const shore = dockDayTimeline(
+      start,
+      rhythm({ briefingMinutes: 0, gearSetupMinutes: 0, boatRideMinutes: 0 }),
+      end,
+      2,
+    );
+    expect(beats(shore)).toEqual([
+      "arrive",
+      "departure",
+      "dive1",
+      "surfaceInterval1",
+      "dive2",
+      "return",
+    ]);
+    // Dive one starts the moment they go in, not at some fabricated third.
+    expect(shore[2]?.at).toEqual(start);
+  });
+
+  it("shows a set-up beat when the shop kits up at the dock", () => {
+    const timeline = dockDayTimeline(start, rhythm({ gearSetupMinutes: 25 }));
+    expect(beats(timeline)).toEqual(["arrive", "gearSetup", "briefing", "departure"]);
+  });
+
+  it("never prints a beat the published return time has already passed", () => {
+    // A fourth dive does not fit a five-hour window at this shop's numbers; the
+    // return the shop sold wins, and the page does not argue with itself.
+    const timeline = dockDayTimeline(start, rhythm(), end, 4);
+    expect(beats(timeline)).toContain("dive3");
+    expect(beats(timeline)).not.toContain("dive4");
+    // ...and the surface interval that was leading into dive four goes with it,
+    // rather than sitting at the end of the day with nothing after it.
+    expect(beats(timeline).at(-2)).toBe("dive3");
+    expect(timeline.every(({ at }) => at <= end)).toBe(true);
+    expect(timeline.at(-1)?.at).toEqual(end);
+  });
+
+  it("renders only the dock beats when there is no return to bound the day", () => {
+    expect(beats(dockDayTimeline(start, rhythm()))).toEqual(["arrive", "briefing", "departure"]);
+  });
+
+  it("previews the same shape Settings shows, without inventing a return", () => {
+    const preview = dockDayOffsets(rhythm(), 2);
+    expect(preview[0]).toEqual({ step: "arrive", minutesFromDeparture: -30 });
+    expect(beats(preview)).not.toContain("return");
+  });
+});
+
+describe("parsing a submitted rhythm", () => {
+  const complete = {
+    dockCallMinutes: "30",
+    gearSetupMinutes: "0",
+    briefingMinutes: "15",
+    boatRideMinutes: "20",
+    bottomTimeMinutes: "45",
+    surfaceIntervalMinutes: "60",
+  };
+
+  it("accepts a complete, in-range submission", () => {
+    expect(parseDockDayRhythm(complete)).toEqual(DEFAULT_DOCK_DAY_RHYTHM);
+  });
+
+  it("refuses the whole save rather than clamping one bad field", () => {
+    expect(parseDockDayRhythm({ ...complete, bottomTimeMinutes: "0" })).toBeNull();
+    expect(parseDockDayRhythm({ ...complete, dockCallMinutes: "1000" })).toBeNull();
+    expect(parseDockDayRhythm({ ...complete, briefingMinutes: "12.5" })).toBeNull();
+    expect(parseDockDayRhythm({ ...complete, boatRideMinutes: "-5" })).toBeNull();
+  });
+
+  it("refuses a partial post, since the beats are validated against each other", () => {
+    expect(parseDockDayRhythm({ dockCallMinutes: "30" })).toBeNull();
   });
 });
 
@@ -63,6 +172,10 @@ describe("booking delight planning", () => {
     const plan = packingConfidence([], null, null);
     expect(plan.provided).toEqual(["tanksAndWeights", "crewBriefing"]);
     expect(plan.temperatureTip).toBeNull();
+  });
+
+  it("stops promising a briefing to a shop that doesn't run one", () => {
+    expect(packingConfidence([], null, null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
   it("only calls a newer crew briefing a change", () => {

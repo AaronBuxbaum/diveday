@@ -137,7 +137,14 @@ export function DetailsSection({
               footerNote: t("shared.tripDiveFields.footerNote"),
             }}
           />
-          <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-6">
+          {/* Two rows of three, not one row of six. Six equal columns gave
+              every box the same ~120px whatever it held — a date picker and a
+              seat count side by side at the same width, with "Price per diver
+              (optional)" wrapping to two lines while its neighbours sat on one
+              and the whole caption row went ragged. Three columns is also the
+              shape the schedule builder's own add panel uses, so the two places
+              a departure's when-and-how-many is typed now look alike. */}
+          <FieldGrid columns={3} className="gap-x-5 gap-y-5">
             <Field label={t("trips.details.dateLabel")}>
               <input
                 name="date"
@@ -165,6 +172,8 @@ export function DetailsSection({
                 className={controlClass}
               />
             </Field>
+          </FieldGrid>
+          <FieldGrid columns={3} className="gap-x-5 gap-y-5">
             <Field label={t("trips.details.capacityLabel")}>
               <input
                 name="capacity"
@@ -179,8 +188,13 @@ export function DetailsSection({
             {/* The date/departs/returns boxes describe day one; this says how
               many consecutive days repeat it. Saving rebuilds the whole
               meeting-day list, so a departure can grow or shrink here rather
-              than being deleted and rebuilt as separate trips. */}
-            <Field label={t("trips.details.dayCountLabel")}>
+              than being deleted and rebuilt as separate trips. The description
+              is what makes an Open Water weekend legible from the box: "2" on
+              its own reads as a quantity of nothing in particular. */}
+            <Field
+              label={t("trips.details.dayCountLabel")}
+              description={t("trips.details.dayCountDescription")}
+            >
               <input
                 name="dayCount"
                 type="number"

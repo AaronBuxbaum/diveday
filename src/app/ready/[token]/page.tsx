@@ -979,6 +979,11 @@ export default async function DiverReadinessPage({
               shop={fullShop}
               trip={fullTrip}
               rentalFit={data.rentalFit}
+              // Never the "every day follows this shape" note here, even on a
+              // course weekend: this page is what a diver reads the morning
+              // they sail, about the day in front of them. The booking page is
+              // where the whole itinerary is laid out.
+              multiDay={false}
               locale={locale}
             />
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
