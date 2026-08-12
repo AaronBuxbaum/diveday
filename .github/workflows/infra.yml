@@ -182,6 +182,23 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DEPLOY_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDeployRoleArn stack output."
           exit 1
+      # TEMPORARY — diagnosing "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+      # against a trust policy and OIDC provider that both check out correct from the AWS
+      # side (see the PR description). This prints only the decoded claims, never the raw
+      # token, since this repo's Actions logs are public. Remove this step once the cause
+      # is confirmed.
+      - name: Debug OIDC token claims
+        run: |
+          jwt=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          payload=$(echo "$jwt" | cut -d. -f2)
+          python3 -c "
+          import base64, json, sys
+          s = sys.argv[1]; s += '=' * (-len(s) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(s))
+          for k in ('iss','aud','sub','repository','repository_owner','environment','ref','job_workflow_ref'):
+              print(f'{k}: {claims.get(k)}')
+          " "$payload"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
