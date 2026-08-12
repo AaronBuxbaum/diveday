@@ -371,10 +371,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const owned = bookingIds.length > 0;
 
   let queued = 0;
-  const retire = async (
-    kind: "certification_card" | "recap_photo" | "waiver_document",
-    url: string | null,
-  ) => {
+  const retire = async (kind: "recap_photo" | "waiver_document", url: string | null) => {
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
@@ -447,20 +444,22 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   // --- certification evidence ---------------------------------------------
   // The card *sighting* survives (agency, level, status, when it was reviewed);
-  // the diver's agency number and the photograph of their card do not. Cards
-  // are archived at the same time: an erased diver has no future readiness to
-  // satisfy, and archiving frees the number's partial unique index.
+  // the diver's agency number does not. Cards are archived at the same time: an
+  // erased diver has no future readiness to satisfy, and archiving frees the
+  // number's partial unique index.
+  //
+  // Nothing to retire from the blob store here any more: a card never carried a
+  // photograph after ADR 20260811-retire-the-digital-card dropped
+  // `card_image_url`. Recap photos and waiver documents still do, below.
   const levelCards = await tx
     .select()
     .from(certifications)
     .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)));
   for (const card of levelCards) {
-    await retire("certification_card", card.cardImageUrl);
     await tx
       .update(certifications)
       .set({
         identifier: redactedUniqueValue("redacted"),
-        cardImageUrl: null,
         reviewNote: null,
         importedFromLabel: null,
         deletedAt: card.deletedAt ?? now,
@@ -478,12 +477,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       ),
     );
   for (const card of specialtyCards) {
-    await retire("certification_card", card.cardImageUrl);
     await tx
       .update(specialtyCertifications)
       .set({
         identifier: redactedUniqueValue("redacted"),
-        cardImageUrl: null,
         reviewNote: null,
         importedFromLabel: null,
         deletedAt: card.deletedAt ?? now,

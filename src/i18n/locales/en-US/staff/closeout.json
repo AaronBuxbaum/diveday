@@ -49,8 +49,7 @@
     "heading": "Tomorrow, at a glance",
     "subtitle": "What the morning queue opens with — read it now, walk out lighter.",
     "empty": "Tomorrow starts clear.",
-    "count": "{count, plural, one {# job is waiting in tomorrow's queue.} other {# jobs are waiting in tomorrow's queue.}}",
-    "openToday": "Open Today"
+    "count": "{count, plural, one {# job is waiting in tomorrow's queue.} other {# jobs are waiting in tomorrow's queue.}}"
   },
   "close": {
     "heading": "Close the day",

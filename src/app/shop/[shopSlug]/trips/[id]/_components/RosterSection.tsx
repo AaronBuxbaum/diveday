@@ -747,7 +747,17 @@ export function RosterSection({
                       Stripe refund that the Undo banner can't claw back — a real
                       send of money, not a purely reversible edit — so this gets a
                       blocking confirm too (docs/design/principles.md §7). */}
-                  <form action={removeBookingAction} className="sm:ml-auto">
+                  {/* Last in the row, not flung to its far right. The
+                      `sm:ml-auto` this replaces put a gulf between "Create
+                      order" and "Remove booking" wide enough to read as a
+                      separate control belonging to something else — and on a
+                      card whose actions are otherwise a left-aligned run, a
+                      lone right-hung one is the shape a *primary* action
+                      takes. It is already the least prominent thing here (ghost
+                      weight, muted ink, danger only on hover) and it already
+                      confirms before it fires; its position was carrying a
+                      third warning nobody asked it to. */}
+                  <form action={removeBookingAction}>
                     <input type="hidden" name="bookingId" value={booking.id} />
                     <InlineConfirm
                       triggerLabel={t("trips.roster.removeBooking")}

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
 import { EmptyState } from "@/components/EmptyState";
-import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -20,11 +19,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
-import {
-  ARRIVALS_AHEAD_HOURS,
-  ARRIVALS_LOOKBACK_HOURS,
-  OPERATIONAL_HORIZON_DAYS,
-} from "@/lib/operational-window";
+import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
@@ -147,27 +142,21 @@ export default async function CheckInPage({
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
         description={t("checkIn.description")}
-        // The same window sentence Today and Not ready print, plus the one
-        // extra clause naming how counter mode narrows it. The arrivals lens
-        // never reaches past the shared horizon (`arrivalsWindowIsInsideHorizon`),
-        // so a diver at the counter is always someone the other two also show
-        // (task 141, UX persona lens 17).
+        // What this queue *is* — how far either side of now it reaches — which
+        // is a fact about the rows below it and nothing a reader can find
+        // elsewhere. Gone with it: the shared-window sentence Today used to
+        // print here too, and the pivots back to Today, which named a
+        // destination the nav tabs and the phone dock already carry one tap
+        // away. The arrivals lens never reaches past the shared horizon
+        // (`arrivalsWindowIsInsideHorizon`), so a diver at the counter is
+        // always someone Today also shows (task 141, UX persona lens 17).
         meta={
-          <OperationalWindowNote
-            copy={{
-              note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
-              lens: t("shared.operationalWindow.arrivalsLens", {
-                lookback: ARRIVALS_LOOKBACK_HOURS,
-                ahead: ARRIVALS_AHEAD_HOURS,
-              }),
-              pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
-            }}
-            pivots={readinessPivots(shopSlug, "check_in", {
-              today: t("shared.shopNavLinks.today"),
-              blockers: t("shared.shopNavLinks.blockers"),
-              check_in: t("shared.shopNavLinks.checkIn"),
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            {t("shared.operationalWindow.arrivalsLens", {
+              lookback: ARRIVALS_LOOKBACK_HOURS,
+              ahead: ARRIVALS_AHEAD_HOURS,
             })}
-          />
+          </p>
         }
         actions={
           // Secondary, and a verb: the page's action is the queue itself —

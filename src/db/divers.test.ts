@@ -786,7 +786,6 @@ describe("diver erasure", () => {
       agency: "padi",
       level: "open_water",
       identifier: "PADI-ELENA-1",
-      cardImageUrl: `${BLOB}/cards/elena-ow.jpg`,
       reviewNote: "Checked against Elena's PADI portal record",
       importedFromLabel: "Old Shop CRM",
       status: "verified",
@@ -797,7 +796,6 @@ describe("diver erasure", () => {
       agency: "padi",
       specialty: "deep",
       identifier: "PADI-ELENA-1",
-      cardImageUrl: `${BLOB}/cards/elena-deep.jpg`,
       reviewNote: "Elena brought the physical card",
       status: "verified",
     });
@@ -1086,7 +1084,6 @@ describe("diver erasure", () => {
       .where(eq(certifications.personId, diver.id));
     expect(levelCard?.identifier).not.toContain("ELENA");
     expect(levelCard).toMatchObject({
-      cardImageUrl: null,
       reviewNote: null,
       importedFromLabel: null,
       // The sighting survives: agency, level, and status are what the shop
@@ -1102,7 +1099,7 @@ describe("diver erasure", () => {
       .from(specialtyCertifications)
       .where(eq(specialtyCertifications.personId, diver.id));
     expect(specialtyCard?.identifier).not.toContain("ELENA");
-    expect(specialtyCard).toMatchObject({ cardImageUrl: null, reviewNote: null });
+    expect(specialtyCard).toMatchObject({ reviewNote: null });
 
     const [nitroxCard] = await db
       .select()
@@ -1277,15 +1274,16 @@ describe("diver erasure", () => {
       .where(eq(mediaDeletionAttempts.shopId, shop.id));
     expect(queued.map((row) => row.url).sort()).toEqual(
       [
-        `${BLOB}/cards/elena-deep.jpg`,
-        `${BLOB}/cards/elena-ow.jpg`,
         `${BLOB}/recap/elena-1.jpg`,
         `${BLOB}/waivers/elena-medical.pdf`,
         `${BLOB}/waivers/elena-release.pdf`,
       ].sort(),
     );
+    // No `certification_card`: a card has carried no photograph since ADR
+    // 20260811-retire-the-digital-card dropped the column, so erasure has
+    // nothing of that kind left to queue.
     expect(new Set(queued.map((row) => row.kind))).toEqual(
-      new Set(["certification_card", "recap_photo", "waiver_document"]),
+      new Set(["recap_photo", "waiver_document"]),
     );
     expect(queued.every((row) => row.status === "pending")).toBe(true);
     expect(result.queuedMediaDeletions).toBe(queued.length);

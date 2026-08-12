@@ -1,6 +1,6 @@
 import { diverTranslator } from "@/i18n/messages";
-import { depthText, surfaceConditionsText, temperatureText } from "@/i18n/unit-labels";
-import { formatShortDate } from "@/lib/format";
+import { depthText, seaStateText, temperatureText } from "@/i18n/unit-labels";
+import { seaStateReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
 
@@ -28,18 +28,24 @@ export function ForecastSection({
   const waterTemperatureC = crewPrediction
     ? trip.waterTemperatureC
     : (automatedForecast?.waterTemperatureC ?? null);
-  // Two different things share this row. The crew's own read is free text they
-  // typed ("choppy after lunch") and is shown exactly as written — never
-  // translated, never re-unitted. The automated outlook is numbers and codes
-  // from the marine model, so it is written out here in the shop's depth unit
-  // and the reader's language (DOM-L2); it used to arrive from `src/lib` as a
-  // pre-composed English metric string, which a shop reading feet could do
-  // nothing with.
-  const surfaceText = crewPrediction
-    ? trip.surfaceConditions
-    : automatedForecast?.surface
-      ? surfaceConditionsText(t, automatedForecast.surface, depthUnit)
-      : null;
+  // Two different things share this row.
+  //
+  // The crew's own read is free text they typed ("choppy after lunch") and is
+  // shown exactly as written — never translated, never re-unitted.
+  //
+  // The automated outlook used to be the model's numbers written out: "0.7 m
+  // seas from E · 7 s period". True, and close to useless to the person
+  // deciding whether to bring a seasickness tablet — significant wave height is
+  // a statistic about the highest third of waves, a bearing answers a question
+  // nobody on a booking page asked, and a period means nothing without
+  // something to compare it to. `seaStateReading` (src/lib/marine-forecast.ts)
+  // does that comparing and returns a band; the words come from the bundle.
+  const seaState = crewPrediction ? null : seaStateReading(automatedForecast?.surface ?? null);
+  const sea = seaState ? seaStateText(t, seaState) : null;
+  const surfaceText = crewPrediction ? trip.surfaceConditions : (sea?.label ?? null);
+  // Only the crew ever records underwater visibility — the marine model has no
+  // such reading (see `AutomatedMarineForecast`).
+  const visibilityMeters = crewPrediction ? trip.visibilityMeters : null;
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">
@@ -57,11 +63,11 @@ export function ForecastSection({
             </dd>
           </div>
         ) : null}
-        {crewPrediction && trip.visibilityMeters !== null ? (
+        {visibilityMeters !== null ? (
           <div className="rounded-lg bg-surface-sunken p-3">
             <dt className="text-sm text-muted">{t("trip.visibility")}</dt>
             <dd className="mt-1 text-lg font-semibold">
-              {depthText(t, trip.visibilityMeters, depthUnit)}
+              {depthText(t, visibilityMeters, depthUnit)}
             </dd>
           </div>
         ) : null}
@@ -69,6 +75,11 @@ export function ForecastSection({
           <div className="rounded-lg bg-surface-sunken p-3">
             <dt className="text-sm text-muted">{t("trip.surface")}</dt>
             <dd className="mt-1 text-lg font-semibold">{surfaceText}</dd>
+            {/* What the band means for the day, on the automated path only —
+                a crew who typed "choppy after lunch" have already said it in
+                their own words, and a second sentence underneath explaining
+                theirs back to them would be the app talking over the boat. */}
+            {sea ? <dd className="mt-1 text-sm text-muted">{sea.detail}</dd> : null}
           </div>
         ) : null}
       </dl>
@@ -85,36 +96,31 @@ export function ForecastSection({
             : t("trip.forecastUpdateUnavailable")}
         </p>
       ) : automatedForecast ? (
-        <div className="mt-4">
-          {/* Open-Meteo's license (open-meteo.com/en/license) requires attribution
-              with a link back to them, not just the name in plain text. */}
-          <p className="text-base text-muted">
-            {t("trip.forecastSourcePrefix")}{" "}
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
-            >
-              Open-Meteo
-            </a>{" "}
-            {t("trip.forecastSourceSuffix")}
-          </p>
-          <p className="mt-2 text-xs text-muted">
-            {t("trip.forecastVisibilityNote")}{" "}
-            <time dateTime={automatedForecast.validAt.toISOString()}>
-              {t("trip.forecastValidFor", {
-                date: formatShortDate(automatedForecast.validAt, locale, shop.timezone),
-                time: automatedForecast.validAt.toLocaleTimeString(locale, {
-                  timeZone: shop.timezone,
-                  hour: "numeric",
-                  minute: "2-digit",
-                  timeZoneName: "short",
-                }),
-              })}
-            </time>
-          </p>
-        </div>
+        // One line of fine print, not a 16px paragraph above it. "Planning
+        // outlook from Open-Meteo" restated the eyebrow this card already
+        // wears ("Automated marine outlook") at nearly body weight, so the
+        // first thing a diver read under the numbers was where they came from
+        // rather than what they mean. What survives is what nothing else says:
+        // that the crew makes the final call, and who supplied the model. The
+        // credit stays a link — Open-Meteo's license (open-meteo.com/en/license)
+        // requires attribution *with* a link back, not the name in plain text.
+        //
+        // No "valid for <date> · <time>" any more. It was an hour stamp on a
+        // planning outlook for a departure whose own time is at the top of this
+        // page, and a diver reading it a day out has nothing to do with the
+        // difference. The freshness that matters is stated instead: the crew
+        // confirm at the dock.
+        <p className="mt-4 text-xs text-muted">
+          {t("trip.forecastCrewCall")} {t("trip.forecastCreditPrefix")}{" "}
+          <a
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Open-Meteo
+          </a>
+        </p>
       ) : null}
     </section>
   );

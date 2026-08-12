@@ -103,7 +103,7 @@ test.describe("staffing", () => {
     await expect(keiko.getByText("Demo schedule")).toBeVisible();
   });
 
-  test("an uncrewed departure is counted in one line that hands off to Today", async ({ page }) => {
+  test("an uncrewed departure is counted in one line, and nothing more", async ({ page }) => {
     // Create the departure, then read it back off the roster — two navigations
     // and two server round trips.
     test.setTimeout(30_000);
@@ -128,11 +128,12 @@ test.describe("staffing", () => {
     await expect(page.getByText("1 departure in this window still needs crew")).toBeVisible();
     await expect(page.getByText(title)).toHaveCount(0);
 
-    // And the line is not a dead end: it leads to the surface that can crew a
-    // boat, which the old coverage table could not do.
-    await page.getByRole("link", { name: "Assign crew on Today" }).click();
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // And no button beside it. The "Assign crew on Today" link this line used
+    // to carry pointed at a permanent nav tab, which the header and the phone
+    // dock already put one tap away from every page — chrome restated as a
+    // call to action. The sentence names where the work is; getting there was
+    // never the hard part.
+    await expect(page.getByRole("link", { name: /Assign crew/ })).toHaveCount(0);
   });
 
   test("a window with every departure crewed says so, with nowhere to go", async ({ page }) => {

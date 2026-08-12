@@ -1843,15 +1843,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
-      // The roster's one view that leaves the active list behind: where a
-      // removed diver can be found and restored, once the undo toast is long
-      // gone. The demo shop removes nobody, so this photographs the view's own
-      // chrome — the chip row with "Removed" on it, the line saying what
-      // removal means, and the way back out.
-      test(`the removed-divers view renders true to the design (${scheme})`, async ({ page }) => {
+      // The roster's one view that leaves the active list behind: where an
+      // archived diver can be found and unarchived, once the undo toast is
+      // long gone. The demo shop archives nobody, so this photographs the
+      // view's own chrome — the chip row with "Archived" on it, the line
+      // saying what archiving means, and the way back out.
+      test(`the archived-divers view renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/divers?filter=removed");
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
-        await page.getByRole("link", { name: "Removed", exact: true }).waitFor();
+        await page.getByRole("link", { name: "Archived", exact: true }).waitFor();
         await capture(page, "divers-removed", scheme);
       });
 
@@ -2784,42 +2784,22 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The two staff overlays and the app's not-found backstop — three
-       * surfaces that are *states*, not routes, and so had no baseline at all.
+       * The staff command palette and the app's not-found backstop — surfaces
+       * that are *states*, not routes, and so had no baseline at all.
        *
-       * Both overlays are hosted on `/settings/calendar` rather than Today.
-       * They are `position: fixed`, and a `fullPage` shot renders a fixed
-       * element once, at the top, above however much page happens to sit
-       * underneath — so hosting them on the tall dashboard would bank a
-       * baseline that re-diffs every time Today's queue changes, for a change
-       * that has nothing to do with the overlay. The calendar settings page is
-       * the shortest read-only staff surface there is (two panels, no seeded
-       * rows, nothing minted until a button is pressed), so almost all of each
-       * of these images is the overlay itself.
+       * The palette is hosted on `/settings/calendar` rather than Today. It is
+       * `position: fixed`, and a `fullPage` shot renders a fixed element once,
+       * at the top, above however much page happens to sit underneath — so
+       * hosting it on the tall dashboard would bank a baseline that re-diffs
+       * every time Today's queue changes, for a change that has nothing to do
+       * with the overlay. The calendar settings page is the shortest read-only
+       * staff surface there is (two panels, no seeded rows, nothing minted
+       * until a button is pressed), so almost all of the image is the overlay
+       * itself.
        *
-       * One test each, and each closes its overlay before finishing: an overlay
-       * left open leaks into whatever the same page does next, which is the
-       * hazard that used to make these one sequential test.
+       * It closes its overlay before finishing: an overlay left open leaks
+       * into whatever the same page does next.
        */
-      test(`the keyboard shortcut sheet renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/settings/calendar");
-        // The panels are Client Components; wait for a control one of them only
-        // renders once mounted, not for the server-rendered <h1> above them —
-        // the same wait `settings-calendar` makes.
-        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
-        // The cheat sheet `?` opens (e2e/keyboard-shortcuts.spec.ts): every
-        // `g`-sequence this viewer's role can reach, read off the one
-        // destination registry the nav and the palette also read.
-        await page.keyboard.press("?");
-        const sheet = page.getByRole("dialog", { name: "Keyboard shortcuts" });
-        await sheet.waitFor();
-        await capture(page, "shortcut-sheet", scheme);
-        await page.keyboard.press("Escape");
-        await expect(sheet).toBeHidden();
-      });
-
       // The command palette on open, with no query typed: a Client Component,
       // so wait for the control it only renders once mounted *and* focused
       // rather than for anything the server rendered. An empty query lists

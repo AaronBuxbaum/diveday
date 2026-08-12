@@ -392,8 +392,8 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // 4 scans at ~3.5s each, plus a board crawl and a server-action round trip.
     test.setTimeout(110_000);
     // Step one: which departure. A registry destination
-    // (src/lib/staff-destinations.ts, `addBooking`) with a `g a` shortcut and a
-    // palette row, and until now scanned by nothing.
+    // (src/lib/staff-destinations.ts, `addBooking`) with a palette row, and
+    // until now scanned by nothing.
     await page.goto("/shop/blue-mantis/bookings/new", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
     await expectNoA11yViolations(page);
@@ -680,10 +680,8 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
  * and exactly what an empty-state-only scan would miss.
  */
 test.describe("automated accessibility scans of the staff overlays", () => {
-  test("the command palette and the shortcut sheet have no automated a11y violations", async ({
-    page,
-  }) => {
-    // 3 scans at ~3.5s each, plus the debounced search round trip.
+  test("the command palette has no automated a11y violations", async ({ page }) => {
+    // 2 scans at ~3.5s each, plus the debounced search round trip.
     test.setTimeout(70_000);
     await page.goto("/shop/blue-mantis");
     const trigger = page.getByRole("button", { name: "Search" });
@@ -696,14 +694,6 @@ test.describe("automated accessibility scans of the staff overlays", () => {
     // With rows: `aria-activedescendant` now names a real option id.
     await palette.getByRole("combobox").fill("Di");
     await expect(palette.getByRole("option").first()).toBeVisible();
-    await expectNoA11yViolations(page);
-
-    // The `?` cheat-sheet — the other portal dialog, and the surface that
-    // teaches keyboard users the app has keyboard access at all.
-    await page.keyboard.press("Escape");
-    await expect(palette).toBeHidden();
-    await page.keyboard.press("?");
-    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
     await expectNoA11yViolations(page);
   });
 

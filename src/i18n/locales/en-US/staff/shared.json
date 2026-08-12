@@ -1,8 +1,6 @@
 {
   "operationalWindow": {
-    "note": "The next {days} days of departures — Today and Check-in read one list.",
-    "arrivalsLens": "Counter mode narrows that to arrivals from the last {lookback} hours through the next {ahead}.",
-    "pivotsLabel": "The same list, seen another way"
+    "arrivalsLens": "Counter mode shows arrivals from the last {lookback} hours through the next {ahead}."
   },
   "skipToContent": "Skip to main content",
   "publicPreview": {
@@ -73,8 +71,8 @@
   "rollCallNote": {
     "optionalNote": "Note",
     "message": {
-      "manualOnly": "Saves with this diver’s roll-call result.",
       "saving": "Saving…",
+      "waiting": "Saved on this device — sends with this diver’s result.",
       "saved": "Saved.",
       "queued": "Saved on this device — sends when you’re back online.",
       "error": "Couldn’t save — your note is still here. Try again.",
@@ -97,17 +95,6 @@
     "groupGoTo": "Go to",
     "goToBoarding": "Boarding — today's boat",
     "goToOfflineRollCall": "Open offline roll call"
-  },
-  "keyboardShortcuts": {
-    "buttonAriaLabel": "Keyboard shortcuts",
-    "buttonTitle": "Keyboard shortcuts (press ?)",
-    "dialogAriaLabel": "Keyboard shortcuts",
-    "closeAriaLabel": "Close",
-    "heading": "Keyboard shortcuts",
-    "paletteLabel": "Search divers, trips, and pages",
-    "helpLabel": "Show this help",
-    "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the board.",
-    "goToLabel": "Go to {page}"
   },
   "tripAdmission": {
     "level": "This charter requires {level}. This diver's highest card on file is {held}. If they hold a {level} card, add it to their record — otherwise book them onto a trip at their level, or into the {level} course.",

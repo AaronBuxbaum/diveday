@@ -48,12 +48,21 @@ tap a chronological queue cannot offer.
   bookmarked page 3 lands on page 3.
 - The registry (`src/lib/staff-destinations.ts`) keeps a `blockers` destination, because the
   registry is the only place a destination may be declared and staff still ask for it by name — but
-  it is now `navGroup: null` with a `query` of `?view=departures`. It stays in ⌘K and keeps `g b`;
+  it is now `navGroup: null` with a `query` of `?view=departures`. It stays in ⌘K (the `g b`
+  sequence it also kept was retired with every other shortcut on 2026-08-11 —
+  [command-palette-is-the-only-keyboard-route](20260811-command-palette-is-the-only-keyboard-route.md));
   it loses its nav tab. Its badge moves onto Today, which is where blocked divers are read now.
 - The window note's pivots take a *list* of surfaces the current page already is. The shop home
   passes both `today` and `blockers`, so it pivots only to Check-in: offering the by-departure view
   as a pivot *and* as a switch on the same screen is the duplicate control
   [principles.md](../../design/principles.md) #8 rules out. Check-in still pivots to both.
+  **Amended 2026-08-11:** the shared window note and its pivots are gone entirely
+  (`src/components/OperationalWindowNote.tsx` is deleted). The sentence explained the data model to
+  a reader who came to clear blockers, and every pivot it offered — Today, Check-in — is a
+  permanent nav tab and a permanent phone-dock slot, so the links restated standing chrome.
+  Check-in keeps the one clause that was only true of itself: how far either side of now its
+  arrivals lens reaches. Nothing about the shared window or the `blockers` registry entry changes;
+  only the paragraph that narrated them.
 
 The switch sits **on the queue block**, not under the page header. The departure board above it is
 not a queue view, and a toggle floating above content it does not govern reads as a page-wide
@@ -67,7 +76,7 @@ filter.
   re-sorts the tab beside it is the duplicate control, whatever it points at.
 - **Client-side toggle over one payload.** Rejected: it would have to fetch both shapes on every
   visit to Today, and the URL would stop describing what is on screen — no bookmark, no back
-  button, no server-rendered deep link from ⌘K or `g b`.
+  button, no server-rendered deep link from ⌘K.
 - **Drop the by-departure grouping entirely.** Rejected: the batch send and the per-boat read are
   real work the chronological queue cannot do.
 

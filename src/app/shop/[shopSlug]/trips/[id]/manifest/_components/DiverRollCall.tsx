@@ -460,9 +460,7 @@ export function DiverRollCall({
                         <RollCallNote
                           bookingId={diver.bookingId}
                           checkpoint={checkpoint}
-                          formId={`not-boarded-${diver.bookingId}`}
                           initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
-                          canAutoSave={!!rc && !rc.implied}
                           saveNote={saveRollCallNoteAction}
                           copy={{
                             // The summary this sits under already reads "Add a
@@ -471,8 +469,8 @@ export function DiverRollCall({
                             // reader and comes off the screen.
                             optionalNote: t("shared.rollCallNote.optionalNote"),
                             message: {
-                              manualOnly: t("shared.rollCallNote.message.manualOnly"),
                               saving: t("shared.rollCallNote.message.saving"),
+                              waiting: t("shared.rollCallNote.message.waiting"),
                               saved: t("shared.rollCallNote.message.saved"),
                               queued: t("shared.rollCallNote.message.queued"),
                               error: t("shared.rollCallNote.message.error"),
@@ -526,7 +524,7 @@ export function DiverRollCall({
                   action={rollCallAction}
                   copy={rollCallButtonCopy(diver.bookingId)}
                   showBoardControl={boardingControlShown}
-                  formId={`not-boarded-${diver.bookingId}`}
+                  noteDraftFor={{ bookingId: diver.bookingId, checkpoint }}
                   t={t}
                 />
               </div>

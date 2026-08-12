@@ -3,6 +3,7 @@ import {
   AUTOMATED_FORECAST_WINDOW_DAYS,
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
+  seaStateReading,
   shouldShowAutomatedForecast,
 } from "./marine-forecast";
 
@@ -168,5 +169,51 @@ describe("hasCrewPrediction", () => {
         surfaceConditions: null,
       }),
     ).toBe(true);
+  });
+});
+
+describe("seaStateReading", () => {
+  const sea = (waveHeightMeters: number, wavePeriodSeconds: number | null = 7) => ({
+    waveHeightMeters,
+    waveDirection: "e" as const,
+    wavePeriodSeconds,
+  });
+
+  it("has nothing to read when the model gave no sea", () => {
+    expect(seaStateReading(null)).toBeNull();
+  });
+
+  it("bands by height, finely where a dive day is actually decided", () => {
+    expect(seaStateReading(sea(0.05))).toBe("glassy");
+    expect(seaStateReading(sea(0.3))).toBe("calm");
+    expect(seaStateReading(sea(0.7))).toBe("light_chop");
+    expect(seaStateReading(sea(1.2))).toBe("choppy");
+    expect(seaStateReading(sea(2.0))).toBe("rough");
+    expect(seaStateReading(sea(4.0))).toBe("very_rough");
+  });
+
+  // The whole reason the raw numbers were unreadable: 0.9 m is a different day
+  // depending on whether it arrives every four seconds or every eleven.
+  it("reads the same height differently by period", () => {
+    expect(seaStateReading(sea(1.0, 4))).toBe("rough");
+    expect(seaStateReading(sea(1.0, 7))).toBe("choppy");
+    expect(seaStateReading(sea(1.0, 12))).toBe("light_chop");
+  });
+
+  it("never calls a long-period swell glassy, however small", () => {
+    // A groundswell rolling in every twelve seconds is a comfortable ride and
+    // is visibly not a mirror — claiming otherwise is the forecast saying
+    // something a diver can disprove by looking at the water.
+    expect(seaStateReading(sea(0.05, 14))).toBe("calm");
+    expect(seaStateReading(sea(0.3, 14))).toBe("calm");
+  });
+
+  it("takes the height alone when the model reported no period", () => {
+    expect(seaStateReading(sea(1.0, null))).toBe("choppy");
+  });
+
+  it("never runs off either end of the scale", () => {
+    expect(seaStateReading(sea(0, 2))).toBe("calm");
+    expect(seaStateReading(sea(99, 2))).toBe("very_rough");
   });
 });

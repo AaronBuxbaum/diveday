@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
@@ -37,7 +35,6 @@ import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
-import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
@@ -48,6 +45,7 @@ import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import {
   applySeriesDetailsAction,
   cancelOffCadenceSeriesAction,
@@ -224,12 +222,6 @@ export default async function ManageTripPage({
   // sailing, read straight from CrewSection instead of a separate trip to
   // the staffing page.
   const onShiftIds = [...(await crewShiftCoverage(db, shop.id, trip, crewIds))];
-  const capacityLabelValue = capacityLabel(trip);
-  const capacityText =
-    capacityLabelValue.kind === "full"
-      ? t("shared.capacity.full")
-      : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
-
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
   // staffer's role means we never rendered — falls through to the banner.
@@ -250,9 +242,15 @@ export default async function ManageTripPage({
   return (
     <>
       <FlashParams params={["notice", "count", "form"]} />
-      <ShopPageHeader
-        eyebrow={t("trips.detail.eyebrow")}
+      <TripPageHeader
         title={trip.title}
+        startsAt={trip.startsAt}
+        endsAt={trip.endsAt}
+        locale={locale}
+        timeZone={shop.timezone}
+        badge={
+          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
+        }
         actions={
           <>
             <Link
@@ -271,24 +269,8 @@ export default async function ManageTripPage({
             />
           </>
         }
-        meta={
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              {cancelled ? (
-                <Badge tone="danger">{t("trips.detail.cancelledBadge")}</Badge>
-              ) : (
-                // A sold-out boat is a win worth noticing, not a quiet state
-                // (design/principles.md #3) — "success" stands out where
-                // "neutral" would recede.
-                <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
-                  {capacityText}
-                </Badge>
-              )}
-              <span className="text-muted">
-                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-              </span>
-            </div>
+        extraMeta={
+          <>
             {scheduleDays.length > 1 ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
                 <span>{t("trips.detail.meetingDaysSummary", { count: scheduleDays.length })}</span>
@@ -372,7 +354,7 @@ export default async function ManageTripPage({
                 })}
               </p>
             ) : null}
-          </div>
+          </>
         }
       />
 

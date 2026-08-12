@@ -115,13 +115,18 @@
       "value": "{count, plural, one {# item} other {# items}}"
     },
     "dockCall": {
-      "heading": "Dock call time",
-      "description": "How early divers are asked to arrive before departure.",
-      "detail": "Time for gear setup, cert checks, and the briefing. It appears on confirmations, the dock-day rhythm, and every pre-trip reminder.",
-      "label": "Minutes before departure",
-      "submit": "Save dock call time",
+      "heading": "Dock-day rhythm",
+      "description": "How early divers arrive, and when the briefing starts.",
+      "detail": "One number sets the whole rhythm: divers see it as “Your dock-day rhythm” on their booking page, and it carries into confirmations and every pre-trip reminder. The briefing follows the arrival call automatically, so it can never land before your divers were asked to be there.",
+      "label": "Arrive this many minutes before departure",
+      "submit": "Save dock-day rhythm",
       "submitting": "Saving…",
-      "value": "{count} min before departure"
+      "value": "Arrive {count} min before",
+      "stepArrive": "Arrive and check in",
+      "stepBriefing": "Crew briefing",
+      "stepDeparture": "Departure",
+      "minutesBefore": "{count} min before",
+      "atDeparture": "On time"
     },
     "units": {
       "heading": "Units",

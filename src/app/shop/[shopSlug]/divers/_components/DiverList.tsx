@@ -33,7 +33,7 @@ export interface DiverListCopy {
   removedNote: string;
   restore: string;
   restoring: string;
-  /** `{name}` — one "Restore" per row needs a distinct accessible name. */
+  /** `{name}` — one "Unarchive" per row needs a distinct accessible name. */
   restoreDiverLabel: string;
   peopleHeading: string;
   /** Already pluralised for the count the badge carries — never a bare digit. */
@@ -164,7 +164,7 @@ export function DiverList({
   // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
   // page together.
   //
-  // "Removed" is the fourth, and the one that is not about a day: it is the
+  // "Archived" is the fourth, and the one that is not about a day: it is the
   // only way to *find* a soft-deleted diver, who otherwise matches no search
   // and sits in no view. It comes last, visually apart from the working views,
   // and only for a staffer who may restore — the whole reason to go there.

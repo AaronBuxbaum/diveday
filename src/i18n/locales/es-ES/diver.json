@@ -142,18 +142,11 @@
     "waterTemperature": "Temperatura del agua",
     "visibility": "Visibilidad",
     "surface": "Superficie",
-    "surfaceWavesMeters": "mar de {value, number} m",
-    "surfaceWavesFeet": "mar de {value, number} ft",
-    "surfaceWavesFrom": "{waves} del {direction}",
-    "surfaceWavesWithPeriod": "{waves} · periodo de {seconds} s",
-    "surfaceWavesFromWithPeriod": "{waves} del {direction} · periodo de {seconds} s",
     "forecastCrewNote": "Previsión facilitada por la tripulación; las condiciones pueden cambiar. La decisión final se toma en el muelle.",
     "forecastUpdated": "Actualizado el {when}.",
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
-    "forecastSourcePrefix": "Previsión de planificación de",
-    "forecastSourceSuffix": "— la tripulación confirma las condiciones y decide en el muelle.",
-    "forecastVisibilityNote": "La visibilidad bajo el agua la aporta la tripulación.",
-    "forecastValidFor": "Para el {date} · {time}",
+    "forecastCrewCall": "La tripulación confirma las condiciones y decide en el muelle.",
+    "forecastCreditPrefix": "Previsión de",
     "timeline": {
       "arrive": "Llegada y registro",
       "briefing": "Briefing de la tripulación y montaje del equipo",
@@ -184,7 +177,23 @@
     "conditionsHoldBody": "La tripulación está siguiendo el tiempo y dará la decisión final. Las plazas ya reservadas se mantienen; las nuevas reservas están pausadas por ahora.",
     "conditionsChangedHeading": "Las condiciones cambiaron desde que reservaste",
     "conditionsChangedBody": "La tripulación ha publicado una lectura más reciente para este día. Revísala abajo; la ruta final y la decisión de salir o no se confirman igualmente en el muelle.",
-    "bookAndSpotsLeft": "Reservar · quedan {count}"
+    "bookAndSpotsLeft": "Reservar · quedan {count}",
+    "seaState": {
+      "glassy": "Como un espejo",
+      "calm": "En calma",
+      "light_chop": "Marejadilla",
+      "choppy": "Picado",
+      "rough": "Agitado",
+      "very_rough": "Muy agitado"
+    },
+    "seaStateDetail": {
+      "glassy": "Agua plana, como un espejo.",
+      "calm": "Apenas hay movimiento en la superficie.",
+      "light_chop": "Olas pequeñas: la mayoría deja de notarlas una vez abajo.",
+      "choppy": "Travesía movida. Conviene tomar algo para el mareo si eres propenso.",
+      "rough": "La navegación cuesta y entrar y salir del agua exige más cuidado.",
+      "very_rough": "El tipo de mar que suele dejar los barcos en el muelle: la tripulación estará muy pendiente."
+    }
   },
   "booking": {
     "heading": "Reserva tu plaza",

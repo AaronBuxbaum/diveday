@@ -1363,8 +1363,10 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   instead of a confirm dialog (`restoreCertification`/specialty/nitrox; reusable `UndoToast`).
 - **Optimistic interaction** — a true `useOptimistic` payment-status control flips instantly and
   reconciles on the server; boarding stays server-authoritative (never optimistic on safety state).
-- **Visible keyboard shortcuts** — a `g`-sequence jumps between surfaces and `?` opens a shortcuts
-  cheat-sheet, beyond ⌘K.
+- **One keyboard idiom** — ⌘K opens the command palette, which searches records and reaches every
+  registry destination under "Go to". The `g`-sequences and the `?` cheat-sheet that once sat
+  beside it were removed on 2026-08-11
+  ([command-palette-is-the-only-keyboard-route](../architecture/decisions/20260811-command-palette-is-the-only-keyboard-route.md)).
 - **Saved views** — the diver roster has role-preset chips (All / Missing contact / Has insurance)
   plus per-shop browser-saved custom views, over a cheap `listDiverSummaries` facet.
 - **Performance budget** — the shared first-load JS is gzip-measured after build and gated in CI

@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { AutomatedSurfaceConditions } from "@/lib/marine-forecast";
+import { SEA_STATES } from "@/lib/marine-forecast";
 import { diverTranslator } from "./messages";
-import { depthText, surfaceConditionsText, temperatureText } from "./unit-labels";
+import { depthText, seaStateText, temperatureText } from "./unit-labels";
 
 const en = diverTranslator("en-US");
 const es = diverTranslator("es-ES");
-
-const seaState = (
-  overrides: Partial<AutomatedSurfaceConditions> = {},
-): AutomatedSurfaceConditions => ({
-  waveHeightMeters: 0.7,
-  waveDirection: "e",
-  wavePeriodSeconds: 7,
-  ...overrides,
-});
 
 describe("depthText / temperatureText", () => {
   it("writes a stored metric value in the shop's own unit", () => {
@@ -24,62 +15,40 @@ describe("depthText / temperatureText", () => {
   });
 });
 
-describe("surfaceConditionsText", () => {
-  // DOM-L2: the forecast used to hand `src/app` a finished English metric
-  // sentence, so a Florida crew reading feet was told "0.7 m waves from E"
-  // on the same page whose water temperature it had already converted for
-  // them. The unit is the shop's existing `depth_unit`, not a setting the
-  // forecast grew for itself.
-  it("writes the sea state in the shop's depth unit", () => {
-    // "seas", not "waves": the reading is significant wave height (the mean of
-    // the highest third), and individual sets run 1.5–2× it — "2 ft waves" reads
-    // as a ceiling when it is an average (dive-domain-expert review, 2026-08-06).
-    expect(surfaceConditionsText(en, seaState(), "meters")).toBe("0.7 m seas from E · 7 s period");
-    expect(surfaceConditionsText(en, seaState(), "feet")).toBe("2 ft seas from E · 7 s period");
+describe("seaStateText", () => {
+  // The forecast used to hand a diver the model's own numbers — "0.7 m seas
+  // from E · 7 s period". Every part true, and close to useless to the person
+  // deciding whether to bring a seasickness tablet. What reaches the page now
+  // is a reading: what the sea is, and what that means for the day.
+  it("names the band and says what it means for the day", () => {
+    const light = seaStateText(en, "light_chop");
+    expect(light.label).toBe("Light chop");
+    expect(light.detail).toMatch(/small waves/i);
+
+    const bad = seaStateText(en, "very_rough");
+    expect(bad.label).toBe("Very rough");
+    expect(bad.detail).toMatch(/dock/i);
   });
 
-  // Whole metres would collapse the entire range a reef boat actually sees;
-  // whole feet keep the same readings apart without a decimal.
-  it("keeps a tenth of a metre and rounds to a whole foot", () => {
-    expect(surfaceConditionsText(en, seaState({ waveHeightMeters: 0.24 }), "meters")).toContain(
-      "0.2 m",
-    );
-    expect(surfaceConditionsText(en, seaState({ waveHeightMeters: 1.37 }), "meters")).toContain(
-      "1.4 m",
-    );
-    expect(surfaceConditionsText(en, seaState({ waveHeightMeters: 1.37 }), "feet")).toContain(
-      "4 ft",
-    );
+  // The band is a code, not a word, so the reader's own language decides —
+  // the same division every other measurement on this page goes through.
+  it("reads in the reader's own language", () => {
+    expect(seaStateText(es, "calm").label).toBe("En calma");
+    expect(seaStateText(es, "choppy").label).toBe("Picado");
+    expect(seaStateText(es, "choppy").detail).toMatch(/mareo/i);
   });
 
-  it("drops the clause a reading is missing rather than leaving an empty one", () => {
-    expect(surfaceConditionsText(en, seaState({ wavePeriodSeconds: null }), "meters")).toBe(
-      "0.7 m seas from E",
-    );
-    expect(surfaceConditionsText(en, seaState({ waveDirection: null }), "meters")).toBe(
-      "0.7 m seas · 7 s period",
-    );
-    expect(
-      surfaceConditionsText(
-        en,
-        seaState({ waveDirection: null, wavePeriodSeconds: null }),
-        "meters",
-      ),
-    ).toBe("0.7 m seas");
-  });
-
-  // The compass is not language-neutral: Spanish writes O for west and SO/NO
-  // for the corners that touch it, and the decimal separator moves too. Both
-  // come out of the bundle rather than out of `src/lib`.
-  it("reads the compass and the decimal in the reader's own language", () => {
-    expect(surfaceConditionsText(es, seaState(), "meters")).toBe(
-      "mar de 0,7 m del E · periodo de 7 s",
-    );
-    expect(surfaceConditionsText(es, seaState({ waveDirection: "w" }), "meters")).toContain(
-      "del O",
-    );
-    expect(surfaceConditionsText(es, seaState({ waveDirection: "sw" }), "meters")).toContain(
-      "del SO",
-    );
+  // Every band has both halves in both bundles; a missing one would render an
+  // ICU key on a diver's booking page.
+  it("has words for every band", () => {
+    for (const state of SEA_STATES) {
+      for (const t of [en, es]) {
+        const { label, detail } = seaStateText(t, state);
+        expect(label).not.toContain("trip.");
+        expect(detail).not.toContain("trip.");
+        expect(label.length).toBeGreaterThan(0);
+        expect(detail.length).toBeGreaterThan(0);
+      }
+    }
   });
 });

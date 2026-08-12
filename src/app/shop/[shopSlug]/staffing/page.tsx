@@ -169,16 +169,15 @@ export default async function StaffingPage({
         <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
           {/* 16px, not 14: this is the page's one operational message, and the
               dock test (design principle 2) sets the floor for the text a
-              manager reads on a phone between boats. */}
+              manager reads on a phone between boats.
+              No button beside it. The "Assign crew on Today" link this
+              replaces went to a permanent nav tab, which the header and the
+              phone dock already put one tap away from every page — chrome
+              restated as a call to action. The sentence names where the work
+              is done; getting there was never the hard part. */}
           <p className="text-base font-medium text-warning">
             {t("staffing.crewGaps.needCrew", { count: view.crewGaps.needCrew })}
           </p>
-          <Link
-            href={`/shop/${shopSlug}`}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("staffing.crewGaps.action")}
-          </Link>
         </section>
       ) : (
         <p className="mt-4 text-sm text-muted">

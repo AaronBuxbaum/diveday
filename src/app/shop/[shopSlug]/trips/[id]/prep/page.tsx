@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { PrintButton } from "@/components/PrintButton";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
@@ -13,10 +12,10 @@ import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { buildDivePrepChecklist, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
+import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -112,9 +111,15 @@ export default async function TripPrepPage({
 
   return (
     <>
-      <ShopPageHeader
-        eyebrow={t("trips.prep.eyebrow")}
+      <TripPageHeader
         title={trip.title}
+        startsAt={trip.startsAt}
+        endsAt={trip.endsAt}
+        locale={locale}
+        timeZone={shop.timezone}
+        badge={
+          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
+        }
         description={[
           t("trips.prep.diverCount", { count: checklist.diverCount }),
           checklist.crewCount > 0
@@ -125,12 +130,6 @@ export default async function TripPrepPage({
         ]
           .filter(Boolean)
           .join(" · ")}
-        meta={
-          <span>
-            {formatShortDate(trip.startsAt, locale, shop.timezone)},{" "}
-            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-          </span>
-        }
         actions={<PrintButton label={t("shared.printButton.label")} />}
       />
 

@@ -70,7 +70,20 @@ export default async function TripLayout({
           edge — the control carries a legend above it, and centring the two
           boxes puts their visible pills a few pixels out of line. */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <TripSubNav shopSlug={shopSlug} tripId={id} copy={subNavCopy} className="min-w-64 flex-1" />
+        {/* `basis-full` until `md`. These two are both `whitespace-nowrap`
+            pills, and between roughly 520px and 700px they fit on one row only
+            by squeezing the nav below its four tabs' own width — which the
+            nav's `overflow-x-auto` then absorbed *silently*, scrolling Prep out
+            of sight with no scrollbar and nothing to say a fourth tab existed.
+            Taking the whole row below `md` makes them stack, which is what the
+            wrap was already for at phone widths; from `md` up there is room for
+            both side by side. */}
+        <TripSubNav
+          shopSlug={shopSlug}
+          tripId={id}
+          copy={subNavCopy}
+          className="basis-full md:min-w-64 md:flex-1 md:basis-auto"
+        />
         <AmbientContrastControl
           copy={{
             modeLabel: t("shared.boatMode.modeLabel"),

@@ -197,7 +197,12 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // and the per-assertion override this test used to carry (15s on the empty
   // state) was budgeting for a diagnosis that measurement does not support. It
   // is gone; the assertion runs on the suite's ordinary 8s.
-  test.setTimeout(25_000);
+  //
+  // 35s, not 25: closing the eviction race added a second reload (see the
+  // ordering note further down). That is one more navigation, not a slower
+  // assertion — every wait in here is still a converging poll or the suite's
+  // ordinary 8s.
+  test.setTimeout(35_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
@@ -234,6 +239,32 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // that asks — and it is the honest simulation, since a captain whose storage
   // was cleared on the boat has no way to refetch either.
   await context.setOffline(true);
+  // The fourth way this test has been raced, and the one the delete loop below
+  // cannot converge on by itself.
+  //
+  // `setOffline` blocks transport; it does not make `navigator.onLine` read
+  // false, and it certainly does not survive a navigation. So the *reloaded*
+  // document believes it has signal and starts an auto-save round — and while
+  // aborting `/upcoming` stops that round fetching anything, a round that
+  // began in the **old** document before `setOffline` already holds its payload
+  // in memory and writes to IndexedDB with no network at all. That write can
+  // land after the delete loop's last look and before the reload's read, and
+  // the page then correctly renders a roster while the assertion waits for an
+  // empty state. It is exactly the failure this test produced on CI (shard 2/4,
+  // run 31550980341), and never on an idle machine, because the window is a
+  // few hundred milliseconds wide and only a loaded runner sits in it.
+  //
+  // Making `navigator.onLine` false in every document from here closes it at
+  // the source: every writer in OfflineManifestAutoSave and
+  // OfflineManifestManager returns early on that flag, so once the reload below
+  // has happened *nothing in the page can write to the store at all* — which is
+  // what turns the delete into a last word rather than a race. It is also the
+  // honest simulation. A captain whose storage was cleared mid-charter has a
+  // phone that knows it has no bars, not one that thinks it is online and
+  // merely fails every request.
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false });
+  });
   await context.route("**/api/offline-manifests/upcoming*", (route) => route.abort());
   // And the identity endpoint the offline shell itself calls (review 20260802,
   // action item 12 — it used to reach `/upcoming` for the same one string).
@@ -243,18 +274,22 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // a simulation that lets one of them answer is not the situation being
   // tested.
   await context.route("**/api/offline-manifests/identity*", (route) => route.abort());
-  // Deleting once is not enough, and this is the third distinct way this test
-  // has been raced. `setOffline` stops a save *round* from starting, but a
-  // round that began just before it already holds its payload in memory and
-  // writes to IndexedDB with no network at all — so the record can reappear
-  // between the delete and the reload, and the page then correctly renders a
-  // manifest while the assertion below waits for the empty state.
-  //
-  // So: delete, look again a beat later, and delete again until it stays gone.
-  // Nothing can legitimately re-create it once it has — the network is down
-  // and `/upcoming` is refused — which is what makes this converge rather than
-  // merely wait longer. `onblocked` resolves rather than hanging: a still-open
-  // connection means "not deleted", which this loop is already the answer to.
+  // Reload *before* deleting, into a document that reports no signal. This is
+  // the ordering the race above dictates: every writer is now disabled, and the
+  // old document — the one that may still have had a save round in flight — is
+  // gone with its in-memory payload. Only after this is the store quiet enough
+  // for a delete to mean anything. The page still renders the saved roster here
+  // (nothing has been deleted yet), which is the point: the record is intact
+  // and no longer reachable by any writer.
+  await page.reload();
+  await expect(page).toHaveURL(/\/offline-manifest\?trip=.*checkpoint=after_dive_1/);
+
+  // Deleting once ought to be enough now, and the loop stays as the proof of
+  // it rather than as a way of outlasting a writer: it converges on the first
+  // pass, and if it ever stops converging that is a real regression in the
+  // "offline means offline" contract above, not a timing problem to wait out.
+  // `onblocked` resolves rather than hanging: a still-open connection means
+  // "not deleted", which this loop is already the answer to.
   await expect
     .poll(
       () =>
@@ -342,9 +377,38 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // are still caught: if the worker served the route, the reload would have
   // *succeeded* and there would be no error; if it redirected to the offline
   // shell, the URL would say so.
-  expect(reloadError?.message).toMatch(
-    /ERR_INTERNET_DISCONNECTED|ERR_ABORTED|Not attached to an active page/,
-  );
+  //
+  // **A fourth shape, and the last one this can have.** CI produced a reload
+  // that did not throw at all (run 31551932833, shard 2/4), which the paragraph
+  // above treats as proof the worker served the route. It is not proof: a
+  // document can come back offline from Chromium's own HTTP cache or bfcache,
+  // with no service worker involved, and that has nothing to do with what this
+  // test guards. Widening the regex again would have been the fourth guess at
+  // an error string.
+  //
+  // So the no-throw case is now decided by the one signal that names the
+  // culprit directly. `PerformanceNavigationTiming.workerStart` is non-zero
+  // **only** when the navigation went through a service worker's fetch
+  // handler — the browser's own record of whether the worker answered. If the
+  // reload succeeded without the worker, that is the HTTP cache doing its job
+  // and no concern of this spec; if the worker answered a `/guests` URL, that
+  // is exactly the regression, and it fails here whatever the error shape.
+  if (reloadError) {
+    expect(reloadError.message).toMatch(
+      /ERR_INTERNET_DISCONNECTED|ERR_ABORTED|Not attached to an active page/,
+    );
+  } else {
+    const servedByWorker = await page.evaluate(() => {
+      const [navigation] = performance.getEntriesByType(
+        "navigation",
+      ) as PerformanceNavigationTiming[];
+      return (navigation?.workerStart ?? 0) > 0;
+    });
+    expect(
+      servedByWorker,
+      "the offline reload succeeded and the service worker is what answered it — the live-manifest pattern has leaked past the manifest route",
+    ).toBe(false);
+  }
   expect(page.url()).not.toContain("/offline-manifest");
 
   await context.setOffline(false);

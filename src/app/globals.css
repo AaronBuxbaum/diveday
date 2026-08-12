@@ -268,6 +268,45 @@ textarea {
   accent-color: var(--primary);
 }
 
+/*
+ * One dropdown arrow, ours, everywhere.
+ *
+ * The native control draws its own indicator hard against the box's right
+ * edge, ignoring the element's padding: at the app's `rounded-lg` radius that
+ * left a thin platform chevron sitting inside the corner curve, at a weight
+ * and size that matched nothing else on the page and that differs between
+ * macOS, Windows, and Android. Every select here is styled by us apart from
+ * that one glyph, so it was the single piece that looked borrowed.
+ *
+ * Drawn from two gradient triangles rather than an SVG data URI so the arrow
+ * is painted in `currentColor`: a data URI cannot interpolate a CSS variable,
+ * which would have meant hard-coding a hex per skin and re-hard-coding it for
+ * dark, boat mode, and glare mode. `padding-inline-end` reserves the strip it
+ * occupies so a long option label never runs under it.
+ *
+ * Multi-selects and sized list boxes render as an open list, not a closed
+ * box, and have no indicator to replace.
+ */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-inline-end: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 1.25rem center,
+    right 0.9375rem center;
+  background-size: 0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+}
+
+/* The indicator follows the writing direction, as the padding already does. */
+select:not([multiple]):not([size]):dir(rtl) {
+  background-position:
+    left 0.9375rem center,
+    left 1.25rem center;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: color-mix(in srgb, var(--muted) 78%, transparent);

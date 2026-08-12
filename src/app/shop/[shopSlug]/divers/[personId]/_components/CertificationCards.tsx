@@ -1,4 +1,3 @@
-import { DigitalCardFlip } from "@/components/DigitalCardFlip";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -39,25 +38,6 @@ export async function CertificationCards({
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // Shared across every card on this diver. Per-card interpolated text (card
-  // number, ID, aria-label) is built fresh per card below, in the .map — ICU
-  // composes those server-side so word order stays correct per locale,
-  // rather than concatenating a prefix/suffix on the client.
-  const cardCopy = {
-    diverLabel: t("divers.certifications.card.diverLabel"),
-    statusVerified: t("divers.certifications.card.statusVerified"),
-    statusRefresherDue: t("divers.certifications.card.statusRefresherDue"),
-    statusPending: t("divers.certifications.card.statusPending"),
-    noPhoto: t("divers.certifications.card.noPhoto"),
-    certifiedByStaff: t("divers.certifications.card.certifiedByStaff"),
-    refresherDueVerify: t("divers.certifications.card.refresherDueVerify"),
-    awaitingVerification: t("divers.certifications.card.awaitingVerification"),
-    secureLabel: t("divers.certifications.card.secureLabel"),
-    openFullSize: t("divers.certifications.card.openFullSize"),
-    uploadedAlt: t("divers.certifications.card.uploadedAlt"),
-  };
-  const uploadedPhotoText = t("divers.certifications.card.uploadedPhoto");
-  const securityDetailsText = t("divers.certifications.card.securityDetails");
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -175,31 +155,6 @@ export async function CertificationCards({
                   {card.reviewNote ? (
                     <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
                   ) : null}
-                  <details className="mt-2 group print:hidden">
-                    <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">
-                      {t("divers.certifications.viewDigitalCard")}
-                    </summary>
-                    <DigitalCardFlip
-                      fullName={diver.person.fullName}
-                      agencyLabel={t(AGENCY_KEYS[card.agency])}
-                      levelLabel={t(CERTIFICATION_LEVEL_KEYS[card.level])}
-                      cardImageUrl={card.cardImageUrl}
-                      verificationStatus={display}
-                      copy={{
-                        ...cardCopy,
-                        cardNumberText: t("divers.certifications.card.cardNumberText", {
-                          id: card.identifier,
-                        }),
-                        idText: t("divers.certifications.card.idText", { id: card.identifier }),
-                        flipAriaLabel: t("divers.certifications.card.flipAriaLabel", {
-                          level: t(CERTIFICATION_LEVEL_KEYS[card.level]),
-                        }),
-                        tapToFlipText: t("divers.certifications.card.tapToFlipText", {
-                          target: card.cardImageUrl ? uploadedPhotoText : securityDetailsText,
-                        }),
-                      }}
-                    />
-                  </details>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone(display)}>{t(CARD_STATUS_KEYS[display])}</Badge>

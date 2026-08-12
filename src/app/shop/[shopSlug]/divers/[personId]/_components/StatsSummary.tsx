@@ -35,6 +35,7 @@ function StatCard({
 }: {
   label: string;
   value: ReactNode;
+  /** Null when the value says everything there is to say — see the Bookings card. */
   detail: ReactNode;
   /** Set when this card is holding something a staffer still has to do. */
   attention?: boolean;
@@ -46,16 +47,23 @@ function StatCard({
         attention ? "border-warning/40 bg-warning/5" : "border-border bg-surface"
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* `flex-wrap`, and the badge nowraps. Four of these sit in one `lg`
+          row, so each card is about 200px wide — and "Rental fit" beside
+          "▲ Needs attention" does not fit in that. Without wrapping, flex shrank
+          *both*: the label broke after "Rental" and the badge broke mid-phrase,
+          giving a two-line label facing a two-line pill and a card that read as
+          damaged. Wrapping drops the badge to its own full-width line instead,
+          where it has room to stay one line and the label stays one line too. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <p className="text-sm text-muted">{label}</p>
         {attention ? (
-          <Badge tone="warning" size="sm">
+          <Badge tone="warning" size="sm" className="whitespace-nowrap">
             {t("divers.stats.needsAttention")}
           </Badge>
         ) : null}
       </div>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
-      <p className="text-sm text-muted">{detail}</p>
+      {detail ? <p className="text-sm text-muted">{detail}</p> : null}
     </div>
   );
 }
@@ -179,9 +187,13 @@ export function StatsSummary({
       {/* Bookings, deliberately — not dives. The imported half of this number is
           what a prior system recorded as booked (ADR 20260725-import-prior-visits),
           which includes rows it also recorded as cancelled; counting those as
-          dives would invent trips the diver never made. The sub-line splits the
-          number so nobody has to guess which part happened here — unless money
-          is owed, in which case that is the more useful thing to say. */}
+          dives would invent trips the diver never made.
+          The sub-line says what the number *doesn't*: how much of it is owed
+          for, or how much of it predates this shop's records. It used to open
+          by restating the count in words — "3" over "3 bookings" — which is the
+          one thing a reader has already got from the digit above it
+          (principle 9). With neither an unpaid seat nor an import there is
+          nothing left to add, so the line is simply absent. */}
       <StatCard
         t={t}
         label={t("divers.stats.bookings")}
@@ -190,11 +202,9 @@ export function StatsSummary({
         detail={
           unpaid > 0
             ? t("divers.stats.unpaidBookings", { count: unpaid })
-            : `${t("divers.stats.bookingsText", { count: totalBookings })}${
-                diver.priorVisits.length > 0
-                  ? t("divers.stats.importedSuffix", { count: diver.priorVisits.length })
-                  : ""
-              }`
+            : diver.priorVisits.length > 0
+              ? t("divers.stats.importedCount", { count: diver.priorVisits.length })
+              : null
         }
       />
     </div>

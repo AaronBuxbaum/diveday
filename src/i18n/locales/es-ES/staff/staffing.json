@@ -42,8 +42,7 @@
   "crewGaps": {
     "needCrew": "{count, plural, one {# salida de este periodo sigue sin tripulación suficiente.} other {# salidas de este periodo siguen sin tripulación suficiente.}}",
     "allCrewed": "Todas las salidas de este periodo tienen su tripulación.",
-    "noDepartures": "No hay salidas programadas en este periodo.",
-    "action": "Asignar tripulación en Hoy"
+    "noDepartures": "No hay salidas programadas en este periodo."
   },
   "notice": {
     "shiftSaved": "Turno guardado.",

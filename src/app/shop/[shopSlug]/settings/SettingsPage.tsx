@@ -37,6 +37,7 @@ import {
   canViewShopReports,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { type DockDayRhythmStep, dockDayRhythmPreview } from "@/lib/diver-planning";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
@@ -212,6 +213,20 @@ export { SETTINGS_GROUPS };
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
 const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
+
+/**
+ * Staff words for the beats of the dock day that this page's one dock-call
+ * number produces. The diver-facing page names the same steps from
+ * `diver.json`; these are the staff bundle's own, because a shop owner
+ * configuring the rhythm and a diver reading it are two different readers.
+ * Typed against `DockDayRhythmStep`, so a new beat is a compile error here
+ * until it has a word.
+ */
+const DOCK_DAY_STEP_KEYS: Record<DockDayRhythmStep, StaffMessageKey> = {
+  arrive: "settings.main.dockCall.stepArrive",
+  briefing: "settings.main.dockCall.stepBriefing",
+  departure: "settings.main.dockCall.stepDeparture",
+};
 
 /**
  * Which stored file a deletion never finished on. Without an entry here the
@@ -725,6 +740,28 @@ export default async function SettingsPage({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
+            {/* The answer to "where do I set the dock-day rhythm?" — which used
+                to be nowhere a reader could see. This one number is the whole
+                rhythm a diver reads on their booking page under that heading:
+                it sets the arrival call, and the briefing is derived from it
+                (`dockDayTimeline`, src/lib/diver-planning.ts). Showing the
+                beats it produces, as offsets from departure, is what makes the
+                field and the diver-facing timeline visibly the same thing —
+                naming the setting after the arrival call alone was why they
+                read as two unrelated features. Offsets, not clock times: this
+                row is about every departure, not one. */}
+            <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+              {dockDayRhythmPreview(shop.dockCallMinutes).map(({ step, minutesBefore }) => (
+                <div key={step} className="flex items-baseline gap-2">
+                  <dt>{t(DOCK_DAY_STEP_KEYS[step])}</dt>
+                  <dd className="font-medium text-foreground tabular-nums">
+                    {minutesBefore === 0
+                      ? t("settings.main.dockCall.atDeparture")
+                      : t("settings.main.dockCall.minutesBefore", { count: minutesBefore })}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </SettingsRow>
 
           {/* One row for the three units a shop reads its own numbers in.
