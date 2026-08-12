@@ -36,6 +36,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # TEMPORARY — every workflow_dispatch run of this workflow has had its
+  # `diff`/`deploy` jobs skip regardless of the chosen `command` input, both
+  # via the API and via the Actions UI "Run workflow" button. This job has no
+  # `needs:` and no dependency on `inputs.command`, so it always runs; its one
+  # job is to print exactly what GitHub actually recorded for this dispatch,
+  # so we can tell an inputs problem from a needs-propagation problem instead
+  # of continuing to guess. Remove once the cause is confirmed.
+  debug-dispatch:
+    name: Debug workflow_dispatch inputs
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print raw event context
+        env:
+          EVENT_INPUTS: ${{ toJSON(github.event.inputs) }}
+          TOP_LEVEL_INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "github.event.inputs: ${EVENT_INPUTS}"
+          echo "inputs: ${TOP_LEVEL_INPUTS}"
+          echo "inputs.command: ${{ inputs.command }}"
+
   infra-changed:
     name: Detect infra changes
     # Only pull_request needs this gate. A workflow_dispatch run is already an
