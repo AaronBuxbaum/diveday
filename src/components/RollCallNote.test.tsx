@@ -2,7 +2,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readNoteDraft, writeNoteDraft } from "@/lib/roll-call-note-draft";
+import { clearNoteDraft, readNoteDraft, writeNoteDraft } from "@/lib/roll-call-note-draft";
 import { RollCallNote, type RollCallNoteCopy } from "./RollCallNote";
 
 const BOOKING = "00000000-0000-4000-8000-000000000001";
@@ -26,6 +26,11 @@ function setOnline(online: boolean) {
 
 afterEach(() => {
   cleanup();
+  // Through the module, not just `localStorage.clear()`: the draft store keeps
+  // an in-memory map of each row's pending text so the roll-call buttons can
+  // read it without a `getItem` per render, and wiping storage behind its back
+  // would leave that map speaking for a row this test no longer owns.
+  clearNoteDraft(BOOKING, "departure");
   localStorage.clear();
   setOnline(true);
 });
