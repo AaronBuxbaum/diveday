@@ -38,15 +38,14 @@ to the wildcard, and neither casing nor an omitted ID survives that check.
 
 ## Decision
 
-`infra-stack.ts` §pre-18 adds `GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351"`, built from
-GitHub's own immutable identifiers — this repository's account id and repository id, stable across a
-rename or an ownership transfer (presumably why GitHub started embedding them: a deleted-and-recreated
-repo of the same name now mints a different `sub` and stops matching a trust policy built by name
-alone, closing a spoofing gap). Both `GitHubActionsCdkDiffRole` and `GitHubActionsCdkDeployRole`'s
-trust conditions are built from `GITHUB_REPO_SUB` instead of `GITHUB_REPO`. `GITHUB_REPO` itself is
-kept — it has no other reader in `infra-stack.ts`, but the bare `owner/repo` string is still the
-readable one for a comment or a future non-`sub` use, and rebuilding it from `GITHUB_REPO_SUB` by
-stripping `@id` suffixes would be more code than the duplication it avoids.
+`infra-stack.ts` §pre-18 replaces the bare-name `GITHUB_REPO` constant with
+`GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351"`, built from GitHub's own immutable
+identifiers — this repository's account id and repository id, stable across a rename or an ownership
+transfer (presumably why GitHub started embedding them: a deleted-and-recreated repo of the same name
+now mints a different `sub` and stops matching a trust policy built by name alone, closing a spoofing
+gap). Both `GitHubActionsCdkDiffRole` and `GitHubActionsCdkDeployRole`'s trust conditions are built
+from `GITHUB_REPO_SUB`. The old constant had no other reader, so it's gone rather than kept alongside
+as dead code.
 
 ## Alternatives considered
 

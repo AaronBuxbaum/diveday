@@ -36,29 +36,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # TEMPORARY — every workflow_dispatch run of this workflow has had its
-  # `diff`/`deploy` jobs skip regardless of the chosen `command` input, both
-  # via the API and via the Actions UI "Run workflow" button. This job has no
-  # `needs:` and no dependency on `inputs.command`, so it always runs; its one
-  # job is to print exactly what GitHub actually recorded for this dispatch,
-  # so we can tell an inputs problem from a needs-propagation problem instead
-  # of continuing to guess. Remove once the cause is confirmed.
-  debug-dispatch:
-    name: Debug workflow_dispatch inputs
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Print raw event context
-        env:
-          EVENT_INPUTS: ${{ toJSON(github.event.inputs) }}
-          TOP_LEVEL_INPUTS: ${{ toJSON(inputs) }}
-        run: |
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "github.event.inputs: ${EVENT_INPUTS}"
-          echo "inputs: ${TOP_LEVEL_INPUTS}"
-          echo "inputs.command: ${{ inputs.command }}"
-
   infra-changed:
     name: Detect infra changes
     # Only pull_request needs this gate. A workflow_dispatch run is already an
@@ -159,27 +136,6 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DIFF_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDiffRoleArn stack output."
           exit 1
-      # TEMPORARY — same reasoning as the identical step in the deploy job
-      # (added in #475): this role's assumption also fails with "Not
-      # authorized to perform sts:AssumeRoleWithWebIdentity" despite a
-      # trust policy and OIDC provider that both check out correct from the
-      # AWS side, and this job actually reaches this point (deploy's own
-      # debug step never runs, since deploy needs this job to succeed).
-      # Prints decoded claims only, never the raw token — this repo's
-      # Actions logs are public. Remove once the cause is confirmed.
-      - name: Debug OIDC token claims
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          jwt=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          payload=$(echo "$jwt" | cut -d. -f2)
-          python3 -c "
-          import base64, json, sys
-          s = sys.argv[1]; s += '=' * (-len(s) % 4)
-          claims = json.loads(base64.urlsafe_b64decode(s))
-          for k in ('iss','aud','sub','repository','repository_owner','environment','ref','job_workflow_ref'):
-              print(f'{k}: {claims.get(k)}')
-          " "$payload"
       - uses: aws-actions/configure-aws-credentials@v4
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
@@ -231,23 +187,6 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DEPLOY_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDeployRoleArn stack output."
           exit 1
-      # TEMPORARY — diagnosing "Not authorized to perform sts:AssumeRoleWithWebIdentity"
-      # against a trust policy and OIDC provider that both check out correct from the AWS
-      # side (see the PR description). This prints only the decoded claims, never the raw
-      # token, since this repo's Actions logs are public. Remove this step once the cause
-      # is confirmed.
-      - name: Debug OIDC token claims
-        run: |
-          jwt=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          payload=$(echo "$jwt" | cut -d. -f2)
-          python3 -c "
-          import base64, json, sys
-          s = sys.argv[1]; s += '=' * (-len(s) % 4)
-          claims = json.loads(base64.urlsafe_b64decode(s))
-          for k in ('iss','aud','sub','repository','repository_owner','environment','ref','job_workflow_ref'):
-              print(f'{k}: {claims.get(k)}')
-          " "$payload"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1

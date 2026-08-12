@@ -41,36 +41,31 @@ const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
 /**
  * Scopes every GitHub Actions OIDC trust condition below (§18) to this repo.
- *
  * Spelled with GitHub's own casing, and it has to be: this string is embedded
- * (see `GITHUB_REPO_SUB`, below) in an IAM `StringLike` on
- * `token.actions.githubusercontent.com:sub`, and `StringLike` is
- * case-sensitive with no ignore-case variant to reach for.
- */
-const GITHUB_REPO = "AaronBuxbaum/diveday";
-/** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
-const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
-/**
- * GitHub now mints the `sub` claim's `repo:` segment as
- * `owner@ownerId/repo@repoId`, not the bare `owner/repo` `GITHUB_REPO` alone
- * would suggest — confirmed 2026-08-12 by printing a real token's decoded
- * claims from a workflow run (`repo:AaronBuxbaum@5578581/diveday@1302222351:
- * ref:refs/heads/main`), after the trust policy, the `GitHubActionsOidcProvider`,
- * the AWS account, and AWS Organizations SCPs/RCPs were each individually
- * ruled out as the cause of "Not authorized to perform
- * sts:AssumeRoleWithWebIdentity" on every credentialed CI step touching
- * `infra/`. A `StringLike` built from `GITHUB_REPO` alone (`repo:AaronBuxbaum/
- * diveday:*`) is not a prefix of that string, so it matches nothing — the same
- * failure shape, and the same read-as-something-else risk, the casing bug
- * above once caused. Both IDs are GitHub's own immutable identifiers (account
- * id and repository id — this repo's `git remote`/API surface calls them
- * `owner.id` and `id`), stable across a rename or an ownership transfer,
- * which is presumably why GitHub started including them: a deleted-and-
- * recreated repo of the same name mints a different `sub` and stops matching
- * a trust policy built this way, closing a spoofing gap a name-only match
- * left open.
+ * in an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, and
+ * `StringLike` is case-sensitive with no ignore-case variant to reach for.
+ *
+ * Also spelled as `owner@ownerId/repo@repoId`, not the bare `owner/repo` that
+ * reads naturally — GitHub now mints the `sub` claim's `repo:` segment that
+ * way, confirmed 2026-08-12 by printing a real token's decoded claims from a
+ * workflow run (`repo:AaronBuxbaum@5578581/diveday@1302222351:ref:refs/heads/
+ * main`), after the trust policy, the `GitHubActionsOidcProvider`, the AWS
+ * account, and AWS Organizations SCPs/RCPs were each individually ruled out
+ * as the cause of "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+ * on every credentialed CI step touching `infra/`. A `StringLike` built from
+ * the bare name (`repo:AaronBuxbaum/diveday:*`) is not a prefix of that
+ * string, so it matches nothing — the same failure shape, and the same
+ * read-as-something-else risk, the casing bug once caused. Both IDs are
+ * GitHub's own immutable identifiers (account id and repository id — this
+ * repo's `git remote`/API surface calls them `owner.id` and `id`), stable
+ * across a rename or an ownership transfer, which is presumably why GitHub
+ * started including them: a deleted-and-recreated repo of the same name
+ * mints a different `sub` and stops matching a trust policy built this way,
+ * closing a spoofing gap a name-only match left open.
  */
 const GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351";
+/** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
+const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
 // IAM user names as literals, for the destination headings inside the
 // credentials document. `iam.User.userName` is a token there, not a string, so
