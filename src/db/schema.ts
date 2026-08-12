@@ -2865,18 +2865,6 @@ export const certifications = pgTable(
     level: certificationLevel("level").notNull(),
     identifier: text("identifier").notNull(),
     /**
-     * **Legacy only — nothing writes this any more.** A shop verifies a card by
-     * looking its number up with the issuing agency, which is what "Mark
-     * certified" attests to; the upload only ever added a second, unverified
-     * artefact to hold, and the digital-card viewer that displayed it is gone
-     * too. Kept nullable so rows written before those removals still round-trip
-     * through export and still get their stored object retired by diver erasure
-     * (`src/db/anonymize.ts`) — dropping the column would strand those objects
-     * in the blob store with nothing left pointing at them. See
-     * docs/product/follow-ups/ for the drop-and-purge that finishes this.
-     */
-    cardImageUrl: text("card_image_url"),
-    /**
      * Date-only, no time-of-day or timezone (CR-009): a card is valid
      * through the end of its own local calendar day in the shop's
      * timezone, not a fixed UTC instant that expires early or late
@@ -2937,18 +2925,6 @@ export const specialtyCertifications = pgTable(
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
     identifier: text("identifier").notNull(),
-    /**
-     * **Legacy only — nothing writes this any more.** A shop verifies a card by
-     * looking its number up with the issuing agency, which is what "Mark
-     * certified" attests to; the upload only ever added a second, unverified
-     * artefact to hold, and the digital-card viewer that displayed it is gone
-     * too. Kept nullable so rows written before those removals still round-trip
-     * through export and still get their stored object retired by diver erasure
-     * (`src/db/anonymize.ts`) — dropping the column would strand those objects
-     * in the blob store with nothing left pointing at them. See
-     * docs/product/follow-ups/ for the drop-and-purge that finishes this.
-     */
-    cardImageUrl: text("card_image_url"),
     /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
     expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
@@ -3596,12 +3572,19 @@ export const tripReviews = pgTable(
 );
 
 /**
- * `certification_card` (a photograph of a diver's C-card) and `waiver_document`
- * (a scanned paper release or medical form brought in by the importer) are the
- * blob kinds diver erasure owes a delete for
+ * `waiver_document` (a scanned paper release or medical form brought in by the
+ * importer) is the blob kind diver erasure owes a delete for
  * (ADR 20260802-diver-data-erasure) — the row's URL column is nulled locally
  * and the object itself is retired through this same ledger rather than a
- * second, parallel mechanism.
+ * second, parallel mechanism. `recap_photo` joins it for a diver who shared
+ * photos of their own.
+ *
+ * **`certification_card` is unreachable** and kept only because Postgres has no
+ * `ALTER TYPE … DROP VALUE`: removing it means recreating the type that
+ * `media_deletions.kind` depends on, which is a materially riskier migration
+ * than the dead enum member costs. A card has carried no photograph since ADR
+ * 20260811-retire-the-digital-card dropped `card_image_url`, so nothing can
+ * queue one; its labels stay so a pre-release row still renders a word.
  */
 export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "course_photo",

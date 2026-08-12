@@ -71,8 +71,10 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     ["Orders", /\/orders$/],
     ["Team", /\/settings\/team$/],
     // The global seat-a-diver door. It was hand-written into the palette
-    // itself until it earned a registry entry of its own, so this row now
-    // proves the same list the nav reads.
+    // itself until it earned a registry entry of its own, so this row proves
+    // the palette reads the shared destination registry. Not that the nav
+    // does: `addBooking` is `navGroup: null` (it is an action, and the board
+    // keeps its own button), so no header tab has ever named it.
     ["Add a booking", /\/bookings\/new$/],
   ] as const) {
     await shortcuts.fill(query);

@@ -107,6 +107,32 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "The money runs through your Stripe account, not ours." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
+
+  // The click-through above has done its job — the Product link leads here. The
+  // disclosure below is exercised from a fresh `goto`, and deliberately not
+  // from the page this client-side navigation left us on.
+  //
+  // `/product` paints a **default-locale body as its own Suspense fallback**
+  // and swaps in the negotiated-locale one when it resolves (see
+  // `ProductPage`). For an en-US run both render identical copy, so every
+  // assertion above passes against either — but the swap replaces the subtree,
+  // and `<details>` open/closed is DOM state that a replaced subtree does not
+  // carry over. A click that lands in that window opens a disclosure that is
+  // about to be thrown away, and the assertion that follows then queries a
+  // *closed* `<details>` — whose contents are outside the accessibility tree,
+  // so `getByRole` reports "element(s) not found" rather than "not visible".
+  // That is exactly the failure this line produced on CI (shard 3/4, run
+  // 31549005047) and never once in local repeats, which is the signature of a
+  // race that only opens up under load.
+  //
+  // `goto` is load-gated, so the streamed body has landed before the click.
+  // Not a timing shim: nothing here waits a guessed interval or retries — the
+  // navigation's own completion is the signal, which is what the whole page
+  // lacked on the client-side path. The user-facing half of this — a visitor
+  // who opens the disclosure fast enough watches it snap shut — is filed as
+  // FU-20260812-marketing-suspense-swap-discards-interaction.
+  await page.goto("/product");
+  await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
   // The full capability index sits behind a disclosure by default.
   await page.getByText("The full list").click();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();

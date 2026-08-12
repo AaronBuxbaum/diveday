@@ -94,15 +94,30 @@ export function RollCallNote({
       startTransition(async () => {
         try {
           const result = await saveNote(bookingId, checkpoint, value);
-          if (result.ok && result.saved) {
+          if (!result.ok) {
+            // The action itself refused — a value that failed its schema, or a
+            // checkpoint it could not prove. That is a fault, not a hold, and
+            // the draft stays pending so a reload or a re-blur retries it.
+            setStatus("error");
+          } else if (result.saved) {
+            // Clear only what *this* save actually landed. Staff type faster
+            // than a round trip: while this request was in flight the field
+            // may have moved on, and its newer text is sitting in the draft
+            // with its own debounce behind it. Clearing that would open a
+            // window — up to one debounce wide — in which the newer note is on
+            // neither the server nor the device, so a "Mark boarded" tap
+            // during it would post nothing and lose the note outright, which
+            // is the exact failure this whole path exists to prevent.
+            const current = readNoteDraft(bookingId, checkpoint);
+            if (current && current.value !== value) return;
             clearNoteDraft(bookingId, checkpoint);
             setStatus("saved");
           } else {
-            // The server was reached and refused: there is no recorded result
+            // Reached and accepted, but there is no recorded roll-call result
             // on this row for the note to attach to. That is the *ordinary*
             // state of an uncalled diver, not an error — so the draft stays
             // pending on the device, where the next roll-call submit picks it
-            // up, and the line says it is waiting rather than that it failed.
+            // up, and the line says it is held rather than that it failed.
             setStatus("waiting");
           }
         } catch {

@@ -220,7 +220,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
         `- ${table.file} (${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}): ${table.note}`,
     ),
     ``,
-    `Photos: any image_url / card_image_url / *_url column above whose link is`,
+    `Photos: any image_url / *_url column above whose link is`,
     `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
     `path as the URL — for example an image_url of`,
     `https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg is also at`,

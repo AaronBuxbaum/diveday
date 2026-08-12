@@ -62,3 +62,10 @@ and one more field between a front-desk staffer and a captured card.
   keeps no image — rather than reinstating a stored photo.
 - Reversible at the cost of one form field: the column, the display, and the storage pipeline all
   survive, so restoring the upload is additive rather than a migration.
+  **No longer true as of 2026-08-11.**
+  [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md) removed both displays,
+  took `cardImageUrl` off the create path, and dropped `card_image_url` from both tables. Only the
+  shared storage pipeline in `src/lib/storage/` survives (it still carries course, recap,
+  dive-site and import-document uploads). Reinstating a card photo now means a migration to add
+  the column back, plus the write path, the display, and the export and erasure handling — which
+  was an acceptable trade only because no shop was live and no row held a value.

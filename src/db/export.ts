@@ -491,8 +491,6 @@ export async function loadShopExportBundleInput(
       // again to DiveDay's own storage — collecting a non-managed URL here is
       // harmless, just never fetched.
       const photoUrls = [
-        ...certificationRows.map((row) => row.cardImageUrl),
-        ...specialtyRows.map((row) => row.cardImageUrl),
         ...recapPhotoRows.map((row) => row.imageUrl),
         ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
         ...creatureRows.map((row) => row.imageUrl),
@@ -685,7 +683,6 @@ export async function loadShopExportBundleInput(
             "expires_at",
             "review_note",
             "reviewed_at",
-            "card_image_url",
             // Provenance from the contact importer (ADR 20260724-import-verified-cards):
             // a non-null imported_at is the definitive "this card was migrated, not
             // carded on sight" marker, permanent even after a staff confirm.
@@ -705,7 +702,6 @@ export async function loadShopExportBundleInput(
             row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
-            row.cardImageUrl,
             row.importedAt,
             row.importedFromLabel,
             row.deletedAt,
@@ -726,7 +722,6 @@ export async function loadShopExportBundleInput(
             "expires_at",
             "review_note",
             "reviewed_at",
-            "card_image_url",
             "deleted_at",
             "created_at",
           ],
@@ -741,7 +736,6 @@ export async function loadShopExportBundleInput(
             row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
-            row.cardImageUrl,
             row.deletedAt,
             row.createdAt,
           ]),

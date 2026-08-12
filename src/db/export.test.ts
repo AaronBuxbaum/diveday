@@ -14,6 +14,7 @@ import {
   certifications,
   courseInquiries,
   courses,
+  diveSites,
   internalNotes,
   people,
   personRoles,
@@ -1037,39 +1038,22 @@ describe("export counts (the settings page's cheap view)", () => {
 describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
   it("collects every image URL referenced anywhere in the bundle, deduped and sorted", async () => {
     const { db, shop } = await seededShopContext();
-    const [diver] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Photo Person", email: "photo.person@example.com" })
-      .returning();
-    const managedA = "https://xyz.public.blob.vercel-storage.com/cards/a.jpg";
-    const managedB = "https://xyz.public.blob.vercel-storage.com/cards/b.jpg";
-    await db.insert(certifications).values([
-      {
-        shopId: shop.id,
-        personId: diver.id,
-        agency: "padi",
-        level: "open_water",
-        identifier: "PHOTO-1",
-        cardImageUrl: managedA,
-      },
-      {
-        shopId: shop.id,
-        personId: diver.id,
-        agency: "padi",
-        level: "advanced_open_water",
-        identifier: "PHOTO-2",
-        // Same URL again — must be deduped, not fetched/counted twice.
-        cardImageUrl: managedA,
-      },
+    const managedA = "https://xyz.public.blob.vercel-storage.com/sites/a.jpg";
+    const managedB = "https://xyz.public.blob.vercel-storage.com/sites/b.jpg";
+    // Dive-site imagery rather than certification cards: a card has carried no
+    // photograph since ADR 20260811-retire-the-digital-card dropped the column,
+    // so there is no card URL left for this bundle to gather. What is being
+    // proved — dedup across rows, sorting, and that an unreferenced URL never
+    // appears — is unchanged.
+    await db.insert(diveSites).values([
+      { shopId: shop.id, name: "Photo Reef One", satelliteImageUrl: managedA },
+      // The same URL again, on another row and another column — must be
+      // deduped, not fetched or counted twice.
+      { shopId: shop.id, name: "Photo Reef Two", routeImageUrl: managedA },
+      // A site with no imagery at all contributes nothing (not null, not
+      // undefined, not an empty string).
+      { shopId: shop.id, name: "Photo Reef Three" },
     ]);
-    // A card with no image contributes nothing (not null, not undefined).
-    await db.insert(certifications).values({
-      shopId: shop.id,
-      personId: diver.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "PHOTO-3",
-    });
 
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("shop failed to load");

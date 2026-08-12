@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readNoteDraft, writeNoteDraft } from "@/lib/roll-call-note-draft";
@@ -148,5 +148,65 @@ describe("RollCallNote", () => {
     await userEvent.tab();
 
     await waitFor(() => expect(saveNote).toHaveBeenCalledWith(BOOKING, "departure", "reg checked"));
+  });
+
+  it("keeps a newer keystroke when an older save lands after it", async () => {
+    // Staff type faster than a round trip. If the in-flight save's success
+    // clears the draft wholesale, the newer text is on neither the server nor
+    // the device until its own debounce fires — and a "Mark boarded" tap in
+    // that window posts no note at all (RollCallButton's `useUnsavedNote`
+    // reads exactly this draft). Regression for the window.
+    let release: (value: { ok: boolean; saved: boolean }) => void = () => {};
+    const inFlight = new Promise<{ ok: boolean; saved: boolean }>((resolve) => {
+      release = resolve;
+    });
+    const saveNote = vi.fn().mockReturnValueOnce(inFlight).mockResolvedValue({
+      ok: true,
+      saved: true,
+    });
+    const { input } = renderNote({ saveNote });
+
+    await userEvent.type(input, "reg");
+    await userEvent.tab(); // flushes "reg" — now in flight
+
+    // The staffer keeps typing while that request is out.
+    await userEvent.type(input, " free-flow");
+    expect(readNoteDraft(BOOKING, "departure")).toEqual({
+      value: "reg free-flow",
+      pending: true,
+    });
+
+    // The older save lands. It must not take the newer text with it.
+    release({ ok: true, saved: true });
+    // Flush only the promise continuation that handles the result — never the
+    // newer keystroke's 700ms debounce. Waiting for that debounce is what
+    // makes this bug invisible: the draft *is* wiped, and then rewritten a
+    // beat later, so an assertion that polls until it reappears passes
+    // against the broken code. The gap between those two moments is the bug,
+    // and a staffer's tap lands in it.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(readNoteDraft(BOOKING, "departure")).toEqual({
+      value: "reg free-flow",
+      pending: true,
+    });
+  });
+
+  it("calls a refused action a fault, not a hold", async () => {
+    // `{ ok: false }` is the action refusing outright — a value that failed its
+    // schema, or a checkpoint it could not prove. Reading that as the ordinary
+    // "no result to attach to yet" hold would tell a staffer their note is
+    // safely waiting when nothing will ever pick it up.
+    const saveNote = vi.fn(async () => ({ ok: false, saved: false }));
+    const { input } = renderNote({ saveNote });
+
+    await userEvent.type(input, "bad value");
+    await userEvent.tab();
+
+    expect(await screen.findByText(/your note is still here\. Try again/)).toBeInTheDocument();
+    expect(screen.queryByText(/sends with this diver/)).not.toBeInTheDocument();
   });
 });

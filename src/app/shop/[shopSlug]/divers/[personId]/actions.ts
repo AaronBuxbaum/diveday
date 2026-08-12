@@ -196,10 +196,11 @@ export async function addCertificationAction(
   const staff = await requireStaffSession();
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
-  // No card photo: a shop verifies a card by looking its number up with the
-  // issuing agency, which is what "Mark certified" already attests to — the
-  // upload only ever added a second, unverified artefact to hold. Rows that
-  // still carry a `card_image_url` from before this keep displaying it.
+  // No card photo, anywhere in the model: a shop verifies a card by looking its
+  // number up with the issuing agency, which is what "Mark certified" attests
+  // to. The upload only ever added a second, unverified artefact to hold
+  // (ADR 20260804-card-evidence-is-the-number), and the column that held it is
+  // gone too (ADR 20260811-retire-the-digital-card).
   const saved = await createCertification(await getDb(), {
     shopId: staff.user.shopId,
     personId,
