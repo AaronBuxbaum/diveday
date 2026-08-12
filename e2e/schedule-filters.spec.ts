@@ -47,11 +47,11 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   await expect(page).toHaveURL(/hasSpace=1/);
 });
 
-test("the filter row never changes size while it hydrates", async ({ page }) => {
+test("no control comes or goes from the filter row while it hydrates", async ({ page }) => {
   // The property, stated as a diver experiences it: the filter row a diver sees
   // on paint is the filter row they still see once it goes live. Nothing
-  // appears, nothing disappears, nothing shifts under a thumb already moving
-  // toward "Has space".
+  // appears, nothing disappears under a thumb already moving toward "Has
+  // space".
   //
   // This has regressed twice, in opposite directions. An Apply button that
   // rendered for everyone and was *removed* on hydration made every visitor
@@ -62,22 +62,39 @@ test("the filter row never changes size while it hydrates", async ({ page }) => 
   // streams inside a hidden div that only an inline script relocates. It is now
   // gone entirely (ADR 20260812-javascript-is-required).
   //
-  // Guarding the size rather than the button is what survives that history: any
-  // future control that renders conditionally on hydration fails this, whatever
-  // mechanism it reaches for.
+  // Guarding the row's *inventory* rather than the button is what survives that
+  // history: any future control that renders conditionally on hydration fails
+  // this, whatever mechanism it reaches for.
+  //
+  // Counted, deliberately, rather than measured. The first shape of this test
+  // sampled the form's bounding box and failed on CI with `["0x0", "1104x68"]`
+  // — the sampler catching the page's own streaming, because until the inline
+  // script relocates it the form sits inside `<div hidden id="S:…">` and so
+  // measures 0x0 (the same mechanism that makes this page a permanent skeleton
+  // without JavaScript — ADR 20260812-javascript-is-required). Whether the
+  // first frame lands before or after that relocation is pure load timing: it
+  // landed after on a developer machine and before on a CI runner. Filtering
+  // zero-area samples fixes that one case and leaves another — a scrollbar
+  // appearing as the list streams in changes the row's width too, and neither
+  // is a control coming or going. A count moves if and only if the thing under
+  // test happens.
   //
   // Sampled every frame from before hydration rather than asserted on the
   // settled page — a settled-page check passes just as happily against a
   // control that flashed and left, which is precisely what is being guarded.
   await page.addInitScript(() => {
-    const w = window as unknown as { __filterBoxes: string[] };
-    w.__filterBoxes = [];
+    const w = window as unknown as { __filterControls: number[] };
+    w.__filterControls = [];
     const sample = () => {
-      const form = document.querySelector("form");
+      // Found through its own `<select>`, never `document.querySelector("form")`
+      // — this page carries more than one form, they stream in in an order
+      // nothing guarantees, and "the first form in the DOM" is therefore a
+      // different element from one frame to the next. That is what made the
+      // first version of this test pass alone and fail under parallel workers.
+      const form = document.querySelector('select[name="tripType"]')?.closest("form");
       if (form) {
-        const { width, height } = form.getBoundingClientRect();
-        const box = `${Math.round(width)}x${Math.round(height)}`;
-        if (w.__filterBoxes.at(-1) !== box) w.__filterBoxes.push(box);
+        const count = form.querySelectorAll("button, input, select, textarea").length;
+        if (w.__filterControls.at(-1) !== count) w.__filterControls.push(count);
       }
       requestAnimationFrame(sample);
     };
@@ -88,13 +105,14 @@ test("the filter row never changes size while it hydrates", async ({ page }) => 
   // The filters are live, so the hydration window has closed and the sampler
   // above ran across all of it.
   await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
-  const boxes = await page.evaluate(
-    () => (window as unknown as { __filterBoxes: string[] }).__filterBoxes,
+  const counts = await page.evaluate(
+    () => (window as unknown as { __filterControls: number[] }).__filterControls,
   );
-  // One distinct size for the whole window. (The sampler only records changes,
-  // so a stable row is exactly one entry — and zero would mean it never saw the
-  // form at all, which is its own failure.)
-  expect(boxes).toHaveLength(1);
+  // One count for the whole window, and it is the two filters and nothing else.
+  // (The sampler only records changes, so a stable row is exactly one entry;
+  // asserting the value rather than just the length is what stops an empty or
+  // never-found form passing as "never changed".)
+  expect(counts).toEqual([2]);
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
