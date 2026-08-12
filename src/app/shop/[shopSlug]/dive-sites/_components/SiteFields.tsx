@@ -194,16 +194,25 @@ export function SiteFields({
       <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
         <legend className="px-1 text-sm font-medium">{t("diveSites.form.photosLegend")}</legend>
         <p className="mt-1 text-sm text-muted">{t("diveSites.form.photosDescription")}</p>
-        {/* Each stored photo sits *above* its `Field`, never inside it. A
+        {/* Each stored photo sits *under* its own `Field`, never inside it. A
             `Field` whose children are not one native control wraps everything
             in the caption `<label>` (see `src/components/ui/form.tsx`), and
             each remove box is a `<label>` of its own — nesting the two would
             be invalid markup and would hand the caption a name made of every
-            word in the block. */}
+            word in the block. Under rather than over, because a photo above
+            its own caption reads as belonging to whatever field precedes it:
+            the first visual-regression run of this form showed the gallery
+            hanging off the map/route row it merely happened to sit below. */}
         <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
           <div>
+            <Field
+              label={t("diveSites.form.mapImageLabel")}
+              hint={t("diveSites.form.optionalHint")}
+            >
+              <ImageFileInput name="satelliteImageFile" copy={imageInputCopy} />
+            </Field>
             {values?.satelliteImageUrl ? (
-              <div className="mb-2">
+              <div className="mt-2">
                 <ExistingPhoto
                   url={values.satelliteImageUrl}
                   removeName="removeSatelliteImage"
@@ -211,16 +220,16 @@ export function SiteFields({
                 />
               </div>
             ) : null}
-            <Field
-              label={t("diveSites.form.mapImageLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              <ImageFileInput name="satelliteImageFile" copy={imageInputCopy} />
-            </Field>
           </div>
           <div>
+            <Field
+              label={t("diveSites.form.routeImageLabel")}
+              hint={t("diveSites.form.optionalHint")}
+            >
+              <ImageFileInput name="routeImageFile" copy={imageInputCopy} />
+            </Field>
             {values?.routeImageUrl ? (
-              <div className="mb-2">
+              <div className="mt-2">
                 <ExistingPhoto
                   url={values.routeImageUrl}
                   removeName="removeRouteImage"
@@ -228,28 +237,9 @@ export function SiteFields({
                 />
               </div>
             ) : null}
-            <Field
-              label={t("diveSites.form.routeImageLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              <ImageFileInput name="routeImageFile" copy={imageInputCopy} />
-            </Field>
           </div>
         </div>
         <div className="mt-5">
-          {values && values.imageUrls.length > 0 ? (
-            <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {values.imageUrls.map((url) => (
-                <ExistingPhoto
-                  key={url}
-                  url={url}
-                  removeName="removeSiteImageUrls"
-                  removeValue={url}
-                  removeLabel={t("diveSites.form.removeLabel")}
-                />
-              ))}
-            </div>
-          ) : null}
           <Field
             label={t("diveSites.form.sitePhotosLabel")}
             hint={t("diveSites.form.sitePhotosHint", { max: MAX_SITE_IMAGES })}
@@ -264,6 +254,19 @@ export function SiteFields({
               }}
             />
           </Field>
+          {values && values.imageUrls.length > 0 ? (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {values.imageUrls.map((url) => (
+                <ExistingPhoto
+                  key={url}
+                  url={url}
+                  removeName="removeSiteImageUrls"
+                  removeValue={url}
+                  removeLabel={t("diveSites.form.removeLabel")}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </fieldset>
       <FieldGrid columns={1} className="gap-y-5">
