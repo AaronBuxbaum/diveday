@@ -1,4 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
+import { openGraphSite } from "@/lib/site-metadata";
 
 /**
  * Public-facing product claims, as message-bundle *keys* — never words. The
@@ -16,31 +17,21 @@ import type { DiverMessageKey } from "@/i18n/messages";
  */
 
 /**
- * The Open Graph fields every marketing page needs and cannot inherit.
- *
- * Next merges `metadata` shallowly: a page that exports its own `openGraph`
- * object **replaces** the root layout's outright rather than merging into it
- * (`generate-metadata.md`, "Inheriting fields" — and `mergeMetadata` in
- * `next/dist/lib/metadata/resolve-metadata.js` does a straight assignment).
- * Every marketing page does export its own block, because a shared link has to
- * unfurl with *that page's* words. The cost is silent: `siteName`, `type`, and
- * — worst — the shared link card from `src/app/opengraph-image.tsx` all drop
- * off, so the page unfurls as text with no image and nobody notices, because
- * the failure only appears in someone else's chat window.
+ * The Open Graph fields every marketing page needs and cannot inherit:
+ * `openGraphSite` (see `src/lib/site-metadata.ts` for why a page-level
+ * `openGraph` block drops it) plus the shared link card itself.
  *
  * File-based image metadata is collected per segment, so the root card is
  * re-attached only to pages in the root segment (`/`). Every other marketing
  * route names it here instead. `/` deliberately does not spread this: its own
  * segment supplies the file, and Next's generated URL carries a cache-busting
- * id this hand-written path can't.
+ * id this hand-written path can't — it spreads `openGraphSite` directly.
  *
  * Setting it explicitly is safe either way — if a field would have been
  * inherited, restating it changes nothing.
  */
 export const sharedLinkCard = {
-  // i18n-exempt: brand name, rendered as-is in every locale
-  siteName: "DiveDay",
-  type: "website" as const,
+  ...openGraphSite,
   // The route Next generates for `src/app/opengraph-image.tsx`; resolved
   // against `metadataBase` (set in `src/app/layout.tsx`). Dimensions mirror the
   // `size` that file exports — keep the three in step.

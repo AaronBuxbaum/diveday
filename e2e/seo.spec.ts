@@ -97,6 +97,46 @@ test("the homepage carries a resolvable og:image", async ({ page }) => {
   expect(content).toMatch(/^https?:\/\//);
 });
 
+/**
+ * The inversion this catches is counter-intuitive, which is why it gets a
+ * test rather than a review habit: a page-level `openGraph` block *replaces*
+ * the root layout's rather than merging into it, so the pages written with
+ * the most care about their unfurl — `/` and the whole `/s/` namespace — were
+ * the exact ones unfurling with no site name, while a page with nothing to
+ * say about itself inherited one. Every page that exports a block now spreads
+ * `openGraphSite` (src/lib/site-metadata.ts).
+ */
+test("every public page names the site in its unfurl, not just the ones with no words of their own", async ({
+  page,
+}) => {
+  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
+  const tripHref = await page
+    .locator(`a[href*="/s/${DEMO_SHOP_SLUG}/trips/"]`)
+    .first()
+    .getAttribute("href");
+  expect(tripHref, "no seeded departure to read a trip page from").toBeTruthy();
+
+  for (const path of [
+    "/",
+    `/s/${DEMO_SHOP_SLUG}`,
+    `/s/${DEMO_SHOP_SLUG}/courses`,
+    tripHref as string,
+    // Declares no block of its own, so it inherits the layout's — the other
+    // half of the pair, and the half that already worked.
+    "/sign-in",
+  ]) {
+    await page.goto(path);
+    expect(
+      await page.locator('meta[property="og:site_name"]').first().getAttribute("content"),
+      `${path} og:site_name`,
+    ).toBe("DiveDay");
+    expect(
+      await page.locator('meta[property="og:type"]').first().getAttribute("content"),
+      `${path} og:type`,
+    ).toBe("website");
+  }
+});
+
 test("the shop schedule page carries its own per-shop og:image", async ({ page }) => {
   await page.goto(`/s/${DEMO_SHOP_SLUG}`);
   const content = await page.locator('meta[property="og:image"]').getAttribute("content");

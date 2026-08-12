@@ -22,6 +22,7 @@ import { currencySymbol, minorToMajor } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
+import { openGraphSite } from "@/lib/site-metadata";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { temperatureUnitFor } from "@/lib/temperature-units";
@@ -82,7 +83,10 @@ export async function generateMetadata({
   return {
     title: t("recap.metaTitle"),
     robots: { index: false, follow: false },
-    openGraph: { title: ogTitle, description: ogDescription },
+    // No `url`: this is a bearer-token page, and `og:url` would put the
+    // capability itself in a meta tag that unfurls for bystanders who never
+    // clicked the link (docs/engineering/capability-telemetry-runbook.md).
+    openGraph: { ...openGraphSite, title: ogTitle, description: ogDescription },
   };
 }
 

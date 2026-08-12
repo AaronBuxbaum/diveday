@@ -39,6 +39,7 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
+import { openGraphSite } from "@/lib/site-metadata";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull, pinnedNextDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -73,6 +74,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: publicSchedulePath(shop.slug) },
     openGraph: {
+      ...openGraphSite,
       title: `Dive schedule — ${shop.name}`,
       description,
       url: publicSchedulePath(shop.slug),
