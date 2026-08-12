@@ -26,7 +26,7 @@ on:
         options:
           - diff
           - deploy
-        default: diff
+        default: deploy
 
 concurrency:
   # workflow_dispatch runs (in particular a deploy) must never be cancelled by
