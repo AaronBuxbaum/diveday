@@ -1987,6 +1987,29 @@ exports.handler = async (event) => {
         resources: [bootstrapVersionParameterArn],
       }),
     );
+    // `cdk diff` always publishes the stack template as an asset before
+    // comparing it -- this stack's template is well past the 51,200-byte
+    // inline limit -- and same-account role assumption needs the calling
+    // identity's own policy to allow it, not just the bootstrap role's trust
+    // policy (which already trusts this whole account). Without this,
+    // file-publishing-role's own assume-role call fails, CDK falls back to a
+    // template-only diff with no real change set, and that fallback silently
+    // reports "no differences" even when the template plainly changed --
+    // found 2026-08-12 (FU-20260812-diff-role-cannot-reach-cdk-assets-bucket)
+    // the first time this role got past OIDC far enough to reach this step.
+    // Only file-publishing-role: this stack does no context lookups (no
+    // `Vpc.fromLookup`, no `StringParameter.valueFromLookup`) and publishes
+    // no container images, so lookup-role and image-publishing-role would be
+    // unused scope on a role reachable from any branch's `pull_request` run.
+    // deploy-role is deliberately absent -- this role creates and discards a
+    // change set, never executes one (see its description above).
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AssumeCdkFilePublishingRole",
+        actions: ["sts:AssumeRole"],
+        resources: [bootstrapRoleArn("file-publishing-role")],
+      }),
+    );
     cdkDiffRole.addToPolicy(denyReadingAnySecret());
 
     const cdkDeployRole = new iam.Role(this, "GitHubActionsCdkDeployRole", {
