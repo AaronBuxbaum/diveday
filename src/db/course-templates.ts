@@ -740,7 +740,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     minimumCertificationLevel: "advanced_open_water",
     content: {
       ...blank,
-      summary: "How to dive between 18 and 40 meters (60 and 130 feet) and come back with a plan intact",
+      summary:
+        "How to dive between 18 and 40 meters (60 and 130 feet) and come back with a plan intact",
       overview:
         "Deep diving is not about being brave. It is about how little margin you have: air goes faster, no-decompression limits shrink, narcosis is real, and the surface is further away when something goes wrong.\n\nThe course is four dives, the deepest to a maximum of 40 meters (130 feet) — the limit of recreational diving, and the deepest this certification will ever take you. You will plan gas and time before you get wet, practice using a safety cylinder on a line, and see for yourself what narcosis does to you by running a simple task at depth and again at the surface.\n\nColor disappears with depth too. Bring a light and watch what red does at 30 meters (100 feet).",
       heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),

@@ -109,9 +109,12 @@
       "tanksAndWeights": "Botellas y plomos",
       "crewBriefing": "Briefing de la tripulación"
     },
-    "temperatureTip": {
-      "cold": "Se espera una temperatura del agua de unos {temperature} — pregunta al centro si necesitas protección térmica adicional.",
-      "mild": "Se espera una temperatura del agua de unos {temperature} — sigue la recomendación de traje del centro para tu comodidad."
+    "exposureSuit": {
+      "swimwear": "El agua está lo bastante cálida como para bucear con licra o bañador.",
+      "shorty": "La mayoría bucea cómoda con un traje corto o completo de 3 mm.",
+      "wetsuit5mm": "A esta temperatura, la mayoría prefiere un traje completo de 5 mm.",
+      "wetsuit7mm": "Agua fresca: la mayoría prefiere un traje completo de 7 mm, con capucha y guantes.",
+      "drysuit": "Agua fría: un semiseco de 7 mm con capucha y guantes, o traje seco si buceas con uno."
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
     "dockDayEachDay": "Los horarios de abajo son del primer día; todos los días de esta salida siguen la misma forma.",

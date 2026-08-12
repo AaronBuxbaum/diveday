@@ -7,11 +7,11 @@ import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
   hasAnyRentalPricing,
+  nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
   type RentalPricing,
-  shopOffersNitrox,
 } from "@/lib/rentals";
 import {
   RENTABLE_ITEM_HINT_KEYS,
@@ -47,6 +47,7 @@ export function BookingGearFields({
   index,
   showDiverLabel,
   rentalItems,
+  course,
   pricing,
   plannedDives,
   currency,
@@ -57,6 +58,13 @@ export function BookingGearFields({
   /** Show "Diver N's gear" instead of the plain heading, once the party grows past one. */
   showDiverLabel: boolean;
   rentalItems: string[];
+  /**
+   * The course this departure teaches, or null on an ordinary charter — read
+   * only for whether it may run on enriched air (`nitroxAvailableOn`). A
+   * course that runs on air has no nitrox box, however much nitrox the shop
+   * fills.
+   */
+  course: { nitroxCompatible: boolean } | null;
   pricing: RentalPricing;
   plannedDives: number;
   currency: ShopCurrency;
@@ -66,7 +74,7 @@ export function BookingGearFields({
   const t = useTranslations();
   const locale = useLocale();
   const offered = offeredRentableItems(rentalItems);
-  const nitroxOffered = shopOffersNitrox(rentalItems);
+  const nitroxOffered = nitroxAvailableOn(rentalItems, course);
   // Opt-in, and empty until then — see the note above the component.
   const [wantsGear, setWantsGear] = useState(false);
   const [rentedKinds, setRentedKinds] = useState<Set<RentableItemKind>>(() => new Set());

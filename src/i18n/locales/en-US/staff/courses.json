@@ -54,6 +54,8 @@
     "durationPlaceholder": "3 days · 8:15am–5:30pm",
     "groupSizeLabel": "Group size",
     "groupSizePlaceholder": "Max 5 students per instructor",
+    "nitroxCompatibleLabel": "We can run this course on nitrox",
+    "nitroxCompatibleHint": "Off for courses taught on air. When it is off, sessions of this course never offer divers the enriched-air box — a diver still needs a verified nitrox card before any fill.",
     "enrollLegend": "Who can enroll",
     "orHigher": "{level} or higher",
     "ageSuffix": ", {age}+",

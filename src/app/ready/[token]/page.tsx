@@ -853,6 +853,7 @@ export default async function DiverReadinessPage({
             action={saveFitFromReady.bind(null, token)}
             rentalFit={data.rentalFit}
             rentalItems={data.shop.rentalItems}
+            course={data.trip.course}
             pricing={data.shop.rentalPricing}
             currency={toShopCurrency(data.shop.currency)}
             wantsNitrox={data.wantsNitrox}

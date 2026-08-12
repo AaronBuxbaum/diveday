@@ -201,7 +201,8 @@ export async function seedTrips(
       }),
       ...courseSession("Deep Diver", {
         title: "Deep Diver — Spiegel Grove & the wall",
-        description: "Four dives building to 40 meters (130 feet), with gas planning that keeps up.",
+        description:
+          "Four dives building to 40 meters (130 feet), with gas planning that keeps up.",
         startsAt: at(20, 8, 0),
         endsAt: at(21, 16, 0),
         capacity: 6,

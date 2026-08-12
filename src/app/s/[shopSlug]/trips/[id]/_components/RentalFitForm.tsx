@@ -11,11 +11,11 @@ import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
   hasAnyRentalPricing,
+  nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
   type RentalPricing,
-  shopOffersNitrox,
 } from "@/lib/rentals";
 import type { RentalFit } from "./types";
 
@@ -63,6 +63,7 @@ export function RentalFitForm({
   action,
   rentalFit,
   rentalItems,
+  course,
   pricing,
   wantsNitrox,
   nitroxCardVerified,
@@ -73,6 +74,12 @@ export function RentalFitForm({
   action: (formData: FormData) => void;
   rentalFit: RentalFit;
   rentalItems: string[];
+  /**
+   * The course this departure teaches, or null on an ordinary charter — read
+   * only for whether it may run on enriched air (`nitroxAvailableOn`), the
+   * same gate the booking page's gear fields use.
+   */
+  course: { nitroxCompatible: boolean } | null;
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
@@ -90,7 +97,7 @@ export function RentalFitForm({
   const locale = useLocale();
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
-  const nitroxOffered = shopOffersNitrox(rentalItems);
+  const nitroxOffered = nitroxAvailableOn(rentalItems, course);
   const showPricing = hasAnyRentalPricing(pricing);
   const [rentedKinds, setRentedKinds] = useState(
     () =>

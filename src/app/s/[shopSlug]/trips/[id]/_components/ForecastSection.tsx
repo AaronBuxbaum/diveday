@@ -1,8 +1,24 @@
+import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText } from "@/i18n/unit-labels";
+import { type ExposureSuit, exposureSuitFor } from "@/lib/diver-planning";
 import { seaStateReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
+
+/**
+ * `exposureSuitFor` returns a band code (src/lib/diver-planning.ts); this is
+ * where each one becomes the sentence under the reading. Thicknesses are
+ * written in millimetres in every locale because that is how neoprene is sold
+ * everywhere, including the markets that read feet and Fahrenheit.
+ */
+const EXPOSURE_SUIT_KEYS: Record<ExposureSuit, DiverMessageKey> = {
+  swimwear: "trip.exposureSuit.swimwear",
+  shorty: "trip.exposureSuit.shorty",
+  wetsuit5mm: "trip.exposureSuit.wetsuit5mm",
+  wetsuit7mm: "trip.exposureSuit.wetsuit7mm",
+  drysuit: "trip.exposureSuit.drysuit",
+};
 
 export function ForecastSection({
   shop,
@@ -60,6 +76,16 @@ export function ForecastSection({
             <dt className="text-sm text-muted">{t("trip.waterTemperature")}</dt>
             <dd className="mt-1 text-lg font-semibold">
               {temperatureText(t, waterTemperatureC, temperatureUnit)}
+            </dd>
+            {/* What the number means for what to wear — the same shape the sea
+                state wears below, and for the same reason. A temperature is a
+                figure a diver has to translate before it is any use, and the
+                translation ("most divers want a 5 mm here") is the only reason
+                they opened the card. Advisory, and worded as such: thermal
+                comfort is personal, and the crew's own note above outranks a
+                rule of thumb. */}
+            <dd className="mt-1 text-sm text-muted">
+              {t(EXPOSURE_SUIT_KEYS[exposureSuitFor(waterTemperatureC)])}
             </dd>
           </div>
         ) : null}

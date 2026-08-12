@@ -15,13 +15,21 @@ export type NewCourse = {
   priceCents?: number | null;
   eLearningPriceCents?: number | null;
   minimumCertificationLevel?: CertificationLevel | null;
+  /** Whether a session of this course may run on enriched air — see the column's own note. */
+  nitroxCompatible?: boolean;
 } & Partial<CourseContent>;
 
 /**
  * Title, agency, the cert gate, and the minimum age come from the agency's
- * catalog; a shop owns only its two prices, which it sets on the course page.
+ * catalog; what a shop owns is what it decides for itself — its two prices,
+ * and whether it will run this course on enriched air. Everything here is a
+ * shop's own answer, which is what separates this patch from
+ * {@link CourseContentPatch}'s prose.
  */
-export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
+export type CoursePatch = Pick<
+  NewCourse,
+  "priceCents" | "eLearningPriceCents" | "nitroxCompatible"
+>;
 
 /**
  * The diver-facing page, edited on its own screen and saved in one shot. The
@@ -234,6 +242,11 @@ export async function updateCourse(
     .set({
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
+      // A checkbox that arrives absent means unticked, never "leave it alone" —
+      // the editor always renders the control, so an omitted key is a form that
+      // did not have it and the column keeps its own default rather than
+      // silently flipping.
+      ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

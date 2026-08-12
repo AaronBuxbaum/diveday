@@ -109,9 +109,12 @@
       "tanksAndWeights": "Tanks and weights",
       "crewBriefing": "Crew briefing"
     },
-    "temperatureTip": {
-      "cold": "Water is expected around {temperature} — ask the shop whether you need extra exposure protection.",
-      "mild": "Water is expected around {temperature} — use the shop's wetsuit guidance for comfort."
+    "exposureSuit": {
+      "swimwear": "Warm enough that most divers are comfortable in a rash guard or swimwear.",
+      "shorty": "Most divers are comfortable in a 3 mm shorty or full suit.",
+      "wetsuit5mm": "Most divers want a 5 mm full suit at this temperature.",
+      "wetsuit7mm": "Cool — most divers want a 7 mm full suit, with a hood and gloves.",
+      "drysuit": "Cold — a 7 mm semi-dry with hood and gloves, or a drysuit if you dive one."
     },
     "dockDayRhythm": "Your dock-day rhythm",
     "dockDayEachDay": "Times below are day one — every day of this trip follows the same shape.",

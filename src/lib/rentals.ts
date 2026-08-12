@@ -141,9 +141,40 @@ export function offeredRentableItems(rentalItems: readonly string[]): RentableIt
   return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
 }
 
-/** Whether this shop fills nitrox tanks at all — the gate for every nitrox-request surface. */
+/** Whether this shop fills nitrox tanks at all — the first of the two gates below. */
 export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
   return toRentableKinds(rentalItems).includes("nitrox");
+}
+
+/**
+ * Whether a diver may ask for enriched air on *this* departure: the shop fills
+ * nitrox, **and** the course being taught permits it
+ * (`courses.nitrox_compatible`).
+ *
+ * The shop's catalog alone was the whole answer until courses got a say, which
+ * put a nitrox tick box on the booking page of an Open Water class at any shop
+ * that fills nitrox at all — a request the course cannot honour and no student
+ * on it could clear anyway (a fill needs a verified card, src/db/nitrox.ts).
+ * Whether a course runs on air is a fact about the course, so the shop answers
+ * it once on the course page instead of every session inheriting the boat's
+ * answer.
+ *
+ * A trip with **no course** passes on the shop's answer alone — an ordinary
+ * charter is exactly what this gate has always been. The course argument is
+ * structurally typed rather than the `courses` row so a joined projection, a
+ * form value and a test fixture can each pass their own shape, the same way
+ * `CourseCrewGapCourse` does in src/lib/course-ratios.ts.
+ *
+ * Every nitrox-request surface reads this — the booking page's gear fields,
+ * the pre-trip "ready" form, and the server actions behind both — so a diver
+ * cannot be shown the box on one and refused on the other, and a hand-posted
+ * `nitrox=on` cannot slip past a hidden checkbox.
+ */
+export function nitroxAvailableOn(
+  rentalItems: readonly string[],
+  course: { nitroxCompatible: boolean } | null | undefined,
+): boolean {
+  return shopOffersNitrox(rentalItems) && (course?.nitroxCompatible ?? true);
 }
 
 /**

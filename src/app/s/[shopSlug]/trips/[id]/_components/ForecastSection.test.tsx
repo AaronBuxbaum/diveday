@@ -87,6 +87,27 @@ describe("ForecastSection — the automated marine outlook", () => {
     expect(screen.queryByText(/^For /)).not.toBeInTheDocument();
   });
 
+  it("says what the water temperature means for what to wear", () => {
+    // A reading is a number a diver has to translate before it is any use,
+    // and the translation is the reason they opened the card. It rides under
+    // the temperature itself, on both sources — the automated model supplies a
+    // water temperature on plenty of departures no crew has looked at yet.
+    renderAutomated();
+    expect(screen.getByText("27°C")).toBeInTheDocument();
+    expect(screen.getByText(/3 mm shorty or full suit/i)).toBeInTheDocument();
+  });
+
+  it("names a thicker suit as the water gets colder", () => {
+    renderAutomated(automated({ waterTemperatureC: 19 }));
+    expect(screen.getByText(/7 mm full suit/i)).toBeInTheDocument();
+    expect(screen.getByText(/hood and gloves/i)).toBeInTheDocument();
+  });
+
+  it("keeps its counsel when no source has a temperature", () => {
+    renderAutomated(automated({ waterTemperatureC: null }));
+    expect(screen.queryByText(/mm/)).not.toBeInTheDocument();
+  });
+
   it("renders nothing at all when there is neither source", () => {
     const { container } = render(
       <ForecastSection

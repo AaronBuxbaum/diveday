@@ -303,17 +303,53 @@ const RENTAL_FIELD_KINDS: ReadonlyArray<readonly [string, RentableItemKind]> = [
 ];
 
 /**
- * How cold the water reads, for the "pack a little more neoprene" nudge — a
- * code plus the raw reading, never a rendered sentence: the component
- * composes the one ICU template (`trip.temperatureTip.<tone>`) with
- * `{celsius}` itself.
+ * What most divers are comfortable wearing at a given water temperature.
+ *
+ * A water temperature on a booking page is a number a diver has to translate
+ * before it means anything, and the translation is the only reason they were
+ * reading it: 24°C answers no question, "most divers want a 5 mm full suit"
+ * answers the one they have. Suit thickness is the rare diving figure that
+ * needs no unit decision — neoprene is sold in millimetres in every market,
+ * including the ones that read feet and Fahrenheit — so this stays true
+ * whatever the shop's `depth_unit` and `temperature_unit` say.
+ *
+ * The bands are the ordinary recreational rule of thumb, not an agency
+ * standard, and they are **advisory**: thermal comfort varies enormously by
+ * person, dive time, and how many dives are behind you that day, and the crew's
+ * own conditions note is what a diver should believe over this. The words say
+ * "most divers" for that reason, and the shop's rental list is what actually
+ * turns up on the boat.
+ *
+ * A code, never a sentence (AGENTS.md — src/lib returns codes, the UI picks the
+ * words). Thresholds are in stored Celsius, so a shop reading Fahrenheit gets
+ * the same band as its neighbour reading Celsius rather than one shifted by a
+ * rounding step.
  */
-export type TemperatureTip = { tone: "cold" | "mild"; celsius: number };
+export type ExposureSuit = "swimwear" | "shorty" | "wetsuit5mm" | "wetsuit7mm" | "drysuit";
+
+/**
+ * Lower bound (inclusive, °C) of each band, warmest first. Read in order, so
+ * the first threshold a reading clears wins and anything below the last one
+ * falls through to `drysuit`.
+ *
+ * 29 / 25 / 21 / 17 rather than round Fahrenheit numbers because Celsius is
+ * what is stored; in Fahrenheit they land at roughly 84 / 77 / 70 / 63, which
+ * is the same rule of thumb a US shop would recognise.
+ */
+const EXPOSURE_SUIT_BANDS: ReadonlyArray<readonly [number, ExposureSuit]> = [
+  [29, "swimwear"],
+  [25, "shorty"],
+  [21, "wetsuit5mm"],
+  [17, "wetsuit7mm"],
+];
+
+export function exposureSuitFor(celsius: number): ExposureSuit {
+  return EXPOSURE_SUIT_BANDS.find(([floor]) => celsius >= floor)?.[1] ?? "drysuit";
+}
 
 export function packingConfidence(
   shopItems: string[],
   rental: null | Record<string, boolean | string | null>,
-  waterTemperatureC: number | null,
   /**
    * Whether the shop runs a briefing at all (`briefingMinutes > 0`). "Crew
    * briefing" used to be an unconditional entry under *Provided*, which put the
@@ -325,20 +361,14 @@ export function packingConfidence(
   bring: string[];
   rented: RentableItemKind[];
   provided: ProvidedItemCode[];
-  temperatureTip: TemperatureTip | null;
 } {
   const rented = rental
     ? RENTAL_FIELD_KINDS.filter(([field]) => rental[field] === true).map(([, kind]) => kind)
     : [];
-  const temperatureTip: TemperatureTip | null =
-    waterTemperatureC === null
-      ? null
-      : { tone: waterTemperatureC < 20 ? "cold" : "mild", celsius: waterTemperatureC };
   return {
     bring: shopItems,
     rented,
     provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
-    temperatureTip,
   };
 }
 

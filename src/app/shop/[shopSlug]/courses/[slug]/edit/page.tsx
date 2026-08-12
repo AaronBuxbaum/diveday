@@ -334,6 +334,24 @@ export default async function EditCoursePage({
                 />
               </Field>
             </FieldGrid>
+            {/* Filed with how the course *runs* rather than with who may take
+                it: this answers "do we teach this one on enriched air", which
+                is the shop's own call about its own gas, not an agency
+                admission rule like the two facts in the next box. Unticked, no
+                session of this course offers the nitrox box at all — on the
+                booking page or on the pre-trip form — however much nitrox the
+                shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
+            <label className="mt-5 flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="nitroxCompatible"
+                value="true"
+                defaultChecked={course.nitroxCompatible}
+                className="size-4"
+              />
+              {t("courses.edit.nitroxCompatibleLabel")}
+            </label>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.nitroxCompatibleHint")}</p>
           </fieldset>
 
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">

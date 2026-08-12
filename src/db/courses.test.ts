@@ -691,6 +691,55 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     expect((await setCourseVisibility(db, shop.id, course.id, true))?.isActive).toBe(true);
   });
 
+  it("lets a shop say whether a course runs on nitrox, defaulting to yes", async () => {
+    // Whether a course is taught on enriched air is the shop's own call about
+    // its own gas, so it sits in `CoursePatch` beside the prices rather than
+    // with the agency facts the catalog owns. The column defaults true, so
+    // every course that existed before it did keeps behaving as it did.
+    const { db, shop } = await courseContext();
+    const course = await createCourse(db, {
+      shopId: shop.id,
+      title: "Deep Diver — nitrox test",
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    if (!course) throw new Error("course not created");
+    expect(course.nitroxCompatible).toBe(true);
+
+    const offAir = await updateCourse(db, shop.id, course.id, {
+      priceCents: 42500,
+      eLearningPriceCents: null,
+      nitroxCompatible: false,
+    });
+    expect(offAir?.nitroxCompatible).toBe(false);
+    // And back, from the same control — never a one-way switch.
+    const backOn = await updateCourse(db, shop.id, course.id, {
+      priceCents: 42500,
+      eLearningPriceCents: null,
+      nitroxCompatible: true,
+    });
+    expect(backOn?.nitroxCompatible).toBe(true);
+  });
+
+  it("seeds an air-only answer for every course a student takes with no card", async () => {
+    // The seeded catalog mirrors the migration's own backfill rule, so a fresh
+    // demo and a migrated shop agree: a taster, and anything open to
+    // uncertified divers, runs on air. Nobody on those holds the verified
+    // nitrox card a fill needs, so offering the box would advertise a fill the
+    // course cannot give.
+    const { db, shop } = await courseContext();
+    const catalog = await listActiveCourses(db, shop.id);
+    for (const entry of catalog) {
+      const runsOnAir = entry.isIntroCourse || entry.minimumCertificationLevel === null;
+      expect({ title: entry.title, nitrox: entry.nitroxCompatible }).toEqual({
+        title: entry.title,
+        nitrox: !runsOnAir,
+      });
+    }
+    // Both shapes are actually present, or the loop above proves nothing.
+    expect(catalog.some((entry) => entry.nitroxCompatible)).toBe(true);
+    expect(catalog.some((entry) => !entry.nitroxCompatible)).toBe(true);
+  });
+
   /**
    * The prerequisite gate is a **card** check, not a level check: the diver's
    * card has to be verified, not past its refresher-due date, and still on the

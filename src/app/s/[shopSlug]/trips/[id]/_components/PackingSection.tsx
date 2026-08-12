@@ -1,6 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
-import { temperatureText } from "@/i18n/unit-labels";
 import {
   dockDayTimeline,
   type ProvidedItemCode,
@@ -8,7 +7,6 @@ import {
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
-import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { RentalFit, Shop, Trip } from "./types";
 
 /**
@@ -31,11 +29,6 @@ const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
 const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   crewBriefing: "trip.providedItems.crewBriefing",
-};
-
-const TEMPERATURE_TIP_KEYS: Record<"cold" | "mild", DiverMessageKey> = {
-  cold: "trip.temperatureTip.cold",
-  mild: "trip.temperatureTip.mild",
 };
 
 export function PackingSection({
@@ -71,30 +64,17 @@ export function PackingSection({
   locale: string;
 }) {
   const window = day ?? trip;
-  const packing = packingConfidence(
-    shop.packingList,
-    rentalFit ?? null,
-    trip.waterTemperatureC,
-    shop.briefingMinutes > 0,
-  );
+  const packing = packingConfidence(shop.packingList, rentalFit ?? null, shop.briefingMinutes > 0);
   const t = diverTranslator(locale);
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5">
+      {/* No "water is expected around 24°C — use the shop's wetsuit
+          guidance" line here any more. It restated the reading from the
+          forecast card a few inches above and then pointed at advice it did
+          not give; that card now names the suit itself (`exposureSuitFor`,
+          src/lib/diver-planning.ts), which is the thing this sentence was
+          gesturing at, said once and with a thickness in it. */}
       <h2 className="text-lg font-semibold">{t("trip.packTitle")}</h2>
-      {packing.temperatureTip ? (
-        <p className="mt-2 text-sm text-muted">
-          {t(TEMPERATURE_TIP_KEYS[packing.temperatureTip.tone], {
-            // The tip and the forecast tile above it are on the same page and
-            // must not disagree about units: both read the shop's own
-            // `temperature_unit` (src/lib/temperature-units.ts).
-            temperature: temperatureText(
-              t,
-              packing.temperatureTip.celsius,
-              temperatureUnitFor(shop),
-            ),
-          })}
-        </p>
-      ) : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div>
           <h3 className="font-semibold">{t("trip.packBring")}</h3>

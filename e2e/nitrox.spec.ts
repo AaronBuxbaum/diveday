@@ -262,3 +262,31 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
   await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
 });
+
+test("a course taught on air offers no nitrox request, at the same shop that fills it", async ({
+  page,
+}) => {
+  // Two gates, not one (`nitroxAvailableOn`, src/lib/rentals.ts). The test
+  // above books an ordinary reef trip at this shop and is offered nitrox; the
+  // Open Water class is at the same shop, on the same catalog, and must not
+  // be — its students are being certified on air and none of them can hold the
+  // verified nitrox card a fill needs. Offering the box there advertises a
+  // fill the course cannot give.
+  await page.goto("/s/blue-mantis");
+  await page
+    .locator("li")
+    .filter({ hasText: "Open Water Diver — three-day course" })
+    .getByRole("link", { name: "Open Water Diver — three-day course" })
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name").fill("Owen Reid");
+  await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Owen/ })).toBeVisible();
+
+  // The rest of the rental form is untouched — this closes one box, not the
+  // picker — so the assertion is about nitrox alone, not about a form that
+  // failed to render.
+  await expect(page.getByRole("button", { name: "Save rental fit" })).toBeVisible();
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
+});

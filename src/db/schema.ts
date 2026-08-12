@@ -604,12 +604,36 @@ export const courses = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     /**
      * A no-certification-required taster session (Discover Scuba Diving, Try
-     * Scuba, …), set by staff on the course editor rather than sniffed from
-     * the title at render time — the booking page's "great gift" nudge reads
-     * this instead of pattern-matching English words that would silently
-     * miss a differently-worded or translated course title.
+     * Scuba, …). DiveDay's own published catalog says which entries these are
+     * (`COURSE_TEMPLATES` in src/db/course-templates.ts) — never sniffed from
+     * the title at render time, which would pattern-match English words and
+     * silently miss a differently-worded or translated one, and no longer
+     * editable on the course page either: it selects the tighter 2:1 in-water
+     * ratio (src/lib/course-ratios.ts), which is not a claim a shop makes
+     * about itself while editing marketing copy.
      */
     isIntroCourse: boolean("is_intro_course").notNull().default(false),
+    /**
+     * Whether a diver may request an enriched-air fill on a session of this
+     * course — the shop's answer to "can we run this one on nitrox?", set per
+     * course because it is a property of the course rather than of the boat.
+     *
+     * Two gates, both of which must pass before the nitrox box appears on a
+     * booking: the shop has to fill nitrox at all (`shopOffersNitrox`, from
+     * `shops.rental_items`) and the course has to permit it — see
+     * `nitroxAvailableOn` in src/lib/rentals.ts, which is the one place the
+     * two are composed. A trip with no course is unaffected.
+     *
+     * Defaults true, so every ordinary continuing-education course keeps
+     * behaving exactly as it did before this column existed. The migration
+     * backfills **false** for the two shapes where the box could only ever
+     * mislead: a taster, and any course open to uncertified divers. Nobody on
+     * those holds a nitrox card — the fill gate needs a verified one
+     * (`authorizesNitroxFill`, src/db/nitrox.ts) — and their training dives are
+     * conducted on air, so offering the tick box would advertise something the
+     * course cannot deliver.
+     */
+    nitroxCompatible: boolean("nitrox_compatible").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

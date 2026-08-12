@@ -5,6 +5,7 @@ import {
   type DockDayRhythm,
   dockDayOffsets,
   dockDayTimeline,
+  exposureSuitFor,
   packingConfidence,
   parseDockDayRhythm,
   siteFit,
@@ -193,29 +194,42 @@ describe("booking delight planning", () => {
   });
 
   it("separates what a diver brings from requested rental gear", () => {
-    const plan = packingConfidence(
-      ["Swimsuit", "Certification card"],
-      { rentsBcd: true, rentsWetsuit: false },
-      18,
-    );
+    const plan = packingConfidence(["Swimsuit", "Certification card"], {
+      rentsBcd: true,
+      rentsWetsuit: false,
+    });
     expect(plan.bring).toContain("Swimsuit");
     expect(plan.rented).toEqual(["bcd"]);
-    expect(plan.temperatureTip).toEqual({ tone: "cold", celsius: 18 });
-  });
-
-  it("reads warmer water as the mild tone", () => {
-    const plan = packingConfidence([], null, 27);
-    expect(plan.temperatureTip).toEqual({ tone: "mild", celsius: 27 });
   });
 
   it("gives every diver the same fixed provided-item codes", () => {
-    const plan = packingConfidence([], null, null);
-    expect(plan.provided).toEqual(["tanksAndWeights", "crewBriefing"]);
-    expect(plan.temperatureTip).toBeNull();
+    expect(packingConfidence([], null).provided).toEqual(["tanksAndWeights", "crewBriefing"]);
   });
 
   it("stops promising a briefing to a shop that doesn't run one", () => {
-    expect(packingConfidence([], null, null, false).provided).toEqual(["tanksAndWeights"]);
+    expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
+  });
+
+  it("turns a water temperature into the suit most divers want", () => {
+    // A reading is a number a diver has to translate; this is the
+    // translation. Bands are the ordinary recreational rule of thumb, read
+    // warmest-first so a reading takes the first band it clears.
+    expect(exposureSuitFor(30)).toBe("swimwear");
+    expect(exposureSuitFor(29)).toBe("swimwear");
+    expect(exposureSuitFor(28)).toBe("shorty");
+    expect(exposureSuitFor(25)).toBe("shorty");
+    expect(exposureSuitFor(24)).toBe("wetsuit5mm");
+    expect(exposureSuitFor(21)).toBe("wetsuit5mm");
+    expect(exposureSuitFor(20)).toBe("wetsuit7mm");
+    expect(exposureSuitFor(17)).toBe("wetsuit7mm");
+    expect(exposureSuitFor(16)).toBe("drysuit");
+  });
+
+  it("answers for water no recreational diver would call ordinary", () => {
+    // The entry form accepts -2°C to 40°C (src/lib/temperature-units.ts), so
+    // both ends have to land somewhere rather than fall off the table.
+    expect(exposureSuitFor(-2)).toBe("drysuit");
+    expect(exposureSuitFor(40)).toBe("swimwear");
   });
 
   it("only calls a newer crew briefing a change", () => {

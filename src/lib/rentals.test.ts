@@ -3,6 +3,7 @@ import {
   DEFAULT_SHOP_RENTAL_ITEMS,
   EMPTY_RENTAL_PRICING,
   hasAnyRentalPricing,
+  nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
   RENTABLE_ITEMS,
@@ -92,6 +93,25 @@ describe("nitrox catalog", () => {
     expect(shopOffersNitrox(["bcd", "nitrox"])).toBe(true);
     expect(shopOffersNitrox(["bcd"])).toBe(false);
     expect(shopOffersNitrox([])).toBe(false);
+  });
+
+  it("needs both the shop's fills and the course's permission", () => {
+    const fills = ["bcd", "nitrox"];
+    // An ordinary charter has no course to ask, so the shop's answer stands —
+    // exactly what this gate was before courses got a say.
+    expect(nitroxAvailableOn(fills, null)).toBe(true);
+    expect(nitroxAvailableOn(fills, undefined)).toBe(true);
+    // A course taught on air closes the box at a shop that fills nitrox all
+    // day: an Open Water class is the case this exists for.
+    expect(nitroxAvailableOn(fills, { nitroxCompatible: false })).toBe(false);
+    expect(nitroxAvailableOn(fills, { nitroxCompatible: true })).toBe(true);
+  });
+
+  it("never opens on a course's say-so alone", () => {
+    // A shop that does not fill nitrox cannot be talked into it by a catalog
+    // row — the two gates are an AND in that direction too.
+    expect(nitroxAvailableOn(["bcd"], { nitroxCompatible: true })).toBe(false);
+    expect(nitroxAvailableOn([], null)).toBe(false);
   });
 });
 
