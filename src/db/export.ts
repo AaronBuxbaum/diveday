@@ -528,6 +528,15 @@ export async function loadShopExportBundleInput(
             "address_postal_code",
             "address_country",
             "dock_call_minutes",
+            // The rest of the shop's dock-day rhythm (ADR
+            // 20260812-configurable-dock-day-rhythm). Six numbers that describe
+            // how this shop runs a day — as much the shop's own record as its
+            // packing list, and re-importable as one.
+            "gear_setup_minutes",
+            "briefing_minutes",
+            "boat_ride_minutes",
+            "bottom_time_minutes",
+            "surface_interval_minutes",
             "review_url",
             "packing_list",
             "rental_items",
@@ -552,6 +561,11 @@ export async function loadShopExportBundleInput(
               shop.addressPostalCode,
               shop.addressCountry,
               shop.dockCallMinutes,
+              shop.gearSetupMinutes,
+              shop.briefingMinutes,
+              shop.boatRideMinutes,
+              shop.bottomTimeMinutes,
+              shop.surfaceIntervalMinutes,
               shop.reviewUrl,
               JSON.stringify(shop.packingList),
               JSON.stringify(shop.rentalItems),

@@ -27,7 +27,18 @@ describe("selectDeployProfile", () => {
   });
 
   it("targets diveday-admin even before aws login has created the profile", () => {
-    const environment = {};
+    // An empty *AWS home*, not an empty environment. `{}` leaves
+    // `hasGeneratedDeployerProfile` falling back to the real `~/.aws/credentials`
+    // — so this case asserted "no deployer profile exists" while reading the
+    // machine it happened to run on. It passed on CI, which has no `~/.aws`, and
+    // failed on the desk of anyone who had actually run the wizard: exactly
+    // backwards, since having run it is the normal state for the person
+    // maintaining this script.
+    const home = mkdtempSync(join(tmpdir(), "diveday-aws-profile-"));
+    directories.push(home);
+    mkdirSync(join(home, ".aws"));
+
+    const environment = { AWS_PROFILE_HOME: join(home, ".aws") };
     expect(selectDeployProfile(environment).AWS_PROFILE).toBe("diveday-admin");
   });
 

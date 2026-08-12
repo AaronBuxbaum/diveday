@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MapEmbed } from "@/components/MapEmbed";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
@@ -151,16 +152,17 @@ export function RouteEditor({
       {query ? (
         <>
           <div className="mt-4 overflow-hidden rounded-lg border border-border">
-            <div className="relative h-72">
-              <iframe
-                title={copy.mapAriaLabel}
-                src={googleSatelliteEmbedUrl(query, zoom)}
-                // Never interactive: a panned map is a route drawn against a
-                // frame the briefing cannot reproduce. See the note above.
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+            {/* Never interactive: a panned map is a route drawn against a frame
+                the briefing cannot reproduce. See the note above. `MapEmbed`
+                also crops Google's own controls out of the window, and it has
+                to be the *same* frame the diver-facing briefing draws on
+                (`src/components/DiveSiteMap.tsx`) — a staffer clicking a
+                waypoint here is fixing a percentage of this box. */}
+            <MapEmbed
+              title={copy.mapAriaLabel}
+              src={googleSatelliteEmbedUrl(query, zoom)}
+              className="h-72"
+            >
               {/* The click surface sits over the whole frame. A `<button>`
                   rather than a bare div so it is a real control with a name,
                   and so a tap on a phone behaves like a tap and not a drag. */}
@@ -210,7 +212,7 @@ export function RouteEditor({
                   />
                 ))}
               </svg>
-            </div>
+            </MapEmbed>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">

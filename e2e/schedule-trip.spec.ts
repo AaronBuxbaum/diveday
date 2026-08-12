@@ -142,4 +142,17 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("2 meeting days · same instructors each day")).toBeVisible();
+
+  // **And the diver is told.** Every assertion above this line passed while the
+  // booking page still printed day one's date and time range and stopped, so a
+  // student bought a seat on a course weekend with no way to learn there was a
+  // second day (`meetingDays` reaching `TripHeader`). The staff side knowing is
+  // not the feature.
+  // Straight to the public path rather than through "View booking page", which
+  // is `target="_blank"` — clicking it opens a tab this `page` never becomes.
+  const tripId = new URL(page.url()).pathname.split("/").pop();
+  await page.goto(`/s/blue-mantis/trips/${tripId}`);
+  await expect(page.getByText(/^2 days · /)).toBeVisible();
+  await expect(page.getByText(/^Day 1 · /)).toBeVisible();
+  await expect(page.getByText(/^Day 2 · /)).toBeVisible();
 });

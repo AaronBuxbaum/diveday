@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
@@ -11,9 +12,26 @@ import {
 } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
-import type { Shop, Trip } from "./types";
+import type { Shop, Trip, TripMeetingDay } from "./types";
 
-export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; locale: string }) {
+export function TripHeader({
+  shop,
+  trip,
+  meetingDays,
+  locale,
+}: {
+  shop: Shop;
+  trip: Trip;
+  /**
+   * Every consecutive day this departure meets on, in order. One entry is an
+   * ordinary single-day trip; more is an Open Water weekend or a liveaboard,
+   * and until now the diver was never told: the hero printed day one's date and
+   * time range and stopped, so a three-day course read as a Tuesday morning and
+   * a student found out about Wednesday and Thursday from the shop.
+   */
+  meetingDays: TripMeetingDay[];
+  locale: string;
+}) {
   const charge = checkoutCharge(trip, trip.course);
   const deadline = cancellationDeadline(trip);
   // Every figure in the hero is a list price, so it follows the shop's own
@@ -35,7 +53,7 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
   const courseFeeCents = breakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
   const eLearningFeeCents =
     breakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
-  const cancellationContact = shop.contactEmail || shop.contactPhone;
+  const multiDay = meetingDays.length > 1;
   return (
     <div className="mt-4">
       <ShopPageHeader
@@ -51,10 +69,49 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
                 is, and the confirmation they get afterwards has said "EDT" all
                 along — which made this the one step of the flow that could
                 disagree with the two around it. */}
-            <p className="text-lg text-muted">
-              {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-            </p>
+            {multiDay ? (
+              // A multi-day departure leads with its whole span, then names
+              // every day. The days are listed rather than summarised as a
+              // range because they are what a student has to clear a calendar
+              // for, and because each carries its own hours — the staff editor
+              // repeats one wall-clock window across the days, but a day edited
+              // afterwards keeps its own, and this must show that rather than
+              // imply day one's times run the week.
+              <>
+                <p className="text-lg text-muted">
+                  {t("trip.meetingDaysSummary", {
+                    count: meetingDays.length,
+                    first: formatShortDate(meetingDays[0].startsAt, locale, shop.timezone),
+                    last: formatShortDate(
+                      meetingDays[meetingDays.length - 1].startsAt,
+                      locale,
+                      shop.timezone,
+                    ),
+                  })}
+                </p>
+                <ol className="mt-2 space-y-0.5 text-sm text-muted">
+                  {meetingDays.map((day) => (
+                    <li key={day.id}>
+                      {t("trip.meetingDayLabel", {
+                        number: day.dayNumber,
+                        date: formatShortDate(day.startsAt, locale, shop.timezone),
+                        timeRange: formatTimeRangeTz(
+                          day.startsAt,
+                          day.endsAt,
+                          locale,
+                          shop.timezone,
+                        ),
+                      })}
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <p className="text-lg text-muted">
+                {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+              </p>
+            )}
             {trip.course ? (
               <p className="mt-2 text-sm font-medium text-primary">
                 {t("trip.courseSession")} ·{" "}
@@ -99,19 +156,24 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
                 })}
               </p>
             ) : null}
+            {/* The cancellation line only speaks when cancelling could cost
+                something. A stated free-cancellation window is always worth
+                saying; past that, "Cancellation questions? Ask the shop" is
+                only a real prompt for a diver who is about to put a deposit
+                down — on a book-now-pay-later seat it invented a worry about
+                money nobody had handed over, on every trip in the catalogue. */}
             {deadline ? (
               <p className="mt-1 text-sm text-muted">
                 {t("trip.freeCancellationUntil", {
                   when: formatDateTimeTz(deadline, locale, shop.timezone),
                 })}
               </p>
-            ) : cancellationContact ? (
+            ) : charge?.isDeposit ? (
               <p className="mt-1 text-sm text-muted">
-                {t("trip.cancellationAskShop", { contact: cancellationContact })}
+                {t("trip.cancellationAskShop")}{" "}
+                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
               </p>
-            ) : (
-              <p className="mt-1 text-sm text-muted">{t("trip.cancellationAskShopNoContact")}</p>
-            )}
+            ) : null}
           </>
         }
       />

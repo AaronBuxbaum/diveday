@@ -2192,6 +2192,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-address", scheme);
       });
 
+      /**
+       * The dock-day rhythm, open — six minute boxes and the live strip of
+       * beats they produce (ADR 20260812-configurable-dock-day-rhythm). Its own
+       * capture for the same reason the address card has one: the row is closed
+       * in `settings-payments`, and this is the only place the form that
+       * replaced a single arrival-call box is looked at. The preview strip
+       * underneath is the part worth a baseline — it is the same arithmetic the
+       * diver's booking page renders, so a change to the model that quietly
+       * stops matching shows up as pixels here.
+       */
+      test(`the dock-day rhythm card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Dock-day rhythm" }).waitFor();
+        await openSettingsRow(page, "Dock-day rhythm");
+        await page.getByLabel("Surface interval between dives").waitFor();
+        await capture(page, "settings-dock-day-rhythm", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what

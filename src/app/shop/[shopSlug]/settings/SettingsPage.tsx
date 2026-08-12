@@ -37,7 +37,12 @@ import {
   canViewShopReports,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { type DockDayRhythmStep, dockDayRhythmPreview } from "@/lib/diver-planning";
+import {
+  DOCK_DAY_FIELDS,
+  DOCK_DAY_LIMITS,
+  type DockDayStep,
+  dockDayOffsets,
+} from "@/lib/diver-planning";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
@@ -60,7 +65,7 @@ import {
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveContactAction,
-  saveDockCallAction,
+  saveDockDayRhythmAction,
   savePackingAction,
   saveRentalItemsAction,
   saveRentalPricingAction,
@@ -215,17 +220,59 @@ type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
 
 /**
- * Staff words for the beats of the dock day that this page's one dock-call
- * number produces. The diver-facing page names the same steps from
- * `diver.json`; these are the staff bundle's own, because a shop owner
- * configuring the rhythm and a diver reading it are two different readers.
- * Typed against `DockDayRhythmStep`, so a new beat is a compile error here
- * until it has a word.
+ * Staff words for the beats of the dock day these fields produce. The
+ * diver-facing page names the same steps from `diver.json`; these are the staff
+ * bundle's own, because a shop owner configuring the rhythm and a diver reading
+ * it are two different readers. Typed against `DockDayStep`, so a new beat is a
+ * compile error here until it has a word — `return` included, even though the
+ * preview stops before it, because a trip's return time is the trip's to state.
  */
-const DOCK_DAY_STEP_KEYS: Record<DockDayRhythmStep, StaffMessageKey> = {
+const DOCK_DAY_STEP_KEYS: Record<DockDayStep, StaffMessageKey> = {
   arrive: "settings.main.dockCall.stepArrive",
+  gearSetup: "settings.main.dockCall.stepGearSetup",
   briefing: "settings.main.dockCall.stepBriefing",
   departure: "settings.main.dockCall.stepDeparture",
+  boatRide: "settings.main.dockCall.stepBoatRide",
+  dive: "settings.main.dockCall.stepDive",
+  surfaceInterval: "settings.main.dockCall.stepSurfaceInterval",
+  return: "settings.main.dockCall.stepReturn",
+};
+
+/**
+ * The rhythm's six fields, in the order they are read and edited: what a shop
+ * does at the dock, then what the day looks like once the lines are off. One
+ * row per field rather than six hand-written `<Field>`s, so the bounds always
+ * come from `DOCK_DAY_LIMITS` — the same table the server action refuses
+ * against and the same the table's CHECK constraints enforce.
+ */
+const DOCK_DAY_FIELD_KEYS: Record<
+  (typeof DOCK_DAY_FIELDS)[number],
+  { label: StaffMessageKey; description: StaffMessageKey }
+> = {
+  dockCallMinutes: {
+    label: "settings.main.dockCall.dockCallLabel",
+    description: "settings.main.dockCall.dockCallDescription",
+  },
+  gearSetupMinutes: {
+    label: "settings.main.dockCall.gearSetupLabel",
+    description: "settings.main.dockCall.gearSetupDescription",
+  },
+  briefingMinutes: {
+    label: "settings.main.dockCall.briefingLabel",
+    description: "settings.main.dockCall.briefingDescription",
+  },
+  boatRideMinutes: {
+    label: "settings.main.dockCall.boatRideLabel",
+    description: "settings.main.dockCall.boatRideDescription",
+  },
+  bottomTimeMinutes: {
+    label: "settings.main.dockCall.bottomTimeLabel",
+    description: "settings.main.dockCall.bottomTimeDescription",
+  },
+  surfaceIntervalMinutes: {
+    label: "settings.main.dockCall.surfaceIntervalLabel",
+    description: "settings.main.dockCall.surfaceIntervalDescription",
+  },
 };
 
 /**
@@ -718,19 +765,39 @@ export default async function SettingsPage({
             open={activeSection === "dockCall"}
           >
             <SectionNotice banner={banner} section="dockCall" active={activeSection} />
-            <FieldGrid as="form" action={saveDockCallAction} columns={2} className="mt-4">
-              <Field label={t("settings.main.dockCall.label")}>
-                <input
-                  name="dockCallMinutes"
-                  type="number"
-                  inputMode="numeric"
-                  min={5}
-                  max={180}
-                  step={5}
-                  defaultValue={shop.dockCallMinutes}
-                  className={controlClass}
-                />
-              </Field>
+            {/* Six numbers, one save. The day used to come out of the single
+                arrival-call box below: the briefing was half of it capped at
+                15, and the two beats on the water were the trip window's own
+                thirds — so a shop that briefs on the boat, kits up on board,
+                walks in off a beach, or runs one tank had no way to say so and
+                read DiveDay telling their divers a day they don't run. Each
+                field states what zero means where zero is meaningful, because
+                "0" is how a shop says "we don't do that one". */}
+            <FieldGrid
+              as="form"
+              action={saveDockDayRhythmAction}
+              columns={2}
+              className="mt-4 gap-x-5 gap-y-5"
+            >
+              {DOCK_DAY_FIELDS.map((field) => (
+                <Field
+                  key={field}
+                  label={t(DOCK_DAY_FIELD_KEYS[field].label)}
+                  description={t(DOCK_DAY_FIELD_KEYS[field].description)}
+                >
+                  <input
+                    name={field}
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    min={DOCK_DAY_LIMITS[field].min}
+                    max={DOCK_DAY_LIMITS[field].max}
+                    step={5}
+                    defaultValue={shop[field]}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+              ))}
               <FieldActions>
                 <SubmitButton
                   pendingLabel={t("settings.main.dockCall.submitting")}
@@ -741,23 +808,28 @@ export default async function SettingsPage({
               </FieldActions>
             </FieldGrid>
             {/* The answer to "where do I set the dock-day rhythm?" — which used
-                to be nowhere a reader could see. This one number is the whole
-                rhythm a diver reads on their booking page under that heading:
-                it sets the arrival call, and the briefing is derived from it
-                (`dockDayTimeline`, src/lib/diver-planning.ts). Showing the
-                beats it produces, as offsets from departure, is what makes the
-                field and the diver-facing timeline visibly the same thing —
-                naming the setting after the arrival call alone was why they
-                read as two unrelated features. Offsets, not clock times: this
-                row is about every departure, not one. */}
-            <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
-              {dockDayRhythmPreview(shop.dockCallMinutes).map(({ step, minutesBefore }) => (
-                <div key={step} className="flex items-baseline gap-2">
-                  <dt>{t(DOCK_DAY_STEP_KEYS[step])}</dt>
+                to be nowhere a reader could see. Showing the beats the fields
+                produce, as offsets from departure, is what makes the form and
+                the diver-facing timeline visibly the same thing. Offsets, not
+                clock times: this row is about every departure, not one — which
+                is also why it stops at the last dive rather than inventing a
+                return, since each trip publishes its own. Two dives, because
+                that is what most of this catalogue is; a departure's own
+                planned count is what the diver's page lays out. */}
+            <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+              {dockDayOffsets(shop).map(({ step, number, minutesFromDeparture }) => (
+                <div key={`${step}-${number ?? 0}`} className="flex items-baseline gap-2">
+                  <dt>{t(DOCK_DAY_STEP_KEYS[step], { number: number ?? 1 })}</dt>
                   <dd className="font-medium text-foreground tabular-nums">
-                    {minutesBefore === 0
+                    {minutesFromDeparture === 0
                       ? t("settings.main.dockCall.atDeparture")
-                      : t("settings.main.dockCall.minutesBefore", { count: minutesBefore })}
+                      : minutesFromDeparture < 0
+                        ? t("settings.main.dockCall.minutesBefore", {
+                            count: -minutesFromDeparture,
+                          })
+                        : t("settings.main.dockCall.minutesAfter", {
+                            count: minutesFromDeparture,
+                          })}
                   </dd>
                 </div>
               ))}

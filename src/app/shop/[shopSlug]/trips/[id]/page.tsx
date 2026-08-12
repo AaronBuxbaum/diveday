@@ -271,18 +271,32 @@ export default async function ManageTripPage({
         }
         extraMeta={
           <>
+            {/* A real list, not a wrapped run of spans. The days used to sit in
+                one `flex-wrap` row separated by nothing but a 12px gap, so a
+                three-day course read as "3 meeting days · same instructors each
+                day Day 1: Tue Oct 13 · 9:00 AM – 5:00 PM Day 2: …" — one
+                sentence with no seams, re-flowing differently at every width.
+                One line per day is what the diver's own booking page shows, and
+                the two now read the same. */}
             {scheduleDays.length > 1 ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-                <span>{t("trips.detail.meetingDaysSummary", { count: scheduleDays.length })}</span>
-                {scheduleDays.map((day) => (
-                  <span key={day.id}>
-                    {t("trips.detail.dayLabel", {
-                      number: day.dayNumber,
-                      date: formatShortDate(day.startsAt, locale, shop.timezone),
-                      timeRange: formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone),
-                    })}
-                  </span>
-                ))}
+              <div className="text-sm text-muted">
+                <p>{t("trips.detail.meetingDaysSummary", { count: scheduleDays.length })}</p>
+                <ol className="mt-1 space-y-0.5">
+                  {scheduleDays.map((day) => (
+                    <li key={day.id}>
+                      {t("trips.detail.dayLabel", {
+                        number: day.dayNumber,
+                        date: formatShortDate(day.startsAt, locale, shop.timezone),
+                        timeRange: formatTimeRangeTz(
+                          day.startsAt,
+                          day.endsAt,
+                          locale,
+                          shop.timezone,
+                        ),
+                      })}
+                    </li>
+                  ))}
+                </ol>
               </div>
             ) : null}
             {trip.course ? (

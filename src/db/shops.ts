@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -55,13 +56,17 @@ export async function setShopTimezone(db: AppDb, shopId: string, timezone: strin
   return shop ?? null;
 }
 
-/** Sets how many minutes before departure divers are asked to be at the dock. */
-export async function setShopDockCallMinutes(db: AppDb, shopId: string, dockCallMinutes: number) {
-  const [shop] = await db
-    .update(shops)
-    .set({ dockCallMinutes })
-    .where(eq(shops.id, shopId))
-    .returning();
+/**
+ * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
+ * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
+ *
+ * All six together, never a field at a time: the beats before departure are
+ * clamped against the arrival call, so saving a briefing without the call it
+ * has to fit inside is how a shop ends up with a day that reads back
+ * differently from the one they typed.
+ */
+export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
+  const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
 

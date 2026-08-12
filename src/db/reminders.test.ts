@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DEFAULT_DOCK_DAY_RHYTHM } from "@/lib/diver-planning";
 import { seededShopContext } from "@/test/db";
 import { fakeEmail, fakeSms, fakeCourtesy as fakeWhatsApp } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
 import { notificationDeliveries, people, shops, waiverRecords } from "./schema";
-import { setShopDockCallMinutes } from "./shops";
+import { setShopDockDayRhythm } from "./shops";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -183,7 +184,7 @@ describe("sendDueReminders", () => {
 
   it("carries the shop's dock call time and readiness fields into the reminder", async () => {
     const { db, shop, bookingId, inWeekBucket } = await reminderContext();
-    await setShopDockCallMinutes(db, shop.id, 45);
+    await setShopDockDayRhythm(db, shop.id, { ...DEFAULT_DOCK_DAY_RHYTHM, dockCallMinutes: 45 });
     const email = fakeEmail();
     await sendDueReminders(db, {
       now: inWeekBucket,
