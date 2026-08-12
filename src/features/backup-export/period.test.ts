@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backupObjectKey, backupPeriodKey } from "./period";
+import { backupObjectKey, backupPeriodKey, backupRunDate, platformBackupObjectKey } from "./period";
 
 describe("backupPeriodKey", () => {
   it("names an ordinary mid-year week", () => {
@@ -60,5 +60,45 @@ describe("backupObjectKey", () => {
   it("is deterministic for a period, so a retried week overwrites its own object", () => {
     const first = backupObjectKey("diveday", "blue-mantis", "2026-W32");
     expect(backupObjectKey("diveday", "blue-mantis", "2026-W32")).toBe(first);
+  });
+});
+
+describe("backupRunDate", () => {
+  it("is the UTC calendar date, which is what a platform run is filed under", () => {
+    expect(backupRunDate(new Date("2026-08-12T05:00:00Z"))).toBe("2026-08-12");
+  });
+
+  it("reads the UTC date, not the host's — a late-evening run must not file itself tomorrow", () => {
+    expect(backupRunDate(new Date("2026-08-12T23:59:59Z"))).toBe("2026-08-12");
+    expect(backupRunDate(new Date("2026-08-13T00:00:00Z"))).toBe("2026-08-13");
+  });
+});
+
+describe("platformBackupObjectKey", () => {
+  it("files a whole run under one date prefix", () => {
+    expect(platformBackupObjectKey("2026-08-12", "blue-mantis")).toBe(
+      "exports/2026-08-12/blue-mantis.zip",
+    );
+  });
+
+  // The layout the freshness watchdog depends on: a single ListObjectsV2 with
+  // delimiter "/" returns run dates as common prefixes, and ISO dates sort
+  // lexicographically into chronological order.
+  it("sorts lexicographically into chronological order", () => {
+    const keys = ["2026-01-05", "2026-08-12", "2026-08-02", "2025-12-31"].map((date) =>
+      platformBackupObjectKey(date, "blue-mantis"),
+    );
+    expect([...keys].sort()).toEqual([
+      "exports/2025-12-31/blue-mantis.zip",
+      "exports/2026-01-05/blue-mantis.zip",
+      "exports/2026-08-02/blue-mantis.zip",
+      "exports/2026-08-12/blue-mantis.zip",
+    ]);
+  });
+
+  it("is deterministic, so a re-run overwrites its own object", () => {
+    expect(platformBackupObjectKey("2026-08-12", "blue-mantis")).toBe(
+      platformBackupObjectKey("2026-08-12", "blue-mantis"),
+    );
   });
 });

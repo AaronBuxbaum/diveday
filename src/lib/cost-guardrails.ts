@@ -115,7 +115,7 @@ export type CostCeiling = {
  * looking authoritative. A number that is openly "the level at which Aaron
  * wants an email" is never wrong — it is a decision, and it is reviewed by
  * editing this array. It is the same posture as `monthlyBudgetLimit` defaulting
- * to 5 in the CDK stack: a figure someone picked, not a figure AWS published.
+ * to 30 in the CDK stack: a figure someone picked, not a figure AWS published.
  *
  * Set these *above* normal running cost and below the point where a bill would
  * be a surprise. Alert-only, so there is no cost to being generous.

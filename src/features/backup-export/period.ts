@@ -22,6 +22,32 @@ export function backupPeriodKey(now: Date): string {
   return `${isoYear}-W${String(week).padStart(2, "0")}`;
 }
 
+/** "2026-08-12" — the UTC calendar date, which is what a platform run is filed under. */
+export function backupRunDate(now: Date): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * Where one shop's bundle lands in DiveDay's *own* backup bucket:
+ * `exports/<YYYY-MM-DD>/<shop-slug>.zip`.
+ *
+ * Date first, so a whole run is one prefix. That is not cosmetic — it is the
+ * property the freshness watchdog depends on. The uploader credential is
+ * write-only by design (no `ListBucket`, `infra/lib/infra-stack.ts` §11), so
+ * nothing on the application side can ever see what landed; the check has to
+ * come from a different principal in AWS, and a single `ListObjectsV2` with
+ * `delimiter=/` over `exports/` returns the run dates as common prefixes that
+ * sort lexicographically into chronological order. A key laid out any other way
+ * would make that one cheap call into a full-bucket scan.
+ *
+ * Deterministic, like the shop-owned key: a re-run on the same day overwrites
+ * its own objects rather than accumulating copies. The bucket is versioned, so
+ * an overwrite adds a version instead of destroying the earlier bundle.
+ */
+export function platformBackupObjectKey(runDate: string, shopSlug: string): string {
+  return `exports/${runDate}/${shopSlug}.zip`;
+}
+
 /**
  * Where the period's bundle lands inside the bucket. Deterministic on purpose:
  * a retried week overwrites its own object instead of accumulating copies, and

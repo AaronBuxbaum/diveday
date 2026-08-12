@@ -10,6 +10,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as destinations from "aws-cdk-lib/aws-logs-destinations";
 import * as rum from "aws-cdk-lib/aws-rum";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
@@ -375,7 +376,15 @@ export class InfraStack extends cdk.Stack {
     // somewhere else. Kept as a context override so a fork or a second account
     // can point it elsewhere without editing the stack (OPS-4).
     const alertEmail = this.node.tryGetContext("alertEmail") || "alerts@dive.day";
-    const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 5);
+    // Raised from 5 to 30 on 2026-08-12 (amendment to ADR
+    // 20260802-aws-cost-guardrails). At 5 the fixed floor -- the credentials
+    // secret, two metrics past CloudWatch's always-free ten -- was already a
+    // fifth of the cap, so the 50% and 80% notifications were on course to fire
+    // every month on cost that never changes, which is precisely the "guardrail
+    // becomes noise" failure that ADR set out to avoid. 30 puts the fixed floor
+    // back under 5% and leaves the thresholds meaning what they say: something
+    // is growing that was not growing before.
+    const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 30);
 
     const emailSubscriber = (address: string): budgets.CfnBudget.SubscriberProperty => ({
       subscriptionType: "EMAIL",
@@ -869,21 +878,24 @@ exports.handler = async (event) => {
         "Destination bucket for scheduled logical export bundles. Versioned, private, RETAIN -- see docs/engineering/backup-and-restore-runbook.md.",
     });
 
-    // No destination exists for this credential yet. `src/app/api/cron/backup-export/`
-    // reads no AWS credential at all, the runtime feature seals its own per-shop
-    // credentials, and `.env.example` has no entry for it -- the choice of runner
-    // is still a `TODO(owner)` in docs/engineering/backup-and-restore-runbook.md.
-    // It rides in the off-dotenv section saying exactly that, rather than in a
-    // `.env` block implying a home it does not have.
+    // This credential now has a home: Vercel, read by the weekly
+    // /api/cron/platform-backup route (ADR 20260812-platform-backup-runner).
+    // It rode in the off-dotenv "nowhere yet" section from 2026-08-02 until
+    // 2026-08-12, while the choice of runner was an open TODO(owner) in
+    // docs/engineering/backup-and-restore-runbook.md S2.
+    //
+    // Safe to send to Vercel precisely because of how narrow it is: PutObject
+    // and AbortMultipartUpload on this one bucket's objects, nothing else. It
+    // cannot list the bucket, cannot read an object back, and cannot delete
+    // one -- so a leak of the deployed environment cannot be turned into a
+    // download of every shop's exported waivers, which is the property that
+    // made write-only worth the inconvenience of not being able to check our
+    // own work from the app. Checking the work is S19's job instead.
     const backupUploaderKey = mintAccessKey("BackupUploaderUserAccessKey", backupUploaderUser);
-    offDotenvCredentials.push({
-      destination: `${BACKUP_UPLOADER_USER_NAME} -> nowhere yet`,
-      note: "Whatever ends up running the scheduled export (a Vercel Cron route or a GitHub Actions schedule - undecided, see backup-and-restore-runbook.md). Until that is decided this key has no home; leave it here.",
-      body: [
-        `AWS_ACCESS_KEY_ID=${backupUploaderKey.id}`,
-        `AWS_SECRET_ACCESS_KEY=${backupUploaderKey.secret}`,
-      ],
-    });
+    envValues.PLATFORM_BACKUP_BUCKET = backupBucket.bucketName;
+    envValues.PLATFORM_BACKUP_AWS_REGION = this.region;
+    envValues.PLATFORM_BACKUP_AWS_ACCESS_KEY_ID = backupUploaderKey.id;
+    envValues.PLATFORM_BACKUP_AWS_SECRET_ACCESS_KEY = backupUploaderKey.secret;
 
     // 12. Address lookup for the settings address card - see ADR
     // 20260804-aws-location-address-lookup, amended by ADR
@@ -1430,11 +1442,15 @@ exports.handler = async (event) => {
     // credential this file no longer describes should stop working -- but it is a
     // sharp edge and it is why S16's checklist carries a rotation entry.
     //
-    // One secret, not eight. Secrets Manager bills $0.40 per secret per month;
-    // eight would be $3.20 against the ~$5/month this account is budgeted for
-    // (ADR 20260802-aws-cost-guardrails), which would make the budget's 50% and
-    // 80% alerts fire every month on fixed cost and turn the guardrail into
-    // noise. One secret is $0.40 and rounds to nothing. The cost is granularity:
+    // One secret, not eight. Secrets Manager bills $0.40 per secret per month
+    // and has no free tier at all, so eight would be $3.20 of fixed monthly
+    // cost. Be honest that this argument got weaker on 2026-08-12: against the
+    // $5 budget this was written for, $3.20 was most of the cap and would have
+    // fired the 50% and 80% notifications every month on cost that never
+    // changes; against today's $30 it is ~11%, which is affordable rather than
+    // disqualifying. One secret is still the right call, but now on the
+    // simpler ground that eight hand-off documents for one operator to read is
+    // worse ergonomics, not because the money forbids it. The cost is granularity:
     // whoever can read this reads all of it, and there is no per-credential read
     // scope. On a single-operator account that distinction is theoretical - the
     // same person holds account admin either way.
@@ -2129,6 +2145,195 @@ exports.handler = async (event) => {
       value: cdkDeployRole.roleArn,
       description:
         "role-to-assume for .github/workflows/infra.yml's deploy job. Store as the AWS_CDK_DEPLOY_ROLE_ARN repository variable (manual action, S17).",
+    });
+
+    // 19. Did the weekly platform backup actually land? See ADR
+    // 20260812-platform-backup-runner, and S11 for the bucket it reads.
+    //
+    // This is the half of the backup that cannot live on Vercel, for two
+    // independent reasons:
+    //
+    //  1. **Nothing on the application side can see the bucket.** The uploader
+    //     credential is PutObject-only by design (S11), so the cron route knows
+    //     only that each PUT was accepted -- never that the object is there, or
+    //     that the pass ran at all. Reading the bucket back needs a different
+    //     principal, and giving the app that reach would undo the write-only
+    //     property that makes the credential safe to keep in Vercel.
+    //  2. **A backup whose only alarm shares fate with the thing being backed
+    //     up is not much of an alarm.** If the Vercel project is suspended,
+    //     deleted, or its crons silently stop, the pass stops and every signal
+    //     that would have told us -- the cron's own log line, its Sentry
+    //     check-in -- stops with it. Absence of evidence looks identical to a
+    //     healthy quiet week. This check runs in the account that holds the
+    //     bucket, on AWS's schedule, and fires precisely *because* nothing
+    //     arrived.
+    //
+    // Cost: nothing. EventBridge Scheduler's first 14 million invocations and
+    // Lambda's first million requests are both always-free allowances, and this
+    // is 52 invocations a year.
+    const backupFreshnessLogs = new logs.LogGroup(this, "BackupFreshnessCheckLogs", {
+      // Named for the function so Lambda writes here instead of creating its
+      // own group, which would have no retention and keep every line forever.
+      logGroupName: "/aws/lambda/diveday-backup-freshness-check",
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Eight days, not seven: the pass is weekly, so a threshold of exactly one
+    // week would alarm on an ordinary run that drifted by an hour. Eight leaves
+    // a day of slack and still catches a single missed week.
+    const backupMaxAgeDays = 8;
+
+    const backupFreshnessCheck = new lambda.Function(this, "BackupFreshnessCheck", {
+      functionName: "diveday-backup-freshness-check",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.seconds(60),
+      logGroup: backupFreshnessLogs,
+      environment: {
+        BUCKET: backupBucket.bucketName,
+        TOPIC_ARN: observabilityAlarms.topicArn,
+        MAX_AGE_DAYS: String(backupMaxAgeDays),
+      },
+      // Inline for the same reason as the SMS forwarder in S10: a couple of
+      // dozen lines against SDK clients the runtime already ships, where a
+      // bundling step would be more moving parts than the function.
+      //
+      // One ListObjectsV2 answers the whole question. Delimiter "/" over the
+      // "exports/" prefix returns each run's date folder as a common prefix
+      // rather than listing every object, and "YYYY-MM-DD" sorts
+      // lexicographically into chronological order -- so the newest run is the
+      // last element, in one call, with no pagination until the year 2045.
+      code: lambda.Code.fromInline(`
+const { S3Client, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const s3 = new S3Client({});
+const sns = new SNSClient({});
+
+const DAY_MS = 86400000;
+
+async function alarm(subject, message) {
+  console.log(JSON.stringify({ event: "backup_freshness.alarm", subject }));
+  await sns.send(new PublishCommand({
+    TopicArn: process.env.TOPIC_ARN,
+    Subject: subject,
+    Message: message,
+  }));
+}
+
+exports.handler = async () => {
+  const bucket = process.env.BUCKET;
+  const maxAgeDays = Number(process.env.MAX_AGE_DAYS);
+
+  const runs = await s3.send(new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: "exports/",
+    Delimiter: "/",
+  }));
+  const dates = (runs.CommonPrefixes ?? [])
+    .map((entry) => (entry.Prefix ?? "").slice("exports/".length).replace(/\\/$/, ""))
+    .filter((name) => /^\\d{4}-\\d{2}-\\d{2}$/.test(name))
+    .sort();
+
+  if (dates.length === 0) {
+    await alarm(
+      "DiveDay backup: no export has ever landed",
+      "The bucket " + bucket + " has no exports/<date>/ prefix at all. Either the weekly " +
+      "/api/cron/platform-backup pass has never succeeded, or it is writing somewhere else. " +
+      "See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return { status: "never_run" };
+  }
+
+  const latest = dates[dates.length - 1];
+  const ageDays = Math.floor((Date.now() - Date.parse(latest + "T00:00:00Z")) / DAY_MS);
+
+  // How many shops that run covered. A prefix that exists but holds nothing is
+  // the failure a date check alone would wave through.
+  const objects = await s3.send(new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: "exports/" + latest + "/",
+  }));
+  const bundles = (objects.Contents ?? []).filter((entry) => (entry.Key ?? "").endsWith(".zip"));
+
+  if (ageDays > maxAgeDays) {
+    await alarm(
+      "DiveDay backup: no export in " + ageDays + " days",
+      "The newest export in " + bucket + " is " + latest + ", " + ageDays + " days old " +
+      "(threshold " + maxAgeDays + "). The weekly pass has missed at least one run. Check the " +
+      "Vercel cron log for /api/cron/platform-backup and the diveday-platform-backup Sentry " +
+      "monitor. See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return { status: "stale", latest, ageDays, bundles: bundles.length };
+  }
+
+  if (bundles.length === 0) {
+    await alarm(
+      "DiveDay backup: the newest run stored nothing",
+      "The run " + latest + " in " + bucket + " has a prefix but no .zip bundles under it. " +
+      "The pass started and stored nothing. See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return { status: "empty", latest, ageDays };
+  }
+
+  console.log(JSON.stringify({
+    event: "backup_freshness.ok",
+    latest,
+    ageDays,
+    bundles: bundles.length,
+  }));
+  return { status: "ok", latest, ageDays, bundles: bundles.length };
+};
+`),
+    });
+
+    // Read-only, and only this bucket. The watchdog answers "is it there", never
+    // "what is in it": no GetObject, so the function that runs unattended every
+    // week cannot read a shop's exported waivers even if its code were changed
+    // to try.
+    backupFreshnessCheck.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "ListBackupBundlesOnly",
+        actions: ["s3:ListBucket"],
+        resources: [backupBucket.bucketArn],
+      }),
+    );
+    observabilityAlarms.grantPublish(backupFreshnessCheck);
+
+    const backupFreshnessSchedulerRole = new iam.Role(this, "BackupFreshnessSchedulerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
+      description: "Lets EventBridge Scheduler invoke the weekly backup freshness check.",
+    });
+    backupFreshnessCheck.grantInvoke(backupFreshnessSchedulerRole);
+
+    // Tuesday 06:00 UTC. The pass itself is Monday 05:00 (vercel.json), so this
+    // sits a day behind it rather than an hour: a backup that is merely late
+    // should not page anyone, and a whole day of slack is what keeps this alarm
+    // meaning "a week was missed" rather than "a run was slow".
+    new scheduler.CfnSchedule(this, "BackupFreshnessSchedule", {
+      name: "diveday-backup-freshness",
+      description:
+        "Weekly check that the platform backup actually landed in the bucket (S19). Alert-only.",
+      flexibleTimeWindow: { mode: "OFF" },
+      scheduleExpression: "cron(0 6 ? * TUE *)",
+      scheduleExpressionTimezone: "Etc/UTC",
+      target: {
+        arn: backupFreshnessCheck.functionArn,
+        roleArn: backupFreshnessSchedulerRole.roleArn,
+        retryPolicy: {
+          // A weekly check has a whole week to succeed and nothing downstream
+          // depends on its timing, so retry generously rather than losing the
+          // week to one transient throttle.
+          maximumRetryAttempts: 3,
+          maximumEventAgeInSeconds: 3600,
+        },
+      },
+    });
+
+    new cdk.CfnOutput(this, "BackupFreshnessCheckName", {
+      value: backupFreshnessCheck.functionName,
+      description:
+        "Weekly watchdog over the platform backup bucket. Alerts to the observability topic when the newest export is missing, stale, or empty. Invoke it by hand to test: aws lambda invoke --function-name diveday-backup-freshness-check /dev/stdout",
     });
   }
 }

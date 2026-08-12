@@ -507,6 +507,47 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "DiveDay's own scheduled logical export -- the platform recovery layer, not the",
+      "per-shop one (ADR 20260812-platform-backup-runner,",
+      "docs/engineering/backup-and-restore-runbook.md S2). GET /api/cron/platform-backup",
+      "builds every non-demo shop's export bundle weekly and PUTs it to DiveDay's own",
+      "private, versioned bucket. The credential is the diveday-backup-uploader IAM user",
+      "(infra/lib/infra-stack.ts S11), which can PutObject and nothing else -- no read, no",
+      "list, no delete -- so a leak cannot read a shop's exported waivers back out.",
+      "",
+      "All four or nothing: a half-configured uploader looks configured and silently",
+      "stores nothing, which is the one failure a backup cannot afford.",
+    ],
+    keys: [
+      {
+        key: "PLATFORM_BACKUP_BUCKET",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "the weekly platform backup answers 501 and stores nothing; the shop-owned backups in S2b are unaffected",
+      },
+      {
+        key: "PLATFORM_BACKUP_AWS_REGION",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as PLATFORM_BACKUP_BUCKET",
+      },
+      {
+        key: "PLATFORM_BACKUP_AWS_ACCESS_KEY_ID",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as PLATFORM_BACKUP_BUCKET",
+      },
+      {
+        key: "PLATFORM_BACKUP_AWS_SECRET_ACCESS_KEY",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as PLATFORM_BACKUP_BUCKET",
+      },
+    ],
+  },
+  {
+    doc: [
       "reg-suit visual regression testing via S3. The reg-suit-bot IAM user",
       "(infra/lib/infra-stack.ts S2). CI reads the same values as GitHub Actions",
       "repository secrets; locally they are only for running `pnpm visual`. Never sent",

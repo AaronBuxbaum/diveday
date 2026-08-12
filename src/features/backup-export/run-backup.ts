@@ -1,14 +1,8 @@
 import type { AppDb } from "@/db/client";
-import { loadShopExportBundleInput } from "@/db/export";
 import type { BackupDeliveryTrigger } from "@/db/schema";
-import { type FeedLabels, feedDocument, listFeedTrips } from "@/features/calendar-sync";
+import type { FeedLabels } from "@/features/calendar-sync";
 import { nowDate } from "@/lib/clock";
-import {
-  buildExportBundle,
-  type ExportFile,
-  fetchExportPhotos,
-  zipExportBundle,
-} from "@/lib/export";
+import { buildBackupBundle } from "./bundle";
 import {
   beginBackupDelivery,
   finishBackupDelivery,
@@ -99,33 +93,18 @@ export async function runShopBackup(
   let zip: Uint8Array;
   let shopSlug: string;
   try {
-    const bundleInput = await loadShopExportBundleInput(db, input.shopId, now);
-    if (!bundleInput) return fail("shop_missing");
-    shopSlug = bundleInput.shopSlug;
-
-    // The .ics rides along (roadmap §1): the shop-wide departures document,
-    // which by calendar-sync's own invariant never contains a diver.
-    const trips = await listFeedTrips(db, {
+    // The same assembly the platform backup uses (./bundle.ts), so both copies
+    // of a shop's data are byte-for-byte the same artifact.
+    const bundle = await buildBackupBundle(db, {
       shopId: input.shopId,
-      personId: "",
-      scope: "shop_trips",
-      now,
-    });
-    const ics = feedDocument({
-      trips,
+      icsLabels: input.icsLabels,
       origin: input.origin,
-      shopSlug: bundleInput.shopSlug,
-      labels: input.icsLabels,
       now,
+      fetchImpl: input.fetchImpl,
     });
-
-    const photos = await fetchExportPhotos(bundleInput.photoUrls, input.fetchImpl);
-    const files: ExportFile[] = [
-      ...buildExportBundle(bundleInput, now),
-      { name: "trips.ics", content: ics },
-      ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
-    ];
-    zip = zipExportBundle(files);
+    if (!bundle.ok) return fail("shop_missing");
+    zip = bundle.zip;
+    shopSlug = bundle.shopSlug;
   } catch {
     // A bundle that cannot be assembled is a bug worth a code in the history,
     // not an exception that takes the rest of the cron pass down with it.

@@ -147,24 +147,35 @@ Two things the tests will refuse:
   does not error, it counts zero forever and the alarm above it reads healthy.
 - **A signal with no response.** A graph without a stated first move is a graph nobody acts on.
 
-Keep the set small on purpose. A custom metric is about $0.30/month and the app emits ~40 event
-codes; a metric per code would cost more than the account's entire monthly budget. Anything that
-does not need an *alarm* belongs in a saved query, which is free.
+Keep the set small on purpose. Past the free allowance a custom metric is $0.30/month and its alarm
+another $0.10, and the app emits ~40 event codes; a metric per code would be ~$16/month for a set of
+graphs nobody chose. Anything that does not need an *alarm* belongs in a saved query.
 
 ## What this costs
 
-| Item | Roughly |
-| --- | --- |
-| 7 signal metrics | $2.10/month |
-| 5 web-vital metrics | $1.50/month |
-| Log ingestion + 30 days storage | ~$0.50/GB ingested |
-| CloudWatch RUM | $1 per 100,000 events |
+CloudWatch's free allowance here is **Always Free** — it does not expire after twelve months and
+does not depend on the account's age or plan. What that covers, and what this stack actually uses:
 
-Against the $5 default in the stack's cost guardrail
-([cost-guardrails-runbook.md](cost-guardrails-runbook.md)), the fixed part alone is most of the
-budget — enough that its 50% and 80% alerts may start firing on fixed cost, which is exactly what
-that guardrail's ADR says must not happen. Raising `--context monthlyBudgetLimit=…` is a human's
-call, deliberately not something this stack does for you.
+| Always free, per month | Used | Billed |
+| --- | --- | --- |
+| 10 custom metrics | 12 (7 signals + 5 web vitals) | 2 × $0.30 = **$0.60** |
+| 10 standard-resolution alarms | 10 (7 signals + 3 alarmed vitals) | **$0.00** — exactly at the line |
+| 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
+| 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
+| 1 Contributor Insights rule | 0 | — |
+| 1,800 minutes of Live Tail | 0 | — |
+
+So the fixed monthly cost of everything in this runbook is about **$0.60**, and the next counted
+signal added to the registry costs **$0.40** — $0.30 for the metric plus $0.10 for the alarm. The
+alarm count reads like a cliff and is not one; the metric half is what is worth rationing.
+
+**RUM is the exception and the one to watch.** Its 1,000,000 events is a one-time trial, *not* an
+always-free allowance, and past it RUM is $1.00 per 100,000 events with no ceiling.
+`NEXT_PUBLIC_RUM_SAMPLE_RATE` defaults to `1` — every session — so it is the only line here that can
+grow without anything good happening. Against the $30 default in the stack's cost guardrail
+([cost-guardrails-runbook.md](cost-guardrails-runbook.md)) the fixed part is noise and RUM is the
+whole risk. Raising `--context monthlyBudgetLimit=…` is a human's call, deliberately not something
+this stack does for you.
 
 The two levers, in the order to reach for them:
 
