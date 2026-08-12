@@ -7,6 +7,7 @@
     { "path": "/api/cron/retention", "schedule": "30 3 * * 0" },
     { "path": "/api/cron/backup-export", "schedule": "0 4 * * 1" },
     { "path": "/api/cron/platform-backup", "schedule": "0 5 * * 1" },
-    { "path": "/api/cron/trip-series", "schedule": "15 3 * * *" }
+    { "path": "/api/cron/trip-series", "schedule": "15 3 * * *" },
+    { "path": "/api/cron/demo-refresh", "schedule": "45 3 * * *" }
   ]
 }
