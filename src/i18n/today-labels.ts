@@ -355,6 +355,7 @@ const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
   // note on Reports' `MEDIA_KIND_KEYS`: a missing entry renders the raw enum.
   certification_card: "shared.today.opsAlert.mediaKind.certificationCard",
   waiver_document: "shared.today.opsAlert.mediaKind.waiverDocument",
+  dive_site_photo: "shared.today.opsAlert.mediaKind.diveSitePhoto",
 };
 
 /** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */

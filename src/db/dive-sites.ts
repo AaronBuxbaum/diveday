@@ -44,6 +44,8 @@ export type DiveSiteInput = {
   depthRange?: string;
   /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
   maxDepthMeters?: number | null;
+  /** This site's own time in the water; null/undefined leaves the shop's figure standing. */
+  expectedBottomTimeMinutes?: number | null;
   currentNote?: string;
   divePlan?: string;
   landmarks?: string[];
@@ -217,6 +219,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       marineLifeDescription: input.marineLifeDescription || null,
       difficulty: input.difficulty || null,
       depthRange: input.depthRange || null,
+      expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
       landmarks: input.landmarks ?? [],
@@ -258,6 +261,7 @@ export async function updateDiveSite(
       // distinction still matters — an omitted field clears the column, which
       // is how a shop takes a depth back off a site.
       maxDepthMeters: input.maxDepthMeters ?? null,
+      expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
       landmarks: input.landmarks ?? [],
@@ -305,6 +309,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     difficulty: source.difficulty ?? undefined,
     depthRange: source.depthRange ?? undefined,
     maxDepthMeters: source.maxDepthMeters,
+    expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
     landmarks: source.landmarks,

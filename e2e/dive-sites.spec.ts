@@ -245,7 +245,7 @@ test.describe("staff", () => {
     // Typing the pair is enough — the frame follows the boxes, so a brand-new
     // site is drawable without a save-and-come-back round trip.
     const map = page.getByRole("button", {
-      name: "Satellite view — click to add a route waypoint",
+      name: "Terrain view — click to add a route waypoint",
     });
     await expect(map).toBeVisible();
     await expect(page.getByText("Click where the dive starts.")).toBeVisible();
@@ -302,7 +302,7 @@ test.describe("staff", () => {
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByText("Ledge and back")).toBeVisible();
     await expect(page.getByText("Out along the ledge, home over the sand.")).toBeVisible();
-    await expect(page.getByTitle(`Satellite map of ${siteName}`)).toBeVisible();
+    await expect(page.getByTitle(`Terrain map of ${siteName}`)).toBeVisible();
   });
 
   test("a half-entered forecast point is named as the reason, and nothing typed is lost", async ({
@@ -450,19 +450,21 @@ test.describe("staff", () => {
     }
   });
 
-  test("a URL resolving to a private address is blocked server-side, never saved raw (CR-020)", async ({
-    page,
-  }) => {
-    // A literal loopback address needs no real DNS/network access to prove
-    // the save wiring actually runs the SSRF check end to end (real
-    // dns.lookup call, real code path) and fails closed rather than keeping
-    // the raw URL. src/lib/storage/ingest-url.test.ts covers the full range
-    // of blocked addresses and the not_configured/blocked distinction.
+  // The SSRF check this used to exercise has no dive-site caller left: photos
+  // are uploaded from the staffer's own device now, so there is no pasted URL
+  // for the server to fetch (2026-08-12 amendment to
+  // ADR 20260724-dive-site-media-ingestion). `ingestImageUrl` and every
+  // defense in it survive for contact-import waiver documents, which really do
+  // arrive as URLs in a CSV, and are covered by
+  // src/lib/storage/ingest-url.test.ts.
+  test("the briefing takes photos as files, never as a pasted link", async ({ page }) => {
     await page.goto("/shop/blue-mantis/dive-sites/new");
-    await page.getByLabel("Name").fill(`Ingestion Check ${e2eNow().getTime()}`);
-    await page.getByLabel("Satellite map image URL").fill("http://127.0.0.1:1/reef-sat.jpg");
-    await page.getByRole("button", { name: "Save dive site" }).click();
-    await expect(page.getByText(/couldn.t be used/)).toBeVisible();
+    // Three file inputs — map still, route still, and the gallery — and not one
+    // box asking for a URL.
+    await expect(page.getByLabel("Map still")).toHaveAttribute("type", "file");
+    await expect(page.getByLabel("Route still")).toHaveAttribute("type", "file");
+    await expect(page.getByLabel(/Site photos/)).toHaveAttribute("type", "file");
+    await expect(page.getByLabel(/image URL/i)).toHaveCount(0);
   });
 });
 
@@ -474,7 +476,7 @@ test("the dive-site catalog is staff-only", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("the seeded reef briefing shows a satellite map, a gentle route, landmarks, and a field guide", async ({
+test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, and a field guide", async ({
   page,
 }) => {
   // The per-test fixture reset already restored the seeded briefing; read it
@@ -488,7 +490,7 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
 
-  await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
+  await expect(page.getByTitle("Terrain map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
   // Landmarks, the field guide, and diver moments fold behind one tap per

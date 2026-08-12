@@ -188,13 +188,8 @@ export function DetailsSection({
             {/* The date/departs/returns boxes describe day one; this says how
               many consecutive days repeat it. Saving rebuilds the whole
               meeting-day list, so a departure can grow or shrink here rather
-              than being deleted and rebuilt as separate trips. The description
-              is what makes an Open Water weekend legible from the box: "2" on
-              its own reads as a quantity of nothing in particular. */}
-            <Field
-              label={t("trips.details.dayCountLabel")}
-              description={t("trips.details.dayCountDescription")}
-            >
+              than being deleted and rebuilt as separate trips. */}
+            <Field label={t("trips.details.dayCountLabel")}>
               <input
                 name="dayCount"
                 type="number"

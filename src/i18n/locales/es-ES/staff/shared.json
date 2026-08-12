@@ -145,6 +145,7 @@
     }
   },
   "shopNav": {
+    "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
     "signOutPending": "Cerrando sesión…"
@@ -418,7 +419,8 @@
         "coursePhoto": "Foto del curso",
         "recapPhoto": "Foto del resumen",
         "certificationCard": "Foto de la tarjeta",
-        "waiverDocument": "Documento de exención"
+        "waiverDocument": "Documento de exención",
+        "diveSitePhoto": "Foto del sitio de buceo"
       },
       "stuckDetail": {
         "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",

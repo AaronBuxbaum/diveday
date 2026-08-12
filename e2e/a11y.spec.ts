@@ -162,16 +162,17 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    // The document that leaves the building. One tap from the manifest turns
-    // the departure into the print-ready record of who was aboard, the
-    // roll-call timeline and the certification evidence — the page a shop
-    // hands an insurer or an authority after something goes wrong, and the one
+    // The document that leaves the building. One tap from close-out turns the
+    // departure into the print-ready record of who was aboard, the roll-call
+    // timeline and the certification evidence — the page a shop hands an
+    // insurer or an authority after something goes wrong, and the one
     // safety-critical surface downstream of roll call that nothing scanned. It
     // is also a table-and-definition-list document rather than a form, which is
     // the markup shape an automated landmark/heading scan has the most to say
     // about.
-    await page.getByRole("link", { name: "Incident-ready export" }).click();
-    await page.waitForURL(/\/incident-export$/);
+    const logTripPath = new URL(page.url()).pathname.replace(/\/manifest$/, "");
+    await page.goto(`${logTripPath}/log`);
+    await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
     await expectNoA11yViolations(page);
   });
 
@@ -747,7 +748,7 @@ test.describe("automated accessibility scans of the staff overlays", () => {
  *
  * The seeded reef trip's public briefing (`/s/blue-mantis/trips/<id>`) is not
  * here. It is the one diver surface `expectNoA11yViolations` cannot scan: the
- * page embeds a Google Maps satellite iframe (which the context fixture in
+ * page embeds a Google Maps terrain iframe (which the context fixture in
  * e2e/fixtures.ts aborts) and externally hosted site photos proxied through
  * `/_next/image` (which the sealed e2e fleet can never fetch), so the document
  * never reaches the `networkidle` state the scan waits for and the test hangs

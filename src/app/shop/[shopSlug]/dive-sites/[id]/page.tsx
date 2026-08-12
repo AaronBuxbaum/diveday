@@ -16,20 +16,16 @@ import {
   listUpcomingTripsForSite,
   updateDiveSite,
 } from "@/db/dive-sites";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import {
-  type DiveSiteFormError,
-  parseDiveSiteForm,
-  splitMediaUrls,
-  submittedValues,
-} from "@/lib/dive-sites";
+import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
@@ -116,46 +112,47 @@ export default async function EditDiveSitePage({
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
     if (!specialties.success) return refuse("invalid");
-    let imageUrls: string[];
-    try {
-      imageUrls = splitMediaUrls(parsed.fields.imageUrls);
-    } catch {
-      return refuse("images");
-    }
     const landmarks = parsed.fields.landmarks
       .split("\n")
       .map((landmark) => landmark.trim())
       .filter(Boolean);
-    // Every media URL becomes first-party before it's ever stored — a public
-    // dive-site page must never make a live request to a staff-pasted
-    // third-party host (CR-020).
-    const media = await ingestDiveSiteMedia({
-      satelliteImageUrl: parsed.fields.satelliteImageUrl || undefined,
-      routeImageUrl: parsed.fields.routeImageUrl || undefined,
-      imageUrls,
-    });
-    if (!media.ok) {
-      return refuse(media.reason === "not_configured" ? "imagesUnconfigured" : "images");
+    // The site as stored, re-read rather than closed over: this action runs
+    // long after the page rendered, and it decides what a blank file input
+    // means (keep what is there) and which objects this save orphans.
+    const activeDb = await getDb();
+    const stored = await getDiveSite(activeDb, activeSession.user.shopId, id);
+    if (!stored) notFound();
+    // Uploaded from the staffer's own device straight into first-party
+    // storage — there is no pasted URL for a public page to fetch (CR-020).
+    const photos = await uploadDiveSitePhotos(formData, stored);
+    if (!photos.ok) {
+      return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
     }
-    // `maxDepth` is the form's unit-relative field, not a column — it became
-    // `parsed.maxDepthMeters`, so it must not reach the spread.
-    const { maxDepth: _maxDepth, ...siteFields } = parsed.fields;
-    const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
+    // `maxDepth` and `expectedBottomTime` are the form's own fields, not
+    // columns — they became `parsed.maxDepthMeters` /
+    // `parsed.expectedBottomTimeMinutes`, so neither may reach the spread.
+    const {
+      maxDepth: _maxDepth,
+      expectedBottomTime: _expectedBottomTime,
+      ...siteFields
+    } = parsed.fields;
+    const updated = await updateDiveSite(activeDb, activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...siteFields,
       forecastLatitude:
         parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
       forecastLongitude:
         parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
-      satelliteImageUrl: media.satelliteImageUrl,
-      routeImageUrl: media.routeImageUrl,
-      imageUrls: media.imageUrls,
+      satelliteImageUrl: photos.photos.satelliteImageUrl,
+      routeImageUrl: photos.photos.routeImageUrl,
+      imageUrls: photos.photos.imageUrls,
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
       difficulty: parsed.fields.difficulty,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
+      expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
       landmarks,
@@ -165,6 +162,16 @@ export default async function EditDiveSitePage({
       routeZoom: parsed.route.zoom,
     });
     if (!updated) notFound();
+    // Only once the row is durably saved: a photo this save replaced or
+    // removed is queued for provider deletion, never blocked on storage and
+    // owner-visible if it fails (CR-012).
+    for (const url of supersededDiveSitePhotos(stored, photos.photos)) {
+      await queueAndAttemptMediaDeletion(activeDb, {
+        shopId: activeSession.user.shopId,
+        kind: "dive_site_photo",
+        url,
+      });
+    }
     revalidateAndRedirect(`${back}/${id}`, `${back}/${id}?notice=saved`);
   }
 

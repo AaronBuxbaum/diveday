@@ -8,6 +8,7 @@ import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { ariaLabelsIn } from "@/test/jsx-inspect";
+import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
@@ -19,7 +20,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {

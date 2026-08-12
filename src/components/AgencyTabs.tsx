@@ -1,7 +1,10 @@
 import Link from "next/link";
 
 /**
- * Which agency's half of the catalog the roster is showing.
+ * Which agency's half of the catalog is showing — worn by the staff roster
+ * (`/shop/<slug>/courses`) and the diver-facing catalog (`/s/<slug>/courses`)
+ * alike, because a diver deciding between a PADI and an SSI shop is asking the
+ * same question of the same list.
  *
  * This replaced a per-row PADI/SSI pill. A pill on every row spent a badge of
  * visual weight repeating what is, in a shop's catalog, one of two answers —
@@ -27,7 +30,12 @@ export function AgencyTabs({
   hrefFor,
   copy,
 }: {
-  /** The agencies present in this shop's catalog, from `courseAgencies`. */
+  /**
+   * The agencies present in the catalog this strip sits above — the whole
+   * catalog for the staff roster (`courseAgencies`), the publicly visible part
+   * of it for the diver page (`activeCourseAgencies`). Never a constant pair:
+   * `courses.agency` is free text a CSV import can carry anything into.
+   */
   agencies: string[];
   /** The selected agency — always one of `agencies`; there is no unfiltered view. */
   current: string | null;
@@ -38,14 +46,15 @@ export function AgencyTabs({
   // already on screen.
   if (agencies.length < 2) return null;
 
-  // No "All" tab. A shop teaches to one agency's standards at a time: the
-  // roster reads in *progression order*, the order a diver actually moves
+  // No "All" tab. A shop teaches to one agency's standards at a time: both
+  // lists read in *progression order*, the order a diver actually moves
   // through the certifications, and that order only means anything inside one
   // agency's ladder. "All" interleaved two ladders into a single column where
-  // an Open Water sat next to an Open Water, and staff had to read the row
-  // twice to tell which was which — a list nobody wanted, occupying the tab
-  // every shop lands on first. `agencies` covers the whole catalog between
-  // them (`courses.agency` is non-null), so nothing is unreachable without it.
+  // an Open Water sat next to an Open Water, and the reader had to read the
+  // row twice to tell which was which — a list nobody wanted, occupying the
+  // tab every visitor lands on first. `agencies` covers the whole catalog
+  // between them (`courses.agency` is non-null), so nothing is unreachable
+  // without it.
   //
   // An agency code is shop data (a proper noun), never copy: upper-cased here
   // rather than translated.

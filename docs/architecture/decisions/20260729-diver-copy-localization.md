@@ -1,6 +1,8 @@
 # 20260729-diver-copy-localization — next-intl for the diver-facing surface
 
-- **Status:** Accepted
+- **Status:** Accepted, **partly superseded 2026-08-12** by
+  [20260812-reader-chosen-language](20260812-reader-chosen-language.md) (a reader can now choose;
+  the no-`[locale]`-route decision stands)
 - **Date:** 2026-07-29
 - **Supersedes:** the locale-ready copy slice in
   [20260729-staffing-waiver-audit-and-localized-copy](20260729-staffing-waiver-audit-and-localized-copy.md)
@@ -40,6 +42,11 @@ about them, so the common case needs no interaction at all; a switcher is worth 
 someone reports the negotiated answer being wrong, not before. Because the explicit-locale APIs are
 used throughout (`createTranslator`, `NextIntlClientProvider` with an explicit `locale`), adding one
 later is a change of input to one function, not a re-architecture.
+
+> **Superseded 2026-08-12.** That last paragraph turned out to be right about the cost and wrong
+> about the need — see [20260812-reader-chosen-language](20260812-reader-chosen-language.md). A
+> reader now picks their own language, held in a cookie, and it was indeed a change of input to
+> `requestLocale` and nothing else. The `/es/` URL segment is still refused, for the reasons above.
 
 **ICU, so plurals are the translator's problem.** "1 review" / "2 reviews" and "1 opinión" /
 "3 opiniones" are one message with a `plural` clause, not a ternary in a component picking between two

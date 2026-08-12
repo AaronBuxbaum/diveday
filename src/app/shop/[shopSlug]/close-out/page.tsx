@@ -8,6 +8,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { closeDay, getDayCloseout } from "@/db/closeout";
 import { setTripRecapShoutout } from "@/db/recap";
@@ -66,9 +67,9 @@ export default async function CloseOutPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ closed?: string; noted?: string }>;
+  searchParams: Promise<{ closed?: string; noted?: string; notice?: string }>;
 }) {
-  const [session, { shopSlug }, { closed, noted }] = await Promise.all([
+  const [session, { shopSlug }, { closed, noted, notice }] = await Promise.all([
     requireStaffSession(),
     params,
     searchParams,
@@ -92,6 +93,13 @@ export default async function CloseOutPage({
     // still shows *you*", so it must hold the same rows for the same viewer.
     canViewShopReports(session.user.roles),
   );
+
+  // Whether this staffer may generate a departure's log at all. Owner-only
+  // (ADR 20260804-incident-export-owner-gate), checked against the database
+  // rather than the session's roles so a demotion takes effect at once — and
+  // resolved once here rather than per row. Absent, not disabled: the door
+  // simply is not on anyone else's rows (AGENTS.md: gate by not rendering).
+  const canGenerateLog = await canPersonExportIncidentRecord(db, shop.id, session.user.personId);
 
   async function closeDayAction(formData: FormData) {
     "use server";
@@ -148,7 +156,7 @@ export default async function CloseOutPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["closed", "noted"]} />
+      <FlashParams params={["closed", "noted", "notice"]} />
       <ShopPageHeader
         eyebrow={`${t("closeout.title")} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={t(CLOSEOUT_HEADLINE_KEYS[state.shape])}
@@ -159,6 +167,17 @@ export default async function CloseOutPage({
         <div className="mb-6">
           <ShopNotice tone="success" role="status">
             {t("closeout.notice.closed")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {/* Where the owner-only departure log lands everyone else. The link on
+          each row is absent for them, so this is for a bookmark, a deep link,
+          or a role that changed under them. */}
+      {notice === "log_not_authorized" ? (
+        <div className="mb-6">
+          <ShopNotice tone="neutral" role="status">
+            {t("incidentExport.ownerOnlyNotice")}
           </ShopNotice>
         </div>
       ) : null}
@@ -264,14 +283,32 @@ export default async function CloseOutPage({
                         gets the manifest door too, not only the rows with a
                         recorded gap (principle 10: no dead ends on the row
                         that matters most). */}
-                    {departure.gapReason || departure.status === "still_out" ? (
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=${checkpoint}`}
-                        className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-                      >
-                        {openRollCallActionText(t)}
-                      </Link>
-                    ) : null}
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {departure.gapReason || departure.status === "still_out" ? (
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=${checkpoint}`}
+                          className={buttonClass({ variant: "secondary" })}
+                        >
+                          {openRollCallActionText(t)}
+                        </Link>
+                      ) : null}
+                      {/* Writing the day up belongs to the evening, so the
+                          departure log is generated from here rather than from
+                          the manifest a crew works at the rail. On every row,
+                          not only the boats that are back: the moment a shop
+                          most needs a departure's recorded facts is while the
+                          departure is still happening, and the document has
+                          always reported what is on record *so far* rather
+                          than claiming a day is finished. */}
+                      {canGenerateLog ? (
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${departure.tripId}/log`}
+                          className={buttonClass({ variant: "secondary" })}
+                        >
+                          {t("incidentExport.openLink")}
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                   {/* The one thing this evening can still add to a departure
                       that is behind the shop. Only on an ended boat: a trip

@@ -7,6 +7,70 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A reader picks their own language (delivered 2026-08-12)
+
+**The switcher DiveDay deliberately did not have.** Language was negotiated from `Accept-Language`
+alone, so a diver on a borrowed phone and a staffer whose laptop somebody else configured both read
+a language they might not, with nothing on the page to do about it. A reader now chooses, and the
+choice is a cookie rather than a URL segment — the shop's schedule keeps exactly one address in
+either language, which is the part of the original decision that still holds. Three doors, all
+naming each language in itself ("English", "español", from CLDR rather than a bundle, because the
+reader who needs this control is the one who cannot read the label above it): the public shop header
+beside the shop's name, the staff header's shop-name menu, and the command palette. Precedence lives
+in one function — the reader's choice, then the device's header, then `shops.default_locale` — and an
+explicit pick also silences the "you asked for a language we don't have" notice, which would
+otherwise argue with a decision the app just honoured.
+[20260812-reader-chosen-language](../architecture/decisions/20260812-reader-chosen-language.md),
+partly superseding
+[20260729-diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md).
+
+## Dive-site briefings: uploads, terrain, and a site's own bottom time (delivered 2026-08-12)
+
+**Photos are files now, not pasted links.** The three URL boxes on a site briefing (satellite map,
+route image, and the one-per-line gallery) are file inputs — the same shape the course editor has
+used since CR-011. That removes a class of problem rather than defending against it: no external URL
+to fetch means no SSRF surface on this path and no link that can quietly change or 404 six months
+later on a page a diver reads before a dive. Replaced and removed photos queue through the
+media-deletion ledger (a new `dive_site_photo` kind) so nothing is orphaned. 2026-08-12 amendment to
+[20260724-dive-site-media-ingestion](../architecture/decisions/20260724-dive-site-media-ingestion.md);
+`ingestImageUrl` and its defenses live on for contact-import waiver documents, which really do
+arrive as URLs in a CSV.
+
+**The map is terrain, not satellite.** A satellite photo of open water is a flat blue rectangle: it
+shows a shop's drawn route over nothing readable, and the one thing a diver wants — how the bottom
+is shaped — is exactly what the photo cannot show. `t=p` renders bathymetric shading and depth
+contours instead, at the same projection, so every stored route still lands on the water it
+describes.
+
+**A site can name its own time in the water.** `dive_sites.expected_bottom_time_minutes` overrides
+the shop-wide figure wherever the dock-day rhythm is laid over a departure, per dive rather than per
+trip — a two-tank morning routinely visits a wall run at 30 minutes and a reef run at 60, and one
+number told the diver the wrong time on whichever it was not. Blank is the ordinary case and means
+the shop's own figure stands.
+
+## The course catalog and its "get in touch" (delivered 2026-08-12)
+
+**Divers get the agency toggle staff already had.** `/s/<slug>/courses` reads one agency's ladder at
+a time with a PADI/SSI tab strip, the same `AgencyTabs` the staff roster wears — the catalog sorts in
+*progression order*, which only means anything inside one agency's ladder, and interleaving two put
+an Open Water next to an Open Water. The per-row agency pill went with it, for the reason the roster
+dropped its own: a badge repeating one of two answers, replaced by the control that acts on it.
+
+**The inquiry composer asks less and answers more.** The date picker beside "When suits you" is gone
+— a date typed there is a request the shop replies to, never a hold, so a picker only ever promised a
+precision the answer does not have; one free-text field now takes anything from "12 August" to
+"sometime this autumn". "How many divers" starts at 1. Email or phone is required — either one,
+never both — because a lead with neither is a question nobody can reply to, enforced in the composer
+*and* in the server action. And the "your message so far" preview is gone: it showed a diver their
+own answers written back to them a second time. The composed message still reaches the mail app and
+the clipboard exactly as before.
+
+## The departure log moves to the evening (delivered 2026-08-12)
+
+See the [Departure log](#departure-log-delivered-2026-08-04-moved-and-renamed-2026-08-12) entry
+below: the "incident-ready export" is the **departure log**, generated from close-out rather than
+from the manifest header a crew works at the rail.
+
 ## Surface consolidation — fewer, obvious places to go (delivered 2026-08-06)
 
 Eleven PRs (#397–#413) against one finding: staff surfaces answering the same question at two URLs.
@@ -180,7 +244,7 @@ type. Roll-call rows tell their two recorded outcomes apart by hue — aboard gr
 buttons beside them do not already say the same thing. **Boat mode** (was "Contrast: Auto / Standard
 / Maximum", plus a redundant "Glare mode active ☀" chip) is now one Auto / Land mode / Boat mode
 control that belongs to the whole trip, not the Manifest tab alone. Print / save PDF sits in the
-same place on every tab. The **incident-ready export is owner-only** — the manifest stays open to the
+same place on every tab. The **departure log is owner-only** — the manifest stays open to the
 crew who run the roll call, but the shop's evidentiary account of a departure is the owner's to
 produce, and the route refuses however it is reached. Smaller: the Celebrations line now says
 *today* / *coming up* / *just had* rather than one sentence for all three; a confirm-guarded resend
@@ -213,7 +277,7 @@ group is recordable — before that, a diver deliberately placed with a DM print
 export identically to a diver nobody paired. A diver is DB-enforced to at most one team per
 departure; a divemaster may lead several. Every act — form, add, remove, dissolve — is explicit and
 appends to a **pairing trail** carrying the member names as they stood, which outlives the
-membership rows a dissolve deletes and renders in the incident export's roll-call timeline, closing
+membership rows a dissolve deletes and renders in the departure log's roll-call timeline, closing
 the one fact on that document that had no audit entry. Teams **inform only** — never readiness,
 admission, capacity, or checkpoint completeness — and a shop that records none is unremarked. The
 offline copy shows teams read-only by name (divers *and* crew) and says the split-team read belongs
@@ -250,11 +314,11 @@ truth. Gear-return reconciliation from the original idea is deliberately out of 
 register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
 and the glossary's "Close-out".
 
-## Incident-ready export (delivered 2026-08-04)
+## Departure log (delivered 2026-08-04, moved and renamed 2026-08-12)
 
 - **One tap on a departure produces the document a shop hands to authorities or insurers.** From
-  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
-  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
+  close-out, "Generate log" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/log`) assembling the departure's recorded facts: the
   manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
   roll-call timeline (corrections included — history is never laundered), each diver's
   certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
@@ -268,6 +332,14 @@ and the glossary's "Close-out".
   (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
   uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
   that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
+- **Written up in the evening, not at the rail (2026-08-12).** It shipped as an "incident-ready
+  export" in the manifest header, one tap from "Mark boarded" — an authority-facing document on the
+  surface a crew works mid-departure, framed by the worst day rather than by what it is. It is the
+  **departure log** now, generated from close-out (one link per departure row, beside the recap
+  note), and the route moved to match. Offered on every row rather than only the boats that are
+  back: the moment a shop most needs a departure's recorded facts is while the departure is still
+  happening. See the 2026-08-12 amendment to
+  [20260804-incident-export-owner-gate](../architecture/decisions/20260804-incident-export-owner-gate.md).
 
 ## Seat claim links for party bookings (delivered 2026-08-04)
 
