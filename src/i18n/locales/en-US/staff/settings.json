@@ -269,7 +269,8 @@
         "course_photo": "Course photo",
         "recap_photo": "Recap photo",
         "certification_card": "Card photo",
-        "waiver_document": "Waiver document"
+        "waiver_document": "Waiver document",
+        "dive_site_photo": "Dive-site photo"
       },
       "mediaDeletions": {
         "sectionLabel": "Photos that didn't finish deleting",

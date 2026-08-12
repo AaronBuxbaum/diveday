@@ -468,8 +468,8 @@ new domain concept, define it here in the same PR.
   **static** fact about the departure — how many the trip carries, how many crew it names — never a
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel.
-- **Incident-ready export** — the print-optimized document a shop hands to authorities or insurers
-  after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
+- **Departure log** (was "incident-ready export" until 2026-08-12) — the print-optimized document a
+  shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
   complete append-only roll-call timeline (corrections included), certification evidence as held,
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
   the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,
@@ -538,7 +538,7 @@ new domain concept, define it here in the same PR.
   superseding [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
   A number named nobody, so it could not help anyone find a missing person, and it asked the crew to
   re-state as a figure what they had just recorded by name. Rows already written stay: they are
-  statements humans made about departures that sailed, the **incident-ready export** renders them,
+  statements humans made about departures that sailed, the **departure log** renders them,
   and `roll_call_crew_attestations.csv` remains part of the shop export.
 - **Crew roll-call event** — the per-person half: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
@@ -561,7 +561,7 @@ new domain concept, define it here in the same PR.
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
   not**. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the
   divemaster leading the group holds no booking, and before crew could be members a diver
-  deliberately placed with a DM printed on the incident export identically to a diver nobody
+  deliberately placed with a DM printed on the departure log identically to a diver nobody
   paired. Membership is a decision about this boat, never a standing relationship.
   **Nothing above two is refused**; a team of one is, because a team needs someone to be a team
   with. A **diver** is on at most one team per departure — the invariant that keeps the manifest
@@ -572,7 +572,7 @@ new domain concept, define it here in the same PR.
   two is refused (dissolving is its own act), and each of forming, adding, removing, and dissolving
   appends to an **append-only pairing trail** carrying the member names as they stood at that
   moment — so who was paired with whom survives the membership rows a dissolve deletes, and the
-  incident export renders it in the roll-call timeline. The split-team state (`separated_dock` as a
+  departure log renders it in the roll-call timeline. The split-team state (`separated_dock` as a
   boarding heads-up, `separated_after_dive` as the loud one) **informs and never acts** — it plays
   no part in readiness, admission, capacity, or whether a checkpoint reads complete, and it messages
   nobody. The offline manifest shows teams read-only by name and states that the split-team read

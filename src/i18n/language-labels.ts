@@ -46,3 +46,19 @@ export function languageNameIn(code: string, locale: string): string | null {
   const name = cachedDisplayNames(locale, { type: "language" }).of(code);
   return !name || name === code ? null : name;
 }
+
+/**
+ * A locale's name for itself, ready to put on a switcher — `"en-US"` →
+ * "English", `"es-ES"` → "español".
+ *
+ * The *primary subtag* is what gets named, not the whole tag: CLDR renders
+ * `en-US` as "American English" and `es-ES` as "español de España", which is
+ * accurate and useless on a two-item menu — DiveDay carries one bundle per
+ * language, so the region is an implementation detail of which bundle, never a
+ * choice the reader is making. Falls back to the tag itself if the runtime has
+ * no name at all, which is still better than a blank button.
+ */
+export function localeEndonym(locale: string): string {
+  const language = locale.split("-")[0];
+  return languageNameIn(language, locale) ?? languageEndonym(language) ?? locale;
+}

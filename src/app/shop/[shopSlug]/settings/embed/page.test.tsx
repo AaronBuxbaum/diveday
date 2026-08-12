@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { seededTestDb } from "@/test/db";
+import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -17,7 +18,7 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
 // inside a real Next request scope — absent here since the page is invoked
 // directly. An empty header set negotiates down to the shop's default
 // locale, same as a real request that sends no Accept-Language.
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {

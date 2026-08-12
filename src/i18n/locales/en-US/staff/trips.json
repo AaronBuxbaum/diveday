@@ -106,7 +106,6 @@
     "returnsLabel": "Returns",
     "capacityLabel": "Capacity",
     "dayCountLabel": "Days",
-    "dayCountDescription": "Consecutive days this departure meets — 1 for a single day, 2 for a weekend course.",
     "priceLabel": "Price per diver",
     "payAtBookingLegend": "Pay at booking",
     "payAtBookingDescription": "Optional. Leave the deposit blank to charge the full fare when a diver books online.",

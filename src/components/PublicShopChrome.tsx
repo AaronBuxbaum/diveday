@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import type { DiverTranslator } from "@/i18n/messages";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -14,19 +15,33 @@ import { publicSchedulePath } from "@/lib/public-routes";
  * never renders in `?embed=1` mode, which already carries its own framing on
  * the page that embeds it.
  *
- * The header shows the shop's name and where a diver can go — nothing else.
- * Phone and email live in the footer, once: repeating them up here made the
- * top of every page a contact card and left no room for the navigation that
- * was actually missing.
+ * The header shows the shop's name, where a diver can go, and — beside the
+ * name — which language they are reading in. Phone and email live in the
+ * footer, once: repeating them up here made the top of every page a contact
+ * card and left no room for the navigation that was actually missing.
+ *
+ * The language control sits with the shop's own identity rather than in the
+ * nav, because it is not a destination. It is the one control on a public page
+ * whose *label* the reader may not be able to read, which is why each option
+ * is its own language's name for itself and why it is on the first band of the
+ * page rather than filed in the footer.
  */
 export function PublicShopHeader({
   shop,
   navAriaLabel,
   navItems,
+  locale,
+  languages,
+  setLocale,
 }: {
   shop: { slug: string; name: string };
   navAriaLabel: string;
   navItems: readonly PublicShopNavItem[];
+  /** The language this page was written in — the one marked as in force. */
+  locale: string;
+  /** Every language DiveDay carries, each named in itself. */
+  languages: readonly LanguageChoice[];
+  setLocale: (locale: string) => Promise<void>;
 }) {
   return (
     <header className="border-b border-border bg-surface">
@@ -37,7 +52,10 @@ export function PublicShopHeader({
         >
           {shop.name}
         </Link>
-        <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
+          <LanguageChoices current={locale} choices={languages} setLocale={setLocale} />
+        </div>
       </div>
     </header>
   );

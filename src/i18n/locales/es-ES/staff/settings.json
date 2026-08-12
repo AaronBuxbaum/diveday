@@ -269,7 +269,8 @@
         "course_photo": "Foto del curso",
         "recap_photo": "Foto del resumen",
         "certification_card": "Foto de la tarjeta",
-        "waiver_document": "Documento de exención"
+        "waiver_document": "Documento de exención",
+        "dive_site_photo": "Foto del sitio de buceo"
       },
       "mediaDeletions": {
         "sectionLabel": "Fotos que no terminaron de eliminarse",

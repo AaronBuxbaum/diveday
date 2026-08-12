@@ -8,12 +8,9 @@ import {
 } from "@/components/OfflineManifestManager";
 import { PrintButton } from "@/components/PrintButton";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
-import { ShopNotice } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
-import { buttonClass } from "@/components/ui/button";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
-import { canPersonExportIncidentRecord } from "@/db/authz";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
@@ -75,12 +72,11 @@ export default async function TripManifestPage({
     checkpoint?: string;
     buddyError?: string;
     buddies?: string;
-    notice?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { checkpoint: requestedCheckpoint, buddyError, buddies, notice } = await searchParams;
+  const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -88,19 +84,15 @@ export default async function TripManifestPage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
-  // The manifest rows, the raw team membership, and the export gate don't
-  // depend on one another — resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList, canExportIncidentRecord] = await Promise.all([
+  // The manifest rows and the raw team membership don't depend on one another —
+  // resolve them together instead of serially.
+  const [completeManifests, buddyTeamsList] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
     // until dissolved), while the manifest derivation already dropped that
     // member from every row's team (ADR 20260804-buddy-teams).
     listTripBuddyTeams(db, shop.id, tripId),
-    // The incident-ready export hands over the whole departure as evidence, so
-    // it is owner-only (src/lib/authz.ts). Hide the door rather than offering a
-    // link that 404s — the page re-checks the same gate itself.
-    canPersonExportIncidentRecord(db, shop.id, session.user.personId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -241,22 +233,11 @@ export default async function TripManifestPage({
         // both of which name the current one; saying it a third time up here
         // was the page explaining itself before it showed itself.
         description={t("trips.manifest.description")}
-        actions={
-          <>
-            {/* One tap to the hand-to-authorities document: the recorded
-                manifest, roll-call timeline, cert evidence, and waiver status
-                for this departure, print-ready with an integrity code. */}
-            {canExportIncidentRecord ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/${tripId}/incident-export`}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("incidentExport.openLink")}
-              </Link>
-            ) : null}
-            <PrintButton label={t("shared.printButton.label")} />
-          </>
-        }
+        // Just the printer. "Generate log" used to stand here too, which put
+        // a hand-to-authorities document one tap from "Mark boarded" on the
+        // page a crew works at the rail — writing the day up is an evening
+        // act, and its door is now the close-out page.
+        actions={<PrintButton label={t("shared.printButton.label")} />}
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
@@ -274,16 +255,6 @@ export default async function TripManifestPage({
           souls: manifest.summary.totalDivers + manifest.crew.length,
         })}
       </p>
-      {/* Where the owner-only incident export lands everyone else. The link
-          above is hidden for them, so this is for a bookmark, a deep link, or
-          a role that changed under them. */}
-      {notice === "incident_export_not_authorized" ? (
-        <div className="mt-6 print:hidden">
-          <ShopNotice tone="neutral" role="status">
-            {t("incidentExport.ownerOnlyNotice")}
-          </ShopNotice>
-        </div>
-      ) : null}
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle

@@ -27,7 +27,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * never right.
  *
  * Three more come from the `print` block at the bottom: the manifest, prep,
- * and incident-export pages as they render for the printer. Print is its own
+ * and departure-log pages as they render for the printer. Print is its own
  * concern, not a light/dark one — the `@media print` token override collapses
  * both schemes to one black-and-white palette — so each is captured once, at a
  * US-Letter width, via `capturePrint()`. That brings the run to 383
@@ -1156,7 +1156,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-embed", scheme);
       });
 
-      // The seeded reef trip's public briefing: satellite map, gentle route,
+      // The seeded reef trip's public briefing: terrain map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
       //
       // Reached from the *standalone* schedule, never the embed: a schedule
@@ -1166,7 +1166,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip briefing renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
-        await page.getByTitle("Satellite map of Molasses Reef").waitFor();
+        await page.getByTitle("Terrain map of Molasses Reef").waitFor();
         await capture(page, "site-briefing", scheme);
       });
 
@@ -1954,20 +1954,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest", scheme);
       });
 
-      // The incident-ready export: the hand-to-authorities document of the
+      // The departure log: the hand-to-authorities document of the
       // departure's recorded facts (roster with roll-call state, evidence and
       // waiver status, timeline, integrity code). Captured on the seeded reef
       // trip before any roll call, so the baseline shows the stated-absence
       // rendering — "Awaiting" cells, an explicitly empty timeline — which is
       // exactly the state that must never read as a blank on this document.
-      test(`a trip's incident-ready export renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`a trip's departure log renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const tripPath = new URL(page.url()).pathname;
-        await page.goto(`${tripPath}/incident-export`);
+        await page.goto(`${tripPath}/log`);
         await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
-        await capture(page, "incident-export", scheme);
+        await capture(page, "departure-log", scheme);
       });
 
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
@@ -2620,10 +2618,6 @@ for (const scheme of ["light", "dark"] as const) {
           await page.goto("/shop/blue-mantis/dive-sites");
           await page.getByRole("link", { name: "Molasses Reef" }).first().click();
           await page.waitForURL(/\/dive-sites\//);
-          // The seeded briefing's photo URLs can't be re-ingested from the e2e
-          // sandbox, so leaving them in refuses the save with the image error
-          // (returned to the form now, not a `?error=images` redirect).
-          await page.getByLabel(/Site photo URLs/).fill("");
           await page.getByLabel(/Maximum depth/).fill(meters);
           await page.getByRole("button", { name: "Save dive site" }).click();
           await page.getByText("Dive site saved.").waitFor();
@@ -2756,7 +2750,7 @@ for (const scheme of ["light", "dark"] as const) {
       // A site's own briefing form, which is where the route a shop draws is
       // drawn. Captured on a seeded site that already has one, so the frame
       // holds the map, the curve, and its start/finish dots rather than the
-      // empty state — the thing worth having a baseline of. The satellite
+      // empty state — the thing worth having a baseline of. The terrain
       // embed is a third-party iframe and renders nothing deterministic in
       // CI, which is exactly why the overlay is what this watches: the SVG is
       // ours and is drawn from the row.
@@ -2957,13 +2951,13 @@ test.describe("print", () => {
     await capturePrint(page, "prep");
   });
 
-  // The incident-ready export exists to be printed and handed over, so the
-  // print rendering is the primary artifact, not a nice-to-have.
-  test("the incident-ready export prints monochrome and padded", async ({ page }) => {
+  // The departure log exists to be printed and handed over, so the print
+  // rendering is the primary artifact, not a nice-to-have.
+  test("the departure log prints monochrome and padded", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/incident-export`);
+    await page.goto(`${tripPath}/log`);
     await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
-    await capturePrint(page, "incident-export");
+    await capturePrint(page, "departure-log");
   });
 });

@@ -421,11 +421,6 @@ const courseInquirySchema = z.object({
   inquirerPhone: z.string().trim().min(1).max(30).optional(),
   experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
   timing: z.string().trim().min(1).max(200).optional(),
-  /** A bare `YYYY-MM-DD` the diver asked for; the template formats it for the reader. */
-  preferredDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
   divers: z.number().int().min(1).max(12).optional(),
   message: z.string().trim().min(1).max(1500).optional(),
 });

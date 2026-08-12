@@ -13,13 +13,11 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
 import { coursePageJsonLd } from "@/lib/structured-data";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
   CourseAdmission,
@@ -192,10 +190,6 @@ export default async function CoursePage({
             shopName={shop.name}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
-            locale={locale}
-            // Today where the shop is, not where the diver's browser is: the
-            // floor on the date picker is the shop's own calendar day.
-            today={toDateInputValue(utcToWallTime(nowDate(), shop.timezone))}
             copy={{
               getInTouch: t("inquiry.getInTouch"),
               noDateBody: t("inquiry.noDateBody"),
@@ -208,8 +202,8 @@ export default async function CoursePage({
               howManyDivers: t("inquiry.howManyDivers"),
               optional: t("common.optional"),
               required: t("inquiry.required"),
-              preferredDate: t("inquiry.preferredDate"),
-              preferredDateHint: t("inquiry.preferredDateHint"),
+              orPhone: t("inquiry.orPhone"),
+              orEmail: t("inquiry.orEmail"),
               whenSuits: t("inquiry.whenSuits"),
               whenSuitsHint: t("inquiry.whenSuitsHint"),
               whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
@@ -217,7 +211,6 @@ export default async function CoursePage({
               chooseOne: t("inquiry.chooseOne"),
               anythingElse: t("inquiry.anythingElse"),
               messagePlaceholder: t("inquiry.messagePlaceholder"),
-              messageSoFar: t("inquiry.messageSoFar"),
               openInEmailApp: t("inquiry.openInEmailApp"),
               copyMessage: t("inquiry.copy"),
               copied: t("inquiry.copied"),

@@ -54,12 +54,30 @@ const progressionOrder = [
   asc(courses.title),
 ];
 
-/** Active catalog entries available when a staff member schedules a session. */
-export async function listActiveCourses(db: AppDb, shopId: string) {
+/**
+ * Active catalog entries — what a staff member picks from when scheduling a
+ * session, and what the diver-facing catalog lists.
+ *
+ * `agency` narrows it to one agency's ladder, which is what the diver page's
+ * tab strip selects. Left off, the whole active catalog comes back in
+ * progression order; passing an agency nobody teaches returns nothing rather
+ * than everything, so a caller must have resolved it against
+ * {@link activeCourseAgencies} first.
+ */
+export async function listActiveCourses(
+  db: AppDb,
+  shopId: string,
+  options: { agency?: string } = {},
+) {
+  const scope = and(
+    eq(courses.shopId, shopId),
+    eq(courses.isActive, true),
+    ...(options.agency ? [eq(courses.agency, options.agency)] : []),
+  );
   return db
     .select()
     .from(courses)
-    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .where(scope)
     .orderBy(...progressionOrder);
 }
 
@@ -113,6 +131,24 @@ export async function courseAgencies(db: AppDb, shopId: string): Promise<string[
     .selectDistinct({ agency: courses.agency })
     .from(courses)
     .where(eq(courses.shopId, shopId))
+    .orderBy(asc(courses.agency));
+  return rows.map((row) => row.agency);
+}
+
+/**
+ * The same question asked of the *publicly visible* catalog, for the diver
+ * page's tab strip.
+ *
+ * Deliberately not {@link courseAgencies} with a filter applied afterwards: a
+ * shop whose SSI ladder is entirely hidden must not be offered an SSI tab that
+ * lands a diver on an empty page. Hidden courses are staff's business, and a
+ * tab is a promise that there is something behind it.
+ */
+export async function activeCourseAgencies(db: AppDb, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ agency: courses.agency })
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
     .orderBy(asc(courses.agency));
   return rows.map((row) => row.agency);
 }

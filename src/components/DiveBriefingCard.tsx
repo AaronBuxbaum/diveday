@@ -68,8 +68,9 @@ export function DiveBriefingCard({
   ]
     .filter(Boolean)
     .join(" · ");
-  // First-party by construction, like the satellite image below: a staff-pasted
-  // moment URL is fetched and re-stored at save time, never persisted raw.
+  // First-party by construction, like the site's own map still below: a
+  // staff-pasted moment URL is fetched and re-stored at save time, never
+  // persisted raw.
   const momentImageUrl = moments[0]?.imageUrl ?? null;
 
   return (
@@ -78,11 +79,12 @@ export function DiveBriefingCard({
         <DiveSiteMap site={site} t={t} />
       ) : site?.satelliteImageUrl ? (
         <div className="relative h-56 w-full">
-          {/* First-party blob/bundled URL only — ingested server-side at save time
-              (CR-020, src/lib/storage/ingest-dive-site-media.ts), never a live third-party host. */}
+          {/* First-party blob URL only — uploaded by staff into this app's own
+              storage (src/lib/storage/dive-site-photos.ts), never a live
+              third-party host a shop pasted a link to. */}
           <Image
             src={site.satelliteImageUrl}
-            alt={t("trip.siteSatelliteAlt", { site: site.name })}
+            alt={t("trip.siteMapAlt", { site: site.name })}
             fill
             sizes="(min-width: 640px) 42rem, 90vw"
             className="object-cover"

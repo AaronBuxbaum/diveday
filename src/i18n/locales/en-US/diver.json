@@ -128,7 +128,7 @@
     "compareNote": "Typical site facts, not a promise of the route, wildlife, or conditions on the day.",
     "briefingsFooter": "Conditions and timing apply to the whole boat day. Sites can change, and the crew makes the final call at the dock.",
     "diveNumber": "Dive {number}",
-    "siteSatelliteAlt": "Satellite view of {site}",
+    "siteMapAlt": "Map of {site}",
     "siteRouteAtDock": "The crew will brief the final route at the dock.",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitePlanningGuide": "A planning guide, not a certification or safety clearance.",
@@ -377,6 +377,7 @@
       "eyebrow": "Courses",
       "title": "Courses",
       "description": "Everything this shop teaches, from a first taste of scuba to advanced training.",
+      "agencyTabsLabel": "Show courses by agency",
       "noCoursesHeading": "No courses listed yet",
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point."
     }
@@ -775,9 +776,9 @@
     "fieldGuideEyebrow": "Reef field guide",
     "fieldGuideHeading": "A few faces to learn",
     "likelySightings": "{count, plural, one {# likely sighting} other {# likely sightings}}",
-    "satelliteViewIllustrative": "Satellite view · illustrative route",
+    "terrainViewIllustrative": "Terrain view · illustrative route",
     "openMap": "Open map ↗",
-    "satelliteMapTitle": "Satellite map of {site}",
+    "terrainMapTitle": "Terrain map of {site}",
     "landmarkKinds": {
       "navigationMark": "Navigation mark",
       "reefHistory": "Reef history",
@@ -802,10 +803,10 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
-    "preferredDate": "A date you have in mind",
-    "preferredDateHint": "We’ll tell you if it works — nothing is booked or held yet.",
+    "orPhone": "(or phone)",
+    "orEmail": "(or email)",
     "whenSuits": "When suits you",
-    "whenSuitsHint": "Rough is fine — a month or “any weekend” tells us plenty.",
+    "whenSuitsHint": "As exact or as loose as you like — a day, a week, or “sometime this autumn”.",
     "whereYouAreUpTo": "Where you are up to",
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
@@ -813,13 +814,12 @@
     "copied": "Copied",
     "copyFailed": "Couldn’t copy — the mail button beside it does the same job.",
     "getInTouch": "Get in touch",
-    "noDateBody": "No date that works, or a question first? Answer what you can and we will write the email for you — it sends from your own mail app, so our reply lands where you expect it.",
+    "noDateBody": "Tell us what you know and we’ll take it from there. Nothing is booked or held — this just starts the conversation.",
     "namePlaceholder": "Priya Sharma",
     "emailPlaceholder": "you@example.com",
     "phonePlaceholder": "+1 305 555 0134",
-    "whenSuitsPlaceholder": "The week of 12 August",
+    "whenSuitsPlaceholder": "12 August, or any weekend this autumn",
     "messagePlaceholder": "We are on a cruise and only ashore on Tuesday.",
-    "messageSoFar": "Your message so far",
     "openInEmailApp": "Open in your email app",
     "orWriteTo": "Or write to",
     "callLabel": "call",
@@ -830,7 +830,7 @@
     "sentHeading": "Inquiry sent",
     "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
     "subject": "Course inquiry: {courseTitle}",
-    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\n{hasDate, select, yes {Date I have in mind: {preferredDate}\n} other {}}When: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -840,7 +840,8 @@
     "errors": {
       "invalid": "Check the highlighted field and try again.",
       "unavailable": "This course isn't available right now.",
-      "experienceRequired": "Let us know where you are up to before sending."
+      "experienceRequired": "Let us know where you are up to before sending.",
+      "contactRequired": "Leave an email or a phone number so we can reply."
     }
   },
   "account": {
@@ -2081,7 +2082,6 @@
       "subject": "New course inquiry: {courseTitle}",
       "intro": "{name} is asking about {courseTitle} through your course page.",
       "contact": "Email: {email} · Phone: {phone}",
-      "preferredDate": "Date asked for: {date}",
       "timing": "When: {timing}",
       "divers": "How many divers: {divers}",
       "experience": "Experience so far: {experience}"

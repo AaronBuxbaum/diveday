@@ -4,17 +4,19 @@ import { openTripFromBoard, openTripTab } from "./helpers";
 signedInAsOwner();
 
 /**
- * Incident-ready export: one tap on the departure's manifest produces the
- * print-ready document of recorded facts — roster with boarding state, the
- * roll-call timeline, certification evidence, waiver *status*, and the
- * integrity code in the footer. Safety-critical surface, so the flow is
- * exercised end to end: record a real roll-call fact first, then check it
- * appears on the document with its attribution.
+ * The departure log: one tap from close-out produces the print-ready document
+ * of recorded facts — roster with boarding state, the roll-call timeline,
+ * certification evidence, waiver *status*, and the integrity code in the
+ * footer. Safety-critical surface, so the flow is exercised end to end: record
+ * a real roll-call fact first, then check it appears on the document with its
+ * attribution.
+ *
+ * The door is close-out, not the manifest. Writing the day up is an evening
+ * act, and an authority-facing document standing beside "Mark boarded" put it
+ * on the surface a crew works at the rail.
  */
-test("one tap from the manifest opens the incident-ready document with the recorded facts", async ({
-  page,
-}) => {
-  // Board → trip → manifest, one roll-call write, then the export page —
+test("one tap from close-out opens the departure log with the recorded facts", async ({ page }) => {
+  // Board → trip → manifest, one roll-call write, close-out, then the log —
   // several full server round trips over a 9-diver manifest.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -34,9 +36,16 @@ test("one tap from the manifest opens the incident-ready document with the recor
     page.locator("#roll-call-list").getByRole("button", { name: "Boarded ☑️" }).first(),
   ).toBeVisible();
 
-  // The one-tap entry point.
-  await page.getByRole("link", { name: "Incident-ready export" }).click();
-  await page.waitForURL(/\/incident-export$/);
+  // The manifest keeps the printer and nothing else — this door moved.
+  await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
+
+  // The evening surface is where it lives now, one link per departure.
+  await page.goto("/shop/blue-mantis/close-out");
+  const reefRow = page.locator("li", {
+    has: page.getByText("Two-Tank Reef — Molasses & French"),
+  });
+  await reefRow.getByRole("link", { name: "Generate log" }).first().click();
+  await page.waitForURL(/\/log$/);
 
   // The document header states what this is — and what it is not.
   await expect(page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ })).toBeVisible();
@@ -115,24 +124,24 @@ test("a trip id that is not this shop's renders the not-found refusal, never a d
   // and e2e/marketing.spec.ts's cold-slug 404. What a regression here would
   // change is what the person actually gets: the not-found backstop must
   // render, and not one fact of the document may accompany it.
-  await page.goto("/shop/blue-mantis/trips/00000000-0000-0000-0000-0000000000ff/incident-export");
+  await page.goto("/shop/blue-mantis/trips/00000000-0000-0000-0000-0000000000ff/log");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // Zero document content: no kicker/entry label, no section headings, no
   // integrity code — nothing an authority-facing document is made of.
-  await expect(page.getByText("Incident-ready export")).toHaveCount(0);
+  await expect(page.getByText("Departure log")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
   await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toHaveCount(0);
 });
 
 /**
- * Owner-only (`canExportIncidentRecord`, src/lib/authz.ts). The manifest stays
- * open to the whole crew — they run the roll call — but producing the shop's
- * evidentiary account of a departure, stamped with the generator's own name, is
- * the owner's call. The link is hidden and the route refuses; hiding alone is
- * not a control.
+ * Owner-only (`canExportIncidentRecord`, src/lib/authz.ts). Close-out and the
+ * manifest both stay open to the whole crew — they run the roll call and they
+ * close the day — but producing the shop's evidentiary account of a departure,
+ * stamped with the generator's own name, is the owner's call. The link is
+ * hidden and the route refuses; hiding alone is not a control.
  */
-test.describe("the export is the owner's to produce", () => {
+test.describe("the log is the owner's to produce", () => {
   signedInAs("instructor");
 
   test("an instructor gets neither the link nor the document", async ({ page }) => {
@@ -141,18 +150,19 @@ test.describe("the export is the owner's to produce", () => {
     await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
     await openTripTab(page, "Manifest");
     await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+    const tripUrl = new URL(page.url());
 
-    // The manifest is theirs to run; this one door is not on it.
-    await expect(page.getByRole("link", { name: "Incident-ready export" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+    // Close-out is theirs to run; this one door is not on any of its rows.
+    await page.goto("/shop/blue-mantis/close-out");
+    await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
 
     // And the route itself refuses, however it was reached — a bookmark, a
-    // deep link, or a role that changed under them. It lands back on the
-    // manifest saying why, never silently.
-    const tripUrl = new URL(page.url());
-    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/incident-export`);
-    await page.waitForURL(/\/manifest\?notice=incident_export_not_authorized$/);
-    await expect(page.getByText(/[Oo]nly an owner can produce/)).toBeVisible();
+    // deep link, or a role that changed under them. It lands back on close-out
+    // saying why, never silently.
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/log`);
+    await page.waitForURL(/\/close-out\?notice=log_not_authorized$/);
+    await expect(page.getByText(/[Oo]nly an owner can generate/)).toBeVisible();
     // Not one fact of the document travels with the refusal.
     await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
     await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);

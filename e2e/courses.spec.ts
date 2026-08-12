@@ -85,6 +85,37 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
 });
 
+/**
+ * The agency toggle a diver gets, the same control the staff roster wears.
+ * A shop teaches to one agency's standards at a time and the catalog reads in
+ * progression order, which only means anything inside one agency's ladder — so
+ * the diver-facing list is one ladder with a way to switch, never both
+ * interleaved.
+ */
+test("a diver reads one agency's ladder at a time and can switch between them", async ({
+  page,
+}) => {
+  await page.goto("/s/blue-mantis/courses");
+  const tabs = page.getByRole("navigation", { name: "Show courses by agency" });
+  await expect(tabs.getByRole("link", { name: "PADI" })).toHaveAttribute("aria-current", "true");
+
+  // The shop's first agency keeps the bare URL canonical, so what a diver
+  // lands on and what a search engine indexes are the same page.
+  const list = page.getByRole("listitem");
+  await expect(list.filter({ hasText: "Open Water Diver" }).first()).toBeVisible();
+  await expect(list.filter({ hasText: "SSI Open Water Diver" })).toHaveCount(0);
+
+  await tabs.getByRole("link", { name: "SSI" }).click();
+  await expect(page).toHaveURL("/s/blue-mantis/courses?agency=ssi");
+  await expect(list.filter({ hasText: "SSI Open Water Diver" })).toHaveCount(1);
+  await expect(tabs.getByRole("link", { name: "SSI" })).toHaveAttribute("aria-current", "true");
+
+  // The per-row agency pill is gone with the arrival of the tabs — the same
+  // trade the staff roster made: a badge on every row repeating one of two
+  // answers, replaced by the control that acts on it.
+  await expect(list.first().getByText("SSI", { exact: true })).toHaveCount(0);
+});
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -450,11 +481,11 @@ test("a diver with no workable date gets a written email instead of a dead end",
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Mira Delgado");
+  await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
   await page.getByLabel("How many divers").fill("3");
-  // A date the diver proposes, beside the rough "when suits you" — the two
-  // answer different questions and the composer keeps both.
-  const proposed = daysFromNow(21);
-  await page.getByLabel("A date you have in mind").fill(proposed);
+  // One free-text answer, as exact or as loose as the diver wants — the date
+  // picker beside it is gone, because a date typed here is a request the shop
+  // answers, never a hold the picker implied.
   await page.getByLabel("When suits you").fill("the week of 12 August");
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
@@ -462,14 +493,9 @@ test("a diver with no workable date gets a written email instead of a dead end",
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Anything else").fill("We are ashore only on the Tuesday.");
 
-  // The preview is the promise: what the diver reads here is exactly what the
-  // mail client will be handed.
-  const preview = inquiry.getByRole("region", { name: "Your message so far" });
-  await expect(preview.getByText("Course inquiry: Open Water Diver")).toBeVisible();
-  await expect(preview.getByText("How many divers: 3")).toBeVisible();
-  await expect(preview.getByText(/Date I have in mind: /)).toBeVisible();
-  await expect(preview.getByText("When: the week of 12 August")).toBeVisible();
-  await expect(preview.getByText("We are ashore only on the Tuesday.")).toBeVisible();
+  // No preview panel any more — the composed message is what the mail app is
+  // handed, and the mailto href is where that promise is now kept.
+  await expect(inquiry.getByRole("region", { name: "Your message so far" })).toHaveCount(0);
 
   const mailto = await page
     .getByRole("link", { name: "Open in your email app" })
@@ -480,25 +506,44 @@ test("a diver with no workable date gets a written email instead of a dead end",
   const params = new URLSearchParams(url.search);
   expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
   expect(params.get("body")).toContain("Experience so far: I have never dived before");
-  expect(params.get("body")).toContain("Date I have in mind: ");
+  expect(params.get("body")).toContain("When: the week of 12 August");
+  expect(params.get("body")).toContain("How many divers: 3");
   expect(params.get("body")).toContain("Mira Delgado");
 });
 
-test("a blank inquiry is rejected, not defaulted — experience is required (task 8)", async ({
+test("a blank inquiry is rejected, not defaulted — experience and a way to reply are required", async ({
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
 
-  // No experience picked: every path the composer offers refuses to go
-  // through, not just the one a diver happens to reach for first.
+  // Nothing filled in: every path the composer offers refuses to go through,
+  // not just the one a diver happens to reach for first, and both refusals
+  // land at once rather than one after the other.
   await inquiry.getByRole("button", { name: "Send inquiry" }).click();
   await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+  await expect(
+    inquiry.getByText("Leave an email or a phone number so we can reply."),
+  ).toBeVisible();
   await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
 
   await inquiry.getByRole("link", { name: "Open in your email app" }).click();
   await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+
+  // Experience alone is not enough — a lead with no address and no number is
+  // a question nobody can answer.
+  await page.getByLabel("Where you are up to").selectOption("never");
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(
+    inquiry.getByText("Leave an email or a phone number so we can reply."),
+  ).toBeVisible();
+  await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
+
+  // A phone number on its own clears it: either one, never both.
+  await page.getByLabel("Your phone").fill("+1 305 555 0177");
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
 });
 
 test("a diver's inquiry is recorded server-side and the shop's details stay reachable after sending", async ({
@@ -510,10 +555,10 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   await page.getByLabel("Your name").fill("Sena Okafor");
   await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");
   await page.getByLabel("Your phone").fill("+1 305 555 0199");
-  // The picker refuses a date already gone: a request nobody can answer is
-  // never worth sending.
-  await expect(page.getByLabel("A date you have in mind")).toHaveAttribute("min", daysFromNow(0));
-  await page.getByLabel("A date you have in mind").fill(daysFromNow(30));
+  // One diver is already in the box — nobody fills in a field to say the
+  // obvious.
+  await expect(page.getByLabel("How many divers")).toHaveValue("1");
+  await page.getByLabel("When suits you").fill("any weekend this autumn");
   await page.getByLabel("Where you are up to").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send inquiry" }).click();
