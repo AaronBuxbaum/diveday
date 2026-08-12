@@ -3,17 +3,17 @@
  *
  * One row per condition. A row is simultaneously a CloudWatch **metric filter**
  * (the count), an **alarm** (the threshold and the email), and a **dashboard
- * widget** (the picture) — declared once here and expanded three times in
- * §17 of `infra-stack.ts`. Adding a signal is editing this array; there is
+ * widget** (the picture) -- declared once here and expanded three times in
+ * S17 of `infra-stack.ts`. Adding a signal is editing this array; there is
  * deliberately no way to add a graph without also deciding what a bad value is
  * and who answers it.
  *
  * Why a registry rather than a metric per event code: a CloudWatch custom
  * metric costs about $0.30/month and this app emits ~40 distinct event codes.
  * A filter per code would quietly cost more per month than the entire AWS
- * budget the stack sets (§7), for a set of graphs nobody chose. So the metrics
- * are the handful worth alarming on, and every other code stays queryable —
- * for free — through the Logs Insights queries below. See
+ * budget the stack sets (S7), for a set of graphs nobody chose. So the metrics
+ * are the handful worth alarming on, and every other code stays queryable --
+ * for free -- through the Logs Insights queries below. See
  * docs/engineering/cloudwatch-observability-runbook.md.
  *
  * The `events` codes are the exact strings `log()` is called with in `src/`,
@@ -34,7 +34,7 @@ export interface LogSignal {
   /** Why this is worth a metric rather than a Logs Insights query. */
   readonly why: string;
   /**
-   * The `$.event` codes that count. Mutually exclusive with `level` — a signal
+   * The `$.event` codes that count. Mutually exclusive with `level` -- a signal
    * is either "these specific things happened" or "anything at this severity".
    */
   readonly events?: readonly string[];
@@ -53,7 +53,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     metricName: "AppErrors",
     title: "Handled errors",
     why:
-      "Sentry sees thrown exceptions; these are the ones the app caught and decided about — a refused " +
+      "Sentry sees thrown exceptions; these are the ones the app caught and decided about -- a refused " +
       "payment reconciliation, a send that gave up, a prune that failed a table. Nothing else counts them.",
     level: "error",
     threshold: 3,
@@ -85,7 +85,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     metricName: "NotificationSendFailures",
     title: "Notifications not sending",
     why:
-      "A waiver link or a departure reminder that never left is invisible from inside DiveDay — the booking " +
+      "A waiver link or a departure reminder that never left is invisible from inside DiveDay -- the booking " +
       "still looks fine. The send row records it; nothing was watching the rate.",
     events: [
       "notification.ses_send_failed",
@@ -102,7 +102,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     title: "A scheduled pass failed",
     why:
       "Sentry's cron monitors answer 'did the tick run at all'. This answers the different question of " +
-      "whether the pass that ran actually did its work — a scan that failed halfway still checks in.",
+      "whether the pass that ran actually did its work -- a scan that failed halfway still checks in.",
     events: [
       "cron_reminders.tick_failed",
       "cron_reminders.scan_failed",
@@ -132,7 +132,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     metricName: "RateLimitStoreFailures",
     title: "Rate limiting is failing open",
     why:
-      "`src/lib/rate-limit.ts` deliberately allows a request when its store is unreachable — refusing real " +
+      "`src/lib/rate-limit.ts` deliberately allows a request when its store is unreachable -- refusing real " +
       "divers is the worse failure. That decision is only safe while somebody is told it is happening.",
     events: ["rate_limit.store_failed"],
     threshold: 5,
@@ -150,7 +150,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     threshold: 1,
     periodMinutes: 60,
     response:
-      "docs/engineering/realtime-manifest-events-runbook.md — check the connection ceiling against the number of boats out.",
+      "docs/engineering/realtime-manifest-events-runbook.md -- check the connection ceiling against the number of boats out.",
   },
 ];
 
@@ -158,7 +158,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
  * The metric filter's pattern, in CloudWatch's JSON dialect.
  *
  * `$.level = "error"` and `$.event = "..."` read the fields `log()` writes, so
- * the pattern is only as stable as those key names — which is exactly why
+ * the pattern is only as stable as those key names -- which is exactly why
  * `src/lib/log.ts` documents the line shape as a contract rather than a detail.
  */
 export function filterPatternFor(signal: LogSignal): string {
@@ -173,7 +173,7 @@ export function alarmDescriptionFor(signal: LogSignal): string {
 }
 
 /**
- * `AppErrors` → `diveday-app-errors`. Named rather than left to CloudFormation
+ * `AppErrors` -> `diveday-app-errors`. Named rather than left to CloudFormation
  * because an alarm's name is what arrives in the alert email's subject line,
  * and `DiveDay-AppErrorsAlarm3F2A1B` is not a subject line anyone wants at 6am.
  */
@@ -188,7 +188,7 @@ export function alarmNameFor(signal: LogSignal): string {
  *
  * A different shape from `LogSignal` on purpose. Those count *occurrences* and
  * alarm when a count rises; these read a **value out of the line**
- * (`metricValue: "$.lcp"`) and alarm on its **75th percentile** — the statistic
+ * (`metricValue: "$.lcp"`) and alarm on its **75th percentile** -- the statistic
  * Google and Vercel both score Core Web Vitals with, because a median hides the
  * quarter of visits that were actually bad.
  *
@@ -198,8 +198,8 @@ export function alarmNameFor(signal: LogSignal): string {
  * without erroring.
  *
  * Only the three Core Web Vitals alarm. FCP and TTFB are collected and graphed
- * because they are how you tell *why* an LCP regressed — a slow server versus a
- * slow render — but neither is a thing to be woken up for on its own.
+ * because they are how you tell *why* an LCP regressed -- a slow server versus a
+ * slow render -- but neither is a thing to be woken up for on its own.
  */
 export interface WebVitalSignal {
   readonly metricName: string;
@@ -254,7 +254,7 @@ export const WEB_VITAL_SIGNALS: readonly WebVitalSignal[] = [
     field: "ttfb",
     goodThreshold: 800,
     alarm: false,
-    response: "Context for LCP — this is the half of it the server owns. Not alarmed on its own.",
+    response: "Context for LCP -- this is the half of it the server owns. Not alarmed on its own.",
   },
 ];
 
@@ -263,13 +263,13 @@ export function webVitalFilterPatternFor(signal: WebVitalSignal): string {
   return `{ $.event = "web_vital.reported" && $.${signal.field} = * }`;
 }
 
-/** `WebVitalLcp` → `diveday-web-vital-lcp`, same reasoning as `alarmNameFor`. */
+/** `WebVitalLcp` -> `diveday-web-vital-lcp`, same reasoning as `alarmNameFor`. */
 export function webVitalAlarmNameFor(signal: WebVitalSignal): string {
   return `diveday-${signal.metricName.replace(/(?<!^)([A-Z])/g, "-$1").toLowerCase()}`;
 }
 
 /**
- * Saved Logs Insights queries — the free half of this design, and where every
+ * Saved Logs Insights queries -- the free half of this design, and where every
  * event code that did not earn a metric stays answerable.
  *
  * These are the questions the runbooks already ask in prose. Saving them means
@@ -306,7 +306,7 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
   },
   {
     name: "DiveDay/Money path, everything",
-    why: "Every Stripe webhook and checkout decision in order, including the ones that succeeded — for reconciling one order end to end.",
+    why: "Every Stripe webhook and checkout decision in order, including the ones that succeeded -- for reconciling one order end to end.",
     queryString: [
       "fields @timestamp, event, @message",
       "| filter event like /^(stripe_webhook|checkout|payment)\\./",
@@ -316,7 +316,7 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
   },
   {
     name: "DiveDay/Notification failures by provider",
-    why: "Whether a send problem is one provider or all of them — the question that decides which runbook to open.",
+    why: "Whether a send problem is one provider or all of them -- the question that decides which runbook to open.",
     queryString: [
       "fields event",
       "| filter event like /^notification\\..*(failed|fell_back)/",
@@ -357,7 +357,7 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
   },
 ];
 
-/** A construct id from a saved query's display name: `DiveDay/Errors, newest first` → `ErrorsNewestFirst`. */
+/** A construct id from a saved query's display name: `DiveDay/Errors, newest first` -> `ErrorsNewestFirst`. */
 export function queryConstructIdFor(query: SavedLogQuery): string {
   return query.name
     .replace(/^DiveDay\//, "")

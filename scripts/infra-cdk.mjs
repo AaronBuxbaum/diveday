@@ -14,14 +14,23 @@ if (!operation || !["synth", "diff"].includes(operation)) {
 const environment = { ...process.env };
 selectDeployProfile(environment);
 environment.AWS_DEFAULT_REGION ||= "us-east-1";
-try {
-  ensureAwsDeploymentLogin({
-    environment,
-    interactive: !process.env.CI,
-  });
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+// `synth` never calls AWS -- this stack does no context lookups (no
+// Vpc.fromLookup, no StringParameter.valueFromLookup) -- so it's the one
+// operation here that must work with no login at all, credentials
+// unconfigured included. That's what lets .github/workflows/infra.yml's diff
+// job run `pnpm infra:synth` before its `configure-aws-credentials` step,
+// catching a broken template even when AWS_CDK_DIFF_ROLE_ARN hasn't been set
+// up yet, the same way a bare `cdk synth` used to.
+if (operation !== "synth") {
+  try {
+    ensureAwsDeploymentLogin({
+      environment,
+      interactive: !process.env.CI,
+    });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 }
 
 const localCdk = join(process.cwd(), "node_modules", ".bin", "cdk");

@@ -41,7 +41,7 @@ export interface ManualAction {
   readonly title: string;
   readonly category: ManualActionCategory;
   /**
-   * When this applies — "once per account", "after every deploy", "after
+   * When this applies -- "once per account", "after every deploy", "after
    * rotating credentials", "only after `cdk destroy`". Without it a checklist
    * reads as a fresh-account script and the recurring items get skipped.
    */
@@ -54,7 +54,7 @@ export interface ManualAction {
   readonly produces?: string;
   /**
    * Exactly where the result goes: the platform *and* the names it takes there.
-   * Only a destination — a caveat belongs in `note`, a recovery in `onFailure`.
+   * Only a destination -- a caveat belongs in `note`, a recovery in `onFailure`.
    * The moment this field starts carrying other things, the registry is back to
    * being prose with a label on it.
    */
@@ -74,7 +74,7 @@ export interface ManualAction {
  * Numbering follows *this*, not the array, so where a record sits in the source
  * has no bearing on what a reader sees. Numbering off the raw array meant moving
  * one action between categories renumbered the whole doc and left the sections
- * ascending out of order — [9] appearing under Verification while Credentials
+ * ascending out of order -- [9] appearing under Verification while Credentials
  * ran to [10].
  */
 function inReadingOrder(actions: readonly ManualAction[]): ManualAction[] {
@@ -126,7 +126,7 @@ export function renderCategory(
  * splitting only on action boundaries.
  *
  * CloudFormation caps an output value at 4096 characters, and the Credentials
- * group crossed it the first time this registry was written — a limit worth
+ * group crossed it the first time this registry was written -- a limit worth
  * absorbing here rather than paying for in shortened prose, because the reason
  * these entries are long is that they name every variable and platform they
  * touch, which is the whole point.
@@ -143,7 +143,7 @@ export function renderCategoryChunks(
 
   // Bytes, not `String.length`. CloudFormation states its output ceiling in
   // bytes and this prose is full of em dashes, so UTF-16 code units undercount
-  // — today's largest chunk is 3302 units and 3309 bytes, and that gap widens
+  // -- today's largest chunk is 3302 units and 3309 bytes, and that gap widens
   // with the text rather than staying put.
   const size = (text: string) => Buffer.byteLength(text, "utf8");
 
@@ -178,7 +178,7 @@ export function renderManualActionsDoc(actions: readonly ManualAction[]): string
     "",
     "> [!NOTE]",
     "> Generated from the registry in [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts).",
-    "> Do not edit by hand — run `pnpm test infra -u` to regenerate after changing the registry.",
+    "> Do not edit by hand -- run `pnpm test infra -u` to regenerate after changing the registry.",
     "",
     "Only account approvals that no CLI can perform belong here. After a successful deploy,",
     "`pnpm infra:deploy` writes the env files and offers Vercel, GitHub, and SES DNS handoffs",

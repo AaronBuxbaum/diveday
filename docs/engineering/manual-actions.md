@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > Generated from the registry in [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts).
-> Do not edit by hand — run `pnpm test infra -u` to regenerate after changing the registry.
+> Do not edit by hand -- run `pnpm test infra -u` to regenerate after changing the registry.
 
 Only account approvals that no CLI can perform belong here. After a successful deploy,
 `pnpm infra:deploy` writes the env files and offers Vercel, GitHub, and SES DNS handoffs
@@ -23,22 +23,22 @@ this file is the checklist, not the argument.
 
 [2] Bootstrap the account for CDK
     when     once per account and region
-    why      CDK deploys through four roles that a bootstrap stack provisions. §5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.
+    why      CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.
     run      pnpm infra:bootstrap
     produces The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.
     verify   aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version
              aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration
-    note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.
+    note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.
 
 [3] Enable Cost Explorer
     when     once per account
-    why      The Cost Anomaly Detection monitor (infra-stack.ts §7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.
+    why      The Cost Anomaly Detection monitor (infra-stack.ts S7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.
     run      Billing and Cost Management console -> Cost Explorer -> enable.
     verify   aws ce get-anomaly-monitors --query 'AnomalyMonitors[].MonitorName'
 
 [4] Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles
     when     once per provider account, and again after changing plan
-    why      AWS Budgets (infra-stack.ts §7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.
+    why      AWS Budgets (infra-stack.ts S7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.
     run      Vercel -> Settings -> Billing -> Spend Management: set an amount and an email notification.
              Neon -> Organization -> Billing: set the plan's usage alert, and confirm whether exceeding it suspends compute or bills overage on your plan.
              Sentry -> Settings -> Subscription -> Usage: set a spend cap and per-category quota alerts.
@@ -92,7 +92,7 @@ this file is the checklist, not the argument.
 
 [9] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
-    why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
+    why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
              Service Quotas -> Amazon SNS -> Account spend threshold for SMS (default $1/month).
              SNS console -> Text messaging (SMS) -> Origination identities, for US traffic.
@@ -101,7 +101,7 @@ this file is the checklist, not the argument.
 
 [10] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
-    why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
+    why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
              aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>
     verify   A real SubscriptionArn, not "PendingConfirmation".

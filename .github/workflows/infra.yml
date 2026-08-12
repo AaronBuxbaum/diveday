@@ -109,13 +109,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # No AWS credentials needed for this: the stack does no context lookups
-      # (no Vpc.fromLookup, no StringParameter.valueFromLookup), so `cdk
-      # synth` is a pure local build. Running it before credentials are
-      # configured means a broken template fails the check even when the
+      # The wrapper, not a raw `cdk synth`: matches the command a workstation
+      # operator actually runs. No AWS credentials needed for this either way
+      # -- the stack does no context lookups (no Vpc.fromLookup, no
+      # StringParameter.valueFromLookup), so `cdk synth` is a pure local
+      # build, and scripts/infra-cdk.mjs skips its login check specifically
+      # for `synth` for exactly this reason. Running it before credentials
+      # are configured means a broken template fails the check even when the
       # AWS_CDK_DIFF_ROLE_ARN variable (manual action "github-actions-cdk-oidc")
       # has not been set up yet.
-      - run: pnpm exec cdk synth --quiet
+      - run: pnpm infra:synth --quiet
       # This repo restricts who can open a pull request to collaborators
       # (repo setting: pull_request_creation_policy=collaborators_only), which
       # is the primary control here. This condition is defense in depth on

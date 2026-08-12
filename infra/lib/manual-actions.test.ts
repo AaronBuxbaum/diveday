@@ -29,8 +29,8 @@ function synthesize() {
  * `AWS::IAM::Policy`.
  *
  * Scanning only inline user/role policies was the original gap: a later
- * `credentialsSecret.addToResourcePolicy(...)` — the natural construct for
- * cross-account access, and therefore the most likely future edit — synthesizes
+ * `credentialsSecret.addToResourcePolicy(...)` -- the natural construct for
+ * cross-account access, and therefore the most likely future edit -- synthesizes
  * an `AWS::SecretsManager::ResourcePolicy` that nothing here would have looked
  * at, leaving the ADR's central claim asserted by a test that could not see the
  * thing contradicting it.
@@ -65,7 +65,7 @@ describe("the synthesized stack", () => {
     const outputs = template.toJSON().Outputs ?? {};
 
     // A `CfnOutput` is the one stack surface that resolves to plaintext for
-    // anyone holding `cloudformation:DescribeStacks` — which the deployer and
+    // anyone holding `cloudformation:DescribeStacks` -- which the deployer and
     // both read-only MCP users do. `IAMUserSecretKey` published the reg-suit
     // secret this way for months.
     for (const [name, output] of Object.entries<{ Value: unknown }>(outputs)) {
@@ -125,7 +125,7 @@ describe("the synthesized stack", () => {
     for (const [logicalId, key] of Object.entries(accessKeys)) {
       // A `Ref` to the parameter, never a synth-time literal. A literal would
       // mean the value came from context, and context is not remembered between
-      // deploys — the next flag-less deploy would rotate every key back to 1 and
+      // deploys -- the next flag-less deploy would rotate every key back to 1 and
       // delete the ones in use.
       expect(key.Properties.Serial, `${logicalId} cannot be rotated by deploying`).toEqual({
         Ref: "CredentialSerial",
@@ -162,6 +162,28 @@ describe("the synthesized stack", () => {
     expect(deployRoleDeny).toContain("CredentialsEnvDocument");
   });
 
+  it("scopes GitHubActionsCdkDiffRole's bootstrap-role assumption to file-publishing-role alone", () => {
+    const { template } = synthesize();
+    // Named by Sid, not by matching "sts:AssumeRole" generally -- that action
+    // also appears in GitHubActionsCdkDeployRole's own, deliberately broader
+    // AssumeCdkBootstrapRoles statement, and a test that couldn't tell the two
+    // apart wouldn't catch a copy-paste from one onto the other (ADR
+    // 20260812-diff-role-assumes-file-publishing-role).
+    const statements = policyStatements(template).filter((statement) =>
+      statement.includes('"Sid":"AssumeCdkFilePublishingRole"'),
+    );
+    expect(statements).toHaveLength(1);
+    const [statement] = statements;
+    expect(statement).toContain("file-publishing-role");
+    // Not the other three bootstrap roles GitHubActionsCdkDeployRole holds.
+    // deploy-role in particular is the one grant that would let this
+    // fork-reachable role actually execute a change rather than merely build
+    // and discard one -- reintroducing it here would defeat the whole point.
+    expect(statement).not.toContain("deploy-role");
+    expect(statement).not.toContain("lookup-role");
+    expect(statement).not.toContain("image-publishing-role");
+  });
+
   it("grants read access to the credentials secret to exactly one identity, scoped to that one secret", () => {
     const { template } = synthesize();
     const allows = policyStatements(template).filter(
@@ -196,7 +218,7 @@ describe("the synthesized stack", () => {
     );
     expect(pruning).toHaveLength(1);
     // A function that deletes IAM access keys must never be able to reach one it
-    // does not own — a human's, or another service's.
+    // does not own -- a human's, or another service's.
     expect(pruning[0]).not.toContain('"Resource":"*"');
     expect(pruning[0]).toContain("RegSuitUser");
   });
@@ -220,7 +242,7 @@ describe("the synthesized stack", () => {
 
     // The serial must stay out of its properties. With it in, a rotation
     // re-invokes the pruner to delete the outgoing key during the same update in
-    // which CloudFormation is already deleting it — racing the stack's cleanup
+    // which CloudFormation is already deleting it -- racing the stack's cleanup
     // for no gain, since after one run every user holds exactly one key.
     expect(JSON.stringify(pruner.Properties)).not.toContain("CredentialSerial");
   });
@@ -320,7 +342,7 @@ describe("the credentials document", () => {
 
     // The drift guard in the other direction: `fillEnvExample` throws when the
     // stack names a key `.env.example` dropped, and this catches a *new* AWS
-    // credential added to `.env.example` that the stack never fills — which
+    // credential added to `.env.example` that the stack never fills -- which
     // would otherwise ship an empty line under a comment promising a value.
     const unfilled = envExampleKeys(readEnvExample())
       .filter((key) => /_AWS_(ACCESS_KEY_ID|SECRET_ACCESS_KEY|REGION)$/.test(key))

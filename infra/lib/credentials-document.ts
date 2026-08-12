@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
  * profile blocks for workstation-only credentials.
  *
  * Shaped this way on purpose. The credentials are only useful once they are
- * somewhere else — a `.env.local`, Vercel's environment variables, a GitHub
- * Actions secret — so `pnpm infra:deploy` writes target dotenv files directly
+ * somewhere else -- a `.env.local`, Vercel's environment variables, a GitHub
+ * Actions secret -- so `pnpm infra:deploy` writes target dotenv files directly
  * instead of asking an operator to transcribe a bespoke JSON shape. `.env.example` already *is* the registry of what this project
  * configures, so deriving the document from it (rather than maintaining a
  * second list here) is what keeps the application section in step: a variable
@@ -16,8 +16,8 @@ import { readFileSync } from "node:fs";
  * silently vanishing. Workstation credentials use their destination's profile
  * format instead of pretending to be application configuration.
  *
- * Everything the stack cannot know is left exactly as `.env.example` has it —
- * blank, under the comment explaining where it comes from — so the document
+ * Everything the stack cannot know is left exactly as `.env.example` has it --
+ * blank, under the comment explaining where it comes from -- so the document
  * doubles as a complete `.env.local` scaffold rather than a partial one.
  */
 
@@ -25,13 +25,13 @@ import { readFileSync } from "node:fs";
 const ENV_KEY = /^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=/;
 
 /**
- * Credentials whose home is not a dotenv file at all — an AWS CLI profile, a
+ * Credentials whose home is not a dotenv file at all -- an AWS CLI profile, a
  * cloud environment's settings page. They ride along in the same document,
  * commented out so pasting the whole thing into `.env.local` stays safe, each
  * under the destination it belongs to.
  */
 export interface OffDotenvCredential {
-  /** Where it goes, as a heading: "diveday-mcp-readonly-local → ~/.aws/credentials". */
+  /** Where it goes, as a heading: "diveday-mcp-readonly-local -> ~/.aws/credentials". */
   readonly destination: string;
   /** One or two lines on what to do with it. */
   readonly note: string;
@@ -63,8 +63,8 @@ export function envExampleKeys(template: string): string[] {
 }
 
 /**
- * `.env.example` with the given keys' values substituted and every other line —
- * comments, blanks, keys this stack cannot supply — left byte-for-byte alone.
+ * `.env.example` with the given keys' values substituted and every other line --
+ * comments, blanks, keys this stack cannot supply -- left byte-for-byte alone.
  *
  * Throws on a key that `.env.example` does not declare. That is the drift
  * guard, and it fires during `cdk synth` rather than in a test only: renaming
@@ -76,7 +76,7 @@ export function fillEnvExample(template: string, values: Readonly<Record<string,
   const unknown = Object.keys(values).filter((key) => !declared.has(key));
   if (unknown.length > 0) {
     throw new Error(
-      `.env.example declares no ${unknown.join(", ")} — the stack supplies a value for a key that no longer exists. Rename it in infra/lib/infra-stack.ts or restore it in .env.example.`,
+      `.env.example declares no ${unknown.join(", ")} -- the stack supplies a value for a key that no longer exists. Rename it in infra/lib/infra-stack.ts or restore it in .env.example.`,
     );
   }
 
@@ -108,15 +108,15 @@ export function renderCredentialsDocument(options: CredentialsDocumentOptions): 
     "# where it comes from.",
     "#",
     "# WHERE THIS GOES",
-    "#   .env.local  — app configuration only. The cdk-deployer credential is",
+    "#   .env.local  -- app configuration only. The cdk-deployer credential is",
     "#                 in a named AWS CLI profile block instead.",
-    "#   Vercel      — the generated .env.vercel target: app runtime credentials",
+    "#   Vercel      -- the generated .env.vercel target: app runtime credentials",
     "#                 plus any nonblank Stripe values preserved from 1Password.",
-    "#   GitHub      — the four REG_SUIT_* lines, as repository Actions secrets.",
-    "#   AWS CLI     — answer yes to the profile prompt after deploy; it writes",
+    "#   GitHub      -- the four REG_SUIT_* lines, as repository Actions secrets.",
+    "#   AWS CLI     -- answer yes to the profile prompt after deploy; it writes",
     "#                 every generated workstation profile under ~/.aws/credentials.",
     "#",
-    "# Nothing reads this secret at runtime — it is a hand-off point, not a dependency.",
+    "# Nothing reads this secret at runtime -- it is a hand-off point, not a dependency.",
     "# Putting a value somewhere is still a manual act, and so is removing it: rotating",
     "# a key here breaks every copy of it until you re-paste.",
     "#",
@@ -140,7 +140,7 @@ export function renderCredentialsDocument(options: CredentialsDocumentOptions): 
           "# Not .env values.",
           "#",
           "# These credentials belong somewhere other than a dotenv file, so they are",
-          "# commented out — pasting this whole document into .env.local stays safe. To",
+          "# commented out -- pasting this whole document into .env.local stays safe. To",
           "# use one, copy its block and strip the leading `#   `.",
           RULE,
           ...options.offDotenv.flatMap((credential) => [
