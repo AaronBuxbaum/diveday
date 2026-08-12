@@ -157,12 +157,17 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   where it is easiest to forget: that page's hero read "Built by divers, for divers." until
   2026-08-03 — true of every dive-adjacent vendor alive, and therefore an eyebrow wearing a
   headline's clothes. A trust page that opens with a sentence anyone could sign has spent its most
-  valuable line arguing nothing. It has since failed twice more in the *other* direction and both
-  are recorded in `e2e/marketing.spec.ts`: "One person owns every line of code running on this boat."
-  conceded smallness until it read as a vendor with no infrastructure behind it, and "Small enough to
+  valuable line arguing nothing. It has since failed three more times in the *other* direction, all
+  recorded in `e2e/marketing.spec.ts`: "One person owns every line of code running on this boat."
+  conceded smallness until it read as a vendor with no infrastructure behind it; "Small enough to
   answer you." (2026-08-05 to 2026-08-12) spent the line on the company's size — the one fact about
-  DiveDay a buyer has no reason to want. The hero is now **"We'd rather be checked than believed."**:
-  a claim about posture, which the page proves in the section directly below it.
+  DiveDay a buyer has no reason to want; and "We'd rather be checked than believed." fixed the
+  register but picked a fight, presuming the reader's distrust and answering it with a dare. The hero
+  is now **"Your season doesn't hang on us."** — the reassurance stated as a fact about the shop's
+  operation rather than a posture about us, with the sentence beneath it carrying the proof (the
+  shop's own Stripe account, the export ZIP, roll call with no signal). **The lesson that outlived
+  all four:** on this page the headline's job is to say something true about *the buyer's* position,
+  not to characterize DiveDay — as a vendor, as a size, or as an attitude.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
   are honesty the policy requires, and they stay. What is banned is the register that grew up around them — by
@@ -305,7 +310,7 @@ the shared wrappers in `src/components/MarketingSections.tsx`:
 | `DiverBookingFallback` | Public schedule | Diver booking moment |
 | `FrontDeskReadinessFallback` | Staff trip readiness | Desk / safety explanation |
 | `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment, `/about` hero |
-| `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub — what comes across |
+| `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub, and the homepage records band |
 
 **A mockup is a claim, so it mirrors a real screen element for element.**
 `ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
@@ -315,6 +320,12 @@ the same `skipped` badge — including, deliberately, the parts that make DiveDa
 capable (a column it can't read, a row it won't import), because those are what make the rest
 believable. Add a mockup the same way: find the shipped screen, mirror it, and keep the
 unflattering parts in.
+
+**The homepage records band carries both halves as pictures**, in the order the copy argues them:
+the import preview (arriving) above the export inventory card (leaving). That band is the
+portability wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12
+it made that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on
+the site.
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the
