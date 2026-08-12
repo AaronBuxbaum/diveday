@@ -150,6 +150,38 @@ describe("post-deploy wizard", () => {
     expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod"]);
   });
 
+  it("syncs the infra-deploy environment only on a workstation, never in CI", async () => {
+    // The CI path skips this outright: it would have the deploy job rewrite
+    // the very approval gate it is running inside, add the CI PAT's owner as
+    // required reviewer, and need repo Administration:write to do it (a real
+    // 403 on 2026-08-12, ADR 20260812-env-sync-is-workstation-only).
+    const environmentSync = async (ciUnattended) => {
+      const commands = [];
+      await runPostDeployWizard({
+        ask: async () => "yes",
+        ciUnattended,
+        cdkArguments: [],
+        credentialsDocument: "",
+        syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+        execute: (command, arguments_) => {
+          commands.push({ command, arguments_ });
+          if (command === "aws") return JSON.stringify([]);
+          return "";
+        },
+        log: () => {},
+      });
+      return commands.some(({ arguments_ }) =>
+        arguments_.some(
+          (argument) =>
+            typeof argument === "string" && argument.includes("sync-github-cdk-ci-environment.mjs"),
+        ),
+      );
+    };
+
+    expect(await environmentSync(true)).toBe(false);
+    expect(await environmentSync(false)).toBe(true);
+  });
+
   it("skips a Vercel DNS record already present by name, type, and value", async () => {
     const answers = ["no", "no", "no", "no", "no", "no", "yes"];
     const commands = [];
