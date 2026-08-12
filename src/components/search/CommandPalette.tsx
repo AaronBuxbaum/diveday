@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import type { LanguageChoice } from "@/components/LanguageChoices";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 import {
@@ -12,7 +13,19 @@ import {
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
 
-type PaletteItem = { key: string; label: string; detail?: string; href: string };
+/**
+ * A row in the palette. Most are destinations (`href`); a few *do* something
+ * instead (`run`) — switching language is the first, because a language is not
+ * a page to visit and pushing a URL to change one would mean inventing a route
+ * whose only job is to set a cookie and bounce.
+ */
+type PaletteItem = {
+  key: string;
+  label: string;
+  detail?: string;
+  href?: string;
+  run?: () => void;
+};
 type PaletteGroup = { heading: string; items: PaletteItem[] };
 
 const EMPTY: SearchResults = { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
@@ -30,6 +43,8 @@ export type CommandPaletteCopy = {
   groupCourses: string;
   groupOrders: string;
   groupGoTo: string;
+  /** Heading over the language rows — also what a staffer types to find them. */
+  language: string;
   /**
    * The same destination labels the nav renders (src/lib/staff-destinations.ts).
    * One record, so "Go to Board" here and "Board" in the header can never
@@ -53,6 +68,9 @@ export function CommandPalette({
   shopSlug,
   boatBoardingHref,
   gates,
+  locale,
+  languages,
+  setLocaleAction,
   copy,
 }: {
   shopSlug: string;
@@ -62,9 +80,15 @@ export function CommandPalette({
    * destination is absent from both, never present here and missing there.
    */
   gates: StaffDestinationGates;
+  /** The language this render was written in; it is not offered as a choice. */
+  locale: string;
+  /** Every language DiveDay carries, each named in itself. */
+  languages: readonly LanguageChoice[];
+  setLocaleAction: (locale: string) => Promise<void>;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -214,8 +238,32 @@ export function CommandPalette({
       });
     }
     if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
+    // The second door to the language switcher, beside the one behind the
+    // shop's name. Only the languages *not* in force: a row that changes
+    // nothing is not a command. Matched on the group heading and on each
+    // language's own name, so both "language" and "español" find it.
+    const headingMatch = copy.language.toLowerCase().includes(q);
+    const otherLanguages = languages
+      .filter((choice) => choice.locale !== locale)
+      .filter(
+        (choice) =>
+          q === "" ||
+          headingMatch ||
+          choice.label.toLowerCase().includes(q) ||
+          choice.locale.toLowerCase().includes(q),
+      );
+    if (otherLanguages.length > 0) {
+      out.push({
+        heading: copy.language,
+        items: otherLanguages.map((choice) => ({
+          key: `language:${choice.locale}`,
+          label: choice.label,
+          run: () => startTransition(() => setLocaleAction(choice.locale)),
+        })),
+      });
+    }
     return out;
-  }, [results, query, boatBoardingHref, root, gates, copy]);
+  }, [results, query, boatBoardingHref, root, gates, copy, languages, locale, setLocaleAction]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
@@ -237,7 +285,11 @@ export function CommandPalette({
     (item: PaletteItem | undefined) => {
       if (!item) return;
       setOpen(false);
-      router.push(item.href);
+      if (item.run) {
+        item.run();
+        return;
+      }
+      if (item.href) router.push(item.href);
     },
     [router],
   );

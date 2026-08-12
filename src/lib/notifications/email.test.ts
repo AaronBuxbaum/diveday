@@ -506,30 +506,12 @@ describe("courseInquiryEmail", () => {
     timing: "the week of 12 August",
   };
 
-  // The date the diver picked is the fact that decides whether the desk has
-  // anything to answer with, so it leads the block of facts.
-  it("names a requested date first, written for the reader", () => {
-    const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-12" });
-    expect(email.text).toContain("Date asked for: August 12, 2026");
-    expect(email.html).toContain("Date asked for: August 12, 2026");
-    expect(email.text.indexOf("Date asked for")).toBeLessThan(email.text.indexOf("When:"));
-  });
-
-  it("drops the line entirely when the diver named no date", () => {
+  it("puts the facts the desk reads in a fixed order, with no blank lines", () => {
     const email = courseInquiryEmail(inquiry);
-    expect(email.text).not.toContain("Date asked for");
-    expect(email.html).not.toContain("Date asked for");
-    // And no stray separator left where the line would have been.
+    expect(email.text).toContain("When: the week of 12 August");
+    expect(email.text.indexOf("When:")).toBeLessThan(email.text.indexOf("How many divers:"));
+    // No stray separator where the retired "date asked for" line used to sit.
     expect(email.html).not.toContain("<br><br>");
-  });
-
-  it("writes the date in the shop's own language", () => {
-    const email = courseInquiryEmail({
-      ...inquiry,
-      locale: "es-ES",
-      preferredDate: "2026-08-12",
-    });
-    expect(email.text).toContain("Fecha solicitada: 12 de agosto de 2026");
   });
 });
 

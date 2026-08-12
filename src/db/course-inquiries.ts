@@ -18,8 +18,6 @@ export type RecordCourseInquiryInput = {
   phone?: string | null;
   experienceLevel: CourseInquiryExperience;
   timing?: string | null;
-  /** A bare `YYYY-MM-DD` the diver asked for, or null when they named none. */
-  preferredDate?: string | null;
   divers?: number | null;
   message?: string | null;
 };
@@ -99,7 +97,6 @@ export async function recordCourseInquiry(
       phone: normalizeOptional(input.phone),
       experienceLevel: input.experienceLevel,
       timing: normalizeOptional(input.timing),
-      preferredDate: normalizeOptional(input.preferredDate),
       divers: input.divers ?? null,
       message: normalizeOptional(input.message),
     })

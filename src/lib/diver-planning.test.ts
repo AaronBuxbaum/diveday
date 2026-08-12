@@ -139,6 +139,46 @@ describe("parsing a submitted rhythm", () => {
   });
 });
 
+describe("a dive site's own time in the water", () => {
+  const start = new Date("2026-07-18T12:00:00Z");
+  const end = new Date("2026-07-18T18:00:00Z");
+
+  // The reason this exists: a two-tank morning routinely visits a wall the
+  // shop runs at 30 minutes and a shallow reef it runs at 60, and one
+  // shop-wide number told the diver the wrong time on whichever it was not.
+  it("counts each dive at its own site's minutes", () => {
+    const timeline = dockDayTimeline(start, rhythm(), end, 2, [30, 60]);
+    const dive2 = timeline.find((beat) => beat.step === "dive" && beat.number === 2);
+    // Departure + 20 boat ride + 30 (this site) + 60 surface interval.
+    expect(dive2?.at.toISOString()).toBe("2026-07-18T13:50:00.000Z");
+  });
+
+  it("falls back to the shop's figure for a dive whose site names none", () => {
+    const withOverride = dockDayTimeline(start, rhythm(), end, 2, [null, 60]);
+    const shopOnly = dockDayTimeline(start, rhythm(), end, 2);
+    const at = (entries: ReturnType<typeof dockDayTimeline>) =>
+      entries.find((beat) => beat.step === "dive" && beat.number === 2)?.at.toISOString();
+    // Dive 1 named nothing, so dive 2 starts exactly where it always did.
+    expect(at(withOverride)).toBe(at(shopOnly));
+  });
+
+  // Absent, short, and zero-ish lists all mean "nothing to say about this
+  // dive" rather than "a dive of no length".
+  it("ignores a list that runs out, and a nonsense figure inside it", () => {
+    const short = dockDayTimeline(start, rhythm(), end, 2, [30]);
+    const zero = dockDayTimeline(start, rhythm(), end, 2, [30, 0]);
+    expect(beats(short)).toEqual(beats(zero));
+    const dive2 = short.find((beat) => beat.step === "dive" && beat.number === 2);
+    expect(dive2?.at.toISOString()).toBe("2026-07-18T13:50:00.000Z");
+  });
+
+  it("shows through to the preview Settings renders, not only to a departure", () => {
+    const offsets = dockDayOffsets(rhythm(), 2, [30, 60]);
+    const dive2 = offsets.find((beat) => beat.step === "dive" && beat.number === 2);
+    expect(dive2?.minutesFromDeparture).toBe(20 + 30 + 60);
+  });
+});
+
 describe("booking delight planning", () => {
   it("explains site fit from evidence without turning it into a gate", () => {
     expect(

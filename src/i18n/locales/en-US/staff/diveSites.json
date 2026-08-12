@@ -55,12 +55,17 @@
     "locationLabel": "Location",
     "locationPlaceholder": "Key Largo National Marine Sanctuary",
     "descriptionLabel": "What makes this site special?",
-    "satelliteImageLabel": "Satellite map image URL",
-    "routeImageLabel": "Route image URL",
+    "photosLegend": "Photos",
+    "photosDescription": "Upload the pictures a diver sees on this site's briefing. They are stored with your shop, so a briefing page never has to reach out to anyone else's server to draw them.",
+    "mapImageLabel": "Map still",
+    "routeImageLabel": "Route still",
+    "removeCurrentPhoto": "Remove this photo",
+    "removeLabel": "Remove",
+    "tooManyPhotos": "{max, plural, one {A site holds up to # photo.} other {A site holds up to # photos.}}",
     "route": {
       "legend": "The route you swim",
-      "description": "Click the satellite view to drop a waypoint, in the order you swim them. The map can't be dragged — it's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
-      "needsCoordinates": "Fill in the forecast latitude and longitude above and the satellite view appears here, ready to draw on.",
+      "description": "Click the terrain view to drop a waypoint, in the order you swim them. The map can't be dragged — it's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
+      "needsCoordinates": "Fill in the forecast latitude and longitude above and the terrain view appears here, ready to draw on.",
       "labelLabel": "What the route is called",
       "labelPlaceholder": "Reef garden loop",
       "noteLabel": "One line about the route",
@@ -70,7 +75,7 @@
       "zoomOut": "Zoom out",
       "undo": "Undo point",
       "clear": "Clear route",
-      "mapAriaLabel": "Satellite view — click to add a route waypoint",
+      "mapAriaLabel": "Terrain view — click to add a route waypoint",
       "status": {
         "empty": "Click where the dive starts.",
         "one": "One waypoint down — click where it goes next.",
@@ -78,8 +83,8 @@
         "full": "That's the most waypoints a route can carry ({count}). Undo to change one."
       }
     },
-    "sitePhotosLabel": "Site photo URLs",
-    "sitePhotosHint": "(one per line, up to six)",
+    "sitePhotosLabel": "Site photos",
+    "sitePhotosHint": "(up to {max} in total)",
     "marineLifeLabel": "What might divers see?",
     "marineLifePlaceholder": "Parrotfish, eagle rays, elkhorn coral",
     "briefingLabel": "Underwater briefing",
@@ -90,6 +95,9 @@
     "maxDepthMetersLabel": "Maximum depth (metres)",
     "maxDepthFeetLabel": "Maximum depth (feet)",
     "maxDepthHint": "(optional · warns when a diver's card doesn't reach it)",
+    "expectedBottomTimeLabel": "Time in the water here (minutes)",
+    "expectedBottomTimeHint": "(optional · overrides your shop's usual bottom time)",
+    "expectedBottomTimePlaceholder": "45",
     "currentNoteLabel": "Current and conditions notes",
     "divePlanLabel": "Dive plan",
     "divePlanPlaceholder": "Entry, route, turnaround, and exit notes.",
@@ -103,8 +111,8 @@
     "optionalHint": "(optional)",
     "errorCoordinates": "Add both forecast coordinates, or leave both blank — a forecast point needs a latitude and a longitude. Everything else you typed is still here.",
     "errorDepth": "That maximum depth is deeper than any dive site — check the figure, then save again.",
-    "errorImages": "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image.",
-    "errorImagesUnconfigured": "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
+    "errorImages": "One of those photos couldn't be stored — a site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
+    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet — save the briefing without photos for now, or ask your shop's owner or manager to configure it."
   },
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",

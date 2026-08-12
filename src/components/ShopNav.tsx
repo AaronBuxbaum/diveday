@@ -1,4 +1,7 @@
+import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
+import { localeEndonym } from "@/i18n/language-labels";
+import { DIVER_LOCALES } from "@/i18n/settings";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
 import { type StaffDestinationLabels, staffShopRoot } from "@/lib/staff-destinations";
@@ -53,6 +56,7 @@ export function ShopNav({
   navGates,
   navCounts,
   locale,
+  setLocale,
 }: {
   shopSlug: string;
   shopName: string;
@@ -63,9 +67,23 @@ export function ShopNav({
   /** Small pending-work counts for the Reviews/Blockers nav badges (task 83). */
   navCounts?: ShopNavCounts;
   locale: string;
+  /**
+   * Remembers a language the reader picked (`setLocaleAction`). Passed in
+   * rather than imported: `src/components` may not import `src/app`
+   * (`pnpm check:architecture`), and the action is shared with the public
+   * shop header, so one definition has to reach both from above.
+   */
+  setLocale: (locale: string) => Promise<void>;
 }) {
   const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
+  // Each language named in itself, resolved from CLDR rather than a bundle:
+  // the reader who needs this control is the one who cannot read the bundle
+  // currently in force (src/i18n/language-labels.ts).
+  const languages: LanguageChoice[] = DIVER_LOCALES.map((value) => ({
+    locale: value,
+    label: localeEndonym(value),
+  }));
   const destinationLabels = destinationLabelsFor(t);
   // Shared by the header tabs and the phone dock, so a badge can never say
   // different things in the two places the same destination renders.
@@ -112,8 +130,12 @@ export function ShopNav({
               root={root}
               gates={navGates}
               signOutAction={signOutAction}
+              locale={locale}
+              languages={languages}
+              setLocaleAction={setLocale}
               copy={{
                 settings: destinationLabels.settings,
+                language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
                 signOutPending: t("shared.shopNav.signOutPending"),
@@ -126,7 +148,11 @@ export function ShopNav({
               shopSlug={shopSlug}
               boatBoardingHref={boatBoardingHref}
               gates={navGates}
+              locale={locale}
+              languages={languages}
+              setLocaleAction={setLocale}
               copy={{
+                language: t("shared.shopNav.language"),
                 search: t("shared.commandPalette.search"),
                 dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
                 comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),

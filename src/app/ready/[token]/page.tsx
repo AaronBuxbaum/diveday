@@ -648,6 +648,10 @@ export default async function DiverReadinessPage({
     creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
     moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
   }));
+  // Dive 1 first, in the dive plan's own order: where a site names its own
+  // time in the water, that is what the day's rhythm counts rather than the
+  // shop-wide default (src/lib/diver-planning.ts).
+  const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const rescheduleBlockedKey =
@@ -984,6 +988,7 @@ export default async function DiverReadinessPage({
               // they sail, about the day in front of them. The booking page is
               // where the whole itinerary is laid out.
               multiDay={false}
+              siteBottomTimes={siteBottomTimes}
               locale={locale}
             />
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />

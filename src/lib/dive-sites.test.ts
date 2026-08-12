@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDiveSiteForm, splitMediaUrls } from "./dive-sites";
+import { parseDiveSiteForm } from "./dive-sites";
 
 /** A minimal valid submission; every test below varies one field of it. */
 function formEntries(overrides: Record<string, string> = {}): Record<string, unknown> {
@@ -9,14 +9,12 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
     locationName: "",
     forecastLatitude: "",
     forecastLongitude: "",
-    satelliteImageUrl: "",
-    routeImageUrl: "",
-    imageUrls: "",
     marineLife: "",
     marineLifeDescription: "",
     difficulty: "",
     depthRange: "",
     maxDepth: "",
+    expectedBottomTime: "",
     currentNote: "",
     divePlan: "",
     landmarks: "",
@@ -25,30 +23,30 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
   };
 }
 
-describe("splitMediaUrls", () => {
-  it("keeps unique, valid HTTP image links in their entered order", () => {
-    expect(
-      splitMediaUrls(
-        " https://images.example/reef.jpg\nhttps://images.example/turtle.jpg\nhttps://images.example/reef.jpg ",
-      ),
-    ).toEqual(["https://images.example/reef.jpg", "https://images.example/turtle.jpg"]);
-  });
-
-  it("rejects non-web links", () => {
-    expect(() => splitMediaUrls("ftp://images.example/reef.jpg")).toThrow("HTTP(S)");
-  });
-
-  it("limits a briefing to six images", () => {
-    expect(() =>
-      splitMediaUrls(Array.from({ length: 7 }, (_, i) => `https://images.example/${i}`).join("\n")),
-    ).toThrow("six");
-  });
-});
-
 describe("parseDiveSiteForm", () => {
   it("accepts a briefing with no coordinates at all", () => {
     const result = parseDiveSiteForm(formEntries(), "meters");
     expect(result).toMatchObject({ ok: true, maxDepthMeters: null });
+  });
+
+  // A site that names no time in the water is the ordinary case: the shop's
+  // own figure stands, and null is what says so.
+  it("reads a blank time in the water as the shop's own figure", () => {
+    const result = parseDiveSiteForm(formEntries(), "meters");
+    expect(result).toMatchObject({ ok: true, expectedBottomTimeMinutes: null });
+  });
+
+  it("keeps a site's own time in the water in minutes, whatever unit the shop reads depth in", () => {
+    const result = parseDiveSiteForm(formEntries({ expectedBottomTime: "30" }), "feet");
+    expect(result).toMatchObject({ ok: true, expectedBottomTimeMinutes: 30 });
+  });
+
+  // The same bounds the Settings form applies to the shop's own figure — a
+  // site must not be able to name a day Settings would have refused.
+  it("refuses a time in the water outside the shop rhythm's own bounds", () => {
+    expect(parseDiveSiteForm(formEntries({ expectedBottomTime: "0" }), "meters").ok).toBe(false);
+    expect(parseDiveSiteForm(formEntries({ expectedBottomTime: "600" }), "meters").ok).toBe(false);
+    expect(parseDiveSiteForm(formEntries({ expectedBottomTime: "45.5" }), "meters").ok).toBe(false);
   });
 
   it("accepts a complete coordinate pair", () => {

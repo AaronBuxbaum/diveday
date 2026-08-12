@@ -687,18 +687,6 @@ export const courseInquiries = pgTable(
     experienceLevel: courseInquiryExperience("experience_level").notNull(),
     /** Free prose — "the week of 12 August", "any weekend in the autumn". */
     timing: text("timing"),
-    /**
-     * One date the diver asked for, when they picked one — a calendar day in
-     * the shop's own timezone, so `mode: "string"` (a `YYYY-MM-DD` value with
-     * no instant attached, like `people.date_of_birth`). Never a booking and
-     * never a hold: no seat exists on it, nothing is checked against the
-     * schedule, and the shop answers in its own words. It sits beside `timing`
-     * rather than replacing it because the two answer different questions — a
-     * diver who can only say "any weekend in the autumn" is still telling the
-     * shop something, and one who names 12 August should not have to type it
-     * as prose for the desk to re-read.
-     */
-    preferredDate: date("preferred_date", { mode: "string" }),
     /** How many people, including the writer; null when left blank. */
     divers: integer("divers"),
     message: text("message"),
@@ -758,6 +746,20 @@ export const diveSites = pgTable(
      * metre would round it to.
      */
     maxDepthMeters: doublePrecision("max_depth_meters"),
+    /**
+     * How long a dive here actually spends in the water, in minutes — this
+     * site's own answer, overriding the shop's `bottom_time_minutes` wherever
+     * the dock-day rhythm is laid over a departure that visits it.
+     *
+     * Null is the ordinary case and means "the shop's number is right for this
+     * site". It exists because the shop-wide figure is a *default*, and a wall
+     * a shop runs at 30 metres and a shallow reef it runs at 60 minutes are
+     * both real; a single number told a diver the wrong one on at least one of
+     * them. Same bounds as the shop's own field (`DOCK_DAY_LIMITS`), enforced
+     * by the CHECK below as well as the form, because a dive with no time in
+     * it is not a dive.
+     */
+    expectedBottomTimeMinutes: integer("expected_bottom_time_minutes"),
     currentNote: text("current_note"),
     divePlan: text("dive_plan"),
     landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
@@ -806,6 +808,12 @@ export const diveSites = pgTable(
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
     index("dive_sites_shop_name_idx").on(table.shopId, table.name),
+    // Null (the shop's own number applies) or a real duration — never zero,
+    // for the same reason `shops_bottom_time_minutes_positive` exists.
+    check(
+      "dive_sites_expected_bottom_time_positive",
+      sql`${table.expectedBottomTimeMinutes} is null or ${table.expectedBottomTimeMinutes} > 0`,
+    ),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("dive_sites_name_trgm_idx").using("gin", sql`${table.name} gin_trgm_ops`),
     // The site library's own search box matches a place as well as a name
@@ -3615,6 +3623,7 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "recap_photo",
   "certification_card",
   "waiver_document",
+  "dive_site_photo",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

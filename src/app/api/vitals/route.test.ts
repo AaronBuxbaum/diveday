@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextHeadersStub } from "@/test/next-headers";
 import { POST } from "./route";
 
 /**
@@ -6,9 +7,7 @@ import { POST } from "./route";
  * stream. Everything here is about what it refuses.
  */
 
-vi.mock("next/headers", () => ({
-  headers: async () => new Headers({ "x-forwarded-for": "203.0.113.7" }),
-}));
+vi.mock("next/headers", () => nextHeadersStub({ headers: { "x-forwarded-for": "203.0.113.7" } }));
 
 function beacon(body: unknown): Request {
   return new Request("https://dive.day/api/vitals", {

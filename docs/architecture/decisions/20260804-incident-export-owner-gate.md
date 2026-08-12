@@ -1,6 +1,7 @@
 # 20260804-incident-export-owner-gate — The incident-ready export is the owner's to produce
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-12** (renamed to the departure log, and its door moved from
+  the manifest to close-out — see [Amendment](#amendment-2026-08-12--it-is-the-departure-log-and-it-is-generated-from-close-out))
 - **Date:** 2026-08-04
 
 ## Context
@@ -80,4 +81,34 @@ record is lost or delayed, only its assembly into an artefact.
 `canErasePersonalData`, which makes it the one most likely to be "relaxed to owner/manager for
 convenience" by pattern-matching its neighbours. It is pinned at three layers against that: the pure
 predicate (`src/lib/authz.test.ts`), the live DB path including the manager case
-(`src/db/authz.test.ts`), and end to end as an instructor (`e2e/incident-export.spec.ts`).
+(`src/db/authz.test.ts`), and end to end as an instructor (`e2e/departure-log.spec.ts`).
+
+## Amendment 2026-08-12 — it is the departure log, and it is generated from close-out
+
+The gate is unchanged. Two things around it are.
+
+**The words.** "Incident-ready export" named the worst day rather than the document. It also read as
+a thing you *export* — a file operation — when what it is is the shop writing up a departure. It is
+now the **departure log**, and the control that produces it says **Generate log**. The route moved
+with the words: `/shop/<slug>/trips/<id>/log`. No redirect from the old path, because nothing has
+shipped to a shop yet and a 308 to preserve a URL nobody has bookmarked is legacy taken on for free.
+
+**The door.** It stood in the manifest header, next to "Mark boarded". The manifest is the surface a
+crew works *at the rail*, mid-departure, on a phone; an authority-facing document is not something to
+put one tap from a roll-call button, and its presence there quietly framed the manifest as the place
+you go when something has gone wrong. Writing the day up is an evening act, so its door is now the
+evening surface (ADR 20260804-day-closeout): one **Generate log** link per departure row, beside the
+recap note, owner-only and simply absent for everyone else.
+
+It is offered on **every** departure row, not only the ones that are back. The moment a shop most
+needs a departure's recorded facts is while the departure is still happening, and the document has
+always reported what is on record *so far* rather than claiming a day is finished.
+
+The refusal moved with it: a non-owner reaching the route lands on `close-out?notice=log_not_authorized`
+rather than on the manifest, for the same "land somewhere with a reason" rule as before.
+
+Internal module names (`src/lib/incident-export.ts`, `src/db/incident-export.ts`,
+`canExportIncidentRecord`, and the `incidentExport` message namespace) keep the older word
+deliberately. They name *why the document exists* — evidence, if a departure is ever asked about —
+which is exactly the fact this ADR turns on and the fact the softer product word is chosen to avoid
+putting in front of a crew at 07:00.

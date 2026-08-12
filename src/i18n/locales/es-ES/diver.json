@@ -129,7 +129,7 @@
     "compareNote": "Datos habituales del punto, no una promesa sobre la ruta, la fauna o las condiciones del día.",
     "briefingsFooter": "Las condiciones y los horarios valen para toda la jornada. Los puntos pueden cambiar y la tripulación decide en el muelle.",
     "diveNumber": "Inmersión {number}",
-    "siteSatelliteAlt": "Vista por satélite de {site}",
+    "siteMapAlt": "Mapa de {site}",
     "siteRouteAtDock": "La tripulación explicará la ruta definitiva en el muelle.",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitePlanningGuide": "Es una guía de planificación, no una titulación ni una autorización de seguridad.",
@@ -378,6 +378,7 @@
       "eyebrow": "Cursos",
       "title": "Cursos",
       "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
+      "agencyTabsLabel": "Ver cursos por agencia",
       "noCoursesHeading": "Todavía no hay cursos publicados",
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida."
     }
@@ -776,9 +777,9 @@
     "fieldGuideEyebrow": "Guía de campo del arrecife",
     "fieldGuideHeading": "Algunas caras que aprender",
     "likelySightings": "{count, plural, one {# avistamiento probable} other {# avistamientos probables}}",
-    "satelliteViewIllustrative": "Vista satelital · ruta ilustrativa",
+    "terrainViewIllustrative": "Vista topográfica · ruta ilustrativa",
     "openMap": "Abrir mapa ↗",
-    "satelliteMapTitle": "Mapa satelital de {site}",
+    "terrainMapTitle": "Mapa topográfico de {site}",
     "landmarkKinds": {
       "navigationMark": "Marca de navegación",
       "reefHistory": "Historia del arrecife",
@@ -803,10 +804,10 @@
     "yourEmail": "Tu correo",
     "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
-    "preferredDate": "Una fecha que tienes en mente",
-    "preferredDateHint": "Te diremos si nos encaja — todavía no se reserva ni se aparta nada.",
+    "orPhone": "(o teléfono)",
+    "orEmail": "(o correo)",
     "whenSuits": "Cuándo te viene bien",
-    "whenSuitsHint": "Con algo aproximado basta — un mes o “cualquier fin de semana” ya nos dice mucho.",
+    "whenSuitsHint": "Tan exacto o tan aproximado como quieras — un día, una semana o “algún momento este otoño”.",
     "whereYouAreUpTo": "Por dónde vas",
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
@@ -814,13 +815,12 @@
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar — el botón de correo de al lado hace lo mismo.",
     "getInTouch": "Ponte en contacto",
-    "noDateBody": "¿Ninguna fecha te viene bien, o tienes una pregunta primero? Responde lo que puedas y escribiremos el correo por ti — se envía desde tu propia aplicación de correo, así que nuestra respuesta llega donde la esperas.",
+    "noDateBody": "Cuéntanos lo que sepas y nosotros nos encargamos del resto. No se reserva ni se aparta nada — esto solo inicia la conversación.",
     "namePlaceholder": "Priya Sharma",
     "emailPlaceholder": "tu@ejemplo.com",
     "phonePlaceholder": "+34 600 000 000",
-    "whenSuitsPlaceholder": "La semana del 12 de agosto",
+    "whenSuitsPlaceholder": "12 de agosto, o cualquier fin de semana este otoño",
     "messagePlaceholder": "Estamos en un crucero y solo bajamos a tierra los martes.",
-    "messageSoFar": "Tu mensaje hasta ahora",
     "openInEmailApp": "Abrir en tu aplicación de correo",
     "orWriteTo": "O escribe a",
     "callLabel": "llama",
@@ -831,7 +831,7 @@
     "sentHeading": "Consulta enviada",
     "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
     "subject": "Consulta sobre el curso: {courseTitle}",
-    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\n{hasDate, select, yes {Fecha que tengo en mente: {preferredDate}\n} other {}}Cuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -841,7 +841,8 @@
     "errors": {
       "invalid": "Revisa el campo señalado e inténtalo de nuevo.",
       "unavailable": "Este curso no está disponible en este momento.",
-      "experienceRequired": "Cuéntanos por dónde vas antes de enviar."
+      "experienceRequired": "Cuéntanos por dónde vas antes de enviar.",
+      "contactRequired": "Déjanos un correo o un teléfono para poder responderte."
     }
   },
   "account": {
@@ -2082,7 +2083,6 @@
       "subject": "Nueva consulta de curso: {courseTitle}",
       "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
       "contact": "Correo: {email} · Teléfono: {phone}",
-      "preferredDate": "Fecha solicitada: {date}",
       "timing": "Cuándo: {timing}",
       "divers": "Cuántos buceadores: {divers}",
       "experience": "Experiencia hasta ahora: {experience}"

@@ -106,7 +106,6 @@
     "returnsLabel": "Vuelve",
     "capacityLabel": "Capacidad",
     "dayCountLabel": "Días",
-    "dayCountDescription": "Días consecutivos en los que se reúne esta salida: 1 para un solo día, 2 para un curso de fin de semana.",
     "priceLabel": "Precio por buceador",
     "payAtBookingLegend": "Pago al reservar",
     "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",

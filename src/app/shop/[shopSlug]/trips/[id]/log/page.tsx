@@ -31,13 +31,13 @@ import { requireStaffSession } from "@/lib/session";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
-// 20260804-instant-navigation): arriving from the manifest, the trip shell is
+// 20260804-instant-navigation): arriving from close-out, the staff shell is
 // already mounted and this segment's `loading.tsx` is what paints while the
 // document assembles.
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Incident-ready export — DiveDay",
+  title: "Departure log — DiveDay",
 };
 
 /**
@@ -56,19 +56,27 @@ const BUDDY_TEAM_ACTION_KEYS: Record<
 };
 
 /**
- * The one document a shop hands to authorities or insurers after a departure:
- * recorded facts only — boarding, the append-only roll-call timeline,
- * certification evidence as held, waiver *status* (never medical answers) —
- * each with its timestamp and recorder, plus a SHA-256 integrity code in the
- * footer so a printout can be checked against a fresh export.
+ * One departure's log: recorded facts only — boarding, the append-only
+ * roll-call timeline, certification evidence as held, waiver *status* (never
+ * medical answers) — each with its timestamp and recorder, plus a SHA-256
+ * integrity code in the footer so a printout can be checked against a fresh
+ * one. It is what a shop hands to authorities or insurers if a departure is
+ * ever asked about.
+ *
+ * **Generated from close-out, not from the manifest.** It used to sit in the
+ * manifest header, which is the surface a crew works *during* a departure —
+ * an "incident-ready export" button beside "Mark boarded" reads as something
+ * the day might need, on a page nobody should be reading prose on. Writing the
+ * day's log is an evening act, so its door is the evening surface (ADR
+ * 20260804-day-closeout), one row per departure, beside the recap note.
  *
  * **Owner-only** (`canExportIncidentRecord`, src/lib/authz.ts), unlike the
- * manifest it is reached from: the crew run the roll call, but producing the
- * shop's evidentiary account of a departure — and having their own name stamped
- * on it as its generator — is the owner's call. Read-only: nothing on this page
- * mutates anything. Print-first: chrome is `print:hidden`, everything else is
- * plain bordered tables the `@media print` monochrome treatment already
- * handles (globals.css).
+ * manifest and the close-out page it is reached from: the crew run the roll
+ * call, but producing the shop's account of a departure — and having their own
+ * name stamped on it as its generator — is the owner's call. Read-only:
+ * nothing on this page mutates anything. Print-first: chrome is
+ * `print:hidden`, everything else is plain bordered tables the `@media print`
+ * monochrome treatment already handles (globals.css).
  */
 export default async function IncidentExportPage({
   params,
@@ -83,12 +91,12 @@ export default async function IncidentExportPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // Checked against the database, not the JWT, so a demoted owner loses this
-  // immediately. The manifest hides the link for everyone else, but this is the
-  // gate — the page refuses however it was reached. The landing is the manifest
+  // immediately. Close-out hides the link for everyone else, but this is the
+  // gate — the page refuses however it was reached. The landing is close-out
   // with a reason on it: a refusal that teleports you somewhere silently reads
   // as a broken button (task 82).
   if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
-    redirect(`/shop/${shopSlug}/trips/${tripId}/manifest?notice=incident_export_not_authorized`);
+    redirect(`/shop/${shopSlug}/close-out?notice=log_not_authorized`);
   }
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
@@ -142,10 +150,10 @@ export default async function IncidentExportPage({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
             <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/manifest`}
+              href={`/shop/${shopSlug}/close-out`}
               className={buttonClass({ variant: "ghost" })}
             >
-              {t("incidentExport.backToManifest")}
+              {t("incidentExport.backToCloseOut")}
             </Link>
             <PrintButton label={t("shared.printButton.label")} />
           </div>

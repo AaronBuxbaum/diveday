@@ -55,12 +55,17 @@
     "locationLabel": "Ubicación",
     "locationPlaceholder": "Key Largo National Marine Sanctuary",
     "descriptionLabel": "¿Qué hace especial a este sitio?",
-    "satelliteImageLabel": "URL de imagen satelital",
-    "routeImageLabel": "URL de imagen de ruta",
+    "photosLegend": "Fotos",
+    "photosDescription": "Sube las imágenes que un buceador ve en el briefing de este sitio. Se guardan con tu centro, así que la página del briefing nunca tiene que pedirlas al servidor de otra persona.",
+    "mapImageLabel": "Imagen del mapa",
+    "routeImageLabel": "Imagen de la ruta",
+    "removeCurrentPhoto": "Quitar esta foto",
+    "removeLabel": "Quitar",
+    "tooManyPhotos": "{max, plural, one {Un sitio admite hasta # foto.} other {Un sitio admite hasta # fotos.}}",
     "route": {
       "legend": "La ruta que se bucea",
-      "description": "Toca la vista satelital para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
-      "needsCoordinates": "Completa la latitud y la longitud de arriba y aquí aparecerá la vista satelital, lista para dibujar.",
+      "description": "Toca la vista topográfica para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
+      "needsCoordinates": "Completa la latitud y la longitud de arriba y aquí aparecerá la vista topográfica, lista para dibujar.",
       "labelLabel": "Cómo se llama la ruta",
       "labelPlaceholder": "Vuelta por el jardín de coral",
       "noteLabel": "Una línea sobre la ruta",
@@ -70,7 +75,7 @@
       "zoomOut": "Alejar",
       "undo": "Deshacer punto",
       "clear": "Borrar ruta",
-      "mapAriaLabel": "Vista satelital: toca para añadir un punto de la ruta",
+      "mapAriaLabel": "Vista topográfica: toca para añadir un punto de la ruta",
       "status": {
         "empty": "Toca donde empieza la inmersión.",
         "one": "Un punto marcado: toca dónde sigue.",
@@ -78,8 +83,8 @@
         "full": "Es el máximo de puntos que admite una ruta ({count}). Deshaz para cambiar alguno."
       }
     },
-    "sitePhotosLabel": "URLs de fotos del sitio",
-    "sitePhotosHint": "(una por línea, hasta seis)",
+    "sitePhotosLabel": "Fotos del sitio",
+    "sitePhotosHint": "(hasta {max} en total)",
     "marineLifeLabel": "¿Qué podrían ver los buceadores?",
     "marineLifePlaceholder": "Peces loro, mantarrayas, coral cuerno de alce",
     "briefingLabel": "Ficha submarina",
@@ -90,6 +95,9 @@
     "maxDepthMetersLabel": "Profundidad máxima (metros)",
     "maxDepthFeetLabel": "Profundidad máxima (pies)",
     "maxDepthHint": "(opcional · avisa cuando la titulación no llega)",
+    "expectedBottomTimeLabel": "Tiempo en el agua aquí (minutos)",
+    "expectedBottomTimeHint": "(opcional · sustituye el tiempo de fondo habitual de tu centro)",
+    "expectedBottomTimePlaceholder": "45",
     "currentNoteLabel": "Notas de corriente y condiciones",
     "divePlanLabel": "Plan de inmersión",
     "divePlanPlaceholder": "Entrada, ruta, punto de retorno y notas de salida.",
@@ -103,8 +111,8 @@
     "optionalHint": "(opcional)",
     "errorCoordinates": "Añade ambas coordenadas del pronóstico, o deja las dos en blanco — un punto de pronóstico necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
-    "errorImages": "Uno de esos enlaces de imagen no se pudo usar — usa hasta seis enlaces HTTP(S) completos, uno por línea, cada uno apuntando a una imagen real y accesible.",
-    "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para este centro — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu centro que lo configure."
+    "errorImages": "Una de esas fotos no se pudo guardar — un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
+    "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure."
   },
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",

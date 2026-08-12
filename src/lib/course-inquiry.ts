@@ -1,5 +1,4 @@
 import type { DiverMessageKey } from "@/i18n/messages";
-import { cachedFormatter } from "./intl-cache";
 
 /**
  * The "get in touch" composer behind a course page.
@@ -47,19 +46,16 @@ export type CourseInquiry = {
   shopName: string;
   /** Who is writing. Blank until they type it; the message reads fine without. */
   name: string;
-  /** Free prose — "the week of 12 August", "any weekend in the autumn". */
-  timing: string;
   /**
-   * One date the diver asked for, already formatted for the reader
-   * ({@link formatPreferredDate}), or "" when they named none. A *request*,
-   * never a booking: no seat exists on it and nothing is held — the shop reads
-   * it and replies. It sits beside `timing` because the two answer different
-   * questions, and a diver who can only say "any weekend in the autumn" is
-   * still telling the shop something.
+   * Free prose, as exact or as loose as the diver wants — "12 August", "the
+   * week of the 12th", "any weekend this autumn". One field rather than a
+   * date picker beside it: a date the diver types here is a *request*, never
+   * a booking (no seat exists on it and nothing is held), so a picker only
+   * ever promised a precision the answer does not have.
    */
-  preferredDate: string;
-  /** How many people, including the writer. Null until they type one — this
-   *  field is as optional as the rest of the contact form. */
+  timing: string;
+  /** How many people, including the writer. Defaults to one, the commonest
+   *  answer by far; a diver bringing friends types over it. */
   divers: number | null;
   /** Where they are up to, or "" until they pick one. */
   experience: CourseInquiryExperience | "";
@@ -107,7 +103,6 @@ export function courseInquirySubject(
 export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInquiry): string {
   const name = inquiry.name.trim();
   const timing = inquiry.timing.trim();
-  const preferredDate = inquiry.preferredDate.trim();
   const note = inquiry.message.trim();
   const notSaid = t("inquiry.notSaid");
   const experience = inquiry.experience
@@ -116,11 +111,6 @@ export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInqu
   return t("inquiry.body", {
     shopName: inquiry.shopName.trim(),
     courseTitle: inquiry.courseTitle.trim(),
-    // Its own `select` branch, like the note and the name: a diver who named
-    // no date takes the whole line out rather than leaving the shop a
-    // "Preferred date: Not said" to read past.
-    hasDate: preferredDate ? "yes" : "no",
-    preferredDate,
     timing: timing || notSaid,
     divers: inquiry.divers ?? notSaid,
     experience,
@@ -129,32 +119,6 @@ export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInqu
     hasName: name ? "yes" : "no",
     name,
   });
-}
-
-/** A bare `YYYY-MM-DD` as a reader of `locale` writes it, or null if malformed. */
-export function formatPreferredDate(value: string, locale: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-  const [year, month, day] = match.slice(1).map(Number);
-  // A calendar day carries no instant, so a fixed UTC reference plus
-  // `timeZone: "UTC"` is what keeps 12 August from rendering as the 11th for a
-  // reader west of it — the same discipline `formatScheduleDayTime` uses for a
-  // wall-clock time (src/lib/courses.ts).
-  const reference = new Date(Date.UTC(year, month - 1, day));
-  // `Date.UTC` rolls over rather than refusing, so "2026-13-45" would quietly
-  // become a real date in February 2027 and the shop would read a day nobody
-  // asked for. Reject anything that does not read back as it was written.
-  if (
-    reference.getUTCFullYear() !== year ||
-    reference.getUTCMonth() !== month - 1 ||
-    reference.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-    dateStyle: "long",
-    timeZone: "UTC",
-  }).format(reference);
 }
 
 /**

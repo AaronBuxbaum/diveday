@@ -13,7 +13,7 @@ import {
   type RoutePoint,
   routePathD,
 } from "@/lib/dive-site-route";
-import { googleSatelliteEmbedUrl } from "@/lib/maps";
+import { googleTerrainEmbedUrl } from "@/lib/maps";
 
 export type RouteEditorCopy = {
   legend: string;
@@ -41,7 +41,7 @@ export type RouteEditorCopy = {
 };
 
 /**
- * Draw the route a dive takes, by clicking it onto the site's satellite view.
+ * Draw the route a dive takes, by clicking it onto the site's terrain view.
  *
  * The one thing a shop could never do before: routes lived in a hand-authored
  * lookup table keyed by site name, so DiveDay's three demo sites had a line on
@@ -160,7 +160,7 @@ export function RouteEditor({
                 waypoint here is fixing a percentage of this box. */}
             <MapEmbed
               title={copy.mapAriaLabel}
-              src={googleSatelliteEmbedUrl(query, zoom)}
+              src={googleTerrainEmbedUrl(query, zoom)}
               className="h-72"
             >
               {/* The click surface sits over the whole frame. A `<button>`

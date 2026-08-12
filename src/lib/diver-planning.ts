@@ -138,7 +138,34 @@ export type DockDayOffset = { step: DockDayStep; number?: number; minutesFromDep
  * older than this function and worth keeping: a briefing that starts before the
  * diver was asked to be there is a briefing they were set up to miss.
  */
-export function dockDayOffsets(rhythm: DockDayRhythm, plannedDives = 2): DockDayOffset[] {
+/**
+ * How long each dive of a departure spends in the water, dive 1 first — a
+ * site's own `expectedBottomTimeMinutes` where it has one, and a null (or a
+ * short list, or none at all) meaning "the shop's number is right for this
+ * dive".
+ *
+ * The override belongs per *dive* rather than per departure because a two-tank
+ * morning routinely visits two sites: a wall the shop runs at 30 minutes and a
+ * shallow reef it runs at 60. One number told the diver the wrong time on
+ * whichever of the two it wasn't.
+ */
+export type SiteBottomTimes = readonly (number | null | undefined)[];
+
+/** Dive `number`'s own minutes, or the shop's when this site names none. */
+function bottomTimeForDive(
+  rhythm: DockDayRhythm,
+  siteBottomTimes: SiteBottomTimes | undefined,
+  number: number,
+): number {
+  const override = siteBottomTimes?.[number - 1];
+  return typeof override === "number" && override > 0 ? override : rhythm.bottomTimeMinutes;
+}
+
+export function dockDayOffsets(
+  rhythm: DockDayRhythm,
+  plannedDives = 2,
+  siteBottomTimes?: SiteBottomTimes,
+): DockDayOffset[] {
   const beforeDeparture: DockDayOffset[] = [
     { step: "arrive", minutesFromDeparture: -rhythm.dockCallMinutes },
   ];
@@ -173,7 +200,7 @@ export function dockDayOffsets(rhythm: DockDayRhythm, plannedDives = 2): DockDay
       cursor += rhythm.surfaceIntervalMinutes;
     }
     afterDeparture.push({ step: "dive", number, minutesFromDeparture: cursor });
-    cursor += rhythm.bottomTimeMinutes;
+    cursor += bottomTimeForDive(rhythm, siteBottomTimes, number);
   }
 
   return [...beforeDeparture, { step: "departure", minutesFromDeparture: 0 }, ...afterDeparture];
@@ -206,9 +233,10 @@ export function dockDayTimeline(
   rhythm: DockDayRhythm,
   endsAt?: Date,
   plannedDives = 2,
+  siteBottomTimes?: SiteBottomTimes,
 ): Array<{ step: DockDayStep; number?: number; at: Date }> {
   const beats: Array<{ step: DockDayStep; number?: number; at: Date }> = [];
-  for (const offset of dockDayOffsets(rhythm, plannedDives)) {
+  for (const offset of dockDayOffsets(rhythm, plannedDives, siteBottomTimes)) {
     // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at
     // offset zero alongside the departure itself, and it is still a beat on the
     // water that only a stated return time can bound.
