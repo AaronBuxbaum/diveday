@@ -87,7 +87,11 @@ jobs:
     # A skipped `infra-changed` (every workflow_dispatch run) must not skip
     # this job by propagation — it has its own condition below, same pattern
     # ci.yml's real-postgres/visual-report jobs use against their own gates.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.command == 'diff') || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true') }}
+    # `command: deploy` also lands here, not just `command: diff`: the
+    # `deploy` job below `needs: diff`, so its required-reviewer approval
+    # gate comes after a fresh synth+diff is already visible in this run,
+    # not blind against whatever a past PR's diff comment happened to show.
+    if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
@@ -140,11 +144,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: cdk diff
         if: github.event_name == 'workflow_dispatch'
-        run: pnpm exec cdk diff
+        # The wrapper, not a raw `cdk diff`: matches the command a workstation
+        # operator actually runs, and `scripts/infra-cdk.mjs` is a no-op
+        # passthrough here — `selectDeployProfile` short-circuits because
+        # `configure-aws-credentials` above already exported
+        # AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, and `ensureAwsDeploymentLogin`
+        # (interactive: false, since GitHub Actions sets CI=true) just does a
+        # quiet `aws sts get-caller-identity` that immediately succeeds.
+        run: pnpm infra:diff
 
   deploy:
     name: cdk deploy
-    if: github.event_name == 'workflow_dispatch' && inputs.command == 'deploy'
+    needs: diff
+    # `needs.diff.result == 'success'`, not just `needs: diff`: a job's own
+    # `if:` fully replaces the default success-gating, so without this a
+    # failed synth/diff would not stop the deploy from proceeding straight
+    # to the reviewer-approval gate.
+    if: github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The approval gate. GitHub only issues an OIDC token for a job that
