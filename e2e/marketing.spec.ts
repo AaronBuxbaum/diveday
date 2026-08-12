@@ -266,7 +266,13 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await expect(
     page.getByRole("heading", { name: "Your season doesn't hang on us." }),
   ).toBeVisible();
-  await expect(page.getByText(/Payments run through your own Stripe account/)).toBeVisible();
+  // Case-insensitive on purpose. The claim is "the money is in the shop's own
+  // account"; whether the sentence happens to start with it is not part of the
+  // claim, and pinning the capital broke this line when the hero was reordered
+  // for reasons that had nothing to do with what it asserts. The *words* stay
+  // pinned — that is the point of the marketing specs — but incidental form
+  // does not.
+  await expect(page.getByText(/payments run through your own Stripe account/i)).toBeVisible();
 
   // The page earns trust by conceding, not by claiming: the honest-no block is
   // the load-bearing part. (It used to also pin "Aaron Buxbaum, founder" from
