@@ -161,6 +161,25 @@ jobs:
         # quiet `aws sts get-caller-identity` that immediately succeeds.
         run: pnpm infra:diff
 
+  # TEMPORARY -- deploy has skipped on every dispatch with command: deploy so
+  # far, even with diff succeeding and command confirmed as "deploy" both via
+  # the Actions UI and a direct API dispatch. This job always runs (needs:
+  # diff, if: always()) and prints the exact three values deploy's own if:
+  # evaluates, so we can see which one isn't what we expect instead of
+  # guessing. Remove once the cause is confirmed.
+  debug-deploy-condition:
+    name: Debug deploy job's condition inputs
+    needs: diff
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "inputs.command: ${{ inputs.command }}"
+          echo "needs.diff.result: ${{ needs.diff.result }}"
+          echo "full condition: ${{ github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}"
+
   deploy:
     name: cdk deploy
     needs: diff
