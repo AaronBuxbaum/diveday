@@ -121,19 +121,25 @@ export async function runPostDeployWizard({
     });
   }
 
-  if (
+  // Workstation only, and not merely because the CI token cannot do it
+  // (ADR 20260812-env-sync-is-workstation-only). This step bootstraps the
+  // infra-deploy environment -- the approval gate the deploy job is running
+  // *inside* by the time the wizard reaches here. Having that job rewrite its
+  // own gate is the wrong direction, and the identity it would add as
+  // required reviewer is whoever the CI PAT belongs to, not the human who
+  // approved this run. `gh api --method PUT .../environments/infra-deploy`
+  // also needs repo Administration:write, several times broader than the
+  // Secrets/Variables the rest of the wizard uses, on a token reachable from
+  // CI. So the CI path skips it outright rather than asking a question whose
+  // yes-answer is wrong.
+  if (ciUnattended) {
+    log(
+      "CI deploy: skipping the infra-deploy GitHub Environment sync -- it is a workstation bootstrap step (ADR 20260812-env-sync-is-workstation-only).",
+    );
+  } else if (
     yes(
       await ask(
-        // "Yourself" on a workstation: the gh CLI's authenticated user, who
-        // just typed this answer. In the CI-unattended run this is instead
-        // whoever the INFRA_DEPLOY_GH_TOKEN PAT belongs to -- not necessarily
-        // the human who approved this specific deploy -- so the question does
-        // not claim otherwise here (security review on ADR
-        // 20260811-ci-deploy-full-wizard). sync-github-cdk-ci-environment.mjs
-        // itself always logs the exact user id it adds.
-        ciUnattended
-          ? "Create/update the infra-deploy GitHub Environment with the INFRA_DEPLOY_GH_TOKEN identity as its required reviewer? [y/N] "
-          : "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
+        "Create/update the infra-deploy GitHub Environment with yourself as its required reviewer? [y/N] ",
       ),
     )
   ) {
