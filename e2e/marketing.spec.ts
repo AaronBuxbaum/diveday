@@ -538,6 +538,15 @@ test("no marketing page apologizes for the company's size or age", async ({ page
   // So the facts stay and the self-deprecation is pinned out by name. This is a
   // ratchet, not a style note: every one of these shipped as a sentence someone
   // thought was honest, which is exactly why a review won't catch the next one.
+  //
+  // Scope, stated rather than assumed: the suite negotiates the default locale,
+  // so these patterns only ever meet en-US. That is deliberate — English is
+  // where this copy is authored and where the flinch gets invented — but it
+  // does mean an apologetic Spanish string would pass. What guards es-ES is the
+  // edit-both-locales-together rule (`pnpm check:locale`) plus this rulebook,
+  // not this test. Widening it means rendering each page a second time under a
+  // `diveday_locale` cookie with a parallel Spanish pattern list; worth doing if
+  // the register ever drifts between the bundles, and not worth guessing at now.
   const apologetics = [
     /small (enough|vendor|team|company)/i,
     /(new|small) vendor/i,

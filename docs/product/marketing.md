@@ -165,7 +165,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   a claim about posture, which the page proves in the section directly below it.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
-  are required honesty and stay. What is banned is the register that grew up around them — by
+  are honesty the policy requires, and they stay. What is banned is the register that grew up around them — by
   2026-08-12 nine framings of *we're small, we're new, you've never heard of us, don't take us on
   faith* had accumulated across the five pages, including the `/about` H1, the lead-in to its four
   checkable rules, the homepage's export band, `/product`'s honest-no, and the `/pricing` FAQ
