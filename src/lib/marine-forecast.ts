@@ -37,6 +37,83 @@ export type AutomatedSurfaceConditions = {
   wavePeriodSeconds: number | null;
 };
 
+/**
+ * How the sea will *read* to a diver, as a code.
+ *
+ * The raw model output — "0.6 m seas from SE · 5 s period" — is three numbers
+ * that mean something precise to a captain and nothing at all to the person
+ * deciding whether to bring a seasickness tablet. Significant wave height is
+ * itself a statistic (the mean of the highest third), a bearing on a diver's
+ * booking page answers a question nobody asked, and a period in seconds is
+ * meaningless without knowing what to compare it to. So the numbers stay in the
+ * model and the page gets a reading.
+ *
+ * Ordered calmest to roughest, because the period adjustment below is a step
+ * along this list.
+ */
+export const SEA_STATES = [
+  "glassy",
+  "calm",
+  "light_chop",
+  "choppy",
+  "rough",
+  "very_rough",
+] as const;
+export type SeaState = (typeof SEA_STATES)[number];
+
+/**
+ * Significant wave height (metres) at or above which each band starts, in the
+ * same order as `SEA_STATES` minus its first entry — anything below the first
+ * threshold is `glassy`.
+ *
+ * These are a readability mapping, not a standard. The Douglas and WMO sea-state
+ * scales exist, but they are coarse where a dive day is decided (their "smooth"
+ * band spans 0.1–0.5 m and their "slight" spans 0.5–1.25 m, which is the whole
+ * range between a pleasant morning and a boat full of sick divers) and they run
+ * to states no recreational trip sails in. These split that middle finely and
+ * collapse the top.
+ */
+const SEA_STATE_THRESHOLDS_M: readonly number[] = [0.2, 0.5, 0.9, 1.5, 2.5];
+
+/**
+ * Wave *period* is what makes two seas of the same height feel different, so it
+ * is the one correction applied to the height band.
+ *
+ * A short period is wind chop still being made by the wind that is on you now:
+ * steep, close together, and slappy — the sea that makes a boat ride miserable
+ * and a surface swim hard. A long period is swell that has travelled, arriving
+ * as a slow rise and fall the boat rides over. Same height, one band apart in
+ * how it reads.
+ */
+const SHORT_PERIOD_SECONDS = 5;
+const LONG_PERIOD_SECONDS = 9;
+
+/**
+ * The plain reading of an automated sea forecast, or `null` when there is
+ * nothing to read.
+ *
+ * Softening for a long period stops at `calm`, never `glassy`: a two-metre
+ * groundswell rolling in every twelve seconds is a comfortable ride and is not
+ * a mirror, and calling it one would be the forecast telling a diver something
+ * they can disprove by looking at the water.
+ */
+export function seaStateReading(surface: AutomatedSurfaceConditions | null): SeaState | null {
+  if (!surface) return null;
+  const band = SEA_STATE_THRESHOLDS_M.filter(
+    (threshold) => surface.waveHeightMeters >= threshold,
+  ).length;
+  const period = surface.wavePeriodSeconds;
+  const adjusted =
+    period === null
+      ? band
+      : period <= SHORT_PERIOD_SECONDS
+        ? band + 1
+        : period >= LONG_PERIOD_SECONDS
+          ? Math.max(1, band - 1)
+          : band;
+  return SEA_STATES[Math.min(adjusted, SEA_STATES.length - 1)] ?? "calm";
+}
+
 export type AutomatedMarineForecast = {
   waterTemperatureC: number | null;
   surface: AutomatedSurfaceConditions | null;

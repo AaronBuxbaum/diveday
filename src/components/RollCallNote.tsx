@@ -10,7 +10,7 @@ type SaveNote = (
   note: string,
 ) => Promise<{ ok: boolean; saved: boolean }>;
 
-type Status = "idle" | "saving" | "saved" | "queued" | "error";
+type Status = "idle" | "saving" | "saved" | "waiting" | "queued" | "error";
 
 export type RollCallNoteCopy = {
   /**
@@ -26,9 +26,10 @@ export type RollCallNoteCopy = {
    * dot is all that survives of it, as this line's own status mark.
    */
   message: {
-    manualOnly: string;
     saving: string;
     saved: string;
+    /** No result on this row yet, so the note is waiting for one to attach to. */
+    waiting: string;
     queued: string;
     error: string;
     idle: string;
@@ -41,11 +42,25 @@ function isOnline(): boolean {
 }
 
 /**
- * The roll-call note field. When the diver already has a result recorded at this
- * checkpoint the note saves itself as staff type (debounced, plus on blur) so a
- * kit issue or medical question is never lost to a forgotten button. Before any
- * result exists the note instead rides the not-boarded form via `form`, so a
- * note drafted while marking someone ashore is still captured on submit.
+ * The roll-call note field. It saves itself as staff type (debounced, plus on
+ * blur), like every other field on a diver's row — a kit issue or a medical
+ * question is never one forgotten button away from being lost.
+ *
+ * It used to save itself *only* once the diver already had a result recorded at
+ * this checkpoint, and otherwise explained itself in a line of copy ("Saves with
+ * this diver's roll-call result.") while riding the not-boarded form via a
+ * `form=` attribute. Two problems with that: it made one field behave two ways
+ * for a reason a staffer at the rail cannot see, and a note typed before the
+ * diver was marked **boarded** was silently dropped, because only the *other*
+ * button carried it.
+ *
+ * The underlying constraint is real and unchanged — a note lives on the
+ * roll-call event row (`updateLatestRollCallNote`), and before anyone is called
+ * there is no row to hold it. So the field now always tries the save, and when
+ * the server has nowhere to put it the draft simply stays pending on the device
+ * and is posted by whichever roll-call button is pressed next (see
+ * `useUnsavedNote` in RollCallButton). Either way the note lands, and the field
+ * never has to explain a rule.
  *
  * Every keystroke is also mirrored to this device (localStorage) the instant it
  * changes, so a note is never lost to a dropped connection: if the server save
@@ -55,17 +70,13 @@ function isOnline(): boolean {
 export function RollCallNote({
   bookingId,
   checkpoint,
-  formId,
   initialNote,
-  canAutoSave,
   saveNote,
   copy,
 }: {
   bookingId: string;
   checkpoint: string;
-  formId: string;
   initialNote: string;
-  canAutoSave: boolean;
   saveNote: SaveNote;
   copy: RollCallNoteCopy;
 }) {
@@ -87,12 +98,12 @@ export function RollCallNote({
             clearNoteDraft(bookingId, checkpoint);
             setStatus("saved");
           } else {
-            // Server reached but there is no recorded result to attach the note
-            // to (a race with a clear/undo). Retrying can't help, so stop
-            // replaying it — but keep the text on the device so a reload
-            // restores it onto the not-boarded form path.
-            writeNoteDraft(bookingId, checkpoint, { value, pending: false });
-            setStatus("error");
+            // The server was reached and refused: there is no recorded result
+            // on this row for the note to attach to. That is the *ordinary*
+            // state of an uncalled diver, not an error — so the draft stays
+            // pending on the device, where the next roll-call submit picks it
+            // up, and the line says it is waiting rather than that it failed.
+            setStatus("waiting");
           }
         } catch {
           // A throw is a dropped connection or a server error, not a rejection:
@@ -118,7 +129,7 @@ export function RollCallNote({
         // A draft that diverges from the server value is restored regardless of
         // whether it can resync yet, so the note is never silently dropped.
         if (inputRef.current) inputRef.current.value = draft.value;
-        if (canAutoSave && draft.pending) {
+        if (draft.pending) {
           setStatus("queued");
           if (isOnline()) commit(draft.value);
         }
@@ -128,33 +139,33 @@ export function RollCallNote({
     // Replay a pending draft the moment the connection returns.
     function onOnline() {
       const pending = readNoteDraft(bookingId, checkpoint);
-      if (canAutoSave && pending?.pending) commit(pending.value);
+      if (pending?.pending) commit(pending.value);
     }
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
-  }, [bookingId, checkpoint, initialNote, canAutoSave, commit]);
+  }, [bookingId, checkpoint, initialNote, commit]);
 
   function onChange(event: React.ChangeEvent<HTMLInputElement>) {
     const { value } = event.target;
     // Persist every keystroke to this device first — the never-lost guarantee.
     writeNoteDraft(bookingId, checkpoint, { value, pending: true });
-    if (!canAutoSave) return;
     if (timer.current) clearTimeout(timer.current);
     setStatus("saving");
     timer.current = setTimeout(() => commit(value), 700);
   }
 
-  const message = !canAutoSave
-    ? copy.message.manualOnly
-    : status === "saving"
+  const message =
+    status === "saving"
       ? copy.message.saving
       : status === "saved"
         ? copy.message.saved
-        : status === "queued"
-          ? copy.message.queued
-          : status === "error"
-            ? copy.message.error
-            : copy.message.idle;
+        : status === "waiting"
+          ? copy.message.waiting
+          : status === "queued"
+            ? copy.message.queued
+            : status === "error"
+              ? copy.message.error
+              : copy.message.idle;
 
   return (
     <div>
@@ -165,41 +176,34 @@ export function RollCallNote({
         ref={inputRef}
         id={`roll-call-note-${bookingId}`}
         name="note"
-        form={canAutoSave ? undefined : formId}
         defaultValue={initialNote}
         maxLength={300}
         placeholder={copy.notePlaceholder}
         className={controlClass}
         onChange={onChange}
-        onBlur={
-          canAutoSave
-            ? (event) => {
-                if (timer.current) clearTimeout(timer.current);
-                commit(event.target.value);
-              }
-            : undefined
-        }
+        onBlur={(event) => {
+          if (timer.current) clearTimeout(timer.current);
+          commit(event.target.value);
+        }}
       />
       <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
         {/* The dot the status pill used to carry, now this line's own mark —
             colour is never the message here, only a faster read of the words
             beside it. */}
-        {canAutoSave ? (
-          <span
-            className={`size-2 shrink-0 rounded-full transition-colors duration-300 ${
-              status === "saving"
-                ? "animate-pulse bg-warning"
-                : status === "saved"
-                  ? "bg-success"
-                  : status === "queued"
-                    ? "animate-pulse bg-info"
-                    : status === "error"
-                      ? "bg-danger"
-                      : "bg-border-strong"
-            }`}
-            aria-hidden="true"
-          />
-        ) : null}
+        <span
+          className={`size-2 shrink-0 rounded-full transition-colors duration-300 ${
+            status === "saving"
+              ? "animate-pulse bg-warning"
+              : status === "saved"
+                ? "bg-success"
+                : status === "queued"
+                  ? "animate-pulse bg-info"
+                  : status === "error"
+                    ? "bg-danger"
+                    : "bg-border-strong"
+          }`}
+          aria-hidden="true"
+        />
         {message}
       </p>
     </div>

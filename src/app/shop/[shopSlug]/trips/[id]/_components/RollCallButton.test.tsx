@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { clearNoteDraft, writeNoteDraft } from "@/lib/roll-call-note-draft";
 import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
 import { RollCallButton } from "./RollCallButton";
 
@@ -126,5 +127,66 @@ describe("RollCallButton", () => {
     rerender(<Harness checkpoint="after_dive_1" action={action} />);
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  /**
+   * **A note typed before anyone was called still lands.**
+   *
+   * A roll-call note lives on the roll-call event row, so before a diver has
+   * been called there is no row to save it to. It used to ride the *not
+   * boarded* submit alone, through a `form=` attribute on the note input —
+   * which meant a staffer who typed "reg free-flow, swapped it" and then
+   * tapped **Mark boarded** watched their note disappear. Both buttons carry
+   * the still-unsaved draft now.
+   */
+  describe("an unsaved note draft", () => {
+    const BOOKING = "00000000-0000-4000-8000-000000000001";
+
+    afterEach(() => {
+      clearNoteDraft(BOOKING, "departure");
+      localStorage.clear();
+    });
+
+    it("rides whichever result the staffer records", async () => {
+      writeNoteDraft(BOOKING, "departure", { value: "reg free-flow", pending: true });
+      const action = mockAction({ ok: true });
+      render(
+        <RollCallButton
+          action={action}
+          subject={{ field: "bookingId", id: BOOKING }}
+          status="boarded"
+          label="Board"
+          pendingLabel="Boarding…"
+          className="btn"
+          noteDraftFor={{ bookingId: BOOKING, checkpoint: "departure" }}
+          copy={DEFAULT_COPY}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Board" }));
+      expect(action.mock.calls[0]?.[1].get("note")).toBe("reg free-flow");
+    });
+
+    it("posts nothing when the server already holds the note", async () => {
+      // An acknowledged draft is not pending. Posting it again as an empty or
+      // stale value would silently overwrite what the autosave already stored.
+      writeNoteDraft(BOOKING, "departure", { value: "already saved", pending: false });
+      const action = mockAction({ ok: true });
+      render(
+        <RollCallButton
+          action={action}
+          subject={{ field: "bookingId", id: BOOKING }}
+          status="boarded"
+          label="Board"
+          pendingLabel="Boarding…"
+          className="btn"
+          noteDraftFor={{ bookingId: BOOKING, checkpoint: "departure" }}
+          copy={DEFAULT_COPY}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Board" }));
+      expect(action.mock.calls[0]?.[1].has("note")).toBe(false);
+    });
   });
 });

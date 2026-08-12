@@ -13,6 +13,21 @@
  */
 const PREFIX = "diveday:roll-call-note:v1";
 
+/**
+ * Fired on `window` whenever a draft is written or cleared, so a component
+ * that is *not* the note field can still track it — specifically the two
+ * roll-call buttons, which mirror a still-pending draft into their own submit
+ * so a note typed before anyone was called rides whichever result lands.
+ * `storage` events only fire in *other* tabs, which is the opposite of what
+ * that needs.
+ */
+export const NOTE_DRAFT_CHANGE_EVENT = "diveday:roll-call-note-draft";
+
+function announce(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(NOTE_DRAFT_CHANGE_EVENT));
+}
+
 export type NoteDraft = {
   value: string;
   /** True until the server has acknowledged this exact value. */
@@ -54,6 +69,7 @@ export function writeNoteDraft(bookingId: string, checkpoint: string, draft: Not
     // Full or unavailable storage: the note still lives in the input, we just
     // can't survive a reload. Better than throwing while staff are typing.
   }
+  announce();
 }
 
 export function clearNoteDraft(bookingId: string, checkpoint: string): void {
@@ -64,4 +80,19 @@ export function clearNoteDraft(bookingId: string, checkpoint: string): void {
   } catch {
     // A store that can't delete also couldn't have written; nothing to undo.
   }
+  announce();
+}
+
+/**
+ * Subscribe to one row's still-unsaved draft. Returns the pending text, or
+ * `null` when there is nothing owed to the server — either nothing was typed,
+ * or what was typed has already been acknowledged.
+ *
+ * Deliberately `null` for an *acknowledged* draft, not just an absent one: the
+ * roll-call buttons post this value as their own `note` field, and posting an
+ * empty string for a note the server already holds would silently erase it.
+ */
+export function pendingNoteDraft(bookingId: string, checkpoint: string): string | null {
+  const draft = readNoteDraft(bookingId, checkpoint);
+  return draft?.pending ? draft.value : null;
 }

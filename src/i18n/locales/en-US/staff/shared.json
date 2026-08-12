@@ -71,8 +71,8 @@
   "rollCallNote": {
     "optionalNote": "Note",
     "message": {
-      "manualOnly": "Saves with this diver’s roll-call result.",
       "saving": "Saving…",
+      "waiting": "Saved on this device — sends with this diver’s result.",
       "saved": "Saved.",
       "queued": "Saved on this device — sends when you’re back online.",
       "error": "Couldn’t save — your note is still here. Try again.",

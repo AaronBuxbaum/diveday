@@ -71,8 +71,8 @@
   "rollCallNote": {
     "optionalNote": "Nota",
     "message": {
-      "manualOnly": "Se guarda con el resultado del pase de lista de este buceador.",
       "saving": "Guardando…",
+      "waiting": "Guardada en este dispositivo — se envía con el resultado de este buceador.",
       "saved": "Guardada.",
       "queued": "Guardada en este dispositivo — se enviará cuando vuelvas a estar en línea.",
       "error": "No se pudo guardar — tu nota sigue aquí. Inténtalo de nuevo.",

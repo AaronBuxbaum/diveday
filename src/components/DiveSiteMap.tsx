@@ -49,7 +49,20 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
         <iframe
           title={t("site.satelliteMapTitle", { site: site.name })}
           src={googleSatelliteEmbedUrl(query, site.routeZoom)}
-          className="absolute inset-0 h-full w-full"
+          // Never pannable, for the same reason the staff route editor's own
+          // frame isn't (`dive-sites/_components/RouteEditor.tsx`): the route
+          // is an SVG in *frame* coordinates laid over this embed, so the
+          // instant a reader drags the map the drawn path stops describing the
+          // reef under it — the line stays put while the water moves. A diver
+          // reading a briefing has no way to tell they have done that, and
+          // nothing puts the frame back except a reload.
+          //
+          // `tabIndex={-1}` because a frame that cannot be interacted with
+          // should not be a stop in the tab order either. Exploring the site
+          // for real is the "Open map" link in the caption, which opens Google
+          // Maps properly rather than a 256px-tall pretend one.
+          tabIndex={-1}
+          className="pointer-events-none absolute inset-0 h-full w-full"
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
         />

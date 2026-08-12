@@ -111,7 +111,7 @@ export function RollCallControls({
   action,
   copy,
   showBoardControl,
-  formId,
+  noteDraftFor,
   t,
 }: {
   /** Which list this row belongs to — the only thing that varies below. */
@@ -129,10 +129,11 @@ export function RollCallControls({
    */
   showBoardControl: boolean;
   /**
-   * Form id, so a drafted roll-call note with no result to auto-save to yet can
-   * ride the "not boarded" submit. Divers only — crew rows take no note.
+   * The row whose unsaved note draft both buttons should carry, so a note
+   * typed before anybody was called rides whichever result lands — boarded or
+   * not. Divers only; crew rows take no note.
    */
-  formId?: string;
+  noteDraftFor?: { bookingId: string; checkpoint: string };
   t: StaffTranslator;
 }) {
   const { boarded, recordedNotBoarded, notBackAboard, recordedHere } = rollCallRowState(
@@ -176,6 +177,7 @@ export function RollCallControls({
               ? "border border-success bg-success/15 text-success"
               : "bg-primary text-primary-foreground hover:bg-primary-hover"
           }`}
+          noteDraftFor={noteDraftFor}
           copy={copy}
         />
       ) : null}
@@ -222,7 +224,7 @@ export function RollCallControls({
                 : t("trips.manifest.markNotBackAboard")
         }
         pendingLabel={t("trips.manifest.saving")}
-        formId={formId}
+        noteDraftFor={noteDraftFor}
         className={
           notBackAboard
             ? `${BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`

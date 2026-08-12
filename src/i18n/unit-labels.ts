@@ -1,6 +1,6 @@
 import type { DepthUnit } from "@/lib/depth-units";
-import { depthInUnit, waveHeightInUnit } from "@/lib/depth-units";
-import type { AutomatedSurfaceConditions, CardinalDirection } from "@/lib/marine-forecast";
+import { depthInUnit } from "@/lib/depth-units";
+import type { SeaState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { temperatureInUnit } from "@/lib/temperature-units";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
@@ -42,57 +42,45 @@ export function temperatureText(
   return t(TEMPERATURE_UNIT_KEYS[unit], { value: temperatureInUnit(celsius, unit) });
 }
 
-const CARDINAL_DIRECTION_KEYS: Record<CardinalDirection, DiverMessageKey> = {
-  n: "common.compass.n",
-  ne: "common.compass.ne",
-  e: "common.compass.e",
-  se: "common.compass.se",
-  s: "common.compass.s",
-  sw: "common.compass.sw",
-  w: "common.compass.w",
-  nw: "common.compass.nw",
+const SEA_STATE_KEYS: Record<SeaState, DiverMessageKey> = {
+  glassy: "trip.seaState.glassy",
+  calm: "trip.seaState.calm",
+  light_chop: "trip.seaState.light_chop",
+  choppy: "trip.seaState.choppy",
+  rough: "trip.seaState.rough",
+  very_rough: "trip.seaState.very_rough",
+};
+
+const SEA_STATE_DETAIL_KEYS: Record<SeaState, DiverMessageKey> = {
+  glassy: "trip.seaStateDetail.glassy",
+  calm: "trip.seaStateDetail.calm",
+  light_chop: "trip.seaStateDetail.light_chop",
+  choppy: "trip.seaStateDetail.choppy",
+  rough: "trip.seaStateDetail.rough",
+  very_rough: "trip.seaStateDetail.very_rough",
 };
 
 /**
- * The automated marine forecast's sea state, in the shop's own depth unit and
- * the reader's own language — "0.7 m waves from E · 7 s period" for a metric
- * shop, "2 ft waves from E · 7 s period" for the Florida crew who set feet
- * (DOM-L2). The unit comes from `shops.depth_unit`, the setting a shop already
- * has; the forecast deliberately never grew one of its own.
+ * The automated marine forecast's sea state, read out rather than measured out.
  *
- * Three templates rather than one with optional parts: a bearing and a period
- * are independently absent, and which clause a language drops last is not
- * English's to decide.
+ * This used to compose the model's own numbers — "0.7 m seas from E · 7 s
+ * period", in the shop's depth unit, through three ICU templates for the
+ * independently-absent bearing and period. Every part of that was true and
+ * almost none of it was useful to the person reading it: significant wave
+ * height is a statistic about the highest third of waves, a bearing answers a
+ * question a diver on a booking page has not asked, and a period in seconds
+ * means nothing without knowing what to compare it against. `seaStateReading`
+ * (src/lib/marine-forecast.ts) does the comparing — height for the band,
+ * period for how that band actually feels — and this turns its code into the
+ * two lines a reader can act on: what the sea is, and what that means for
+ * their day.
  *
- * The two wave-height templates say `{value, number}`, not the bare `{value}`
- * the depth and temperature templates above use. A bare placeholder
- * interpolates as text, which is invisible for the whole-number values those
- * two carry and wrong for this one: wave height is the only measurement in the
- * product with a fraction, so it is the only one where a Spanish reader would
- * otherwise be shown an English decimal point — "0.7 m" on a page that writes
- * 27 °C correctly beside it.
+ * The shop's `depth_unit` no longer reaches this: with no number left to
+ * render there is nothing for it to decide.
  */
-export function surfaceConditionsText(
+export function seaStateText(
   t: DiverTranslator,
-  surface: AutomatedSurfaceConditions,
-  unit: DepthUnit,
-): string {
-  const waves = t(unit === "feet" ? "trip.surfaceWavesFeet" : "trip.surfaceWavesMeters", {
-    value: waveHeightInUnit(surface.waveHeightMeters, unit),
-  });
-  const direction = surface.waveDirection
-    ? t(CARDINAL_DIRECTION_KEYS[surface.waveDirection])
-    : null;
-  if (direction && surface.wavePeriodSeconds !== null) {
-    return t("trip.surfaceWavesFromWithPeriod", {
-      waves,
-      direction,
-      seconds: surface.wavePeriodSeconds,
-    });
-  }
-  if (direction) return t("trip.surfaceWavesFrom", { waves, direction });
-  if (surface.wavePeriodSeconds !== null) {
-    return t("trip.surfaceWavesWithPeriod", { waves, seconds: surface.wavePeriodSeconds });
-  }
-  return waves;
+  state: SeaState,
+): { label: string; detail: string } {
+  return { label: t(SEA_STATE_KEYS[state]), detail: t(SEA_STATE_DETAIL_KEYS[state]) };
 }

@@ -142,18 +142,11 @@
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
     "surface": "Surface",
-    "surfaceWavesMeters": "{value, number} m seas",
-    "surfaceWavesFeet": "{value, number} ft seas",
-    "surfaceWavesFrom": "{waves} from {direction}",
-    "surfaceWavesWithPeriod": "{waves} · {seconds} s period",
-    "surfaceWavesFromWithPeriod": "{waves} from {direction} · {seconds} s period",
     "forecastCrewNote": "Forecast supplied by the crew; conditions can change. The final call happens at the dock.",
     "forecastUpdated": "Updated {when}.",
     "forecastUpdateUnavailable": "Update time unavailable.",
     "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
     "forecastCreditPrefix": "Forecast by",
-    "forecastVisibilityNote": "Underwater visibility comes from the crew.",
-    "forecastValidFor": "For {date} · {time}",
     "timeline": {
       "arrive": "Arrive and check in",
       "briefing": "Crew briefing and kit set-up",
@@ -184,7 +177,23 @@
     "conditionsHoldBody": "The crew is watching the weather and will make the final call. Existing seats stay held; new bookings are paused for now.",
     "conditionsChangedHeading": "Conditions changed since you booked",
     "conditionsChangedBody": "The crew has published a newer read for this day. Review it below; the final route and go/no-go call still happen at the dock.",
-    "bookAndSpotsLeft": "Book · {count} left"
+    "bookAndSpotsLeft": "Book · {count} left",
+    "seaState": {
+      "glassy": "Glassy",
+      "calm": "Calm",
+      "light_chop": "Light chop",
+      "choppy": "Choppy",
+      "rough": "Rough",
+      "very_rough": "Very rough"
+    },
+    "seaStateDetail": {
+      "glassy": "Flat, mirror-like water.",
+      "calm": "Barely any movement on the surface.",
+      "light_chop": "Small waves — most divers stop noticing them once they're under.",
+      "choppy": "A bumpy ride out. Worth taking something for seasickness if you're prone to it.",
+      "rough": "Hard work on the boat, and getting in and out takes more care.",
+      "very_rough": "The kind of sea that often keeps boats at the dock — expect the crew to be watching it."
+    }
   },
   "booking": {
     "heading": "Grab a spot",
