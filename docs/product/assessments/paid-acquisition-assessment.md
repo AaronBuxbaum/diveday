@@ -17,6 +17,27 @@ ever** — around 18% of the Florida boat-running universe. Advertising is a mac
 audiences too large to enumerate; this audience fits in a spreadsheet one person can build in two
 days. Every channel verdict below is downstream of that single fact.
 
+## The decisions, in one place
+
+Everything in this table is argued below. It is repeated here because the reasoning is long and the
+calls are short, and a reader coming back to this document in six months wants the calls.
+
+| Decision | Call | Argued in |
+| --- | --- | --- |
+| Ad spend, now | **$0** — until a design partner is live | [Prerequisites](#prerequisites-before-any-ad-runs) |
+| Ad spend, after a design partner | **$120/month hard cap**, one Google Search campaign, first ad group brand defense on `diveday`. Expect $30–60 actual — inventory binds before budget does | [The budget this supports](#the-budget-this-supports) |
+| Ad spend, ever, on Meta / LinkedIn / Reddit / Capterra PPC / G2 / TrustRadius / PMax / generic booking terms | **$0** | [Channel verdicts](#channel-verdicts) |
+| Total marketing envelope | **~$190–255/month**, all-in, for three years (15–20% of ~$45k lifetime gross profit) | [The budget this supports](#the-budget-this-supports) |
+| DEMA Show 2026 | **Badge, not booth** — ~$285 plus travel. Let the booth deadline pass deliberately and in writing | [What to buy instead](#what-to-buy-instead-in-order) |
+| Memberships | **Buy both** — DEMA Silver $200/yr, Dive Industry Association $125/yr | [What to buy instead](#what-to-buy-instead-in-order) |
+| Software directories | **Free listings only.** One Capterra submission, one category, plus a free G2 profile. Then collect five reviews — the threshold where a star rating displays, and nobody in this category has any | [Channel verdicts](#channel-verdicts) |
+| Kill metric | **Qualified dive-operator clicks/month < 4** on a 60-day trailing average. Not clicks, CTR, CPA, or impression share | [The kill metric](#the-kill-metric) |
+| Standing rule | Never run a channel whose value depends on learning from conversion counts. Run channels that produce **conversations** | [Why measurement cannot rescue this](#why-measurement-cannot-rescue-this) |
+
+Two things to fix before any ad runs, both worth doing on their own merits: a published privacy
+policy and terms (there are none), and the Phase 0 blockers that make a converting ad click land on
+a shop that cannot send a waiver email, connect Stripe, or pay you.
+
 ## The market, corrected
 
 The number this assessment turns on had three incompatible values in circulation, and the difference
