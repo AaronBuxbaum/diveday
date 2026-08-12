@@ -377,9 +377,38 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // are still caught: if the worker served the route, the reload would have
   // *succeeded* and there would be no error; if it redirected to the offline
   // shell, the URL would say so.
-  expect(reloadError?.message).toMatch(
-    /ERR_INTERNET_DISCONNECTED|ERR_ABORTED|Not attached to an active page/,
-  );
+  //
+  // **A fourth shape, and the last one this can have.** CI produced a reload
+  // that did not throw at all (run 31551932833, shard 2/4), which the paragraph
+  // above treats as proof the worker served the route. It is not proof: a
+  // document can come back offline from Chromium's own HTTP cache or bfcache,
+  // with no service worker involved, and that has nothing to do with what this
+  // test guards. Widening the regex again would have been the fourth guess at
+  // an error string.
+  //
+  // So the no-throw case is now decided by the one signal that names the
+  // culprit directly. `PerformanceNavigationTiming.workerStart` is non-zero
+  // **only** when the navigation went through a service worker's fetch
+  // handler — the browser's own record of whether the worker answered. If the
+  // reload succeeded without the worker, that is the HTTP cache doing its job
+  // and no concern of this spec; if the worker answered a `/guests` URL, that
+  // is exactly the regression, and it fails here whatever the error shape.
+  if (reloadError) {
+    expect(reloadError.message).toMatch(
+      /ERR_INTERNET_DISCONNECTED|ERR_ABORTED|Not attached to an active page/,
+    );
+  } else {
+    const servedByWorker = await page.evaluate(() => {
+      const [navigation] = performance.getEntriesByType(
+        "navigation",
+      ) as PerformanceNavigationTiming[];
+      return (navigation?.workerStart ?? 0) > 0;
+    });
+    expect(
+      servedByWorker,
+      "the offline reload succeeded and the service worker is what answered it — the live-manifest pattern has leaked past the manifest route",
+    ).toBe(false);
+  }
   expect(page.url()).not.toContain("/offline-manifest");
 
   await context.setOffline(false);
