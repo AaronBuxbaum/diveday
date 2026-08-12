@@ -34,9 +34,12 @@ and one more field between a front-desk staffer and a captured card.
   was stored is orphaned or silently hidden.
   **Superseded 2026-08-11** by
   [20260811-retire-the-digital-card](20260811-retire-the-digital-card.md): both displays are gone,
-  and `cardImageUrl` has left the create path too. The column, the erasure retirement path, and the
-  CSV export column still remain — legacy photos stay exportable and stay erasable, they are simply
-  no longer shown.
+  `cardImageUrl` has left the create path, and `card_image_url` has been dropped from both tables
+  along with the erasure retirement path and the CSV export column. Nothing of the card photograph
+  survives anywhere in the model. That was only available because no shop was live and no row held
+  a value — with real data it would have required purging the stored objects through the
+  media-deletion ledger first, or every one of them would have been stranded in the blob store with
+  nothing left pointing at it.
 
 ## Alternatives considered
 
