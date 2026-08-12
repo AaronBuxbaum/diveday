@@ -122,6 +122,34 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
+  it("passes --yes to the Vercel deploy only when unattended", async () => {
+    // The CLI refuses to deploy without an interactive confirmation, so the
+    // real 2026-08-12 CI deploy failed here *after* the stack had already
+    // updated. A workstation run keeps the CLI's own prompt.
+    const vercelDeploy = async (ciUnattended) => {
+      const commands = [];
+      await runPostDeployWizard({
+        ask: async () => "yes",
+        ciUnattended,
+        cdkArguments: [],
+        credentialsDocument: "",
+        syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+        execute: (command, arguments_) => {
+          commands.push({ command, arguments_ });
+          if (command === "aws") return JSON.stringify([]);
+          return "";
+        },
+        log: () => {},
+      });
+      return commands.find(
+        ({ command, arguments_ }) => command === "pnpm" && arguments_[1] === "vercel",
+      );
+    };
+
+    expect((await vercelDeploy(true)).arguments_).toEqual(["exec", "vercel", "--prod", "--yes"]);
+    expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod"]);
+  });
+
   it("skips a Vercel DNS record already present by name, type, and value", async () => {
     const answers = ["no", "no", "no", "no", "no", "no", "yes"];
     const commands = [];
