@@ -2081,6 +2081,23 @@ exports.handler = async (event) => {
         resources: [vercelSyncParameterArn],
       }),
     );
+    // The wizard's last step writes this identity's DKIM tokens into DNS, and
+    // reads them back out of SES first (`aws sesv2 get-email-identity
+    // --query DkimAttributes.Tokens`). Read-only, and scoped to the one
+    // identity this stack creates: the tokens it returns are published as
+    // public CNAME records by construction, so this discloses nothing the
+    // zone file does not already say out loud. Found by a real CI deploy on
+    // 2026-08-12 that got through every other wizard step and then hit
+    // AccessDeniedException here.
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadSesIdentityDkimTokens",
+        actions: ["ses:GetEmailIdentity"],
+        resources: [
+          this.formatArn({ service: "ses", resource: "identity", resourceName: sesEmailDomain }),
+        ],
+      }),
+    );
     // The one exception to "neither CI role can read a secret" (ADR
     // 20260811-ci-deploy-full-wizard): scoped to this secret's own ARN, so it
     // widens nothing else. `denyReadingAnySecret()` below still applies to

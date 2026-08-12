@@ -184,6 +184,24 @@ describe("the synthesized stack", () => {
     expect(statement).not.toContain("image-publishing-role");
   });
 
+  it("scopes the deploy role's SES read to the one identity, and keeps it read-only", () => {
+    const { template } = synthesize();
+    const statements = policyStatements(template).filter((statement) =>
+      statement.includes('"Sid":"ReadSesIdentityDkimTokens"'),
+    );
+    expect(statements).toHaveLength(1);
+    const [statement] = statements;
+    // The wizard only ever reads DKIM tokens. Anything that could *change* an
+    // identity, or reach every identity in the account, is out of scope for a
+    // role a CI job assumes.
+    expect(statement).toContain("ses:GetEmailIdentity");
+    expect(statement).toContain("identity/");
+    expect(statement).not.toContain('"Resource":"*"');
+    expect(statement).not.toContain("ses:Send");
+    expect(statement).not.toContain("ses:Delete");
+    expect(statement).not.toContain("ses:Put");
+  });
+
   it("grants read access to the credentials secret to exactly one identity, scoped to that one secret", () => {
     const { template } = synthesize();
     const allows = policyStatements(template).filter(
