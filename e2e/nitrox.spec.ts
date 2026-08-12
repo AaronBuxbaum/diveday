@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, openSettingsRow } from "./helpers";
+import { acceptAgeAttestation, e2eNow, openSettingsRow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -272,15 +272,18 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   // be — its students are being certified on air and none of them can hold the
   // verified nitrox card a fill needs. Offering the box there advertises a
   // fill the course cannot give.
-  await page.goto("/s/blue-mantis");
-  await page
-    .locator("li")
-    .filter({ hasText: "Open Water Diver — three-day course" })
-    .getByRole("link", { name: "Open Water Diver — three-day course" })
-    .click();
+  // In through the course's own page rather than the schedule: that is the
+  // route a diver enrolling in a course actually takes, and the session sits
+  // far enough out that the schedule's first page need not carry it.
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Owen Reid");
   await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
+  // The course carries the agency's minimum age, so this booking form asks
+  // for the attestation an ordinary charter's does not.
+  await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Owen/ })).toBeVisible();
 

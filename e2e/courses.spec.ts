@@ -471,7 +471,7 @@ test.describe("staff", () => {
   });
 });
 
-test("a diver with no workable date gets a written email instead of a dead end", async ({
+test("a diver with no workable date reaches the shop, and is offered one way to do it", async ({
   page,
 }) => {
   // Signed out: this is the composer a prospective diver meets, not staff.
@@ -492,22 +492,19 @@ test("a diver with no workable date gets a written email instead of a dead end",
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Anything else").fill("We are ashore only on the Tuesday.");
 
-  // No preview panel any more — the composed message is what the mail app is
-  // handed, and the mailto href is where that promise is now kept.
+  // Send is the whole choice. "Open in your email app" and "Copy message"
+  // stood beside it and both handed the diver a draft to send themselves —
+  // no row recorded, no shop notified, and a silent dead end on a phone with
+  // no mail client configured, which is the very case they were meant to
+  // cover. What replaces them is what was always underneath: the shop's own
+  // address and number, as live links.
   await expect(inquiry.getByRole("region", { name: "Your message so far" })).toHaveCount(0);
+  await expect(inquiry.getByRole("link", { name: "Open in your email app" })).toHaveCount(0);
+  await expect(inquiry.getByRole("button", { name: "Copy message" })).toHaveCount(0);
 
-  const mailto = await page
-    .getByRole("link", { name: "Open in your email app" })
-    .getAttribute("href");
-  const url = new URL(mailto ?? "");
-  expect(url.protocol).toBe("mailto:");
-  expect(decodeURIComponent(url.pathname)).toBe("hello@demo.invalid");
-  const params = new URLSearchParams(url.search);
-  expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
-  expect(params.get("body")).toContain("Experience so far: I have never dived before");
-  expect(params.get("body")).toContain("When: the week of 12 August");
-  expect(params.get("body")).toContain("How many divers: 3");
-  expect(params.get("body")).toContain("Mira Delgado");
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await expect(inquiry.getByRole("link", { name: "hello@demo.invalid" })).toBeVisible();
 });
 
 test("a blank inquiry is rejected, not defaulted — experience and a way to reply are required", async ({
@@ -517,18 +514,14 @@ test("a blank inquiry is rejected, not defaulted — experience and a way to rep
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
 
-  // Nothing filled in: every path the composer offers refuses to go through,
-  // not just the one a diver happens to reach for first, and both refusals
-  // land at once rather than one after the other.
+  // Nothing filled in: both refusals land at once rather than one after the
+  // other, so a diver fixes the form in one pass instead of two.
   await inquiry.getByRole("button", { name: "Send inquiry" }).click();
   await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
   await expect(
     inquiry.getByText("Leave an email or a phone number so we can reply."),
   ).toBeVisible();
   await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
-
-  await inquiry.getByRole("link", { name: "Open in your email app" }).click();
-  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
 
   // Experience alone is not enough — a lead with no address and no number is
   // a question nobody can answer.
