@@ -41,18 +41,29 @@ const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
 /**
  * Scopes every GitHub Actions OIDC trust condition below (§18) to this repo.
+ * Spelled with GitHub's own casing, and it has to be: this string is embedded
+ * in an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, and
+ * `StringLike` is case-sensitive with no ignore-case variant to reach for.
  *
- * Spelled with GitHub's own casing, and it has to be. This string lands in an
- * IAM `StringLike` on `token.actions.githubusercontent.com:sub`, GitHub mints
- * that claim as `repo:AaronBuxbaum/diveday:<context>` using the account name as
- * the account holder wrote it, and `StringLike` is case-sensitive with no
- * ignore-case variant to reach for. Lower-cased here, the condition matches
- * nothing: every credentialed CI step fails with `Not authorized to perform
- * sts:AssumeRoleWithWebIdentity`, which reads like a missing role or an
- * unfinished setup step rather than a spelling. GitHub's URLs and API are
- * case-insensitive, so nothing else in the repo notices.
+ * Also spelled as `owner@ownerId/repo@repoId`, not the bare `owner/repo` that
+ * reads naturally — GitHub now mints the `sub` claim's `repo:` segment that
+ * way, confirmed 2026-08-12 by printing a real token's decoded claims from a
+ * workflow run (`repo:AaronBuxbaum@5578581/diveday@1302222351:ref:refs/heads/
+ * main`), after the trust policy, the `GitHubActionsOidcProvider`, the AWS
+ * account, and AWS Organizations SCPs/RCPs were each individually ruled out
+ * as the cause of "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+ * on every credentialed CI step touching `infra/`. A `StringLike` built from
+ * the bare name (`repo:AaronBuxbaum/diveday:*`) is not a prefix of that
+ * string, so it matches nothing — the same failure shape, and the same
+ * read-as-something-else risk, the casing bug once caused. Both IDs are
+ * GitHub's own immutable identifiers (account id and repository id — this
+ * repo's `git remote`/API surface calls them `owner.id` and `id`), stable
+ * across a rename or an ownership transfer, which is presumably why GitHub
+ * started including them: a deleted-and-recreated repo of the same name
+ * mints a different `sub` and stops matching a trust policy built this way,
+ * closing a spoofing gap a name-only match left open.
  */
-const GITHUB_REPO = "AaronBuxbaum/diveday";
+const GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351";
 /** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
 const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
@@ -1951,7 +1962,7 @@ exports.handler = async (event) => {
 
     const cdkDiffRole = new iam.Role(this, "GitHubActionsCdkDiffRole", {
       roleName: "diveday-github-actions-cdk-diff",
-      assumedBy: githubActionsPrincipal(`repo:${GITHUB_REPO}:*`),
+      assumedBy: githubActionsPrincipal(`repo:${GITHUB_REPO_SUB}:*`),
       description:
         "Assumed by .github/workflows/infra.yml to run `cdk diff` against the deployed stack. Can create and discard a change set; never executes one.",
       maxSessionDuration: cdk.Duration.hours(1),
@@ -1981,7 +1992,7 @@ exports.handler = async (event) => {
     const cdkDeployRole = new iam.Role(this, "GitHubActionsCdkDeployRole", {
       roleName: "diveday-github-actions-cdk-deploy",
       assumedBy: githubActionsPrincipal(
-        `repo:${GITHUB_REPO}:environment:${GITHUB_DEPLOY_ENVIRONMENT}`,
+        `repo:${GITHUB_REPO_SUB}:environment:${GITHUB_DEPLOY_ENVIRONMENT}`,
       ),
       description:
         "Assumed by .github/workflows/infra.yml's deploy job, gated on the infra-deploy GitHub Environment's required reviewer.",
