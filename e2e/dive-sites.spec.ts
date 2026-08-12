@@ -245,7 +245,7 @@ test.describe("staff", () => {
     // Typing the pair is enough — the frame follows the boxes, so a brand-new
     // site is drawable without a save-and-come-back round trip.
     const map = page.getByRole("button", {
-      name: "Terrain view — click to add a route waypoint",
+      name: "Map — click to add a route waypoint",
     });
     await expect(map).toBeVisible();
     await expect(page.getByText("Click where the dive starts.")).toBeVisible();

@@ -77,19 +77,22 @@ test.describe("end-of-day close-out", () => {
     ).toBeVisible();
   });
 
-  test("Today holds back the close-out handoff while a boat is still out", async ({ page }) => {
-    // `lastBoatIsIn` (src/lib/today.ts) offers the close-out only once every one
-    // of today's departures is home. The fleet's clock is frozen at 09:30
-    // shop-local with boats still out, so only the negative is reachable here —
-    // the positive needs an evening instant, and DIVEDAY_CLOCK is one
-    // process-wide value shared by server, seed, and browser. The four branches
-    // are covered in src/lib/today.test.ts.
+  test("Today holds back the close-out handoff while every boat is still out", async ({ page }) => {
+    // `anyBoatIsIn` (src/lib/today.ts) offers the close-out as soon as *one* of
+    // today's departures is home — the card no longer waits for the last one,
+    // so an evening with a night dive on the board still gets the handoff. The
+    // fleet's clock is frozen at 09:30 shop-local and the seed's one
+    // sails-today trip has not come back yet, so only the negative is reachable
+    // here: the positive needs an afternoon instant, and DIVEDAY_CLOCK is one
+    // process-wide value shared by server, seed, and browser. Both copy
+    // variants and all five branches are covered in src/lib/today.test.ts.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");
     await expect(
       page.getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "The last boat is in" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "The close-out is open" })).toHaveCount(0);
 
     // Absent from Today is not absent from the app — the card is a suggestion,
     // never the only door.

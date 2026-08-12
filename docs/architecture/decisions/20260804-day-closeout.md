@@ -85,6 +85,21 @@ at the close-out. The registry called this route "Today's evening mirror" while 
 nowhere but the nav's More drawer. It stays a suggestion: nothing nags, nothing gates, and a day
 with no departures shows no card at all.
 
+**2026-08-12 — the card keys on the first boat home, not the last.** Waiting for *every* departure
+meant the only non-palette door to this surface was missing on the evenings a shop most wants it: a
+day with a night dive still on the board, or with one boat running late, showed no card at all,
+which is how a route described as "part of every single working day" ended up reachable on some days
+only (FU-20260811-close-out-has-one-conditional-door). The gate is now `anyBoatIsIn` — a departure
+that is home is work the close-out can take, whatever else is still at sea — and `lastBoatIsIn`
+stays to choose the card's words, because "The last boat is in" is a sentence that must never be
+rendered over a boat still out. Two states, two sets of copy, rather than one vague sentence true of
+both. Nothing else moves: same inputs, same no-clock-band reasoning, still a suggestion, and still
+no card on a day where nothing has come home yet. The alternatives this deliberately did *not* take
+were promoting the close-out into the nav (the staff header is full at five primary tabs, so it
+would have cost another destination its place) and retiring the surface, which is now harder to
+justify than when it shipped: the post-trip recap note is written here, so the page owns work rather
+than only mirroring it.
+
 ## Alternatives considered
 
 - **A third `?view=` on the shop home** — the not-ready precedent cuts the other way: that ADR

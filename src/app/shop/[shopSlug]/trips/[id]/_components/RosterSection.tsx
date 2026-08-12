@@ -31,6 +31,7 @@ import { paymentSourceLine } from "@/lib/payment-source";
 import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
+import { RosterAllClear } from "./RosterAllClear";
 import { BulkWaiverCheckbox, BulkWaiverSendButton } from "./RosterBulkWaiverSelection";
 import type {
   NitroxByBooking,
@@ -251,6 +252,17 @@ export function RosterSection({
               {t("trips.roster.bookedOfCapacity", { booked, capacity })}
             </span>
           </h2>
+          {/* The moment the last blocker clears. Nothing renders until an action
+              on this page moves the count to zero — see RosterAllClear for why
+              that has to be decided in the browser rather than here. Held back
+              on an empty roster: "everyone is cleared" about nobody is not a
+              finished thing. */}
+          {roster.length > 0 ? (
+            <RosterAllClear
+              blockedCount={filterCounts.blocked}
+              label={t("trips.roster.allClear")}
+            />
+          ) : null}
         </div>
         {/* Bulk waiver send — the same `WaiverSendControl` every other surface
             uses (Lens 17: one waiver-send control, not two divergent ones),

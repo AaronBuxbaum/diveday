@@ -148,8 +148,12 @@ export function PushOptIn({
   if (!publicKey || support === "checking") return null;
 
   return (
-    <div className="mt-4 border-border border-t pt-4">
-      <h3 className="font-semibold text-sm">{copy.heading}</h3>
+    // No separator or spacing of its own: this is a row of the manifest page's
+    // "On this phone" group, which owns the border and the rhythm its three
+    // members share. It used to carry its own `border-t` because it rendered
+    // nested inside the offline card.
+    <div>
+      <h3 className="font-semibold">{copy.heading}</h3>
       <p className="mt-1 max-w-2xl text-muted text-sm leading-6">{copy.body}</p>
       {support === "supported" ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">

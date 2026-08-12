@@ -76,6 +76,12 @@ export async function GET(request: Request) {
       // restore is running but the threshold is never being crossed.
       runwayDays: summary.runwayDays,
       refreshed: summary.refreshed,
+      // What it took to keep a boat on today's board: "already" on most days,
+      // "moved" when the narrow pass pulled the next departure onto today,
+      // "restored" when the full rebuild covered it. A run of "no_candidate"
+      // means the board is healthy but every upcoming trip is a series instance
+      // the nudge refuses to move, which is worth seeing rather than guessing at.
+      todayDeparture: summary.today,
       // A database with no canonical demo is a legitimate state (one seeded
       // around an existing shop), not a failure -- but it is worth being able
       // to tell apart from a pass that found a healthy board.

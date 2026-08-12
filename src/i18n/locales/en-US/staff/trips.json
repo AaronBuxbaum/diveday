@@ -289,6 +289,7 @@
     "paymentUpdating": "Updating…",
     "heading": "Divers",
     "bookedOfCapacity": "{booked} of {capacity}",
+    "allClear": "Everyone's cleared to dive",
     "filterAriaLabel": "Filter the roster",
     "filterAll": "All ({count})",
     "filterNeedsWaiver": "Needs waiver ({count})",
@@ -463,6 +464,7 @@
     "noDiversLine": "No divers are booked on this departure.",
     "diverFactsSummaryWithMedical": "Contact, gear & medical"
   },
+  "onThisPhone": "On this phone",
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",
     "reconcileRejectedOne": "1 change needs a look — open the live manifest to sort it out.",

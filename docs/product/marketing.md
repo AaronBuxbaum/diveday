@@ -302,8 +302,7 @@ original one when a position is added beside it, so attribution history spans th
 
 The public pages ship deterministic illustrated mockups as the design — not captured screenshots.
 Each visual is a small, hand-built component in `src/components/MarketingScreenFallbacks.tsx`
-(`DiverBookingFallback`, `FrontDeskReadinessFallback`, `CaptainRollCallFallback`) rendered through
-the shared wrappers in `src/components/MarketingSections.tsx`:
+rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 
 | Component | Represents | Marketing use |
 | --- | --- | --- |
@@ -311,6 +310,7 @@ the shared wrappers in `src/components/MarketingSections.tsx`:
 | `FrontDeskReadinessFallback` | Staff trip readiness | Desk / safety explanation |
 | `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment, `/about` hero |
 | `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub, and the homepage records band |
+| `ExportBundleFallback` | Settings -> Data export | `/pricing`'s "if you leave" band |
 
 **A mockup is a claim, so it mirrors a real screen element for element.**
 `ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
@@ -321,11 +321,35 @@ capable (a column it can't read, a row it won't import), because those are what 
 believable. Add a mockup the same way: find the shipped screen, mirror it, and keep the
 unflattering parts in.
 
+`ExportBundleFallback` (2026-08-12) is the same move on the other direction of the same wedge, and
+`/pricing` was the last marketing page with nothing to look at. It mirrors Settings -> Data export:
+its eyebrow and title, the one download button in its header, the "What's in the bundle" row with
+the real file count on it, three real `EXPORT_FILE_NOTES` entries with their own notes and row
+counts, and the "Not included, on purpose:" line naming credentials as something that never leaves.
+It draws no `photos/` row on purpose -- the bundled images are a directory in the zip, not one of
+the counted files, so a row for them would be an element the real screen does not have, and the
+band's own copy is where the photos claim belongs.
+
+It sits between the fee anchor and the included list rather than in the FAQ, because that is where
+the objection lands: the fee anchor has just made switching look attractive, and the next thought a
+shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
+for a reader who scans that far.
+
 **The homepage records band carries both halves as pictures**, in the order the copy argues them:
 the import preview (arriving) above the export inventory card (leaving). That band is the
 portability wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12
 it made that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on
 the site.
+
+**The homepage's four-card "whole shop, one place" band is deliberately still four assertions.** It
+renders `FeatureGroupsGrid` at `featuresPerGroup={1}`, and it is now the only band on that page that
+asks a reader to take a claim on trust. It was reviewed again on 2026-08-12 and left alone, with the
+reason stated rather than deferred: the band exists to give breadth in one glance and hand the reader
+to `/product`, replacing it with imagery would cost that breadth, and **there is no funnel data to
+decide it on** — the `home-mid` door has no `demo_entered`/`trial_started` pair to read yet, because
+no traffic has run through it. Deciding the midpoint of the highest-traffic page on taste, against a
+measurement that will exist shortly, is the wrong trade. Revisit it when that pair has numbers; if
+the door converts, the change is a visual *beside* the four cards, not instead of them.
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the

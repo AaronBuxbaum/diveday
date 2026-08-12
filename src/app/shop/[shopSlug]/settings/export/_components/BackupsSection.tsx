@@ -247,9 +247,26 @@ export function BackupsSection({
           <p className="mt-2 text-sm text-muted">{t("backup.history.empty")}</p>
         ) : (
           <>
+            {/* Five columns at `sm` and up; one stacked block below it.
+                `overflow-x-auto` stays as the desktop-narrow safety net, but it
+                cannot be the phone answer: a horizontal scroller nested in a
+                vertically-scrolling settings page advertises itself to nobody
+                on a phone, and the column it was hiding is Details — where a
+                *failed* delivery says why. A shop opens this list precisely to
+                find out that last Monday's backup did not land, so that
+                sentence has to be on screen without a guessed gesture
+                (FU-20260811-backup-delivery-history-clips-on-a-phone).
+
+                The fold is the orders index's pattern (`orders/page.tsx`): one
+                set of values, rendered into the date cell below `sm` and into
+                their own columns above it, with `hidden` doing the choosing —
+                so a screen reader is only ever offered the arrangement that is
+                actually on screen. */}
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                {/* Below `sm` the rows are self-describing stacks rather than a
+                    grid, so a lone "When" heading over them would be noise. */}
+                <thead className="hidden sm:table-header-group">
                   <tr className="border-b border-border text-left text-xs text-muted uppercase">
                     <th className="py-2 pr-4 font-medium">{t("backup.history.when")}</th>
                     <th className="py-2 pr-4 font-medium">{t("backup.history.kind")}</th>
@@ -259,37 +276,50 @@ export function BackupsSection({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {deliveries.rows.map((delivery) => (
-                    <tr key={delivery.id}>
-                      <td className="py-2 pr-4 whitespace-nowrap">
-                        {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {delivery.trigger === "scheduled"
-                          ? t("backup.history.trigger.scheduled")
-                          : t("backup.history.trigger.manual")}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <Badge tone={STATUS_TONE[delivery.status]}>
-                          {statusText(t, delivery.status)}
-                        </Badge>
-                      </td>
-                      <td className="py-2 pr-4 whitespace-nowrap tabular-nums">
-                        {delivery.byteCount === null
-                          ? "—"
-                          : formatByteSize(delivery.byteCount, locale)}
-                      </td>
-                      <td className="py-2 text-muted">
-                        {delivery.status === "failed" ? (
-                          deliveryErrorText(t, delivery.errorCode)
-                        ) : delivery.objectKey ? (
-                          <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {deliveries.rows.map((delivery) => {
+                    const kind =
+                      delivery.trigger === "scheduled"
+                        ? t("backup.history.trigger.scheduled")
+                        : t("backup.history.trigger.manual");
+                    const outcome = (
+                      <Badge tone={STATUS_TONE[delivery.status]}>
+                        {statusText(t, delivery.status)}
+                      </Badge>
+                    );
+                    const size =
+                      delivery.byteCount === null
+                        ? "—"
+                        : formatByteSize(delivery.byteCount, locale);
+                    const details =
+                      delivery.status === "failed" ? (
+                        deliveryErrorText(t, delivery.errorCode)
+                      ) : delivery.objectKey ? (
+                        <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
+                      ) : (
+                        "—"
+                      );
+                    return (
+                      <tr key={delivery.id}>
+                        <td className="py-2 align-top sm:pr-4 sm:whitespace-nowrap">
+                          <span className="font-medium sm:font-normal">
+                            {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
+                          </span>
+                          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                            {outcome}
+                            <span className="text-muted">{kind}</span>
+                            <span className="text-muted tabular-nums">{size}</span>
+                          </span>
+                          <span className="mt-1 block text-muted sm:hidden">{details}</span>
+                        </td>
+                        <td className="hidden py-2 pr-4 sm:table-cell">{kind}</td>
+                        <td className="hidden py-2 pr-4 sm:table-cell">{outcome}</td>
+                        <td className="hidden py-2 pr-4 whitespace-nowrap tabular-nums sm:table-cell">
+                          {size}
+                        </td>
+                        <td className="hidden py-2 text-muted sm:table-cell">{details}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

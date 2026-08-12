@@ -2,6 +2,8 @@
   "closeOut": {
     "heading": "The last boat is in",
     "body": "Every departure today is back at the dock. One pass through the close-out — how each boat ended, what is still open, what tomorrow opens with — and you can go home.",
+    "headingBoatStillOut": "The close-out is open",
+    "bodyBoatStillOut": "Not every boat is back yet, so the day isn't finished. You can write up the departures that are home now — how each one ended, what is still open — and pick the rest up when the last one ties up.",
     "action": "Close out the day"
   },
   "createdNotice": {

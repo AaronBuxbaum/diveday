@@ -81,7 +81,11 @@ describe("the synthesized stack", () => {
     const keys = template.findResources("AWS::IAM::AccessKey");
     const secrets = template.findResources("AWS::SecretsManager::Secret");
 
-    expect(Object.keys(secrets)).toHaveLength(2);
+    // Three: the credentials document, the app-secret seed, and the direct
+    // connection string the weekly pg_dump reads (S20). The third is the only
+    // secret in the stack whose *value* a human supplies -- it deploys holding
+    // "unset" -- which is why it is not part of the hand-off document below.
+    expect(Object.keys(secrets)).toHaveLength(3);
     const secret = Object.values(secrets).find(
       (resource) =>
         (resource as { Properties?: { Name?: string } }).Properties?.Name === "diveday/env",
@@ -208,15 +212,33 @@ describe("the synthesized stack", () => {
       (statement) =>
         statement.includes("secretsmanager:GetSecretValue") && !statement.includes('"Deny"'),
     );
+    // Exactly two reads exist in the whole stack, and each is scoped to one
+    // secret: GitHubActionsCdkDeployRole reads the credentials document for the
+    // post-deploy wizard, and the database-dump job reads its own connection
+    // string (S20). Nothing may read both, and nothing may read on "*".
     expect(
       allows,
-      "only GitHubActionsCdkDeployRole's post-deploy-wizard read may allow secretsmanager:GetSecretValue",
-    ).toHaveLength(1);
+      "a new secretsmanager:GetSecretValue Allow appeared -- every read must be scoped to one named secret",
+    ).toHaveLength(2);
+    for (const statement of allows) {
+      expect(statement).not.toContain('"Resource":"*"');
+    }
     // Resource-scoped to the credentials document's own ARN, never "*" -- an
     // unscoped Allow here would read every credential in the account, not just
     // the one document the wizard needs (ADR 20260811-ci-deploy-full-wizard).
-    expect(allows[0]).not.toContain('"Resource":"*"');
-    expect(allows[0]).toContain("CredentialsEnvDocument");
+    const documentReads = allows.filter((statement) =>
+      statement.includes("CredentialsEnvDocument"),
+    );
+    expect(
+      documentReads,
+      "only GitHubActionsCdkDeployRole's post-deploy-wizard read may reach the credentials document",
+    ).toHaveLength(1);
+    // The dump job reads the connection string and nothing else. If this ever
+    // also matched the credentials document, an unattended weekly job would hold
+    // every credential in the account.
+    const dumpReads = allows.filter((statement) => statement.includes("DatabaseDumpConnection"));
+    expect(dumpReads).toHaveLength(1);
+    expect(dumpReads[0]).not.toContain("CredentialsEnvDocument");
   });
 
   it("scopes the deploy role's Vercel-sync checkpoint access to its own parameter path", () => {

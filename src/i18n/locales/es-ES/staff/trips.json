@@ -289,6 +289,7 @@
     "paymentUpdating": "Actualizando…",
     "heading": "Buceadores",
     "bookedOfCapacity": "{booked} de {capacity}",
+    "allClear": "Todos listos para bucear",
     "filterAriaLabel": "Filtrar la lista de buceadores",
     "filterAll": "Todos ({count})",
     "filterNeedsWaiver": "Sin exención ({count})",
@@ -463,6 +464,7 @@
     "noDiversLine": "No hay buceadores reservados en esta salida.",
     "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica"
   },
+  "onThisPhone": "En este teléfono",
   "offlineManifestManager": {
     "checkingDevice": "Comprobando este dispositivo…",
     "reconcileRejectedOne": "1 cambio necesita revisión — abre el manifiesto en vivo para resolverlo.",

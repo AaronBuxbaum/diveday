@@ -99,12 +99,14 @@ getting its own, which would have been $0.40/month for a signal that already has
   it claims to solve is untouched. Fate-independence belongs in the *verification*, which is where
   this decision puts it, and the trigger stays the boring one-line cron beside the other four.
 - **A `pg_dump` layer instead** (the runbook's "obvious next increment"). Not rejected — deferred,
-  and still worth doing. It is strictly larger, covering `user_accounts`, `account_tokens` and
+  and rightly: it is strictly larger, covering `user_accounts`, `account_tokens` and
   `calendar_feeds`, which the per-shop bundle excludes by design and which is why restoring from
-  bundles alone gives you every shop record and nobody who can sign in. It needs a host and the
-  direct connection string, which is a bigger decision than this one; shipping the export layer that
-  already exists should not wait on it. Filed as
-  [FU-20260812-backups-still-cannot-restore-a-login](../../product/follow-ups/FU-20260812-backups-still-cannot-restore-a-login.md).
+  bundles alone gives you every shop record and nobody who can sign in. It needed a host and the
+  direct connection string, which was a bigger decision than this one; shipping the export layer that
+  already existed should not have waited on it. **It landed the same day** on the owner's answer that
+  Neon's PITR window is too short to rely on — see
+  [20260812-platform-database-dump](20260812-platform-database-dump.md), which puts a weekly CodeBuild
+  `pg_dump` under the same bucket's `dumps/` prefix and extends this ADR's watchdog to cover it.
 - **A `platform_backup_deliveries` table** mirroring the shop-owned ledger — rejected as schema for
   its own sake. See the runner section above.
 - **Alarming on the cron's Sentry monitor alone.** Rejected: that is exactly the signal that
