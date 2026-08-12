@@ -151,8 +151,11 @@ export function ShopNav({
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
+              signOutAction={signOutAction}
               copy={{
                 language: t("shared.shopNav.language"),
+                groupSession: t("shared.commandPalette.groupSession"),
+                signOut: t("shared.shopNav.signOut"),
                 search: t("shared.commandPalette.search"),
                 dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
                 comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),

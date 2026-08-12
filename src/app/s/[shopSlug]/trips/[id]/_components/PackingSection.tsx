@@ -1,14 +1,14 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
-import { temperatureText } from "@/i18n/unit-labels";
 import {
   dockDayTimeline,
+  exposureSuitFor,
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
-import { temperatureUnitFor } from "@/lib/temperature-units";
+import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { RentalFit, Shop, Trip } from "./types";
 
 /**
@@ -33,11 +33,6 @@ const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   crewBriefing: "trip.providedItems.crewBriefing",
 };
 
-const TEMPERATURE_TIP_KEYS: Record<"cold" | "mild", DiverMessageKey> = {
-  cold: "trip.temperatureTip.cold",
-  mild: "trip.temperatureTip.mild",
-};
-
 export function PackingSection({
   shop,
   trip,
@@ -45,6 +40,7 @@ export function PackingSection({
   day,
   multiDay,
   siteBottomTimes,
+  temperatureStatedAbove,
   locale,
 }: {
   shop: Shop;
@@ -68,32 +64,42 @@ export function PackingSection({
    * `SiteBottomTimes`.
    */
   siteBottomTimes?: SiteBottomTimes;
+  /**
+   * Whether a conditions card above this one already states the water
+   * temperature — and with it the suit most divers want (`ForecastSection`).
+   *
+   * The booking page renders that card and passes `true`, so the advice is
+   * given once, under the reading it is derived from. `/ready/[token]` renders
+   * this section with **no** conditions card anywhere on the page and passes
+   * `false`, so the suit line lands here instead: the morning of a dive is
+   * when a diver is deciding what to put in the car, and that page would
+   * otherwise say nothing at all about the water they are getting into.
+   *
+   * An explicit prop, not a guess from `trip.waterTemperatureC`: which sections
+   * a page renders is the page's own knowledge, and the two surfaces have
+   * genuinely different layouts rather than one being a subset of the other.
+   */
+  temperatureStatedAbove: boolean;
   locale: string;
 }) {
   const window = day ?? trip;
-  const packing = packingConfidence(
-    shop.packingList,
-    rentalFit ?? null,
-    trip.waterTemperatureC,
-    shop.briefingMinutes > 0,
-  );
+  const packing = packingConfidence(shop.packingList, rentalFit ?? null, shop.briefingMinutes > 0);
   const t = diverTranslator(locale);
+  // Said here only when nothing above has said it. This used to be an
+  // unconditional "water is expected around 24°C — use the shop's wetsuit
+  // guidance", which on the booking page restated the reading from the
+  // conditions card a few inches up and then pointed at advice it did not
+  // give. The card now names the suit itself; this is the same sentence, on
+  // the one page that has no card to put it on.
+  const exposureSuit =
+    temperatureStatedAbove || trip.waterTemperatureC === null
+      ? null
+      : exposureSuitFor(trip.waterTemperatureC);
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5">
       <h2 className="text-lg font-semibold">{t("trip.packTitle")}</h2>
-      {packing.temperatureTip ? (
-        <p className="mt-2 text-sm text-muted">
-          {t(TEMPERATURE_TIP_KEYS[packing.temperatureTip.tone], {
-            // The tip and the forecast tile above it are on the same page and
-            // must not disagree about units: both read the shop's own
-            // `temperature_unit` (src/lib/temperature-units.ts).
-            temperature: temperatureText(
-              t,
-              packing.temperatureTip.celsius,
-              temperatureUnitFor(shop),
-            ),
-          })}
-        </p>
+      {exposureSuit ? (
+        <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
       ) : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div>

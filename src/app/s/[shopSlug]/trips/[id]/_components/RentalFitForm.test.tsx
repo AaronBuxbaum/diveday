@@ -57,6 +57,7 @@ describe("RentalFitForm defaults", () => {
         action={mockAction}
         rentalFit={null}
         rentalItems={["bcd", "mask_fins", "gopro"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -78,6 +79,7 @@ describe("RentalFitForm defaults", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd", "mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -92,6 +94,50 @@ describe("RentalFitForm defaults", () => {
   });
 });
 
+describe("RentalFitForm nitrox gate", () => {
+  it("drops the nitrox box on a course taught on air", () => {
+    // The same two gates the booking page applies (`nitroxAvailableOn`), so a
+    // diver cannot be offered enriched air here after being refused it at
+    // checkout — or the other way round.
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "nitrox"]}
+        course={{ nitroxCompatible: false }}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /nitrox/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps it on a course that runs on nitrox at a shop that fills it", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "nitrox"]}
+        course={{ nitroxCompatible: true }}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeInTheDocument();
+  });
+});
+
 describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   it("renders 'Bringing own gear' by default if no rentals selected", () => {
     renderDiver(
@@ -99,6 +145,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd", "mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -119,6 +166,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={fitWithRentals}
         rentalItems={["bcd", "mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -139,6 +187,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={confirmedFit}
         rentalItems={["bcd"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -158,6 +207,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -194,6 +244,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={wetsuitFit}
         rentalItems={["wetsuit"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -222,6 +273,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={finsFit}
         rentalItems={["mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -242,6 +294,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         action={mockAction}
         rentalFit={mixedFit}
         rentalItems={["bcd", "mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -270,6 +323,7 @@ describe("RentalFitForm currency (task 35)", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd", "mask_fins"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -291,6 +345,7 @@ describe("RentalFitForm currency (task 35)", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -311,6 +366,7 @@ describe("RentalFitForm currency (task 35)", () => {
         action={mockAction}
         rentalFit={emptyFit}
         rentalItems={["bcd"]}
+        course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}

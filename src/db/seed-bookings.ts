@@ -59,7 +59,7 @@ export async function seedBookings(
     ["Two-Tank Reef — Benwood & Elbow", [10, 11, 12]],
     ["Afternoon Two-Tank — French Reef", [13, 14, 15]],
     ["Nitrox Diver — classroom & two dives", [16, 17]],
-    ["Night Diver — three evenings", [13]],
+    ["Night Diver — two evenings", [13]],
     ["Deep Diver — Spiegel Grove & the wall", [17]],
   ];
   const bookingRows = [
@@ -180,7 +180,7 @@ export async function seedBookings(
       amountCents: 19_500,
     },
     {
-      booking: bookingByTripTitle("Night Diver — three evenings", 13),
+      booking: bookingByTripTitle("Night Diver — two evenings", 13),
       status: "paid",
       amountCents: 9_500,
     },

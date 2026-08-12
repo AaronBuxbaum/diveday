@@ -15,19 +15,34 @@ export type NewCourse = {
   priceCents?: number | null;
   eLearningPriceCents?: number | null;
   minimumCertificationLevel?: CertificationLevel | null;
+  /** Whether a session of this course may run on enriched air — see the column's own note. */
+  nitroxCompatible?: boolean;
 } & Partial<CourseContent>;
 
 /**
  * Title, agency, the cert gate, and the minimum age come from the agency's
- * catalog; a shop owns only its two prices, which it sets on the course page.
+ * catalog; what a shop owns is what it decides for itself — its two prices,
+ * and whether it will run this course on enriched air. Everything here is a
+ * shop's own answer, which is what separates this patch from
+ * {@link CourseContentPatch}'s prose.
  */
-export type CoursePatch = Pick<NewCourse, "priceCents" | "eLearningPriceCents">;
+export type CoursePatch = Pick<
+  NewCourse,
+  "priceCents" | "eLearningPriceCents" | "nitroxCompatible"
+>;
 
 /**
  * The diver-facing page, edited on its own screen and saved in one shot. The
  * minimum age is the agency's and never edited here, so it is not in the patch.
+ *
+ * Neither is `isIntroCourse`. It rides along on {@link CourseContent} because
+ * that is the shape a published template carries, but it is not prose a shop
+ * writes: DiveDay ships the catalogue and knows which entries are tasters, and
+ * the flag picks the tighter in-water ratio a taster is held to
+ * (src/lib/course-ratios.ts). Out of the patch means the page editor cannot
+ * send it at all — a safety cap is not a side effect of saving marketing copy.
  */
-export type CourseContentPatch = Omit<CourseContent, "minimumAge">;
+export type CourseContentPatch = Omit<CourseContent, "minimumAge" | "isIntroCourse">;
 
 /**
  * Progression order: the sequence a shop teaches its catalog in, read off the
@@ -227,6 +242,11 @@ export async function updateCourse(
     .set({
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
+      // A checkbox that arrives absent means unticked, never "leave it alone" —
+      // the editor always renders the control, so an omitted key is a form that
+      // did not have it and the column keeps its own default rather than
+      // silently flipping.
+      ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
@@ -257,8 +277,9 @@ export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
 }
 
 /**
- * Saves the whole marketing page at once. Pricing, the cert gate, and the
- * agency's minimum age are untouched — those are not marketing prose.
+ * Saves the whole marketing page at once. Pricing, the cert gate, the agency's
+ * minimum age, and the taster flag are untouched — none of those are marketing
+ * prose, and the last one is a safety cap (see {@link CourseContentPatch}).
  */
 export async function updateCourseContent(
   db: AppDb,
@@ -281,7 +302,6 @@ export async function updateCourseContent(
       excludes: input.excludes,
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
-      isIntroCourse: input.isIntroCourse,
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

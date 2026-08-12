@@ -45,6 +45,10 @@ export type CommandPaletteCopy = {
   groupGoTo: string;
   /** Heading over the language rows — also what a staffer types to find them. */
   language: string;
+  /** Heading over the rows about this session rather than this shop's work. */
+  groupSession: string;
+  /** The same word the shop-name menu signs out under — one act, one label. */
+  signOut: string;
   /**
    * The same destination labels the nav renders (src/lib/staff-destinations.ts).
    * One record, so "Go to Board" here and "Board" in the header can never
@@ -71,6 +75,7 @@ export function CommandPalette({
   locale,
   languages,
   setLocaleAction,
+  signOutAction,
   copy,
 }: {
   shopSlug: string;
@@ -85,6 +90,8 @@ export function CommandPalette({
   /** Every language DiveDay carries, each named in itself. */
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
+  /** The same Server Action the shop-name menu's Sign out submits to. */
+  signOutAction: () => Promise<void>;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -262,8 +269,52 @@ export function CommandPalette({
         })),
       });
     }
+    // Sign out, last. The palette is where a staffer who is already typing
+    // looks for anything at all, and until now the one control that is about
+    // *ending this session* could only be reached by finding the shop's name
+    // and opening the menu behind it — which is exactly the disclosure a
+    // person handing the tablet on is least likely to go hunting through.
+    //
+    // Filed with Language rather than under "Go to": neither is a page, both
+    // are about this reader on this device, and the sign-out act is the same
+    // one the shop-name menu performs — the same Server Action under the same
+    // word, never a second way to end a session. Matched on the heading too,
+    // so "session" finds it as readily as "sign out".
+    //
+    // Bottom of the list on purpose. The menu's Sign out is two taps
+    // (`InlineConfirm`) because it must be deliberate on a shared device; a
+    // palette row cannot borrow that shape without inventing a confirm step
+    // inside a combobox, so deliberateness comes from position instead — it is
+    // never the row an arrow key lands on first.
+    if (
+      q === "" ||
+      copy.groupSession.toLowerCase().includes(q) ||
+      copy.signOut.toLowerCase().includes(q)
+    ) {
+      out.push({
+        heading: copy.groupSession,
+        items: [
+          {
+            key: "session:sign-out",
+            label: copy.signOut,
+            run: () => startTransition(() => signOutAction()),
+          },
+        ],
+      });
+    }
     return out;
-  }, [results, query, boatBoardingHref, root, gates, copy, languages, locale, setLocaleAction]);
+  }, [
+    results,
+    query,
+    boatBoardingHref,
+    root,
+    gates,
+    copy,
+    languages,
+    locale,
+    setLocaleAction,
+    signOutAction,
+  ]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

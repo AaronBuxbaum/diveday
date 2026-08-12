@@ -11,9 +11,10 @@ import { signInAsOwner } from "./helpers";
  * never forks a URL: the shop's schedule keeps exactly one address in either
  * language.
  *
- * Each option is its own language's name for itself — "English", "español" —
+ * Each option is its own language's name for itself — "English", "Español" —
  * because the reader reaching for this control is by definition the one who
- * cannot read the label above it.
+ * cannot read the label above it. Sentence-cased on the control even though
+ * Spanish writes the language lowercase mid-sentence (src/i18n/language-labels.ts).
  */
 
 test("a diver switches a shop's public pages into Spanish, and it survives navigation", async ({
@@ -26,12 +27,12 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
   // not a fact they need a control to tell them.
   await expect(header.getByRole("button", { name: "English" })).toHaveCount(0);
 
-  await header.getByRole("button", { name: "español" }).click();
+  await header.getByRole("button", { name: "Español" }).click();
 
   // The words change; the address does not.
   await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
   await expect(page).toHaveURL("/s/blue-mantis");
-  await expect(header.getByRole("button", { name: "español" })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "Español" })).toHaveCount(0);
 
   // A cookie, not page state: a fresh load of a different public page is still
   // Spanish, which is the whole difference from a switcher that forgets.
@@ -53,7 +54,7 @@ test.describe("staff", () => {
     // Door one: behind the shop's name, filed with the other controls that are
     // about this person on this device rather than about the dive day.
     await page.locator("[data-identity-menu]").click();
-    await page.getByRole("button", { name: "español" }).click();
+    await page.getByRole("button", { name: "Español" }).click();
     await expect(
       page.getByRole("heading", { name: "Cómo terminaron los barcos de hoy" }),
     ).toBeVisible();
@@ -63,7 +64,7 @@ test.describe("staff", () => {
     // force — a row that changes nothing is not a command.
     await page.getByRole("button", { name: "Buscar" }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("option", { name: "español" })).toHaveCount(0);
+    await expect(dialog.getByRole("option", { name: "Español" })).toHaveCount(0);
     await dialog.getByRole("option", { name: "English" }).click();
 
     await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();

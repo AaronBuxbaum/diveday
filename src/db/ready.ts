@@ -99,7 +99,17 @@ export type ReadyPageData = {
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
   };
-  trip: { id: string; plannedDives: number };
+  trip: {
+    id: string;
+    plannedDives: number;
+    /**
+     * Only what the nitrox gate needs, never the whole catalog row: whether a
+     * session of this course may run on enriched air (`nitroxAvailableOn`,
+     * src/lib/rentals.ts). Null on an ordinary charter, which the gate reads
+     * as "the shop's answer is the whole answer".
+     */
+    course: { nitroxCompatible: boolean } | null;
+  };
   person: {
     id: string;
     email: string | null;
@@ -309,7 +319,11 @@ export async function getReadyPageData(
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
     },
-    trip: { id: row.tripId, plannedDives: trip.plannedDives },
+    trip: {
+      id: row.tripId,
+      plannedDives: trip.plannedDives,
+      course: trip.course ? { nitroxCompatible: trip.course.nitroxCompatible } : null,
+    },
     person: {
       id: row.personId,
       email: row.personEmail,

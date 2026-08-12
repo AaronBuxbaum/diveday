@@ -334,6 +334,24 @@ export default async function EditCoursePage({
                 />
               </Field>
             </FieldGrid>
+            {/* Filed with how the course *runs* rather than with who may take
+                it: this answers "do we teach this one on enriched air", which
+                is the shop's own call about its own gas, not an agency
+                admission rule like the two facts in the next box. Unticked, no
+                session of this course offers the nitrox box at all — on the
+                booking page or on the pre-trip form — however much nitrox the
+                shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
+            <label className="mt-5 flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="nitroxCompatible"
+                value="true"
+                defaultChecked={course.nitroxCompatible}
+                className="size-4"
+              />
+              {t("courses.edit.nitroxCompatibleLabel")}
+            </label>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.nitroxCompatibleHint")}</p>
           </fieldset>
 
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
@@ -346,17 +364,18 @@ export default async function EditCoursePage({
                 ),
               })}
             </p>
+            {/* No "this is a taster session" tick box. Which courses are
+                tasters is not something a shop tells DiveDay — DiveDay ships
+                the catalogue and already knows (`isIntroCourse` on the
+                published templates, src/db/course-templates.ts): Discover
+                Scuba and Try Scuba are, and an Advanced Open Water is not.
+                Worse, it was a safety control wearing a checkbox: the flag
+                picks the tighter 2:1 in-water ratio (src/lib/course-ratios.ts,
+                HD-6), so the box existed only to let someone quietly turn that
+                cap off on a course full of people who have never breathed
+                underwater. The column stays; the way to set it is to be one of
+                those courses. */}
             <FieldGrid columns={1} className="mt-4 gap-y-5">
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="isIntroCourse"
-                  value="true"
-                  defaultChecked={course.isIntroCourse}
-                  className="size-4"
-                />
-                {t("courses.edit.introCourseLabel")}
-              </label>
               <Field label={t("courses.edit.prerequisiteLabel")}>
                 <textarea
                   id="prerequisiteNote"

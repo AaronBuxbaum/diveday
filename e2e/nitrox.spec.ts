@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, openSettingsRow } from "./helpers";
+import { acceptAgeAttestation, e2eNow, openSettingsRow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -261,4 +261,35 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   // The request stuck (checkbox stays on) and the flag still explains what's needed.
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
   await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
+});
+
+test("a course taught on air offers no nitrox request, at the same shop that fills it", async ({
+  page,
+}) => {
+  // Two gates, not one (`nitroxAvailableOn`, src/lib/rentals.ts). The test
+  // above books an ordinary reef trip at this shop and is offered nitrox; the
+  // Open Water class is at the same shop, on the same catalog, and must not
+  // be — its students are being certified on air and none of them can hold the
+  // verified nitrox card a fill needs. Offering the box there advertises a
+  // fill the course cannot give.
+  // In through the course's own page rather than the schedule: that is the
+  // route a diver enrolling in a course actually takes, and the session sits
+  // far enough out that the schedule's first page need not carry it.
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name").fill("Owen Reid");
+  await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
+  // The course carries the agency's minimum age, so this booking form asks
+  // for the attestation an ordinary charter's does not.
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Owen/ })).toBeVisible();
+
+  // The rest of the rental form is untouched — this closes one box, not the
+  // picker — so the assertion is about nitrox alone, not about a form that
+  // failed to render.
+  await expect(page.getByRole("button", { name: "Save rental fit" })).toBeVisible();
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
 });

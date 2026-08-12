@@ -94,7 +94,7 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
           shopId,
           agency: "padi",
           title: "Deep Diver",
-          description: "Four dives that extend your range to 40 meters.",
+          description: "Four dives that extend your range to 40 meters (130 feet).",
           priceCents: 42500,
           eLearningPriceCents: 17500,
           minimumCertificationLevel: "advanced_open_water" as const,
@@ -164,7 +164,21 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
         },
         // The public page lives at /courses/<slug>; the catalog is the only place
         // slugs are minted, so the seed mints them the same way an import does.
-      ].map((course) => ({ ...course, slug: courseSlug(course.title) })),
+      ].map((course) => ({
+        ...course,
+        slug: courseSlug(course.title),
+        // The same rule the `nitrox_compatible` migration backfills existing
+        // shops with, so a freshly seeded catalog and a migrated one answer
+        // identically: a taster, or any course open to uncertified divers,
+        // runs on air. Nobody enrolled on those holds the verified nitrox card
+        // a fill needs, so offering the box would advertise a fill the course
+        // cannot give. Everything above that rung keeps the column's `true`
+        // default, and a shop turns one off on the course page.
+        nitroxCompatible: !(
+          ("isIntroCourse" in course && course.isIntroCourse) ||
+          course.minimumCertificationLevel === null
+        ),
+      })),
     )
     .returning();
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");

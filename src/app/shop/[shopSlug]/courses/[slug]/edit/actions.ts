@@ -151,13 +151,14 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     excludes: parseLines(value.excludes),
     scheduleDays,
     faqs: parseFaqs(value.faqs),
-    isIntroCourse: formData.get("isIntroCourse") === "true",
   });
-  // Pricing is a separate concern from the marketing copy, but the editor saves
-  // both in one submit, so both land together.
+  // Pricing and the nitrox answer are the shop's own decisions rather than
+  // marketing copy, but the editor saves everything in one submit, so they land
+  // together with the page.
   await updateCourse(db, staff.user.shopId, course.id, {
     priceCents: centsFromAmount(value.price, currency),
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
+    nitroxCompatible: formData.get("nitroxCompatible") === "true",
   });
 
   // Once the content row is durably saved, any photo it no longer references

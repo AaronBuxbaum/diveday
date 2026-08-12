@@ -119,6 +119,12 @@ test("a booked diver's readiness page carries the packing list and the dive brie
 
   // What to put in the bag, and what each tank actually dives.
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+  // Including the suit. This page renders no conditions card — it is rental
+  // fit and paperwork — so if the packing list stays quiet, the page a diver
+  // reads the morning they sail says nothing about the water they are getting
+  // into. The booking page states it under the reading instead; here it has
+  // nowhere else to go (src/app/s/[shopSlug]/trips/[id]/_components/PackingSection.tsx).
+  await expect(page.getByText(/most divers are comfortable in a 3 mm/i)).toBeVisible();
   await expect(page.getByText("Dive briefings")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
   await expect(page.getByText("Molasses Reef").first()).toBeVisible();

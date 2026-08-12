@@ -535,6 +535,16 @@ export default async function TripDetailPage({
           day={meetingDays[0]}
           multiDay={meetingDays.length > 1}
           siteBottomTimes={siteBottomTimes}
+          // Exactly the condition under which the conditions card above renders
+          // its water-temperature tile — and with it the suit line — rather
+          // than an approximation of it, so a departure with a crew note but no
+          // temperature still gets the advice down here instead of neither
+          // section saying anything.
+          temperatureStatedAbove={
+            (crewPrediction
+              ? trip.waterTemperatureC
+              : (automatedForecast?.waterTemperatureC ?? null)) !== null
+          }
           locale={locale}
         />
         <DiveBriefingsSection briefings={diveBriefings} trip={trip} locale={locale} />

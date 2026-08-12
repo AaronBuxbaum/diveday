@@ -672,12 +672,20 @@ const rezdy: MigrationGuide = {
  * (FareHarbor, Rezdy) additionally carry a `coexist` block, because a channel is
  * something a shop can keep and run DiveDay alongside, not a records system to
  * leave — see CoexistFraming above.
+ *
+ * **Order is by how many shops are actually on the thing**, not by when the
+ * guide was written. FareHarbor leads: it is the incumbent a dive shop is most
+ * likely to already be running, and the switching hub's own first card is the
+ * spreadsheet — which is what everyone else is on. Those two answer the great
+ * majority of arrivals, so they are the first two cards on the page rather than
+ * the fourth and the first. The records-system guides keep their relative order
+ * below them.
  */
 export const MIGRATION_GUIDES: MigrationGuide[] = [
+  fareharbor,
   eve,
   diveshop360,
   smartwaiver,
-  fareharbor,
   rezdy,
 ];
 

@@ -183,17 +183,26 @@ export async function seedTrips(
         endsAt: at(13, 15, 0),
         capacity: 4,
       }),
+      // Two evenings, because that is what the Night Diver page sells: its
+      // day-by-day plan is "Evening 1 — dusk and dark" and "Evening 2 —
+      // navigation", and its at-a-glance line reads "2 evenings · 3 dives"
+      // (src/db/course-templates.ts). This session used to run 17:00 on the
+      // 15th to 21:30 on the *17th*, so the catalogue page and the session it
+      // links to disagreed about the length of the course by a whole evening.
+      // Three dives across two evenings — two on the first, one on the second
+      // — is the shape of the course, not one dive per day.
       ...courseSession("Night Diver", {
-        title: "Night Diver — three evenings",
-        description: "Dusk, dark, and navigation, over three consecutive evenings.",
-        startsAt: at(15, 17, 0),
-        endsAt: at(17, 21, 30),
+        title: "Night Diver — two evenings",
+        description: "Dusk, dark, and navigation, over two consecutive evenings.",
+        startsAt: at(15, 16, 0),
+        endsAt: at(16, 21, 0),
         capacity: 6,
         plannedDives: 3,
       }),
       ...courseSession("Deep Diver", {
         title: "Deep Diver — Spiegel Grove & the wall",
-        description: "Four dives building to 40 meters, with gas planning that keeps up.",
+        description:
+          "Four dives building to 40 meters (130 feet), with gas planning that keeps up.",
         startsAt: at(20, 8, 0),
         endsAt: at(21, 16, 0),
         capacity: 6,
@@ -202,14 +211,42 @@ export async function seedTrips(
     ])
     .returning();
 
+  /**
+   * When a multi-day departure actually meets.
+   *
+   * `trips.starts_at`/`ends_at` bound the whole run — first morning to last
+   * evening — and say nothing about the nights in between, so every departure
+   * that meets more than once needs a `trip_schedule_days` row per day or the
+   * page prints one continuous 57-hour outing. Anything absent here meets once,
+   * on its own window, which is every ordinary boat.
+   *
+   * Keyed by the session's own title rather than by course id: the Open Water
+   * class was the only entry when this was an `if`, and the two multi-day
+   * course sessions added since silently fell through it. Each set of windows
+   * matches the day-by-day plan on that course's published page
+   * (src/db/course-templates.ts) — a demo whose Night Diver page promises two
+   * evenings while the session it links to spans three is a bug a shop reports.
+   */
+  const meetingDays: Record<string, { startsAt: Date; endsAt: Date }[]> = {
+    "Open Water Diver — three-day course": [
+      { startsAt: at(9, 8), endsAt: at(9, 14) },
+      { startsAt: at(10, 8), endsAt: at(10, 16) },
+      { startsAt: at(11, 9), endsAt: at(11, 17) },
+    ],
+    "Night Diver — two evenings": [
+      { startsAt: at(15, 16, 0), endsAt: at(15, 21, 30) },
+      { startsAt: at(16, 17, 0), endsAt: at(16, 21, 0) },
+    ],
+    "Deep Diver — Spiegel Grove & the wall": [
+      { startsAt: at(20, 8, 0), endsAt: at(20, 15, 0) },
+      { startsAt: at(21, 8, 0), endsAt: at(21, 16, 0) },
+    ],
+  };
   await db.insert(tripScheduleDays).values(
     tripRows.flatMap((trip) => {
-      if (trip.courseId === openWaterCourse?.id) {
-        return [
-          { tripId: trip.id, dayNumber: 1, startsAt: at(9, 8), endsAt: at(9, 14) },
-          { tripId: trip.id, dayNumber: 2, startsAt: at(10, 8), endsAt: at(10, 16) },
-          { tripId: trip.id, dayNumber: 3, startsAt: at(11, 9), endsAt: at(11, 17) },
-        ];
+      const days = meetingDays[trip.title];
+      if (days) {
+        return days.map((day, index) => ({ tripId: trip.id, dayNumber: index + 1, ...day }));
       }
       return [{ tripId: trip.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }];
     }),

@@ -44,6 +44,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -65,6 +66,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -88,6 +90,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -105,6 +108,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -133,6 +137,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -163,6 +168,7 @@ describe("BookingGearFields", () => {
         index={1}
         showDiverLabel
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -179,6 +185,7 @@ describe("BookingGearFields", () => {
         index={2}
         showDiverLabel
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -191,6 +198,45 @@ describe("BookingGearFields", () => {
     expect(container.querySelector('input[name="nitrox-2"]')).not.toBeNull();
   });
 
+  it("offers no nitrox on a course taught on air, however much the shop fills", () => {
+    // Two gates, not one (`nitroxAvailableOn`): an Open Water class runs on
+    // air, so its sessions must not advertise a fill the course cannot give —
+    // and no student on one holds the verified card a fill needs anyway.
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={{ nitroxCompatible: false }}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+      />,
+    );
+
+    askForGear();
+    // The rest of the kit is untouched — this closes one box, not the picker.
+    expect(screen.getByLabelText(/^BCD/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Reserve nitrox-compatible tanks/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the nitrox box on a course that does run on it", () => {
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={{ nitroxCompatible: true }}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+      />,
+    );
+
+    askForGear();
+    expect(screen.getByLabelText(/Reserve nitrox-compatible tanks/)).toBeInTheDocument();
+  });
+
   it("quotes the set price once the diver picks the whole core kit, and adds nitrox on top", () => {
     const onSubtotalChange = vi.fn();
     renderDiver(
@@ -198,6 +244,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -230,6 +277,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
+        course={null}
         pricing={{ setCents: null, perItemCents: {}, nitroxCents: null }}
         plannedDives={2}
         currency="usd"

@@ -180,14 +180,13 @@ export default async function CoursePage({
       />
       <CourseFaqs faqs={course.faqs} t={t} />
       {shop.contactEmail ? (
-        // The subject/body preview recomposes on every keystroke, so it needs
-        // its own translator on the client — DiverIntlProvider is what makes
+        // The composer's own refusals ("tell us where you are up to") are
+        // chosen on the client as a diver types, so it needs its own
+        // translator there — DiverIntlProvider is what makes
         // useTranslations() inside CourseInquiry work rather than throw.
         <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
           <CourseInquiry
             submitInquiry={submitCourseInquiryAction.bind(null, shopSlug, slug)}
-            courseTitle={course.title}
-            shopName={shop.name}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
             copy={{
@@ -211,10 +210,6 @@ export default async function CoursePage({
               chooseOne: t("inquiry.chooseOne"),
               anythingElse: t("inquiry.anythingElse"),
               messagePlaceholder: t("inquiry.messagePlaceholder"),
-              openInEmailApp: t("inquiry.openInEmailApp"),
-              copyMessage: t("inquiry.copy"),
-              copied: t("inquiry.copied"),
-              copyFailed: t("inquiry.copyFailed"),
               orWriteTo: t("inquiry.orWriteTo"),
               callLabel: t("inquiry.callLabel"),
               send: t("inquiry.send"),

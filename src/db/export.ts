@@ -1972,6 +1972,7 @@ export async function loadShopExportBundleInput(
             "gallery_photos",
             "is_active",
             "is_intro_course",
+            "nitrox_compatible",
             "created_at",
           ],
           rows: courseRows.map((row) => [
@@ -1998,6 +1999,7 @@ export async function loadShopExportBundleInput(
             JSON.stringify(row.galleryPhotos),
             row.isActive,
             row.isIntroCourse,
+            row.nitroxCompatible,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["courses.csv"],

@@ -336,6 +336,7 @@ export function BookSpotSection({
                 index={index}
                 showDiverLabel={partySize > 1}
                 rentalItems={rentalItems}
+                course={trip.course}
                 pricing={rentalPricing}
                 plannedDives={trip.plannedDives}
                 currency={currency}

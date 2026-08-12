@@ -900,7 +900,20 @@ new domain concept, define it here in the same PR.
   computer (default-on); the GoPro and nitrox are opt-in — most shops don't fill nitrox, so a shop
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
-  does not rewrite a fit a diver already recorded.
+  does not rewrite a fit a diver already recorded. The catalog is only **half** the nitrox
+  answer — see **Nitrox-compatible course** below.
+- **Nitrox-compatible course** — whether a shop will run a given course on enriched air
+  (`courses.nitrox_compatible`, set on the course editor's *At a glance* box). It is the second of
+  two gates on the enriched-air request: `nitroxAvailableOn` (`src/lib/rentals.ts`) offers the box
+  only when the shop fills nitrox **and** this departure's course permits it, and every surface
+  reads that one predicate — the booking page's gear picker, the pre-trip *ready* form, and the
+  server actions behind both, so a hand-posted `nitrox=on` cannot slip past a hidden checkbox. A
+  trip with **no course** is an ordinary charter and takes the shop's answer alone. Defaults true;
+  the migration that added it backfilled **false** for a taster and for any course open to
+  uncertified divers, because nobody enrolled on those holds the verified card a fill needs
+  (**Nitrox/EANx** above) and their training dives are conducted on air — the box could only ever
+  advertise a fill the course cannot give. It changes what is *offered*, never what a diver already
+  requested, and it is not a fill authorization: a verified card still gates that.
 - **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit of five hard-goods pieces (usually
   cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —

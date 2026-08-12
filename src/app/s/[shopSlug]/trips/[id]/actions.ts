@@ -40,10 +40,10 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import {
   hasAnyRentalPricing,
+  nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
-  shopOffersNitrox,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
@@ -263,7 +263,11 @@ export async function bookSpot(
   );
   const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
   const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
-  const nitroxOfferedAtCheckout = shopOffersNitrox(shopNow.rentalItems);
+  // Both gates, re-derived server-side: the shop fills nitrox, and this
+  // departure's course runs on it. The checkbox is absent from the form in
+  // either case (`BookingGearFields`), so a `nitrox-N=on` arriving anyway is
+  // hand-crafted and must not become a request the course cannot honour.
+  const nitroxOfferedAtCheckout = nitroxAvailableOn(shopNow.rentalItems, tripForGear?.course);
   const gearSelections: Array<{ rentedKinds: RentableItemKind[]; wantsNitrox: boolean }> = [];
   const plannedDives = tripForGear?.plannedDives ?? 2;
   if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
@@ -742,14 +746,18 @@ export async function saveRentalFitRequest(
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,
   });
-  // The nitrox checkbox is only in this form when the shop currently offers
-  // nitrox (RentalFitForm.tsx) — when it isn't, the field is simply absent
-  // from every submission, whatever the diver's actual request. Only write it
-  // when the checkbox could have been there at all, so an unrelated save (a
-  // note, a size) never silently clears a request recorded while the shop
-  // still offered it.
-  const shop = await getShopById(ctx.db, ctx.capability.shopId);
-  if (shop && shopOffersNitrox(shop.rentalItems)) {
+  // The nitrox checkbox is only in this form when the shop currently fills
+  // nitrox *and* this departure's course runs on it (RentalFitForm.tsx) — when
+  // it isn't, the field is simply absent from every submission, whatever the
+  // diver's actual request. Re-derived here rather than trusted from the post,
+  // and only written when the box could have been there at all, so an
+  // unrelated save (a note, a size) never silently clears a request recorded
+  // while the shop still offered it.
+  const [shop, tripForFit] = await Promise.all([
+    getShopById(ctx.db, ctx.capability.shopId),
+    getTripWithBooked(ctx.db, ctx.capability.shopId, tripId),
+  ]);
+  if (shop && nitroxAvailableOn(shop.rentalItems, tripForFit?.course)) {
     await setBookingNitrox(ctx.db, {
       shopId: ctx.capability.shopId,
       bookingId: ctx.capability.bookingId,

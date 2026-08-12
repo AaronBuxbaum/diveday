@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ComponentProps } from "react";
+import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type BuilderCopy,
@@ -537,6 +537,22 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
 
     rerender(<ScheduleBuilder {...props} openAdd="quick" />);
+    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
+  });
+
+  it("stays open through a StrictMode double-invoke, so a cross-route link lands on the form", () => {
+    // Every door into this form from *another* route — the catalogue's
+    // "schedule a session of this course", the `/trips/new` 308, a pasted
+    // `?add=full` — arrives as a fresh mount carrying `openAdd`, and React
+    // runs every effect twice on mount in development. The disarm-on-revisit
+    // effect used to close unconditionally on its second pass, so the panel
+    // opened and shut again before anyone saw it and the whole catalogue
+    // button read as dead. StrictMode here reproduces that second pass.
+    render(
+      <StrictMode>
+        <ScheduleBuilder {...props} openAdd="quick" />
+      </StrictMode>,
+    );
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
   });
 
