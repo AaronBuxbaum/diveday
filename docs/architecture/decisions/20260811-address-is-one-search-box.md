@@ -94,11 +94,21 @@ be forgotten, never usefully reconsidered.
 ## Consequences
 
 - **A deployment with no `PLACES_AWS_*` credentials can no longer set a shop address from the UI.**
-  That is the ordinary local and self-hosted case, and it is a real loss for self-hosters, who
+  That is the ordinary local and self-hosted case, and it was a real loss for self-hosters, who
   previously had five plain text boxes. The address remains settable by import (`src/db/import.ts`)
-  and by seed. Recorded as a follow-up (`FU-20260811-self-hosted-address-entry`) rather than solved
-  here, because the alternatives — a second hand-entry path, or a no-credential geocoder — are both
-  larger than this change and neither is obviously right.
+  and by seed. This was left open as a follow-up here, on the reasoning that the alternatives — a
+  second hand-entry path, or a no-credential geocoder — were both larger than this change and
+  neither obviously right.
+
+  **Decided 2026-08-12: nothing is built for the unconfigured case.** Every deployment DiveDay ships
+  carries the provider, so a card that cannot set an address is a misconfiguration to fix rather than
+  a deployment shape to design for. The read-only card and its `settings.main.address.notConfigured`
+  sentence stay exactly as they are — they are what a broken deployment looks like, and a *second*
+  address-entry path would be a worse outcome than the first: the free-text boxes are what published
+  a shop's invented spelling of its own town, and the one nobody at DiveDay runs is the one that
+  would rot. `pnpm check:env` continues to skip `PLACES_*` deliberately, so local `pnpm dev` and CI
+  still run with no AWS account; they simply render the address read-only, which is correct for a
+  box that has no geocoder behind it.
 - **`Suggest` is priced like `Autocomplete`** (per request, plus the `Core` attributes), so the
   billing shape, the debounce, the three-character floor and `RATE_LIMITS.addressLookup` all carry
   over unchanged.

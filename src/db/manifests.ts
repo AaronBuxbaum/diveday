@@ -171,6 +171,13 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     const crew = byId.get(person.id) ?? {
       id: person.id,
       fullName: person.fullName,
+      // Straight off the person record — crew are `people` rows, so the columns
+      // a diver's contact lives in were already here and already populated for
+      // anyone who has ever been a diver at this shop. Nothing was stored; it
+      // was simply never read into the crew payload (dive-domain review
+      // 20260810).
+      emergencyContactName: person.emergencyContactName,
+      emergencyContactPhone: person.emergencyContactPhone,
       roles: [],
       shopRoles: [],
     };

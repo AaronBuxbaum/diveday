@@ -8,6 +8,7 @@ import {
   isRollCallAccountedFor,
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
+  type ManifestCrewMember,
   type ManifestDiverInput,
   maxRecordedDiveNumber,
   type RollCallRecord,
@@ -30,6 +31,20 @@ const notBoardedAt = (note: string | null = null): RollCallRecord => ({
   note,
 });
 
+/**
+ * A crew member with no emergency contact on file — the ordinary state, since
+ * nobody is asked for one at hire. Tests that care about the contact pass it
+ * explicitly; everything else says nothing and gets the common case.
+ */
+const crewMember = (
+  member: Omit<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone"> &
+    Partial<Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone">>,
+): ManifestCrewMember => ({
+  emergencyContactName: null,
+  emergencyContactPhone: null,
+  ...member,
+});
+
 const trip = {
   id: "trip-1",
   title: "Two-Tank Reef",
@@ -42,7 +57,7 @@ describe("buildTripManifest", () => {
   it("retains every supplied booking and fails closed when its readiness lookup is unavailable", () => {
     const manifest = buildTripManifest({
       trip,
-      crew: [{ id: "crew-dana", fullName: "Dana Reyes", roles: ["captain"] }],
+      crew: [crewMember({ id: "crew-dana", fullName: "Dana Reyes", roles: ["captain"] })],
       divers: [
         {
           bookingId: "booking-ready",
@@ -116,7 +131,14 @@ describe("buildTripManifest", () => {
         // The captain has her own result too: the crew half of the checkpoint
         // needs every named crew member accounted for, so this fixture closes
         // it and the assertion below stays about the *divers*.
-        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() }],
+        crew: [
+          crewMember({
+            id: "crew-1",
+            fullName: "Dana Reyes",
+            roles: ["captain"],
+            rollCall: boardedAt(),
+          }),
+        ],
         divers: [
           {
             bookingId: "booking-aboard",
@@ -712,7 +734,12 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     });
     expect(
       withCrew([
-        { id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() },
+        crewMember({
+          id: "crew-1",
+          fullName: "Dana Reyes",
+          roles: ["captain"],
+          rollCall: boardedAt(),
+        }),
       ]).completeness.complete,
     ).toBe(true);
   });
@@ -727,8 +754,18 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
         trip,
         checkpoint,
         crew: [
-          { id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() },
-          { id: "crew-2", fullName: "Ana Vidal", roles: ["divemaster"], rollCall: crewRollCall },
+          crewMember({
+            id: "crew-1",
+            fullName: "Dana Reyes",
+            roles: ["captain"],
+            rollCall: boardedAt(),
+          }),
+          crewMember({
+            id: "crew-2",
+            fullName: "Ana Vidal",
+            roles: ["divemaster"],
+            rollCall: crewRollCall,
+          }),
         ],
         divers: [
           {
@@ -866,13 +903,13 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       trip,
       checkpoint: "after_dive_1",
       crew: [
-        {
+        crewMember({
           id: "person-keiko",
           fullName: "Keiko Tanaka",
           roles: ["divemaster"],
           rollCall: boardedAt(),
           buddyTeams: [team("team-1", [otherDiver("booking-tom", "Tom Okafor")])],
-        },
+        }),
       ],
       divers: [
         diver("booking-tom", "Tom Okafor", {

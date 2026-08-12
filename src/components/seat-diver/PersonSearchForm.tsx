@@ -16,8 +16,8 @@ import { QueryForm } from "@/components/ui/QueryForm";
  *
  * The reload is a router navigation (`QueryForm`), not a native GET submit: a
  * staffer mid-list who searched used to be thrown back to the top of the page
- * by the document tearing down. The URL, the server render and the no-JS
- * fallback are all unchanged.
+ * by the document tearing down. The URL, the server render and the
+ * pre-hydration native submit are all unchanged.
  *
  * Words arrive as props: this is shared UI under `src/components`, so it never
  * reads the staff bundle itself (AGENTS.md — staff copy is resolved

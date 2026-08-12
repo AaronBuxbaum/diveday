@@ -278,19 +278,22 @@ export type TodayAction = {
   href: string;
   /**
    * Present when the tap issues and sends a waiver in place rather than
-   * navigating. `href` stays as the no-JS fallback to the roster row.
+   * navigating. `href` stays the row's real destination — a pre-hydration tap,
+   * a middle-click and an open-in-new-tab all still land on the roster row.
    */
   waiver?: { bookingIds: string[] };
   /**
    * Present when the tap re-sends a failed booking confirmation in place. `href`
-   * stays as the no-JS fallback to the trip.
+   * stays the row's real destination (pre-hydration tap, middle-click,
+   * open-in-new-tab), the trip.
    */
   resend?: { bookingId: string };
   /**
    * Present on a freed-seat row: the front-of-line wait-list entry plus the
    * context the one-tap invite needs for its composer fallback, so staff can
    * offer the seat straight from the queue instead of navigating to the trip.
-   * `href` stays as the no-JS fallback to the wait-list section.
+   * `href` stays the row's real destination (pre-hydration tap, middle-click,
+   * open-in-new-tab), the wait-list section.
    */
   invite?: {
     tripId: string;

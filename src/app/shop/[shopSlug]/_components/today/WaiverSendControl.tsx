@@ -143,8 +143,8 @@ function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSen
  * The one-tap waiver send used on Today and Blockers. It posts the shared server
  * action in place and renders the outcome inline — "Waiver sent to Diego", or a
  * copyable private link when there is no email — so the label never lies about
- * what the tap did and staff never leave the queue. Degrades to a plain form
- * post (the send still happens) without JavaScript.
+ * what the tap did and staff never leave the queue. Falls back to a plain form
+ * post (the send still happens) before hydration.
  */
 export function WaiverSendControl({
   shopSlug,

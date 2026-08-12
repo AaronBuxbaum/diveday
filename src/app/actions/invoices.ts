@@ -13,8 +13,8 @@ import type { InvoiceResendState } from "./invoice-resend-types";
  * resends an existing open invoice — never creates a new one, so a shop that
  * paused or disconnected Stripe can't be tricked into re-invoicing through a
  * stale form. Shop and order ownership are re-checked server-side on every
- * call; the caller only supplies an order id. Degrades to a plain form post
- * without JavaScript.
+ * call; the caller only supplies an order id. Falls back to a plain form post
+ * before hydration.
  */
 export async function resendInvoiceAction(
   shopSlug: string,

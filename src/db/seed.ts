@@ -211,8 +211,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         shopId: shop.id,
         fullName: s.fullName,
         email: canonicalStaffEmail(s.local),
-        emergencyContactName: "On file",
-        emergencyContactPhone: "+1-305-555-0100",
+        emergencyContactName: s.emergencyContact?.[0] ?? null,
+        emergencyContactPhone: s.emergencyContact?.[1] ?? null,
       })),
     )
     .returning();
@@ -391,8 +391,8 @@ export async function createDemoShop(
         shopId: shop.id,
         fullName: s.fullName,
         email: identity.emailFor(s.local),
-        emergencyContactName: "On file",
-        emergencyContactPhone: "+1-305-555-0100",
+        emergencyContactName: s.emergencyContact?.[0] ?? null,
+        emergencyContactPhone: s.emergencyContact?.[1] ?? null,
       })),
     )
     .returning();

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
@@ -25,6 +26,7 @@ import {
   resendInviteAction,
   restoreStaffAction,
   saveAllStaffRolesAction,
+  saveStaffEmergencyContactAction,
   setStaffStatusAction,
 } from "./actions";
 
@@ -50,15 +52,18 @@ const INVITE_EMAIL_NOTICES = new Set([
 
 /** The rest of what the invite form itself can say, refusals and confirmation alike. */
 const INVITE_FORM_NOTICES = new Set(["invited", "invite_invalid"]);
+/** Outcomes of one staff card's emergency-contact form, shown on that card. */
+const CONTACT_FORM_NOTICES = new Set(["contact_saved", "half_filled"]);
+
+/** One resolved `?notice=`: the tone it carries and the words for it. */
+type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
 
 /**
  * Built inside the request, not at module scope, so the notice text tracks
  * the negotiated locale rather than freezing to whichever locale first
  * imported this file.
  */
-function noticeMessages(
-  t: StaffTranslator,
-): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
+function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
   return {
     invited: { tone: "success", text: t("settings.team.notice.invited") },
     invite_resent: { tone: "success", text: t("settings.team.notice.inviteResent") },
@@ -79,6 +84,8 @@ function noticeMessages(
       tone: "danger",
       text: t("settings.team.notice.inviteEmailReserved"),
     },
+    contact_saved: { tone: "success", text: t("settings.team.notice.contactSaved") },
+    half_filled: { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
     last_owner: { tone: "danger", text: t("settings.team.notice.lastOwner") },
     not_found: { tone: "danger", text: t("settings.team.notice.notFound") },
     not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
@@ -150,11 +157,20 @@ function RoleCheckboxes({
   );
 }
 
-function StaffRow({ member, t }: { member: StaffMember; t: StaffTranslator }) {
+function StaffRow({
+  member,
+  contactStatus,
+  t,
+}: {
+  member: StaffMember;
+  /** This card's own emergency-contact outcome, or nothing. */
+  contactStatus: NoticeMessage | undefined;
+  t: StaffTranslator;
+}) {
   const status = statusBadge(t)[member.accountStatus];
   const isDisabled = member.accountStatus === "disabled";
   return (
-    <li className="rounded-lg border border-border bg-surface p-4">
+    <li id={`staff-${member.personId}`} className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="font-medium">{member.fullName}</p>
@@ -171,6 +187,58 @@ function StaffRow({ member, t }: { member: StaffMember; t: StaffTranslator }) {
           t={t}
         />
       </div>
+
+      {/* Who to call for this person, and the one place a shop can say so.
+          Behind a disclosure because it is the rare edit — a contact is typed
+          once and then read off a printed manifest for years (principle 8) —
+          and because a roster of eleven people with four open boxes each is a
+          form, not a team page.
+
+          It prints on the boat manifest, which is the whole reason it exists:
+          the sheet a coastguard reads answered "who do we call?" for every
+          paying diver and for neither of the two staff most reliably in the
+          water (dive-domain review 20260810). */}
+      <details className="group/contact mt-4">
+        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+          <DisclosureCaret className="group-open/contact:rotate-90" />
+          <span className="hover:underline">
+            {member.emergencyContactName && member.emergencyContactPhone
+              ? t("settings.team.emergencyContact.summaryOnFile", {
+                  name: member.emergencyContactName,
+                })
+              : t("settings.team.emergencyContact.summaryEmpty")}
+          </span>
+        </summary>
+        <FieldGrid as="form" action={saveStaffEmergencyContactAction} columns={2} className="mt-3">
+          <input type="hidden" name="personId" value={member.personId} />
+          <Field label={t("settings.team.emergencyContact.nameLabel")}>
+            <input
+              name="emergencyContactName"
+              defaultValue={member.emergencyContactName ?? ""}
+              autoComplete="off"
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("settings.team.emergencyContact.phoneLabel")}>
+            <input
+              name="emergencyContactPhone"
+              type="tel"
+              defaultValue={member.emergencyContactPhone ?? ""}
+              autoComplete="off"
+              className={controlClass}
+            />
+          </Field>
+          <FieldActions>
+            <FormStatus tone={contactStatus?.tone}>{contactStatus?.text}</FormStatus>
+            <SubmitButton
+              pendingLabel={t("settings.team.emergencyContact.saving")}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("settings.team.emergencyContact.save")}
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </details>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -261,11 +329,13 @@ export default async function TeamSettingsPage({
     undoUserAccountId?: string;
     undoRoles?: string;
     undoName?: string;
+    contactFor?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName } = await searchParams;
+  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName, contactFor } =
+    await searchParams;
   const db = await getDb();
 
   const canManage = await canPersonManageStaffAccounts(
@@ -291,12 +361,24 @@ export default async function TeamSettingsPage({
     notice && INVITE_EMAIL_NOTICES.has(notice) ? (banner?.text ?? undefined) : undefined;
   const inviteStatus =
     !inviteEmailError && notice && INVITE_FORM_NOTICES.has(notice) ? banner : undefined;
-  const pageBanner = inviteEmailError || inviteStatus ? undefined : banner;
+  // An emergency contact's outcome belongs on the card whose contact it is —
+  // `contactFor` names that card, so a "name without a number" refusal is beside
+  // the two boxes that caused it and not above a roster of eleven people.
+  const contactStatus =
+    notice && CONTACT_FORM_NOTICES.has(notice) && contactFor ? banner : undefined;
+  const pageBanner = inviteEmailError || inviteStatus || contactStatus ? undefined : banner;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams
-        params={["notice", "undoPersonId", "undoUserAccountId", "undoRoles", "undoName"]}
+        params={[
+          "notice",
+          "undoPersonId",
+          "undoUserAccountId",
+          "undoRoles",
+          "undoName",
+          "contactFor",
+        ]}
       />
       <ShopPageHeader
         eyebrow={t("settings.team.eyebrow")}
@@ -380,7 +462,12 @@ export default async function TeamSettingsPage({
           <>
             <ul className="mt-3 flex flex-col gap-3">
               {staff.map((member) => (
-                <StaffRow key={member.personId} member={member} t={t} />
+                <StaffRow
+                  key={member.personId}
+                  member={member}
+                  contactStatus={contactFor === member.personId ? contactStatus : undefined}
+                  t={t}
+                />
               ))}
             </ul>
             {/* Every card's role checkboxes are associated to this form via the

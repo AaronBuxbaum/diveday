@@ -6,7 +6,22 @@ import {
   type IncidentExportInput,
   incidentExportContentHash,
 } from "./incident-export";
-import { buildTripManifest, rollCallCheckpoints, type TripManifest } from "./manifests";
+import {
+  buildTripManifest,
+  type ManifestCrewMember,
+  rollCallCheckpoints,
+  type TripManifest,
+} from "./manifests";
+
+/** A manifest crew member with no emergency contact on file — the ordinary state. */
+const manifestCrew = (
+  member: Omit<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone"> &
+    Partial<Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone">>,
+): ManifestCrewMember => ({
+  emergencyContactName: null,
+  emergencyContactPhone: null,
+  ...member,
+});
 
 const TRIP = {
   id: "trip-1",
@@ -89,7 +104,7 @@ function baseInput(overrides: Partial<IncidentExportInput> = {}): IncidentExport
     shop: { name: "Blue Mantis", slug: "blue-mantis", timezone: "America/New_York" },
     manifests: manifestsFor(
       [diver("b1", "Ana Diaz", boarded), diver("b2", "Ben Cho")],
-      [{ id: "p9", fullName: "Sol Marin", roles: ["captain"], rollCall: boarded }],
+      [manifestCrew({ id: "p9", fullName: "Sol Marin", roles: ["captain"], rollCall: boarded })],
     ),
     diverEvidence: [
       {
@@ -515,7 +530,7 @@ describe("buildIncidentExport", () => {
         teamedInput({
           manifests: manifestsFor(
             [diver("b1", "Ana Diaz"), diver("b2", "Ben Cho")],
-            [{ id: "p9", fullName: "Keiko Tanaka", roles: ["divemaster"] }],
+            [manifestCrew({ id: "p9", fullName: "Keiko Tanaka", roles: ["divemaster"] })],
           ),
           buddyTeams: [
             teamOf("t1", [diverMember("b1", "Ana Diaz"), crewMember("p9", "Keiko Tanaka")]),

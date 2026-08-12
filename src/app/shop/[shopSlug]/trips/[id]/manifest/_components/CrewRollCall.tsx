@@ -4,6 +4,7 @@ import type {
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -21,6 +22,56 @@ import {
   rollCallRecordedTone,
   rollCallRowState,
 } from "./RollCallControls";
+
+/**
+ * Who to call for one crew member — the same fact, in the same words, as a
+ * diver's `DiverFacts` emergency-contact line, and rendered by the same rule:
+ * behind the row's disclosure on screen, unconditionally on paper.
+ *
+ * Twice per row, deliberately, exactly as a diver's is: a closed `<details>`
+ * contributes nothing to print, and the printed manifest is the document a
+ * coastguard reads, so it keeps every fact without asking paper to disclose.
+ *
+ * `labelled` is what differs between the two placements. On screen the
+ * disclosure's own summary is already the words "Emergency contact", so
+ * repeating them inside the panel is the same label twice a line apart; on
+ * paper there is no summary, so the label has to be there.
+ */
+function CrewFacts({
+  member,
+  labelled,
+  t,
+}: {
+  member: TripManifest["crew"][number];
+  labelled: boolean;
+  t: StaffTranslator;
+}) {
+  const { emergencyContactName: name, emergencyContactPhone: phone } = member;
+  return (
+    <p className="text-base">
+      {labelled ? (
+        <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
+      ) : null}
+      <span className={`text-muted${labelled ? " mt-0.5 block" : ""}`}>
+        {name && phone ? (
+          <>
+            {name} ·{" "}
+            {/* Never broken across lines — a number a crew member reads aloud
+                in an emergency is the last string on this page that should be
+                reassembled by eye. Same rule, same reason, as a diver's. */}
+            <span className="whitespace-nowrap">{phone}</span>
+          </>
+        ) : (
+          // Said in words rather than left blank. Nobody is asked for a crew
+          // contact at hire, so absence is the common case — and an empty space
+          // on the sheet reads as "nothing to say here" rather than "we do not
+          // know who to call for the divemaster".
+          t("trips.manifest.notOnFile")
+        )}
+      </span>
+    </p>
+  );
+}
 
 /**
  * The crew half of the head count (DOM-H1, ADR
@@ -144,6 +195,24 @@ export function CrewRollCall({
                           alert={member.buddyAlert}
                         />
                       </p>
+                      {/* One quiet line at rest, the same grammar as a diver
+                          row's "Contact & gear". Screen only — the print block
+                          below carries the same fact unconditionally, because a
+                          closed disclosure prints nothing. */}
+                      <details className="group/crewfacts mt-1 print:hidden">
+                        <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+                          <DisclosureCaret className="group-open/crewfacts:rotate-90" />
+                          <span className="group-hover/summary:underline">
+                            {t("trips.manifest.emergencyContactLabel")}
+                          </span>
+                        </summary>
+                        <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
+                          <CrewFacts member={member} labelled={false} t={t} />
+                        </div>
+                      </details>
+                      <div className="mt-2 hidden print:block">
+                        <CrewFacts member={member} labelled t={t} />
+                      </div>
                       {rc && !rc.implied ? (
                         <p className="mt-2 text-sm text-muted">
                           {t("trips.manifest.crewRollCallRecordedBy", {

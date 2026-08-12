@@ -15,10 +15,33 @@
  * **Order is load-bearing** and matches the insert order both seeders use.
  */
 export const staffDefs = [
-  { fullName: "Dana Reyes", local: "dana", roles: ["owner", "manager"] },
-  { fullName: "Marcus Webb", local: "marcus", roles: ["instructor"] },
-  { fullName: "Keiko Tanaka", local: "keiko", roles: ["divemaster"] },
-  { fullName: "Sal Moretti", local: "sal", roles: ["captain"] },
+  {
+    fullName: "Dana Reyes",
+    local: "dana",
+    roles: ["owner", "manager"],
+    emergencyContact: ["Marisol Reyes (wife)", "+1-305-555-0101"],
+  },
+  {
+    fullName: "Marcus Webb",
+    local: "marcus",
+    roles: ["instructor"],
+    emergencyContact: ["Yvonne Webb (mother)", "+1-305-555-0102"],
+  },
+  {
+    fullName: "Keiko Tanaka",
+    local: "keiko",
+    roles: ["divemaster"],
+    emergencyContact: ["Haru Tanaka (brother)", "+81-3-555-0103"],
+  },
+  // No contact on file: the crew-side twin of the divers' deliberate gaps
+  // below. The captain is the person a coastguard most needs to reach, and
+  // the printed manifest saying "Not on file" under his name is the whole
+  // argument for the field existing (dive-domain review 20260810).
+  //
+  // Spelled `undefined` rather than omitted, because `as const` keeps each
+  // entry's own literal type — an omitted key is absent from the union and
+  // `s.emergencyContact` stops compiling for every member, not just this one.
+  { fullName: "Sal Moretti", local: "sal", roles: ["captain"], emergencyContact: undefined },
   /**
    * The shop's second instructor (DOM-M7, review 20260802). A real shop of this
    * size has one lead and one more who teaches some of the week — and without
@@ -32,8 +55,27 @@ export const staffDefs = [
    * account for every entry in this list, so she has one there; that is the
    * minting path being uniform, not a second persona.)
    */
-  { fullName: "Talia Okonkwo", local: "talia", roles: ["instructor"] },
-] as const;
+  {
+    fullName: "Talia Okonkwo",
+    local: "talia",
+    roles: ["instructor"],
+    emergencyContact: ["Chidi Okonkwo (husband)", "+234-1-555-0105"],
+  },
+] as const satisfies ReadonlyArray<{
+  fullName: string;
+  local: string;
+  roles: readonly string[];
+  /**
+   * Same shape and same intent as `customerDefs` below: real-looking people a
+   * crew could actually ring, with one deliberate gap. Staff used to share a
+   * single literal `"On file"` name and one phone number between them, which
+   * was invisible while nothing rendered it — and became "On file ·
+   * +1-305-555-0100" under every crew name the moment the boat manifest
+   * started printing crew contacts. A placeholder that reads as data is worse
+   * on that sheet than an honest blank.
+   */
+  emergencyContact?: readonly [string, string];
+}>;
 
 /** Whose course sessions these are — the instructor of record on every one. */
 export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";

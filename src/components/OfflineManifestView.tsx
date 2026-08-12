@@ -57,6 +57,18 @@ import {
  * snapshot has loaded from storage, so `navigator` is always defined by then —
  * the guard is for safety, not for a real server render.
  */
+/**
+ * The live manifest's `BOAT_TARGET_CLASS`, minus its `w-full` (these buttons
+ * go `w-full` on a phone and auto-width beside the row from `sm` up).
+ *
+ * Copied rather than imported: that constant lives under
+ * `src/app/shop/[shopSlug]/trips/[id]/manifest/`, and `src/components` may not
+ * import from `src/app` (`pnpm check:architecture`). Kept literal and adjacent
+ * to the class strings that use it so a drift is visible in one file.
+ */
+const OFFLINE_BOAT_TARGET_CLASS =
+  "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto";
+
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
 }
@@ -1120,6 +1132,11 @@ export function OfflineManifestView() {
             // "Mark…" wording, same as the live manifest.
             const recordedNotBoarded = state?.state === "not_boarded" && state.implied !== true;
             const missing = isNotBackAboard(checkpoint, state);
+            // Same condition the live page passes as `showBoardControl`: divers
+            // only board at departure once readiness clears them. Named, because
+            // the exception control's weight now reads it too — it is what
+            // decides whether that control is the row's *only* one.
+            const showBoardControl = ready || !isDeparture;
             return (
               <li
                 key={diver.bookingId}
@@ -1174,29 +1191,51 @@ export function OfflineManifestView() {
                           note above the list). */}
                       <OfflineBuddyTeamChip t={t} locale={locale} names={diver.buddyTeamNames} />
                     </div>
-                    <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
-                      <p>
-                        <span className="font-bold">
-                          {t("shared.offlineManifest.single.emergencyContact")}
+                    {/* The live manifest's "Contact & gear" disclosure, in the
+                        same clothes and under the same words — this copy and
+                        that one are read minutes apart by the same captain, and
+                        reference facts standing open on every row here while
+                        they fold there is the divergence this closes.
+
+                        `trips.manifest.diverFactsSummary`, not an offline key
+                        of its own: one word list is the whole point, exactly as
+                        `rollCallLabelText` is shared for the state pills above.
+
+                        No medical line to disclose here — the dock payload
+                        deliberately never carries one (see the allow-list in
+                        offline-manifests.ts) — so this is always the plain
+                        two-fact summary, never the "& medical" variant. */}
+                    <details className="group/offlinefacts mt-2 max-w-xl">
+                      <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+                        <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
+                        <span className="group-hover/summary:underline">
+                          {t("trips.manifest.diverFactsSummary")}
                         </span>
-                        <span className="mt-0.5 block text-muted">
-                          {diver.emergencyContactName && diver.emergencyContactPhone
-                            ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                            : t("shared.offlineManifest.single.notOnFile")}
-                        </span>
-                      </p>
-                      <p>
-                        <span className="font-bold">
-                          {t("shared.offlineManifest.single.rentalFit")}
-                        </span>
-                        <span className="mt-0.5 block text-muted">
-                          {rentalFitLineText(t, locale, diver.rentalFit)}
-                          {diver.nitroxRequested
-                            ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
-                            : ""}
-                        </span>
-                      </p>
-                    </div>
+                      </summary>
+                      <div className="mb-1 grid gap-2 rounded-xl border border-border/70 bg-surface-sunken/50 p-3 text-base">
+                        <p>
+                          <span className="font-bold">
+                            {t("shared.offlineManifest.single.emergencyContact")}
+                          </span>
+                          <span className="mt-0.5 block text-muted">
+                            {diver.emergencyContactName && diver.emergencyContactPhone
+                              ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                              : t("shared.offlineManifest.single.notOnFile")}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="font-bold">
+                            {t("shared.offlineManifest.single.rentalFit")}
+                          </span>
+                          <span className="mt-0.5 block text-muted">
+                            {rentalFitLineText(t, locale, diver.rentalFit)}
+                            {diver.nitroxRequested
+                              ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
+                              : ""}
+                          </span>
+                        </p>
+                      </div>
+                    </details>
                     {!ready ? (
                       <ul className="mt-2 text-sm text-danger">
                         {diver.readiness.blockers.map((blocker) => (
@@ -1253,7 +1292,7 @@ export function OfflineManifestView() {
                       </p>
                     ) : (
                       <>
-                        {ready || !isDeparture ? (
+                        {showBoardControl ? (
                           <button
                             type="button"
                             disabled={busyBooking === diver.bookingId}
@@ -1261,7 +1300,15 @@ export function OfflineManifestView() {
                               record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
                             }
                             aria-busy={busyBooking === diver.bookingId}
-                            className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-base font-semibold text-primary-foreground transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                            // Settles into the live page's success outline once
+                            // recorded, rather than staying a solid primary fill
+                            // that reads as "still to do" beside a label saying
+                            // it is done (RollCallControls, same two states).
+                            className={`${OFFLINE_BOAT_TARGET_CLASS} ${
+                              state?.state === "boarded"
+                                ? "border border-success bg-success/15 text-success"
+                                : "bg-primary text-primary-foreground"
+                            }`}
                           >
                             {busyBooking === diver.bookingId
                               ? t("shared.offlineManifest.single.saving")
@@ -1277,10 +1324,31 @@ export function OfflineManifestView() {
                             record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
                           }
                           aria-busy={busyBooking === diver.bookingId}
+                          // The exception control, at the live page's weights
+                          // and by the live page's rules (RollCallControls):
+                          // most people board, so while nothing is recorded and
+                          // the board button is on offer this drops its border
+                          // and fill — the exception at less than equal weight
+                          // (principle 8), still a full dock-sized target, and
+                          // still foreground ink, because marking a no-show is
+                          // routine on the surface with the harshest viewing
+                          // conditions. It takes the box back the moment it
+                          // matters: when it is the row's only control (a
+                          // blocked diver at the dock), or when it carries the
+                          // recorded state. After a dive the unrecorded label
+                          // keeps danger ink — it is the control that reports a
+                          // person missing, and it must be findable at the rail
+                          // without reading every word.
                           className={
                             missing
-                              ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-danger bg-danger/15 px-5 text-base font-semibold text-danger transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
-                              : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                              ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
+                              : recordedNotBoarded
+                                ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
+                                : showBoardControl
+                                  ? isDeparture
+                                    ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger/10`
+                                  : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
                           }
                         >
                           {/* No done-check after a dive: "Not boarded ✓" beside a
@@ -1309,7 +1377,24 @@ export function OfflineManifestView() {
       {/* Same words as the live page, chosen by the same checkpoint rule: at
           the dock these are people still to board, after a dive they are
           people nobody has counted back aboard yet. The dock copy must never
-          be louder than the live manifest about a benign state. */}
+          be louder than the live manifest about a benign state.
+
+          **The grid stays here, and only here** (decision 20260812, closing
+          FU-20260810-offline-manifest-checklist-grammar). The live manifest
+          replaced its face grid with name chips because those chips live under
+          a *sticky* checkpoint panel: they follow the reader down a
+          nine-diver roster, so a jump target is always one thumb away. This
+          page has no sticky panel — its stats row scrolls away with everything
+          else — so the same chips would be in view exactly when nobody needs
+          them and gone by the time they do.
+
+          The grid is also a scanning surface rather than a jump list, and this
+          is the copy read underway, at the rail, looking up from the water for
+          a face rather than down at a name. Its rents-kit and blocked accents
+          carry information no chip does. Keeping it is a considered divergence
+          from the live page, not a leftover: the *rows* above now read
+          identically on both surfaces, which is what a captain working the two
+          minutes apart actually needs. */}
       <MissingDiversGrid
         divers={missingDivers.map((diver) => ({
           bookingId: diver.bookingId,

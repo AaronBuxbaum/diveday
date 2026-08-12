@@ -240,7 +240,7 @@ function DepartureCard({
           not. Editing is the rare act (once a day, not once a glance), so the
           controls live behind the line's own disclosure rather than sitting
           open on every card (principle 8: collapse the rare path). Native
-          <details>: keyboard, screen-reader, and no-JS behavior for free. */}
+          <details>: keyboard and screen-reader behavior for free. */}
       <details className="group/crew mt-3">
         <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
           <DisclosureCaret className="text-muted group-open/crew:rotate-90" />

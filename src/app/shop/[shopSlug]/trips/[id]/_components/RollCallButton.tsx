@@ -37,8 +37,8 @@ export type RollCallButtonCopy = {
  * and shows the worded reason in place. This is the safety line for WP-6:
  * pending is a client hint; confirmed is server-authoritative.
  *
- * Without JavaScript the form still posts and the card settles from the
- * server; only the in-flight "Boarding…" hint needs JS.
+ * Before hydration the form still posts and the card settles from the server;
+ * only the in-flight "Boarding…" hint needs the client.
  *
  * `result` lives in `useActionState`, which exposes no external setter to
  * clear it on demand. The checkpoint switcher (manifest/page.tsx's
@@ -72,8 +72,8 @@ export function RollCallButton({
    *
    * The subject is the *only* thing that differs, which is why this is one
    * generalized control rather than a near-copy: the instant pending label,
-   * the confirm/refuse haptics, the `role="alert"` refusal, the no-JS form
-   * post, and the remount-key contract below are all safety behaviour, and a
+   * the confirm/refuse haptics, the `role="alert"` refusal, the pre-hydration
+   * form post, and the remount-key contract below are all safety behaviour, and a
    * sibling component would be a second place for them to drift. The union
    * (rather than a bare field name) is what stops a caller typing
    * `"bookingid"` and posting a crew id into a diver action.

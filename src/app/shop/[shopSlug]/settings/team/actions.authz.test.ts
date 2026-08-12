@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { personRoles, userAccounts } from "@/db/schema";
+import { people, personRoles, userAccounts } from "@/db/schema";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
@@ -40,9 +40,12 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { removeStaffAction, saveAllStaffRolesAction, setStaffStatusAction } = await import(
-  "./actions"
-);
+const {
+  removeStaffAction,
+  saveAllStaffRolesAction,
+  saveStaffEmergencyContactAction,
+  setStaffStatusAction,
+} = await import("./actions");
 
 async function rolesOf(db: AppDb, personId: string): Promise<Role[]> {
   const rows = await db
@@ -188,5 +191,97 @@ describe("disabling and removing a teammate's access", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=disabled`);
     expect(await accountStatusOf(db, captain)).toBe("disabled");
+  });
+});
+
+describe("editing a teammate's emergency contact", () => {
+  // Personal data about a colleague, so it sits behind the same gate as roles
+  // and account status rather than being writable by anyone who can reach the
+  // settings page. `setStaffEmergencyContact` has no gate of its own, so the
+  // assertion is on the stored row, not the notice.
+  async function contactOf(db: AppDb, personId: string) {
+    const [row] = await db
+      .select({
+        name: people.emergencyContactName,
+        phone: people.emergencyContactPhone,
+      })
+      .from(people)
+      .where(eq(people.id, personId));
+    return row ?? null;
+  }
+
+  function contactForm(personId: string, name: string, phone: string): FormData {
+    const formData = new FormData();
+    formData.set("personId", personId);
+    formData.set("emergencyContactName", name);
+    formData.set("emergencyContactPhone", phone);
+    return formData;
+  }
+
+  it("refuses a captain editing the owner's contact", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, captain);
+    // Asserted as *unchanged* rather than empty: the demo seed gives its people
+    // contacts, so "still null" would pass for the wrong reason on a row that
+    // was never null.
+    const before = await contactOf(db, owner);
+
+    const to = await redirectedTo(() =>
+      saveStaffEmergencyContactAction(contactForm(owner, "Mallory", "+1-305-555-0000")),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(await contactOf(db, owner)).toEqual(before);
+  });
+
+  it("refuses a captain editing his own", async () => {
+    // Not a self-service field: the gate is about who may read and write staff
+    // personal data on this page, not about whose row it is.
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const before = await contactOf(db, captain);
+
+    const to = await redirectedTo(() =>
+      saveStaffEmergencyContactAction(contactForm(captain, "Marta", "+1-305-555-0114")),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(await contactOf(db, captain)).toEqual(before);
+  });
+
+  it("lets an owner set one, and names the card the outcome belongs to", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveStaffEmergencyContactAction(contactForm(captain, "Marta Okonkwo", "+1-305-555-0114")),
+    );
+
+    // `contactFor` is what puts the outcome in that card's own action row
+    // instead of a banner above a roster of eleven people.
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=contact_saved&contactFor=${captain}#staff-${captain}`,
+    );
+    expect(await contactOf(db, captain)).toMatchObject({
+      name: "Marta Okonkwo",
+      phone: "+1-305-555-0114",
+    });
+  });
+
+  it("reports a half-filled contact on the card, and writes nothing", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+    const before = await contactOf(db, captain);
+
+    const to = await redirectedTo(() =>
+      saveStaffEmergencyContactAction(contactForm(captain, "Marta Okonkwo", "")),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=half_filled&contactFor=${captain}#staff-${captain}`,
+    );
+    // Nothing written, not even the half that was supplied — a refused save
+    // must not leave the row holding a name whose number it just dropped.
+    expect(await contactOf(db, captain)).toEqual(before);
   });
 });
