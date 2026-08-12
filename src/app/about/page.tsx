@@ -6,6 +6,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
+import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
@@ -120,9 +121,12 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
   return (
     <main className="flex-1">
+      {/* The hero claims "check us", so the right column is the artifact rule 1
+          sends a reader to go check: a captain's roll call, running from the
+          phone's own offline copy. */}
       <section className="border-b border-border">
-        <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-24">
-          <div className="max-w-3xl">
+        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
+          <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.about.eyebrow")}
             </p>
@@ -133,62 +137,17 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.about.heroDescription")}
             </p>
           </div>
+          <CaptainPhoneFrame
+            label={t("marketing.about.phoneFrameLabel")}
+            locale={locale}
+            className="mx-auto w-full max-w-xs lg:max-w-sm"
+          />
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.founderEyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.about.founderTitle")}
-            </h2>
-          </div>
-          <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
-            <p>{t("marketing.about.founderP1")}</p>
-            <p>{t("marketing.about.founderP2")}</p>
-            <p>{t("marketing.about.founderP3")}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.runEyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.about.runTitle")}
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
-            <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href={`mailto:${SUPPORT_EMAIL}`}
-                className={buttonClass({ className: "cursor-pointer" })}
-              >
-                {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
-              </a>
-              <Link
-                href="/pricing"
-                className={buttonClass({
-                  variant: "secondary",
-                  className: "border-border-strong",
-                })}
-              >
-                {t("marketing.about.seeCost")}
-              </Link>
-              <Link href="/product" className={buttonClass({ variant: "link" })}>
-                {t("marketing.about.seeProduct")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      {/* The proof comes before the concessions. This page used to open with
+          two sections of prose and reach the checkable rules fourth, which put
+          its only verifiable content far below the fold on every screen. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
@@ -222,6 +181,59 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
       <section className="border-y border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.about.founderEyebrow")}
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("marketing.about.founderTitle")}
+              </h2>
+            </div>
+            <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
+              <p>{t("marketing.about.founderP1")}</p>
+              <p>{t("marketing.about.founderP2")}</p>
+              <p>{t("marketing.about.founderP3")}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+            {t("marketing.about.runEyebrow")}
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {t("marketing.about.runTitle")}
+          </h2>
+          <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
+          <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className={buttonClass({ className: "cursor-pointer" })}
+            >
+              {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
+            </a>
+            <Link
+              href="/pricing"
+              className={buttonClass({
+                variant: "secondary",
+                className: "border-border-strong",
+              })}
+            >
+              {t("marketing.about.seeCost")}
+            </Link>
+            <Link href="/product" className={buttonClass({ variant: "link" })}>
+              {t("marketing.about.seeProduct")}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-surface">
+        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.about.plainlyEyebrow")}
@@ -233,11 +245,13 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.about.plainlyDescription")}
             </p>
           </div>
+          {/* `bg-background`, not `bg-surface`: these cards sit *on* a surface
+              band, and surface-on-surface left them a border with no card. */}
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}
-                className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
+                className="rounded-2xl border border-border bg-background p-6 sm:p-8"
               >
                 <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
                 <p className="mt-3 leading-7 text-muted">{truth.body}</p>

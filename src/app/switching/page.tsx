@@ -6,6 +6,8 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
+import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
+import { MarketingMockup } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
@@ -130,6 +132,32 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
               </span>
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* "Exactly what comes across" is this page's whole promise, and it used
+          to be made only in prose. This is the importer's real preview step in
+          miniature — mapped columns, the ignored ones named, the skipped row
+          visible — so the promise is shown before it is described. */}
+      <section className="border-y border-border bg-surface">
+        <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div className="max-w-xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("switching.hub.previewEyebrow")}
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("switching.hub.previewTitle")}
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-muted">{t("switching.hub.previewBody")}</p>
+            </div>
+            <MarketingMockup
+              label={t("switching.hub.previewMockupLabel")}
+              className="shadow-xl shadow-foreground/5"
+            >
+              <ImportPreviewFallback locale={locale} />
+            </MarketingMockup>
+          </div>
         </div>
       </section>
 

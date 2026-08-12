@@ -1411,6 +1411,10 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The migration-guides hub: one card per incumbent a shop might be
       // leaving, the entry point to the portability wedge on the marketing side.
+      // Also the only baseline covering `ImportPreviewFallback`, the mockup that
+      // makes this page's "exactly what comes across" promise visible instead of
+      // merely stated — its mapped-column chips and skipped row are the parts a
+      // diff here should be read against.
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
         await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
