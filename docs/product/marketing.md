@@ -156,13 +156,36 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   headline onto their site truthfully? If yes, sharpen it. **The test binds `/about` too**, which is
   where it is easiest to forget: that page's hero read "Built by divers, for divers." until
   2026-08-03 — true of every dive-adjacent vendor alive, and therefore an eyebrow wearing a
-  headline's clothes. It now names the thing only DiveDay can say and the page can prove two
-  sections down with a real address ("The person who writes the code answers your email"). A trust
-  page that opens with a sentence anyone could sign has spent its most valuable line arguing
-  nothing.
+  headline's clothes. A trust page that opens with a sentence anyone could sign has spent its most
+  valuable line arguing nothing. It has since failed twice more in the *other* direction and both
+  are recorded in `e2e/marketing.spec.ts`: "One person owns every line of code running on this boat."
+  conceded smallness until it read as a vendor with no infrastructure behind it, and "Small enough to
+  answer you." (2026-08-05 to 2026-08-12) spent the line on the company's size — the one fact about
+  DiveDay a buyer has no reason to want. The hero is now **"We'd rather be checked than believed."**:
+  a claim about posture, which the page proves in the section directly below it.
+- **Concede the facts; never apologize for them.** This is the rule the page-level version of the
+  claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
+  are required honesty and stay. What is banned is the register that grew up around them — by
+  2026-08-12 nine framings of *we're small, we're new, you've never heard of us, don't take us on
+  faith* had accumulated across the five pages, including the `/about` H1, the lead-in to its four
+  checkable rules, the homepage's export band, `/product`'s honest-no, and the `/pricing` FAQ
+  question "DiveDay is new. What happens to my data if this doesn't work out?" Every one read as
+  reasonable candor alone; together they argued the buyer out of the sale before the product got a
+  word in. The fix in each case was to keep the fact and drop the flinch — the pricing question is
+  now "What happens to my records if I leave?" with the same answer underneath. **A test enforces
+  this** ("no marketing page apologizes for the company's size or age"), pinning the specific
+  phrasings out by name, because each one shipped as a sentence its author thought was honest.
 - **Concrete nouns over software jargon.** The buyer runs a shop, a counter, a boat — not an
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
+- **Show the screen before describing it, and never inventory the same thing twice.** The feature
+  claims exist at three densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
+  `/pricing`), `4` is the scannable overview (`/product`), and the full inventory is
+  `productCapabilityIndex` in `/product`'s `<details>`. `/product` used to render *all* of
+  `productFeatureGroups` (30 bullets) about a thousand pixels above a `<details>` holding 46 better
+  organized ones covering the same ground; a reader scrolled one wall of bullets to reach a longer
+  one. Pricing had already been cut back for exactly this reason. Before adding a list to a page,
+  check the other two densities: the answer is usually a mockup or a link, not a third copy.
 - **No unprovable superlatives** ("everything", "best", "complete") — scope claims to what ships:
   "from booking to head count".
 - Buttons are verbs; eyebrows are short; body copy earns each sentence. Read it aloud as a dive
@@ -281,7 +304,17 @@ the shared wrappers in `src/components/MarketingSections.tsx`:
 | --- | --- | --- |
 | `DiverBookingFallback` | Public schedule | Diver booking moment |
 | `FrontDeskReadinessFallback` | Staff trip readiness | Desk / safety explanation |
-| `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment |
+| `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment, `/about` hero |
+| `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub — what comes across |
+
+**A mockup is a claim, so it mirrors a real screen element for element.**
+`ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
+surface's whole promise and was being made only in prose; it reproduces the wizard's mapped-column
+chips, its "Not recognized, so ignored" line, three of its eight stat tiles, and its row table with
+the same `skipped` badge — including, deliberately, the parts that make DiveDay look *less*
+capable (a column it can't read, a row it won't import), because those are what make the rest
+believable. Add a mockup the same way: find the shipped screen, mirror it, and keep the
+unflattering parts in.
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the

@@ -1010,13 +1010,17 @@
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
       "title": "La puerta se abre en ambos sentidos.",
-      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que ya se les quedó corto, porque mudarse parece doloroso. Estas guías lo hacen concreto en ambos sentidos: cómo sacar a tus buceadores de lo que uses hoy, qué se transfiere exactamente, y cómo todo el centro se descarga de vuelta en un solo ZIP cuando quieras. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón.",
+      "description": "Entrar cuesta un archivo. Salir cuesta un botón. Estas guías muestran ambas cosas: cómo sacar a tus buceadores de lo que uses hoy, y qué llega exactamente cuando entran.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como verificar cada tarjeta antes de que salga el barco.",
       "readGuide": "Leer la guía →",
+      "previewEyebrow": "Antes de guardar nada",
+      "previewTitle": "Ves el archivo entero antes de que caiga una sola fila.",
+      "previewBody": "Sube el CSV y DiveDay te muestra su propia lectura: qué columnas tuyas reconoció, cuáles no reconoció y va a ignorar, cuántos buceadores y certificaciones contó, y cada fila que piensa omitir. No se escribe nada hasta que lo mires y digas adelante.",
+      "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
       "switchingFrom": "Cambiando desde {competitor}",
       "dontSeeSystem": "¿No ves tu sistema?",
-      "dontSeeSystemBody": "La mayoría de las exportaciones se importan tal cual — una hoja de cálculo de tus buceadores con columnas reconocibles de nombre, tarjeta y talla es todo lo que hace falta. Prueba la demo en vivo, o empieza una prueba y trae un CSV: DiveDay mapea los nombres de columna habituales, previsualiza el archivo y marca lo que no reconoce antes de guardar.",
+      "dontSeeSystemBody": "La mayoría de las exportaciones entran tal cual — una hoja con columnas reconocibles de nombre, tarjeta y talla es todo lo que hace falta. Empieza una prueba y trae un CSV, o envíanoslo y lo mapeamos contigo.",
       "gettingDemoReady": "Preparando la demo…"
     },
     "competitor": {
@@ -1179,7 +1183,24 @@
     "tomorrowTime": "Mañana · 7:30",
     "fridayTime": "Viernes · 19:30",
     "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
-    "full": "Completo"
+    "full": "Completo",
+    "import": {
+      "label": "Vista previa de importación",
+      "eyebrow": "Trayendo a tus buceadores",
+      "title": "No se guarda nada hasta que tú lo digas.",
+      "fieldName": "Nombre completo",
+      "fieldEmail": "Correo",
+      "fieldCard": "Nivel de certificación",
+      "fieldSuit": "Talla de traje",
+      "ignored": "No reconocidas, así que se ignoran: legacy_id, internal_notes.",
+      "statDivers": "Buceadores en el archivo",
+      "statCards": "Certificaciones",
+      "statSkipped": "Omitidos",
+      "noName": "— sin nombre —",
+      "skippedBadge": "omitido",
+      "cardLine": "{level} · importado",
+      "emptyValue": "—"
+    }
   },
   "demo": {
     "shopLabel": "Centro de demostración",
@@ -1254,8 +1275,8 @@
       "seeFullProduct": "Ver el producto completo",
       "exportEyebrow": "Tus registros",
       "exportTitle": "Tus registros entran limpios y salen igual.",
-      "exportDescription1": "Llegar es un archivo, no un proyecto: el importador mapea la hoja o exportación que ya llevas y muestra exactamente qué se transfiere —y qué no— antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
-      "exportDescription2": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo, así que la salida está hecha con el mismo cuidado: un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
+      "exportDescription1": "Llegar es un archivo, no un proyecto. El importador lee la hoja o exportación que ya llevas y muestra exactamente qué se transfiere —y qué no— antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "exportDescription2": "Salir está hecho con el mismo cuidado que entrar: un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
       "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
       "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
       "inExportEyebrow": "En la exportación",
@@ -1265,7 +1286,7 @@
       "exportItem4": "Una guía en lenguaje claro de cada archivo — sin proyecto de descifrado después",
       "tryEyebrow": "Pruébalo",
       "tryTitle": "Mira cómo se siente cuando todo el centro está en la misma página.",
-      "tryDescription": "DiveDay es reciente, y los primeros centros lo moldean — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
+      "tryDescription": "Los centros que se unen ahora lo moldean — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
       "priceLine": "Un precio único — {price} {cadence}, congelado dos años para los centros fundadores.",
       "seeIncluded": "Ver qué incluye →",
       "gettingReady": "Preparando tu centro…",
@@ -1753,23 +1774,24 @@
     },
     "about": {
       "eyebrow": "Quiénes somos",
-      "heroTitle": "Lo bastante pequeño para responderte. Construido para que nada dependa de una sola persona.",
-      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores, y las partes que tu temporada no puede perder no dependen de ninguno de nosotros: los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP cualquier día, y el pase de lista funciona en un teléfono sin señal. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
+      "heroTitle": "Preferimos que nos verifiques a que nos creas.",
+      "phoneFrameLabel": "Un capitán haciendo el pase de lista en DiveDay desde la copia sin conexión del teléfono.",
+      "heroDescription": "A DiveDay lo hacen buceadores, y las partes de las que depende tu temporada no descansan en ninguno de nosotros: los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP cualquier día, y el pase de lista funciona en un teléfono sin señal. Cada afirmación de esta página es algo que puedes abrir y probar en los próximos minutos, o algo que te decimos abiertamente que no hacemos.",
       "founderEyebrow": "Del fundador",
       "founderTitle": "Por qué existe esto.",
-      "founderP1": "Un dueño de un centro de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Su equipo lleva una operación ajustada; las herramientas simplemente nunca llegaron para este sector.",
+      "founderP1": "Un dueño de un centro de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores.",
       "founderP2": "Ese es el patrón: un sector entero funcionando con software que nadie construyó para él — anticuado en el mejor caso, hostil en el peor, hecho para una oficina trasera, no para un muelle mojado. Los centros se quedan con la pizarra y la tablilla porque el papel nunca falla, nunca te desconecta, nunca exige cinco pantallas con las manos mojadas.",
       "founderP3": "DiveDay cierra esa brecha: software rápido, claro y tolerante para que un equipo lo use sin que se lo pidan — construido observando cómo transcurre un día de barco, no desde una especificación escrita lejos del agua. Si tu equipo no lo abriría una mañana ajetreada, no ha cumplido su función.",
       "runEyebrow": "Cómo se lleva",
       "runTitle": "Precios claros. Soporte real.",
       "runP1": "Escribe sobre una mala mañana en el mostrador, un fallo o una pregunta — una persona real lo lee y te ayuda, no un formulario que te pide adjuntar una captura antes de que alguien lo mire.",
-      "runP2": "Los precios funcionan igual: un número fijo, sin plazas que contar, sin nivel que esconda la función que realmente necesitas. Aquí nadie cobra por venderte más, así que la página de precios no tiene nada que ocultar.",
+      "runP2": "Los precios funcionan igual: están enteros en una sola página, y puedes leer cada línea sin hablar antes con nadie de aquí.",
       "emailCta": "Escribe a {email}",
       "seeCost": "Ver qué cuesta",
       "seeProduct": "Ver qué hace →",
       "rulesEyebrow": "A qué nos comprometemos",
       "rulesTitle": "Cuatro reglas, y puedes verificar cada una.",
-      "rulesDescription": "Un proveedor nuevo no puede señalar clientes, así que esto no son promesas — son cosas que puedes ir a probar en la demo en unos cinco minutos.",
+      "rulesDescription": "Esto no son promesas. Cada una es algo que puedes ir a desmentir en la demo, en cosa de un minuto.",
       "rules": {
         "survivesDock": {
           "title": "Tiene que sobrevivir al muelle.",
@@ -1794,11 +1816,11 @@
       },
       "plainlyEyebrow": "Sin rodeos",
       "plainlyTitle": "Lo que no vamos a fingir.",
-      "plainlyDescription": "Lo vas a descubrir de todos modos. Mejor aquí, antes de haber movido una temporada de reservas.",
+      "plainlyDescription": "Lo descubrirías de todos modos. Mejor ahora que después de haber movido una temporada de reservas.",
       "truths": {
         "new": {
           "title": "DiveDay es nuevo.",
-          "body": "No hay una base de clientes que señalar ni un muro de logos del que tomar prestada credibilidad. Por eso la demo es un centro real en funcionamiento y el botón de exportar funciona desde tu primer día."
+          "body": "Estarías entre los primeros centros en usarlo. Por eso la demo es un centro en funcionamiento en lugar de una llamada de ventas, y por eso el botón de exportar funciona desde tu primer día."
         },
         "notEverything": {
           "title": "No lo hace todo.",
@@ -1806,12 +1828,12 @@
         },
         "stillMoving": {
           "title": "Todavía está en marcha.",
-          "body": "El acceso anticipado significa que los centros que se unen primero orientan lo que se construye después, no una hoja de ruta fijada con meses de antelación en una sala lejos del agua. Ese es el trato: un producto que se adapta a tu temporada, y que sigue cambiando mientras lo usas."
+          "body": "Los centros que se unen ahora orientan lo que se construye después — aquello con lo que se topa tu equipo esta temporada es lo que recibe atención. El trato es un producto que se adapta a tu centro mientras todavía cambia bajo tus pies."
         }
       },
       "leaveEyebrow": "Antes de comprometerte",
       "leaveTitle": "A quién le estás comprando en realidad.",
-      "leaveP1": "Confiar en un proveedor pequeño los registros que suben a tus buceadores a un barco es una decisión real, así que aquí están las partes que vale la pena conocer antes de tomarla — incluida la más importante, que es cómo te irías.",
+      "leaveP1": "Estos son los registros que suben a tus buceadores a un barco, así que esto es lo que vale la pena saber antes de entregarlos — empezando por la parte que lo decide, que es cómo los recuperarías.",
       "leaveP2": "{terms} Viniendo en la otra dirección, una persona se sentará con tu exportación o hoja de cálculo anterior y traerá a tus buceadores contigo.",
       "switchingLink": "Cómo funciona el cambio, en ambas direcciones →",
       "whereLiveLabel": "Dónde viven tus registros",
@@ -1863,7 +1885,7 @@
       "fullListSummary": "La lista completa",
       "noEyebrow": "Un no honesto",
       "noTitle": "Lo que DiveDay no hace.",
-      "noDescription": "Estás evaluando a un proveedor del que nunca oíste hablar; lo mínimo que podemos hacer es marcar nuestros propios límites antes de que los encuentres tú.",
+      "noDescription": "Todo producto tiene un límite. Mejor que te lo digamos nosotros a que lo descubras en tu segunda semana.",
       "notCovered": {
         "pos": {
           "title": "Un punto de venta minorista",
@@ -1928,7 +1950,7 @@
           "answer": "Sí. El equipo guarda el listado en su teléfono antes de salir del muelle. Los pases de lista de salida y después de la inmersión funcionan a partir de esa copia, la pantalla siempre muestra cuán reciente es, y cuando vuelve el servicio DiveDay verifica cada cambio contra el listado en vivo antes de que cuente."
         },
         "dataIfNotWorking": {
-          "question": "DiveDay es nuevo. ¿Qué pasa con mis datos si esto no funciona?",
+          "question": "¿Qué pasa con mis registros si me voy?",
           "answer": "Te llevas los registros de tu centro, cuando quieras. {claim} {terms}"
         },
         "switching": {

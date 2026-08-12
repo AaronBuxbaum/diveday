@@ -1010,13 +1010,17 @@
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make it concrete both ways: how to get your divers out of whatever you use now, exactly what comes across — and how the whole shop downloads back out as one ZIP whenever you ask. Coming in takes a file and a few minutes. Going out takes one button.",
+      "description": "Coming in takes a file. Going out takes one button. These guides show both: how to get your divers out of whatever you run now, and exactly what lands when they arrive.",
       "spreadsheetTitle": "Coming from a spreadsheet",
       "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
       "readGuide": "Read the guide →",
+      "previewEyebrow": "Before anything saves",
+      "previewTitle": "You see the whole file before a single row lands.",
+      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: which of your columns it matched, which it didn't recognize and will ignore, how many divers and cards it counted, and every row it intends to skip. Nothing is written until you look at that and say go.",
+      "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
       "switchingFrom": "Switching from {competitor}",
       "dontSeeSystem": "Don't see your system?",
-      "dontSeeSystemBody": "Most exports import as-is — a spreadsheet of your divers with recognizable name, card, and size columns is all it takes. Try the live demo, or start a trial and bring a CSV: DiveDay maps the common column names, previews the file, and flags anything it doesn't recognize before saving.",
+      "dontSeeSystemBody": "Most exports come in as-is — a spreadsheet with recognizable name, card, and size columns is all it takes. Start a trial and bring a CSV, or send it to us and we'll map it with you.",
       "gettingDemoReady": "Getting the demo ready…"
     },
     "competitor": {
@@ -1179,7 +1183,24 @@
     "tomorrowTime": "Tomorrow · 7:30 AM",
     "fridayTime": "Friday · 7:30 PM",
     "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
-    "full": "Full"
+    "full": "Full",
+    "import": {
+      "label": "Import preview",
+      "eyebrow": "Bringing your divers in",
+      "title": "Nothing saves until you say so.",
+      "fieldName": "Full name",
+      "fieldEmail": "Email",
+      "fieldCard": "Cert level",
+      "fieldSuit": "Wetsuit size",
+      "ignored": "Not recognized, so ignored: legacy_id, internal_notes.",
+      "statDivers": "Divers in file",
+      "statCards": "Cards",
+      "statSkipped": "Skipped",
+      "noName": "— no name —",
+      "skippedBadge": "skipped",
+      "cardLine": "{level} · imported",
+      "emptyValue": "—"
+    }
   },
   "demo": {
     "shopLabel": "Demo shop",
@@ -1254,8 +1275,8 @@
       "seeFullProduct": "See the full product",
       "exportEyebrow": "Your records",
       "exportTitle": "Your records come in clean, and leave the same way.",
-      "exportDescription1": "Arriving is a file, not a project: the importer maps the spreadsheet or export you already keep and shows exactly what comes across — and what honestly doesn't — before a single row saves. Or hand us the sheet and we'll bring your divers in with you, free.",
-      "exportDescription2": "DiveDay is new, and you shouldn't have to take a new vendor on faith, so the way out is built to the same standard: one ZIP of your shop's records, downloaded from Settings any day you choose. {terms}",
+      "exportDescription1": "Arriving is a file, not a project. The importer reads the spreadsheet or export you already keep and shows exactly what comes across — and what doesn't — before a single row saves. Or send us the sheet and we'll bring your divers in with you, free.",
+      "exportDescription2": "Leaving is built to the same standard as arriving: one ZIP of your shop's records, downloaded from Settings any day you choose. {terms}",
       "spreadsheetLink": "Running the day on a spreadsheet? See how it comes across →",
       "switchingLink": "Switching from {competitors}? Read the guides →",
       "inExportEyebrow": "In the export",
@@ -1265,7 +1286,7 @@
       "exportItem4": "A plain-language guide to every file — no decoding project later",
       "tryEyebrow": "Try it",
       "tryTitle": "See how it feels when the whole shop is on the same page.",
-      "tryDescription": "DiveDay is early, and the first shops shape it — what your crew runs into this season is what gets attention next.",
+      "tryDescription": "The shops that join now shape it — what your crew runs into this season is what gets attention next.",
       "priceLine": "One flat price — {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what's included →",
       "gettingReady": "Getting your shop ready…",
@@ -1753,23 +1774,24 @@
     },
     "about": {
       "eyebrow": "Who we are",
-      "heroTitle": "Small enough to answer you. Built so nothing rests on one person.",
-      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay, and the parts your season can't afford to lose don't sit with any of us: payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
+      "heroTitle": "We'd rather be checked than believed.",
+      "phoneFrameLabel": "A captain running roll call in DiveDay from the phone's offline copy.",
+      "heroDescription": "Divers build DiveDay, and the parts your season depends on don't rest on any of us: payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. Every claim below is either something you can open and try in the next few minutes, or something we're telling you outright that we don't do.",
       "founderEyebrow": "From the founder",
       "founderTitle": "Why this exists.",
-      "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers. His crew runs a tight operation; the tools just never showed up for this industry.",
+      "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers.",
       "founderP2": "That's the pattern: an entire industry running on software nobody built for it — dated at best, hostile at worst, built for a back office, not a wet dock. Shops keep the whiteboard and clipboard because paper never crashes, never logs you out, never needs five taps with wet hands.",
       "founderP3": "DiveDay closes that gap: software fast, clear, and forgiving enough that a crew reaches for it unprompted — built from watching how a boat day runs, not a spec written far from the water. If your team wouldn't open it on a busy morning, it hasn't done its job.",
       "runEyebrow": "How it's run",
       "runTitle": "Straightforward pricing. Real support.",
       "runP1": "Write in about a bad morning at the counter, a bug, or a question — a real person reads it and helps, not a form that asks you to attach a screenshot before anyone looks.",
-      "runP2": "The pricing works the same way: one flat number, no seats to count, no tier that hides the feature you actually need. Nobody here is compensated for selling you more, so the pricing page has nothing to hide behind.",
+      "runP2": "Pricing works the same way: the whole of it is on one page, and you can read every line of it without talking to anyone here first.",
       "emailCta": "Email {email}",
       "seeCost": "See what it costs",
       "seeProduct": "See what it does →",
       "rulesEyebrow": "What we hold it to",
       "rulesTitle": "Four rules, and you can check every one.",
-      "rulesDescription": "A new vendor can't point at customers, so these aren't promises — they're things you can go and test in the demo in about five minutes.",
+      "rulesDescription": "These aren't promises. Each one is something you can go and prove wrong in the demo, in about a minute.",
       "rules": {
         "survivesDock": {
           "title": "It has to survive the dock.",
@@ -1794,11 +1816,11 @@
       },
       "plainlyEyebrow": "Plainly",
       "plainlyTitle": "What we're not going to pretend.",
-      "plainlyDescription": "You are going to find these out anyway. Better here, before you've moved a season of bookings.",
+      "plainlyDescription": "You'd find these out anyway. Better now than after you've moved a season of bookings.",
       "truths": {
         "new": {
           "title": "DiveDay is new.",
-          "body": "There is no install base to point at and no wall of logos to borrow credibility from. That is exactly why the demo is a real working shop and the export button works on your first day."
+          "body": "You'd be among the first shops on it. That's why the demo is a working shop instead of a sales call, and why the export button works on your first day."
         },
         "notEverything": {
           "title": "It doesn't do everything.",
@@ -1806,12 +1828,12 @@
         },
         "stillMoving": {
           "title": "It's still moving.",
-          "body": "Early access means the shops that join first steer what gets built next, not a roadmap set months in advance in a room far from the water. That's the trade: a product that bends toward your season, and one that is still changing while you use it."
+          "body": "Shops that join now steer what gets built next — what your crew hits this season is what gets attention. The trade is a product that bends toward your shop while it's still changing under you."
         }
       },
       "leaveEyebrow": "Before you commit",
       "leaveTitle": "Who you're actually buying from.",
-      "leaveP1": "Trusting a small vendor with the records that get your divers on a boat is a real decision, so here are the parts of it worth knowing before you make it — including the one that matters most, which is how you'd walk away.",
+      "leaveP1": "These are the records that get your divers on a boat, so here's what's worth knowing before you hand them over — starting with the part that decides it, which is how you'd take them back.",
       "leaveP2": "{terms} Coming the other way, a person will sit with your old export or spreadsheet and bring your divers across with you.",
       "switchingLink": "How switching works, both directions →",
       "whereLiveLabel": "Where your records live",
@@ -1863,7 +1885,7 @@
       "fullListSummary": "The full list",
       "noEyebrow": "An honest no",
       "noTitle": "What DiveDay doesn't do.",
-      "noDescription": "You're sizing up a vendor you've never heard of; the least we can do is draw our own boundaries before you find them.",
+      "noDescription": "Every product has an edge. Better you hear ours from us than find it in your second week.",
       "notCovered": {
         "pos": {
           "title": "A retail point of sale",
@@ -1928,7 +1950,7 @@
           "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts."
         },
         "dataIfNotWorking": {
-          "question": "DiveDay is new. What happens to my data if this doesn't work out?",
+          "question": "What happens to my records if I leave?",
           "answer": "You leave with your shop's records, whenever you choose. {claim} {terms}"
         },
         "switching": {

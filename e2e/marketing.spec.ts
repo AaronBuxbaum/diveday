@@ -192,11 +192,15 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     expect(pricingBody, `unfounded savings claim matching ${pattern}`).not.toMatch(pattern);
   }
   // The objection layer answers the deal-killers, and a skeptic can reach the
-  // demo without committing to a trial form.
+  // demo without committing to a trial form. This row asked "DiveDay is new.
+  // What happens to my data if this doesn't work out?" until 2026-08-12: a FAQ
+  // question is the one place a page speaks in the reader's voice, and putting
+  // our own weakest framing in their mouth talked them into a doubt they hadn't
+  // arrived with. The answer beneath it is unchanged — the exit is the point,
+  // not the flinch (docs/product/marketing.md, "Concede the facts; never
+  // apologize for them").
   await expect(
-    page.getByRole("heading", {
-      name: "DiveDay is new. What happens to my data if this doesn't work out?",
-    }),
+    page.getByRole("heading", { name: "What happens to my records if I leave?" }),
   ).toBeVisible();
   // Same shared label as everywhere else — "Try the live demo first" was the
   // exact per-page synonym drift the one-label rule exists to catch.
@@ -235,21 +239,22 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await page.goto("/");
   await page.getByRole("contentinfo").getByRole("link", { name: "About" }).click();
 
-  // The hero has to survive the rulebook's own paste test: "Built by divers,
-  // for divers." was true of every dive-adjacent vendor on earth — a rival
-  // could paste it unchanged — which made it an eyebrow wearing a headline's
-  // clothes.
+  // This headline has walked into three different failures, so it is pinned
+  // against all three. "Built by divers, for divers." was true of every
+  // dive-adjacent vendor on earth — a rival could paste it unchanged, making it
+  // an eyebrow in a headline's clothes. "One person owns every line of code
+  // running on this boat." conceded smallness so hard it read as a vendor with
+  // no infrastructure behind it — the fear this page exists to answer, not
+  // feed. "Small enough to answer you." then spent the site's most valuable
+  // line on the company's *size*, which is the one thing about DiveDay a buyer
+  // has no reason to want.
   //
-  // It also has to survive the *opposite* failure, which the previous headline
-  // ("One person owns every line of code running on this boat.") walked into:
-  // conceding smallness so hard it read as a vendor with no infrastructure
-  // behind it, which is the fear this page exists to answer, not feed. The
-  // replacement keeps the accountability and adds what actually backs it —
-  // asserted here as a pair, because either half alone is the old bug.
+  // What survives all three is a claim about posture that the page can prove
+  // two sections down: the four rules, each with the demo action that settles
+  // it. The Stripe half is asserted beside it because the headline alone would
+  // be the second failure again.
   await expect(
-    page.getByRole("heading", {
-      name: "Small enough to answer you. Built so nothing rests on one person.",
-    }),
+    page.getByRole("heading", { name: "We'd rather be checked than believed." }),
   ).toBeVisible();
   await expect(page.getByText(/payments run through your own Stripe account/)).toBeVisible();
 
@@ -264,14 +269,23 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
 
-  // Trust from a vendor with no install base is checkable, not asserted: each
-  // rule ships with the demo action that proves it.
+  // Trust here is checkable, not asserted: each rule ships with the demo action
+  // that proves it.
   await expect(
     page.getByRole("heading", { name: "Four rules, and you can check every one." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "It has to survive the dock." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No silent passes." })).toBeVisible();
   await expect(page.getByText("save a manifest to your phone")).toBeVisible();
+
+  // The checkable half comes *before* the conceding half. The rules used to sit
+  // fourth, below two sections of prose, which put the page's only verifiable
+  // content off the bottom of every screen a visitor actually saw. Asserted as
+  // an order rather than a presence, because both blocks existed then too.
+  const headings = await page.getByRole("heading", { level: 2 }).allInnerTexts();
+  expect(headings.indexOf("Four rules, and you can check every one.")).toBeLessThan(
+    headings.indexOf("What we're not going to pretend."),
+  );
 
   // A trust page that didn't land on the exit would be missing the point.
   await expect(
@@ -510,6 +524,55 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
     "href",
     "/onboard?from=switching-spreadsheet",
   );
+});
+
+test("no marketing page apologizes for the company's size or age", async ({ page }) => {
+  // The claims policy requires the honest no — "DiveDay is new." is still a
+  // heading on /about, and the scope concessions still lead /product's own
+  // section. What it never required is *apologizing* for those facts, and by
+  // 2026-08-12 nine separate framings of "we're small, we're new, you've never
+  // heard of us, don't take us on faith" had accumulated across five pages.
+  // Each read as reasonable candor alone; together they argued a buyer out of
+  // the sale before the product got a word in.
+  //
+  // So the facts stay and the self-deprecation is pinned out by name. This is a
+  // ratchet, not a style note: every one of these shipped as a sentence someone
+  // thought was honest, which is exactly why a review won't catch the next one.
+  const apologetics = [
+    /small (enough|vendor|team|company)/i,
+    /(new|small) vendor/i,
+    /on faith/i,
+    /never heard of/i,
+    /no install base/i,
+    /wall of logos/i,
+    /the least we can do/i,
+    /borrow credibility/i,
+  ];
+  for (const path of ["/", "/product", "/pricing", "/about", "/switching"]) {
+    await page.goto(path);
+    const rendered = await page.locator("body").innerText();
+    for (const pattern of apologetics) {
+      expect(rendered, `${path} apologizes: ${pattern}`).not.toMatch(pattern);
+    }
+  }
+});
+
+test("the switching hub shows the import preview rather than describing it", async ({ page }) => {
+  // "Exactly what comes across" is this page's entire promise and it was made
+  // only in prose. The mockup mirrors the real wizard's preview step, so the
+  // parts that make the promise credible — the columns it *didn't* recognize,
+  // and the row it intends to skip — are the parts asserted here.
+  await page.goto("/switching");
+  await expect(
+    page.getByRole("heading", { name: "You see the whole file before a single row lands." }),
+  ).toBeVisible();
+  const preview = page.getByRole("img", { name: /import preview/i });
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText(/Not recognized, so ignored/)).toBeVisible();
+  // `exact` (and so case-sensitive): the mockup also carries a "Skipped" stat
+  // tile, and the badge on the row is the half that shows the file being read
+  // rather than merely counted.
+  await expect(preview.getByText("skipped", { exact: true })).toBeVisible();
 });
 
 test("every public marketing page unfurls as a card, not a bare URL", async ({ page }) => {

@@ -104,6 +104,98 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
   );
 }
 
+/**
+ * The contacts importer's preview step, in miniature — the one screen that
+ * answers "what actually comes across?" with a picture instead of a paragraph.
+ *
+ * Every element mirrors the real wizard
+ * (`src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx`): the
+ * mapped-column chips it builds from the file's own headers, its
+ * "Not recognized, so ignored" line, three of its eight stat tiles, and the
+ * row table with the same `skipped` badge and `{level} · {status}` card line.
+ * Keeping it a mirror is what makes it a claim rather than an illustration —
+ * if the wizard's shape changes, this changes with it.
+ */
+export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  const rows = [
+    // i18n-exempt: sample diver names and certification levels, marketing mockup only
+    { row: 1, name: "Priya Sharma", card: "Open Water", skipped: false },
+    { row: 2, name: "Tom Okafor", card: "Rescue Diver", skipped: false },
+    { row: 3, name: null, card: null, skipped: true },
+  ];
+  return (
+    <div className="bg-background">
+      <AppBar label={t("fallback.import.label")} />
+      <div className="p-5">
+        <p className="text-xs font-medium tracking-widest text-primary uppercase">
+          {t("fallback.import.eyebrow")}
+        </p>
+        <h3 className="mt-1 text-xl font-semibold tracking-tight">{t("fallback.import.title")}</h3>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[
+            [t("fallback.import.fieldName"), "Name"],
+            [t("fallback.import.fieldEmail"), "email"],
+            [t("fallback.import.fieldCard"), "CertLevel"],
+            [t("fallback.import.fieldSuit"), "Suit"],
+          ].map(([field, header]) => (
+            <span
+              key={header}
+              className="inline-flex items-baseline gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-xs"
+            >
+              <span className="font-medium">{field}</span>
+              {/* i18n-exempt: the file's own raw column headers, shown verbatim */}
+              <span className="font-mono text-muted">{header}</span>
+            </span>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-warning">{t("fallback.import.ignored")}</p>
+        <dl className="mt-4 grid grid-cols-3 gap-2">
+          {[
+            [t("fallback.import.statDivers"), "128"],
+            [t("fallback.import.statCards"), "96"],
+            [t("fallback.import.statSkipped"), "2"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg bg-surface-sunken px-3 py-2">
+              <dt className="text-[10px] text-muted">{label}</dt>
+              <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
+          {rows.map((row) => (
+            <div
+              key={row.row}
+              className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0 ${
+                row.skipped ? "opacity-60" : ""
+              }`}
+            >
+              <p className="flex items-center gap-2 text-sm">
+                <span className="tabular-nums text-muted">{row.row}</span>
+                {row.name ? (
+                  <span className="font-semibold">{row.name}</span>
+                ) : (
+                  <span className="text-danger">{t("fallback.import.noName")}</span>
+                )}
+                {row.skipped ? (
+                  <span className="rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
+                    {t("fallback.import.skippedBadge")}
+                  </span>
+                ) : null}
+              </p>
+              <p className="whitespace-nowrap text-xs text-muted">
+                {row.card
+                  ? t("fallback.import.cardLine", { level: row.card })
+                  : t("fallback.import.emptyValue")}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   const trips = [

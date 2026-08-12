@@ -184,8 +184,15 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.product.systemTitle")}
             </h2>
           </div>
+          {/* Four per group, not all thirty. The complete inventory is the
+              capability index in the `<details>` two sections down (46 lines,
+              better organized); rendering every feature here as well made a
+              reader scroll one wall of bullets to reach a longer one, and the
+              two overlapped almost entirely. The claims each group's remaining
+              features carry — offline roll call, payments, the recap, the
+              export — all have their own section on this page already. */}
           <div className="mt-12">
-            <FeatureGroupsGrid locale={locale} columns={2} />
+            <FeatureGroupsGrid locale={locale} columns={2} featuresPerGroup={4} />
           </div>
         </div>
       </section>
