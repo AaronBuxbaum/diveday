@@ -17,6 +17,7 @@ import { courseTotalCents } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
+import { openGraphSite } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -69,7 +70,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
-    openGraph: { title, description, url: canonical },
+    openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }
 

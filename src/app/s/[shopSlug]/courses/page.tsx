@@ -14,6 +14,7 @@ import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
+import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -38,7 +39,7 @@ export async function generateMetadata({
     title: `Courses — ${shop.name}`,
     description,
     alternates: { canonical },
-    openGraph: { title: `Courses — ${shop.name}`, description, url: canonical },
+    openGraph: { ...openGraphSite, title: `Courses — ${shop.name}`, description, url: canonical },
   };
 }
 

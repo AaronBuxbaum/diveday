@@ -634,6 +634,11 @@ test("every public marketing page unfurls as a card, not a bare URL", async ({ p
     expect(await content('meta[property="og:url"]'), `${path} og:url`).toContain(
       path === "/" ? "/" : path,
     );
+    // A page's own `openGraph` block replaces the root layout's rather than
+    // merging into it, so these two drop off silently the moment a page says
+    // anything about itself — see src/lib/site-metadata.ts.
+    expect(await content('meta[property="og:site_name"]'), `${path} og:site_name`).toBe("DiveDay");
+    expect(await content('meta[property="og:type"]'), `${path} og:type`).toBe("website");
     // Policy (docs/product/marketing.md): `summary_large_image` wherever the
     // shared link card applies. The root `src/app/opengraph-image.tsx` renders
     // for every marketing page (a segment with its own file overrides it — see
