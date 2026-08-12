@@ -17,16 +17,15 @@ const copy: CourseInquiryCopy = {
   howManyDivers: "How many divers",
   optional: "(optional)",
   required: "(required)",
-  preferredDate: "A date you have in mind",
-  preferredDateHint: "We'll tell you if it works — nothing is booked or held yet.",
+  orPhone: "(or phone)",
+  orEmail: "(or email)",
   whenSuits: "When suits you",
-  whenSuitsHint: "Rough is fine.",
-  whenSuitsPlaceholder: "The week of 12 August",
+  whenSuitsHint: "As exact or as loose as you like.",
+  whenSuitsPlaceholder: "12 August, or any weekend this autumn",
   whereYouAreUpTo: "Where you are up to",
   chooseOne: "Choose one",
   anythingElse: "Anything else",
   messagePlaceholder: "We are ashore on Tuesday.",
-  messageSoFar: "Your message so far",
   openInEmailApp: "Open in your email app",
   copyMessage: "Copy message",
   copied: "Copied",
@@ -52,10 +51,29 @@ function renderInquiry(
       shopName="Blue Mantis Divers"
       contactEmail="hello@example.com"
       contactPhone="+1 305 555 0134"
-      locale="en-US"
-      today="2026-08-05"
       copy={copy}
     />,
+  );
+}
+
+/** Every send path needs a reply address; fill one so a test can assert on the rest. */
+function fillEmail(value = "priya@example.com") {
+  fireEvent.change(screen.getByLabelText(/Your email/), { target: { value } });
+}
+
+function pickExperience(value = "never") {
+  fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
+    target: { value },
+  });
+}
+
+/** A stub that always reports the inquiry as recorded. */
+function succeeds() {
+  return vi.fn(
+    async (
+      _prev: CourseInquiryFormState,
+      _formData: FormData,
+    ): Promise<CourseInquiryFormState> => ({ success: true }),
   );
 }
 
@@ -94,9 +112,7 @@ describe("CourseInquiry — experience is required (task 8)", () => {
     fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
     expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "never" },
-    });
+    pickExperience();
     expect(
       screen.queryByText("Let us know where you are up to before sending."),
     ).not.toBeInTheDocument();
@@ -106,9 +122,8 @@ describe("CourseInquiry — experience is required (task 8)", () => {
     const submitInquiry = vi.fn();
     renderInquiry(submitInquiry);
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "never" },
-    });
+    fillEmail();
+    pickExperience();
     fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
 
     expect(
@@ -129,9 +144,8 @@ describe("CourseInquiry — server-recorded submission", () => {
     );
     renderInquiry(submitInquiry);
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "tried" },
-    });
+    fillEmail();
+    pickExperience("tried");
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
@@ -149,9 +163,8 @@ describe("CourseInquiry — server-recorded submission", () => {
     );
     renderInquiry(submitInquiry);
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "certified" },
-    });
+    fillEmail();
+    pickExperience("certified");
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
@@ -173,80 +186,120 @@ describe("CourseInquiry — server-recorded submission", () => {
   });
 });
 
-describe("CourseInquiry — proposing a date", () => {
-  it("offers a date picker that cannot reach into the past", () => {
-    renderInquiry(vi.fn());
-
-    const picker = screen.getByLabelText(/A date you have in mind/);
-    expect(picker).toHaveAttribute("type", "date");
-    // Today where the *shop* is, not where the browser is: a diver who cannot
-    // pick a day already gone never sends a request nobody can answer.
-    expect(picker).toHaveAttribute("min", "2026-08-05");
-  });
-
-  // The preview is the whole point of the composer — a diver must see the date
-  // they picked, written the way they read dates, before they send anything.
-  it("writes the picked date into the message preview in the reader's locale", () => {
-    renderInquiry(vi.fn());
-
-    fireEvent.change(screen.getByLabelText(/A date you have in mind/), {
-      target: { value: "2026-08-12" },
-    });
-
-    expect(screen.getByText(/Date I have in mind: August 12, 2026/)).toBeInTheDocument();
-  });
-
-  it("keeps the date line out of the preview until one is picked", () => {
-    renderInquiry(vi.fn());
-    expect(screen.queryByText(/Date I have in mind/)).not.toBeInTheDocument();
-  });
-
-  // The row stores a bare calendar day; the formatted string is for reading,
-  // never for the column.
-  it("posts the raw YYYY-MM-DD, not the formatted date", async () => {
-    const submitInquiry = vi.fn(
-      async (
-        _prev: CourseInquiryFormState,
-        _formData: FormData,
-      ): Promise<CourseInquiryFormState> => ({
-        success: true,
-      }),
-    );
+describe("CourseInquiry — a lead the shop can answer", () => {
+  // A question with no email and no phone is a lead nobody can reply to, so
+  // every path out of the composer refuses it — including the two that never
+  // touch the server.
+  it("refuses the server send when neither an email nor a phone is given", () => {
+    const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
-    fireEvent.change(screen.getByLabelText(/A date you have in mind/), {
-      target: { value: "2026-08-12" },
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    expect(
+      screen.getByText("Leave an email or a phone number so we can reply."),
+    ).toBeInTheDocument();
+    expect(submitInquiry).not.toHaveBeenCalled();
+  });
+
+  it("refuses the mailto composer when neither an email nor a phone is given", () => {
+    renderInquiry(vi.fn());
+
+    pickExperience();
+    fireEvent.click(screen.getByRole("link", { name: "Open in your email app" }));
+
+    expect(
+      screen.getByText("Leave an email or a phone number so we can reply."),
+    ).toBeInTheDocument();
+  });
+
+  it("accepts a phone number on its own — either one, never both", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
+
+    fireEvent.change(screen.getByLabelText(/Your phone/), {
+      target: { value: "+1 305 555 0199" },
     });
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "never" },
-    });
+    pickExperience();
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
     const formData = submitInquiry.mock.calls[0]?.[1];
-    expect(formData.get("preferredDate")).toBe("2026-08-12");
+    expect(formData.get("phone")).toBe("+1 305 555 0199");
+    expect(formData.get("email")).toBeNull();
   });
 
-  // A date is a *request*, not a booking: it must not become a required field,
-  // and the rest of the composer must work without it.
-  it("stays optional — an inquiry with no date still sends", async () => {
-    const submitInquiry = vi.fn(
-      async (
-        _prev: CourseInquiryFormState,
-        _formData: FormData,
-      ): Promise<CourseInquiryFormState> => ({
-        success: true,
-      }),
-    );
+  it("clears the refusal as soon as either box is typed into", () => {
+    renderInquiry(vi.fn());
+
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+    expect(
+      screen.getByText("Leave an email or a phone number so we can reply."),
+    ).toBeInTheDocument();
+
+    fillEmail();
+    expect(
+      screen.queryByText("Leave an email or a phone number so we can reply."),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("CourseInquiry — how many divers", () => {
+  // One diver is the commonest answer by a distance; nobody should have to
+  // fill in a field to say the obvious.
+  it("starts at one diver", async () => {
+    const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
-      target: { value: "never" },
-    });
+    expect(screen.getByLabelText(/How many divers/)).toHaveValue(1);
+
+    fillEmail();
+    pickExperience();
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
-    const formData = submitInquiry.mock.calls[0]?.[1];
-    expect(formData.get("preferredDate")).toBeNull();
+    expect(submitInquiry.mock.calls[0]?.[1].get("divers")).toBe("1");
+  });
+
+  it("lets the box be cleared — an emptied count is a real answer, not a reset", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
+
+    fireEvent.change(screen.getByLabelText(/How many divers/), { target: { value: "" } });
+    fillEmail();
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("divers")).toBeNull();
+  });
+});
+
+describe("CourseInquiry — the composed message", () => {
+  // The "your message so far" preview is gone; the buttons that carry that
+  // message out of the page are not.
+  it("shows no message preview, only the buttons and the shop's own details", () => {
+    renderInquiry(vi.fn());
+
+    expect(screen.queryByRole("region", { name: /message so far/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in your email app" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy message" })).toBeInTheDocument();
+    expect(screen.getByText("hello@example.com")).toBeInTheDocument();
+  });
+
+  it("still carries every answer into the mailto body", () => {
+    renderInquiry(vi.fn());
+
+    fillEmail();
+    fireEvent.change(screen.getByLabelText(/When suits you/), {
+      target: { value: "any weekend this autumn" },
+    });
+    pickExperience();
+
+    const href = screen.getByRole("link", { name: "Open in your email app" }).getAttribute("href");
+    expect(decodeURIComponent(href ?? "")).toContain("When: any weekend this autumn");
+    expect(decodeURIComponent(href ?? "")).toContain("How many divers: 1");
   });
 });

@@ -5,6 +5,7 @@ import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
+import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -20,7 +21,7 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
 // directly. An empty header set negotiates down to the shop's default
 // locale, same as a real request that sends no Accept-Language (see
 // src/app/api/offline-manifests/upcoming/route.test.ts).
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {

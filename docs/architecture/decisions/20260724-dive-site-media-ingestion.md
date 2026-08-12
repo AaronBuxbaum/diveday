@@ -1,6 +1,8 @@
 # 20260724-dive-site-media-ingestion — Ingest staff-pasted image URLs, never render them live
 
-- **Status:** Accepted
+- **Status:** Accepted, **superseded for dive sites 2026-08-12** by
+  [Amendment](#amendment-2026-08-12--dive-site-photos-are-uploads-so-there-is-no-url-to-ingest)
+  (the machinery it describes lives on for contact-import waiver documents)
 - **Date:** 2026-07-24
 
 ## Context
@@ -75,3 +77,26 @@ remaining scope is dive-site media only.
 - A shop without Blob storage configured cannot add a dive-site image via URL until an operator sets
   `BLOB_READ_WRITE_TOKEN` — an accepted, documented trade-off, not a silent regression.
 - DNS-rebinding remains a known, documented residual gap; closing it fully is a candidate follow-up.
+
+## Amendment 2026-08-12 — dive-site photos are uploads, so there is no URL to ingest
+
+The dive-site form no longer accepts a pasted link. `Satellite map image URL`, `Route image URL`, and
+the one-per-line `Site photo URLs` box are three file inputs — the same `ImageFileInput` +
+`storeImage` shape the course editor has used since CR-011, and the shape this record's own Context
+section noted was already closed there.
+
+That removes the class of problem rather than defending against it: bytes arrive from the staffer's
+own device and go straight to first-party storage, so there is no external URL to fetch, no SSRF
+surface on this path at all, and — the residual gap above — nothing for a DNS-rebinding attacker to
+rebind. It also removes the failure mode nobody had a good answer for: a pasted link that worked at
+save time and 404s (or changes) six months later, on a briefing page a diver reads before a dive.
+
+What went with it: `src/lib/storage/ingest-dive-site-media.ts`, `splitMediaUrls`, and
+`src/lib/dive-site-media.ts`'s bundled-Commons resolver, whose only caller was the ingest path (the
+seeded demo rows write their local `/dive-sites/…` paths directly). What stays: `ingestImageUrl` and
+every SSRF defense in it, because contact-import waiver documents (`src/db/import.ts`, ADR
+20260724-import-verified-cards) genuinely arrive as URLs in a CSV and have no upload path to take.
+
+No migration and no compatibility read: the three columns still hold first-party URLs, they are just
+written by an upload now. Replaced and removed photos queue through the media-deletion ledger like
+course photos do (a new `dive_site_photo` kind), so a superseded blob is not silently orphaned.

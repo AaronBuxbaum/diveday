@@ -12,7 +12,6 @@ import {
   courseInquiryBody,
   courseInquiryMailto,
   courseInquirySubject,
-  formatPreferredDate,
   telHref,
 } from "@/lib/course-inquiry";
 import type { CourseInquiryFormState } from "../actions";
@@ -34,8 +33,8 @@ export interface CourseInquiryCopy {
   howManyDivers: string;
   optional: string;
   required: string;
-  preferredDate: string;
-  preferredDateHint: string;
+  orPhone: string;
+  orEmail: string;
   whenSuits: string;
   whenSuitsHint: string;
   whenSuitsPlaceholder: string;
@@ -43,7 +42,6 @@ export interface CourseInquiryCopy {
   chooseOne: string;
   anythingElse: string;
   messagePlaceholder: string;
-  messageSoFar: string;
   openInEmailApp: string;
   copyMessage: string;
   copied: string;
@@ -59,9 +57,8 @@ export interface CourseInquiryCopy {
 /**
  * "Get in touch and we will set one" used to be the end of the road: a diver
  * with no workable date was handed a sentence and left to write the email
- * themselves. This writes it for them, and shows them exactly what they are
- * about to send before they send it — the preview is the point, because a
- * builder whose output you cannot see is a form you have to trust.
+ * themselves. This asks the four questions a shop always ends up asking for
+ * and turns them into a lead the desk can act on without a round trip.
  *
  * Submitting records the inquiry server-side (a new `course_inquiries` row,
  * via `submitInquiry`) and best-effort notifies the shop's own inbox, so a
@@ -86,8 +83,6 @@ export function CourseInquiry({
   shopName,
   contactEmail,
   contactPhone,
-  locale,
-  today,
   copy,
 }: {
   submitInquiry: (
@@ -98,16 +93,6 @@ export function CourseInquiry({
   shopName: string;
   contactEmail: string;
   contactPhone: string | null;
-  /** The negotiated request locale — how the picked date reads in the preview. */
-  locale: string;
-  /**
-   * Today where the shop is, as a date-input value. The floor on the picker:
-   * a date already gone is never a request, only a typo the shop has to write
-   * back about. Passed in rather than read from the browser clock so the
-   * server and client renders agree (and so the e2e fleet's frozen clock
-   * reaches it).
-   */
-  today: string;
   copy: CourseInquiryCopy;
 }) {
   const t = useTranslations();
@@ -117,24 +102,24 @@ export function CourseInquiry({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [timing, setTiming] = useState("");
-  const [preferredDate, setPreferredDate] = useState("");
-  const [diversInput, setDiversInput] = useState("");
+  // One diver is the answer far more often than any other, so it is the one
+  // the box already holds — a diver bringing friends types over it, and nobody
+  // has to fill in a field to say the obvious.
+  const [diversInput, setDiversInput] = useState("1");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [experienceMissing, setExperienceMissing] = useState(false);
+  const [contactMissing, setContactMissing] = useState(false);
 
-  // Optional, like every other contact field: blank is a real answer, not
-  // something to snap back to a placeholder count.
+  // Cleared to blank is still a real answer — an emptied box means "I would
+  // rather not say" and is never snapped back to the default.
   const divers = diversInput === "" ? null : clampDivers(Number(diversInput));
   const inquiry = {
     courseTitle,
     shopName,
     name,
     timing,
-    // The preview shows the date the way the diver reads it; the value posted
-    // to the server below stays the raw `YYYY-MM-DD` the column stores.
-    preferredDate: (preferredDate && formatPreferredDate(preferredDate, locale)) || "",
     divers,
     experience,
     message,
@@ -142,17 +127,26 @@ export function CourseInquiry({
   const subject = courseInquirySubject(t, inquiry);
   const body = courseInquiryBody(t, inquiry);
 
-  // The one field every submission path requires (task 8) — a diver reaching
-  // for the mailto composer, the copy button, or the server-recorded send
-  // all hit this first, because it is the field the shop reads before
-  // anything else the diver typed.
-  function requireExperience(): boolean {
-    if (experience) {
-      setExperienceMissing(false);
-      return true;
-    }
-    setExperienceMissing(true);
-    return false;
+  /**
+   * What every submission path requires, whichever button the diver reached
+   * for — the mailto composer, the copy button, and the server-recorded send
+   * all run this first.
+   *
+   * Two things: where the diver is up to, because it is the field the shop
+   * reads before anything else they typed, and *some* way to answer them.
+   * Email or phone — either one, never both — because a diver standing on a
+   * dock may only have one of the two, but a lead with neither is a question
+   * nobody can reply to.
+   *
+   * Both are evaluated before returning, so a submission missing both shows
+   * both refusals at once rather than one, then the other.
+   */
+  function requireAnswerable(): boolean {
+    const hasExperience = Boolean(experience);
+    const hasContact = Boolean(email.trim() || phone.trim());
+    setExperienceMissing(!hasExperience);
+    setContactMissing(!hasContact);
+    return hasExperience && hasContact;
   }
 
   async function copyMessage() {
@@ -164,13 +158,12 @@ export function CourseInquiry({
   }
 
   function sendInquiry() {
-    if (!requireExperience()) return;
+    if (!requireAnswerable()) return;
     const formData = new FormData();
     if (name) formData.set("name", name);
     if (email) formData.set("email", email);
     if (phone) formData.set("phone", phone);
     if (timing) formData.set("timing", timing);
-    if (preferredDate) formData.set("preferredDate", preferredDate);
     if (diversInput) formData.set("divers", diversInput);
     formData.set("experience", experience);
     if (message) formData.set("message", message);
@@ -228,7 +221,7 @@ export function CourseInquiry({
         </p>
       ) : null}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 max-w-3xl">
         <FieldGrid columns={2} className="content-start gap-y-5">
           <Field label={copy.yourName} hint={copy.optional}>
             <input
@@ -241,7 +234,14 @@ export function CourseInquiry({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.yourEmail} hint={copy.optional}>
+          {/* Email and phone read as "(or phone)" / "(or email)" rather than
+              "(optional)": neither is required on its own, but the pair is —
+              the refusal below says so in words when both are left blank. */}
+          <Field
+            label={copy.yourEmail}
+            hint={copy.orPhone}
+            error={contactMissing ? t("inquiry.errors.contactRequired") : null}
+          >
             <input
               name="email"
               type="email"
@@ -249,19 +249,26 @@ export function CourseInquiry({
               autoComplete="email"
               maxLength={200}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setContactMissing(false);
+              }}
               placeholder={copy.emailPlaceholder}
               className={controlClass}
             />
           </Field>
-          <Field label={copy.yourPhone} hint={copy.optional}>
+          <Field label={copy.yourPhone} hint={copy.orEmail}>
             <input
               name="phone"
               type="tel"
               autoComplete="tel"
               maxLength={30}
+              aria-invalid={contactMissing}
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              onChange={(event) => {
+                setPhone(event.target.value);
+                setContactMissing(false);
+              }}
               placeholder={copy.phonePlaceholder}
               className={controlClass}
             />
@@ -278,20 +285,11 @@ export function CourseInquiry({
             />
           </Field>
           <Field
-            label={copy.preferredDate}
+            label={copy.whenSuits}
             hint={copy.optional}
-            description={copy.preferredDateHint}
+            description={copy.whenSuitsHint}
+            className="sm:col-span-2"
           >
-            <input
-              name="preferredDate"
-              type="date"
-              min={today}
-              value={preferredDate}
-              onChange={(event) => setPreferredDate(event.target.value)}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={copy.whenSuits} hint={copy.optional} description={copy.whenSuitsHint}>
             <input
               name="timing"
               maxLength={200}
@@ -301,12 +299,16 @@ export function CourseInquiry({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.whereYouAreUpTo} hint={copy.required} className="sm:col-span-2">
+          <Field
+            label={copy.whereYouAreUpTo}
+            hint={copy.required}
+            className="sm:col-span-2"
+            error={experienceMissing ? t("inquiry.errors.experienceRequired") : null}
+          >
             <select
               name="experience"
               required
               aria-required="true"
-              aria-invalid={experienceMissing}
               value={experience}
               onChange={(event) => {
                 setExperience(event.target.value as CourseInquiryExperience | "");
@@ -321,11 +323,6 @@ export function CourseInquiry({
                 </option>
               ))}
             </select>
-            {experienceMissing ? (
-              <p role="alert" className="text-sm text-danger">
-                {t("inquiry.errors.experienceRequired")}
-              </p>
-            ) : null}
           </Field>
           <Field label={copy.anythingElse} hint={copy.optional} className="sm:col-span-2">
             <textarea
@@ -340,73 +337,64 @@ export function CourseInquiry({
           </Field>
         </FieldGrid>
 
-        <section
-          aria-labelledby="inquiry-preview-heading"
-          className="rounded-2xl border border-border bg-surface-sunken p-5"
-        >
-          <h3
-            id="inquiry-preview-heading"
-            className="text-xs font-semibold tracking-wide text-muted uppercase"
+        {/* The buttons and the shop's own details, and nothing between them
+            and the fields. There used to be a "your message so far" preview
+            of the composed subject and body here; it showed a diver their own
+            answers written back to them a second time, which is a paragraph to
+            re-read rather than a fact to check. The composed message still
+            goes to the mail app and the clipboard exactly as before — it just
+            no longer occupies half the section on its way there. */}
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={pending}
+            aria-busy={pending}
+            onClick={sendInquiry}
+            className={buttonClass()}
           >
-            {copy.messageSoFar}
-          </h3>
-          <p className="mt-3 text-sm font-semibold">{subject}</p>
-          <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-muted">{body}</p>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              disabled={pending}
-              aria-busy={pending}
-              onClick={sendInquiry}
-              className={buttonClass()}
-            >
-              {pending ? copy.sending : copy.send}
-            </button>
-            <a
-              href={courseInquiryMailto(t, contactEmail, inquiry)}
-              onClick={(event) => {
-                if (!requireExperience()) event.preventDefault();
-              }}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              {copy.openInEmailApp}
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                if (requireExperience()) copyMessage();
-              }}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              <span aria-live="polite">
-                {copyStatus === "copied"
-                  ? copy.copied
-                  : copyStatus === "failed"
-                    ? copy.copyFailed
-                    : copy.copyMessage}
-              </span>
-            </button>
-          </div>
-          <p className="mt-4 text-sm text-muted">
-            {copy.orWriteTo}{" "}
-            <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
-              {contactEmail}
-            </a>
-            {contactPhone ? (
-              <>
-                {" "}
-                · {copy.callLabel}{" "}
-                <a
-                  href={telHref(contactPhone)}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {contactPhone}
-                </a>
-              </>
-            ) : null}
-            .
-          </p>
-        </section>
+            {pending ? copy.sending : copy.send}
+          </button>
+          <a
+            href={courseInquiryMailto(t, contactEmail, inquiry)}
+            onClick={(event) => {
+              if (!requireAnswerable()) event.preventDefault();
+            }}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            {copy.openInEmailApp}
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              if (requireAnswerable()) copyMessage();
+            }}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            <span aria-live="polite">
+              {copyStatus === "copied"
+                ? copy.copied
+                : copyStatus === "failed"
+                  ? copy.copyFailed
+                  : copy.copyMessage}
+            </span>
+          </button>
+        </div>
+        <p className="mt-4 text-sm text-muted">
+          {copy.orWriteTo}{" "}
+          <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
+            {contactEmail}
+          </a>
+          {contactPhone ? (
+            <>
+              {" "}
+              · {copy.callLabel}{" "}
+              <a href={telHref(contactPhone)} className="font-medium text-primary hover:underline">
+                {contactPhone}
+              </a>
+            </>
+          ) : null}
+          .
+        </p>
       </div>
     </section>
   );

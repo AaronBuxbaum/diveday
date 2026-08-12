@@ -1,6 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { hasRoute, type RoutePoint, routeMapQuery, routePathD } from "@/lib/dive-site-route";
-import { googleMapsUrl, googleSatelliteEmbedUrl } from "@/lib/maps";
+import { googleMapsUrl, googleTerrainEmbedUrl } from "@/lib/maps";
 import { MapEmbed } from "./MapEmbed";
 
 /** The slice of a dive site this draws — structural, so callers pass the row. */
@@ -25,7 +25,7 @@ export function canDrawRoute(site: DiveSiteRouteMap): boolean {
 }
 
 /**
- * A dive site's satellite frame with the shop's own route drawn over it.
+ * A dive site's terrain frame with the shop's own route drawn over it.
  *
  * The route used to come from a lookup table of three hand-authored SVG paths
  * keyed by site name, which meant DiveDay's three demo sites had a map and no
@@ -57,8 +57,8 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
           pretend one — which is also why `MapEmbed` can crop the provider's own
           controls away without taking anything from the reader. */}
       <MapEmbed
-        title={t("site.satelliteMapTitle", { site: site.name })}
-        src={googleSatelliteEmbedUrl(query, site.routeZoom)}
+        title={t("site.terrainMapTitle", { site: site.name })}
+        src={googleTerrainEmbedUrl(query, site.routeZoom)}
         className="h-64 sm:h-80"
       >
         <svg
@@ -96,7 +96,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
           />
         </svg>
         <div className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-          {t("site.satelliteViewIllustrative")}
+          {t("site.terrainViewIllustrative")}
         </div>
       </MapEmbed>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">

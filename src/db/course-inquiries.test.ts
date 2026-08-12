@@ -38,7 +38,6 @@ describe("recordCourseInquiry", () => {
       phone: " +1 305 555 0134 ",
       experienceLevel: "tried",
       timing: " The week of 12 August ",
-      preferredDate: "2026-08-12",
       divers: 2,
       message: " Excited to start! ",
     });
@@ -53,7 +52,6 @@ describe("recordCourseInquiry", () => {
       phone: "+1 305 555 0134",
       experienceLevel: "tried",
       timing: "The week of 12 August",
-      preferredDate: "2026-08-12",
       divers: 2,
       message: "Excited to start!",
     });
@@ -73,7 +71,6 @@ describe("recordCourseInquiry", () => {
     expect(row.email).toBeNull();
     expect(row.phone).toBeNull();
     expect(row.timing).toBeNull();
-    expect(row.preferredDate).toBeNull();
     expect(row.divers).toBeNull();
     expect(row.message).toBeNull();
     expect(row.experienceLevel).toBe("never");
@@ -90,33 +87,6 @@ describe("recordCourseInquiry", () => {
     const row = await latestInquiryForCourse(db, shop.id, course.id);
     expect(row.id).toBe(record.id);
     expect(row.name).toBeNull();
-  });
-
-  // A requested date is a lead, never a hold: nothing here reserves a seat,
-  // and the column stores the bare calendar day the diver picked so the shop
-  // reads the day they meant rather than one shifted by a timezone.
-  it("stores a requested date as the bare calendar day, with no instant attached", async () => {
-    const { db, shop, course } = await inquiryContext();
-    await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: course.id,
-      experienceLevel: "never",
-      preferredDate: "2026-08-12",
-    });
-    const row = await latestInquiryForCourse(db, shop.id, course.id);
-    expect(row.preferredDate).toBe("2026-08-12");
-  });
-
-  it("accepts a date already gone — the shop answers a typo, the database does not refuse it", async () => {
-    const { db, shop, course } = await inquiryContext();
-    await recordCourseInquiry(db, {
-      shopId: shop.id,
-      courseId: course.id,
-      experienceLevel: "never",
-      preferredDate: "2020-01-01",
-    });
-    const row = await latestInquiryForCourse(db, shop.id, course.id);
-    expect(row.preferredDate).toBe("2020-01-01");
   });
 
   it("rejects a course id that does not exist (FK constraint, not a silent orphan row)", async () => {

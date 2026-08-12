@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { LogoMark } from "@/components/Logo";
 import { isDestinationCurrent, type ShopNavGates } from "@/components/ShopNavLinks";
 import { buttonClass } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { staffDestination, staffDestinationHref } from "@/lib/staff-destinations
 
 export type ShopIdentityMenuCopy = {
   settings: string;
+  language: string;
   signOut: string;
   signOutConfirm: string;
   signOutPending: string;
@@ -30,6 +32,12 @@ export type ShopIdentityMenuCopy = {
  * works. Behind the shop's own name it is still one tap from anywhere at every
  * width, and it reads as what it is.
  *
+ * Language is the third, and belongs here for the same reason: it is about
+ * *this reader on this device*, not about the dive day. It is also the one
+ * control a person who cannot read the rest of the header needs to find, which
+ * is why the options render as their own languages' names rather than as
+ * words in whichever language is currently wrong for them.
+ *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
  * alive briefly on a device the next person is already holding (principle 7).
@@ -39,6 +47,9 @@ export function ShopIdentityMenu({
   root,
   gates,
   signOutAction,
+  locale,
+  languages,
+  setLocaleAction,
   copy,
 }: {
   shopName: string;
@@ -47,6 +58,11 @@ export function ShopIdentityMenu({
   /** Settings is owner/manager work (H-14) — hidden entirely from everyone else. */
   gates: ShopNavGates;
   signOutAction: () => Promise<void>;
+  /** The language this render was written in — the one marked as in force. */
+  locale: string;
+  /** Every language DiveDay carries, each named in itself. */
+  languages: readonly LanguageChoice[];
+  setLocaleAction: (locale: string) => Promise<void>;
   copy: ShopIdentityMenuCopy;
 }) {
   const [open, setOpen] = useState(false);
@@ -150,12 +166,25 @@ export function ShopIdentityMenu({
               {copy.settings}
             </Link>
           ) : null}
+          <div className={showSettings ? "mt-1 border-t border-border pt-2" : "pt-1"}>
+            <p className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
+              {copy.language}
+            </p>
+            <div className="mt-1">
+              <LanguageChoices
+                current={locale}
+                choices={languages}
+                setLocale={setLocaleAction}
+                onChosen={() => setOpen(false)}
+              />
+            </div>
+          </div>
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as a navigation row. */}
           <form
             action={signOutAction}
             data-scroll-reset="true"
-            className={showSettings ? "mt-1 border-t border-border pt-1" : ""}
+            className="mt-1 border-t border-border pt-1"
           >
             <InlineConfirm
               triggerLabel={copy.signOut}

@@ -241,6 +241,10 @@ export default async function TripDetailPage({
     creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
     moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
   }));
+  // Dive 1 first, in the dive plan's own order: where a site names its own
+  // time in the water, that is what the day's rhythm counts rather than the
+  // shop-wide default (src/lib/diver-planning.ts).
+  const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
   // Pay-at-booking is offered only when the shop's own Stripe account can
   // take a charge, the trip carries a price, and a canonical origin exists
   // for the return links; otherwise the flow is book-now-pay-later as before.
@@ -530,6 +534,7 @@ export default async function TripDetailPage({
           rentalFit={rentalFit}
           day={meetingDays[0]}
           multiDay={meetingDays.length > 1}
+          siteBottomTimes={siteBottomTimes}
           locale={locale}
         />
         <DiveBriefingsSection briefings={diveBriefings} trip={trip} locale={locale} />

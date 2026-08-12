@@ -34,7 +34,6 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
   if (!href) throw new Error(`no dive-site link for ${siteName}`);
   await page.goto(href);
   await page.getByLabel(unitLabel).fill(depth);
-  await page.getByLabel(/Site photo URLs/).fill("");
   await page.getByRole("button", { name: "Save dive site" }).click();
   await expect(page.getByText("Dive site saved.")).toBeVisible();
   return href;

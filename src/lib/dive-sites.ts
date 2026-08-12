@@ -1,33 +1,15 @@
 import { z } from "zod";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
+import { DOCK_DAY_LIMITS } from "./diver-planning";
 
-const MAX_SITE_IMAGES = 6;
-
-/** Turn staff's one-link-per-line form input into a compact, safe site gallery. */
-export function splitMediaUrls(value: string): string[] {
-  const urls = [
-    ...new Set(
-      value
-        .split(/\r?\n/)
-        .map((url) => url.trim())
-        .filter(Boolean),
-    ),
-  ];
-  if (urls.length > MAX_SITE_IMAGES) throw new Error("Choose up to six images.");
-  for (const url of urls) {
-    let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      throw new Error("Each image must be a complete HTTP(S) link.");
-    }
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      throw new Error("Each image must be a complete HTTP(S) link.");
-    }
-  }
-  return urls;
-}
+/**
+ * How many photos one site's gallery may hold in total — uploaded ones now,
+ * where it used to be pasted links (there is no paste-a-URL path any more; see
+ * `SiteFields`). A briefing is a page a diver reads before a dive, not an
+ * album.
+ */
+export const MAX_SITE_IMAGES = 6;
 
 /**
  * Why a submitted site briefing was refused. A code, never a sentence: both the
@@ -71,8 +53,6 @@ export function submittedValues(formData: FormData): SubmittedFormValues {
   return values;
 }
 
-const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
-
 /**
  * The shape both site forms post. No Zod `message` arguments anywhere: a
  * message argument is an English sentence that `pnpm check:copy` cannot see
@@ -85,9 +65,6 @@ export const diveSiteFormSchema = z.object({
   locationName: z.string().trim().max(160),
   forecastLatitude: z.union([z.literal(""), z.coerce.number().min(-90).max(90)]),
   forecastLongitude: z.union([z.literal(""), z.coerce.number().min(-180).max(180)]),
-  satelliteImageUrl: optionalUrl,
-  routeImageUrl: optionalUrl,
-  imageUrls: z.string().max(12_000),
   marineLife: z.string().trim().max(400),
   marineLifeDescription: z.string().trim().max(1_200),
   difficulty: z.string().trim().max(120),
@@ -96,6 +73,18 @@ export const diveSiteFormSchema = z.object({
   // be applied once the unit is known — this is the loose outer guard, and
   // `parseDiveSiteForm`'s `depthUnit` argument applies the true ceiling.
   maxDepth: z.union([z.literal(""), z.coerce.number().positive().max(1_000)]),
+  // Minutes, in nobody's unit but its own — blank means the shop's own figure
+  // stands, which is what almost every site says. Bounded by the same limits
+  // the shop's field uses, so a site cannot name a day the Settings form would
+  // have refused.
+  expectedBottomTime: z.union([
+    z.literal(""),
+    z.coerce
+      .number()
+      .int()
+      .min(DOCK_DAY_LIMITS.bottomTimeMinutes.min)
+      .max(DOCK_DAY_LIMITS.bottomTimeMinutes.max),
+  ]),
   currentNote: z.string().trim().max(500),
   divePlan: z.string().trim().max(1_200),
   landmarks: z.string().max(4_000),
@@ -130,6 +119,8 @@ export type DiveSiteFormParse =
       ok: true;
       fields: DiveSiteFormFields;
       maxDepthMeters: number | null;
+      /** The typed override in minutes, or null when the shop's own figure stands. */
+      expectedBottomTimeMinutes: number | null;
       route: DiveSiteFormRoute;
     }
   | { ok: false; error: DiveSiteFormError };
@@ -168,6 +159,8 @@ export function parseDiveSiteForm(
     ok: true,
     fields: parsed.data,
     maxDepthMeters,
+    expectedBottomTimeMinutes:
+      parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
     route: {
       points: routePoints,
       zoom: parseRouteZoom(parsed.data.routeZoom),

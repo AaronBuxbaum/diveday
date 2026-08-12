@@ -286,6 +286,7 @@ const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
   recap_photo: "settings.main.dataJobs.mediaKind.recap_photo",
   certification_card: "settings.main.dataJobs.mediaKind.certification_card",
   waiver_document: "settings.main.dataJobs.mediaKind.waiver_document",
+  dive_site_photo: "settings.main.dataJobs.mediaKind.dive_site_photo",
 };
 
 /**

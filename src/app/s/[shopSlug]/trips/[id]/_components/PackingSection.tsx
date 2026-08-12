@@ -1,7 +1,12 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { temperatureText } from "@/i18n/unit-labels";
-import { dockDayTimeline, type ProvidedItemCode, packingConfidence } from "@/lib/diver-planning";
+import {
+  dockDayTimeline,
+  type ProvidedItemCode,
+  packingConfidence,
+  type SiteBottomTimes,
+} from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { RentalFit, Shop, Trip } from "./types";
@@ -39,6 +44,7 @@ export function PackingSection({
   rentalFit,
   day,
   multiDay,
+  siteBottomTimes,
   locale,
 }: {
   shop: Shop;
@@ -56,6 +62,12 @@ export function PackingSection({
   day?: { startsAt: Date; endsAt: Date };
   /** Whether this departure meets on more than one day — the rhythm repeats. */
   multiDay: boolean;
+  /**
+   * Each planned dive's own time in the water, dive 1 first, where the site it
+   * visits names one. Absent entries fall back to the shop's own figure — see
+   * `SiteBottomTimes`.
+   */
+  siteBottomTimes?: SiteBottomTimes;
   locale: string;
 }) {
   const window = day ?? trip;
@@ -118,7 +130,13 @@ export function PackingSection({
           day, and says so rather than implying it only happens once. */}
       {multiDay ? <p className="mt-1 text-sm text-muted">{t("trip.dockDayEachDay")}</p> : null}
       <ol className="mt-2 space-y-1 text-sm text-muted">
-        {dockDayTimeline(window.startsAt, shop, window.endsAt, trip.plannedDives).map((entry) => (
+        {dockDayTimeline(
+          window.startsAt,
+          shop,
+          window.endsAt,
+          trip.plannedDives,
+          siteBottomTimes,
+        ).map((entry) => (
           <li key={`${entry.step}-${entry.number ?? 0}`}>
             {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })} ·{" "}
             {entry.at.toLocaleTimeString(locale, {

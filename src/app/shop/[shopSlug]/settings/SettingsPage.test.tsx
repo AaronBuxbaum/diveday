@@ -13,6 +13,7 @@ import {
   hrefsIn,
   selectNamesIn,
 } from "@/test/jsx-inspect";
+import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
@@ -25,7 +26,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
 // An empty header set negotiates down to the shop's default locale, same as a
 // real request that sends no Accept-Language.
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {

@@ -3,7 +3,9 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
+import { setLocaleAction } from "@/app/actions/set-locale";
 import { DemoBanner } from "@/components/DemoBanner";
+import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
@@ -16,9 +18,10 @@ import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
+import { localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLanguageFallback, requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
@@ -181,6 +184,18 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
     isStaff(session?.user?.roles) &&
     session?.user?.shopId === shop?.id;
   const staffT = staffTranslator(locale);
+  // Each language named in itself (src/i18n/language-labels.ts): the reader
+  // reaching for this is the one who cannot read the page around it.
+  //
+  // Only the languages *not* in force, unlike the staff menu's version. A
+  // public header is one line a diver reads past on a phone, and a two-state
+  // control there costs the width the nav needs; one button reading "español"
+  // is self-describing (it is written in the language it switches to) and says
+  // the same thing in half the room. The language currently in force is not a
+  // fact a diver needs a control to tell them — they are reading it.
+  const languages: LanguageChoice[] = DIVER_LOCALES.filter((value) => value !== locale).map(
+    (value) => ({ locale: value, label: localeEndonym(value) }),
+  );
 
   return (
     <>
@@ -240,6 +255,9 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
           shop={shop}
           navAriaLabel={t("shopChrome.navAriaLabel")}
           navItems={navItems}
+          locale={locale}
+          languages={languages}
+          setLocale={setLocaleAction}
         />
       ) : null}
       {/* Below the header on purpose: the shop's own identity is what a diver

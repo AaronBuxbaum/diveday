@@ -10,15 +10,10 @@ import { createDiveSite } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import {
-  type DiveSiteFormError,
-  parseDiveSiteForm,
-  splitMediaUrls,
-  submittedValues,
-} from "@/lib/dive-sites";
+import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
@@ -80,12 +75,6 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       activeShop?.depthUnit ?? "meters",
     );
     if (!parsed.ok) return refuse(parsed.error);
-    let imageUrls: string[];
-    try {
-      imageUrls = splitMediaUrls(parsed.fields.imageUrls);
-    } catch {
-      return refuse("images");
-    }
     const specialties = z
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
@@ -94,20 +83,20 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       .split("\n")
       .map((landmark) => landmark.trim())
       .filter(Boolean);
-    // Every media URL becomes first-party before it's ever stored — a public
-    // dive-site page must never make a live request to a staff-pasted
-    // third-party host (CR-020).
-    const media = await ingestDiveSiteMedia({
-      satelliteImageUrl: parsed.fields.satelliteImageUrl || undefined,
-      routeImageUrl: parsed.fields.routeImageUrl || undefined,
-      imageUrls,
-    });
-    if (!media.ok) {
-      return refuse(media.reason === "not_configured" ? "imagesUnconfigured" : "images");
+    // Uploaded from the staffer's own device straight into first-party
+    // storage — there is no pasted URL for a public page to fetch (CR-020).
+    const photos = await uploadDiveSitePhotos(formData);
+    if (!photos.ok) {
+      return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
     }
-    // `maxDepth` is the form's unit-relative field, not a column — it became
-    // `parsed.maxDepthMeters`, so it must not reach the spread.
-    const { maxDepth: _maxDepth, ...siteFields } = parsed.fields;
+    // `maxDepth` and `expectedBottomTime` are the form's own fields, not
+    // columns — they became `parsed.maxDepthMeters` /
+    // `parsed.expectedBottomTimeMinutes`, so neither may reach the spread.
+    const {
+      maxDepth: _maxDepth,
+      expectedBottomTime: _expectedBottomTime,
+      ...siteFields
+    } = parsed.fields;
     const site = await createDiveSite(await getDb(), {
       shopId: activeSession.user.shopId,
       ...siteFields,
@@ -115,15 +104,16 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
         parsed.fields.forecastLatitude === "" ? undefined : parsed.fields.forecastLatitude,
       forecastLongitude:
         parsed.fields.forecastLongitude === "" ? undefined : parsed.fields.forecastLongitude,
-      satelliteImageUrl: media.satelliteImageUrl,
-      routeImageUrl: media.routeImageUrl,
-      imageUrls: media.imageUrls,
+      satelliteImageUrl: photos.photos.satelliteImageUrl,
+      routeImageUrl: photos.photos.routeImageUrl,
+      imageUrls: photos.photos.imageUrls,
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
       difficulty: parsed.fields.difficulty,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
+      expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
       landmarks,

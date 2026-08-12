@@ -1,0 +1,5 @@
+ALTER TYPE "media_deletion_kind" ADD VALUE 'dive_site_photo';--> statement-breakpoint
+ALTER TABLE "dive_sites" ADD COLUMN "expected_bottom_time_minutes" integer;--> statement-breakpoint
+-- diveday:allow-destructive drop-column course_inquiries.preferred_date: the course inquiry form no longer asks for one. The date picker beside "When suits you" implied a precision the answer never had — a diver's date is a request the shop replies to, never a hold — so the free-text timing field is now the only "when" question, and nothing reads or writes this column. No shop is live and no row holds a value, so there is no lead's answer to strand.
+ALTER TABLE "course_inquiries" DROP COLUMN "preferred_date";--> statement-breakpoint
+ALTER TABLE "dive_sites" ADD CONSTRAINT "dive_sites_expected_bottom_time_positive" CHECK ("expected_bottom_time_minutes" is null or "expected_bottom_time_minutes" > 0);

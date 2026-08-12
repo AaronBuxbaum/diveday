@@ -1,8 +1,22 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { type LanguageFallback, languageEndonym, languageNameIn } from "./language-labels";
+import { LOCALE_COOKIE } from "./locale-cookie";
 import { diverTranslator } from "./messages";
 import { firstHandLocale, negotiateLocale, unsupportedLanguage } from "./negotiate";
-import type { DiverLocale } from "./settings";
+import { type DiverLocale, isDiverLocale } from "./settings";
+
+/**
+ * The language this reader picked for themselves, or null if they never did.
+ *
+ * Outranks `Accept-Language` everywhere below: a header is what a device was
+ * configured to want, a cookie is what the person in front of it actually
+ * asked for. An unrecognised value (a retired locale, a hand-edited cookie)
+ * reads as no choice rather than as a locale we have no bundle for.
+ */
+async function chosenLocale(): Promise<DiverLocale | null> {
+  const value = (await cookies()).get(LOCALE_COOKIE)?.value;
+  return isDiverLocale(value) ? value : null;
+}
 
 /**
  * The locale for the current request: what the visitor's device asked for if
@@ -32,6 +46,8 @@ import type { DiverLocale } from "./settings";
  * page's body into a `"use cache"` function keyed by this locale.
  */
 export async function requestLocale(shopDefaultLocale?: string | null): Promise<DiverLocale> {
+  const chosen = await chosenLocale();
+  if (chosen) return chosen;
   const header = (await headers()).get("accept-language");
   return negotiateLocale(header, shopDefaultLocale);
 }
@@ -52,7 +68,9 @@ export async function requestLocale(shopDefaultLocale?: string | null): Promise<
  * `findOrCreatePerson`.
  */
 export async function requestFirstHandLocale(): Promise<DiverLocale | null> {
-  return firstHandLocale((await headers()).get("accept-language"));
+  // A deliberate pick is the strongest first-hand evidence there is — stronger
+  // than the header, which is a device setting somebody else may have made.
+  return (await chosenLocale()) ?? firstHandLocale((await headers()).get("accept-language"));
 }
 
 /** `requestLocale` plus a translator bound to it — what most pages want. */
@@ -79,6 +97,10 @@ export async function requestTranslator(shopDefaultLocale?: string | null) {
 export async function requestLanguageFallback(
   shownLocale: DiverLocale,
 ): Promise<LanguageFallback | null> {
+  // Someone who picked this language is not being fallen back on — they are
+  // reading what they asked for, and telling them otherwise would be the app
+  // arguing with a choice it just honoured.
+  if (await chosenLocale()) return null;
   const unsupported = unsupportedLanguage((await headers()).get("accept-language"));
   if (!unsupported) return null;
   const shownLanguage = shownLocale.split("-")[0];
