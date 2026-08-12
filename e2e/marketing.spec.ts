@@ -49,6 +49,13 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
 
   await scheduleLink.click();
   await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+  // Departures on it, not merely a page titled "Schedule". The link promises a
+  // booking page, and the heading renders identically over the "No trips on the
+  // books yet" empty state — which is exactly what the canonical demo shows once
+  // its clock-anchored seed ages out (ADR 20260812-demo-schedule-keeper).
+  await expect(
+    page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first(),
+  ).toBeVisible();
   // The diver-facing schedule, not a staff console — no sign-in chrome.
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 });

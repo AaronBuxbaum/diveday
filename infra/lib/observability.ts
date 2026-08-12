@@ -131,6 +131,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // at all, and is watched from the AWS side instead (infra-stack.ts S19).
       "cron_platform_backup.pass_failed",
       "cron_trip_series.roll_failed",
+      "cron_demo_refresh.pass_failed",
     ],
     threshold: 1,
     periodMinutes: 1_440,
