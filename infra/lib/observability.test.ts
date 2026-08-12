@@ -18,7 +18,7 @@ import {
 
 /**
  * The registry in `observability.ts` is only as good as its weakest claim: a
- * metric filter whose pattern matches nothing does not fail, error, or warn —
+ * metric filter whose pattern matches nothing does not fail, error, or warn --
  * it counts zero, forever, and the alarm above it reads healthy. Everything
  * here exists to make that specific silence impossible.
  */
@@ -146,7 +146,7 @@ describe("the synthesized observability stack", () => {
       >,
     );
     // Matched by the identity the policy is attached to, not by the actions in
-    // it: §10's SNS delivery-status role also holds `logs:PutLogEvents`, and a
+    // it: S10's SNS delivery-status role also holds `logs:PutLogEvents`, and a
     // filter on the action list would either pick that up or be written to
     // match only what this test already expects to find.
     const shipperStatements = policies
@@ -306,7 +306,7 @@ describe("the synthesized observability stack", () => {
     const declared = [...source.matchAll(/field:\s*"([a-z]+)"/g)].map((match) => match[1]);
     expect(declared.length).toBe(WEB_VITAL_SIGNALS.length);
     // A metric filter naming a field the log line does not carry extracts
-    // nothing, forever, without erroring — the whole reason this guard exists.
+    // nothing, forever, without erroring -- the whole reason this guard exists.
     expect(WEB_VITAL_SIGNALS.map((signal) => signal.field).sort()).toEqual([...declared].sort());
   });
 
@@ -379,7 +379,7 @@ describe("the synthesized observability stack", () => {
     expect(properties?.AppMonitorConfiguration?.AllowCookies).toBe(false);
     expect(properties?.AppMonitorConfiguration?.EnableXRay).toBe(false);
     // RUM's own log group would have no retention policy, duplicating what
-    // §13's bounded group already keeps.
+    // S13's bounded group already keeps.
     expect(properties?.CwLogEnabled).toBe(false);
     // The only server-side control on who may write here.
     expect(properties?.Domain).toBe("www.dive.day");

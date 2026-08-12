@@ -78,11 +78,33 @@ role.
 template-only comparison, so the diff comment posted to a `pull_request` (and a `workflow_dispatch`
 run's own diff output) reflects what would actually happen, not just what changed textually.
 
-`GitHubActionsCdkDiffRole` can now assume one more role than before — still cannot read any secret
-(the existing `denyReadingAnySecret()` statement is untouched), still cannot assume `deploy-role`, and
-`file-publishing-role` itself only carries S3 asset-bucket and ECR-repository permissions under the
-modern CDK synthesizer, not stack-execution permissions — so this role still cannot create, modify, or
-delete any resource this stack manages.
+`GitHubActionsCdkDiffRole` can now assume one more role than before. Still cannot assume `deploy-role`,
+so still cannot create, modify, or delete any resource this stack manages, and still cannot read any
+Secrets Manager secret through its own identity policy — but that Deny doesn't travel across an
+`sts:AssumeRole` boundary: an assumed-role session's permissions come entirely from the *target* role's
+own policy, not an intersection with the caller's. What actually keeps this grant from reaching a
+secret is that `file-publishing-role`'s attached policy (`FilePublishingRoleDefaultPolicy` in AWS's
+own CDK bootstrap template, verified by reading it directly rather than assuming) carries only S3
+(`GetObject*`/`GetBucket*`/`List*`/`DeleteObject*`/`PutObject*`/`Abort*`/`GetEncryptionConfiguration`)
+on the bootstrap staging bucket and KMS (`Decrypt`/`DescribeKey`/`Encrypt`/`ReEncrypt*`/
+`GenerateDataKey*`) on its key — no `secretsmanager:*`, no `cloudformation:*`, no `iam:PassRole`. (ECR
+belongs to a *different* bootstrap role, `image-publishing-role`, not granted here — an earlier draft
+of this record misattributed it to `file-publishing-role`.) If a future CDK bootstrap template version
+ever widened that policy, this grant would inherit the change silently; the boundary here is AWS's
+bootstrap template, not anything this stack owns or tests.
+
+That S3 grant is also **bucket-wide**, not scoped to this stack's own template object: `sts:AssumeRole`
+hands over the whole target policy, and `file-publishing-role`'s resource is the entire per-(account,
+region) staging bucket, `${StagingBucket.Arn}` and `${StagingBucket.Arn}/*`. Today that's low-impact —
+grepping `infra/` turns up no `fromAsset`/`NodejsFunction`/`DockerImageAsset` (both this stack's Lambdas
+use `Code.fromInline`) and no context lookups, so nothing but this stack's own oversized template
+object lives in that bucket for this role to reach. But the grant itself doesn't know that: the moment
+this stack (or any other CDK app sharing this account) gains a bundled Lambda or another file asset, it
+lands in the same shared bucket and becomes listable, readable, overwritable, and deletable through this
+identical grant, assumable by any branch's `pull_request` run including a fork's, with no change to this
+file required. Revisit this record if that happens — the fix then is narrowing what's actually needed
+(a bucket-prefix condition, if CDK's staging-bucket layout permits one) rather than accepting the
+wider surface by default.
 
 Escape hatch: if this stack ever needs a real `Vpc.fromLookup`/`StringParameter.valueFromLookup` or a
 container image asset, `lookup-role`/`image-publishing-role` would need the same one-line addition
@@ -91,7 +113,12 @@ adding preemptively now.
 
 ## Follow-up
 
-The local-root-session variant of this failure (same "could not assume... proceeding anyway" +
-"we dont have access to it" shape, but from `arn:aws:iam::417160702652:root`, which shouldn't need an
-identity-based policy grant at all) is unexplained by this record's fix and is a separate question —
-worth a `-v` CDK run to see the underlying error rather than guessing further.
+- The local-root-session variant of this failure (same "could not assume... proceeding anyway" +
+  "we dont have access to it" shape, but from `arn:aws:iam::417160702652:root`, which shouldn't need an
+  identity-based policy grant at all) is unexplained by this record's fix and is a separate question —
+  worth a `-v` CDK run to see the underlying error rather than guessing further.
+- Nothing in this repo's tests asserts `GitHubActionsCdkDiffRole`'s new `sts:AssumeRole` statement is
+  scoped to exactly `file-publishing-role`. A copy-paste from `GitHubActionsCdkDeployRole`'s four-role
+  `AssumeCdkBootstrapRoles` array onto this fork-reachable role — reintroducing `deploy-role` in
+  particular — would pass `cdk synth` silently. `infra/lib/manual-actions.test.ts` gets a new assertion
+  for this in the same change that adds the grant.

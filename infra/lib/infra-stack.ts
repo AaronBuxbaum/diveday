@@ -40,13 +40,13 @@ const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
 /**
- * Scopes every GitHub Actions OIDC trust condition below (§18) to this repo.
+ * Scopes every GitHub Actions OIDC trust condition below (S18) to this repo.
  * Spelled with GitHub's own casing, and it has to be: this string is embedded
  * in an IAM `StringLike` on `token.actions.githubusercontent.com:sub`, and
  * `StringLike` is case-sensitive with no ignore-case variant to reach for.
  *
  * Also spelled as `owner@ownerId/repo@repoId`, not the bare `owner/repo` that
- * reads naturally — GitHub now mints the `sub` claim's `repo:` segment that
+ * reads naturally -- GitHub now mints the `sub` claim's `repo:` segment that
  * way, confirmed 2026-08-12 by printing a real token's decoded claims from a
  * workflow run (`repo:AaronBuxbaum@5578581/diveday@1302222351:ref:refs/heads/
  * main`), after the trust policy, the `GitHubActionsOidcProvider`, the AWS
@@ -54,9 +54,9 @@ const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
  * as the cause of "Not authorized to perform sts:AssumeRoleWithWebIdentity"
  * on every credentialed CI step touching `infra/`. A `StringLike` built from
  * the bare name (`repo:AaronBuxbaum/diveday:*`) is not a prefix of that
- * string, so it matches nothing — the same failure shape, and the same
+ * string, so it matches nothing -- the same failure shape, and the same
  * read-as-something-else risk, the casing bug once caused. Both IDs are
- * GitHub's own immutable identifiers (account id and repository id — this
+ * GitHub's own immutable identifiers (account id and repository id -- this
  * repo's `git remote`/API surface calls them `owner.id` and `id`), stable
  * across a rename or an ownership transfer, which is presumably why GitHub
  * started including them: a deleted-and-recreated repo of the same name
@@ -64,7 +64,7 @@ const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
  * closing a spoofing gap a name-only match left open.
  */
 const GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351";
-/** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (§18). */
+/** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (S18). */
 const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
 // IAM user names as literals, for the destination headings inside the
@@ -77,7 +77,7 @@ const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
- * The app's own log group (§13). A literal rather than a derived token because
+ * The app's own log group (S13). A literal rather than a derived token because
  * it is both an IAM policy's scope and a value a human pastes into Vercel, and
  * `${Token[...]}` is no use for the second of those.
  */
@@ -98,7 +98,7 @@ export class InfraStack extends cdk.Stack {
     const userName = this.node.tryGetContext("userName") || "reg-suit-bot";
 
     // Every access key this stack mints is created by CloudFormation and its
-    // value delivered through the credential hand-off secret (§16). Rotation is a
+    // value delivered through the credential hand-off secret (S16). Rotation is a
     // deploy, not a console visit: `AWS::IAM::AccessKey.Serial` may only ever be
     // incremented, and incrementing it makes CloudFormation replace the key --
     // create-then-delete, so the user is transiently at IAM's two-key ceiling
@@ -199,13 +199,13 @@ export class InfraStack extends cdk.Stack {
     //
     // This one used to publish its secret as an unmasked `IAMUserSecretKey`
     // stack output. `cloudformation:DescribeStacks` returns resolved outputs, so
-    // that credential was readable by the cdk-deployer user (§5, which holds
+    // that credential was readable by the cdk-deployer user (S5, which holds
     // DescribeStacks on every stack in the account) and by both "read-only" MCP
-    // users (§6, whose ReadOnlyAccess includes it) -- each of which then had
+    // users (S6, whose ReadOnlyAccess includes it) -- each of which then had
     // s3:DeleteObject* on an unversioned bucket via `grantReadWrite` below.
     // Three identities' stated security rationale defeated by one output.
     //
-    // The secret now goes to Secrets Manager (§16) and nowhere else. Outputs
+    // The secret now goes to Secrets Manager (S16) and nowhere else. Outputs
     // carry names, ARNs, and instructions; never key material.
     const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user);
     envValues.REG_SUIT_S3_BUCKET_NAME = bucket.bucketName;
@@ -225,10 +225,10 @@ export class InfraStack extends cdk.Stack {
     // execution role, and a plain `cdk bootstrap` leaves that role at
     // AdministratorAccess (`--cloudformation-execution-policies` defaults to
     // empty). Anything deployable is therefore reachable from this key,
-    // including a stack that reads §16's credentials secret. Bootstrapping with
+    // including a stack that reads S16's credentials secret. Bootstrapping with
     // scoped execution policies is what would actually bound it, and it is a
-    // manual action (§17, `cdk-bootstrap`). Until then, treat this key as an
-    // administrator credential -- which is why the document in §16 marks it
+    // manual action (S17, `cdk-bootstrap`). Until then, treat this key as an
+    // administrator credential -- which is why the document in S16 marks it
     // workstation-only.
     const deployerUser = new iam.User(this, "CdkDeployerUser", {
       userName: "cdk-deployer",
@@ -304,10 +304,10 @@ export class InfraStack extends cdk.Stack {
     //
     // "Read-only" has to mean it, and ReadOnlyAccess is AWS's policy to change,
     // not ours: it already grants `cloudformation:DescribeStacks`, which is how
-    // the old `IAMUserSecretKey` output (§4) was readable from here. An explicit
+    // the old `IAMUserSecretKey` output (S4) was readable from here. An explicit
     // Deny on `secretsmanager:GetSecretValue` is what makes the claim true
     // independent of what AWS adds to the managed policy next - a Deny always
-    // beats an Allow, so these credentials can never read §16's secret and
+    // beats an Allow, so these credentials can never read S16's secret and
     // escalate into the write-capable identities it carries.
     const readOnlyAccess = iam.ManagedPolicy.fromAwsManagedPolicyName("ReadOnlyAccess");
 
@@ -398,7 +398,7 @@ export class InfraStack extends cdk.Stack {
     // No `budgetName` here, deliberately: a fixed one collides with itself on
     // the replacement `--context monthlyBudgetLimit=...` forces. See the
     // "Troubleshooting" note in docs/engineering/infrastructure-runbook.md
-    // §6 for the mechanism; the resolved name is in the output below.
+    // S6 for the mechanism; the resolved name is in the output below.
     const monthlyCostGuardrail = new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
       budget: {
         budgetType: "COST",
@@ -454,7 +454,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // The app's own origin, used to subscribe its webhook routes to the two SNS
-    // topics below (SES delivery events in §8, SMS delivery receipts in §10).
+    // topics below (SES delivery events in S8, SMS delivery receipts in S10).
     // Both were runbook steps until ADR 20260803-webhook-subscriptions-in-cdk;
     // an unsubscribed topic is the failure nothing detects, because every hop
     // either side of it looks perfectly healthy while no event ever arrives.
@@ -635,7 +635,7 @@ export class InfraStack extends cdk.Stack {
     // subscription filter can only target Lambda, Kinesis, or Firehose - not
     // SNS - so reaching the app takes a forwarder.
     //
-    // Logs → filter → Lambda → SNS topic → /api/webhooks/sms. The extra SNS hop
+    // Logs -> filter -> Lambda -> SNS topic -> /api/webhooks/sms. The extra SNS hop
     // buys the thing that makes it worth having: the receipt arrives over the
     // same signed SNS envelope the SES webhook already verifies, so the app
     // needs no new authentication path for a third provider.
@@ -846,7 +846,7 @@ exports.handler = async (event) => {
       ],
     });
 
-    // Least-privilege uploader, same posture as §5's cdk-deployer: write-only.
+    // Least-privilege uploader, same posture as S5's cdk-deployer: write-only.
     // It can create a new bundle and nothing else -- no GetObject, no
     // DeleteObject, no ListBucket. A leaked uploader credential therefore
     // cannot read a shop's exported waivers back out, and cannot destroy an
@@ -956,7 +956,7 @@ exports.handler = async (event) => {
       logGroupName: APP_LOG_GROUP_NAME,
       // A month: long enough to answer "what happened at last month-end", short
       // enough that the record of every payment decision is not an open-ended
-      // liability. Same bounded posture as the SMS receipt groups in §10, and
+      // liability. Same bounded posture as the SMS receipt groups in S10, and
       // the reason the group is declared here at all rather than left for the
       // shipper's first write to create - a group CloudWatch creates for you
       // never expires anything.
@@ -988,14 +988,14 @@ exports.handler = async (event) => {
     // document as often as it is pasted into Vercel.
     envValues.CLOUDWATCH_LOG_GROUP = APP_LOG_GROUP_NAME;
 
-    // Alarms land in the same mailbox as every other operational alert (§7's
+    // Alarms land in the same mailbox as every other operational alert (S7's
     // cost guardrails, the in-app new-account and demo alerts, Sentry's issue
     // alerts). One inbox to watch is the whole point; a second alert channel
     // nobody reads is worse than no alarm.
     //
     // An SNS email subscription needs a confirmation click that no API can
     // perform, which is why this is one of the few things here that turns into
-    // a manual action (§17, `confirm-observability-alarms`).
+    // a manual action (S17, `confirm-observability-alarms`).
     const observabilityAlarms = new sns.Topic(this, "ObservabilityAlarms", {
       topicName: "diveday-observability-alarms",
       displayName: "DiveDay alarms",
@@ -1100,7 +1100,7 @@ exports.handler = async (event) => {
         "cognito-identity.amazonaws.com",
         {
           // Both conditions are load-bearing. The `aud` binds the role to *this*
-          // identity pool, so a role ARN that leaks (and it does leak — it ships
+          // identity pool, so a role ARN that leaks (and it does leak -- it ships
           // in the browser bundle) cannot be assumed through somebody else's
           // pool. The `amr` binds it to the unauthenticated flow, so it can
           // never be handed out as if it were an authenticated identity's role.
@@ -1113,7 +1113,7 @@ exports.handler = async (event) => {
     rumGuestRole.addToPolicy(
       new iam.PolicyStatement({
         // One action, one app monitor. This credential is public by
-        // construction — anyone can open the site and mint one — so the only
+        // construction -- anyone can open the site and mint one -- so the only
         // meaningful bound is how little it can do. The worst an abuser
         // achieves is writing junk page views into this monitor's own data.
         actions: ["rum:PutRumEvents"],
@@ -1133,7 +1133,7 @@ exports.handler = async (event) => {
       // canonical host rather than left open.
       domain: new URL(webhookHost).hostname,
       // Off: RUM would otherwise create its own log group with no retention
-      // policy, duplicating what §13's group already keeps under a bounded one.
+      // policy, duplicating what S13's group already keeps under a bounded one.
       cwLogEnabled: false,
       appMonitorConfiguration: {
         identityPoolId: rumIdentityPool.ref,
@@ -1142,14 +1142,14 @@ exports.handler = async (event) => {
         enableXRay: false,
         sessionSampleRate: 1,
         // Performance only. Errors are Sentry's, and RUM's `http` telemetry
-        // records request URLs — which in this app include bearer-capability
+        // records request URLs -- which in this app include bearer-capability
         // paths (docs/engineering/capability-telemetry-runbook.md).
         telemetries: ["performance"],
       },
     });
 
     // Public by necessity: the browser is the only consumer, and none of the
-    // four is a secret — the identity pool hands the same credential to anyone
+    // four is a secret -- the identity pool hands the same credential to anyone
     // who loads the page, and it can do exactly one thing.
     envValues.NEXT_PUBLIC_RUM_APP_MONITOR_ID = rumAppMonitor.attrId;
     envValues.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID = rumIdentityPool.ref;
@@ -1190,11 +1190,11 @@ exports.handler = async (event) => {
     }
     observabilityDashboard.addWidgets(
       new cloudwatch.GraphWidget({
-        title: "Core Web Vitals (p75) — timings",
+        title: "Core Web Vitals (p75) -- timings",
         left: vitalMetrics.filter((_metric, index) => WEB_VITAL_SIGNALS[index]?.field !== "cls"),
         // Google's LCP boundary, drawn on the graph so a reader does not have to
         // remember it to know whether the line is where it should be.
-        leftAnnotations: [{ value: 2_500, label: "LCP good ≤ 2.5s" }],
+        leftAnnotations: [{ value: 2_500, label: "LCP good <= 2.5s" }],
         width: 12,
         height: 6,
       }),
@@ -1203,7 +1203,7 @@ exports.handler = async (event) => {
         // Its own widget: CLS is a unitless fraction under 1 and would be a flat
         // line against milliseconds in the thousands.
         left: vitalMetrics.filter((_metric, index) => WEB_VITAL_SIGNALS[index]?.field === "cls"),
-        leftAnnotations: [{ value: 0.1, label: "good ≤ 0.1" }],
+        leftAnnotations: [{ value: 0.1, label: "good <= 0.1" }],
         width: 12,
         height: 6,
       }),
@@ -1416,7 +1416,7 @@ exports.handler = async (event) => {
     //  - A `CfnAccessKey` secret is *not* readable from the template.
     //    `cloudformation:GetTemplate` returns the unresolved `Fn::GetAtt`, at
     //    both Original and Processed stages. What leaked it was putting it in a
-    //    `CfnOutput` (§4), which `DescribeStacks` resolves. Outputs were the
+    //    `CfnOutput` (S4), which `DescribeStacks` resolves. Outputs were the
     //    hole, not CfnAccessKey.
     //  - Minting by hand did not avoid the secret; it moved it into a terminal
     //    scrollback and a human's memory, once, unrecoverably. Lose it and the
@@ -1428,7 +1428,7 @@ exports.handler = async (event) => {
     // *deletes the key*, breaking anything still holding it, where a hand-minted
     // key would have survived untouched. That is the correct default -- a
     // credential this file no longer describes should stop working -- but it is a
-    // sharp edge and it is why §16's checklist carries a rotation entry.
+    // sharp edge and it is why S16's checklist carries a rotation entry.
     //
     // One secret, not eight. Secrets Manager bills $0.40 per secret per month;
     // eight would be $3.20 against the ~$5/month this account is budgeted for
@@ -1440,13 +1440,13 @@ exports.handler = async (event) => {
     // same person holds account admin either way.
     //
     // **Exactly one additional principal is granted read** -- GitHubActionsCdkDeployRole
-    // (§18), scoped to this secret's own ARN and nothing else -- and it is worth
+    // (S18), scoped to this secret's own ARN and nothing else -- and it is worth
     // being exact about what that does and does not buy.
     //
-    // It bounds the read-only MCP users (§6) completely: they carry an explicit
+    // It bounds the read-only MCP users (S6) completely: they carry an explicit
     // Deny, and a Deny beats any Allow.
     //
-    // It does *not* bound the deployer (§5), and saying otherwise would be the
+    // It does *not* bound the deployer (S5), and saying otherwise would be the
     // same species of false comfort this whole change exists to remove. The
     // deployer can assume `cdk-<qualifier>-deploy-role`, and a plain
     // `cdk bootstrap` - which is what `pnpm infra:bootstrap` runs - leaves the
@@ -1456,7 +1456,7 @@ exports.handler = async (event) => {
     // deploy a one-resource stack that reads this secret. Withholding
     // `grantRead` costs them a step, not the capability. What would actually
     // bound it is bootstrapping with scoped execution policies - a manual
-    // action, and named as one in §17.
+    // action, and named as one in S17.
     //
     // That reach is why the deployer's own key is the one credential in the
     // document marked workstation-only: it is the key that yields all the
@@ -1464,7 +1464,7 @@ exports.handler = async (event) => {
     //
     // The account owner reads the secret with their administrator profile, or in
     // the console. It is also a hand-off point for CI: once a human has approved
-    // the infra-deploy GitHub Environment (§18), `pnpm infra:deploy` reads this
+    // the infra-deploy GitHub Environment (S18), `pnpm infra:deploy` reads this
     // same secret with the OIDC-assumed deploy role to run the post-deploy wizard
     // non-interactively (ADR 20260811-ci-deploy-full-wizard) -- a narrower reach
     // than the deployer's own already has, and one the resource-scoped Allow below
@@ -1510,7 +1510,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "CredentialsSecretName", {
       value: CREDENTIALS_SECRET_NAME,
       description:
-        "Secrets Manager secret holding filled-in application env and named workstation profiles. Read access is granted to no principal other than GitHubActionsCdkDeployRole (§18, scoped to this secret's own ARN); everyone else uses an administrator profile.",
+        "Secrets Manager secret holding filled-in application env and named workstation profiles. Read access is granted to no principal other than GitHubActionsCdkDeployRole (S18, scoped to this secret's own ARN); everyone else uses an administrator profile.",
     });
 
     // 17. Only first-run account approvals that no CLI can truthfully perform.
@@ -1522,7 +1522,7 @@ exports.handler = async (event) => {
     // credential hand-offs, thirteen environment variables, the SNS SMS sandbox
     // and spend-limit gate, the account-level S3 Block Public Access toggle, and
     // Cost Explorer enablement - and named a capability limit where the real
-    // reason was a policy choice, which is how the reg-suit exception in §4 went
+    // reason was a policy choice, which is how the reg-suit exception in S4 went
     // unnoticed for so long. Each entry below states its own `why`, so a step
     // whose reason is "we chose to" reads differently from one that is
     // structurally impossible.
@@ -1547,7 +1547,7 @@ exports.handler = async (event) => {
         title: "Bootstrap the account for CDK",
         category: "Prerequisites",
         when: "once per account and region",
-        why: "CDK deploys through four roles that a bootstrap stack provisions. §5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.",
+        why: "CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.",
         run: ["pnpm infra:bootstrap"],
         produces:
           "The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.",
@@ -1555,14 +1555,14 @@ exports.handler = async (event) => {
           "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version",
           "aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration",
         ],
-        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.",
+        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.",
       },
       {
         id: "github-actions-cdk-oidc",
         title: "Authorize GitHub Actions to run cdk diff/deploy",
         category: "Credentials",
         when: "once, after the first deploy of this stack, and again if the deploy role's required reviewer needs to change",
-        why: "The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API. `pnpm infra:deploy`'s post-deploy wizard offers both as yes/no prompts right after a successful deploy (scripts/post-deploy-wizard.mjs), each a thin wrapper around the two commands below. Both need a gh-authenticated workstation, which is why this stays a wizard prompt rather than something CloudFormation could do -- GitHubActionsCdkDeployRole's trust policy (infra-stack.ts §18) only ever hands an OIDC token to a job that references the infra-deploy environment, so nothing runs until this has happened at least once.",
+        why: "The role ARNs and the required-reviewer approval gate both live on GitHub, not AWS -- this stack has no credential for GitHub's API. `pnpm infra:deploy`'s post-deploy wizard offers both as yes/no prompts right after a successful deploy (scripts/post-deploy-wizard.mjs), each a thin wrapper around the two commands below. Both need a gh-authenticated workstation, which is why this stays a wizard prompt rather than something CloudFormation could do -- GitHubActionsCdkDeployRole's trust policy (infra-stack.ts S18) only ever hands an OIDC token to a job that references the infra-deploy environment, so nothing runs until this has happened at least once.",
         run: [
           "node scripts/sync-github-cdk-ci-vars.mjs < <(printf 'AWS_CDK_DIFF_ROLE_ARN=%s\\nAWS_CDK_DEPLOY_ROLE_ARN=%s' <GitHubActionsCdkDiffRoleArn output> <GitHubActionsCdkDeployRoleArn output>)",
           "node scripts/sync-github-cdk-ci-environment.mjs",
@@ -1621,7 +1621,7 @@ exports.handler = async (event) => {
         title: "Enable Cost Explorer",
         category: "Prerequisites",
         when: "once per account",
-        why: "The Cost Anomaly Detection monitor (infra-stack.ts §7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.",
+        why: "The Cost Anomaly Detection monitor (infra-stack.ts S7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.",
         run: ["Billing and Cost Management console -> Cost Explorer -> enable."],
         verify: ["aws ce get-anomaly-monitors --query 'AnomalyMonitors[].MonitorName'"],
       },
@@ -1630,7 +1630,7 @@ exports.handler = async (event) => {
         title: "Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles",
         category: "Prerequisites",
         when: "once per provider account, and again after changing plan",
-        why: "AWS Budgets (infra-stack.ts §7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.",
+        why: "AWS Budgets (infra-stack.ts S7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.",
         run: [
           "Vercel -> Settings -> Billing -> Spend Management: set an amount and an email notification.",
           "Neon -> Organization -> Billing: set the plan's usage alert, and confirm whether exceeding it suspends compute or bills overage on your plan.",
@@ -1663,7 +1663,7 @@ exports.handler = async (event) => {
         title: "Put the reg-suit credentials into GitHub Actions secrets",
         category: "Credentials",
         when: "after the first deploy, and after rotating reg-suit-bot",
-        why: "CI compares visual baselines against the visual-regression bucket (infra-stack.ts §1). GitHub is a third platform, and its secrets are write-only through an API this stack has no credential for.",
+        why: "CI compares visual baselines against the visual-regression bucket (infra-stack.ts S1). GitHub is a third platform, and its secrets are write-only through an API this stack has no credential for.",
         run: ["gh secret set --env-file .env.github"],
         store:
           ".env.github (gitignored) is the full GitHub Actions target file, imported as repository secrets. It contains REG_SUIT_S3_BUCKET_NAME, REG_SUIT_AWS_ACCESS_KEY_ID, REG_SUIT_AWS_SECRET_ACCESS_KEY, and REG_SUIT_GITHUB_CLIENT_ID.",
@@ -1718,7 +1718,7 @@ exports.handler = async (event) => {
         title: "Confirm the surplus access keys were revoked",
         category: "Verification",
         when: "after the first deploy, and after any deploy that adds an IAM identity",
-        why: "The stack revokes them itself (infra-stack.ts §14), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded -- on the day someone is rotating because something leaked.",
+        why: "The stack revokes them itself (infra-stack.ts S14), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded -- on the day someone is rotating because something leaked.",
         run: [
           "Read the RetiredAccessKeys stack output: the keys this deploy revoked, or 'none'.",
           'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].AccessKeyId\' --output text; done',
@@ -1790,7 +1790,7 @@ exports.handler = async (event) => {
         title: "Leave the SMS sandbox, raise the spend limit, register an origination identity",
         category: "AWS account",
         when: "once, before sending SMS to a diver",
-        why: "All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them -- it sets delivery-status logging and nothing else.",
+        why: "All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.",
         run: [
           "SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).",
           "Service Quotas -> Amazon SNS -> Account spend threshold for SMS (default $1/month).",
@@ -1804,7 +1804,7 @@ exports.handler = async (event) => {
         title: "Re-adopt the retained backup bucket",
         category: "AWS account",
         when: "only after a cdk destroy, and only if you then redeploy",
-        why: "The backup bucket (infra-stack.ts §11) carries RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create a bucket whose name is already taken and the deploy fails.",
+        why: "The backup bucket (infra-stack.ts S11) carries RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create a bucket whose name is already taken and the deploy fails.",
         run: [
           "Import the existing bucket into the stack, or deploy with --context backupBucketName=<a new name>.",
         ],
@@ -1835,7 +1835,7 @@ exports.handler = async (event) => {
         title: "Confirm the observability alarm subscription email",
         category: "AWS account",
         when: "once per alert address, and again if the address changes",
-        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts §13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.",
+        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.",
         run: [
           "Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.",
           "aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>",
@@ -1850,7 +1850,7 @@ exports.handler = async (event) => {
         title: "Confirm SMS delivery-status logging applied",
         category: "Verification",
         when: "after the first deploy, and after changing the delivery-status role",
-        why: "infra-stack.ts §10 sets this through an AwsCustomResource because SetSMSAttributes is account-level state with no CloudFormation resource. A custom resource that succeeded is not the same as an attribute that took.",
+        why: "infra-stack.ts S10 sets this through an AwsCustomResource because SetSMSAttributes is account-level state with no CloudFormation resource. A custom resource that succeeded is not the same as an attribute that took.",
         run: [
           "aws sns get-sms-attributes --attributes DeliveryStatusIAMRole,DeliveryStatusSuccessSamplingRate",
         ],
@@ -1893,7 +1893,7 @@ exports.handler = async (event) => {
 
     // 18. GitHub Actions CI: OIDC federation so .github/workflows/infra.yml can
     // run `cdk diff`/`pnpm infra:deploy` from a workflow instead of only a
-    // workstation (§5's cdk-deployer is explicitly workstation-only -- see its
+    // workstation (S5's cdk-deployer is explicitly workstation-only -- see its
     // comment). The deploy job runs the full wrapper, post-deploy wizard
     // included, non-interactively (ADR 20260811-ci-deploy-full-wizard).
     //
@@ -1908,12 +1908,12 @@ exports.handler = async (event) => {
     //   - GitHubActionsCdkDeployRole's sub condition names the infra-deploy
     //     GitHub Environment specifically, so GitHub only mints an OIDC token
     //     for it once a required reviewer has approved that job (manual action
-    //     "github-actions-cdk-oidc", §17) -- the environment is what turns
+    //     "github-actions-cdk-oidc", S17) -- the environment is what turns
     //     "workflow_dispatch was clicked" into "a human clicked Approve", not
     //     anything this role's trust policy alone could enforce.
     //
-    // GitHubActionsCdkDiffRole can never read the credentials secret (§16): it
-    // carries the same explicit, unscoped Deny as §6's read-only MCP identities,
+    // GitHubActionsCdkDiffRole can never read the credentials secret (S16): it
+    // carries the same explicit, unscoped Deny as S6's read-only MCP identities,
     // so a change to what AWS::IAM::Role or the OIDC bootstrap roles can reach
     // can never make a `diff` run -- assumable by any branch in this repo --
     // capable of exfiltrating it.
@@ -1929,7 +1929,7 @@ exports.handler = async (event) => {
     // the one document it was already trusted, via the environment gate, to
     // finish a deploy with. `cdk deploy`'s actual resource writes run under the
     // bootstrap deploy-role's own permissions (AdministratorAccess by default --
-    // see §5's note on --cloudformation-execution-policies), not this role's --
+    // see S5's note on --cloudformation-execution-policies), not this role's --
     // the policies here bound only what the *caller* can do directly.
     const githubActionsOidcProvider = new iam.OpenIdConnectProvider(
       this,
@@ -1995,7 +1995,7 @@ exports.handler = async (event) => {
     // file-publishing-role's own assume-role call fails, CDK falls back to a
     // template-only diff with no real change set, and that fallback silently
     // reports "no differences" even when the template plainly changed --
-    // found 2026-08-12 (FU-20260812-diff-role-cannot-reach-cdk-assets-bucket)
+    // found and fixed 2026-08-12, ADR 20260812-diff-role-assumes-file-publishing-role,
     // the first time this role got past OIDC far enough to reach this step.
     // Only file-publishing-role: this stack does no context lookups (no
     // `Vpc.fromLookup`, no `StringParameter.valueFromLookup`) and publishes
@@ -2003,6 +2003,15 @@ exports.handler = async (event) => {
     // unused scope on a role reachable from any branch's `pull_request` run.
     // deploy-role is deliberately absent -- this role creates and discards a
     // change set, never executes one (see its description above).
+    // sts:AssumeRole hands over file-publishing-role's *entire* own policy for
+    // the resulting session -- it is not intersected with cdkDiffRole's own
+    // (the denyReadingAnySecret() below never applies to it). That policy is
+    // S3 (read/write/delete/list) and KMS on the CDK bootstrap staging
+    // bucket -- bucket-wide, not scoped to this stack's own template object --
+    // plus no secretsmanager/cloudformation/iam access at all today; see the
+    // ADR's Consequences section before assuming that stays true if this
+    // stack (or another CDK app sharing this account) ever gains a file
+    // asset.
     cdkDiffRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "AssumeCdkFilePublishingRole",
@@ -2021,7 +2030,7 @@ exports.handler = async (event) => {
         "Assumed by .github/workflows/infra.yml's deploy job, gated on the infra-deploy GitHub Environment's required reviewer.",
       maxSessionDuration: cdk.Duration.hours(1),
     });
-    // Same four ARNs §5's cdk-deployer user holds sts:AssumeRole on -- the
+    // Same four ARNs S5's cdk-deployer user holds sts:AssumeRole on -- the
     // bootstrap roles are what actually carry deploy-time permissions under the
     // modern CDK synthesizer, so this identity needs nothing broader than they
     // do.
@@ -2076,7 +2085,7 @@ exports.handler = async (event) => {
     // 20260811-ci-deploy-full-wizard): scoped to this secret's own ARN, so it
     // widens nothing else. `denyReadingAnySecret()` below still applies to
     // every *other* secret in the account, including the app-secret seed this
-    // stack also creates (§16) -- NotResource makes the Deny bind everywhere
+    // stack also creates (S16) -- NotResource makes the Deny bind everywhere
     // except the one ARN just allowed, rather than nowhere at all.
     cdkDeployRole.addToPolicy(
       new iam.PolicyStatement({
@@ -2097,12 +2106,12 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "GitHubActionsCdkDiffRoleArn", {
       value: cdkDiffRole.roleArn,
       description:
-        "role-to-assume for .github/workflows/infra.yml's diff job. Store as the AWS_CDK_DIFF_ROLE_ARN repository variable (manual action, §17).",
+        "role-to-assume for .github/workflows/infra.yml's diff job. Store as the AWS_CDK_DIFF_ROLE_ARN repository variable (manual action, S17).",
     });
     new cdk.CfnOutput(this, "GitHubActionsCdkDeployRoleArn", {
       value: cdkDeployRole.roleArn,
       description:
-        "role-to-assume for .github/workflows/infra.yml's deploy job. Store as the AWS_CDK_DEPLOY_ROLE_ARN repository variable (manual action, §17).",
+        "role-to-assume for .github/workflows/infra.yml's deploy job. Store as the AWS_CDK_DEPLOY_ROLE_ARN repository variable (manual action, S17).",
     });
   }
 }

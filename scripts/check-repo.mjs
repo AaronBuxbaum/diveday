@@ -31,6 +31,7 @@ const checks = [
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["text", "check-source-text.mjs"],
+  ["infra-ascii", "check-infra-ascii.mjs"],
   ["locale", "check-locale.mjs"],
   ["timezone", "check-timezone.mjs"],
   ["copy", "check-copy.mjs"],
