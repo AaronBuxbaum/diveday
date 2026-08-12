@@ -74,6 +74,7 @@ Everything in `marketing-page`'s claims policy applies here, plus:
 | Pilot-recruiting kit index (what the founder carries into Phase 1) | `docs/product/pilot-kit/README.md` | Phase 1 recruiting |
 | Ten-shop Florida call list — **template only**, rows researched by hand | `docs/product/pilot-kit/florida-call-list.md` | Phase 1 recruiting |
 | First-call script (discovery written to disconfirm, not to sell) | `docs/product/pilot-kit/first-call-script.md` | Phase 1 recruiting; persona reality-check |
+| Cold email to a shop with no warm route in (+ follow-up and general-inbox variants) | `docs/product/pilot-kit/cold-email-template.md` | Phase 1 recruiting; the V-02 boat day it asks for |
 
 **Never invent a prospect.** A call list, a target-media list, or a DEMA meeting list may carry
 research criteria, columns, and the public directories to source from — never a fabricated shop
