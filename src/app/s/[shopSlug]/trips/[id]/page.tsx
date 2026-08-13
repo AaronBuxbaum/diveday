@@ -433,7 +433,10 @@ export default async function TripDetailPage({
             count is met, because then there is nothing conditional left to
             say, and on a departure that already sailed or was cancelled. */}
         {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
-          <p className="mt-5 rounded-lg border border-border bg-surface-sunken p-4 text-sm text-muted">
+          // Sunken fill, no border: a stated fact about the departure, not a
+          // warning — it wears the same quiet material as the supporting
+          // reading, one step below the amber conditions banner above.
+          <p className="mt-5 rounded-xl bg-surface-sunken p-4 text-sm text-muted">
             {t("trip.minimumSeatsNotice", {
               minimum: minimumSeats.minimum,
               deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
