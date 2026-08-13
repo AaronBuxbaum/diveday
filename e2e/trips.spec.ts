@@ -1,5 +1,5 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openRosterDetails } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
@@ -251,6 +251,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     // native click with no handler, so the "Yes" step never appears. Retry the
     // arm until the confirm actually renders instead of trusting one tap.
     await expect(async () => {
+      await openRosterDetails(row);
       await row.getByRole("button", { name: "Remove booking" }).click();
       await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible({
         timeout: 2_000,

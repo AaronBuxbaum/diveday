@@ -82,6 +82,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
 import { seedMedicalReview } from "./seed-medical-review";
+import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOrders } from "./seed-orders";
@@ -591,6 +592,12 @@ export async function seedDemoSchedule(
   // (src/db/seed-counter-blockers.ts). Nothing seeded before it moves, and it
   // has not sailed, so it opens no head count.
   await seedCounterBlockers(db, shopId, { siteByName, captainId, divemasterId });
+
+  // Same shape and the same reasons: its own departure, added late, four days
+  // out and three of six seats sold — the long-range run a shop states a
+  // minimum head count on, in the state it is worked in (short, deadline still
+  // ahead). See src/db/seed-minimum-seats.ts.
+  await seedMinimumSeats(db, shopId, { siteByName, captainId, divemasterId });
 
   // A synthetic, status-only medical-review hold on a future departure gives
   // the demo and staff training a real fail-closed waiver path without storing

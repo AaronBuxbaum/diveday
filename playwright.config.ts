@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { chromiumLaunchOptions } from "./e2e/browser";
 import {
   E2E_APP_HOST,
+  E2E_CRON_SECRET,
   E2E_FROZEN_CLOCK,
   E2E_TEST_ROUTE_SECRET,
   E2E_WORKER_COUNT,
@@ -38,6 +39,8 @@ const serverEnv = {
   PGLITE_DATA_DIR: "memory",
   DIVEDAY_E2E: "1",
   DIVEDAY_E2E_SECRET: E2E_TEST_ROUTE_SECRET,
+  // Lets a spec fire a scheduled pass — see E2E_CRON_SECRET in e2e/servers.ts.
+  CRON_SECRET: E2E_CRON_SECRET,
   // Freeze the server clock so the clock-anchored seed and every relative
   // render resolve to one fixed instant on every run — the server half of what
   // keeps visual baselines stable (the browser half is the `context` init

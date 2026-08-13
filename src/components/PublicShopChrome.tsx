@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
+import type { LanguageChoice } from "@/components/LanguageChoices";
+import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import type { DiverTranslator } from "@/i18n/messages";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -31,17 +32,22 @@ export function PublicShopHeader({
   navAriaLabel,
   navItems,
   locale,
+  localeLabel,
   languages,
   setLocale,
+  languagePickerCopy,
 }: {
   shop: { slug: string; name: string };
   navAriaLabel: string;
   navItems: readonly PublicShopNavItem[];
   /** The language this page was written in — the one marked as in force. */
   locale: string;
-  /** Every language DiveDay carries, each named in itself. */
+  /** That language's own name for itself. */
+  localeLabel: string;
+  /** Every language DiveDay carries, each named in itself — including `locale`. */
   languages: readonly LanguageChoice[];
   setLocale: (locale: string) => Promise<void>;
+  languagePickerCopy: LanguagePickerCopy;
 }) {
   return (
     <header className="border-b border-border bg-surface">
@@ -54,7 +60,13 @@ export function PublicShopHeader({
         </Link>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
-          <LanguageChoices current={locale} choices={languages} setLocale={setLocale} />
+          <LanguagePicker
+            current={locale}
+            currentLabel={localeLabel}
+            choices={languages}
+            setLocale={setLocale}
+            copy={languagePickerCopy}
+          />
         </div>
       </div>
     </header>
