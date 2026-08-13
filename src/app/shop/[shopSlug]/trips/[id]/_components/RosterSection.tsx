@@ -651,10 +651,18 @@ export function RosterSection({
 
                 {/* Safety-critical and never disclosed: a flagged medical answer
                     is the one thing on this card that must be read before the
-                    diver boards. */}
+                    diver boards.
+                    It carries the **status word** as well as the instruction.
+                    A medical hold renders no waiver control — there is nothing
+                    to send — so without this the only place the card said
+                    "Medical review" was the reference panel, one tap away:
+                    the roster would show a warning box telling staff to follow
+                    something up without naming the state the diver is in
+                    (caught by waivers.spec.ts). */}
                 {waiverStatus === "medical_review" ? (
                   <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                    <p className="font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
+                    <p className="font-semibold">{waiverControl.label}</p>
+                    <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
                     {flaggedPrompts.length > 0 ? (
                       <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
                         {flaggedPrompts.map((prompt) => (
@@ -805,11 +813,18 @@ export function RosterSection({
             const reference = (
               <>
                 <div className="mt-3 grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      {t("trips.roster.waiverColumnHeading")}
-                    </p>
-                    {currentWaiver?.completedAt && waiverStatus === "complete" ? (
+                  {/* The signed waiver's own evidence — when, and by which
+                      route — and nothing else. Every state that is *not*
+                      signed already says so in the open half, as a control to
+                      press or a medical hold to read, so a second copy of the
+                      same word down here was the card saying one thing twice
+                      (principle 9) and, worse, the only visible copy for a
+                      status that renders no control. */}
+                  {currentWaiver?.completedAt && waiverStatus === "complete" ? (
+                    <div>
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        {t("trips.roster.waiverColumnHeading")}
+                      </p>
                       <p className="mt-1 text-sm text-muted">
                         {currentWaiver.signatureMethod === "in_person_attested"
                           ? t("trips.roster.signedPaper", {
@@ -835,10 +850,8 @@ export function RosterSection({
                                 ),
                               })}
                       </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-muted">{waiverControl.label}</p>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
 
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
