@@ -174,13 +174,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               <form action={enterDemoAction} className="w-full sm:w-auto">
                 <FunnelTag source="home-hero" />
                 <SubmitButton
-                  pendingLabel={t("nav.gettingReady")}
+                  pendingLabel={t("marketing.common.gettingReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
                   })}
                 >
-                  {t("nav.tryDemo")}
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -191,7 +191,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   className: "w-full border-border-strong sm:w-auto",
                 })}
               >
-                {t("nav.startTrial")}
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
             {/* The demo's cost, stated once on the whole page — at the first
@@ -228,10 +228,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
         <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
           {dailyMoments.map((moment, index) => (
-            <div
-              key={moment.title}
-              className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14"
-            >
+            <div key={moment.title} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
               <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
                 <p className="text-sm font-semibold text-primary">{moment.when}</p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
@@ -363,13 +360,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               <form action={enterDemoAction}>
                 <FunnelTag source="home-closing" />
                 <SubmitButton
-                  pendingLabel={t("nav.gettingReady")}
+                  pendingLabel={t("marketing.common.gettingReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "cursor-pointer disabled:opacity-70",
                   })}
                 >
-                  {t("nav.tryDemo")}
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -380,7 +377,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   className: "border-border-strong",
                 })}
               >
-                {t("nav.startTrial")}
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
             <p className="mt-6 font-medium">
