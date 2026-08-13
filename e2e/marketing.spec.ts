@@ -1,7 +1,7 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 
-test("the homepage hero offers one demo door, and the diver preview lives on its moment card", async ({
+test("the homepage hero offers one demo door, and the diver preview lives on its daily-moment row", async ({
   page,
 }) => {
   await page.goto("/");
@@ -18,9 +18,12 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
       .getByText("The demo opens a working sample shop in one click — no sign-up, no card.")
       .first(),
   ).toBeVisible();
-  // Exactly three demo buttons (hero, mid-page, closing) — the five-chip role
-  // picker is gone from the hero; role switching is the in-demo switcher's job.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  // Exactly two demo buttons (hero, closing) — the five-chip role picker is
+  // gone from the hero (role switching is the in-demo switcher's job), and the
+  // mid-page door retired on 2026-08-13 when the page's three consecutive
+  // banded CTAs merged into one close, putting the closing door a full band
+  // nearer (docs/product/marketing.md).
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
   // The old label is gone site-wide, not merely replaced here: one action
   // wearing two names is what the single-label rule exists to stop, and the
   // rename has to stay renamed (docs/product/marketing.md, Voice).
@@ -29,7 +32,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // Hero decision density: one primary action, at most one secondary. The hero
   // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
   // and every retired destination moved rather than disappeared — the roles
-  // into the in-demo switcher, the preview onto its moment card below. The
+  // into the in-demo switcher, the preview onto its daily-moment row below. The
   // mockup's "Mark boarded" buttons are `disabled` scenery, not doors, so the
   // count is of things a visitor can actually act on.
   const heroSection = page.getByRole("main").locator("section").first();
@@ -38,12 +41,13 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
   // The diver preview moved out of the hero (where it was a third competing
-  // door) onto the "For the diver" moment card, still tagged for attribution.
+  // door) onto the diver's row of the daily-moments section, still tagged for
+  // attribution.
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
   // for funnel attribution the same way the trial link is. The source moved to
-  // the "For the diver" moment card when the hero's role picker was retired
+  // the diver's daily-moments row when the hero's role picker was retired
   // (#328); the path is the split public namespace's.
   expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
 
@@ -102,7 +106,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // that claim in two paragraphs and a checklist until 2026-08-12. Asserting the
   // mockup keeps it from quietly reverting to prose.
   await expect(page.getByRole("img", { name: /import preview/i })).toBeVisible();
-  await expect(page.getByText("In the export")).toBeVisible();
+  // The two directions are named, and the geometry that names them is the
+  // claim: a mirrored pair of columns for a section arguing that records leave
+  // the same way they arrive (2026-08-13 redesign, docs/product/marketing.md).
+  // Headings rather than text, so a future edit cannot demote them back into
+  // an eyebrow that leaves each column unnamed in the outline.
+  await expect(page.getByRole("heading", { name: "Coming in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Going out" })).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
