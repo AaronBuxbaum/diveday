@@ -11,6 +11,12 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import {
+  MAX_DECISION_HOURS,
+  MAX_MINIMUM_BOOKINGS,
+  MIN_DECISION_HOURS,
+  MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
+} from "@/lib/minimum-seats";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -182,6 +188,12 @@ export type BuilderCopy = {
   depositTitle: string;
   cancellationWindowLabel: string;
   cancellationWindowDescription: string;
+  minimumBookingsLabel: string;
+  minimumBookingsDescription: string;
+  minimumDecisionLabel: string;
+  minimumDecisionDescription: string;
+  diversSuffix: string;
+  hoursBeforeSuffix: string;
   hoursSuffix: string;
   repeatLegend: string;
   repeatDescription: string;
@@ -507,6 +519,42 @@ function AddPanel({
                 className={`${controlClass} tabular-nums sm:w-28`}
               />
               <span className="text-sm text-muted">{copy.hoursSuffix}</span>
+            </div>
+          </Field>
+          <Field
+            label={copy.minimumBookingsLabel}
+            hint={copy.optional}
+            description={copy.minimumBookingsDescription}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                name="minimumBookings"
+                type="number"
+                step={1}
+                min={1}
+                max={MAX_MINIMUM_BOOKINGS}
+                placeholder="4"
+                className={`${controlClass} tabular-nums sm:w-28`}
+              />
+              <span className="text-sm text-muted">{copy.diversSuffix}</span>
+            </div>
+          </Field>
+          <Field
+            label={copy.minimumDecisionLabel}
+            hint={copy.optional}
+            description={copy.minimumDecisionDescription}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                name="minimumDecisionHours"
+                type="number"
+                step={1}
+                min={MIN_DECISION_HOURS}
+                max={MAX_DECISION_HOURS}
+                placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
+                className={`${controlClass} tabular-nums sm:w-28`}
+              />
+              <span className="text-sm text-muted">{copy.hoursBeforeSuffix}</span>
             </div>
           </Field>
         </FieldGrid>

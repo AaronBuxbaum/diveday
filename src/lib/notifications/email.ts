@@ -195,6 +195,56 @@ export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): No
   };
 }
 
+export type TripMinimumNotMetEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  minimumBookings: number;
+  bookedCount: number;
+  scheduleUrl: string;
+};
+
+/**
+ * "This one did not fill." The message a diver gets when a departure they
+ * booked is cancelled by the minimum-head-count sweep.
+ *
+ * It says the numbers. A cancellation with no reason reads as a shop that
+ * changed its mind; "we run this one with at least 4 divers and had 2 by the
+ * moment we said we'd decide" reads as the promise the booking page made,
+ * kept — and it is the difference between a diver who books the next one and a
+ * diver who books somewhere else. It does not mention money: refunds stay
+ * staff-initiated on the per-booking path (H-07), and a template that promised
+ * one would be writing a policy this app does not enforce.
+ */
+export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const params = {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+    date,
+    minimum: input.minimumBookings,
+    booked: input.bookedCount,
+  };
+  const body = t("notifications.tripMinimumNotMet.body", params);
+  const bodyHtml = t("notifications.tripMinimumNotMet.body", {
+    ...params,
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+    date: escapeHtml(date),
+  });
+  const findAnother = t("notifications.tripMinimumNotMet.findAnother");
+  return {
+    subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${escapeHtml(input.scheduleUrl)}">${findAnother}</a></p>`,
+  };
+}
+
 export type TripBlowoutEmailInput = {
   locale: DiverLocale;
   diverName: string;

@@ -75,7 +75,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await openPrivateNotes(page);
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
-  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  // No banner: adding a note lands in place now (`addInternalNoteAction`), so
+  // the note appearing in the list above the box *is* the confirmation — the
+  // page does not navigate, which is the whole point of the change.
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
