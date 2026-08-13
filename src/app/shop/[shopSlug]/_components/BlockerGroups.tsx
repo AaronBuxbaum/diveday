@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
+import { UrgencyBand } from "@/app/shop/[shopSlug]/_components/today/UrgencyBand";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { BlockerQueue } from "@/db/blockers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { URGENCY_KEYS } from "@/i18n/today-labels";
@@ -156,6 +156,7 @@ export function BlockerGroups({
   locale,
   pageHref,
   headingId,
+  viewSwitch,
   t,
 }: {
   queue: BlockerQueue;
@@ -168,6 +169,11 @@ export function BlockerGroups({
   pageHref: (page: number) => string;
   /** The heading this section is named by, so both views label the queue alike. */
   headingId: string;
+  /**
+   * The urgency/by-departure switch, on the queue's own heading row — same
+   * slot `TodayQueue` renders it in, so flipping the view never moves it.
+   */
+  viewSwitch?: React.ReactNode;
   t: StaffTranslator;
 }) {
   const { trips, truncated } = queue;
@@ -180,27 +186,26 @@ export function BlockerGroups({
 
   return (
     <section aria-labelledby={headingId}>
-      {/* The count rides the heading, not the sentence under it. "Not ready"
-          was a page with its own headline number until ADR
-          20260803-not-ready-is-a-view folded it in here; a muted subtitle is
-          where a fact goes to be skimmed past, and how many divers cannot board
-          is the one number this view exists to state. Danger, like every other
-          surface that names a blocked diver (`readinessStatusTone`). */}
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 id={headingId} className="text-lg font-semibold">
-          {t("blockers.title")}
-        </h2>
-        {blocked > 0 ? (
-          <Badge tone="danger" size="sm" tabularNums>
-            {t("blockers.blockedCount", { count: blocked })}
-          </Badge>
-        ) : null}
+      {/* Heading, count, and the view switch on one row — the same row shape
+          as the urgency view's, so flipping the view moves nothing. The count
+          rides the heading (danger, like every surface that names a blocked
+          diver — `readinessStatusTone`): how many divers cannot board is the
+          one number this view exists to state, and a muted subtitle is where
+          a fact goes to be skimmed past. No standing description under it —
+          the departure groups below say the rest themselves. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 id={headingId} className="text-lg font-semibold">
+            {t("blockers.title")}
+          </h2>
+          {blocked > 0 ? (
+            <Badge tone="danger" size="sm" tabularNums>
+              {t("blockers.blockedCount", { count: blocked })}
+            </Badge>
+          ) : null}
+        </div>
+        {viewSwitch}
       </div>
-      <p className="mt-1 text-sm text-muted">
-        {blocked === 0
-          ? t("blockers.description.none")
-          : t("blockers.description.some", { departures: trips.length })}
-      </p>
 
       {trips.length === 0 ? (
         // The shared `EmptyState`, not the bespoke whole-page emoji pattern
@@ -235,18 +240,13 @@ export function BlockerGroups({
               groups the page, not the whole queue: pagination already bounds
               what's on screen (BLOCKERS_TRIPS_PER_PAGE), so a band can
               legitimately continue under its own heading on the next page. */}
-          {groupBlockerTrips(visibleTrips).map((group, index) => {
-            const header = (
-              <div className="flex w-full items-baseline justify-between gap-3">
-                <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
-                  {t(URGENCY_KEYS[group.urgency])}
-                </h3>
-                <span className="rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
-                  {t("blockers.pagination.total", { count: group.trips.length })}
-                </span>
-              </div>
-            );
-            const rows = (
+          {groupBlockerTrips(visibleTrips).map((group, index) => (
+            <UrgencyBand
+              key={group.urgency}
+              label={t(URGENCY_KEYS[group.urgency])}
+              count={t("blockers.pagination.total", { count: group.trips.length })}
+              folded={index > 0 && (group.urgency === "soon" || group.urgency === "later")}
+            >
               <div className="mt-3 flex flex-col gap-5">
                 {group.trips.map((trip) => (
                   <TripGroup
@@ -259,26 +259,8 @@ export function BlockerGroups({
                   />
                 ))}
               </div>
-            );
-            const folded = index > 0 && (group.urgency === "soon" || group.urgency === "later");
-            if (!folded) {
-              return (
-                <div key={group.urgency}>
-                  {header}
-                  {rows}
-                </div>
-              );
-            }
-            return (
-              <details key={group.urgency} className="group/fold">
-                <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-                  <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />
-                  {header}
-                </summary>
-                {rows}
-              </details>
-            );
-          })}
+            </UrgencyBand>
+          ))}
           {/* Above the pager, not below it. This says "the queue itself stops
               short of your week" — a fact about the whole list — and under
               "Page 2 of 4" it read as a footnote to the page you happen to be

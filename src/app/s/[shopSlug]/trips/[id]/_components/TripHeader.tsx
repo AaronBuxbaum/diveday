@@ -1,19 +1,22 @@
 import Link from "next/link";
-import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
-import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
-import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
-import {
-  formatDateTimeTz,
-  formatMoneyCents,
-  formatShortDate,
-  formatTimeRangeTz,
-} from "@/lib/format";
+import { perDiverBookingPriceCents } from "@/lib/courses";
+import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip, TripMeetingDay } from "./types";
 
+/**
+ * The masthead answers exactly what a diver arrives with — when is it, what is
+ * it, how much — with type scale and space, not a stack of same-weight muted
+ * lines. It used to carry up to nine of those (meeting days, course link,
+ * minimum age, description, price, fee breakdown, deposit, cancellation,
+ * contact links), which made the date indistinguishable from the fine print.
+ * The money terms now live beside the booking button (`TripTerms`), where the
+ * decision they inform is actually made, and the minimum age is stated by the
+ * booking form's own attestation checkbox rather than twice.
+ */
 export function TripHeader({
   shop,
   trip,
@@ -32,8 +35,6 @@ export function TripHeader({
   meetingDays: TripMeetingDay[];
   locale: string;
 }) {
-  const charge = checkoutCharge(trip, trip.course);
-  const deadline = cancellationDeadline(trip);
   // Every figure in the hero is a list price, so it follows the shop's own
   // currency (docs ADR 20260731-shop-currency) — never a hardcoded "usd".
   const currency = toShopCurrency(shop.currency);
@@ -43,16 +44,6 @@ export function TripHeader({
   // course session could show one price in the hero and a higher one once
   // the diver reached the form.
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
-  const breakdown = trip.course
-    ? courseCharges({
-        title: trip.course.title,
-        priceCents: trip.course.priceCents ?? trip.priceCents,
-        eLearningPriceCents: trip.course.eLearningPriceCents,
-      })
-    : [];
-  const courseFeeCents = breakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
-  const eLearningFeeCents =
-    breakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
   const multiDay = meetingDays.length > 1;
   return (
     <div className="mt-4">
@@ -68,7 +59,9 @@ export function TripHeader({
                 11:00 AM" here has nothing else to tell them whose morning that
                 is, and the confirmation they get afterwards has said "EDT" all
                 along — which made this the one step of the flow that could
-                disagree with the two around it. */}
+                disagree with the two around it. Foreground weight on purpose:
+                "when" is one of the two facts this page exists to answer, and
+                it spent its whole life in the muted ink reserved for asides. */}
             {multiDay ? (
               // A multi-day departure leads with its whole span, then names
               // every day. The days are listed rather than summarised as a
@@ -78,7 +71,7 @@ export function TripHeader({
               // afterwards keeps its own, and this must show that rather than
               // imply day one's times run the week.
               <>
-                <p className="text-lg text-muted">
+                <p className="text-lg font-medium">
                   {t("trip.meetingDaysSummary", {
                     count: meetingDays.length,
                     first: formatShortDate(meetingDays[0].startsAt, locale, shop.timezone),
@@ -107,7 +100,7 @@ export function TripHeader({
                 </ol>
               </>
             ) : (
-              <p className="text-lg text-muted">
+              <p className="text-lg font-medium">
                 {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
                 {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </p>
@@ -123,55 +116,18 @@ export function TripHeader({
                 </Link>
               </p>
             ) : null}
-            {/* Minimum age was previously shown only on the course page, never here
-                where a parent is actually about to book (task 23) — the trip page
-                is a self-declared display only; enforcement stays out of scope
-                pending a human-decision entry (see the booking form's attestation
-                checkbox and docs/product/human-decisions.md H-08/H-22). */}
-            {trip.course?.minimumAge ? (
-              <p className="mt-1 text-sm text-muted">
-                {t("trip.minimumAge", { age: trip.course.minimumAge })}
-              </p>
-            ) : null}
             {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
+            {/* "How much" is the other fact this page exists to answer, so it
+                gets a real typographic moment instead of one more muted line.
+                The deposit split, cancellation window, and course-fee
+                breakdown that used to trail it are `TripTerms`, beside the
+                button — fine print belongs with the signature. */}
             {perDiverPriceCents !== null ? (
-              <p className="mt-3 text-lg font-semibold tabular-nums">
-                {formatMoneyCents(perDiverPriceCents, currency, locale)}{" "}
-                <span className="text-sm font-normal text-muted">{t("common.perDiver")}</span>
-              </p>
-            ) : null}
-            {courseFeeCents !== null && eLearningFeeCents !== null ? (
-              <p className="mt-1 text-sm text-muted tabular-nums">
-                {t("trip.courseFeeBreakdown", {
-                  course: formatMoneyCents(courseFeeCents, currency, locale),
-                  eLearning: formatMoneyCents(eLearningFeeCents, currency, locale),
-                })}
-              </p>
-            ) : null}
-            {charge?.isDeposit ? (
-              <p className="mt-1 text-sm text-muted tabular-nums">
-                {t("trip.depositLine", {
-                  deposit: formatMoneyCents(charge.amountCents, currency, locale),
-                  balance: formatMoneyCents(charge.balanceDueCents, currency, locale),
-                })}
-              </p>
-            ) : null}
-            {/* The cancellation line only speaks when cancelling could cost
-                something. A stated free-cancellation window is always worth
-                saying; past that, "Cancellation questions? Ask the shop" is
-                only a real prompt for a diver who is about to put a deposit
-                down — on a book-now-pay-later seat it invented a worry about
-                money nobody had handed over, on every trip in the catalogue. */}
-            {deadline ? (
-              <p className="mt-1 text-sm text-muted">
-                {t("trip.freeCancellationUntil", {
-                  when: formatDateTimeTz(deadline, locale, shop.timezone),
-                })}
-              </p>
-            ) : charge?.isDeposit ? (
-              <p className="mt-1 text-sm text-muted">
-                {t("trip.cancellationAskShop")}{" "}
-                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
+              <p className="mt-4 flex items-baseline gap-2">
+                <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                  {formatMoneyCents(perDiverPriceCents, currency, locale)}
+                </span>
+                <span className="text-sm text-muted">{t("common.perDiver")}</span>
               </p>
             ) : null}
           </>

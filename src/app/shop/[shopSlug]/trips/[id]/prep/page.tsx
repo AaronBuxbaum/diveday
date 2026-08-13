@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { PrintButton } from "@/components/PrintButton";
+import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
@@ -156,34 +158,14 @@ export default async function TripPrepPage({
             <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
               {showNitrox ? (
                 <>
-                  <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">{t("trips.prep.total")}</p>
-                    <p className="mt-1 text-3xl font-semibold tabular-nums">
-                      {checklist.tanks.total}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">{t("trips.prep.air")}</p>
-                    <p className="mt-1 text-3xl font-semibold tabular-nums">
-                      {checklist.tanks.air}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-surface p-4">
-                    <p className="text-sm text-muted">{t("trips.prep.nitrox")}</p>
-                    <p className="mt-1 text-3xl font-semibold tabular-nums">
-                      {checklist.tanks.nitrox}
-                    </p>
-                  </div>
+                  <ShopStat label={t("trips.prep.total")} value={checklist.tanks.total} />
+                  <ShopStat label={t("trips.prep.air")} value={checklist.tanks.air} />
+                  <ShopStat label={t("trips.prep.nitrox")} value={checklist.tanks.nitrox} />
                 </>
               ) : (
                 // Air and total are the same number with no nitrox split to draw,
                 // so there's nothing for a second tile to distinguish.
-                <div className="rounded-lg border border-border bg-surface p-4">
-                  <p className="text-sm text-muted">{t("trips.prep.total")}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">
-                    {checklist.tanks.total}
-                  </p>
-                </div>
+                <ShopStat label={t("trips.prep.total")} value={checklist.tanks.total} />
               )}
             </div>
             <p className="mt-2 text-sm text-muted">
@@ -404,46 +386,30 @@ export default async function TripPrepPage({
                     </li>
                   ))}
                 </ul>
-                {/* `print:min-w-0`/`print:overflow-visible` keep paper out of
-                    the scroll rule entirely: an A4 sheet is narrower than the
-                    720px floor, and a clipped column on a packing list is a
-                    silent one. On screen the floor is what stops the four
-                    columns collapsing between 640px and a real tablet. */}
-                <div className="mt-3 hidden overflow-x-auto sm:block print:block print:overflow-visible">
-                  <table className="w-full min-w-180 border-collapse text-left text-sm print:min-w-0">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                          {t("trips.prep.itemColumn")}
-                        </th>
-                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                          {t("trips.prep.sizeColumn")}
-                        </th>
-                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                          {t("trips.prep.qtyColumn")}
-                        </th>
-                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                          {t("trips.prep.forColumn")}
-                        </th>
+                {/* The scroll strategy: the 45rem floor is what stops the four
+                    columns collapsing between 640px and a real tablet, and the
+                    vocabulary's `print:` overrides keep paper out of the
+                    scroll rule entirely — an A4 sheet is narrower than the
+                    floor, and a clipped column on a packing list is a silent
+                    one. */}
+                <Table minWidth="45rem" shellClassName="mt-3 hidden sm:block print:block">
+                  <THead>
+                    <Th>{t("trips.prep.itemColumn")}</Th>
+                    <Th>{t("trips.prep.sizeColumn")}</Th>
+                    <Th numeric>{t("trips.prep.qtyColumn")}</Th>
+                    <Th>{t("trips.prep.forColumn")}</Th>
+                  </THead>
+                  <TBody>
+                    {checklist.lines.map((line) => (
+                      <tr key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}>
+                        <Td className="font-medium">{rentalItemLabel(t, line.kind)}</Td>
+                        <Td>{sizeCell(line)}</Td>
+                        <Td numeric>{line.count}</Td>
+                        <Td muted>{line.divers.join(", ")}</Td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {checklist.lines.map((line) => (
-                        <tr
-                          key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
-                          className="border-b border-border last:border-0"
-                        >
-                          <td className="px-3 py-3 font-medium sm:px-4">
-                            {rentalItemLabel(t, line.kind)}
-                          </td>
-                          <td className="px-3 py-3 sm:px-4">{sizeCell(line)}</td>
-                          <td className="px-3 py-3 tabular-nums sm:px-4">{line.count}</td>
-                          <td className="px-3 py-3 text-muted sm:px-4">{line.divers.join(", ")}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </TBody>
+                </Table>
               </>
             )}
           </section>
