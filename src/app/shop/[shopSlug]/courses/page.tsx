@@ -168,12 +168,13 @@ export default async function CoursesPage({
                   className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
                 >
                   {course.title}
+                  {/* The arrow is CSS `content`, not a text node: specs locate
+                      this row by the title's exact text, and a DOM arrow would
+                      make the link read "Rescue Diver →" to them. */}
                   <span
                     aria-hidden="true"
-                    className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    →
-                  </span>
+                    className="ml-1 opacity-0 transition-opacity before:content-['→'] group-hover:opacity-100"
+                  />
                 </Link>
                 {course.isActive ? null : (
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
