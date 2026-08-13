@@ -9,8 +9,10 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { hasTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
-import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
+import { listDepartureBoardedByTrip } from "@/db/manifests";
+import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listRecapPhotosForTrip } from "@/db/recap";
+import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
 import {
@@ -31,10 +33,13 @@ import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
+import { rentalFitCompleteness } from "@/lib/rentals";
+import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
+import { isFull, spotsRemaining } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
@@ -46,6 +51,7 @@ import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
+import { TripPulse, type TripPulseFact } from "./_components/TripPulse";
 import {
   applySeriesDetailsAction,
   cancelOffCadenceSeriesAction,
@@ -116,6 +122,17 @@ export default async function ManageTripPage({
   ]);
   const t = staffTranslator(locale);
   if (!trip) notFound();
+  const cancelled = trip.status === "cancelled";
+  // "Is this trip behind us?" — the same reading the recap run makes when it
+  // decides whose recap to send (`sendDueRecaps`, src/db/recap.ts): the boat is
+  // back once its end time has passed, and a cancelled departure never sailed
+  // at all. Read through the clock, never `new Date()`, so the e2e fleet's
+  // frozen instant renders this page identically every run.
+  const departed = !cancelled && trip.endsAt <= nowDate();
+  // The pulse — the state-of-the-boat strip that opens the page — only beats
+  // for a departure that is still ahead: a cancelled or departed trip has no
+  // seats to fill or blockers to clear, and the recap material takes over.
+  const pulseNeeded = !cancelled && !departed;
   const [
     staff,
     crewAssignments,
@@ -128,6 +145,9 @@ export default async function ManageTripPage({
     canConfigure,
     recapPhotos,
     blowoutCalled,
+    pulseReadiness,
+    pulsePrepDivers,
+    pulseBoardedByTrip,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewAssignments(db, shop.id, tripId),
@@ -143,6 +163,17 @@ export default async function ManageTripPage({
     // record is the surface a weather morning is worked from, so the trip page
     // must always offer the way back to it (ADR 20260804-blowout-cascade).
     hasTripBlowout(db, shop.id, tripId),
+    // The pulse's facts, read only while the trip is still ahead. All go
+    // through the readers their destination surfaces already trust — the
+    // roster's own blocked predicate, the prep list's own completeness rule,
+    // and the manifest's own boarded reader — so the counts on this strip can
+    // never disagree with the pages it links to, and its bar means exactly
+    // what Today's does on the morning divers start boarding.
+    pulseNeeded ? listTripReadiness(db, shop.id, tripId) : [],
+    pulseNeeded ? listTripPrepDivers(db, shop.id, tripId) : [],
+    pulseNeeded
+      ? listDepartureBoardedByTrip(db, shop.id, [tripId])
+      : new Map<string, Set<string>>(),
   ]);
   // Only ever non-empty right after staff narrowed this run's cadence, and only
   // for someone who can act on it — a second query rather than a field on the
@@ -164,13 +195,14 @@ export default async function ManageTripPage({
   // one day that the day count then repeats.
   const firstDay = scheduleDays[0];
   const endWall = utcToWallTime(firstDay?.endsAt ?? trip.endsAt, shop.timezone);
-  const cancelled = trip.status === "cancelled";
-  // "Is this trip behind us?" — the same reading the recap run makes when it
-  // decides whose recap to send (`sendDueRecaps`, src/db/recap.ts): the boat is
-  // back once its end time has passed, and a cancelled departure never sailed
-  // at all. Read through the clock, never `new Date()`, so the e2e fleet's
-  // frozen instant renders this page identically every run.
-  const departed = !cancelled && trip.endsAt <= nowDate();
+  // How the boat stands, in the pulse's terms: who still can't board (the
+  // roster chips' own rule, src/lib/roster-filters.ts) and whose rental fit
+  // the packer can't pack from yet (the prep list's own rule, src/lib/rentals.ts).
+  const pulseBlocked = pulseReadiness.filter((row) => rosterRowIsBlocked(row.readiness)).length;
+  const pulsePrepGaps = pulsePrepDivers.filter(
+    (diver) => rentalFitCompleteness(diver.fit, shop.rentalItems).state !== "complete",
+  ).length;
+  const pulseBoarded = pulseBoardedByTrip.get(tripId)?.size ?? 0;
   const crewIds = crewAssignments.map((entry) => entry.personId);
   const tripRoleByPerson = new Map(
     crewAssignments.map((entry) => [entry.personId, entry.tripRole] as const),
@@ -220,8 +252,10 @@ export default async function ManageTripPage({
   // The other half of the shift ↔ crew cross-link (Lens 17 task 165): whether
   // each assigned crew member actually has a working shift covering this
   // sailing, read straight from CrewSection instead of a separate trip to
-  // the staffing page.
-  const onShiftIds = [...(await crewShiftCoverage(db, shop.id, trip, crewIds))];
+  // the staffing page. `null` — the shop has never scheduled a shift — means
+  // the question doesn't apply, and CrewSection renders no coverage state.
+  const shiftCoverage = await crewShiftCoverage(db, shop.id, trip, crewIds);
+  const onShiftIds = shiftCoverage === null ? null : [...shiftCoverage];
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
   // staffer's role means we never rendered — falls through to the banner.
@@ -239,6 +273,64 @@ export default async function ManageTripPage({
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
   const pageNotice = tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
 
+  // The pulse in words: the caption carries every number the bar draws, and
+  // each fact is a whole sentence linking to the surface that fixes it. A fact
+  // at zero contributes nothing — "none blocked" is not a status (principle 9).
+  // "Aboard" joins the caption only once boarding has actually begun, with the
+  // separator the caption's own key already uses between its clauses.
+  const pulseSeats = isFull(trip)
+    ? t("trips.pulse.seatsFull", { capacity: trip.capacity })
+    : t("trips.pulse.seats", {
+        booked: trip.booked,
+        capacity: trip.capacity,
+        open: spotsRemaining(trip),
+      });
+  const pulseCaption =
+    pulseBoarded > 0
+      ? `${t("trips.pulse.aboard", { count: pulseBoarded })} · ${pulseSeats}`
+      : pulseSeats;
+  const pulseFacts: TripPulseFact[] = [
+    ...(pulseBlocked > 0
+      ? [
+          {
+            text: t("trips.pulse.blocked", { count: pulseBlocked }),
+            href: `/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#roster`,
+            tone: "danger" as const,
+          },
+        ]
+      : []),
+    // A course session whose crew can't cover it is a can-this-boat-sail fact
+    // in the pulse's exact register — until it surfaces here, the strip's
+    // quiet reads as an all clear the Crew panel three screens down would
+    // contradict. The panel keeps the full sentence; this is the door to it.
+    ...(crewGap.code === "no_instructor"
+      ? [
+          {
+            text: t("trips.pulse.needsInstructor"),
+            href: "#crew",
+            tone: "danger" as const,
+          },
+        ]
+      : []),
+    ...(crewGap.code === "over_ratio"
+      ? [
+          {
+            text: t("trips.pulse.overRatio"),
+            href: "#crew",
+            tone: "danger" as const,
+          },
+        ]
+      : []),
+    ...(pulsePrepGaps > 0
+      ? [
+          {
+            text: t("trips.pulse.prepGaps", { count: pulsePrepGaps }),
+            href: `/shop/${shopSlug}/trips/${tripId}/prep`,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <>
       <FlashParams params={["notice", "count", "form"]} />
@@ -249,7 +341,19 @@ export default async function ManageTripPage({
         locale={locale}
         timeZone={shop.timezone}
         badge={
-          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
+          // While the pulse beats it owns the seat numbers — a "3 spots left"
+          // pill above a strip reading "9 of 12 booked · 3 seats open" would
+          // state the same fact twice (principle 9). Cancelled is the one
+          // state the badge still announces; a departed trip gets neither —
+          // "3 spots left" on a boat already home is a dead fact formatted as
+          // a live status, and it reads as sellable seats.
+          cancelled ? (
+            <TripCapacityBadge
+              trip={trip}
+              cancelledLabel={t("trips.detail.cancelledBadge")}
+              t={t}
+            />
+          ) : undefined
         }
         actions={
           <>
@@ -373,6 +477,18 @@ export default async function ManageTripPage({
       />
 
       <TripNoticeBanner notice={pageNotice} locale={locale} />
+
+      {pulseNeeded ? (
+        <TripPulse
+          booked={trip.booked}
+          boarded={pulseBoarded}
+          blocked={pulseBlocked}
+          capacity={trip.capacity}
+          caption={pulseCaption}
+          captionTone={isFull(trip) ? "success" : undefined}
+          facts={pulseFacts}
+        />
+      ) : null}
 
       {/* No "you're viewing this trip" notice for staff without configure
           rights. The editable sections simply aren't rendered, which is the

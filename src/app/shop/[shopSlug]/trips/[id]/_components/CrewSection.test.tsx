@@ -216,3 +216,46 @@ describe("CrewSection per-trip role picker", () => {
     ).toBe("captain");
   });
 });
+
+describe("CrewSection shift coverage", () => {
+  it("warns per uncovered crew member at a shop that schedules shifts", () => {
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={[staffMember("staff-1", "Dana Reyes"), staffMember("staff-2", "Ana Cruz")]}
+        crewRoles={{}}
+        crewIds={["staff-1", "staff-2"]}
+        onShiftIds={["staff-1"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={vi.fn(async () => ({ ok: true }))}
+        copy={COPY}
+      />,
+    );
+    // One badge for the uncovered member, the quiet sr-only fact for the covered one.
+    expect(screen.getAllByText("Not on shift")).toHaveLength(1);
+    expect(screen.getByText("On shift")).toBeInTheDocument();
+  });
+
+  it("renders no coverage state at all when the shop has never scheduled a shift", () => {
+    // The regression this pins: `onShiftIds === null` (crewShiftCoverage's
+    // "the question does not apply") used to be indistinguishable from
+    // "nobody is covered", so shops that never used the staffing feature saw
+    // a permanent warning on every crew member of every trip.
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={[staffMember("staff-1", "Dana Reyes")]}
+        crewRoles={{}}
+        crewIds={["staff-1"]}
+        onShiftIds={null}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={vi.fn(async () => ({ ok: true }))}
+        copy={COPY}
+      />,
+    );
+    expect(screen.queryByText("Not on shift")).not.toBeInTheDocument();
+    expect(screen.queryByText("On shift")).not.toBeInTheDocument();
+  });
+});

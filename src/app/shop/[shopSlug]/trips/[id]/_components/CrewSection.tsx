@@ -59,8 +59,14 @@ export function CrewSection({
   crewIds: string[];
   /** Each assigned person's current `trip_assignments.trip_role`, or null. */
   crewRoles: Record<string, TripCrewRole | null>;
-  /** Person ids among `crewIds` who have a staff shift overlapping this trip's window. */
-  onShiftIds: string[];
+  /**
+   * Person ids among `crewIds` who have a staff shift overlapping this trip's
+   * window — or `null` when the shop has never scheduled a shift, in which
+   * case no coverage state renders at all: "Not on a shift" is a warning for
+   * shops whose own schedule says this sailing has a hole, not a permanent
+   * amber pill for shops that don't keep one (design principle 9).
+   */
+  onShiftIds: string[] | null;
   crewGapCode: "none" | "no_instructor" | "over_ratio";
   shopSlug: string;
   updateCrewAction: (tripId: string, change: TripCrewChange) => Promise<{ ok: boolean }>;
@@ -98,7 +104,7 @@ export function CrewSection({
     setAssignError(false);
   }, [crewIds, crewRoles, staff]);
 
-  const onShift = new Set(onShiftIds);
+  const onShift = onShiftIds === null ? null : new Set(onShiftIds);
   const hasUnassignedStaff = localCrew.length < availableStaff.length;
 
   // Confirm-then-render, not optimistic-then-rollback: a staffer (or a test)
@@ -240,12 +246,15 @@ export function CrewSection({
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{entry.fullName}</span>
                     <span className="text-muted">{entry.roles.join(", ")}</span>
-                    {/* Badge only for the exceptional state: on a normal day
-                        every crew member is on a shift, and a green pill per
-                        row is the expected state formatted as an alert
-                        (design/principles.md #9). A row with no badge is
-                        covered; the sr-only text keeps that fact audible. */}
-                    {onShift.has(entry.id) ? (
+                    {/* Badge only for the exceptional state: at a shop that
+                        schedules shifts, a normal day has every crew member on
+                        one, and a green pill per row is the expected state
+                        formatted as an alert (design/principles.md #9). A row
+                        with no badge is covered; the sr-only text keeps that
+                        fact audible. At a shop with no shift schedule at all
+                        (`onShift === null`) the question doesn't apply and
+                        nothing renders — see `onShiftIds` above. */}
+                    {onShift === null ? null : onShift.has(entry.id) ? (
                       <span className="sr-only">{copy.onShift}</span>
                     ) : (
                       <Badge tone="warning" size="sm">

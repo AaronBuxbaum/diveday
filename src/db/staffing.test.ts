@@ -403,14 +403,33 @@ describe("crewShiftCoverage", () => {
       onShift.person.id,
       offShift.person.id,
     ]);
-    expect(covered.has(onShift.person.id)).toBe(true);
-    expect(covered.has(offShift.person.id)).toBe(false);
+    expect(covered?.has(onShift.person.id)).toBe(true);
+    expect(covered?.has(offShift.person.id)).toBe(false);
   });
 
-  it("returns an empty set for no crew, without querying", async () => {
+  it("returns an empty set for no crew at a shop that schedules shifts", async () => {
+    // The seeded fixture already carries staff shifts, so this shop "uses
+    // shifts" — an empty crew list is then an empty answer, never null.
     const { db, shop } = await seededShopContext();
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("seeded upcoming trip missing");
     expect(await crewShiftCoverage(db, shop.id, trip, [])).toEqual(new Set());
+  });
+
+  it("answers null for a shop that has never scheduled a shift — the question does not apply", async () => {
+    // The regression this pins: a shop that doesn't use the staffing feature
+    // used to get a "Not on a shift" warning on every crew member of every
+    // trip, forever — the expected state formatted as an alert (design
+    // principle 9). No shifts on file means shift coverage is not a question
+    // this shop asks, which is a different answer from "nobody is covered".
+    const { db, shop } = await seededShopContext();
+    await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
+    const staff = await listStaff(db, shop.id);
+    const [crew] = staff;
+    if (!crew) throw new Error("seeded staffing fixture needs staff");
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded upcoming trip missing");
+    expect(await crewShiftCoverage(db, shop.id, trip, [crew.person.id])).toBeNull();
+    expect(await crewShiftCoverage(db, shop.id, trip, [])).toBeNull();
   });
 });

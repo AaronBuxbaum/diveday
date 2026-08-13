@@ -154,6 +154,42 @@ test.describe("per-trip crew role", () => {
 });
 
 /**
+ * The pulse: a trip's Overview opens with the state of the boat — seats in
+ * words and numbers, then only the facts that need someone, each one a link
+ * to the surface that fixes it (design principle 10). The seeded reef trip
+ * carries one blocked diver (an unsent waiver) and several rental-fit gaps,
+ * so both facts render; the seat caption owns the numbers, so the header's
+ * "spots left" pill stands down on this tab (principle 9 — one fact, once).
+ */
+test.describe("trip pulse", () => {
+  signedInAsOwner();
+
+  test("the Overview answers how the boat stands, and the blocked fact lands on the filtered roster", async ({
+    page,
+  }) => {
+    const link = await findTripOnBoard(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    const href = await link.getAttribute("href");
+    if (!href) throw new Error("no trip card found for the seeded reef trip");
+    await page.goto(href);
+
+    // The caption carries the numbers the bar draws — and because it does,
+    // the capacity pill must not repeat them above it.
+    await expect(page.getByText("9 of 12 booked · 3 seats open")).toBeVisible();
+    await expect(page.getByText("3 spots left")).toHaveCount(0);
+
+    // Each fact is a door to its fix: the blocked one lands on the Guests
+    // roster already narrowed to the divers who hold the boat up.
+    await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
+    await page.getByRole("link", { name: /can’t board yet/ }).click();
+    await expect(page).toHaveURL(/rf=blocked/);
+    // The chip row confirms the filter is on and counts the same one diver.
+    await expect(page.getByRole("link", { name: "Blocked (1)" })).toBeVisible();
+    // Role-scoped: the card renders her name twice (heading and record link).
+    await expect(page.getByRole("link", { name: "Priya Sharma" })).toBeVisible();
+  });
+});
+
+/**
  * The undo of a roster removal is a *stale* affordance by construction: the
  * banner is server-rendered from `?notice=booking-removed&bid=…` and then
  * `FlashParams` strips those params, so the button sits on screen for as long
