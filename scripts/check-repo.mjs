@@ -37,6 +37,7 @@ const checks = [
   ["copy", "check-copy.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
   ["migrations", "check-migrations.mjs"],
+  ["open-graph", "check-open-graph.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

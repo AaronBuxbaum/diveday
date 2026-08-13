@@ -34,16 +34,54 @@ const CARD_STYLE = {
 };
 
 const WORDMARK = (
-  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-    <div
-      style={{
-        width: 28,
-        height: 28,
-        borderRadius: 9999,
-        backgroundColor: "#22d3ee",
-        display: "flex",
-      }}
-    />
+  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+    {/*
+     * The bubble-trail mark from `src/components/Logo.tsx` — three ascending
+     * bubbles, the top one the rationed coral accent. Restated as positioned
+     * circles because satori has no `<svg>`, with `LogoMark`'s 24x24 viewBox
+     * geometry doubled to a 48px box — the same mark-to-wordmark proportion
+     * the site header uses (`size-6` beside `text-base`). Keep the two in step. It used to be one plain
+     * circle here, which read as a bullet rather than as the logo.
+     */}
+    <div style={{ display: "flex", position: "relative", width: 48, height: 48 }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 4,
+          top: 24,
+          width: 20,
+          height: 20,
+          borderRadius: 9999,
+          backgroundColor: "#22d3ee",
+          display: "flex",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 24,
+          top: 11,
+          width: 14,
+          height: 14,
+          borderRadius: 9999,
+          backgroundColor: "#22d3ee",
+          opacity: 0.75,
+          display: "flex",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 35,
+          top: 5,
+          width: 8,
+          height: 8,
+          borderRadius: 9999,
+          backgroundColor: "#ff8a7e",
+          display: "flex",
+        }}
+      />
+    </div>
     <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>
       DiveDay
       <span style={{ color: "#ff8a7e" }}>.</span>

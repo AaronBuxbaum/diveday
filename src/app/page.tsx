@@ -25,6 +25,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -38,6 +39,7 @@ export const metadata: Metadata = {
     "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Easy to try in a live demo, safe to run the boat on, and your records come in clean and leave the same way.",
   alternates: { canonical: "/" },
   openGraph: {
+    ...openGraphSite,
     title: "DiveDay — dive shop software for the whole dive day",
     description:
       "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",

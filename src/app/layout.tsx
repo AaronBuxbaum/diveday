@@ -8,6 +8,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { publicAppUrl } from "@/lib/notifications";
+import { openGraphSite } from "@/lib/site-metadata";
 import { Observability } from "./observability-client";
 
 const geistSans = Geist({
@@ -48,10 +49,10 @@ export const metadata: Metadata = {
   title: "DiveDay — a calmer way to run a dive day",
   description:
     "Bookings, waivers, cert checks, trip prep, and boat manifests — one calm system for the whole dive shop.",
-  openGraph: {
-    siteName: "DiveDay",
-    type: "website",
-  },
+  // The app-wide floor, inherited only by pages that export no `openGraph`
+  // block of their own — every page that does export one spreads
+  // `openGraphSite` itself. See src/lib/site-metadata.ts.
+  openGraph: { ...openGraphSite },
   twitter: {
     card: "summary_large_image",
   },

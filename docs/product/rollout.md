@@ -167,8 +167,14 @@ operations surface.
 - **Facebook dive-industry groups** — shop-owner and dive-professional groups (e.g. the various
   "Dive Shop Owners" / "Scuba Instructors" groups) are where this demographic actually talks shop.
 - **Scubanomics / Business of Diving Institute** (Darcy Kieran's newsletter and LinkedIn
-  community) — the one publication squarely aimed at dive-shop economics; a guest piece or
-  sponsorship reaches exactly the buyer.
+  community) — the one publication squarely aimed at dive-shop economics; a guest piece reaches
+  exactly the buyer. **Correction 2026-08-12:** the *sponsorship* half of this is not purchasable —
+  it sells no advertising at all (no rate card, no sponsorship page, no published subscriber count),
+  and its scale is small (635 Medium followers; 827 lifetime podcast plays). Treat it as a
+  relationship and an earned-media contact. The buyable trade book aimed at this reader is **Scuba
+  Diving Industry Magazine**, printed and mailed to every US dive retailer, whose
+  retailer-to-retailer podcast books guests for free — see
+  [paid-acquisition-assessment.md](assessments/paid-acquisition-assessment.md).
 - **Local directories as a call list:** the PADI and SSI shop locators for the chosen launch
   region give a complete, public list of every shop to visit in person. In-person beats email for
   a 0-reputation product; bring a phone, run the demo shop from the dock.
@@ -206,9 +212,16 @@ finite (a plain `support@dive.day` inbox, not a founder-direct promise as of 202
 [human-decisions.md](human-decisions.md#decision-register)).
 
 - **Turn on the switching funnel.** The `/switching` guides are live SEO surfaces; now feed them:
-  the EVE case study as a linked story, and modest paid search on high-intent queries ("EVE dive
-  shop software replacement", "DiveShop360 alternative") pointed at the guides — the documented
-  Jane/anti-Mindbody pattern. Track guide → trial conversion via the existing analytics seam.
+  the EVE case study as a linked story, pointed at the guides — the documented Jane/anti-Mindbody
+  pattern. Track guide → trial conversion via the existing analytics seam. **The paid-search half of
+  this line was narrowed 2026-08-12** by
+  [paid-acquisition-assessment.md](assessments/paid-acquisition-assessment.md): the pattern is right
+  and the queries are not — `diveshop360 alternative` returns no Google autocomplete suggestions at
+  all, and the EVE switching terms return none *and* collide with anime and EVE Online. The guides
+  earn their keep organically (`dive.day/switching` already ranks #2 for "how to export data from
+  EVE" with no backlinks) and as sales collateral, not as an ad target. Read that assessment before
+  budgeting any advertising: its verdict is $0 until a design partner is live, then a $120/month cap
+  on one search campaign that will structurally underspend.
 - **Direct outreach to the EVE pool:** the migration is forced; the pitch is concierge import +
   the honesty table + "leave anytime" export. Ten personal emails a week from the founder to
   shops in the launch region beats any campaign at this scale.

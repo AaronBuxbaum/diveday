@@ -9,17 +9,17 @@ importers:
   .:
     dependencies:
       '@aws-sdk/client-cloudwatch-logs':
-        specifier: ^3.1108.0
-        version: 3.1108.0
+        specifier: ^3.1109.0
+        version: 3.1109.0
       '@aws-sdk/client-geo-places':
-        specifier: ^3.1108.0
-        version: 3.1108.0
+        specifier: ^3.1109.0
+        version: 3.1109.0
       '@aws-sdk/client-sesv2':
-        specifier: ^3.1108.0
-        version: 3.1108.0
+        specifier: ^3.1109.0
+        version: 3.1109.0
       '@aws-sdk/client-sns':
-        specifier: ^3.1108.0
-        version: 3.1108.0
+        specifier: ^3.1109.0
+        version: 3.1109.0
       '@electric-sql/pglite':
         specifier: ^0.5.4
         version: 0.5.4
@@ -169,8 +169,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
       vercel:
-        specifier: ^58.9.5
-        version: 58.9.5(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(rollup@4.62.4)(supports-color@8.1.1)
+        specifier: ^58.10.0
+        version: 58.10.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(rollup@4.62.4)(supports-color@8.1.1)
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(jsdom@30.0.1)(msw@2.15.0(@types/node@26.2.0)(typescript@7.0.2))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.12))
@@ -247,24 +247,24 @@ packages:
     resolution: {integrity: sha512-insWOqKKNUrbN/dohEG7BJ0U5GkyqhjbMb/NHNaLUtq+7my2M8C4EnZZZoxMmXRqCC+P9dEr+KyJA2JGGzoKLg==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-cloudwatch-logs@3.1108.0':
-    resolution: {integrity: sha512-GVd4/2L2QXc8PLWMzlO/nfa3OpW929ae484r+Lv95efuuSS7eEAjbftyQTH7abCHn4BDIXaXCcX20B8T0WnbGQ==}
+  '@aws-sdk/client-cloudwatch-logs@3.1109.0':
+    resolution: {integrity: sha512-EPnnfhqaTVmHKJELP+0hsZUilUKZZ1/fGqfddv5MyDN2UGIgBWlJ3/0H6COUwa6/IXmD1RjKbpd62sbiQFk/Gw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-geo-places@3.1108.0':
-    resolution: {integrity: sha512-SFYm3tmzuV9Wv5IbXAFA8Ejfe+3MWbBYoY+Ujrx33ls4L/pIK8KzC4OxU1ERckRCCks59roVh09ZPpVvpsWtIw==}
+  '@aws-sdk/client-geo-places@3.1109.0':
+    resolution: {integrity: sha512-g7T1HPAb+zK62crV2I2vsfu5RFkf1JXx5jVSHzfFOR55wG7pDg8ZCS8FxaUOzg55BQ1jx1wF7za8i8kRB0ncyw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-s3@3.1108.0':
-    resolution: {integrity: sha512-prdothEAFE1G8H0s0+zFGuNZdSj+Acg/siB1dFxPS181op9+hJ1GLr+b2anJch4B9a/xbWy7k8eG/enH3cNSjQ==}
+  '@aws-sdk/client-s3@3.1109.0':
+    resolution: {integrity: sha512-iPWzBeGkAe5H5+dBBGCOdIT4uMhpu12OK+nFnDzjvOChVnHIws4LeoG7Yl0kJHSRWZnNEkVcF4vQYTJny0e5xA==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-sesv2@3.1108.0':
-    resolution: {integrity: sha512-q9Jcu2AWLwFiUi/ec0dFnOad9XJcA0I/r9THi8rvc0JwRHiI1ZI6uuaV9ls790DT6h7cykYglkjw8pHwP1pF+Q==}
+  '@aws-sdk/client-sesv2@3.1109.0':
+    resolution: {integrity: sha512-wBrUNKC/kCCUAsqZAYWM2q8gZYcICRp2LUhTWoc9WCff41ny/vahxUpp1kYn5y31oDLKjNMONU4f+Bdy2k7k0g==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-sns@3.1108.0':
-    resolution: {integrity: sha512-8JTFg2IQxxsleQ1f+H6IwPdt5ZYp4n5TygcSr4uvB6GYO4CKvM9R2Xp48H7RcHleqGoN4aaCBuq195jbxdMF4Q==}
+  '@aws-sdk/client-sns@3.1109.0':
+    resolution: {integrity: sha512-q7f08A5MDDc1ila4zWUz4uksohtAf7PsnipG+oS6Ol6LtGqRv3CxnZLAy/0eNxFcCIM1NQTOEaiDPgDpRgM4hw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/core@3.977.7':
@@ -2945,8 +2945,8 @@ packages:
   '@vercel/backends@0.8.36':
     resolution: {integrity: sha512-h4FTDNlGlbnKkZlux51nWIrDS/HnydrrtK2uhStdXCA0MKwXtNM81fqh7SndbigqEb4TPad4bszWDkbgZczk9A==}
 
-  '@vercel/blob@2.4.0':
-    resolution: {integrity: sha512-ncQ8CRb6XoEAYJwjOTRGpACRT6h/AeY+/33gLyeVxG5BIes27OPm1jmqreF+JHjcTmGhClTP+kBpmyLfbV0xew==}
+  '@vercel/blob@2.8.0':
+    resolution: {integrity: sha512-Nu+HWKpkgovCh/ezlG7wCVwF7RErTzLzZMbGKFBdGBCbTKyK+s5VXPLl+0+TpNEQPH8AVaGzOpIsXUOtkqylCQ==}
     engines: {node: '>=20.0.0'}
 
   '@vercel/build-utils@14.0.5':
@@ -2961,6 +2961,10 @@ packages:
 
   '@vercel/cli-config@0.2.3':
     resolution: {integrity: sha512-Ggh0Wmi92TUkUexmSUPkkDtvJmbjUr7IvF5T3FkSsWrXXs3GFzOujfxFpECdJZpux1JG4SWDv9BT4w++TDgD6A==}
+
+  '@vercel/cli-exec@1.0.1':
+    resolution: {integrity: sha512-g9XerViJ/paZujufXYcu5XYI2vU2rtB4sgdpjUHde5RnOkdmpu0ngH46LCFGHoPXO/C+qDPSczIHIRN+8Q2YKQ==}
+    engines: {node: '>= 18'}
 
   '@vercel/container@0.2.0':
     resolution: {integrity: sha512-l4prOR48EFu3CGNgwN64DCNwfqw8ZJty70HrY0X0+i5AMxi4GiIttZsSYBmttUAM+OSIg3BqMg767dlzjlzQyQ==}
@@ -3024,14 +3028,18 @@ packages:
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
 
+  '@vercel/oidc@3.8.4':
+    resolution: {integrity: sha512-FGNvVZ5pgX9FaBqkPt6VkYFZ6bWAMDzYi7nxW+1Xt+Z4fn5PuTULVwsxjKc+0uKhysyWBQmvsmM50Oh6C2/oMA==}
+    engines: {node: '>= 20'}
+
   '@vercel/prepare-flags-definitions@0.3.0':
     resolution: {integrity: sha512-/0nuDFwYje0nqZnVKSd2VfJy2wOPQwbkas1qO1JQgtb0sLl+EeSCW4O9hrvq55pN50PNlAZ/APSeWHIAT9ZGHg==}
 
   '@vercel/python-analysis@0.13.2':
     resolution: {integrity: sha512-IEr5K2gvX143NBoQc1W4BWrdDWjZwxnIT6UrL5Y1dnyH7Cqc4AV00FIAddB1YpnIZBJwT4ZhE8QbgqBeO6C9Zw==}
 
-  '@vercel/python@6.56.1':
-    resolution: {integrity: sha512-gkTLBbMZbmBTVCrRMn47grZptEbCeUSMVJb4hrditW7MvpuSkTuYYMx6/mCEpwPkxXFqbjgrE3KZM4z1PT5CrA==}
+  '@vercel/python@6.56.2':
+    resolution: {integrity: sha512-TUQnflCTuK1AFSRka38wn6qqMwI0N70YG2uk5jKVrVXl3w+gZ+yA1DLn5OMMDUdYR21dJMDcMbn0NTaUGxLWaQ==}
 
   '@vercel/redwood@2.5.1':
     resolution: {integrity: sha512-oldy4mZmhFzHKkXluyPNHiIyZHxVW1Zpznn0qBag2hzmn2HpqkL9fZfZvlWGIvuAdQz/Sa4AErbreMEPOzCv0w==}
@@ -3042,8 +3050,8 @@ packages:
   '@vercel/ruby@2.5.1':
     resolution: {integrity: sha512-e23M7pfORQyyxSUmeQ8PqEnyLJ4swhtNrnyctU5E02UCaUYFm5YAdNfdPYRP4It874H4Wyvm+LV8u7CPBrfcPA==}
 
-  '@vercel/rust@1.4.1':
-    resolution: {integrity: sha512-5KNA/WixZ3Ktitg8kBLLb9UTvfZmBxYbJtVOHEBX5JZApIvCeezWHhtnpYbXMpW0wPEOFNBvEMVTRqjZAiAKOQ==}
+  '@vercel/rust@1.4.2':
+    resolution: {integrity: sha512-vWVSMhj+3cMjQxj03jZTCNa94M0o+roVBA5wwfadxNMP8rCqdvZ0aamT/8zGCtjZ13PJc9v2W2nq0dlaaOZf4Q==}
 
   '@vercel/sandbox@2.4.0':
     resolution: {integrity: sha512-pifnr8hex/rgQ3EPyLYHYwHyf0Kwmc4Vbya9kHGk4aERFVGj44P+742S8/SDdt2guMxBriXBOMkMLq1Kaiyyeg==}
@@ -3080,23 +3088,23 @@ packages:
   '@vercel/static-config@3.4.1':
     resolution: {integrity: sha512-kJKTyOg25JDRgDkHEkc+vWlvURxmSQkVKyRPO4EEGD/8HpJT+4u9Z/VGxwnCZ6zZBxYPpma283qBsHwY0gXjfw==}
 
-  '@vercel/vc-native-darwin-arm64@58.9.5':
-    resolution: {integrity: sha512-5nJafq084KHYlvVq5Pa4QJiclmHhsqKwczm5LF3gsvgFBWCIEdmURdQ0bYkc3cbjIYUHfu6D34qGdACFnx0Lsw==}
+  '@vercel/vc-native-darwin-arm64@58.10.0':
+    resolution: {integrity: sha512-gC8UB3/70LiMQJjXhfolt4eclRqIaX11umJsdXQwtX3N54UxULK4hgkHAyiyTSFc6ze/98mbDz18ol55dwJD9w==}
     cpu: [arm64]
     os: [darwin]
 
-  '@vercel/vc-native-darwin-x64@58.9.5':
-    resolution: {integrity: sha512-fLjGd/alzDCeT8drLzL+9a34m+RGj5Mfzr74kCayGfAzA1pMFG5IgXI0ZFUqmSgsZiaZsSoqzcH9nIq94dkfGQ==}
+  '@vercel/vc-native-darwin-x64@58.10.0':
+    resolution: {integrity: sha512-oRFnbXyN+LjPer6P05Jhsf7c043+wc3YsybVh9ozbwP2dhAgpvnjM1F1ZKsHuvrrT5pbBo5v8ckx8CAXfDpzfQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@vercel/vc-native-linux-arm64@58.9.5':
-    resolution: {integrity: sha512-9GCOYk/Y9mcZnM9pQ44I+k7X6YE98Pf34w7cubboTXg5Sei//6WqBfLXdMVBTkB+7mDpJ0aL0vJeYXL+wOQEgg==}
+  '@vercel/vc-native-linux-arm64@58.10.0':
+    resolution: {integrity: sha512-5rpxORyR6/Biqxu5CLoXeqZCALiy7VmifGI/3d91OyWaYhHoR3EVfUnFbne1R1cnr2mS7eayNprNrxq+5Wu9Uw==}
     cpu: [arm64]
     os: [linux]
 
-  '@vercel/vc-native-linux-x64@58.9.5':
-    resolution: {integrity: sha512-i9yb6RNXBEi0EKd4mB7GZLTNrmBkp5UALCMOTJUrlDGgeenTU1jwG/7XQIC4zxpmiNUK2BPLoE9AYq3tVmqgRg==}
+  '@vercel/vc-native-linux-x64@58.10.0':
+    resolution: {integrity: sha512-eVuB03bAbCDI4ILVr3qSnxEcHzEttOTeQBnLlLP8zG86EsXdTM6Td0MQFOElzzTQOnnR2gFv510D5Xrb7znh+w==}
     cpu: [x64]
     os: [linux]
 
@@ -4636,6 +4644,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jose@5.10.0:
+    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
   jose@5.9.6:
     resolution: {integrity: sha512-AMlnetc9+CV9asI19zHmrgS/WYsWUwCn2R7RzlbJWD7F9eWYUTGyBmU9o6PxngtLGOiDGPRu+Uc4fhKzbpteZQ==}
@@ -6325,8 +6336,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  vercel@58.9.5:
-    resolution: {integrity: sha512-ekZoC+wuAkbDltDCRITgGWKlEtJdo58i7LcdMnlCrenvx0p5gr9TUB98f8/L9H9tyu5HDk96yk89/LaIuo9tsA==}
+  vercel@58.10.0:
+    resolution: {integrity: sha512-wcUD7v/R9uqz+3LQR7plqPPRqdrWPJZrm7omJgsBCjiI0Yih2NNdTO3mRvxQbnB7o1MPE/lcUweECOqK402oqg==}
     engines: {node: '>= 18'}
     hasBin: true
 
@@ -6721,7 +6732,7 @@ snapshots:
       '@smithy/types': 4.17.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-cloudwatch-logs@3.1108.0':
+  '@aws-sdk/client-cloudwatch-logs@3.1109.0':
     dependencies:
       '@aws-sdk/core': 3.977.7
       '@aws-sdk/credential-provider-node': 3.972.79
@@ -6732,7 +6743,7 @@ snapshots:
       '@smithy/types': 4.17.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-geo-places@3.1108.0':
+  '@aws-sdk/client-geo-places@3.1109.0':
     dependencies:
       '@aws-sdk/core': 3.977.7
       '@aws-sdk/credential-provider-node': 3.972.79
@@ -6743,7 +6754,7 @@ snapshots:
       '@smithy/types': 4.17.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-s3@3.1108.0':
+  '@aws-sdk/client-s3@3.1109.0':
     dependencies:
       '@aws-sdk/checksums': 3.1000.27
       '@aws-sdk/core': 3.977.7
@@ -6757,7 +6768,7 @@ snapshots:
       '@smithy/types': 4.17.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-sesv2@3.1108.0':
+  '@aws-sdk/client-sesv2@3.1109.0':
     dependencies:
       '@aws-sdk/core': 3.977.7
       '@aws-sdk/credential-provider-node': 3.972.79
@@ -6769,7 +6780,7 @@ snapshots:
       '@smithy/types': 4.17.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-sns@3.1108.0':
+  '@aws-sdk/client-sns@3.1109.0':
     dependencies:
       '@aws-sdk/core': 3.977.7
       '@aws-sdk/credential-provider-node': 3.972.79
@@ -8810,8 +8821,9 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/blob@2.4.0':
+  '@vercel/blob@2.8.0':
     dependencies:
+      '@vercel/oidc': 3.8.4
       async-retry: 1.3.3
       is-buffer: 2.0.5
       is-node-process: 1.2.0
@@ -8846,6 +8858,10 @@ snapshots:
     dependencies:
       xdg-app-paths: 5.5.1
       zod: 4.1.11
+
+  '@vercel/cli-exec@1.0.1':
+    dependencies:
+      execa: 5.1.1
 
   '@vercel/container@0.2.0': {}
 
@@ -9030,6 +9046,12 @@ snapshots:
 
   '@vercel/oidc@3.2.0': {}
 
+  '@vercel/oidc@3.8.4':
+    dependencies:
+      '@vercel/cli-config': 0.2.3
+      '@vercel/cli-exec': 1.0.1
+      jose: 5.10.0
+
   '@vercel/prepare-flags-definitions@0.3.0': {}
 
   '@vercel/python-analysis@0.13.2':
@@ -9042,7 +9064,7 @@ snapshots:
       smol-toml: 1.5.2
       zod: 3.22.4
 
-  '@vercel/python@6.56.1':
+  '@vercel/python@6.56.2':
     dependencies:
       '@vercel/python-analysis': 0.13.2
 
@@ -9072,7 +9094,7 @@ snapshots:
 
   '@vercel/ruby@2.5.1': {}
 
-  '@vercel/rust@1.4.1':
+  '@vercel/rust@1.4.2':
     dependencies:
       execa: 5.1.1
       get-port: 5.1.1
@@ -9113,16 +9135,16 @@ snapshots:
       json-schema-to-ts: 1.6.4
       ts-morph: 12.0.0
 
-  '@vercel/vc-native-darwin-arm64@58.9.5':
+  '@vercel/vc-native-darwin-arm64@58.10.0':
     optional: true
 
-  '@vercel/vc-native-darwin-x64@58.9.5':
+  '@vercel/vc-native-darwin-x64@58.10.0':
     optional: true
 
-  '@vercel/vc-native-linux-arm64@58.9.5':
+  '@vercel/vc-native-linux-arm64@58.10.0':
     optional: true
 
-  '@vercel/vc-native-linux-x64@58.9.5':
+  '@vercel/vc-native-linux-x64@58.10.0':
     optional: true
 
   '@vitejs/plugin-react@6.0.5(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.12))':
@@ -10708,6 +10730,8 @@ snapshots:
 
   jiti@2.7.0: {}
 
+  jose@5.10.0: {}
+
   jose@5.9.6: {}
 
   jose@6.2.3: {}
@@ -11651,7 +11675,7 @@ snapshots:
 
   reg-publish-s3-plugin@0.14.4:
     dependencies:
-      '@aws-sdk/client-s3': 3.1108.0
+      '@aws-sdk/client-s3': 3.1109.0
       mkdirp: 1.0.4
       reg-suit-util: 0.14.3
       uuid: 9.0.1
@@ -12486,10 +12510,10 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vercel@58.9.5(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(rollup@4.62.4)(supports-color@8.1.1):
+  vercel@58.10.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(rollup@4.62.4)(supports-color@8.1.1):
     dependencies:
       '@vercel/backends': 0.8.36(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(rollup@4.62.4)(supports-color@8.1.1)
-      '@vercel/blob': 2.4.0
+      '@vercel/blob': 2.8.0
       '@vercel/build-utils': 14.0.5
       '@vercel/cli-auth': 0.3.4
       '@vercel/cli-config': 0.2.3
@@ -12508,11 +12532,11 @@ snapshots:
       '@vercel/next': 4.21.3(rollup@4.62.4)(supports-color@8.1.1)
       '@vercel/node': 5.9.9(rollup@4.62.4)(supports-color@8.1.1)
       '@vercel/prepare-flags-definitions': 0.3.0
-      '@vercel/python': 6.56.1
+      '@vercel/python': 6.56.2
       '@vercel/redwood': 2.5.1(rollup@4.62.4)(supports-color@8.1.1)
       '@vercel/remix-builder': 5.9.4(rollup@4.62.4)(supports-color@8.1.1)
       '@vercel/ruby': 2.5.1
-      '@vercel/rust': 1.4.1
+      '@vercel/rust': 1.4.2
       '@vercel/static-build': 2.12.5
       chokidar: 4.0.0
       esbuild: 0.27.0
@@ -12525,10 +12549,10 @@ snapshots:
       uuid: 14.0.1
       zod: 4.1.11
     optionalDependencies:
-      '@vercel/vc-native-darwin-arm64': 58.9.5
-      '@vercel/vc-native-darwin-x64': 58.9.5
-      '@vercel/vc-native-linux-arm64': 58.9.5
-      '@vercel/vc-native-linux-x64': 58.9.5
+      '@vercel/vc-native-darwin-arm64': 58.10.0
+      '@vercel/vc-native-darwin-x64': 58.10.0
+      '@vercel/vc-native-linux-arm64': 58.10.0
+      '@vercel/vc-native-linux-x64': 58.10.0
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
