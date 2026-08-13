@@ -15,7 +15,7 @@
 `featuresPerGroup === 1` sets `summaryOnly` and renders a single paragraph; anything higher renders
 the checklist `<ul>`. Both remaining callers pass `1`:
 
-- `src/app/page.tsx:264` — `<FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />`
+- `src/app/page.tsx:317` — `<FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />`
 - `src/app/pricing/page.tsx:349` — `<FeatureGroupsGrid locale={locale} columns={2} featuresPerGroup={1} />`
 
 `/product` was the third, at `featuresPerGroup={4}`, and it is gone — its 30 bullets sat about a
@@ -64,7 +64,7 @@ bill nobody is paying down.
 
 ```text
 `FeatureGroupsGrid` in src/components/MarketingSections.tsx has an unreachable branch. Both
-remaining callers — src/app/page.tsx:264 and src/app/pricing/page.tsx:349 — pass
+remaining callers — src/app/page.tsx:317 and src/app/pricing/page.tsx:349 — pass
 featuresPerGroup={1}, which sets summaryOnly and renders a paragraph, so the checklist <ul> never
 renders. As a result only item1 of each of the four groups in productFeatureGroups
 (src/lib/marketing.ts) is reachable, and the other 26 marketing.features.* keys are translated in
