@@ -1287,7 +1287,7 @@
         "frontDesk": {
           "when": "The morning of",
           "title": "One answer to “are they ready?”",
-          "description": "Waiver, certification, site requirements, payment, and rental fit come together before a problem reaches the dock — and when something can't be verified, DiveDay says so plainly instead of waving it through.",
+          "description": "Waiver, certification, site requirements, payment, and rental fit — settled before a problem reaches the dock. When something can't be verified, DiveDay says so plainly instead of waving it through.",
           "mockupLabel": "The trip readiness section showing clear diver-ready and diver-blocked states."
         }
       },

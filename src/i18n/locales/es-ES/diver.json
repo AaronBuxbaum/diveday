@@ -1287,7 +1287,7 @@
         "frontDesk": {
           "when": "La mañana de la salida",
           "title": "Una sola respuesta a “¿están listos?”",
-          "description": "Exención, titulación, requisitos del sitio, pago y tallas de alquiler se juntan antes de que un problema llegue al muelle, y cuando algo no se puede verificar, DiveDay lo dice claramente en vez de dejarlo pasar.",
+          "description": "Exención, titulación, requisitos del sitio, pago y tallas de alquiler — resueltos antes de que un problema llegue al muelle. Cuando algo no se puede verificar, DiveDay lo dice claramente en vez de dejarlo pasar.",
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
