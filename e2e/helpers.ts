@@ -144,6 +144,8 @@ export async function createTrip(
     capacity?: number;
     price?: number;
     cancellationWindowHours?: number;
+    minimumBookings?: number;
+    minimumDecisionHours?: number;
   },
 ): Promise<void> {
   // Always the full depth (`?add=full`), even for a caller that only fills the
@@ -169,6 +171,12 @@ export async function createTrip(
   }
   if (options.cancellationWindowHours !== undefined) {
     await page.getByLabel("Free cancellation window").fill(String(options.cancellationWindowHours));
+  }
+  if (options.minimumBookings !== undefined) {
+    await page.getByLabel("Minimum to run").fill(String(options.minimumBookings));
+  }
+  if (options.minimumDecisionHours !== undefined) {
+    await page.getByLabel("Decide by").fill(String(options.minimumDecisionHours));
   }
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(options.title);
@@ -286,5 +294,57 @@ export async function openSettingsRow(page: Page, heading: string) {
     .filter({ has: page.getByRole("heading", { level: 3, name: heading, exact: true }) })
     .first();
   const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
-  if (!isOpen) await details.locator("summary").click();
+  // `> summary` for the same reason as `openIfClosed` below: a settings row can
+  // hold its own nested disclosures, and only a direct summary opens this one.
+  if (!isOpen) await details.locator("> summary").click();
+}
+
+/**
+ * Open a Guests roster card's "Details" disclosure.
+ *
+ * The roster keeps **work** in the open — blockers, the waiver control, the
+ * payment selector, the emergency contact, the private notes — and files what
+ * the card can only *tell* you behind one tap: the signed-waiver date, rental
+ * fit, the orders link, and "Remove booking". Removing a seat is the one
+ * administrative act several specs reach for as a teardown, hence this helper
+ * rather than the same three lines in four files.
+ *
+ * The disclosure is uncontrolled — its `open` is native DOM state React does
+ * not touch — so this checks before clicking rather than toggling blindly,
+ * exactly like `openPrivateNotes` in add-diver.spec.ts.
+ */
+export async function openRosterDetails(row: Locator): Promise<void> {
+  await openIfClosed(row.locator("details").filter({ hasText: "Remove booking" }).first());
+}
+
+/**
+ * Open a Guests roster card's private-notes disclosure — a sibling of the
+ * "Details" one above, not nested inside it, because writing a note about a
+ * diver is desk work a staffer starts from the card rather than reference.
+ *
+ * The same check-before-click matters more here than anywhere else on the
+ * roster: adding a note no longer navigates, so the disclosure a spec opened to
+ * write one is *still open* when it comes back to delete it. Clicking blind
+ * would close it and take the Delete button with it.
+ */
+export async function openRosterNotes(row: Locator): Promise<void> {
+  await openIfClosed(
+    row
+      .locator("details")
+      .filter({ hasText: /Private staff notes|Add a private note/ })
+      .first(),
+  );
+}
+
+/**
+ * Native `open` is DOM state React never touches, so check before toggling.
+ *
+ * `> summary`, not `summary`: these panels contain other disclosures (the
+ * emergency-contact edit form is one), and a descendant `<summary>` would make
+ * this ambiguous under strict mode — or, worse, click the wrong one and leave
+ * the panel shut. A `<details>` is opened only by its own direct summary.
+ */
+async function openIfClosed(details: Locator): Promise<void> {
+  const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
+  if (!isOpen) await details.locator("> summary").click();
 }

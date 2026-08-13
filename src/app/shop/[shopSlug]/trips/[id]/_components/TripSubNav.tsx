@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 /**
  * The boat loop's spine: one compact bar on every trip surface so a captain who
@@ -68,27 +68,16 @@ export function TripSubNav({
     )?.page ?? null;
 
   return (
-    <nav
-      aria-label={copy.ariaLabel}
-      className={`flex snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`}
-    >
-      {TABS.map(({ page, label, suffix }) => {
-        const active = page === current;
-        const cls = `inline-flex min-h-11 flex-1 snap-start items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
-          active
-            ? "bg-surface text-primary shadow-sm"
-            : "text-muted hover:bg-surface hover:text-foreground"
-        }`;
-        return active ? (
-          <span key={page} aria-current="page" data-tab-active="true" className={cls}>
-            {label}
-          </span>
-        ) : (
-          <Link key={page} href={`${root}${suffix}`} className={cls}>
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedControl
+      ariaLabel={copy.ariaLabel}
+      items={TABS.map(({ page, label, suffix }) => ({
+        key: page,
+        label,
+        href: `${root}${suffix}`,
+      }))}
+      currentKey={current}
+      fill
+      className={className}
+    />
   );
 }

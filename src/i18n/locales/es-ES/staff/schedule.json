@@ -107,7 +107,13 @@
     "endsLabel": "Termina",
     "endsNever": "Se repite siempre",
     "endsOnChoice": "En una fecha",
-    "endsOnLabel": "Última fecha"
+    "endsOnLabel": "Última fecha",
+    "minimumBookingsLabel": "Mínimo para salir",
+    "minimumBookingsDescription": "En blanco, el barco sale con quien reserve. Si lo rellenas, la página de reserva indica la cifra, y esta salida se cancela sola —avisando a quienes iban— si no la alcanza antes de la fecha límite de al lado.",
+    "minimumDecisionLabel": "Decidir con",
+    "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. Al reservar, se indica el momento exacto al buceador.",
+    "diversSuffix": "buceadores",
+    "hoursBeforeSuffix": "horas de antelación"
   },
   "addBooking": "Añadir una reserva"
 }

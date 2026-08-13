@@ -20,7 +20,9 @@ export function DiveBriefingsSection({
   // only worth its space once the dives are at *different* places.
   const comparableSites = new Set(sited.map(({ diveSite }) => diveSite?.id)).size > 1;
   return (
-    <section className="mt-8">
+    // `mt-12` matches the forecast and packing sections — the page's
+    // supporting reading shares one vertical rhythm.
+    <section className="mt-12">
       <div>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">
           {t("trip.briefingsEyebrow")}

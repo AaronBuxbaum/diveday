@@ -5,13 +5,7 @@ import { useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
-export function TripActions({
-  calendarUrl,
-  directionsUrl,
-}: {
-  calendarUrl: string;
-  directionsUrl: string | null;
-}) {
+export function TripActions({ calendarUrl }: { calendarUrl: string }) {
   const t = useTranslations("trip");
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -29,9 +23,8 @@ export function TripActions({
     }
     // Reuses Copyable's own clipboard write (src/components/Copyable.tsx) —
     // this button isn't Copyable-shaped (it shares a `buttonClass` row with
-    // "Add to calendar"/"Get directions" and only falls back to a copy when
-    // the Web Share API is unavailable), but the write itself is never
-    // hand-rolled here.
+    // "Add to calendar" and only falls back to a copy when the Web Share API
+    // is unavailable), but the write itself is never hand-rolled here.
     const ok = await copyToClipboard(window.location.href);
     setStatus(ok ? "copied" : "failed");
     setTimeout(() => setStatus("idle"), 4000);
@@ -51,25 +44,24 @@ export function TripActions({
         : "";
 
   return (
-    <fieldset className="mt-5 flex flex-wrap gap-2">
+    // Ghost weight, not three bordered pills: these are conveniences, and a
+    // row of same-weight boxed buttons right under the masthead outshouted
+    // the price above and the booking card below (design/principles.md #8 —
+    // nothing here competes with the one primary action).
+    <fieldset className="mt-4 -ml-3 flex flex-wrap gap-1">
       <legend className="sr-only">{t("planAndShare")}</legend>
-      <a href={calendarUrl} className={buttonClass({ variant: "secondary", size: "sm" })}>
+      <a href={calendarUrl} className={buttonClass({ variant: "ghost", size: "sm" })}>
         {t("addToCalendar")}
       </a>
-      {directionsUrl ? (
-        <a
-          href={directionsUrl}
-          target="_blank"
-          rel="noreferrer"
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {t("getDirections")}
-        </a>
-      ) : null}
+      {/* No "Get directions" here. The trip page already carries the site's
+          own map and its link out (`DiveSiteMap`), and a *second* door to the
+          same maps app — sitting in the plan-and-share row, before a diver has
+          booked anything — was a third button competing with the one that
+          matters on this page. Removed 2026-08-13 at the product owner's call. */}
       <button
         type="button"
         onClick={shareTrip}
-        className={buttonClass({ variant: "secondary", size: "sm" })}
+        className={buttonClass({ variant: "ghost", size: "sm" })}
       >
         {label}
       </button>

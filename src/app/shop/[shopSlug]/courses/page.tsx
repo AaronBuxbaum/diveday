@@ -15,7 +15,7 @@ import { getShopBySlug } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { publicCoursePath } from "@/lib/public-routes";
+import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -31,99 +31,13 @@ export const metadata: Metadata = {
   title: "Courses — DiveDay",
 };
 
-/** A closed eye — shown for a course currently hidden from scheduling lists. */
-function EyeOffIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-5"
-    >
-      <path d="M9.88 4.24A9.9 9.9 0 0 1 12 4c5 0 9.27 3.11 11 7.5a12.4 12.4 0 0 1-2.16 3.19M6.61 6.61A12.5 12.5 0 0 0 1 11.5c1.73 4.39 6 7.5 11 7.5a9.9 9.9 0 0 0 3.39-.6" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-      <path d="m3 3 18 18" />
-    </svg>
-  );
-}
-
-/** An open eye — shown for a course currently visible in scheduling lists. */
-function EyeIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-5"
-    >
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-/** A calendar with a plus — schedules a session of this course. */
-function CalendarPlusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-5"
-    >
-      <path d="M8 2v4M16 2v4M3 10h18" />
-      <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7" />
-      <path d="M16 19h6M19 16v6" />
-    </svg>
-  );
-}
-
 /**
- * An arrow leaving a frame — shown next to the eye toggle to open the course's
- * live public page.
- *
- * Not the chain link this used to be. A chain link is the web's mark for *the
- * address of this thing*, and beside a "hide/show" toggle staff read it as the
- * control that copies the URL to send a diver — which is not what it does. An
- * arrow out of a box is the mark for "this opens the page", which is.
- */
-function OpenPageIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-5"
-    >
-      <path d="M14 4h6v6" />
-      <path d="M20 4 11 13" />
-      <path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
-    </svg>
-  );
-}
-
-/**
- * The staff course roster: every course including the hidden ones, with the
- * visibility toggle, the editor, and a link out to each course's live public
- * page. Staff-only, like everything else under `/shop/**` — the diver-facing
- * catalog is `/s/[shopSlug]/courses`, which this page used to render as its
- * other half behind a session check (ADR 20260803-public-shop-namespace).
+ * The staff course roster: every course including the hidden ones. Each row
+ * opens its course's editor; the rail carries only the two list-level acts
+ * (Schedule, Hide/Show), and the header holds the one door to the diver-facing
+ * catalog. Staff-only, like everything else under `/shop/**` — that catalog is
+ * `/s/[shopSlug]/courses`, which this page used to render as its other half
+ * behind a session check (ADR 20260803-public-shop-namespace).
  */
 export default async function CoursesPage({
   params,
@@ -196,6 +110,20 @@ export default async function CoursesPage({
         eyebrow={st("courses.list.eyebrow")}
         title={st("courses.list.title")}
         description={st("courses.list.description")}
+        actions={
+          // The one door to the catalog a diver sees — replacing the
+          // arrow-out-of-a-box icon every row used to carry. "How does my
+          // catalog read to a diver?" is a question about the catalog, so its
+          // answer lives once, up here (the same door Reviews and the board
+          // wear); "how does *this course's* page read?" is answered on the
+          // course's own editor, whose header names its live URL.
+          <Link
+            href={publicCoursesPath(shop.slug)}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            {st("courses.list.viewPublicPage")}
+          </Link>
+        }
       />
 
       <AgencyTabs
@@ -207,18 +135,47 @@ export default async function CoursesPage({
 
       {/* Progression order, not alphabetical: the list reads the way a shop
           teaches — a taster, then the entry certification, then everything it
-          opens (src/db/courses.ts `progressionOrder`). */}
+          opens (src/db/courses.ts `progressionOrder`).
+
+          The row itself is the door to the course's page — the page's own
+          description says what a row is for ("Open a course to edit its page
+          and pricing"), so opening it is the row's tap, not one button among
+          four. What used to trail every row — Edit, plus three icon-only ghost
+          buttons whose names lived in sr-only spans — is down to the two acts
+          that are genuinely *list-level* work, each wearing its verb: Schedule
+          (a catalog exists to be taught) and Hide/Show (thinning the catalog
+          to what the shop offers is a walk down this list, and the roster is
+          deliberately the one place visibility changes — the editor's own
+          toggle was removed for it). The per-row Preview icon moved onto the
+          destination it duplicated: the editor's header names and links the
+          course's live URL. */}
       <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         {courseList.map((course) => (
           <li
             key={course.id}
-            className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 sm:px-5 ${
+            className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors duration-200 hover:bg-surface-sunken sm:px-5 ${
               course.isActive ? "" : "text-muted"
             }`}
           >
             <div className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-foreground">{course.title}</span>
+                {/* Stretched over the whole row (same grammar as the divers
+                    table): the title is the visible name, the label says what
+                    the tap does. */}
+                <Link
+                  href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
+                  aria-label={st("courses.list.editSrLabel", { title: course.title })}
+                  className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                >
+                  {course.title}
+                  {/* The arrow is CSS `content`, not a text node: specs locate
+                      this row by the title's exact text, and a DOM arrow would
+                      make the link read "Rescue Diver →" to them. */}
+                  <span
+                    aria-hidden="true"
+                    className="ml-1 opacity-0 transition-opacity before:content-['→'] group-hover:opacity-100"
+                  />
+                </Link>
                 {course.isActive ? null : (
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
                     {st("courses.list.hidden")}
@@ -233,13 +190,8 @@ export default async function CoursesPage({
                   : st("courses.list.openToUncertified")}
               </p>
             </div>
-            <div className="flex items-center gap-1">
-              <Link
-                href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {st("courses.list.edit")}
-              </Link>
+            {/* Above the stretched link, so the rail's own taps win. */}
+            <div className="relative z-10 flex items-center gap-1">
               {/* The catalog's whole point is that a course gets taught. This
                   hands the board's add panel (`?course=` opens it with the
                   course preselected and shapes the title) the one fact staff
@@ -248,12 +200,10 @@ export default async function CoursesPage({
               {canSchedule ? (
                 <Link
                   href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
-                  className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+                  aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
+                  className={buttonClass({ variant: "ghost", size: "sm" })}
                 >
-                  <CalendarPlusIcon />
-                  <span className="sr-only">
-                    {st("courses.list.scheduleSrLabel", { title: course.title })}
-                  </span>
+                  {st("courses.list.schedule")}
                 </Link>
               ) : null}
               <form action={visibilityAction}>
@@ -261,28 +211,15 @@ export default async function CoursesPage({
                 <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
                 <SubmitButton
                   pendingLabel="…"
-                  className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+                  ariaLabel={st("courses.list.hideShowSrLabel", {
+                    action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
+                    title: course.title,
+                  })}
+                  className={buttonClass({ variant: "ghost", size: "sm" })}
                 >
-                  {course.isActive ? <EyeIcon /> : <EyeOffIcon />}
-                  <span className="sr-only">
-                    {st("courses.list.hideShowSrLabel", {
-                      action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
-                      title: course.title,
-                    })}
-                  </span>
+                  {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
                 </SubmitButton>
               </form>
-              {/* The one staff link that now leaves /shop: this is the page a
-                  diver sees, so it points at the public namespace. */}
-              <Link
-                href={publicCoursePath(shop.slug, course.slug)}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
-              >
-                <OpenPageIcon />
-                <span className="sr-only">
-                  {st("courses.list.previewSrLabel", { title: course.title })}
-                </span>
-              </Link>
             </div>
           </li>
         ))}
