@@ -416,7 +416,8 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     "href",
     "/onboard?from=switching-eve",
   );
-  // Three doors out: the hero, the repeat under the scope table, and the close.
+  // Three doors out, and only three: the hero, the hinge between the argument
+  // and the mechanics, and the close.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
   await expect(
     page.getByRole("heading", { name: "Rather see it than read about it?" }),

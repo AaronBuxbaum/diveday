@@ -1003,76 +1003,85 @@
   },
   "switching": {
     "common": {
+      "backToGuides": "← All switching guides",
+      "contextEyebrow": "Where you are today",
+      "gettingDemoReady": "Getting the demo ready…",
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
+      "facts": {
+        "moves": {
+          "label": "What moves",
+          "value": "Whatever your file holds: people, cards, sizes, waivers, visit history."
+        },
+        "time": {
+          "label": "How long",
+          "value": "An afternoon. Export, preview, import — one sitting."
+        },
+        "preview": {
+          "label": "Before it saves",
+          "value": "Nothing lands until you read the preview and say go."
+        },
+        "back": {
+          "label": "The way out",
+          "value": "What arrives can leave the same way."
+        }
+      },
+      "moveTitle": "How the move works",
+      "moveIntro": "Every step is one you run yourself, in your own time.",
+      "scopeTableTitle": "What comes across — and what doesn't",
+      "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
+      "comesAcross": "Comes across",
+      "staysBehind": "Stays behind",
       "bothWaysTitle": "The same table, read the other way.",
       "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim}",
+      "bringFileTitle": "Bring the file into DiveDay",
+      "bringFileIntro": "The rest is in DiveDay, and it takes minutes.",
+      "openSettingsTitle": "Open Settings → Import contacts",
+      "openSettingsBody": "The owner or manager uploads the CSV in your DiveDay shop.",
+      "checkPreviewTitle": "Check the preview",
+      "checkPreviewBody": "DiveDay maps your columns and shows how each one landed, what it's leaving behind, and any row it can't bring across. A diver with a matching email is updated, not duplicated. Nothing saves until you confirm.",
+      "importReadyTitle": "Import — your roster is ready",
+      "importReadyBody": "Roster, sizes, and cards land immediately. Cards arrive verified and flagged imported, with a one-tap confirm for staff; only a specialty-gated dive waits on it.",
+      "openImportCta": "Open Import in your shop",
       "midCtaTitle": "Rather see it than read about it?",
-      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
-    },
-    "concierge": {
-      "eyebrow": "A person, not a wizard",
-      "title": "We'll switch you on — and off — ourselves.",
-      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, we'll help you carry it all back out just as personally.",
-      "emailCta": "Email us at {email}"
+      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your file lands into."
     },
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Coming in takes a file. Going out takes one button. These guides show both: how to get your divers out of whatever you run now, and exactly what lands when they arrive.",
+      "description": "Coming in takes a file. Going out takes one button. Find what you run now — each guide shows both.",
       "spreadsheetTitle": "Coming from a spreadsheet",
-      "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
-      "readGuide": "Read the guide →",
+      "spreadsheetDescription": "Bring the sheet you already keep, and add the jobs a list can't do — like checking every card before the boat leaves.",
+      "switchingFrom": "Switching from {competitor}",
       "previewEyebrow": "Before anything saves",
       "previewTitle": "You see the whole file before a single row lands.",
-      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: which of your columns it matched, which it didn't recognize and will ignore, how many divers and cards it counted, and every row it intends to skip. Nothing is written until you look at that and say go.",
+      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: the columns it matched, the ones it will ignore, the divers and cards it counted, and every row it intends to skip.",
       "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
-      "switchingFrom": "Switching from {competitor}",
-      "dontSeeSystem": "Don't see your system?",
-      "dontSeeSystemBody": "Most exports come in as-is — a spreadsheet with recognizable name, card, and size columns is all it takes. Start a trial and bring a CSV, or send it to us and we'll map it with you.",
-      "gettingDemoReady": "Getting the demo ready…"
+      "dontSeeSystem": "Something else, or nothing at all?",
+      "dontSeeSystemBody": "Most exports come in as-is — recognizable name, card, and size columns are all it takes."
     },
     "competitor": {
-      "backToGuides": "← All switching guides",
       "keepOrLeaveEyebrow": "Keep it, or leave it",
-      "step1": "Step 1",
-      "step2": "Step 2",
-      "step3": "Step 3",
-      "scopeTableTitle": "What comes across — and what doesn't",
-      "scopeTableDescription": "This is the same scope table DiveDay shows before it imports a single row — the specifics are below.",
-      "comesAcross": "Comes across",
-      "staysBehind": "Stays behind",
-      "bringFileTitle": "Bring the file into DiveDay",
-      "bringFileIntro": "With your export saved, the rest is in DiveDay and takes minutes.",
-      "openSettingsTitle": "Open Settings → Import contacts",
-      "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV you exported.",
-      "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, and what it's leaving behind. Rows with an email match an existing diver, so a re-import updates instead of duplicating. Nothing imports until you confirm.",
-      "importReadyTitle": "Import — your roster is ready",
-      "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
-      "openImportCta": "Open Import in your shop",
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can't.",
       "readyToMove": "Ready to make the move off {competitor}?",
-      "walkDemoFirst": "Walk the live demo as the owner, the captain, or a diver first — then start a trial shop, bring your export, and see your roster land in DiveDay with the same cert checks, waivers, and roll call already in place.",
-      "gettingDemoReady": "Getting the demo ready…",
+      "walkDemoFirst": "Walk the demo first, then bring your export — the cert checks, waivers, and roll call are already in place.",
       "otherGuides": "Other switching guides →",
       "sources": "Sources"
     },
     "spreadsheet": {
-      "backToGuides": "← All switching guides",
       "eyebrow": "Coming from a spreadsheet",
       "title": "The spreadsheet got you this far.",
-      "heroLede": "It won't flag an unverified card, chase an unsigned waiver, or let a diver book their own seat on a Sunday night. DiveDay reads the sheet you already keep — divers, cards, sizes — and takes the rest off your hands. No system to rip out; you already have the file.",
-      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but it can't do the work that keeps a dive day calm and safe — the part you're doing by hand right now.",
+      "heroLede": "It won't flag an unverified card, chase an unsigned waiver, or let a diver book a seat on a Sunday night. DiveDay reads the sheet you already keep and takes the rest off your hands.",
+      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but not the work that keeps a dive day calm — the part you're doing by hand right now.",
       "wedgeIntro2": "That's the trade DiveDay makes worth it. Not a prettier list — the jobs a list can't hold:",
       "wedge": {
         "cardsChecked": {
           "title": "Every card checked before the boat leaves",
-          "body": "DiveDay re-reads each diver's certification against what the trip and the site require, and the ones who can't board yet surface on their own — no scanning a column and hoping."
+          "body": "DiveDay re-reads each diver's certification against what the trip and the site require, and the ones who can't board yet surface on their own."
         },
         "blockersOnePlace": {
           "title": "The day's blockers in one place",
-          "body": "One screen shows who still can't board and why — a missing waiver, a card to verify — so nothing is remembered at the dock instead of the desk."
+          "body": "One screen shows who still can't board and why — a missing waiver, a card to verify — so nothing is remembered at the dock."
         },
         "diversBookThemselves": {
           "title": "Divers book and sign themselves",
@@ -1083,18 +1092,17 @@
           "body": "The captain checks divers off dive by dive on a phone — working from a copy saved to it before the boat leaves, so roll call keeps going when the signal doesn't, then checks itself against the live manifest when service returns."
         }
       },
-      "step1": "Step 1",
       "columnsTitle": "Does your sheet have these columns?",
-      "columnsIntro": "One row per diver, and columns for what you know about them. Your headings don't have to match anything — DiveDay recognizes the common names, previews the file, and flags what it doesn't. Or start from a clean sheet already in the right shape.",
+      "columnsIntro": "One row per diver, saved as CSV. Your headings don't have to match anything — DiveDay recognizes the common names and flags what it doesn't.",
       "downloadTemplate": "Download the starter template (CSV)",
       "columns": {
         "name": {
           "column": "Name",
-          "detail": "First and last in two columns, or one full-name column — either works. This is the only thing a row truly needs."
+          "detail": "First and last in two columns, or one full-name column. The only thing a row truly needs."
         },
         "email": {
           "column": "Email",
-          "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates them instead of making a duplicate. A row without one still comes in as a new diver."
+          "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates instead of duplicating. A row without one still comes in."
         },
         "phone": {
           "column": "Phone",
@@ -1106,50 +1114,42 @@
         },
         "diveInsurance": {
           "column": "Dive insurance",
-          "detail": "However you keep it — a DAN number, a provider name — comes across as written. It's never a gate; it's what the crew wants on hand in an incident."
+          "detail": "A DAN number, a provider name — comes across as written. Never a gate; it's what the crew wants on hand in an incident."
         },
         "certification": {
           "column": "Certification",
-          "detail": "Agency, level, and card number. The card number is what lets a card come across at all — see the scope table below for how it's verified."
+          "detail": "Agency, level, and card number. The card number is what lets a card come across at all."
         },
         "refresherDue": {
           "column": "Refresher due",
-          "detail": "If you track a refresher date, it comes across however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a card that's due — that's the point. An unreadable date goes to staff review instead of verified."
+          "detail": "Written however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a card that's due — that's the point. An unreadable one goes to staff review."
         },
         "specialty": {
           "column": "Specialty",
-          "detail": "Deep, wreck, night, or drysuit — one cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number. See the scope table below for how it's verified."
+          "detail": "Deep, wreck, night, or drysuit. One cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number."
         },
         "nitrox": {
           "column": "Nitrox",
-          "detail": "A yes/no column, plus the nitrox card number if you keep one — that's what brings it across. See the scope table below for how a nitrox fill is gated."
+          "detail": "A yes/no column, plus the nitrox card number if you keep one — that's what brings it across."
         },
         "rentalSizes": {
           "column": "Rental sizes",
-          "detail": "BCD, wetsuit, boot, and fin — whatever sizes you already track become a fit profile."
+          "detail": "BCD, wetsuit, boot, and fin — whatever sizes you track become a fit profile."
         },
         "pastVisits": {
           "column": "Past visits",
-          "detail": "Keep a booking log? A date, trip name, and price per row becomes that diver's history here, so a regular arrives as a regular. Repeat their email on each row to match the right person. See the scope table below for what it means."
+          "detail": "A date, trip name, and price per row becomes that diver's history here, so a regular arrives as a regular. Repeat their email on each row to match the right person."
         }
       },
-      "step2": "Step 2",
-      "scopeTableTitle": "What comes across — and what doesn't",
-      "scopeTableDescription": "This is the same scope table DiveDay shows before it imports a single row — the specifics are below.",
-      "step3": "Step 3",
-      "bringFileTitle": "Bring the file into DiveDay",
-      "bringFileIntro": "Save your sheet as CSV, and the rest is in DiveDay and takes minutes.",
-      "openSettingsTitle": "Open Settings → Import contacts",
-      "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV.",
-      "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, what it's leaving behind, and any row it can't bring across (no name, or a repeated email). Nothing imports until you confirm.",
-      "importReadyTitle": "Import — your roster is ready",
-      "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
-      "openImportCta": "Open Import in your shop",
       "closingTitle": "See it before you switch a thing.",
-      "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, nothing to import, just the working shop. Start a trial when it clicks.",
-      "gettingDemoReady": "Getting the demo ready…",
+      "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, just the working shop.",
       "otherSystems": "Switching from other software →"
+    },
+    "concierge": {
+      "eyebrow": "A person, not a wizard",
+      "title": "We'll switch you on — and off — ourselves.",
+      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, we'll help you carry it all back out just as personally.",
+      "emailCta": "Email us at {email}"
     }
   },
   "nav": {
@@ -1476,7 +1476,7 @@
           },
           "item2": {
             "title": "Certification checks that actually gate the dive",
-            "detail": "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card."
+            "detail": "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm."
           },
           "item3": {
             "title": "Native waivers with medical review — in every tier",
@@ -1559,11 +1559,11 @@
         "heroLede": "EVE keeps your divers and their cards on a Windows PC in the back office. Here's how to get that data out of EVE yourself and bring your people, cards, and rental sizes into DiveDay — with a plain account of what makes the trip and what stays behind.",
         "context": {
           "item1": "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their cards out of EVE and into DiveDay.",
-          "item2": "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are trip-ready from the first booking (see what comes across below), and the history stays where it already is.",
+          "item2": "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import isn't trying to move all that. It moves what you need on day one — your roster, their certification cards, their rental sizes — so your people are trip-ready from the first booking, and the history stays where it already is.",
           "item3": "One rule we won't bend: you export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data — that's your data to hand us, not ours to take."
         },
         "exportHeading": "Get your data out of EVE",
-        "exportIntro": "EVE runs on Windows, so this happens on the back-office PC where EVE is installed — not on a website. The goal is a spreadsheet of your customers and their certification cards. Exact menu labels shifted across EVE versions, so treat these as the shape of the path, not word-for-word buttons.",
+        "exportIntro": "EVE runs on Windows, so this happens on the back-office PC where it's installed, not on a website. The goal is a spreadsheet of your customers and their certification cards. Menu labels shifted across EVE versions, so treat these as the shape of the path, not word-for-word buttons.",
         "exportSteps": {
           "step1": {
             "title": "Open EVE on the shop PC and sign in with a manager account",
@@ -1604,12 +1604,12 @@
         "heroTitle": "Moving your shop off DiveShop360",
         "heroLede": "DiveShop360 keeps your customers and their cards in the cloud, and its own help pages name the datasets you can export as CSV. Here's how to pull your people and certifications and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
         "context": {
-          "item1": "DiveShop360 grew out of a retail point-of-sale system, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four things you can export to CSV: customers, inventory, sales reports, and certification data. For a move to DiveDay you need two of them — customers and certification data. The other two are retail records DiveDay isn't trying to be a home for.",
-          "item2": "We're not here to replace your point of sale. DiveDay runs the water — bookings, readiness, the boat — so \"bring your POS, we run the dive day\" is a real division of labor, not a slogan. That's also why we only ask for the customer and certification files, not your whole retail history.",
+          "item1": "DiveShop360 grew out of a retail point-of-sale system, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four CSV exports: customers, inventory, sales reports, and certification data. A move to DiveDay needs two of them — customers and certification data.",
+          "item2": "We're not here to replace your point of sale. DiveDay runs the water — bookings, readiness, the boat — so “bring your POS, we run the dive day” is a real division of labor, not a slogan. That's why we only ask for the customer and certification files.",
           "item3": "One rule we won't bend: you export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data — that's your data to hand us, not ours to take."
         },
         "exportHeading": "Get your data out of DiveShop360",
-        "exportIntro": "DiveShop360 runs in a browser, and exports come from the back-office admin, not the register. The goal is two CSVs — your customers and your certification data. DiveShop360 has no public API or bulk export, so this is a manual, dataset-by-dataset download; menu labels shift between versions, so treat these as the shape of the path.",
+        "exportIntro": "DiveShop360 runs in a browser, and exports come from the back-office admin, not the register. You want two CSVs — customers and certification data. There's no public API or bulk export, so it's a manual, dataset-by-dataset download, and menu labels shift between versions.",
         "exportSteps": {
           "step1": {
             "title": "Sign into DiveShop360 admin as an owner or manager",
@@ -1641,7 +1641,7 @@
           "note2": "Your column headings don't have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you exactly how each column mapped before you commit.",
           "note3": "If you can also export a booking or sales report, bring it — one row per booking becomes your divers' visit history here. Retail receipts, repair tickets, and your e-commerce site stay in DiveShop360; see the scope table below."
         },
-        "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card."
+        "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first — DiveDay matches people by email, so the certification file adds to the same divers instead of duplicating them. That file usually holds one row per card: a diver with three cards appears on three rows, each landing on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card."
       },
       "smartwaiver": {
         "cardSummary": "Export your participant CSV and bring the people across — a waiver your file already shows as signed comes in marked imported, so nobody has to sign twice.",
@@ -1649,11 +1649,11 @@
         "metaDescription": "Moving off Smartwaiver? A step-by-step guide to exporting your participants and bringing them, and their already-signed waivers, into DiveDay.",
         "heroEyebrow": "Switching to DiveDay",
         "heroTitle": "Moving your waivers off Smartwaiver",
-        "heroLede": "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. Here's how to bring those people — and, when your file shows a waiver already accepted, that acceptance too — into DiveDay, where waivers are native and versioned against your own template going forward.",
+        "heroLede": "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. Here's how to bring those people — and, where your file shows a waiver already accepted, that acceptance too — into DiveDay, where waivers are native and versioned against your own template.",
         "context": {
-          "item1": "Smartwaiver does one thing — digital waivers — and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay's waivers are native and built into every tier, so moving off Smartwaiver means bringing the people across and telling DiveDay which of them already have a waiver on file.",
-          "item2": "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact — the roster you need. What it doesn't hold is certification cards or rental sizes; a waiver system isn't where those live, so expect most of the file to be contact data.",
-          "item3": "If a row in your export marks a diver's waiver as already accepted, DiveDay's importer trusts that and brings the waiver across too — marked imported, dated to the acceptance date in your file, and satisfying the boarding gate without asking the diver to sign again. It isn't a copy of the signed Smartwaiver PDF itself (that stays in Smartwaiver, or you can attach a saved copy of it during import); it's your prior acceptance, carried forward. The importer's preview shows exactly what will happen, row by row, before anything is saved. The scope table below states this plainly.",
+          "item1": "Smartwaiver does one thing — digital waivers — and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay's waivers are native and in every tier, so moving off means bringing the people across and telling DiveDay which of them already have a waiver on file.",
+          "item2": "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact — the roster you need. What it doesn't hold is certification cards or rental sizes; a waiver system isn't where those live.",
+          "item3": "If a row in your export marks a diver's waiver as already accepted, DiveDay's importer trusts that and brings the waiver across too — marked imported, dated to the acceptance date in your file, and satisfying the boarding gate without asking the diver to sign again. It isn't a copy of the signed Smartwaiver PDF itself (that stays in Smartwaiver, or you can attach a saved copy of it during import); it's your prior acceptance, carried forward.",
           "item4": "One rule we won't bend: you export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data — that's your data to hand us, not ours to take."
         },
         "exportHeading": "Get your data out of Smartwaiver",
@@ -1684,24 +1684,23 @@
         "importerNote": "A Smartwaiver export is mostly contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). A waiver your export shows as already accepted comes across too, marked imported."
       },
       "fareharbor": {
-        "cardSummary": "A booking engine for tours, not dive software. Keep its booking button and hotel/OTA network and run the dive day it can't — or leave the per-booking fee behind entirely. Either way, bring your divers across.",
+        "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it can't — or leave the per-booking fee behind.",
         "metaTitle": "FareHarbor and DiveDay — run the dive day, or switch",
         "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
         "heroEyebrow": "FareHarbor + DiveDay",
         "heroTitle": "FareHarbor fills the seats. DiveDay runs the boat.",
-        "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network — and then the dive day still runs on a clipboard, because a general booking engine was never built for cards, waivers, or a roll call on the water. Here's how DiveDay runs that day: keep FareHarbor for the storefront, or leave the per-booking fee behind and take the booking here too. Either way, bringing your divers across is the same few minutes.",
+        "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard — a general booking engine was never built for cards, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or leave the per-booking fee behind and take the booking here too.",
         "context": {
-          "item1": "FareHarbor is an online booking platform for tours, activities, and rentals — owned by Booking Holdings, the company behind Booking.com — and plenty of dive shops run their storefront on it. It's genuinely good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you'd never reach on your own. We're not here to talk you out of any of that.",
-          "item2": "What it isn't is dive software. FareHarbor makes no claim to certification gating, medical waivers that fail closed, rental-gear fit, or a boat manifest built for a roll call — because it's a general booking engine, not a dive shop's back office. Its \"manifest\" is a passenger list you can download; it has no concept of a C-card. So your guests book beautifully, and then the part that keeps people safe on the water still runs on a clipboard.",
-          "item3": "And the storefront isn't free: FareHarbor charges nothing monthly, but it takes a fee on every booking — added to your guest's checkout price — for as long as you use it. It doesn't publish the rate; you hear it on a sales call (third parties report around 6%). A cut of every booking, forever, is the thing a growing shop feels.",
-          "item4": "So there are two honest ways DiveDay fits a FareHarbor shop, below: keep FareHarbor for the storefront and add the dive day it can't run, or take the booking in DiveDay too and leave the per-booking fee behind. Whichever you pick, you bring your divers across the same way — and the cert checks, waivers, and roll-call manifest hold either way."
+          "item1": "FareHarbor is an online booking platform for tours, activities, and rentals — owned by Booking Holdings, the company behind Booking.com — and plenty of dive shops run their storefront on it. It's good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you'd never reach on your own.",
+          "item2": "What it isn't is dive software. FareHarbor makes no claim to certification gating, medical waivers that fail closed, rental-gear fit, or a boat manifest built for a roll call — it's a general booking engine, not a dive shop's back office. Its “manifest” is a passenger list you can download; it has no concept of a C-card.",
+          "item3": "And the storefront isn't free: FareHarbor charges nothing monthly, but takes a fee on every booking — added to your guest's checkout price — for as long as you use it. It doesn't publish the rate; you hear it on a sales call (third parties report around 6%). A cut of every booking, forever, is what a growing shop feels."
         },
         "coexist": {
           "heading": "Keep FareHarbor. Add the day it can't run.",
           "intro": "DiveDay runs the water side — everything between \"booked\" and \"back at the dock\" that a booking engine was never built to touch. Point-for-point, this is what FareHarbor leaves to your clipboard:",
-          "bridgeNote": "FareHarbor keeps doing what it's good at — taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
+          "bridgeNote": "FareHarbor keeps doing what it's good at — taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two: you bring your divers in with the CSV export below, and re-import as your roster grows.",
           "replaceHeading": "Or leave the per-booking fee behind.",
-          "replaceBody": "If FareHarbor is really just your booking button — you're not leaning on its distribution network — you don't need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, and the same native waivers. Bring your divers across once, point your booking link at DiveDay, and the per-booking fee stops. The steps below are the same either way."
+          "replaceBody": "If FareHarbor is really just your booking button — you're not leaning on its distribution network — you don't need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Bring your divers across once, point your booking link here, and the per-booking fee stops."
         },
         "exportHeading": "Get your data out of FareHarbor",
         "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard's reports — there's no single \"export everything\" button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path, not word-for-word buttons.",
@@ -1733,30 +1732,29 @@
           "note3": "Certification cards and rental sizes aren't in a FareHarbor export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
           "note4": "What FareHarbor does hold is bookings, and those come across: run the Bookings report over the same wide date range and your regulars arrive with their visit history rather than as new names."
         },
-        "importerNote": "A FareHarbor export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). Import the Contacts file, then the Bookings file: DiveDay matches divers by email, so the second file adds each booking to the same diver's history instead of duplicating them, and re-running either one later updates rather than doubles."
+        "importerNote": "A FareHarbor export is mostly contact and booking data — people, emails, phones, and any emergency contact import; certification cards and rental sizes don't, because a booking platform doesn't hold them. Import Contacts first, then Bookings: DiveDay matches divers by email, so the second file adds each booking to the same diver's history instead of duplicating them."
       },
       "rezdy": {
-        "cardSummary": "A general tours booking platform with a big reseller marketplace — not dive software. Keep it for distribution and run the dive day it can't, or leave the monthly fee plus per-booking cut behind. Either way, bring your divers across.",
+        "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or leave the monthly fee and per-booking cut behind.",
         "metaTitle": "Rezdy and DiveDay — run the dive day, or switch",
         "metaDescription": "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the monthly subscription and per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
         "heroEyebrow": "Rezdy + DiveDay",
         "heroTitle": "Rezdy sells the seats. DiveDay runs the boat.",
-        "heroLede": "Rezdy takes the online booking and pushes your trips out to its reseller marketplace and the big OTAs — and then the dive day still runs on a clipboard, because a general booking engine was never built for cards, waivers, or a roll call on the water. Here's how DiveDay runs that day: keep Rezdy for the storefront, or leave the monthly-fee-plus-per-booking-cut behind and take the booking here too. Either way, bringing your divers across is the same few minutes.",
+        "heroLede": "Rezdy takes the online booking and pushes your trips to its reseller marketplace and the big OTAs. Then the dive day still runs on a clipboard — a general booking engine was never built for cards, waivers, or a roll call on the water. Keep Rezdy for the storefront, or leave the monthly fee and the per-booking cut behind and take the booking here too.",
         "context": {
-          "item1": "Rezdy is an online booking platform for tours, activities, and experiences — built in Australia, now part of a group with Checkfront and Regiondo under a private-equity-backed parent. Plenty of dive shops run their storefront on it, and it's genuinely good at that job: guests book and pay online, and its channel manager pushes your trips out to a marketplace of resellers and OTAs — GetYourGuide, Viator, Expedia, Google Things to Do — that you'd struggle to reach on your own. We're not here to talk you out of any of that.",
-          "item2": "What it isn't is dive software. Rezdy publishes no certification gating, no dive-medical waivers, no boat manifest built for a roll call, and no rental-gear fit — because it's a general booking engine, not a dive shop's back office. Selling a course as a bookable product isn't the same as tracking whether the diver in front of you is actually carded for the dive. So your guests book beautifully, and then the part that keeps people safe on the water still runs on a clipboard.",
-          "item3": "The storefront isn't free either: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing, with a no-monthly-fee option that still takes the 3%). To its credit, Rezdy doesn't lock you in — no setup fee, no contract, a self-serve CSV export, and an API you can turn on yourself. That's a fair way to treat your data, and it's exactly what makes running DiveDay alongside Rezdy — or moving off it entirely — a low-risk decision rather than a fight.",
-          "item4": "So there are two honest ways DiveDay fits a Rezdy shop, below: keep Rezdy for the storefront and add the dive day it can't run, or take the booking in DiveDay too and leave the monthly fee and the per-booking cut behind. Whichever you pick, you bring your divers across the same way — and the cert checks, waivers, and roll-call manifest hold either way."
+          "item1": "Rezdy is an online booking platform for tours and activities — Australian-built, now grouped with Checkfront and Regiondo under a private-equity-backed parent. Plenty of dive shops run their storefront on it, and it's good at that job: guests book and pay online, and its channel manager pushes your trips to resellers and OTAs — GetYourGuide, Viator, Expedia, Google Things to Do. We're not here to talk you out of any of that.",
+          "item2": "What it isn't is dive software. Rezdy publishes no certification gating, no dive-medical waivers, no boat manifest built for a roll call, and no rental-gear fit — it's a general booking engine, not a dive shop's back office. Selling a course as a bookable product isn't the same as knowing the diver in front of you is carded for the dive.",
+          "item3": "The storefront isn't free: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing, with a no-monthly-fee option that still takes the 3%). To its credit, Rezdy doesn't lock you in — no setup fee, no contract, a self-serve CSV export, an API you can turn on yourself."
         },
         "coexist": {
           "heading": "Keep Rezdy. Add the day it can't run.",
           "intro": "DiveDay runs the water side — everything between \"booked\" and \"back at the dock\" that a booking engine was never built to touch. Point-for-point, this is what Rezdy leaves to your clipboard:",
-          "bridgeNote": "Rezdy keeps doing what it's good at — taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
+          "bridgeNote": "Rezdy keeps doing what it's good at — taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two: you bring your divers in with the CSV export below, and re-import as your roster grows.",
           "replaceHeading": "Or leave the monthly fee and the per-booking cut behind.",
-          "replaceBody": "If you're not leaning on Rezdy's marketplace, you're paying a monthly subscription and a slice of every booking for a storefront you could run here. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, and the same native waivers. And Rezdy makes this easy on you — no lock-in contract, a self-serve CSV export, an API you can turn on yourself — so bringing your divers across and pointing your booking link at DiveDay is a clean move, not a fight. The steps below are the same either way."
+          "replaceBody": "Not leaning on Rezdy's marketplace? Then you're paying a monthly subscription and a slice of every booking for a storefront you could run here — a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. And Rezdy makes going easy: no lock-in contract, a self-serve CSV export, an API you can turn on yourself."
         },
         "exportHeading": "Get your data out of Rezdy",
-        "exportIntro": "Rezdy runs in a browser, and — to its credit — it's open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates and Rezdy's own help center is the authoritative source for the exact path, so treat these as the shape of it, not word-for-word buttons.",
+        "exportIntro": "Rezdy runs in a browser and — to its credit — is open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates, and Rezdy's own help center is the authoritative path, so treat these as the shape of it.",
         "exportSteps": {
           "step1": {
             "title": "Sign into your Rezdy dashboard as an owner or manager",
@@ -1785,7 +1783,7 @@
           "note3": "Certification cards and rental sizes aren't in a Rezdy export — a booking engine doesn't hold them (see the scope table below). Expect people and their contact details; certs and sizes you build in DiveDay as divers arrive.",
           "note4": "What Rezdy does hold is bookings, and those come across: the Orders report's one-row-per-booking shape is exactly what carries your regulars' visit history over with them."
         },
-        "importerNote": "A Rezdy export is mostly contact and booking data — expect people, emails, phones, and any emergency contact to import, and no certification cards or rental sizes (a booking platform doesn't hold them). The Orders file is the one to bring: DiveDay matches divers by email, so its repeated rows for one customer become that diver's visit history rather than duplicate people, and re-running it later updates instead of doubling."
+        "importerNote": "A Rezdy export is mostly contact and booking data — people, emails, phones, and any emergency contact import; certification cards and rental sizes don't, because a booking platform doesn't hold them. Bring the Orders file: DiveDay matches divers by email, so its repeated rows for one customer become that diver's visit history rather than duplicate people."
       }
     },
     "about": {

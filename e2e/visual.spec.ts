@@ -1439,7 +1439,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "about", scheme);
       });
 
-      // The migration-guides hub: one card per incumbent a shop might be
+      // The migration-guides hub: one ruled row per thing a shop might be
       // leaving, the entry point to the portability wedge on the marketing side.
       // Also the only baseline covering `ImportPreviewFallback`, the mockup that
       // makes this page's "exactly what comes across" promise visible instead of
@@ -1454,7 +1454,8 @@ for (const scheme of ["light", "dark"] as const) {
       // The "Switching from EVE" migration guide: the marketing face of the
       // portability wedge — export click-path, the shared scope table, and the
       // importer, on the market's most motivated switching pool. Represents the
-      // shared guide template every live incumbent page renders.
+      // one shared composition (`src/app/switching/_components/guide.tsx`) that
+      // every guide, incumbent or not, renders as a single numbered move rail.
       test(`the EVE switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/eve");
         await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
@@ -1462,9 +1463,10 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The non-incumbent switching guide: shops coming from a spreadsheet — the
-      // market's largest under-served pool. Its own layout (columns-that-matter,
-      // the downloadable template, the free-import offer) around the same shared
-      // honesty table every guide renders.
+      // market's largest under-served pool. Same shared composition as the
+      // incumbent guides, with its own first phase (columns-that-matter, the
+      // downloadable template) and three rail phases instead of four — there is
+      // no incumbent to cut over from.
       test(`the spreadsheet switching guide renders true to the design (${scheme})`, async ({
         page,
       }) => {
@@ -1473,10 +1475,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "switching-spreadsheet", scheme);
       });
 
-      // The FareHarbor guide: the coexist-led variant of the template, for a
+      // The FareHarbor guide: the coexist-led variant of the composition, for a
       // booking channel a shop keeps rather than a records system it leaves —
-      // the "keep it, or leave it" section (run-the-day cards + the leave path)
-      // that no other guide renders.
+      // the "keep it, or leave it" section (the ruled run-the-day list plus the
+      // leave path) that only the channel guides render.
       test(`the FareHarbor switching guide renders true to the design (${scheme})`, async ({
         page,
       }) => {
@@ -1487,9 +1489,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "switching-fareharbor", scheme);
       });
 
-      // The Rezdy guide: the second booking-channel guide, same coexist template
+      // The Rezdy guide: the second booking-channel guide, same coexist shape
       // with its own copy (a monthly-plus-per-booking model). Baselined so its
-      // page — and the extra hub card it adds — stay pixel-stable.
+      // page — and the extra hub row it adds — stay pixel-stable.
       test(`the Rezdy switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/rezdy");
         await page
