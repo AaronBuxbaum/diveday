@@ -245,7 +245,8 @@
   },
   "waitlist": {
     "heading": "Wait list",
-    "description": "Not booked, and not on the manifest. When a seat opens, one tap emails the next in line.",
+    "description": "Not booked, and not on the manifest. When a seat opens, one tap emails whoever you pick — nobody here is promised the seat.",
+    "joined": "Asked {date}",
     "empty": "No one’s waiting yet — when the trip sells out, divers can join the wait list from the public trip page.",
     "noEmailOnFile": "no email on file",
     "invitedRelative": "Invited {time}",
@@ -260,7 +261,7 @@
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
     "emailSubject": "A spot opened up on {tripTitle}",
-    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You're next on the wait list — grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
+    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You're on the wait list for it — grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
   },
   "lastMinute": {
     "heading": "Last-minute deal",

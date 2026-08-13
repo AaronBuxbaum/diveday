@@ -35,7 +35,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     expect(await getTripRoster(db, shop.id, fullTrip.id)).toHaveLength(fullTrip.capacity);
   });
 
-  it("keeps one first-come entry per diver and trip", async () => {
+  it("keeps one entry per diver and trip, dated when they first asked", async () => {
     const { db, shop, fullTrip } = await seededContext();
     const first = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
     const again = await joinTripWaitlist(db, {

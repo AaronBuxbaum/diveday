@@ -1170,8 +1170,9 @@ archived.
   [course-page-media](../architecture/decisions/20260720-course-page-media.md),
   [course-page-simplification](../architecture/decisions/20260720-course-page-simplification.md)).
 - **Booking confirmation email** through the Resend seam; delivery failure never affects the booking.
-- **Durable wait list** — first-come, separate from bookings/manifests; freed-seat invite now sends
-  ([trip-waitlist](../architecture/decisions/20260719-trip-waitlist.md)).
+- **Durable wait list** — a set of leads the shop works, separate from bookings/manifests; freed-seat
+  invite now sends ([trip-waitlist](../architecture/decisions/20260719-trip-waitlist.md),
+  [wait-list-is-a-lead-list](../architecture/decisions/20260813-wait-list-is-a-lead-list.md)).
 - **Recurring trip series** — weekly/every-N-week series materializes independent trip instances on
   the shared spine ([recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md)).
 - **Returning-diver picker + roster bulk waiver send** — adding a diver leads with a search of the

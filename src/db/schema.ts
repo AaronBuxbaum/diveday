@@ -1448,8 +1448,11 @@ export const activityEvents = pgTable(
 );
 
 /**
- * A diver's place in line for a full trip. It is deliberately separate from
- * bookings: a wait-list entry never consumes capacity or appears on a manifest.
+ * A diver who asked to be told if a full trip frees a seat. It is deliberately
+ * separate from bookings: a wait-list entry never consumes capacity or appears
+ * on a manifest. It is also **not a queue position** — `createdAt` records when
+ * the diver asked, and the shop invites whoever fits the departure
+ * (ADR 20260813-wait-list-is-a-lead-list).
  */
 export const tripWaitlistEntries = pgTable(
   "trip_waitlist_entries",

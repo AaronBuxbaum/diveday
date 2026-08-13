@@ -235,7 +235,7 @@
     "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
     "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
-    "waitlistConfirmedBody": "A spot is not held yet. The shop can see your place in line and will contact you if one opens up.",
+    "waitlistConfirmedBody": "A spot is not held yet. The shop has your details and will get in touch if a seat opens up.",
     "sailedHeading": "This one’s already sailed",
     "sailedCheckSchedule": "Check the schedule",
     "sailedForNext": "for the next departure.",
@@ -2838,10 +2838,10 @@
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",
-      "body": "A seat just opened on {tripTitle} with {shopName}, and you're next on the wait list.",
+      "body": "A seat just opened on {tripTitle} with {shopName}, and the shop is offering it to you.",
       "claim": "Claim it before it's gone",
       "claimLink": "Claim your spot",
-      "footer": "Seats go first-come, so don't wait too long. See you on the boat!"
+      "footer": "The seat isn't held for you, so don't wait too long. See you on the boat!"
     },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% off {tripTitle} — last-minute deal",

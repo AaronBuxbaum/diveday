@@ -14,9 +14,11 @@ import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
  * moves the timestamp forward). Stage 1 of seat recovery: the actual invite is
  * a one-tap email/composer in the UI; this records that it happened.
  *
- * Stage 2 (auto-invite position 1 on a cancellation, with an expiring window)
- * is deliberately not built here — it is blocked on the H-09 notification
- * policy decision. When that lands, it hangs off this same `invitedAt` column.
+ * There is no position 1 to auto-invite: a wait list is a set of leads the shop
+ * works, not a queue a diver holds a place in (ADR 20260813-wait-list-is-a-lead-list).
+ * Any later automation hangs off this same `invitedAt` column, but it picks by
+ * fit rather than by rank, and it is separately blocked on the H-09
+ * notification policy decision.
  */
 export async function recordWaitlistInvite(
   db: AppDb,
@@ -55,9 +57,9 @@ export type InviteWaitlistDiverResult =
  * claiming mail went out. The invite is recorded either way — the durable
  * "Invited 2h ago" cue is the stamp, not the email.
  *
- * This is Stage 1 of seat recovery (WP-9); Stage 2 (auto-invite position 1 on a
- * cancellation) still hangs off this same `invitedAt` column when the H-09
- * policy row lands.
+ * This is Stage 1 of seat recovery (WP-9). Which diver gets the invite is the
+ * shop's call, not an ordering the product computes — see
+ * ADR 20260813-wait-list-is-a-lead-list.
  */
 export async function inviteWaitlistDiver(
   db: AppDb,
@@ -129,8 +131,11 @@ export type WaitlistOutcome =
     };
 
 /**
- * Adds a diver to a full trip's first-come wait list. A wait-list entry is not
- * a booking and must never reserve a manifest seat.
+ * Adds a diver to a full trip's wait list. A wait-list entry is not a booking,
+ * must never reserve a manifest seat, and does not entitle the diver to the
+ * next seat that frees: `createdAt` records when they asked, and staff invite
+ * whoever fits the departure (ADR 20260813-wait-list-is-a-lead-list). The copy
+ * the diver reads on joining says exactly that.
  */
 export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise<WaitlistOutcome> {
   const email = req.email.trim().toLowerCase();

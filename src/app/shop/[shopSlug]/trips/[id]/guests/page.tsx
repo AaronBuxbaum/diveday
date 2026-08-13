@@ -358,7 +358,7 @@ async function TripGuestsBody({
       {/* Below the roster and only when someone is actually waiting: an empty
           wait list used to lead this page as a full-width dashed card — "None"
           rendered as a status (design/principles.md #9). Today's own
-          "invite the next in line" row only exists when waiting > 0, so its
+          invite-from-the-wait-list row only exists when waiting > 0, so its
           `#waitlist` landing always finds this section. */}
       {waitlist.length > 0 ? (
         <WaitlistSection
@@ -370,6 +370,7 @@ async function TripGuestsBody({
           tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
           locale={locale}
+          timezone={shop.timezone}
         />
       ) : null}
 

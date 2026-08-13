@@ -245,7 +245,8 @@
   },
   "waitlist": {
     "heading": "Lista de espera",
-    "description": "Sin reserva y fuera del manifiesto. Cuando se libere una plaza, un toque avisa por correo al siguiente.",
+    "description": "Sin reserva y fuera del manifiesto. Cuando se libere una plaza, un toque avisa por correo a quien elijas — aquí nadie tiene la plaza prometida.",
+    "joined": "Lo pidió el {date}",
     "empty": "Todavía nadie está esperando — cuando la salida se llene, los buceadores podrán unirse a la lista de espera desde la página pública de la salida.",
     "noEmailOnFile": "sin correo registrado",
     "invitedRelative": "Invitado {time}",
@@ -260,7 +261,7 @@
     "hoursAgo": "hace {hours} h",
     "daysAgo": "hace {days} d",
     "emailSubject": "Se ha liberado una plaza en {tripTitle}",
-    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Eres el siguiente en la lista de espera — consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera — consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
   },
   "lastMinute": {
     "heading": "Oferta de última hora",

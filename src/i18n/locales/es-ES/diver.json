@@ -235,7 +235,7 @@
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
-    "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro ve tu puesto en la lista y te avisará si se libera una.",
+    "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro tiene tus datos y te avisará si se libera una.",
     "sailedHeading": "Esta salida ya ha zarpado",
     "sailedCheckSchedule": "Consulta el calendario",
     "sailedForNext": "para la próxima salida.",
@@ -2838,10 +2838,10 @@
     },
     "waitlistInvite": {
       "subject": "Se ha liberado una plaza en {tripTitle}",
-      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y eres el siguiente en la lista de espera.",
+      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y el centro te la ofrece a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "Las plazas se asignan por orden de llegada, así que no esperes demasiado. ¡Nos vemos en el barco!"
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
     },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% de descuento en {tripTitle} — oferta de última hora",

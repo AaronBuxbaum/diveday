@@ -30,11 +30,15 @@ export function lastMinuteEntryMatchesTripDate(
 
 /**
  * Puts a trip's own wait-listers first in a last-minute-deal recipient list,
- * in their wait-list order, ahead of everyone else who is merely around that
- * week. They hold "a place in line" for this exact trip that the deal can
- * otherwise sell out from under them — see backlog item 147 (reconcile the
- * wait list and the last-minute list). Anyone not on the wait list keeps
- * their original relative order (a stable sort).
+ * longest wait first, ahead of everyone else who is merely around that week.
+ * They asked about this exact trip and the deal can otherwise sell the seat
+ * out from under them — see backlog item 147 (reconcile the wait list and the
+ * last-minute list). Anyone not on the wait list keeps their original relative
+ * order (a stable sort).
+ *
+ * This is the order one automated mail goes out in, and nothing more: a wait
+ * list is a set of leads, not a queue anyone holds a place in
+ * (ADR 20260813-wait-list-is-a-lead-list).
  */
 export function orderLastMinuteRecipients<T extends { person: { id: string } }>(
   matches: readonly T[],
