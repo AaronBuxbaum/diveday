@@ -1004,12 +1004,13 @@
   "switching": {
     "common": {
       "backToGuides": "← Todas las guías de cambio",
+      "contextEyebrow": "Dónde estás hoy",
       "gettingDemoReady": "Preparando la demo…",
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
       "facts": {
         "moves": {
           "label": "Qué se traslada",
-          "value": "Buceadores, sus tarjetas y tallas, exenciones firmadas, historial de visitas."
+          "value": "Lo que traiga tu archivo: personas, tarjetas, tallas, exenciones, historial de visitas."
         },
         "time": {
           "label": "Cuánto tarda",
@@ -1087,8 +1088,8 @@
           "body": "Un buceador elige su plaza y firma la exención desde un enlace, sin cuenta y sin app — la persecución de firmas en el muelle casi desaparece."
         },
         "manifestHeadCount": {
-          "title": "Una lista de pasajeros que es un conteo, no una impresión",
-          "body": "El capitán marca a los buceadores inmersión por inmersión en el teléfono — trabajando desde una copia guardada antes de que salga el barco, así el pase de lista sigue cuando la señal no, y luego se contrasta con la lista en vivo cuando vuelve la cobertura."
+          "title": "Un listado que es un recuento, no una impresión",
+          "body": "El capitán marca a los buceadores inmersión por inmersión en un teléfono — trabajando desde una copia guardada en él antes de salir del muelle, así que el pase de lista sigue funcionando cuando falla la señal, y luego se verifica contra el listado en vivo cuando vuelve el servicio."
         }
       },
       "columnsTitle": "¿Tu hoja tiene estas columnas?",
@@ -1125,7 +1126,7 @@
         },
         "specialty": {
           "column": "Especialidad",
-          "detail": "Profunda, pecios, nocturna o traje seco. Una celda puede nombrar varias (“Profunda, Pecios”) y cada una se vuelve su propia tarjeta bajo el número de agencia del buceador."
+          "detail": "Profundidad, naufragios, nocturna o traje seco. Una celda puede nombrar varias (“Profundidad, Naufragios”) y cada una se convierte en su propia tarjeta bajo el número de agencia del buceador."
         },
         "nitrox": {
           "column": "Nitrox",
@@ -1133,7 +1134,7 @@
         },
         "rentalSizes": {
           "column": "Tallas de alquiler",
-          "detail": "BCD, traje, bota y aleta — las tallas que ya lleves se vuelven un perfil de tallaje."
+          "detail": "BCD, traje, bota y aleta — las tallas que ya llevas se convierten en un perfil de ajuste."
         },
         "pastVisits": {
           "column": "Visitas anteriores",
@@ -1699,8 +1700,7 @@
         "context": {
           "item1": "FareHarbor es una plataforma de reservas online para tours, actividades y alquileres — propiedad de Booking Holdings, la empresa detrás de Booking.com — y muchos centros de buceo llevan su escaparate en ella. Es buena en ese trabajo: los clientes reservan y pagan online, y su red de distribución pone tus salidas delante de hoteles, conserjes y revendedores a los que nunca llegarías por tu cuenta.",
           "item2": "Lo que no es, es software de buceo. FareHarbor no afirma ofrecer control de certificaciones, descargos médicos que bloquean en caso de duda, tallas de equipo de alquiler ni un listado de barco hecho para un pase de lista — es un motor de reservas generalista, no la trastienda de un centro de buceo. Su “listado” es una lista de pasajeros que puedes descargar; no tiene concepto de C-card.",
-          "item3": "Y el escaparate no es gratis: FareHarbor no cobra nada al mes, pero se lleva una comisión de cada reserva — añadida al precio que paga tu cliente — mientras lo uses. No publica la tarifa; la oyes en una llamada comercial (terceros hablan de alrededor de un 6%). Un pellizco de cada reserva, para siempre, es lo que nota un centro que crece.",
-          "item4": "Así que hay dos maneras honestas en que DiveDay encaja en un centro con FareHarbor: conserva FareHarbor como escaparate y añade el día de buceo que él no puede llevar, o toma también la reserva aquí y deja atrás la comisión por reserva. En ambos casos traes a tus buceadores de la misma manera."
+          "item3": "Y el escaparate no es gratis: FareHarbor no cobra nada al mes, pero se lleva una comisión de cada reserva — añadida al precio que paga tu cliente — mientras lo uses. No publica la tarifa; la oyes en una llamada comercial (terceros hablan de alrededor de un 6%). Un pellizco de cada reserva, para siempre, es lo que nota un centro que crece."
         },
         "coexist": {
           "heading": "Conserva FareHarbor. Añade el día que él no puede llevar.",
@@ -1751,8 +1751,7 @@
         "context": {
           "item1": "Rezdy es una plataforma de reservas online para tours y actividades — nacida en Australia, hoy agrupada con Checkfront y Regiondo bajo una matriz respaldada por capital privado. Muchos centros de buceo llevan su escaparate en ella, y es buena en ese trabajo: los clientes reservan y pagan online, y su gestor de canales empuja tus salidas a revendedores y OTAs — GetYourGuide, Viator, Expedia, Google Things to Do. No venimos a quitarte nada de eso.",
           "item2": "Lo que no es, es software de buceo. Rezdy no publica control de certificaciones, ni descargos médicos de buceo, ni un listado de barco hecho para un pase de lista, ni tallas de equipo de alquiler — es un motor de reservas generalista, no la trastienda de un centro de buceo. Vender un curso como producto reservable no es lo mismo que saber si el buceador que tienes delante tiene la tarjeta para la inmersión.",
-          "item3": "El escaparate tampoco es gratis: Rezdy cobra una suscripción mensual más un pellizco de cada reserva online (un 3% en su precio publicado actual, con una opción sin cuota mensual que sigue llevándose el 3%). En su favor, Rezdy no te encierra — sin cuota de alta, sin permanencia, una exportación CSV autoservicio y una API que puedes activar tú mismo.",
-          "item4": "Así que hay dos maneras honestas en que DiveDay encaja en un centro con Rezdy: conserva Rezdy como escaparate y añade el día de buceo que él no puede llevar, o toma también la reserva aquí y deja atrás la cuota mensual y la comisión por reserva. En ambos casos traes a tus buceadores de la misma manera."
+          "item3": "El escaparate tampoco es gratis: Rezdy cobra una suscripción mensual más un pellizco de cada reserva online (un 3% en su precio publicado actual, con una opción sin cuota mensual que sigue llevándose el 3%). En su favor, Rezdy no te encierra — sin cuota de alta, sin permanencia, una exportación CSV autoservicio y una API que puedes activar tú mismo."
         },
         "coexist": {
           "heading": "Conserva Rezdy. Añade el día que él no puede llevar.",

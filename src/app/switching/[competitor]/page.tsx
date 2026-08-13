@@ -20,6 +20,7 @@ import {
 import {
   ClosingCta,
   DividedList,
+  GuideContext,
   GuideHero,
   ImportPhase,
   MidCta,
@@ -167,15 +168,7 @@ async function GuideBody({
       />
 
       {/* Honest framing of the incumbent. */}
-      <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
-        <div className="max-w-2xl space-y-5">
-          {guide.context.map((paragraph) => (
-            <p key={paragraph} className="text-lg leading-8 text-muted">
-              {t(paragraph)}
-            </p>
-          ))}
-        </div>
-      </section>
+      <GuideContext locale={locale} paragraphs={guide.context.map((key) => t(key))} />
 
       {/* Coexist framing: for a booking channel a shop keeps (FareHarbor,
           Rezdy), the "keep the storefront, we run the water" division of
@@ -211,6 +204,8 @@ async function GuideBody({
           </div>
         </section>
       )}
+
+      <MidCta locale={locale} source={source} />
 
       {/* The whole mechanical path, as one rail: export (files the shop makes
           itself) → the importer's own scope table, verbatim → the importer →
@@ -252,8 +247,6 @@ async function GuideBody({
           />
         </MovePhase>
       </MovePath>
-
-      <MidCta locale={locale} source={source} />
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
       <SwitchingConcierge locale={locale} />

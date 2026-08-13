@@ -132,6 +132,41 @@ export function GuideHero({
 }
 
 /**
+ * The "you are here" step: the guide's own honest read of what the shop is
+ * running today. Every other step on the path is announced — the coexist
+ * section by its eyebrow, the mechanics by a numbered marker — and this one
+ * was four unlabelled paragraphs, so a skimmer met a wall of body text with
+ * nothing telling them what it was for.
+ */
+export function GuideContext({
+  locale,
+  paragraphs,
+  children,
+}: {
+  locale: DiverLocale;
+  paragraphs: string[];
+  /** Anything the last paragraph leads into — the spreadsheet guide's wedge list. */
+  children?: ReactNode;
+}) {
+  const t = diverTranslator(locale);
+  return (
+    <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
+      <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+        {t("switching.common.contextEyebrow")}
+      </p>
+      <div className="mt-5 max-w-2xl space-y-5">
+        {paragraphs.map((paragraph) => (
+          <p key={paragraph} className="text-lg leading-8 text-muted">
+            {paragraph}
+          </p>
+        ))}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/**
  * A two-column list divided by hairlines — the shape for "what changes":
  * the coexist guides' dive-day jobs and the spreadsheet guide's wedge. Six
  * bordered cards said "brochure"; six ruled entries read as one list of facts.
@@ -265,7 +300,9 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
                 signal. Set in the same small-caps as the hero's fact labels
                 and the sources footnote, so one page has one voice for
                 "this names what follows". */}
-            <h4 className="text-xs font-semibold tracking-wider uppercase">{group.label}</h4>
+            <h4 className="text-xs font-semibold tracking-wider text-muted uppercase">
+              {group.label}
+            </h4>
             <ul className="mt-3 divide-y divide-border border-y border-border">
               {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
                 <li
@@ -350,7 +387,14 @@ export function ImportPhase({
   );
 }
 
-/** The mid-page exit — one door at the moment the scope table made it real. */
+/**
+ * The mid-page exit, at the hinge between the argument and the mechanics:
+ * the reader has just been told what changes and is about to be handed a
+ * thousand pixels of export click-path. "Rather see it than read about it?"
+ * is exactly the offer that belongs there, and putting it here rather than
+ * after the move rail keeps it from landing two screens from the closing
+ * band's identical pair.
+ */
 export function MidCta({ locale, source }: { locale: DiverLocale; source: FunnelSource }) {
   const t = diverTranslator(locale);
   return (

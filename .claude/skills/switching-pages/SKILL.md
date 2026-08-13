@@ -34,16 +34,35 @@ specific to a guide — read `marketing-page` first if you haven't.
 | **Leave-it** (records system) | EVE, DiveShop360, Smartwaiver, Checkfront, … | Incumbent's own export click-path → `IMPORT_HONESTY_TABLE` verbatim → demo CTA |
 | **Coexist-led** (booking channel) | FareHarbor, Rezdy | Opens "keep the storefront and its network, run the dive day it can't" → `runsInDiveDay` jobs → same export/scope/import mechanics → clean-leave option |
 
-`/switching/spreadsheet` is a third, static case: no vendor, no export click-path, no `sources` —
-don't use it as a template for an incumbent guide.
+`/switching/spreadsheet` is a third, static case: no vendor, no export click-path, no `sources`.
+Its *content* is not a template for an incumbent guide — but its **shape is the same one**, see
+below.
+
+## One composition, three surfaces
+
+Every guide page renders the same guided path from `src/app/switching/_components/guide.tsx`:
+
+`GuideHero` (eyebrow, headline, lede, the demo/trial pair, and the four shared answers a switcher
+arrives with) → the guide's own "what changes" prose, with `DividedList` where it has items →
+`MidCta` at the hinge between the argument and the mechanics → `MovePath`, one numbered rail of
+`MovePhase`es (`StepList`, `PhaseNotes`, and the shared `ScopePhase` / `ImportPhase`) →
+`SwitchingConcierge` → `ClosingCta` → `SourcesFootnote`.
+
+An incumbent guide runs four phases (export → scope → import → cutover); the spreadsheet guide
+runs three (ready your sheet → scope → import), because there is no incumbent to cut over from.
+**Add a section to that file, not to one page** — the two files were a duplicated 500-line card
+grid each before 2026-08-13, and every fix had to be made twice. Everything is `max-w-4xl`: one
+measure down the whole page.
 
 ## Where to edit
 
 | Change | File |
 | --- | --- |
 | Guide content (steps, scope notes, `coexist` block, `sources`) | `src/lib/migration-guides.ts` — one `MigrationGuide` entry per incumbent |
-| Guide page rendering | `src/app/switching/[competitor]/page.tsx` |
-| Hub page (guide list) | `src/app/switching/page.tsx` |
+| The shared guide composition (hero, move rail, scope/import phases, CTAs, sources) | `src/app/switching/_components/guide.tsx` |
+| Which phases a guide renders, and its own prose sections | `src/app/switching/[competitor]/page.tsx`, `src/app/switching/spreadsheet/page.tsx` |
+| Words every guide shares (the rail, the scope table, the importer walkthrough, the CTAs) | `switching.common.*` in the diver bundles |
+| Hub page (the guide index) | `src/app/switching/page.tsx` |
 | Import scope table (never paraphrase it) | `IMPORT_HONESTY_TABLE` in `src/lib/import.ts` |
 
 A guide is a **live page only** — registering a `MigrationGuide` entry publishes it immediately,

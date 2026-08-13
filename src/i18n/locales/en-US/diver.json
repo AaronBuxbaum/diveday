@@ -1004,12 +1004,13 @@
   "switching": {
     "common": {
       "backToGuides": "← All switching guides",
+      "contextEyebrow": "Where you are today",
       "gettingDemoReady": "Getting the demo ready…",
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
       "facts": {
         "moves": {
           "label": "What moves",
-          "value": "Divers, their cards and sizes, signed waivers, visit history."
+          "value": "Whatever your file holds: people, cards, sizes, waivers, visit history."
         },
         "time": {
           "label": "How long",
@@ -1699,8 +1700,7 @@
         "context": {
           "item1": "FareHarbor is an online booking platform for tours, activities, and rentals — owned by Booking Holdings, the company behind Booking.com — and plenty of dive shops run their storefront on it. It's good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you'd never reach on your own.",
           "item2": "What it isn't is dive software. FareHarbor makes no claim to certification gating, medical waivers that fail closed, rental-gear fit, or a boat manifest built for a roll call — it's a general booking engine, not a dive shop's back office. Its “manifest” is a passenger list you can download; it has no concept of a C-card.",
-          "item3": "And the storefront isn't free: FareHarbor charges nothing monthly, but takes a fee on every booking — added to your guest's checkout price — for as long as you use it. It doesn't publish the rate; you hear it on a sales call (third parties report around 6%). A cut of every booking, forever, is what a growing shop feels.",
-          "item4": "So there are two honest ways DiveDay fits a FareHarbor shop: keep FareHarbor for the storefront and add the dive day it can't run, or take the booking here too and leave the per-booking fee behind. Either way you bring your divers across the same way."
+          "item3": "And the storefront isn't free: FareHarbor charges nothing monthly, but takes a fee on every booking — added to your guest's checkout price — for as long as you use it. It doesn't publish the rate; you hear it on a sales call (third parties report around 6%). A cut of every booking, forever, is what a growing shop feels."
         },
         "coexist": {
           "heading": "Keep FareHarbor. Add the day it can't run.",
@@ -1751,8 +1751,7 @@
         "context": {
           "item1": "Rezdy is an online booking platform for tours and activities — Australian-built, now grouped with Checkfront and Regiondo under a private-equity-backed parent. Plenty of dive shops run their storefront on it, and it's good at that job: guests book and pay online, and its channel manager pushes your trips to resellers and OTAs — GetYourGuide, Viator, Expedia, Google Things to Do. We're not here to talk you out of any of that.",
           "item2": "What it isn't is dive software. Rezdy publishes no certification gating, no dive-medical waivers, no boat manifest built for a roll call, and no rental-gear fit — it's a general booking engine, not a dive shop's back office. Selling a course as a bookable product isn't the same as knowing the diver in front of you is carded for the dive.",
-          "item3": "The storefront isn't free: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing, with a no-monthly-fee option that still takes the 3%). To its credit, Rezdy doesn't lock you in — no setup fee, no contract, a self-serve CSV export, an API you can turn on yourself.",
-          "item4": "So there are two honest ways DiveDay fits a Rezdy shop: keep Rezdy for the storefront and add the dive day it can't run, or take the booking here too and leave the monthly fee and the per-booking cut behind. Either way you bring your divers across the same way."
+          "item3": "The storefront isn't free: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing, with a no-monthly-fee option that still takes the 3%). To its credit, Rezdy doesn't lock you in — no setup fee, no contract, a self-serve CSV export, an API you can turn on yourself."
         },
         "coexist": {
           "heading": "Keep Rezdy. Add the day it can't run.",

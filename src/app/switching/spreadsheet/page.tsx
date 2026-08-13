@@ -14,6 +14,7 @@ import { sharedLinkCard } from "@/lib/marketing";
 import {
   ClosingCta,
   DividedList,
+  GuideContext,
   GuideHero,
   ImportPhase,
   MidCta,
@@ -173,18 +174,22 @@ async function SpreadsheetBody({
       {/* What changes. The two paragraphs set up the trade and the second one
           ends in a colon, so the four jobs are that sentence's own list rather
           than a second band of cards under a second heading. */}
-      <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
-        <div className="max-w-2xl space-y-5">
-          <p className="text-lg leading-8 text-muted">{t("switching.spreadsheet.wedgeIntro1")}</p>
-          <p className="text-lg leading-8 text-muted">{t("switching.spreadsheet.wedgeIntro2")}</p>
-        </div>
+      <GuideContext
+        locale={locale}
+        paragraphs={[
+          t("switching.spreadsheet.wedgeIntro1"),
+          t("switching.spreadsheet.wedgeIntro2"),
+        ]}
+      >
         <DividedList
           items={WEDGE_ITEMS.map((item) => ({
             title: t(`switching.spreadsheet.wedge.${item}.title`),
             detail: t(`switching.spreadsheet.wedge.${item}.body`),
           }))}
         />
-      </section>
+      </GuideContext>
+
+      <MidCta locale={locale} source="switching-spreadsheet" />
 
       {/* The whole mechanical path, as one rail: ready your own sheet → the
           importer's own scope table, verbatim → the importer. */}
@@ -222,8 +227,6 @@ async function SpreadsheetBody({
         <ScopePhase locale={locale} number={2} />
         <ImportPhase locale={locale} number={3} importCta={importCta} />
       </MovePath>
-
-      <MidCta locale={locale} source="switching-spreadsheet" />
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
       <SwitchingConcierge locale={locale} />
