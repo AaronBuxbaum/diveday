@@ -18,9 +18,12 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
       .getByText("The demo opens a working sample shop in one click — no sign-up, no card.")
       .first(),
   ).toBeVisible();
-  // Exactly three demo buttons (hero, mid-page, closing) — the five-chip role
-  // picker is gone from the hero; role switching is the in-demo switcher's job.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  // Exactly two demo buttons (hero, closing) — the five-chip role picker is
+  // gone from the hero (role switching is the in-demo switcher's job), and the
+  // mid-page door retired on 2026-08-13 when the page's three consecutive
+  // banded CTAs merged into one close, putting the closing door a full band
+  // nearer (docs/product/marketing.md).
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
   // The old label is gone site-wide, not merely replaced here: one action
   // wearing two names is what the single-label rule exists to stop, and the
   // rename has to stay renamed (docs/product/marketing.md, Voice).
@@ -38,12 +41,13 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
   // The diver preview moved out of the hero (where it was a third competing
-  // door) onto the "For the diver" moment card, still tagged for attribution.
+  // door) onto the diver's row of the daily-moments section, still tagged for
+  // attribution.
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
   // for funnel attribution the same way the trial link is. The source moved to
-  // the "For the diver" moment card when the hero's role picker was retired
+  // the diver's daily-moments row when the hero's role picker was retired
   // (#328); the path is the split public namespace's.
   expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
 

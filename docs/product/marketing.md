@@ -304,11 +304,15 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`. Mid-page doors exist because
+`home-hero` / `home-closing`, `product` / `product-mid`. Mid-page doors exist because
 one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
 into the page's own tag, such a door can never be shown to have earned its place, and the next
 review re-opens the same question with no evidence either way. The unsuffixed tag stays the page's
-original one when a position is added beside it, so attribution history spans the change.
+original one when a position is added beside it, so attribution history spans the change. A door
+can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the page's three
+consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
+closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
+accumulated still reads.
 
 ## Product visuals
 
@@ -353,15 +357,16 @@ portability wedge, which is DiveDay's strongest claim against every incumbent, a
 it made that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on
 the site.
 
-**The homepage's four-card "whole shop, one place" band is deliberately still four assertions.** It
-renders `FeatureGroupsGrid` at `featuresPerGroup={1}`, and it is now the only band on that page that
-asks a reader to take a claim on trust. It was reviewed again on 2026-08-12 and left alone, with the
-reason stated rather than deferred: the band exists to give breadth in one glance and hand the reader
-to `/product`, replacing it with imagery would cost that breadth, and **there is no funnel data to
-decide it on** — the `home-mid` door has no `demo_entered`/`trial_started` pair to read yet, because
-no traffic has run through it. Deciding the midpoint of the highest-traffic page on taste, against a
-measurement that will exist shortly, is the wrong trade. Revisit it when that pair has numbers; if
-the door converts, the change is a visual *beside* the four cards, not instead of them.
+**The homepage's four-card breadth band is deliberately still four assertions.** It renders
+`FeatureGroupsGrid` at `featuresPerGroup={1}` under the whiteboard/clipboard statement, and it is
+now the only band on that page that asks a reader to take a claim on trust. It was reviewed on
+2026-08-12 and again in the 2026-08-13 redesign and left alone, with the reason stated rather than
+deferred: the band exists to give breadth in one glance and hand the reader to `/product`, and
+replacing it with imagery would cost that breadth. Revisit it when the page-level
+`demo_entered`/`trial_started` pairs (`home-hero` / `home-closing`) have numbers; if the page
+converts poorly at this midpoint, the change is a visual *beside* the four cards, not instead of
+them. (The mid-page demo door that used to sit under the cards retired in the same redesign — the
+merged close is one band away, and three banded CTAs in a row read as pressure, not confidence.)
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the
