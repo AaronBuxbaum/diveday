@@ -126,13 +126,18 @@ test.describe("staff", () => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await expect(page.getByText("$249")).toBeVisible();
 
-    // Back on the roster, the eye toggle hides the course from scheduling lists.
-    // No banner and no navigation — the icon and the "Hidden" badge update in
-    // place, which is also what keeps the click from jumping the page.
+    // Back on the roster, the worded Hide toggle takes the course off
+    // scheduling lists. No banner and no navigation — the toggle's own word
+    // and the "Hidden" badge update in place, which is also what keeps the
+    // click from jumping the page.
     await page.goto("/shop/blue-mantis/courses");
-    await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveAttribute(
+    // The per-row Preview icon is gone: the roster's one door to the diver's
+    // catalog is the header action, and a single course's live page is named
+    // on its own editor ("Live at …").
+    await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "View public page" })).toHaveAttribute(
       "href",
-      "/s/blue-mantis/courses/discover-scuba-diving",
+      "/s/blue-mantis/courses",
     );
     await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
     const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });

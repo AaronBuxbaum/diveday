@@ -6,7 +6,6 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
@@ -17,6 +16,7 @@ import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { UrgencyBand } from "./UrgencyBand";
 import { WaiverSendControl } from "./WaiverSendControl";
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
@@ -173,6 +173,7 @@ export function TodayQueue({
   timezone,
   inviteAction,
   locale,
+  viewSwitch,
 }: {
   actions: readonly TodayAction[];
   shopSlug: string;
@@ -181,6 +182,11 @@ export function TodayQueue({
   timezone: string;
   inviteAction: TodayInviteAction;
   locale: string;
+  /**
+   * The urgency/by-departure switch, rendered on the queue's own heading row —
+   * the control rides the thing it governs rather than floating above it.
+   */
+  viewSwitch?: React.ReactNode;
 }) {
   const groups = groupActions(actions);
   const t = staffTranslator(locale);
@@ -264,10 +270,17 @@ export function TodayQueue({
 
   return (
     <section aria-labelledby="queue-heading">
-      <h2 id="queue-heading" className="text-lg font-semibold">
-        {t("shared.today.todayQueue.needsYouHeading")}
-      </h2>
-      <p className="mt-1 text-sm text-muted">{t("shared.today.todayQueue.needsYouSubtitle")}</p>
+      {/* The heading and the view switch share one row: the switch governs
+          exactly this block, so it sits on it (ADR 20260803-not-ready-is-a-
+          view put it "on the queue block"; this is that, one line tighter).
+          No standing subtitle — the rows themselves are the explanation, and
+          a sentence that renders every day teaches nothing after day one. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="queue-heading" className="text-lg font-semibold">
+          {t("shared.today.todayQueue.needsYouHeading")}
+        </h2>
+        {viewSwitch}
+      </div>
       {todaysBoatsClear ? (
         <p
           role="status"
@@ -278,16 +291,6 @@ export function TodayQueue({
       ) : null}
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group, index) => {
-          const header = (
-            <div className="flex w-full items-baseline justify-between gap-3">
-              <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
-                {t(URGENCY_KEYS[group.urgency])}
-              </h3>
-              <span className="rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
-                {t("shared.today.todayQueue.itemsCount", { count: group.actions.length })}
-              </span>
-            </div>
-          );
           // The band's rows, boat by boat: rows that hang off the same
           // departure share one header card so the trip's name and time are
           // said once, and each row keeps only what differs — the person, the
@@ -354,29 +357,16 @@ export function TodayQueue({
           // cards pulling attention off this morning's blockers (design
           // principles #3 and #8). The queue's *first* group stays open
           // whatever its horizon: an empty morning must lead with the next
-          // real work, not two folded bands and a shrug. Native disclosure,
-          // deliberately — no state to manage, keyboard and screen-reader
-          // semantics for free, and a full-page render (or JS failure)
-          // degrades to the folded summary still being one tap from its rows.
-          const folded = index > 0 && (group.urgency === "soon" || group.urgency === "later");
-          if (!folded) {
-            return (
-              <div key={group.urgency}>
-                {header}
-                {rows}
-              </div>
-            );
-          }
+          // real work, not two folded bands and a shrug.
           return (
-            <details key={group.urgency} className="group/fold">
-              <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-                {/* Which way this goes, before you press it — decorative, the
-                    native disclosure semantics carry the state. */}
-                <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />
-                {header}
-              </summary>
+            <UrgencyBand
+              key={group.urgency}
+              label={t(URGENCY_KEYS[group.urgency])}
+              count={t("shared.today.todayQueue.itemsCount", { count: group.actions.length })}
+              folded={index > 0 && (group.urgency === "soon" || group.urgency === "later")}
+            >
               {rows}
-            </details>
+            </UrgencyBand>
           );
         })}
       </div>

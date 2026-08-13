@@ -21,7 +21,6 @@
   "emailResent": "Confirmation email re-sent.",
   "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
   "crewingBoat": "You’re crewing the {time} {title}.",
-  "noDeparturesHeading": "No boats out today",
   "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
   "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
   "scheduleTrip": "Schedule a trip",
@@ -38,6 +37,7 @@
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
+    "lineHeading": "New here? Try this:",
     "subtitle": "This only shows once — dismiss it any time.",
     "tryLabel": "Try:",
     "dismiss": "Got it",

@@ -96,8 +96,12 @@ export function PackingSection({
       ? null
       : exposureSuitFor(trip.waterTemperatureC);
   return (
-    <section className="mt-6 rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-lg font-semibold">{t("trip.packTitle")}</h2>
+    // No outer card, same reasoning as `ForecastSection`: this is pre-trip
+    // reading, not a decision, and the three columns plus the rhythm below are
+    // their own shape. The heading steps up to the briefings section's scale
+    // so the page's supporting reading reads as one system.
+    <section className="mt-12">
+      <h2 className="text-2xl font-semibold tracking-tight">{t("trip.packTitle")}</h2>
       {exposureSuit ? (
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
       ) : null}
@@ -129,13 +133,17 @@ export function PackingSection({
           </ul>
         </div>
       </div>
-      <h3 className="mt-5 font-semibold">{t("trip.dockDayRhythm")}</h3>
+      <h3 className="mt-6 font-semibold">{t("trip.dockDayRhythm")}</h3>
       {/* The shop's own minutes laid over this departure's clock, for this
           departure's own dive count — not the trip window's thirds, which is
           what this list used to be. A multi-day course runs the same shape each
           day, and says so rather than implying it only happens once. */}
       {multiDay ? <p className="mt-1 text-sm text-muted">{t("trip.dockDayEachDay")}</p> : null}
-      <ol className="mt-2 space-y-1 text-sm text-muted">
+      {/* Time first, in an aligned tabular column: a schedule is read by the
+          clock, and the ragged "label · time" lines it replaces made the eye
+          hunt for every time inside a sentence. The alignment is the shape —
+          no rule or box needed. */}
+      <ol className="mt-3 space-y-1.5 text-sm">
         {dockDayTimeline(
           window.startsAt,
           shop,
@@ -143,13 +151,17 @@ export function PackingSection({
           trip.plannedDives,
           siteBottomTimes,
         ).map((entry) => (
-          <li key={`${entry.step}-${entry.number ?? 0}`}>
-            {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })} ·{" "}
-            {entry.at.toLocaleTimeString(locale, {
-              hour: "numeric",
-              minute: "2-digit",
-              timeZone: shop.timezone,
-            })}
+          <li key={`${entry.step}-${entry.number ?? 0}`} className="flex gap-4">
+            <span className="w-24 shrink-0 font-medium tabular-nums">
+              {entry.at.toLocaleTimeString(locale, {
+                hour: "numeric",
+                minute: "2-digit",
+                timeZone: shop.timezone,
+              })}
+            </span>
+            <span className="text-muted">
+              {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
+            </span>
           </li>
         ))}
       </ol>

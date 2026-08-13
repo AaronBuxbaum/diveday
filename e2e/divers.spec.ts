@@ -1,6 +1,14 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, tripPathByTitle } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openRosterDetails,
+  openTripFromBoard,
+  openTripTab,
+  tripPathByTitle,
+} from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -154,6 +162,41 @@ test("staff record and correct a diver's emergency contact from the roster and t
     .getByText("Contact & gear")
     .click();
   await expect(page.getByText("Casey Diver · +1 305 555 0166")).toBeVisible();
+});
+
+/**
+ * **Which contacts a Guests card shows without being asked.**
+ *
+ * The roster's rule is work in the open, reference behind one tap. An
+ * emergency contact is both, depending: a *missing* one is work — Today sends
+ * staff here to collect it, and it prints on the manifest — while one already
+ * on file is a fact about the seat.
+ *
+ * Both states shipped in the open for one release, and it cost every settled
+ * card a heading, a value and an edit link it had no reason to show: a roster
+ * of nine grew by ~830px, undoing most of what collapsing the cards was for.
+ * A height check would be the obvious guard and the wrong one — it would fail
+ * on any unrelated copy change. What actually matters is *which* card says it,
+ * so that is what this asserts, on a seeded trip carrying one diver of each
+ * kind and nothing freshly saved.
+ */
+test("a Guests card shows an emergency contact only when it is missing", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Guests");
+
+  // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
+  // her card states it where a staffer will act on it.
+  const missing = page.locator("#roster li").filter({ hasText: "Nadia Petrov" });
+  await expect(missing.getByText("Not on file").filter({ visible: true })).toBeVisible();
+  await expect(missing.getByText("Add emergency contact").filter({ visible: true })).toBeVisible();
+
+  // Tom Okafor has one on file. It must not be on the face of the card — but
+  // it must still be *on* the card, one tap away, not dropped.
+  const onFile = page.locator("#roster li").filter({ hasText: "Tom Okafor" });
+  await expect(onFile.getByText(/Ngozi Okafor/)).toBeHidden();
+  await openRosterDetails(onFile);
+  await expect(onFile.getByText(/Ngozi Okafor/).filter({ visible: true })).toBeVisible();
 });
 
 /**

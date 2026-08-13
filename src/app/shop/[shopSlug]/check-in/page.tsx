@@ -140,7 +140,7 @@ export default async function CheckInPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Every code this page carries is now a refusal, and the acts that
           succeed re-render it in place without navigating (./actions.ts). So a
           notice has to be one-shot: left in the URL, the walk-in refusal a
