@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
+  currentStaffNavDestinationId,
   STAFF_DESTINATION_BADGE_TONES,
   type StaffDestination,
   type StaffDestinationBadge,
   type StaffDestinationCounts,
   type StaffDestinationGates,
+  type StaffDestinationId,
   type StaffDestinationLabels,
   staffDestinationHref,
   staffNavDestinations,
@@ -56,29 +59,6 @@ export interface ShopNavLinksCopy {
   badgeLabels: Record<StaffDestinationBadge, string>;
 }
 
-function isCurrent(pathname: string, href: string, root: string) {
-  return href === root ? pathname === root : pathname === href || pathname.startsWith(`${href}/`);
-}
-
-/**
- * Whether this destination is the page being looked at — its own path, or the
- * `alsoMatch` prefix it claims (the board claims `/trips`, Settings claims
- * `/promos`). Shared by the primary tabs, the "More" rows, and the "More"
- * button's own state: those three used to answer the question three ways, and
- * only the first knew about `alsoMatch`, so a destination reached *from* a
- * "More" page left the whole header with nothing reading as current.
- */
-export function isDestinationCurrent(
-  pathname: string,
-  root: string,
-  destination: StaffDestination,
-) {
-  return (
-    isCurrent(pathname, staffDestinationHref(root, destination), root) ||
-    (destination.alsoMatch ?? []).some((prefix) => isCurrent(pathname, `${root}${prefix}`, root))
-  );
-}
-
 function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
@@ -116,11 +96,17 @@ function NavCountBadge({
   );
 }
 
-/** One row inside the "More" panel. */
-function MoreLink({
+/**
+ * One row inside a "More" surface — the header menu here, and the phone
+ * dock's bottom sheet (StaffTabBar), which renders the identical rows so the
+ * two doors can never present the same destination differently. `active`
+ * comes from `currentStaffNavDestinationId` so at most one row anywhere
+ * reads as current.
+ */
+export function MoreLink({
   destination,
   root,
-  pathname,
+  active,
   label,
   count,
   badgeLabel,
@@ -128,14 +114,13 @@ function MoreLink({
 }: {
   destination: StaffDestination;
   root: string;
-  pathname: string;
+  active: boolean;
   label: string;
   count: number | undefined;
   badgeLabel: string | undefined;
   onNavigate: () => void;
 }) {
   const href = staffDestinationHref(root, destination);
-  const active = isDestinationCurrent(pathname, root, destination);
   return (
     <li className="flex">
       <Link
@@ -152,7 +137,7 @@ function MoreLink({
 }
 
 /** The heading over one "More" group, and the group box it labels. */
-function MoreGroup({
+export function MoreGroup({
   id,
   heading,
   className = "",
@@ -181,6 +166,49 @@ function MoreGroup({
   );
 }
 
+/**
+ * The two "More" groups as one column — shared verbatim by the header menu's
+ * panel and the phone dock's bottom sheet. The setup half wears its heading
+ * only once it is a genuine group: a visible heading over a single row is
+ * noise, but it keeps the same accessible name either way, so a screen
+ * reader still hears which half of the menu it is in.
+ */
+export function MoreGroups({
+  daily,
+  setup,
+  groupId,
+  copy,
+  renderLink,
+}: {
+  daily: readonly StaffDestination[];
+  setup: readonly StaffDestination[];
+  groupId: string;
+  copy: Pick<ShopNavLinksCopy, "groupDaily" | "groupSetup">;
+  renderLink: (destination: StaffDestination) => React.ReactNode;
+}) {
+  return (
+    <>
+      {daily.length > 0 ? (
+        <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
+          {daily.map(renderLink)}
+        </MoreGroup>
+      ) : null}
+      {setup.length > 1 ? (
+        <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
+          {setup.map(renderLink)}
+        </MoreGroup>
+      ) : setup.length === 1 ? (
+        <ul
+          aria-label={copy.groupSetup}
+          className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
+        >
+          {setup.map(renderLink)}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
 export function ShopNavLinks({
   root,
   gates,
@@ -203,9 +231,11 @@ export function ShopNavLinks({
   const primary = staffNavDestinations("primary", gates);
   const daily = staffNavDestinations("daily", gates);
   const setup = staffNavDestinations("setup", gates);
-  const moreIsActive = [...daily, ...setup].some((destination) =>
-    isDestinationCurrent(pathname, root, destination),
-  );
+  // One answer to "which row is current?" for the whole header (and the same
+  // answer the dock computes) — most specific destination wins, so Team's row
+  // lights on /settings/team without Settings' row lighting beside it.
+  const currentId: StaffDestinationId | null = currentStaffNavDestinationId(pathname, root, gates);
+  const moreIsActive = [...daily, ...setup].some((destination) => destination.id === currentId);
   // Stable across renders (empty deps — it only touches a ref), so effects
   // below can list it as a dependency without re-subscribing every render.
   const closeMore = useCallback(() => {
@@ -219,7 +249,8 @@ export function ShopNavLinks({
   // elsewhere used to leave it stuck open (task 80, UX persona 11 "Kai").
   // The native `toggle` event is the source of truth for open state (it also
   // fires for a keyboard/assistive-tech toggle, not just this component's own
-  // clicks), so outside-click/Escape handlers only attach while genuinely open.
+  // clicks), so the shared dismissal contract only attaches while genuinely
+  // open.
   useEffect(() => {
     const details = detailsRef.current;
     if (!details) return;
@@ -228,34 +259,19 @@ export function ShopNavLinks({
     return () => details.removeEventListener("toggle", handleToggle);
   }, []);
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    function handlePointerDown(event: PointerEvent) {
-      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) {
-        closeMore();
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeMore();
-        // Return focus to the toggle, matching every other dismissible menu.
-        summaryRef.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [moreOpen, closeMore]);
+  useMenuDismissal({
+    open: moreOpen,
+    close: closeMore,
+    inside: [detailsRef],
+    returnFocus: summaryRef,
+  });
 
   const moreLink = (destination: StaffDestination) => (
     <MoreLink
       key={destination.id}
       destination={destination}
       root={root}
-      pathname={pathname}
+      active={destination.id === currentId}
       label={copy.labels[destination.id]}
       count={destination.badge ? counts?.[destination.badge] : undefined}
       badgeLabel={destination.badge ? copy.badgeLabels[destination.badge] : undefined}
@@ -275,7 +291,7 @@ export function ShopNavLinks({
       >
         {primary.map((destination) => {
           const href = staffDestinationHref(root, destination);
-          const active = isDestinationCurrent(pathname, root, destination);
+          const active = destination.id === currentId;
           return (
             <Link
               key={destination.id}
@@ -294,14 +310,17 @@ export function ShopNavLinks({
           );
         })}
       </nav>
-      {/* No menu over nothing: with every destination either a tab, a palette
-          row, or a contextual door, "More" holds no rows for any role today —
-          a header menu named "More" was the IA admitting it hadn't decided.
-          The machinery stays for the day a destination earns a menu back. */}
+      {/* Defensive only: both groups carry ungated rows today (Close-out,
+          Staffing, the calendar feed), so no role sees an empty "More" — but
+          a menu over nothing must render nothing, never an empty panel. */}
       {daily.length + setup.length === 0 ? null : (
         <details ref={detailsRef} className="relative shrink-0">
           <summary
             ref={summaryRef}
+            // The ARIA counterpart of the active pill: when the current page
+            // lives behind this menu, the door itself says so in the tree —
+            // the tabs' aria-current="page" otherwise leaves nothing current.
+            aria-current={moreIsActive ? "true" : undefined}
             className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
           >
             {copy.more}
@@ -326,27 +345,13 @@ export function ShopNavLinks({
            * a memory test.
            */}
           <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
-            {daily.length > 0 ? (
-              <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
-                {daily.map(moreLink)}
-              </MoreGroup>
-            ) : null}
-            {/* A visible heading over a single row is noise, so the configure-once
-              half wears one only once it is a genuine group. It keeps the same
-              accessible name either way — a screen reader still hears which
-              half of the menu it is in. */}
-            {setup.length > 1 ? (
-              <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
-                {setup.map(moreLink)}
-              </MoreGroup>
-            ) : setup.length === 1 ? (
-              <ul
-                aria-label={copy.groupSetup}
-                className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
-              >
-                {setup.map(moreLink)}
-              </ul>
-            ) : null}
+            <MoreGroups
+              daily={daily}
+              setup={setup}
+              groupId={groupId}
+              copy={copy}
+              renderLink={moreLink}
+            />
           </div>
         </details>
       )}

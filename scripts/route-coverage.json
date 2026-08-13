@@ -139,9 +139,17 @@
       "role-permissions.spec.ts",
       "search.spec.ts",
       "staff-invite.spec.ts",
+      "staff-nav.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["today", "today-empty", "today-first-bookable", "blockers"]
+    "visual": [
+      "today",
+      "today-empty",
+      "today-first-bookable",
+      "blockers",
+      "nav-more-menu",
+      "nav-more-sheet"
+    ]
   },
   "/shop/[shopSlug]/bookings/new": {
     "e2e": ["add-diver.spec.ts"],
