@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
@@ -11,7 +11,6 @@ import {
   CaptainPhoneFrame,
   FeatureGroupsGrid,
   MarketingMockup,
-  MarketingMomentCard,
   marketingMockups,
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -101,12 +100,50 @@ async function LocalizedHomeBody() {
 }
 
 /**
+ * The one kicker for a *part of a section*: a short marker with a hairline rule
+ * running out to the edge of its column. The daily-moment rows use it for where
+ * in the day they sit, the portability diptych for which direction a record is
+ * travelling. One atom, several compositions around it — inventing a new
+ * treatment per band is what made the old page read as six renders of one
+ * template.
+ *
+ * It is deliberately *not* the page's only small-caps-ish label: the hero's
+ * category line and the breadth band's four card eyebrows are uppercase, and
+ * they stay that way because they name a whole thing (the product category, a
+ * capability group) rather than locate a part within a section.
+ *
+ * Page-local until a second marketing page wants the same marker — at which
+ * point it belongs in `src/components/MarketingSections.tsx` with the other
+ * shared visual atoms, not copied.
+ *
+ * `as="h3"` where the marker is the *only* label its column has (the diptych),
+ * so the section's two halves are named in the document outline; the moment
+ * rows leave it a `<p>`, because the `<h3>` they already carry is their name
+ * and a marker heading above it would be a second, emptier one.
+ */
+function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: "p" | "h3" }) {
+  return (
+    <div className="flex items-center gap-4">
+      <Tag className="text-sm font-semibold text-primary">{children}</Tag>
+      <span aria-hidden="true" className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+/**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
  * message-bundle copy and the migration-guide competitor list. Nothing
  * session-scoped lives in this tree — the CTA forms only reference
  * `enterDemoAction` (a Server Action reference, safe to pass through per
  * Next's `"use cache"` interleaving rules).
+ *
+ * The page's shape (redesigned 2026-08-13): one argument — the whole dive day
+ * runs from one calm place — told once per section, each section in its own
+ * composition rather than six renders of the same eyebrow/h2/lede/card-grid
+ * template. Two demo doors, hero and close, with the demo's cost stated once
+ * at the first of them; the old mid-page door and the two extra banded closes
+ * merged into the single closing band (docs/product/marketing.md).
  */
 async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
@@ -117,14 +154,17 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
+  // The day the hero's dock screen completes: a diver books days before, the
+  // front desk clears the boat that morning. Alternating full-width rows —
+  // the screen is the claim, so each row gives the mockup the wider column.
   const dailyMoments = [
     {
-      role: t("marketing.home.moments.diver.role"),
+      when: t("marketing.home.moments.diver.when"),
       title: t("marketing.home.moments.diver.title"),
       description: t("marketing.home.moments.diver.description"),
-      // The diver preview stays a moment-card link rather than a third hero
-      // door: in the hero it competed with the demo and trial CTAs for the
-      // first click; here it sits beside the schedule mockup it opens.
+      // The diver preview stays here rather than in the hero: there it
+      // competed with the demo and trial CTAs for the first click; here it
+      // sits beside the schedule mockup it opens.
       link: {
         label: t("marketing.home.moments.diver.link"),
         href: scheduleAttributionHref(DEMO_SHOP_SLUG, "home-diver-moment"),
@@ -133,13 +173,23 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       mockup: marketingMockups.diverBooking,
     },
     {
-      role: t("marketing.home.moments.frontDesk.role"),
+      when: t("marketing.home.moments.frontDesk.when"),
       title: t("marketing.home.moments.frontDesk.title"),
       description: t("marketing.home.moments.frontDesk.description"),
       link: null,
       mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
     },
+  ] as const;
+  // What a shop gets back on the way out, listed rather than described — the
+  // inventory is the reassurance, so it reads as a manifest, not a paragraph.
+  // Keyed by message key, never by the rendered sentence: two locales edit
+  // these independently, and a duplicated line would silently collide.
+  const exportInventory = [
+    "marketing.home.exportItem1",
+    "marketing.home.exportItem2",
+    "marketing.home.exportItem3",
+    "marketing.home.exportItem4",
   ] as const;
 
   return (
@@ -156,7 +206,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            {/* `w-full sm:w-auto` on all three: without it the primary (inside
+            {/* `w-full sm:w-auto` on both: without it the primary (inside
                 a form, hugging its label) rendered *narrower* than the
                 stretched secondary link on phones — the demoted action was the
                 biggest target on first paint. Full-width buttons are also the
@@ -165,13 +215,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               <form action={enterDemoAction} className="w-full sm:w-auto">
                 <FunnelTag source="home-hero" />
                 <SubmitButton
-                  pendingLabel={t("nav.gettingReady")}
+                  pendingLabel={t("marketing.common.gettingReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
                   })}
                 >
-                  {t("nav.tryDemo")}
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -182,9 +232,12 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   className: "w-full border-border-strong sm:w-auto",
                 })}
               >
-                {t("nav.startTrial")}
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
+            {/* The demo's cost, stated once on the whole page — at the first
+                door, where the decision is actually made. The closing band
+                repeats the door, not the note. */}
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
           </div>
 
@@ -200,179 +253,156 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
+      {/* The day, told backwards from the hero's dock screen: two alternating
+          proof rows (marker → title → one sentence beside a large mockup)
+          instead of the twin-card grid this section used to be — the pair are
+          different moments of one day, and the geometry now says so. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.home.momentsEyebrow")}
-          </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
             {t("marketing.home.momentsTitle")}
           </h2>
-          <p className="mt-4 text-lg leading-8 text-muted">
+          <p className="mt-4 text-lg leading-8 text-pretty text-muted">
             {t("marketing.home.momentsDescription")}
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-2">
-          {dailyMoments.map((moment) => (
-            <MarketingMomentCard
-              key={moment.role}
-              role={moment.role}
-              title={moment.title}
-              description={moment.description}
-              link={
-                moment.link ? (
+        <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
+          {dailyMoments.map((moment, index) => (
+            <div key={moment.title} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
+              <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
+                <SectionMarker>{moment.when}</SectionMarker>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                  {moment.title}
+                </h3>
+                <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
+                {moment.link ? (
                   <Link
                     href={moment.link.href}
-                    className={buttonClass({ variant: "link", className: "px-0" })}
+                    className={buttonClass({ variant: "link", className: "mt-2 px-0" })}
                   >
                     {moment.link.label}
                   </Link>
-                ) : undefined
-              }
-            >
-              <MarketingMockup label={moment.mockupLabel}>
-                {moment.mockup.render(locale)}
-              </MarketingMockup>
-            </MarketingMomentCard>
+                ) : null}
+              </div>
+              <div className="lg:col-span-6">
+                <MarketingMockup
+                  label={moment.mockupLabel}
+                  className="shadow-xl shadow-foreground/5"
+                >
+                  {moment.mockup.render(locale)}
+                </MarketingMockup>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
+      {/* The breadth band: one provocative statement, the four groups as the
+          answer, one door to the full story. Deliberately still four
+          assertions rather than imagery — see docs/product/marketing.md. */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.home.productEyebrow")}
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                {t("marketing.home.productTitle")}
-              </h2>
-            </div>
+          <h2 className="mx-auto max-w-3xl text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {t("marketing.home.productTitle")}
+          </h2>
+          <div className="mt-12">
+            <FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />
+          </div>
+          <div className="mt-10 text-center">
             <Link
               href="/product"
               className={buttonClass({
                 variant: "secondary",
-                className: "self-start border-border-strong lg:self-auto",
+                className: "border-border-strong",
               })}
             >
               {t("marketing.home.seeFullProduct")}
             </Link>
           </div>
-          <div className="mt-12">
-            <FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />
-          </div>
-          {/* A door out at the page's midpoint: on a phone the hero CTA and
-              the closing band sit several thousand pixels apart, and a reader
-              convinced here shouldn't have to scroll to either end to act. */}
-          <div className="mt-12 flex flex-col items-center gap-4 rounded-2xl border border-border bg-background px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
-            <h3 className="text-xl font-semibold tracking-tight">
-              {t("marketing.common.midCtaTitle")}
-            </h3>
-            <form action={enterDemoAction} className="shrink-0">
-              <FunnelTag source="home-mid" />
-              <SubmitButton
-                pendingLabel={t("nav.gettingReady")}
-                className={buttonClass({ className: "cursor-pointer disabled:opacity-70" })}
-              >
-                {t("nav.tryDemo")}
-              </SubmitButton>
-            </form>
-          </div>
         </div>
       </section>
 
+      {/* The portability band, and the one section whose geometry *is* its
+          argument: records come in clean and leave the same way, so the two
+          directions are a mirrored pair of equal columns under one statement —
+          same marker, same rule, same weight — rather than the copy-left /
+          visual-right split it shared with the hero and the first moment row.
+          Arriving reads first (docs/product/marketing.md). */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.home.exportEyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.home.exportTitle")}
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription1")}
-            </p>
-            <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
-            </p>
-            <Link
-              href="/switching/spreadsheet"
-              className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
-            >
-              {t("marketing.home.spreadsheetLink")}
-            </Link>
-            <Link
-              href="/switching"
-              className={buttonClass({ variant: "link", className: "mt-2 text-left" })}
-            >
-              {t("marketing.home.switchingLink", { competitors })}
-            </Link>
-          </div>
-          {/* The band's two directions, each with something to look at rather
-              than only a paragraph: the importer's real preview step for
-              arriving, the export inventory for leaving. Same order the copy
-              argues in (docs/product/marketing.md — arriving first, leaving
-              second), which is why the mockup sits above the card. */}
-          <div className="space-y-5">
+        <h2 className="max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          {t("marketing.home.exportTitle")}
+        </h2>
+
+        <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
+          <div className="flex flex-col gap-5 lg:pr-14">
+            <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
+            <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
             <MarketingMockup
               label={t("marketing.home.importMockupLabel")}
               className="shadow-xl shadow-foreground/5"
             >
               <ImportPreviewFallback locale={locale} />
             </MarketingMockup>
-            <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-              <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.home.inExportEyebrow")}
-              </p>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem1")}</span>
+          </div>
+
+          <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
+            <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
+            <p className="leading-7 text-muted">
+              {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
+            </p>
+            {/* A manifest, not a card: hairline rows echoing the marker rule
+                above them. The bordered card this replaced put a second
+                rounded box beside the import mockup and read as its twin,
+                when the two halves are a picture and an inventory. */}
+            <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
+              {exportInventory.map((itemKey) => (
+                <li key={itemKey} className="flex gap-3 py-4">
+                  <span aria-hidden="true" className="font-semibold text-primary">
+                    ✓
+                  </span>
+                  <span>{t(itemKey)}</span>
                 </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem2")}</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem3")}</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem4")}</span>
-                </li>
-              </ul>
-            </div>
+              ))}
+            </ul>
           </div>
         </div>
+
+        {/* One door to the whole switching surface — the hub fronts both the
+            incumbent guides and the spreadsheet path, so two stacked link CTAs
+            here were one door pretending to be two. */}
+        <Link
+          href="/switching"
+          className={buttonClass({ variant: "link", className: "mt-10 px-0 text-left" })}
+        >
+          {t("marketing.home.guidesLink", { competitors })}
+        </Link>
       </section>
 
+      {/* The one close. Until 2026-08-13 the page ended on three consecutive
+          banded CTAs (a mid-page demo card, a "Try it" band, a contact band);
+          they merged into this single band — ask, price, and the human path,
+          in that order. */}
       <section className="border-t border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.home.tryEyebrow")}
-          </p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
-            {t("marketing.home.tryTitle")}
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-            {t("marketing.home.tryDescription")}
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+              {t("marketing.home.tryTitle")}
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
+              {t("marketing.home.tryDescription")}
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <form action={enterDemoAction}>
                 <FunnelTag source="home-closing" />
                 <SubmitButton
-                  pendingLabel={t("marketing.home.gettingReady")}
+                  pendingLabel={t("marketing.common.gettingReady")}
                   className={buttonClass({
                     size: "cta",
                     className: "cursor-pointer disabled:opacity-70",
                   })}
                 >
-                  {t("nav.tryDemo")}
+                  {t("marketing.common.tryDemo")}
                 </SubmitButton>
               </form>
               <Link
@@ -383,11 +413,10 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   className: "border-border-strong",
                 })}
               >
-                {t("marketing.home.startTrial")}
+                {t("marketing.common.startTrial")}
               </Link>
             </div>
-            <p className="text-sm text-muted">{t("marketing.common.demoNote")}</p>
-            <p className="mt-2 font-medium">
+            <p className="mt-6 font-medium">
               {t("marketing.home.priceLine", {
                 price: earlyAccessPrice.price,
                 cadence: t(earlyAccessPrice.cadenceKey),
@@ -397,30 +426,28 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.home.seeIncluded")}
             </Link>
           </div>
-        </div>
-      </section>
 
-      <section className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-16 lg:flex-row lg:items-center lg:justify-between lg:py-20">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.home.contactEyebrow")}
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-balance sm:text-3xl">
-              {t("marketing.home.contactTitle")}
-            </h2>
-            <p className="mt-3 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
+          <div className="mx-auto mt-16 flex max-w-3xl flex-col items-center gap-5 border-t border-border pt-10 text-center sm:flex-row sm:justify-between sm:gap-8 sm:text-left">
+            <div>
+              {/* An `h2` at `text-xl`: the human path is a top-level way out of
+                  this page, not a footnote under the demo — a buyer who will
+                  not self-serve either button needs it in the outline. Level
+                  and size are separate decisions; it sits quietly on purpose. */}
+              <h2 className="text-xl font-semibold tracking-tight">
+                {t("marketing.home.contactTitle")}
+              </h2>
+              <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
+            </div>
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className={buttonClass({
+                variant: "secondary",
+                className: "shrink-0 border-border-strong",
+              })}
+            >
+              {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
+            </a>
           </div>
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className={buttonClass({
-              variant: "secondary",
-              size: "cta",
-              className: "shrink-0 self-start border-border-strong lg:self-auto",
-            })}
-          >
-            {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
-          </a>
         </div>
       </section>
     </main>
