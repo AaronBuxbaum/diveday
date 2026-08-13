@@ -1933,20 +1933,19 @@
       "gettingDemoReady": "Getting the demo ready…"
     },
     "pricing": {
-      "eyebrow": "Pricing",
       "heroTitle": "One flat price for the whole shop.",
-      "heroDescription": "No setup fee, no per-seat math, no feature tiers, no cut of your bookings — the safety workflow is never an add-on you have to remember to buy.",
-      "completeAccess": "Complete shop access",
+      "heroDescription": "No setup fee. No per-seat math. No feature tiers. No cut of your bookings.",
+      "heroSafetyNote": "The safety workflow is never an add-on.",
       "earlyAccessBadge": "Early access",
       "gettingDemoReady": "Getting the demo ready…",
-      "feesNote": "Payment-processing fees stay between you and your payment provider. If a future integration ever costs extra, we'll say so clearly before you turn it on.",
+      "feesNote": "Payment-processing fees stay between you and your payment provider. If an integration ever costs extra, we'll say so before you turn it on.",
+      "includedLead": "What the price covers",
       "feeAnchor": {
-        "eyebrow": "The other way this gets priced",
         "title": "A flat price, or a cut of every seat you sell.",
-        "body": "Two of the booking channels a dive shop gets offered charge by the booking instead of by the month. Here is what each of them says about its own price — not what any shop ends up paying, which we have no way to know and are not going to guess.",
+        "body": "Two of the booking channels a dive shop gets offered charge by the booking instead of by the month. Here is what each says about its own price — not what any shop ends up paying, which we won't guess.",
         "rezdy": "{competitor}'s current published pricing is a monthly subscription plus 3% of every online booking. The option with no monthly fee still takes the 3%.",
         "fareharbor": "{competitor} publishes no rate at all. It charges nothing monthly and takes a fee on every booking, added to your guest's checkout price, for as long as you use it; third parties report that fee at around 6%.",
-        "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price on the card above — the same number in a busy August as in a quiet January.",
+        "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price above — the same number in a busy August as in a quiet January.",
         "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent's own pages.",
         "guideLink": "What moving off {competitor} looks like →"
       },
@@ -1957,27 +1956,20 @@
         "honestNote": "Two things it will not hand over, and the screen says so: login accounts with their password hashes, and the push credentials tied to a particular phone. Neither means anything in another system, and a file of password hashes is not something a download button should produce.",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle's files with a row count for each and a line naming what it deliberately leaves out"
       },
-      "includedEyebrow": "Included now",
-      "includedTitle": "Everything needed to run the current DiveDay workflow.",
       "seeFullList": "See everything it does, in detail →",
-      "faqEyebrow": "Questions, answered plainly",
       "faqTitle": "The questions that actually decide it.",
       "faq": {
-        "whatIncluded": {
-          "question": "What is included?",
-          "answer": "The founding-shop price covers every currently available DiveDay workflow, from public bookings through the offline-ready boat manifest. It is not a collection of separate per-feature add-ons."
-        },
         "billing": {
           "question": "How does billing work?",
           "answer": "Month to month, per location. Cancel whenever you like and leave with your shop's records through the export button — no setup fee and no annual contract."
         },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free for 3 weeks, no card required."
+          "answer": "Starting a shop is free for 3 weeks, no card required — and nothing switches off when the window ends; what you set up keeps working. When you're ready to move to paid, email {email}."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
-          "answer": "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip."
+          "answer": "Yes. The live demo is a shop already full of sample trips — walk the day as the owner, an instructor, a divemaster, the captain, or a diver. A trial shop of your own starts empty, ready for your first trip."
         },
         "offline": {
           "question": "Does the manifest work offline?",
@@ -1989,7 +1981,8 @@
         },
         "switching": {
           "question": "What does switching to DiveDay actually involve?",
-          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, cards, and rental sizes — showing exactly what will happen before anything is saved. Step-by-step guides cover {competitors}."
+          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, cards, and rental sizes — showing exactly what will happen before anything is saved. Step-by-step guides cover {competitors}.",
+          "guidesLink": "Browse the switching guides →"
         },
         "agency": {
           "question": "Does DiveDay connect to PADI or SSI?",
@@ -1997,7 +1990,7 @@
         },
         "pos": {
           "question": "Does DiveDay replace my POS?",
-          "answer": "No — keep your register. DiveDay runs the water side: bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. Add a retail line to an order, but there's no register or stock count here — we'd rather say so plainly."
+          "answer": "No — keep your register. DiveDay runs the water side: bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. Add a retail line to an order, but there's no register or stock count here."
         },
         "whyFounding": {
           "question": "Why be a founding shop?",
@@ -2008,7 +2001,9 @@
           "answer": "Each DiveDay shop runs one location today. If you operate more than one location, email {email} — we'd rather build that with you than pretend it's already here."
         }
       },
-      "stillQuestion": "Still have a question a FAQ can't answer? Email us — always welcome.",
+      "closingTitle": "That's our whole price.",
+      "closingBody": "{price} {cadence}. No annual contract, and your records leave with you whenever you go.",
+      "stillQuestion": "Still have a question? A real person reads every one.",
       "emailCta": "Email {email}"
     }
   },

@@ -124,7 +124,8 @@ chosen battlegrounds — and re-read it before changing the spine.
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
   `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
-  founding-shop claims (pricing card + FAQ in `src/app/pricing/page.tsx`, closing band in
+  founding-shop claims (the price hero's "What the price covers" list + FAQ in
+  `src/app/pricing/page.tsx`, closing band in
   `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
@@ -222,7 +223,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
 - **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
-  `/product`, the trial on `/pricing`'s card); the nav's "Start a trial" stays secondary weight so
+  `/product`, the trial on `/pricing` — in its price hero, and again in the closing band beneath
+  the FAQ, tagged `pricing-close` so the second position is measured separately); the nav's
+  "Start a trial" stays secondary weight so
   it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
@@ -320,7 +323,8 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-closing`, `product` / `product-mid`. Mid-page doors exist because
+`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`.
+Mid-page and closing doors exist because
 one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
 into the page's own tag, such a door can never be shown to have earned its place, and the next
 review re-opens the same question with no evidence either way. The unsuffixed tag stays the page's

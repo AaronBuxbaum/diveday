@@ -24,6 +24,10 @@ describe("eventSource", () => {
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
     expect(trialHref("product-mid")).toBe("/onboard?from=product-mid");
+    // Same split on the pricing page: its hero door and the door that closes
+    // the objection layer answer different moments in the same visit.
+    expect(eventSource("pricing-close")).toBe("pricing-close");
+    expect(trialHref("pricing-close")).toBe("/onboard?from=pricing-close");
   });
 
   it("collapses anything outside the vocabulary to unknown", () => {
