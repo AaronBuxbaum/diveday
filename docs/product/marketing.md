@@ -124,7 +124,8 @@ chosen battlegrounds — and re-read it before changing the spine.
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
   `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
-  founding-shop claims (pricing card + FAQ in `src/app/pricing/page.tsx`, closing band in
+  founding-shop claims (the price hero's "What the price covers" list + FAQ in
+  `src/app/pricing/page.tsx`, closing band in
   `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
@@ -184,13 +185,17 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
-  claims exist at three densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
-  `/pricing`), `4` is the scannable overview (`/product`), and the full inventory is
-  `productCapabilityIndex` in `/product`'s `<details>`. `/product` used to render *all* of
-  `productFeatureGroups` (30 bullets) about a thousand pixels above a `<details>` holding 46 better
-  organized ones covering the same ground; a reader scrolled one wall of bullets to reach a longer
-  one. Pricing had already been cut back for exactly this reason. Before adding a list to a page,
-  check the other two densities: the answer is usually a mockup or a link, not a third copy.
+  claims exist at two densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
+  `/pricing`), and the full inventory is `productCapabilityIndex`, rendered flat on `/product` as a
+  spec sheet: group name on a left rail, terse lines in two columns, hairline rules, no boxes.
+  There were three until 2026-08-13. `/product` used to render *all* of `productFeatureGroups` (30
+  bullets) about a thousand pixels above a `<details>` holding 46 better organized ones covering
+  the same ground; a reader scrolled one wall of bullets to reach a longer one. Cutting the middle
+  density left the page announcing "the whole list, plainly" above a heading, two lines and a "The
+  full list" link in an otherwise empty band — so the disclosure went too, and the list a buyer
+  came for is simply on the page. Pricing had already been cut back for the same reason. Before
+  adding a list to a page, check the other density: the answer is usually a mockup or a link, not a
+  second copy.
 - **No unprovable superlatives** ("everything", "best", "complete") — scope claims to what ships:
   "from booking to head count".
 - Buttons are verbs; eyebrows are short; body copy earns each sentence. Read it aloud as a dive
@@ -210,18 +215,32 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
   the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
   shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
+- **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
+  sign-up, no card") answers the only question the button raises, and the answer is worth nothing
+  the second time: repeated under every demo button it stops reading as reassurance and starts
+  reading as insistence. It sits with the *first* demo button a reader meets — the homepage hero,
+  not the homepage close — because that is where the decision is made; a reader who scrolls past it
+  has already read it. Deleting it from a page entirely is a different change and not an allowed
+  one: `e2e/marketing.spec.ts` asserts it on `/`.
 - **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
-  `/product`, the trial on `/pricing`'s card); the nav's "Start a trial" stays secondary weight so
+  `/product`, the trial on `/pricing` — in its price hero, and again in the closing band beneath
+  the FAQ, tagged `pricing-close` so the second position is measured separately); the nav's
+  "Start a trial" stays secondary weight so
   it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
-  destination: the roles moved into the in-demo switcher, the diver preview onto its own moment
-  card, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts the hero's
-  enabled controls so the budget can't quietly grow back.
+  destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
+  row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
+  the hero's enabled controls so the budget can't quietly grow back.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
-  user-facing labels — section eyebrows say what the reader is looking at ("Your records", "Try
-  it"), not what the strategy doc calls it.
+  user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
+  2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
+  for a whole thing (the hero's category line, the breadth band's four capability groups), and a
+  sentence-case marker with a hairline rule for a *part* of a section (a moment's place in the day,
+  a direction in the records diptych). The redesign deleted the standing section eyebrows that
+  merely restated the heading beneath them ("Your records", "Try it", "The whole shop, one place");
+  a heading that needs an eyebrow to be understood is a heading that needs rewriting.
 
 ## SEO and shared links
 
@@ -304,11 +323,16 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`. Mid-page doors exist because
+`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`.
+Mid-page and closing doors exist because
 one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
 into the page's own tag, such a door can never be shown to have earned its place, and the next
 review re-opens the same question with no evidence either way. The unsuffixed tag stays the page's
-original one when a position is added beside it, so attribution history spans the change.
+original one when a position is added beside it, so attribution history spans the change. A door
+can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the page's three
+consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
+closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
+accumulated still reads.
 
 ## Product visuals
 
@@ -347,21 +371,38 @@ the objection lands: the fee anchor has just made switching look attractive, and
 shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
 for a reader who scans that far.
 
-**The homepage records band carries both halves as pictures**, in the order the copy argues them:
-the import preview (arriving) above the export inventory card (leaving). That band is the
-portability wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12
-it made that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on
-the site.
+**The homepage records band shows both halves, in the order the copy argues them**: the import
+preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
+real preview step, because "we'll show you exactly what comes across before anything saves" is a
+claim only a screen can settle. Leaving is a list, because what a shop wants to know on the way out
+is *what is in the box*, and a mockup of a ZIP file shows nothing. That band is the portability
+wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12 it made
+that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on the
+site.
 
-**The homepage's four-card "whole shop, one place" band is deliberately still four assertions.** It
-renders `FeatureGroupsGrid` at `featuresPerGroup={1}`, and it is now the only band on that page that
-asks a reader to take a claim on trust. It was reviewed again on 2026-08-12 and left alone, with the
-reason stated rather than deferred: the band exists to give breadth in one glance and hand the reader
-to `/product`, replacing it with imagery would cost that breadth, and **there is no funnel data to
-decide it on** — the `home-mid` door has no `demo_entered`/`trial_started` pair to read yet, because
-no traffic has run through it. Deciding the midpoint of the highest-traffic page on taste, against a
-measurement that will exist shortly, is the wrong trade. Revisit it when that pair has numbers; if
-the door converts, the change is a visual *beside* the four cards, not instead of them.
+**Its geometry is the claim.** On 2026-08-13 the band stopped being a copy-left / visual-right
+split — the third section in a row on that page to use one, after the hero and the first daily
+moment — and became a mirrored diptych: one statement, then two equal columns divided by a rule,
+same marker, same weight, arriving left and leaving right. "Come in clean, and *leave the same
+way*" is an argument about symmetry, so the section that makes it is the one place on the page
+where the layout should be symmetric. The two column markers ("Coming in" / "Going out") are the
+copy that used to open each paragraph — `exportDescription1` lost "Arriving is a file, not a
+project" for "A file, not a project", `exportDescription2` lost "Leaving is built to the same
+standard as arriving", and the export card's own "In the export" eyebrow retired rather than sit
+stacked under "Going out". The inventory also lost its card border and became a hairline manifest:
+a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
+picture and a list.
+
+**The homepage's four-card breadth band is deliberately still four assertions.** It renders
+`FeatureGroupsGrid` at `featuresPerGroup={1}` under the whiteboard/clipboard statement, and it is
+now the only band on that page that asks a reader to take a claim on trust. It was reviewed on
+2026-08-12 and again in the 2026-08-13 redesign and left alone, with the reason stated rather than
+deferred: the band exists to give breadth in one glance and hand the reader to `/product`, and
+replacing it with imagery would cost that breadth. Revisit it when the page-level
+`demo_entered`/`trial_started` pairs (`home-hero` / `home-closing`) have numbers; if the page
+converts poorly at this midpoint, the change is a visual *beside* the four cards, not instead of
+them. (The mid-page demo door that used to sit under the cards retired in the same redesign — the
+merged close is one band away, and three banded CTAs in a row read as pressure, not confidence.)
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the

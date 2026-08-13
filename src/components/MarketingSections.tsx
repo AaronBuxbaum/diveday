@@ -59,33 +59,6 @@ export function CaptainPhoneFrame({
   );
 }
 
-/** A "moment" card: role eyebrow + title + description (and an optional link) above an illustrated mockup. */
-export function MarketingMomentCard({
-  role,
-  title,
-  description,
-  link,
-  children,
-}: {
-  role: string;
-  title: string;
-  description: string;
-  link?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="p-6 sm:p-8">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">{role}</p>
-        <h3 className="mt-3 text-2xl font-semibold tracking-tight">{title}</h3>
-        <p className="mt-3 max-w-lg leading-7 text-muted">{description}</p>
-        {link ? <div className="mt-3">{link}</div> : null}
-      </div>
-      <div className="border-t border-border bg-surface-sunken p-4 sm:p-6">{children}</div>
-    </article>
-  );
-}
-
 /**
  * Only the illustration — never a `label`, which the caller must resolve
  * through a translator (see `marketing.home.moments.*.mockupLabel` and
