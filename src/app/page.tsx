@@ -157,8 +157,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   // The day the hero's dock screen completes: a diver books days before, the
   // front desk clears the boat that morning. Alternating full-width rows —
   // the screen is the claim, so each row gives the mockup the wider column.
+  // `id` is the message-bundle namespace, never a rendered string: it is this
+  // list's React key, and every other field here is localized copy. Keying on
+  // the title would make a language switch look like two different components
+  // to React (needless remount of the mockup beside it) and would collide the
+  // moment a copy edit ever gave two rows the same heading.
   const dailyMoments = [
     {
+      id: "diver",
       when: t("marketing.home.moments.diver.when"),
       title: t("marketing.home.moments.diver.title"),
       description: t("marketing.home.moments.diver.description"),
@@ -173,6 +179,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       mockup: marketingMockups.diverBooking,
     },
     {
+      id: "frontDesk",
       when: t("marketing.home.moments.frontDesk.when"),
       title: t("marketing.home.moments.frontDesk.title"),
       description: t("marketing.home.moments.frontDesk.description"),
@@ -269,7 +276,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
         <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
           {dailyMoments.map((moment, index) => (
-            <div key={moment.title} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
+            <div key={moment.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
               <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
                 <SectionMarker>{moment.when}</SectionMarker>
                 <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
