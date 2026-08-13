@@ -1,29 +1,35 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
-import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
-import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { guideSource, trialHref } from "@/lib/funnel";
-import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
+import { guideSource } from "@/lib/funnel";
+import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
-  IMPORT_SCOPE_ROW_KEYS,
   MIGRATION_GUIDE_SLUGS,
   type MigrationGuide,
 } from "@/lib/migration-guides";
+import {
+  ClosingCta,
+  DividedList,
+  GuideHero,
+  ImportPhase,
+  MidCta,
+  MovePath,
+  MovePhase,
+  PhaseNotes,
+  ScopePhase,
+  SourcesFootnote,
+  StepList,
+} from "../_components/guide";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -114,7 +120,7 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
     <GuideBody
       locale={locale}
       guide={guide}
-      importCta={<SwitchingImportCta label={t("switching.competitor.openImportCta")} />}
+      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
     />
   );
 }
@@ -127,7 +133,7 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
  * read or invoked here, only rendered where it belongs, so its per-visitor
  * content never enters the cache entry.
  *
- * Its own render site wraps `{importCta}` in a `<Suspense>` (see below) —
+ * Its render site (`ImportPhase`) wraps `{importCta}` in a `<Suspense>` —
  * without one, this preview's Cache Components runtime replayed a spurious
  * "unique key" warning on every request that reached this cached body,
  * because the dynamic child was streaming into a cache boundary with no
@@ -148,69 +154,17 @@ async function GuideBody({
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-
-  const scopeChip: Record<
-    (typeof IMPORT_HONESTY_TABLE)[number]["scope"],
-    { label: string; className: string }
-  > = {
-    included: {
-      label: t("switching.competitor.comesAcross"),
-      className: "bg-success/10 text-success",
-    },
-    "stays-behind": {
-      label: t("switching.competitor.staysBehind"),
-      className: "bg-surface-sunken text-muted",
-    },
-  };
+  const source = guideSource(guide.slug);
 
   return (
     <main className="flex-1">
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
-          <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
-            {t("switching.competitor.backToGuides")}
-          </Link>
-          <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
-            {t(guide.heroEyebrow)}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
-            {t(guide.heroTitle)}
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{t(guide.heroLede)}</p>
-
-          {/* The buyer's first door out of the page, before six sections of
-              export click-path and scope table. Deliberately NOT the
-              `importCta` slot: that one deep-links a signed-in owner into
-              their own shop's importer and is correct to disappear for the
-              signed-out shopper this section is written for. Nothing here
-              reads the session, so it stays inside the cached body. */}
-          <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            <form action={enterDemoAction} className="contents">
-              <FunnelTag source={guideSource(guide.slug)} />
-              <SubmitButton
-                pendingLabel={t("switching.competitor.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref(guideSource(guide.slug))}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
-          <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
-        </div>
-      </section>
+      <GuideHero
+        locale={locale}
+        source={source}
+        eyebrow={t(guide.heroEyebrow)}
+        title={t(guide.heroTitle)}
+        lede={t(guide.heroLede)}
+      />
 
       {/* Honest framing of the incumbent. */}
       <section className="mx-auto max-w-4xl px-6 py-14 lg:py-20">
@@ -223,9 +177,10 @@ async function GuideBody({
         </div>
       </section>
 
-      {/* Coexist framing: for a booking channel a shop keeps (FareHarbor),
-            the "keep the storefront, we run the water" division of labor, plus
-            the honest alternative of leaving. Absent for the leave-it guides. */}
+      {/* Coexist framing: for a booking channel a shop keeps (FareHarbor,
+          Rezdy), the "keep the storefront, we run the water" division of
+          labor, plus the honest alternative of leaving. Absent for the
+          leave-it guides. */}
       {guide.coexist && (
         <section className="border-y border-border">
           <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
@@ -237,17 +192,13 @@ async function GuideBody({
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.coexist.intro)}</p>
 
-            <ul className="mt-10 grid gap-5 sm:grid-cols-2">
-              {/* Shared messages — two of them interpolate the competitor's name. */}
-              {guide.coexist.runsInDiveDay.map((item) => (
-                <li key={item.title} className="rounded-2xl border border-border bg-surface p-6">
-                  <h3 className="font-semibold leading-6">{t(item.title)}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">
-                    {t(item.detail, { competitor: guide.competitor })}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            {/* Shared messages — two of them interpolate the competitor's name. */}
+            <DividedList
+              items={guide.coexist.runsInDiveDay.map((item) => ({
+                title: t(item.title),
+                detail: t(item.detail, { competitor: guide.competitor }),
+              }))}
+            />
 
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
@@ -261,292 +212,65 @@ async function GuideBody({
         </section>
       )}
 
-      {/* Step 1: export from the incumbent (files the shop makes itself). */}
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("switching.competitor.step1")}
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t(guide.exportHeading)}
-          </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.exportIntro)}</p>
-
-          <ol className="mt-10 space-y-6">
-            {guide.exportSteps.map((step, index) => (
-              <li key={step.title} className="flex gap-4">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {index + 1}
-                </span>
-                <div className="pt-1">
-                  <h3 className="font-semibold leading-6">{t(step.title)}</h3>
-                  <p className="mt-1.5 leading-7 text-muted">{t(step.detail)}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-
+      {/* The whole mechanical path, as one rail: export (files the shop makes
+          itself) → the importer's own scope table, verbatim → the importer →
+          the cutover. */}
+      <MovePath locale={locale}>
+        <MovePhase number={1} title={t(guide.exportHeading)} intro={t(guide.exportIntro)}>
+          <StepList
+            steps={guide.exportSteps.map((step) => ({
+              title: t(step.title),
+              detail: t(step.detail),
+            }))}
+          />
           {guide.exportNotes.length > 0 && (
-            <ul className="mt-10 space-y-3 rounded-2xl border border-border bg-background p-6 text-sm leading-6 text-muted">
-              {guide.exportNotes.map((note) => (
-                <li key={note} className="flex gap-3">
-                  <span aria-hidden className="font-semibold text-primary">
-                    •
-                  </span>
-                  <span>{t(note)}</span>
-                </li>
-              ))}
-            </ul>
+            <PhaseNotes notes={guide.exportNotes.map((note) => t(note))} />
           )}
-        </div>
-      </section>
-
-      {/* Step 2: the scope table — the importer's own honesty table, verbatim. */}
-      <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("switching.competitor.step2")}
-        </p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t("switching.competitor.scopeTableTitle")}
-        </h2>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-          {t("switching.competitor.scopeTableDescription")}
-        </p>
-
-        <ul className="mt-8 space-y-2">
-          {IMPORT_HONESTY_TABLE.map((row) => (
-            <li
-              key={row.id}
-              className="grid gap-1 rounded-xl border border-border bg-surface px-4 py-3 sm:grid-cols-[11rem_7rem_1fr] sm:items-baseline sm:gap-3"
-            >
-              <span className="font-medium text-foreground">
-                {t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}
-              </span>
-              <span>
-                <span
-                  className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${scopeChip[row.scope].className}`}
-                >
-                  {scopeChip[row.scope].label}
+        </MovePhase>
+        <ScopePhase locale={locale} number={2} />
+        <ImportPhase
+          locale={locale}
+          number={3}
+          importCta={importCta}
+          importerNote={
+            guide.importerNote && (
+              <>
+                <span className="font-semibold text-foreground">
+                  {t("switching.competitor.forExportPrefix", { competitor: guide.competitor })}{" "}
                 </span>
-              </span>
-              <span className="text-sm leading-6 text-muted">
-                {t(IMPORT_SCOPE_ROW_KEYS[row.id].detail)}
-              </span>
-            </li>
-          ))}
-        </ul>
+                {t(guide.importerNote)}
+              </>
+            )
+          }
+        />
+        <MovePhase number={4} title={t(guide.cutover.heading)} intro={t(guide.cutover.intro)}>
+          <StepList
+            steps={guide.cutover.steps.map((step) => ({
+              title: t(step.title),
+              detail: t(step.detail),
+            }))}
+          />
+        </MovePhase>
+      </MovePath>
 
-        {/* The return trip, stated where the reader is weighing the one-way
-            risk: the same rows that describe what arrives also describe what
-            leaves. The claim itself is never re-authored here — it composes
-            `fullShopExport`'s shared keys, so the exit promise on this page,
-            the homepage band, and the pricing FAQ can never drift apart. */}
-        <div className="mt-10 max-w-2xl">
-          <h3 className="text-xl font-semibold tracking-tight">
-            {t("switching.common.bothWaysTitle")}
-          </h3>
-          <p className="mt-2 leading-7 text-muted">
-            {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
-          </p>
-          {/* The terms are their own line rather than a fifth clause: they are
-              the four objections a reader arrives with ("what will it cost me
-              to leave, who do I have to ask, how long am I locked in"), and
-              buried at the end of an eighty-word paragraph nobody skimming
-              finds them. */}
-          <p className="mt-2 leading-7 text-muted">{t(fullShopExport.termsKey)}</p>
-        </div>
-
-        {/* The scope table is where a reader decides the move is real — and it
-            was the furthest point they could reach without a way to act. */}
-        <div className="mt-10 flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-xl font-semibold tracking-tight">
-              {t("switching.common.midCtaTitle")}
-            </h3>
-            <p className="mt-2 max-w-xl leading-7 text-muted">{t("switching.common.midCtaBody")}</p>
-          </div>
-          <div className="flex flex-col items-stretch gap-3 sm:shrink-0 sm:flex-row sm:items-center">
-            <form action={enterDemoAction} className="contents">
-              <FunnelTag source={guideSource(guide.slug)} />
-              <SubmitButton
-                pendingLabel={t("switching.competitor.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref(guideSource(guide.slug))}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Step 3: bring the file into DiveDay. */}
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("switching.competitor.step3")}
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t("switching.competitor.bringFileTitle")}
-          </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-            {t("switching.competitor.bringFileIntro")}
-          </p>
-          <ol className="mt-10 space-y-6">
-            <li className="flex gap-4">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                1
-              </span>
-              <div className="pt-1">
-                <h3 className="font-semibold leading-6">
-                  {t("switching.competitor.openSettingsTitle")}
-                </h3>
-                <p className="mt-1.5 leading-7 text-muted">
-                  {t("switching.competitor.openSettingsBody")}
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-4">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                2
-              </span>
-              <div className="pt-1">
-                <h3 className="font-semibold leading-6">
-                  {t("switching.competitor.checkPreviewTitle")}
-                </h3>
-                <p className="mt-1.5 leading-7 text-muted">
-                  {t("switching.competitor.checkPreviewBody")}
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-4">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                3
-              </span>
-              <div className="pt-1">
-                <h3 className="font-semibold leading-6">
-                  {t("switching.competitor.importReadyTitle")}
-                </h3>
-                <p className="mt-1.5 leading-7 text-muted">
-                  {t("switching.competitor.importReadyBody")}
-                </p>
-              </div>
-            </li>
-          </ol>
-
-          {guide.importerNote && (
-            <p className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
-              <span className="font-semibold text-foreground">
-                {t("switching.competitor.forExportPrefix", { competitor: guide.competitor })}{" "}
-              </span>
-              {t(guide.importerNote)}
-            </p>
-          )}
-
-          <Suspense fallback={null}>{importCta}</Suspense>
-        </div>
-      </section>
-
-      {/* What the actual switch looks like — parallel-run, timing, re-import safety. */}
-      <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-        <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t(guide.cutover.heading)}
-        </h2>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.cutover.intro)}</p>
-
-        <ol className="mt-10 space-y-6">
-          {guide.cutover.steps.map((step, index) => (
-            <li key={step.title} className="flex gap-4">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                {index + 1}
-              </span>
-              <div className="pt-1">
-                <h3 className="font-semibold leading-6">{t(step.title)}</h3>
-                <p className="mt-1.5 leading-7 text-muted">{t(step.detail)}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <MidCta locale={locale} source={source} />
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
       <SwitchingConcierge locale={locale} />
 
-      <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {guide.coexist
-              ? t("switching.competitor.runTheDay", { competitor: guide.competitor })
-              : t("switching.competitor.readyToMove", { competitor: guide.competitor })}
-          </h2>
-          <p className="mt-2 max-w-xl text-muted">{t("switching.competitor.walkDemoFirst")}</p>
-        </div>
-        <div className="flex flex-col items-stretch gap-3 sm:items-end">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <form action={enterDemoAction} className="contents">
-              <FunnelTag source={guideSource(guide.slug)} />
-              <SubmitButton
-                pendingLabel={t("switching.competitor.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref(guideSource(guide.slug))}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
-          <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
-            {t("switching.competitor.otherGuides")}
-          </Link>
-        </div>
-      </section>
+      <ClosingCta
+        locale={locale}
+        source={source}
+        title={
+          guide.coexist
+            ? t("switching.competitor.runTheDay", { competitor: guide.competitor })
+            : t("switching.competitor.readyToMove", { competitor: guide.competitor })
+        }
+        body={t("switching.competitor.walkDemoFirst")}
+        backLabel={t("switching.competitor.otherGuides")}
+      />
 
-      {guide.sources.length > 0 && (
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-4xl px-6 py-8">
-            <h2 className="text-xs font-semibold tracking-widest text-muted uppercase">
-              {t("switching.competitor.sources")}
-            </h2>
-            <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted">
-              {guide.sources.map((source) => (
-                <li key={source.url}>
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer nofollow"
-                    className="hover:text-foreground hover:underline"
-                  >
-                    {source.label} ↗
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
+      {guide.sources.length > 0 && <SourcesFootnote locale={locale} sources={guide.sources} />}
     </main>
   );
 }
