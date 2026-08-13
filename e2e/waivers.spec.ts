@@ -305,6 +305,27 @@ test("a waiver signed under someone else's name is refused, and the link stays s
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
 
+  // The refusal renders *on the field it names* — wired as the control's own
+  // invalid state — and never as a page banner; the reader is carried to it
+  // (the redirect's #anchor for a JS-less browser, `FieldErrorFocus` with
+  // JavaScript, which also puts the cursor there).
+  await expect(page.getByLabel("Type your full name")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#waiver-error")).toHaveCount(0);
+  await expect(page.getByLabel("Type your full name")).toBeFocused();
+
+  // A *repeat* of the identical refusal must re-fire that focus move — the
+  // redirect carries a per-attempt nonce precisely so the second attempt
+  // remounts the focus effect instead of rendering an unchanged tree.
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").click();
+  await expect(page.getByLabel("Type your full name")).not.toBeFocused();
+  await page.getByLabel("Type your full name").fill("Someone Else Again");
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(
+    page.getByText("doesn’t match the name on this booking", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Type your full name")).toBeFocused();
+
   // The refusal redirects back to this same page and re-renders it from
   // scratch server-side — everything the diver had already filled in must
   // survive that round trip, not just the mismatched name.
