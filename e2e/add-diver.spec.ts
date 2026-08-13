@@ -16,7 +16,12 @@ async function openPrivateNotes(page: Page) {
     .filter({ hasText: /Private staff notes|Add a private note/ })
     .filter({ visible: true });
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
-  if (!isOpen) await details.locator("summary").click();
+  // `> summary`, matching `openIfClosed` in helpers.ts: roster cards nest
+  // disclosures inside disclosures, so a descendant summary is both ambiguous
+  // under strict mode and the wrong thing to click. This one stays page-scoped
+  // rather than moving to helpers.ts because the spec seats exactly one diver
+  // and reads the notes box without first locating a row.
+  if (!isOpen) await details.locator("> summary").click();
 }
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
@@ -75,7 +80,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await openPrivateNotes(page);
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
-  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  // No banner: adding a note lands in place now (`addInternalNoteAction`), so
+  // the note appearing in the list above the box *is* the confirmation — the
+  // page does not navigate, which is the whole point of the change.
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();

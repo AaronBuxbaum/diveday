@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/FilterChips";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
@@ -209,26 +210,23 @@ export default async function ReviewsPage({
 
       <ReviewSelectionProvider>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <nav aria-label={t("reviews.filterLabel")} className="flex flex-wrap items-center gap-2">
-            <Link
-              href={base}
-              className={buttonClass({
-                variant: onlyWaiting ? "secondary" : "primary",
-                size: "sm",
-              })}
-            >
-              {t("reviews.filter.all")}
-            </Link>
-            <Link
-              href={`${base}?filter=waiting`}
-              className={buttonClass({
-                variant: onlyWaiting ? "primary" : "secondary",
-                size: "sm",
-              })}
-            >
-              {t("reviews.filter.waiting")}
-            </Link>
-          </nav>
+          {/* A filter is a view of the list, not the page's action — these
+              used to be two buttons with the active one wearing primary
+              weight, a chip idiom of this page's own invention. The shared
+              FilterChips is the one vocabulary for narrowing a staff list
+              (the divers roster wears the same row). */}
+          <FilterChips
+            label={t("reviews.filterLabel")}
+            chips={[
+              { key: "all", href: base, active: !onlyWaiting, label: t("reviews.filter.all") },
+              {
+                key: "waiting",
+                href: `${base}?filter=waiting`,
+                active: onlyWaiting,
+                label: t("reviews.filter.waiting"),
+              },
+            ]}
+          />
           {/* Bulk publish, on exactly the same terms as the roster's bulk waiver
               send: shown only when this page actually holds something it can
               act on, so it is never a dead control. Unpublishing stays a

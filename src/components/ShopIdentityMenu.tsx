@@ -176,6 +176,11 @@ export function ShopIdentityMenu({
                 choices={languages}
                 setLocale={setLocaleAction}
                 onChosen={() => setOpen(false)}
+                // Stacked, like every other row in this menu — a wrapping row
+                // of language buttons inside a 11rem panel reads as a block of
+                // chips rather than as the menu's own list, and stops fitting
+                // at all past a handful of languages.
+                layout="list"
               />
             </div>
           </div>

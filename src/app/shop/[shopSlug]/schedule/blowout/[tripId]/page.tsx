@@ -7,6 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import type { PaymentStatus } from "@/db/schema";
@@ -223,82 +224,68 @@ export default async function BlowoutPage({
       {divers.length === 0 ? (
         <p className="mt-6 text-sm text-muted">{t("blowout.record.empty")}</p>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  {t("blowout.record.table.diver")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  {t("blowout.record.table.message")}
-                </th>
-                <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
-                  {t("blowout.record.table.money")}
-                </th>
-                <th scope="col" className="hidden px-4 py-3 font-semibold md:table-cell">
-                  {t("blowout.record.table.offers")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  {t("blowout.record.table.status")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {divers.map((diver) => {
-                const message = MESSAGE_BADGE[diver.messageStatus];
-                return (
-                  <tr key={diver.id}>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
-                      >
-                        {diver.fullName}
-                      </Link>
-                      {diver.messageStatus === "no_email" && diver.phone ? (
-                        <div className="text-xs text-muted">
-                          {t("blowout.record.callThem", { phone: diver.phone })}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={message.tone} size="sm">
-                        {t(message.key)}
+        <Table shellClassName="mt-6">
+          <THead>
+            <Th>{t("blowout.record.table.diver")}</Th>
+            <Th>{t("blowout.record.table.message")}</Th>
+            <Th hideBelow="sm">{t("blowout.record.table.money")}</Th>
+            <Th hideBelow="md">{t("blowout.record.table.offers")}</Th>
+            <Th>{t("blowout.record.table.status")}</Th>
+          </THead>
+          <TBody>
+            {divers.map((diver) => {
+              const message = MESSAGE_BADGE[diver.messageStatus];
+              return (
+                <tr key={diver.id}>
+                  <Td>
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {diver.fullName}
+                    </Link>
+                    {diver.messageStatus === "no_email" && diver.phone ? (
+                      <div className="text-xs text-muted">
+                        {t("blowout.record.callThem", { phone: diver.phone })}
+                      </div>
+                    ) : null}
+                  </Td>
+                  <Td>
+                    <Badge tone={message.tone} size="sm">
+                      {t(message.key)}
+                    </Badge>
+                  </Td>
+                  <Td muted hideBelow="sm">
+                    {diver.paymentStatus
+                      ? t(PAYMENT_KEY[diver.paymentStatus])
+                      : t("blowout.record.noPayment")}
+                  </Td>
+                  <Td muted hideBelow="md">
+                    {diver.offeredTrips.length === 0
+                      ? t("blowout.record.noOffers")
+                      : diver.offeredTrips
+                          .map(
+                            (offer) =>
+                              `${offer.title} — ${formatShortDate(offer.startsAt, locale, shop.timezone)}`,
+                          )
+                          .join(" · ")}
+                  </Td>
+                  <Td>
+                    {diver.rebooked ? (
+                      <Badge tone="success" size="sm">
+                        {t("blowout.record.rebookedBadge")}
                       </Badge>
-                    </td>
-                    <td className="hidden px-4 py-3 text-muted sm:table-cell">
-                      {diver.paymentStatus
-                        ? t(PAYMENT_KEY[diver.paymentStatus])
-                        : t("blowout.record.noPayment")}
-                    </td>
-                    <td className="hidden px-4 py-3 text-muted md:table-cell">
-                      {diver.offeredTrips.length === 0
-                        ? t("blowout.record.noOffers")
-                        : diver.offeredTrips
-                            .map(
-                              (offer) =>
-                                `${offer.title} — ${formatShortDate(offer.startsAt, locale, shop.timezone)}`,
-                            )
-                            .join(" · ")}
-                    </td>
-                    <td className="px-4 py-3">
-                      {diver.rebooked ? (
-                        <Badge tone="success" size="sm">
-                          {t("blowout.record.rebookedBadge")}
-                        </Badge>
-                      ) : (
-                        <Badge tone="warning" size="sm">
-                          {t("blowout.record.unresolvedBadge")}
-                        </Badge>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    ) : (
+                      <Badge tone="warning" size="sm">
+                        {t("blowout.record.unresolvedBadge")}
+                      </Badge>
+                    )}
+                  </Td>
+                </tr>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
 
       {retryable ? (

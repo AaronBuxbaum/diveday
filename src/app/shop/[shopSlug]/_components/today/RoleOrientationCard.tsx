@@ -21,6 +21,12 @@ export type RoleOrientationCardCopy = {
  * submit (no client JS needed) so it works even on a spotty dock connection,
  * and persists per account (`user_accounts.orientation_dismissed_at`) rather
  * than per browser, so it stays dismissed across the shop's shared devices.
+ *
+ * The full card renders only when Today has no work to show. On a working day
+ * the page's one idea is the queue, and a tinted orientation box above it
+ * pushed the work below the fold on a phone — so a busy Today gets
+ * `RoleOrientationLine` instead: the same pointer and the same dismissal in
+ * one quiet line the reader can take or leave without scrolling past a card.
  */
 export function RoleOrientationCard({
   tourHref,
@@ -65,5 +71,42 @@ export function RoleOrientationCard({
         </form>
       </div>
     </section>
+  );
+}
+
+/**
+ * The busy-day form of the orientation: one muted line — the pointer as a
+ * link, the same per-account dismissal — so a new hire still finds their
+ * bearings without the queue losing its place at the top of the page. Its
+ * intro is its own key (`orientation.lineHeading`, singular framing) because
+ * the card's "a few pointers" promises more than the one link this line keeps.
+ */
+export function RoleOrientationLine({
+  tourHref,
+  dismissAction,
+  copy,
+}: {
+  tourHref: string;
+  dismissAction: () => Promise<void>;
+  copy: Pick<RoleOrientationCardCopy, "heading" | "dismiss" | "tryThis">;
+}) {
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+      <p className="min-w-0">
+        <span aria-hidden="true">💡 </span>
+        {copy.heading}{" "}
+        <Link href={tourHref} className="font-medium text-primary hover:underline">
+          {copy.tryThis}
+        </Link>
+      </p>
+      <form action={dismissAction} className="shrink-0" data-scroll-reset="true">
+        <SubmitButton
+          pendingLabel={copy.dismiss}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {copy.dismiss}
+        </SubmitButton>
+      </form>
+    </div>
   );
 }
