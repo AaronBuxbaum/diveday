@@ -185,13 +185,17 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
-  claims exist at three densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
-  `/pricing`), `4` is the scannable overview (`/product`), and the full inventory is
-  `productCapabilityIndex` in `/product`'s `<details>`. `/product` used to render *all* of
-  `productFeatureGroups` (30 bullets) about a thousand pixels above a `<details>` holding 46 better
-  organized ones covering the same ground; a reader scrolled one wall of bullets to reach a longer
-  one. Pricing had already been cut back for exactly this reason. Before adding a list to a page,
-  check the other two densities: the answer is usually a mockup or a link, not a third copy.
+  claims exist at two densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
+  `/pricing`), and the full inventory is `productCapabilityIndex`, rendered flat on `/product` as a
+  spec sheet: group name on a left rail, terse lines in two columns, hairline rules, no boxes.
+  There were three until 2026-08-13. `/product` used to render *all* of `productFeatureGroups` (30
+  bullets) about a thousand pixels above a `<details>` holding 46 better organized ones covering
+  the same ground; a reader scrolled one wall of bullets to reach a longer one. Cutting the middle
+  density left the page announcing "the whole list, plainly" above a heading, two lines and a "The
+  full list" link in an otherwise empty band — so the disclosure went too, and the list a buyer
+  came for is simply on the page. Pricing had already been cut back for the same reason. Before
+  adding a list to a page, check the other density: the answer is usually a mockup or a link, not a
+  second copy.
 - **No unprovable superlatives** ("everything", "best", "complete") — scope claims to what ships:
   "from booking to head count".
 - Buttons are verbs; eyebrows are short; body copy earns each sentence. Read it aloud as a dive
