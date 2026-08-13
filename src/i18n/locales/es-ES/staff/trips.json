@@ -70,6 +70,15 @@
     "undo": "Deshacer",
     "undoing": "Deshaciendo…"
   },
+  "pulse": {
+    "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
+    "seatsFull": "Barco completo — las {capacity} plazas reservadas",
+    "aboard": "{count} a bordo",
+    "blocked": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}",
+    "needsInstructor": "Esta sesión de curso todavía no tiene instructor",
+    "overRatio": "Hay más buceadores reservados de los que la tripulación puede supervisar",
+    "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}"
+  },
   "detail": {
     "viewBookingPage": "Ver página de reserva",
     "copyBookingLink": "Copiar enlace",

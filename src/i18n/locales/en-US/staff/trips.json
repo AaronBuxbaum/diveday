@@ -70,6 +70,15 @@
     "undo": "Undo",
     "undoing": "Undoing…"
   },
+  "pulse": {
+    "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
+    "seatsFull": "Full boat — all {capacity} seats booked",
+    "aboard": "{count} aboard",
+    "blocked": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
+    "needsInstructor": "This course session has no instructor yet",
+    "overRatio": "More divers booked than the crew can supervise",
+    "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}"
+  },
   "detail": {
     "viewBookingPage": "View booking page",
     "copyBookingLink": "Copy link",

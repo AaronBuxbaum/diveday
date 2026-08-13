@@ -358,6 +358,7 @@
       "recap.spec.ts",
       "refunds.spec.ts",
       "trip-admission.spec.ts",
+      "trips.spec.ts",
       "waivers.spec.ts"
     ],
     "visual": [

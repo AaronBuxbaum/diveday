@@ -228,13 +228,31 @@ export async function getStaffingView(
  * overlapping the trip's own window — the other half of task 165's
  * cross-link, read from the trip's `CrewSection` rather than the staffing
  * page.
+ *
+ * `null` means the shop has never scheduled a shift at all, so the question
+ * does not apply — a different answer from "nobody is covered". Without the
+ * distinction, a shop that doesn't use the staffing feature saw a "Not on a
+ * shift" warning on every crew member of every trip, forever: the expected
+ * state formatted as an alert (design principle 9). The consumer renders no
+ * coverage state at all on `null`; the warning is reserved for shops whose
+ * own shift schedule says this sailing has a hole in it.
  */
 export async function crewShiftCoverage(
   db: AppDb,
   shopId: string,
   trip: { startsAt: Date; endsAt: Date },
   personIds: readonly string[],
-): Promise<Set<string>> {
+): Promise<Set<string> | null> {
+  // Existence probe, deliberately unscoped to the trip window: "does this
+  // shop schedule shifts" is a fact about the shop, and a week nobody entered
+  // shifts for at a shop that does schedule them is exactly when the warning
+  // is earned.
+  const usesShifts = await db
+    .select({ personId: staffShifts.personId })
+    .from(staffShifts)
+    .where(eq(staffShifts.shopId, shopId))
+    .limit(1);
+  if (usesShifts.length === 0) return null;
   if (personIds.length === 0) return new Set();
   const rows = await db
     .select({ personId: staffShifts.personId })
