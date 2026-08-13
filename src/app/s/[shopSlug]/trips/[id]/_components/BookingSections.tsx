@@ -54,9 +54,10 @@ export function WaitlistConfirmation({
   const t = useTranslations();
   return (
     // A wait-list join isn't the earned win the rationed accent is for
-    // (design/principles.md #3) — a seat isn't held yet, so this stays the
-    // calm everyday treatment; only a real confirmed booking gets the coral.
-    <section className="rise-in mt-10 rounded-lg border border-border bg-surface p-6">
+    // (design/principles.md #3) — a seat isn't held yet, so this sits on the
+    // same sunken material as the full-boat state it came from: a place in
+    // line, not a seat on the boat. Only a real confirmed booking gets coral.
+    <section className="rise-in mt-10 rounded-2xl bg-surface-sunken p-6">
       <h2 className="text-xl font-semibold text-balance">
         {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
@@ -74,9 +75,13 @@ export function WaitlistConfirmation({
 export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?: boolean }) {
   const t = useTranslations("booking");
   return (
-    <section className="mt-10 rounded-lg border border-border bg-surface p-6">
-      <h2 className="font-medium">{t("sailedHeading")}</h2>
-      <p className="mt-1 text-sm text-muted">
+    // Type only, no card: a sailed trip has nothing to sell and nothing to do
+    // here, so it must not wear the same box as a live booking form — a state
+    // with no action gets no frame (design/principles.md #10, remove until it
+    // breaks). The one link is the whole surface.
+    <section className="mt-12">
+      <h2 className="text-xl font-semibold text-muted">{t("sailedHeading")}</h2>
+      <p className="mt-1 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
@@ -106,9 +111,14 @@ export function CancelledTripNotice({
 }) {
   const t = useTranslations("booking");
   return (
-    <section className="mt-10 rounded-lg border border-border bg-surface p-6">
-      <h2 className="font-medium">{t("cancelledHeading")}</h2>
-      <p className="mt-1 text-sm text-muted">
+    // This is very nearly the whole page a saved link lands on, so it speaks
+    // in the masthead's own type rather than from inside a small gray box —
+    // and like the sailed state, a departure with nothing to do gets no frame.
+    <section className="mt-10">
+      <h2 className="text-2xl font-semibold tracking-tight text-balance">
+        {t("cancelledHeading")}
+      </h2>
+      <p className="mt-2 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
@@ -118,9 +128,7 @@ export function CancelledTripNotice({
         {t("cancelledBody")}
       </p>
       {contactEmail ? (
-        <p className="mt-2 text-sm text-muted">
-          {t("cancelledContact", { contact: contactEmail })}
-        </p>
+        <p className="mt-2 text-muted">{t("cancelledContact", { contact: contactEmail })}</p>
       ) : null}
     </section>
   );
@@ -129,9 +137,13 @@ export function CancelledTripNotice({
 export function ConditionsHoldSection() {
   const t = useTranslations("booking");
   return (
-    <section className="mt-10 rounded-lg border border-warning/40 bg-warning/10 p-6">
-      <h2 className="font-semibold">{t("holdHeading")}</h2>
-      <p className="mt-1 text-sm text-muted">{t("holdBody")}</p>
+    // Quiet type, not a second warning box: the conditions-hold banner under
+    // the masthead already carries the warning tone, and `holdBody` points
+    // back up at it. Two amber cards saying adjacent things was the page
+    // warning the diver twice about one fact (design/principles.md #9).
+    <section className="mt-10">
+      <h2 className="text-xl font-semibold">{t("holdHeading")}</h2>
+      <p className="mt-1 text-muted">{t("holdBody")}</p>
     </section>
   );
 }
@@ -159,9 +171,14 @@ export function TripFullSection({
     // (trips/[id]/page.tsx) targets it whether or not the trip is full
     // (task 12), so a full boat still lands the diver on a real next step
     // (the wait list) instead of nowhere.
-    <section id="book" className="mt-10 rounded-lg border border-border bg-surface p-6">
-      <h2 className="font-medium">{t("fullHeading")}</h2>
-      <p className="mt-1 text-sm text-muted">
+    //
+    // Sunken material, no border, on purpose: the open state is the page's one
+    // raised card, and a boat with no seats must not wear the same surface —
+    // full *feels* like less is on offer before a word is read. The wait list
+    // is still a real form, so it keeps the full form treatment inside.
+    <section id="book" className="mt-10 rounded-2xl bg-surface-sunken p-5 sm:p-6">
+      <h2 className="text-xl font-semibold">{t("fullHeading")}</h2>
+      <p className="mt-1 text-muted">
         {t("fullBody", { capacity: trip.capacity })}{" "}
         <Link
           href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
@@ -228,6 +245,7 @@ export function BookSpotSection({
   contactPhone,
   rentalItems,
   rentalPricing,
+  terms,
 }: {
   trip: Trip;
   tripRef: TripRef;
@@ -255,6 +273,12 @@ export function BookSpotSection({
   /** The shop's rental catalog and price list — a gear step only renders when both offer something priced. */
   rentalItems: string[];
   rentalPricing: RentalPricing;
+  /**
+   * The money fine print (`TripTerms`), server-rendered by the page and
+   * placed here beside the button it qualifies — deposit split, cancellation
+   * window, course-fee breakdown. Null when the trip has no terms to state.
+   */
+  terms?: React.ReactNode;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -296,9 +320,15 @@ export function BookSpotSection({
       ? tRoot("fallback.full")
       : tRoot("fallback.spotsLeft", { count: capacityLabelValue.remaining });
   return (
-    <section id="book" className="mt-10">
+    // The page's one raised card: the booking form is what this page exists
+    // for, so it is the only composition that gets border + shadow elevation.
+    // Every other state and every supporting section sits flatter than this.
+    <section
+      id="book"
+      className="mt-10 scroll-mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
+    >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">{t("heading")}</h2>
+        <h2 className="text-xl font-semibold">{t("heading")}</h2>
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       </div>
       {payAtBooking && perDiverPriceCents ? (
@@ -414,6 +444,11 @@ export function BookSpotSection({
           {/* The scariest hop on hotel wifi (task 19) — said once, up front,
               rather than only after the tap commits the diver to it. */}
           {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
+          {/* The money fine print, right under the button it qualifies —
+              deposit split, cancellation window, course-fee breakdown. It
+              lived in the masthead before, a whole page away from the tap it
+              was written for. */}
+          {terms}
           {/* The refusal used to render above the whole form — above the party
               fields, the gear fields, and the promo box. On a phone that is
               several thumb-scrolls from the button the diver just tapped, so a

@@ -51,7 +51,7 @@ function PaymentSection({
     // divides by *that* currency's minor unit — a ¥9,000 deposit is not ¥90.
     const money = (cents: number) => formatMoneyCents(cents, payment.currency, locale);
     return (
-      <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
+      <div className="mt-4 rounded-xl border border-success/40 bg-success/10 p-4 text-left">
         <h3 className="font-semibold text-success">
           {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
           {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✅
@@ -68,7 +68,7 @@ function PaymentSection({
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+    <div className="mt-4 rounded-xl border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-semibold">
         {payCancelled ? t("booking.paymentStillOpen") : t("booking.paymentOneThingLeft")}
       </h3>
@@ -203,7 +203,7 @@ export function BookingConfirmation({
         locale={locale}
       />
 
-      <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+      <div className="mt-4 rounded-xl border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (
           <>
             <h3 className="font-semibold">
