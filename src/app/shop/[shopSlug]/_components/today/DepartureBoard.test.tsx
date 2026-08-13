@@ -32,8 +32,6 @@ const COPY: DepartureBoardCopy = {
   everyoneAboard: "Everyone’s aboard.",
   clearToBoard: "Everyone booked on this trip is clear to board.",
   sailingToday: "Sailing today",
-  sailingTodaySubtitle:
-    "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
 };
 
 const availableStaff = [

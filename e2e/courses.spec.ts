@@ -26,7 +26,6 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   const courseLink = page.getByRole("link", { name: "Discover Scuba Diving" });
   await expect(courseLink).toHaveAttribute("href", /\/courses\//);
   await expect(courseLink).toHaveAttribute("href", "/s/blue-mantis/courses/discover-scuba-diving");
-  await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Share with a buddy" })).toBeVisible();
   const calendar = await page.request.get(`${new URL(page.url()).pathname}/calendar`);
@@ -48,17 +47,6 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(
     page.getByRole("status").filter({ hasText: "The crew will see this when they pack" }),
   ).toBeVisible();
-});
-
-test("a regular fun-dive trip does not show the taster-session gift nudge", async ({ page }) => {
-  await page.goto("/s/blue-mantis");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
-    .click();
-  await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}/);
-  await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
 });
 
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({
@@ -138,13 +126,18 @@ test.describe("staff", () => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await expect(page.getByText("$249")).toBeVisible();
 
-    // Back on the roster, the eye toggle hides the course from scheduling lists.
-    // No banner and no navigation — the icon and the "Hidden" badge update in
-    // place, which is also what keeps the click from jumping the page.
+    // Back on the roster, the worded Hide toggle takes the course off
+    // scheduling lists. No banner and no navigation — the toggle's own word
+    // and the "Hidden" badge update in place, which is also what keeps the
+    // click from jumping the page.
     await page.goto("/shop/blue-mantis/courses");
-    await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveAttribute(
+    // The per-row Preview icon is gone: the roster's one door to the diver's
+    // catalog is the header action, and a single course's live page is named
+    // on its own editor ("Live at …").
+    await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "View public page" })).toHaveAttribute(
       "href",
-      "/s/blue-mantis/courses/discover-scuba-diving",
+      "/s/blue-mantis/courses",
     );
     await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
     const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });

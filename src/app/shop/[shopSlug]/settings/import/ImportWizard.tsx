@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
   type ImportField,
   type ImportIssueCode,
@@ -275,12 +276,15 @@ export function ImportWizard({
               { label: copy.stats.waivers, value: prepared.totals.withWaiver },
               { label: copy.stats.pastVisits, value: prepared.totals.withVisit },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-xl bg-surface-sunken px-4 py-3">
-                <dt className="text-xs text-muted">{stat.label}</dt>
-                <dd className="text-2xl font-semibold tabular-nums text-foreground">
-                  {stat.value}
-                </dd>
-              </div>
+              // `inset`: these tiles sit inside the wizard's own card, so they
+              // take the sunken tile rather than stacking card on card.
+              <ShopStat
+                key={stat.label}
+                variant="inset"
+                definition
+                label={stat.label}
+                value={stat.value}
+              />
             ))}
           </dl>
 
@@ -290,109 +294,109 @@ export function ImportWizard({
               public trip page uses over its swipeable briefings — say the
               gesture rather than redesign the table for a screen it isn't for. */}
           <p className="mt-4 text-sm font-medium text-muted sm:hidden">{copy.previewSwipeHint}</p>
-          <div className="mt-2 overflow-x-auto rounded-xl border border-border sm:mt-4">
-            <table className="w-full min-w-[36rem] text-left text-sm">
-              <thead className="bg-surface-sunken text-xs text-muted">
-                <tr>
-                  <th className="px-3 py-2 font-medium">{copy.table.rowNumber}</th>
-                  <th className="px-3 py-2 font-medium">{copy.table.name}</th>
-                  <th className="px-3 py-2 font-medium">{copy.table.email}</th>
-                  <th className="px-3 py-2 font-medium">{copy.table.card}</th>
-                  <th className="px-3 py-2 font-medium">{copy.table.waiver}</th>
-                  <th className="px-3 py-2 font-medium">{copy.table.notes}</th>
+          {/* `flush` inside the wizard's card, with a thin border kept as the
+              boundary of the sideways-scroll region — but no card-on-card
+              shadow or second bg-surface. */}
+          <Table
+            flush
+            minWidth="36rem"
+            shellClassName="mt-2 rounded-xl border border-border sm:mt-4"
+          >
+            <THead>
+              <Th numeric>{copy.table.rowNumber}</Th>
+              <Th>{copy.table.name}</Th>
+              <Th>{copy.table.email}</Th>
+              <Th>{copy.table.card}</Th>
+              <Th>{copy.table.waiver}</Th>
+              <Th>{copy.table.notes}</Th>
+            </THead>
+            <TBody>
+              {previewRows.map((row) => (
+                <tr key={row.rowNumber} className={row.action === "skip" ? "opacity-60" : ""}>
+                  <Td numeric muted>
+                    {row.rowNumber}
+                  </Td>
+                  <Td>
+                    {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
+                    {row.action === "skip" ? (
+                      <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
+                        {copy.table.skippedBadge}
+                      </span>
+                    ) : null}
+                    {row.action === "merge" ? (
+                      <span className="ml-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
+                        {fill(copy.table.mergedBadge, { row: row.mergedIntoRow ?? "" })}
+                      </span>
+                    ) : null}
+                  </Td>
+                  <Td muted>{row.email ?? copy.table.emptyValue}</Td>
+                  {/* One row can carry a level card and a specialty card (a
+                      certification export lists one card per row, so usually
+                      it's one or the other). Both belong here — a specialty
+                      showing as "—" would read as "nothing came across". */}
+                  <Td muted>
+                    {row.cert || row.specialties.length > 0 ? (
+                      <span className="flex flex-col gap-0.5">
+                        {row.cert ? (
+                          <span className="whitespace-nowrap">
+                            {fill(copy.table.certLine, {
+                              level: row.cert.level.replaceAll("_", " "),
+                              status:
+                                row.cert.status === "verified"
+                                  ? copy.table.certImported
+                                  : copy.table.certForReview,
+                            })}
+                          </span>
+                        ) : null}
+                        {row.specialties.map((card) => (
+                          <span key={card.specialty} className="whitespace-nowrap">
+                            {fill(copy.table.specialtyLine, {
+                              specialty: card.specialty,
+                              status:
+                                card.status === "verified"
+                                  ? copy.table.certImported
+                                  : copy.table.certForReview,
+                            })}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      copy.table.emptyValue
+                    )}
+                  </Td>
+                  <Td muted>
+                    {row.waiver ? (
+                      <span className="whitespace-nowrap">{copy.table.waiverAcceptedImported}</span>
+                    ) : (
+                      copy.table.emptyValue
+                    )}
+                  </Td>
+                  <Td>
+                    {row.issues.length === 0 ? (
+                      <span className="text-muted">{copy.table.emptyValue}</span>
+                    ) : (
+                      <ul className="space-y-0.5">
+                        {/* The issue list is built once per row by prepareContactImport and
+                            never reordered or filtered afterward, so the index is a stable
+                            identity — there's no other natural key, since two issues can
+                            legitimately share the same code and params (e.g. "agency
+                            unrecognized" from both a cert and a specialty column). */}
+                        {row.issues.map((issue, index) => (
+                          <li
+                            // biome-ignore lint/suspicious/noArrayIndexKey: static, unreordered list
+                            key={`${issue.code}-${index}`}
+                            className={`text-xs ${issueTone[issue.level]}`}
+                          >
+                            {fill(copy.issues[issue.code], issue.params ?? {})}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {previewRows.map((row) => (
-                  <tr
-                    key={row.rowNumber}
-                    className={`border-t border-border align-top ${row.action === "skip" ? "opacity-60" : ""}`}
-                  >
-                    <td className="px-3 py-2 tabular-nums text-muted">{row.rowNumber}</td>
-                    <td className="px-3 py-2">
-                      {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
-                      {row.action === "skip" ? (
-                        <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
-                          {copy.table.skippedBadge}
-                        </span>
-                      ) : null}
-                      {row.action === "merge" ? (
-                        <span className="ml-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
-                          {fill(copy.table.mergedBadge, { row: row.mergedIntoRow ?? "" })}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2 text-muted">{row.email ?? copy.table.emptyValue}</td>
-                    {/* One row can carry a level card and a specialty card (a
-                        certification export lists one card per row, so usually
-                        it's one or the other). Both belong here — a specialty
-                        showing as "—" would read as "nothing came across". */}
-                    <td className="px-3 py-2 text-muted">
-                      {row.cert || row.specialties.length > 0 ? (
-                        <span className="flex flex-col gap-0.5">
-                          {row.cert ? (
-                            <span className="whitespace-nowrap">
-                              {fill(copy.table.certLine, {
-                                level: row.cert.level.replaceAll("_", " "),
-                                status:
-                                  row.cert.status === "verified"
-                                    ? copy.table.certImported
-                                    : copy.table.certForReview,
-                              })}
-                            </span>
-                          ) : null}
-                          {row.specialties.map((card) => (
-                            <span key={card.specialty} className="whitespace-nowrap">
-                              {fill(copy.table.specialtyLine, {
-                                specialty: card.specialty,
-                                status:
-                                  card.status === "verified"
-                                    ? copy.table.certImported
-                                    : copy.table.certForReview,
-                              })}
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        copy.table.emptyValue
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-muted">
-                      {row.waiver ? (
-                        <span className="whitespace-nowrap">
-                          {copy.table.waiverAcceptedImported}
-                        </span>
-                      ) : (
-                        copy.table.emptyValue
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {row.issues.length === 0 ? (
-                        <span className="text-muted">{copy.table.emptyValue}</span>
-                      ) : (
-                        <ul className="space-y-0.5">
-                          {/* The issue list is built once per row by prepareContactImport and
-                              never reordered or filtered afterward, so the index is a stable
-                              identity — there's no other natural key, since two issues can
-                              legitimately share the same code and params (e.g. "agency
-                              unrecognized" from both a cert and a specialty column). */}
-                          {row.issues.map((issue, index) => (
-                            <li
-                              // biome-ignore lint/suspicious/noArrayIndexKey: static, unreordered list
-                              key={`${issue.code}-${index}`}
-                              className={`text-xs ${issueTone[issue.level]}`}
-                            >
-                              {fill(copy.issues[issue.code], issue.params ?? {})}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </TBody>
+          </Table>
           {hiddenRows > 0 ? (
             <p className="mt-2 text-xs text-muted">
               {fill(copy.hiddenRowsNotice, {

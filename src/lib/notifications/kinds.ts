@@ -228,6 +228,38 @@ const tripConditionsHoldSchema = z.object({
   publishedAt: z.date(),
 });
 
+/**
+ * "This one did not fill, so it is off." The message a diver gets when a
+ * departure they booked is cancelled by the minimum-head-count sweep
+ * (src/lib/minimum-seats.ts).
+ *
+ * Deliberately its own kind rather than a reuse of `trip_blowout`. A blow-out
+ * is the weather deciding on the morning; this is a deadline the diver was
+ * *told about before they paid*, and the message has to say so — "we needed 4
+ * and had 2 by the moment we said we would decide" reads as a promise kept,
+ * where the blow-out's wording would read as a shop that simply cancelled.
+ *
+ * Keyed on the trip, so a sweep that somehow ran twice sends once.
+ */
+const tripMinimumNotMetSchema = z.object({
+  kind: z.literal("trip_minimum_not_met"),
+  tripId: z.uuid(),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** What the departure needed, and what it had when the call was made. */
+  minimumBookings: z.number().int().min(1).max(60),
+  bookedCount: z.number().int().min(0).max(60),
+  /** Back to the shop's own schedule, to find another day. */
+  scheduleUrl: z.url().max(2_000),
+});
+
 // The weather blow-out cascade message (docs ADR 20260804-blowout-cascade):
 // what happened, the diver's money story as a code (the template picks the
 // words), and the alternatives this diver actually qualifies for as links to
@@ -445,6 +477,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   tripReminder24hSchema,
   tripRecapSchema,
   tripConditionsHoldSchema,
+  tripMinimumNotMetSchema,
   tripBlowoutSchema,
   welcomeSchema,
   emailVerificationSchema,
@@ -483,6 +516,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `trip-recap/${notification.bookingId}`;
     case "trip_conditions_hold":
       return `trip-conditions-hold/${notification.tripId}/${notification.publishedAt.toISOString()}/${notification.to}`;
+    // One per booking on the departure that did not fill — the sweep cancels a
+    // trip exactly once, so the booking alone keys it.
+    case "trip_minimum_not_met":
+      return `trip-minimum-not-met/${notification.bookingId}`;
     // One blow-out message per cascade row, ever — the row id is unique per
     // (blow-out, booking), so a resumed cascade or a racing double-tap
     // converges on the same send (docs ADR 20260804-blowout-cascade).
