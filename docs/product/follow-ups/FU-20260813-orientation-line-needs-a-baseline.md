@@ -16,7 +16,7 @@ its layout (the dismiss button wrapping under the sentence on a phone, say) woul
 
 ## Why it isn't already done
 
-Reaching the state needs a **real** (non-demo) shop whose owner has not dismissed orientation *and*
+Reaching this state requires a **real** (non-demo) shop whose owner has not dismissed orientation *and*
 which has work to show. The demo shop suppresses orientation entirely, and the two fresh-shop
 captures deliberately have no bookings, so no state in the current visual suite renders the line.
 Constructing it means onboarding a fresh shop, scheduling a departure, and seating at least one
