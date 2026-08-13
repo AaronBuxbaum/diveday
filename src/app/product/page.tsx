@@ -17,7 +17,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
-import { productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
+import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -429,6 +429,17 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               </dd>
             </div>
           </dl>
+          {/* "What is this going to cost me" is one of the three questions a
+              burned owner arrives with, and this band — the only one on the
+              page about money — answered the other party's half of it and left
+              ours to the nav. A link, not the figure: the price has exactly one
+              source (`earlyAccessPrice`, H-12) and one page that argues it. */}
+          <Link
+            href="/pricing"
+            className={buttonClass({ variant: "link", className: "mt-8 -ml-4 text-left" })}
+          >
+            {t("marketing.product.pricingLink")}
+          </Link>
         </div>
       </section>
 
@@ -500,6 +511,16 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </div>
           ))}
         </dl>
+        {/* Safe-to-leave, said where the objection actually peaks. It is one
+            third of the positioning spine and the named counter to "you're new
+            and unproven" (docs/product/marketing.md), and until now `/product`
+            only implied it — one line inside a 44-entry reference list. The
+            terms come from the shared `fullShopExport` claim rather than a
+            second wording of it, so this page and the pricing FAQ can never
+            drift apart. */}
+        <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
+          {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
+        </p>
       </section>
 
       <section className="border-t border-border bg-surface">
