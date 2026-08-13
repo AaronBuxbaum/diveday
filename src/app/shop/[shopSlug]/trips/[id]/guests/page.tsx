@@ -202,6 +202,13 @@ async function TripGuestsBody({
     notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
       ? bid
       : undefined;
+  // A saved contact moves from the card's open half into its reference panel,
+  // so the row that just saved opens on arrival — otherwise the form the
+  // staffer was typing in appears to have vanished. Both outcomes count: an
+  // incomplete pair (a name with no phone) still saved something and still
+  // needs its field back.
+  const savedContactBookingId =
+    notice === "contact-saved" || notice === "contact-incomplete" ? bid : undefined;
   const cancelled = trip.status === "cancelled";
   // One resolution, routed to the form it answers. The roster's per-diver
   // outcomes stay on the page banner — they carry the undo control, and the
@@ -343,6 +350,7 @@ async function TripGuestsBody({
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
         saveEmergencyContactAction={saveRosterEmergencyContactAction.bind(null, shopSlug, tripId)}
+        savedContactBookingId={savedContactBookingId}
         depthUnit={shop.depthUnit}
         tripDate={tripDateIso}
       />

@@ -762,6 +762,32 @@ async function openReefTrip(page: Page) {
 }
 
 /**
+ * Wait until this page is *controlled* by the offline service worker, before
+ * navigating into a shell surface that photographs it.
+ *
+ * `OfflineShellVersionBanner` renders "A newer version of DiveDay is ready"
+ * off a `controllerchange` event, which fires exactly once per context: when
+ * the worker `primeOfflineManifestShell()` just registered activates and
+ * claims its clients. Whether that lands before or after `capture()` is a
+ * straight race, and it decided a baseline — `offline-manifest-list-dark`
+ * carried the banner on `fc0950b` and not on the run after it, on a commit
+ * that touched neither the shell nor the worker.
+ *
+ * Waiting here rather than on the shell page is the whole point: once the
+ * controller is in place *before* the shell loads, the banner's listener
+ * mounts with nothing left to hear, so the surface is photographed in the
+ * steady state a crew member actually meets. Masking the banner would have
+ * hidden a real control instead.
+ *
+ * Only for captures that reach the shell through a primed manifest page. The
+ * empty/discarded states deliberately suppress priming, so no worker ever
+ * claims them and there is no race to cut.
+ */
+async function settleOfflineShellWorker(page: Page) {
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
+}
+
+/**
  * One diver's record, found by search rather than by scrolling: the demo shop
  * has enough divers to page the roster, so nobody is reliably on the first
  * page.
@@ -2014,6 +2040,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await settleOfflineShellWorker(page);
         await page.goto("/offline-manifest");
         await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
         await capture(page, "offline-manifest-list", scheme);
@@ -2035,6 +2062,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await settleOfflineShellWorker(page);
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
         // The roster is what proves the record was read back and decrypted —
