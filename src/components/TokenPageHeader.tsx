@@ -32,8 +32,12 @@ export function TokenPageHeader({
   const eyebrows = typeof eyebrow === "string" ? [eyebrow] : eyebrow;
   return (
     <header>
-      {eyebrows.map((line) => (
-        <p key={line} className="text-sm font-medium tracking-widest text-primary uppercase">
+      {eyebrows.map((line, index) => (
+        // Index keys, deliberately: the list is static per render, and keying
+        // by text would collide if a caller ever passed two identical lines
+        // (a shop named the same as a page's purpose line).
+        // biome-ignore lint/suspicious/noArrayIndexKey: static list, text can repeat
+        <p key={index} className="text-sm font-medium tracking-widest text-primary uppercase">
           {line}
         </p>
       ))}
