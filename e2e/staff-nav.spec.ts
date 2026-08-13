@@ -1,20 +1,20 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
- * The header nav, the command palette, and the keyboard shortcuts all read one
+ * The header nav, the phone dock, and the command palette all read one
  * destination registry (src/lib/staff-destinations.ts). This spec covers what
- * the nav owes that registry: five tabs and no "More" menu — every header item
- * is a place a shop lives in *during a dive day*, everything demoted keeps its
- * palette row or a contextual door (Reports from Orders' header, Dive sites and
- * Waivers from Settings' cards, Settings itself from the shop-identity menu) —
- * and a role-gated destination is absent rather than disabled (ADR
+ * the nav owes that registry: five primary tabs plus one "More" door carrying
+ * everything else — the header menu from `lg` up, the bottom sheet on the
+ * dock's sixth slot below it (ADR 20260813-more-is-the-shops-other-door) —
+ * with exactly one row anywhere reading as current, and a role-gated
+ * destination absent rather than disabled (ADR
  * 20260724-role-gated-surfaces-hide-not-explain).
  */
 
 test.describe("owner", () => {
   signedInAsOwner();
 
-  test("the header is five tabs, no More menu, and the demoted doors hold", async ({ page }) => {
+  test("the header is five tabs plus a More menu holding the two groups", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
     // Scoped to the header: the primary destinations render twice in the DOM
@@ -30,50 +30,81 @@ test.describe("owner", () => {
       "Orders",
     ]);
 
-    // The "More" menu is gone — a header menu named "More" was the IA
-    // admitting it hadn't decided, and with every destination a tab, a
-    // palette row, or a contextual door, there is nothing left for it to hold.
-    await expect(page.locator("header summary").filter({ hasText: "More" })).toHaveCount(0);
+    // The More menu holds every other *place*, in two named groups — the
+    // operational cadence, then configuration, with Settings closing the menu.
+    const more = page.locator("header summary").filter({ hasText: "More" });
+    await more.click();
+    const menu = page.locator("header details[open]");
+    await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
+      "Close-out",
+      "Staffing",
+      "Courses",
+      "Dive sites",
+      "Waivers",
+      "Reviews",
+      "Reports",
+    ]);
+    await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
+      "Team",
+      "Promo codes",
+      "Calendar subscription",
+      "Settings",
+    ]);
 
-    // The demoted destinations keep real doors on the surfaces that own them.
-    await nav.getByRole("link", { name: "Orders" }).click();
-    await expect(page).toHaveURL(/\/orders$/);
-    await expect(page.getByRole("link", { name: "Monthly report" })).toBeVisible();
+    // A row navigates and the menu closes behind it.
+    await menu.getByRole("link", { name: "Close-out" }).click();
+    await expect(page).toHaveURL(/\/close-out$/);
+    await expect(page.locator("header details[open]")).toHaveCount(0);
+    // …and the door that leads here is what reads as current: the More
+    // button, not a borrowed Today tab — in color and in the tree, so a
+    // screen reader isn't left with five non-current tabs and nothing else.
+    await expect(more).toHaveClass(/text-primary/);
+    await expect(more).toHaveAttribute("aria-current", "true");
+    await more.click();
+    await expect(
+      page.locator("header details[open]").getByRole("link", { name: "Close-out" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 
-  test("Settings lives behind the shop's own name, and marks itself current", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-    // Not a tab any more: the one destination a shop configures rather than
-    // works was taking a sixth of the phone dock.
-    const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
-    await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
-
-    await page.locator("header [data-identity-menu]").click();
-    const settings = page.locator("header").getByRole("link", { name: "Settings" });
-    await expect(settings).toBeVisible();
-    await settings.click();
-    await expect(page).toHaveURL(/\/settings$/);
-    // Door rows: the heading is the link, with no separate CTA label.
-    const settingsMain = page.getByRole("main");
-    await expect(settingsMain.getByRole("link", { name: "Dive sites", exact: true })).toBeVisible();
-    await expect(
-      settingsMain.getByRole("link", { name: "Waiver template", exact: true }),
-    ).toBeVisible();
-
-    // And it is the "you are here" — including for the pages reached from
-    // Settings' own cards, which is what `alsoMatch` is for.
-    await page.locator("header [data-identity-menu]").click();
-    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveAttribute(
+  test("Settings lives in Set up, and only the most specific row lights", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/settings");
+    const more = page.locator("header summary").filter({ hasText: "More" });
+    await more.click();
+    const menu = page.locator("header details[open]");
+    await expect(menu.getByRole("link", { name: "Settings" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    await settingsMain.getByRole("link", { name: "Dive sites", exact: true }).click();
-    await expect(page).toHaveURL(/\/dive-sites/);
+
+    // The identity menu is about the reader's own session now — language and
+    // sign out — so Settings' one door is this menu (principle 8: never the
+    // same destination in two menus).
+    await page.keyboard.press("Escape");
     await page.locator("header [data-identity-menu]").click();
-    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveAttribute(
+    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    // A page reached *from* Settings lights its own row, and Settings' row
+    // goes quiet — most specific claim wins, exactly one current row.
+    await page.getByRole("main").getByRole("link", { name: "Team", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/settings\/team$/);
+    await more.click();
+    const reopened = page.locator("header details[open]");
+    await expect(reopened.getByRole("link", { name: "Team" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    await expect(reopened.getByRole("link", { name: "Settings" })).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  test("the demoted doors on owning surfaces still hold", async ({ page }) => {
+    // The monthly report keeps its door on the Orders header — the same
+    // money, summed — alongside its own More row.
+    await page.goto("/shop/blue-mantis/orders");
+    await expect(page.getByRole("link", { name: "Monthly report" })).toBeVisible();
   });
 });
 
@@ -86,21 +117,35 @@ test.describe("captain", () => {
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // Ungated daily surfaces are all still tabs.
     await expect(nav.getByRole("link", { name: "Orders" })).toBeVisible();
-    // Settings is owner/manager work, so for a captain it is simply not
-    // offered — not in the tabs, and not behind the identity menu either.
-    await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
-    await page.locator("header [data-identity-menu]").click();
-    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Promo codes" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+
+    // The More menu shows a captain only what their role can open: the
+    // ungated cadence rows, and their own calendar feed — never a disabled
+    // Waivers, Reports, Team, Promo codes, or Settings row.
+    await page.locator("header summary").filter({ hasText: "More" }).click();
+    const menu = page.locator("header details[open]");
+    await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
+      "Close-out",
+      "Staffing",
+      "Courses",
+      "Dive sites",
+      "Reviews",
+    ]);
+    // "Set up" collapses to the one personal row — a visible heading over a
+    // single row would be noise, but the group keeps its accessible name.
+    await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
+      "Calendar subscription",
+    ]);
+    for (const gated of ["Waivers", "Reports", "Team", "Promo codes", "Settings"]) {
+      await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
+    }
   });
 });
 
 test.describe("phone dock", () => {
   signedInAsOwner();
   // The one breakpoint story this spec exists to pin: below `lg` the primary
-  // destinations live in a fixed bottom tab bar (the phone dock), and the
-  // header keeps to identity, search, and sign-out — no wrapped rows of tabs.
+  // destinations live in a fixed bottom tab bar (the phone dock) whose sixth
+  // slot is the More sheet, and the header keeps to identity and search.
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("the primary destinations are a bottom tab bar, not header rows", async ({ page }) => {
@@ -131,11 +176,53 @@ test.describe("phone dock", () => {
     await expect(dock.getByRole("link", { name: "Board" })).toHaveAttribute("aria-current", "page");
   });
 
-  test("Settings is still one tap away on a phone, from the identity menu", async ({ page }) => {
+  test("the More sheet puts the whole shop two thumb-taps away", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    await page.locator("header [data-identity-menu]").click();
-    await page.locator("header").getByRole("link", { name: "Settings" }).click();
+
+    // Tap one: the dock's sixth slot.
+    const moreButton = page.locator("[data-dock-more]");
+    await expect(moreButton).toBeVisible();
+    await moreButton.click();
+
+    // The sheet rises from the dock with the same two groups the desktop
+    // menu holds, rendered by the same components.
+    const sheet = page.locator("nav").getByRole("list", { name: "Run the shop" });
+    await expect(sheet.getByRole("link", { name: "Close-out" })).toBeVisible();
+
+    // The sheet follows its trigger in the DOM, so the keyboard walks into
+    // what it just disclosed: Tab from the More button lands on the first row.
+    await page.keyboard.press("Tab");
+    await expect(sheet.getByRole("link", { name: "Close-out" })).toBeFocused();
+
+    // Every row is a real touch target (dock test: >= 44px).
+    const rowBox = await sheet.getByRole("link", { name: "Close-out" }).boundingBox();
+    if (!rowBox) throw new Error("sheet row has no box");
+    expect(rowBox.height).toBeGreaterThanOrEqual(44);
+
+    // Tap two: Settings, at the end of Set up.
+    await page
+      .locator("nav")
+      .getByRole("list", { name: "Set up" })
+      .getByRole("link", { name: "Settings" })
+      .click();
     await expect(page).toHaveURL(/\/settings$/);
+    // The sheet closed with the navigation, and the More slot is what reads
+    // as current for a page that lives behind it — in color and in the tree.
+    await expect(page.getByRole("list", { name: "Set up" })).toHaveCount(0);
+    await expect(moreButton).toHaveClass(/text-primary/);
+    await expect(moreButton).toHaveAttribute("aria-current", "true");
+  });
+
+  test("the sheet dismisses on an outside tap without navigating", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("[data-dock-more]").click();
+    await expect(page.getByRole("list", { name: "Run the shop" })).toBeVisible();
+    // A tap on the dimmed page above the sheet just closes it — no second
+    // tap owed. Coordinates, because what a finger actually hits there is
+    // the scrim, not a control.
+    await page.mouse.click(195, 120);
+    await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   });
 });
 

@@ -8,8 +8,10 @@ import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
@@ -83,6 +85,28 @@ function firstInvalidWaiverField(
   return undefined;
 }
 
+/**
+ * Where a refused submit sends the diver back to: the same page, the refused
+ * field's name, a nonce, and — when the refusal names a control — that
+ * control's own `#anchor`. The anchor is what makes the refusal reachable
+ * with no JavaScript at all: the browser lands the redirect on the named
+ * control, where the refusal's words are rendered (a name-mismatch is the one
+ * refusal a JS-less browser can actually reach — native `required` validation
+ * blocks the empty-field cases before the server ever sees them). The nonce
+ * (`at`) tells one attempt from the next so a diver who repeats the identical
+ * mistake still gets the scroll-and-ring a remounted `FieldErrorFocus`
+ * provides; only the signature-card refusals consume it, and `FlashParams`
+ * strips it with the other flash params after render.
+ */
+function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined) {
+  const nonce = crypto.randomUUID().slice(0, 8);
+  const anchor =
+    field && WAIVER_FIELD_ERROR[field].anchor !== "medical-questionnaire"
+      ? `#${WAIVER_FIELD_ERROR[field].anchor}`
+      : "";
+  return `/waivers/${token}?error=invalid${field ? `&field=${field}` : ""}&at=${nonce}${anchor}`;
+}
+
 /** Copy and same-page anchor for each field a fallback submit can name as missing. */
 const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey; anchor: string }> =
   {
@@ -128,6 +152,28 @@ function readMedicalAnswers(
  */
 const labelTextBase = "text-(length:--text-base) leading-6";
 
+/**
+ * The step markers that make "do this" read differently from "read this": the
+ * release above the form is an unboxed document, and each thing the diver
+ * actually acts on — health check, emergency contact, signature — announces
+ * itself as a numbered step. The number is decorative (`aria-hidden`); the
+ * heading text is what assistive tech reads, so the published questionnaire
+ * title passes through unreworded.
+ */
+function StepHeading({ number, children }: { number: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        aria-hidden="true"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary tabular-nums"
+      >
+        {number}
+      </span>
+      <h2 className="text-lg font-semibold">{children}</h2>
+    </div>
+  );
+}
+
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
 // paints without waiting on the request and the data streams into it —
@@ -140,15 +186,36 @@ export default async function WaiverPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string; field?: string; sent?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    field?: string;
+    sent?: string;
+    at?: string;
+  }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, field, sent } = await searchParams;
+  // `at` is the refusal's own nonce, minted by the actions below on every
+  // refused submit. It exists so a *repeat* of the identical refusal (same
+  // wrong name twice) still remounts `FieldErrorFocus` and re-runs the
+  // scroll-and-ring — without it the second attempt renders an unchanged tree
+  // and the effect never fires again (see FieldErrorFocus's own docstring).
+  const { saved, error, field, sent, at } = await searchParams;
+  // `Object.hasOwn`, not `in` — `field` is attacker-supplied and `in` walks
+  // the prototype chain (`?field=toString` would mint a fieldError whose
+  // anchor is a built-in function).
   const fieldError =
-    error === "invalid" && field && field in WAIVER_FIELD_ERROR
+    error === "invalid" && field && Object.hasOwn(WAIVER_FIELD_ERROR, field)
       ? WAIVER_FIELD_ERROR[field as WaiverInvalidField]
       : undefined;
+  // A refusal that names a control in the signature card renders *beside that
+  // control* (Field `error` / the line under the checkbox), never as a page
+  // banner — the rule in docs/design/forms-and-controls.md. The banner below
+  // keeps only what has no single control to sit with: the medical section,
+  // the generic incomplete, and the link-level refusals.
+  const signatureCardError =
+    fieldError && fieldError.anchor !== "medical-questionnaire" ? fieldError : undefined;
   const db = await getDb();
   // A dead or expired link resolves no shop, so there is no
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
@@ -325,7 +392,7 @@ export default async function WaiverPage({
     .limit(1)
     .then((rows) => rows[0] ?? null);
   const errorText =
-    error === "invalid"
+    error === "invalid" && !signatureCardError
       ? t(fieldError?.textKey ?? "waiver.incomplete")
       : error === "unavailable"
         ? t("waiver.linkInactive")
@@ -349,7 +416,7 @@ export default async function WaiverPage({
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
         answers,
       );
-      redirect(`/waivers/${token}?error=invalid${invalidField ? `&field=${invalidField}` : ""}`);
+      redirect(refusedSubmitPath(token, invalidField));
     }
     const db = await getDb();
     // A form the diver themselves just submitted through their own bearer
@@ -400,7 +467,7 @@ export default async function WaiverPage({
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
         answers,
       );
-      redirect(`/waivers/${token}?error=invalid${invalidField ? `&field=${invalidField}` : ""}`);
+      redirect(refusedSubmitPath(token, invalidField));
     }
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     // Same first-hand signal as the draft save above (docs ADR
@@ -447,14 +514,15 @@ export default async function WaiverPage({
         });
       }
       if (outcome.reason === "name_mismatch") {
-        redirect(`/waivers/${token}?error=invalid&field=signerNameMismatch`);
+        redirect(refusedSubmitPath(token, "signerNameMismatch"));
       }
       if (outcome.reason === "invalid_medical") {
-        redirect(`/waivers/${token}?error=invalid&field=medical`);
+        redirect(refusedSubmitPath(token, "medical"));
       }
-      redirect(
-        `/waivers/${token}?error=${outcome.reason === "invalid_signature" ? "invalid" : "unavailable"}`,
-      );
+      if (outcome.reason === "invalid_signature") {
+        redirect(refusedSubmitPath(token, undefined));
+      }
+      redirect(`/waivers/${token}?error=unavailable`);
     }
     await trackEvent({ name: "waiver_signed" });
     // A diver who just signed goes straight to "what's left" instead of a
@@ -473,12 +541,8 @@ export default async function WaiverPage({
 
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <FlashParams params={["saved", "error", "field"]} />
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-          {t("waiver.beforeDockTitle")}
-        </h1>
+      <FlashParams params={["saved", "error", "field", "at"]} />
+      <TokenPageHeader eyebrow={shopName} title={t("waiver.beforeDockTitle")}>
         <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
         {tripHeader ? (
           <p className="mt-3 text-base font-medium text-foreground">
@@ -494,21 +558,15 @@ export default async function WaiverPage({
             })}
           </p>
         ) : null}
-        <p className="mt-2 text-sm text-muted">
-          {t("waiver.linkExpiresAt", {
-            date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
-          })}
-        </p>
-      </header>
+      </TokenPageHeader>
 
-      {saved ? (
-        <p
-          role="status"
-          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
-        >
-          {t("waiver.progressSaved")}
-        </p>
-      ) : null}
+      {/* One flash surface, never a stack. A refused submit and a saved draft
+          arrive on different redirects, so at most one has something to say —
+          and the refusal wins if both codes ever land on one URL. A refusal
+          that names a control in the signature card is not here at all: its
+          words render beside that control and `FieldErrorFocus` below carries
+          the reader to them. The English-only note is not a flash either; it
+          sits with the document it is about, below. */}
       {errorText ? (
         <p
           id="waiver-error"
@@ -522,21 +580,48 @@ export default async function WaiverPage({
             </a>
           ) : null}
         </p>
-      ) : null}
-
-      {locale !== DEFAULT_DIVER_LOCALE ? (
-        <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {t("waiver.englishOnlyNotice")}
+      ) : saved ? (
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          {t("waiver.progressSaved")}
         </p>
       ) : null}
+      {/* The refusal redirect lands the reader back at the top of a long page;
+          this scrolls them to the refused control, focuses it, and rings it
+          briefly — and the control's own error text (rendered beside it, per
+          docs/design/forms-and-controls.md) is waiting there to say why. Keyed
+          on the submit's nonce so an identical repeat refusal remounts and
+          re-fires. Only for refusals that name a real control: "medical" names
+          a whole section, and focusing eleven fieldsets at once helps nobody —
+          the banner's jump link handles that one. */}
+      {signatureCardError ? (
+        <FieldErrorFocus
+          key={`${signatureCardError.anchor}:${at ?? ""}`}
+          field={signatureCardError.anchor}
+        />
+      ) : null}
 
-      <section className="mt-8 rounded-lg border border-border bg-surface p-5">
-        <p className="text-sm font-medium text-muted">
+      {/* The release reads as a document, not a widget: no card, no box — a
+          quiet titled rule above, the text set at reading size, a closing rule
+          below. The form after it is where the boxes are, so "read this" and
+          "do this" stop looking like the same component. */}
+      <section className="mt-10">
+        <p className="border-b border-border pb-3 text-sm font-medium text-muted">
           {t("waiver.templateVersion", {
             title: record.templateTitle,
             version: record.templateVersion,
           })}
         </p>
+        {locale !== DEFAULT_DIVER_LOCALE ? (
+          // Attached to the document it is about — the reader meets the "this
+          // text is English-only" warning at the top of the English text, not
+          // as a third bar stacked under the page title.
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+            {t("waiver.englishOnlyNotice")}
+          </p>
+        ) : null}
         {/* `wrap-anywhere`, not just `whitespace-pre-wrap`. A shop's waiver text
             is pasted in, usually out of a PDF or a word processor, and real
             releases carry runs a line break can't fall inside: a signature rule
@@ -548,13 +633,13 @@ export default async function WaiverPage({
             empty space beside the page (2026-08-06 review). */}
         <div
           data-waiver-template-body
-          className="mt-3 wrap-anywhere whitespace-pre-wrap text-base leading-7"
+          className="mt-4 wrap-anywhere whitespace-pre-wrap border-b border-border pb-8 text-base leading-7"
         >
           {record.templateBody}
         </div>
       </section>
 
-      <form action={completeAction} className="mt-8 flex flex-col gap-6">
+      <form action={completeAction} className="mt-8 flex flex-col gap-10">
         <section id="medical-questionnaire">
           <QuestionnaireProgress
             total={
@@ -562,7 +647,7 @@ export default async function WaiverPage({
             }
             labelTemplate={t("waiver.questionsAnswered")}
           >
-            <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
+            <StepHeading number={1}>{questionnaire.title}</StepHeading>
             {/* The published form's directions paragraph used to sit here. It
                 asked the diver to memorise which question numbers carry an
                 asterisk and then apply the rule to their own answers, which is
@@ -588,8 +673,11 @@ export default async function WaiverPage({
           </QuestionnaireProgress>
         </section>
 
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
+        {/* No card here: the heading, helper line, and the two fields carry
+            the section by themselves (principle 10 — type and space before
+            boxes). The one card left in the form is the signature block. */}
+        <section>
+          <StepHeading number={2}>{t("waiver.emergencyContact")}</StepHeading>
           {/* Editable whether or not something is on file. It used to go
               read-only the moment a contact existed, on the reasoning that a
               correction was staff work — but this is the one screen a diver
@@ -598,7 +686,7 @@ export default async function WaiverPage({
               never lets a blank overwrite a stored value, so re-showing the
               fields can only ever improve what the crew has. */}
           {emergencyContact?.name && emergencyContact?.phone ? (
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-2 text-sm text-muted">
               {t("waiver.emergencyOnFile", {
                 name: emergencyContact.name,
                 phone: emergencyContact.phone,
@@ -606,7 +694,7 @@ export default async function WaiverPage({
               {t("waiver.emergencyContactChangeHint")}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
+            <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
           )}
           <FieldGrid columns={2} className="mt-4">
             <Field label={t("waiver.contactName")}>
@@ -632,14 +720,30 @@ export default async function WaiverPage({
           </FieldGrid>
         </section>
 
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">{t("waiver.signature")}</h2>
+        {/* The signature block is the one card in the form — the formal act at
+            the end of a paper release gets the same visual weight here. The
+            link's own expiry sits in its fine print, next to "Save and finish
+            later", because "can I come back to this?" is asked at the moment of
+            signing, not while reading the page title. */}
+        <section className="rounded-xl border border-border bg-surface p-5">
+          <StepHeading number={3}>{t("waiver.signature")}</StepHeading>
           <FieldGrid columns={1} className="mt-4">
             <Field
               label={t("waiver.typeFullName")}
               description={
                 signerOnFile
                   ? t("waiver.typeFullNameHint", { name: signerOnFile.fullName })
+                  : undefined
+              }
+              // The refusal renders on the field it names — `Field` puts the
+              // words under the control and wires `aria-invalid` +
+              // `aria-describedby` for us — so the reader `FieldErrorFocus`
+              // scrolls here finds the reason waiting beside the ringed box,
+              // not a ring with its explanation stranded at the top of the
+              // page.
+              error={
+                signatureCardError?.anchor === "signerName"
+                  ? t(signatureCardError.textKey)
                   : undefined
               }
             >
@@ -651,14 +755,6 @@ export default async function WaiverPage({
                 minLength={2}
                 maxLength={120}
                 defaultValue={record.draftSignerName ?? ""}
-                // The refusal at the top of this page *names* this box, and
-                // offers a link down to it. That link is a sighted
-                // affordance; these two attributes are the same fact said to
-                // assistive tech, so the box announces itself as the invalid
-                // one and reads its own reason. No new copy — it points at
-                // the message already rendered (`#waiver-error`).
-                aria-invalid={fieldError?.anchor === "signerName" ? "true" : undefined}
-                aria-describedby={fieldError?.anchor === "signerName" ? "waiver-error" : undefined}
                 className={controlClass}
               />
             </Field>
@@ -671,41 +767,59 @@ export default async function WaiverPage({
               value="on"
               required
               defaultChecked={record.draftAcknowledged}
-              aria-invalid={fieldError?.anchor === "acknowledged" ? "true" : undefined}
-              aria-describedby={fieldError?.anchor === "acknowledged" ? "waiver-error" : undefined}
+              // The checkbox isn't a `Field`, so its refusal wiring is by
+              // hand: the same aria pair `Field`'s `error` prop provides,
+              // pointing at the message rendered just below.
+              aria-invalid={signatureCardError?.anchor === "acknowledged" ? "true" : undefined}
+              aria-describedby={
+                signatureCardError?.anchor === "acknowledged" ? "acknowledged-error" : undefined
+              }
               className="size-4 accent-primary"
             />
             <span>{t("waiver.agreementCheckbox")}</span>
           </label>
-          <p className="mt-3 text-sm text-muted">{t("waiver.signatureNote")}</p>
+          {signatureCardError?.anchor === "acknowledged" ? (
+            <FormStatus id="acknowledged-error" className="mt-2">
+              {t(signatureCardError.textKey)}
+            </FormStatus>
+          ) : null}
+          {/* The actions live in the signature block — signing is what this
+              card is, so its button belongs on it (principle 10: actions ride
+              on their objects), and "Save and finish later" sits beside the
+              expiry fine print that explains why you'd want it. */}
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="submit"
+              formAction={saveDraftAction}
+              // Drafts intentionally accept partial answers — the new
+              // `required` on signerName/acknowledged (and the pre-existing
+              // one on each medical radio) would otherwise let the browser
+              // block a legitimate "save what I have so far" submit.
+              formNoValidate
+              className={buttonClass({
+                variant: "secondary",
+                className: `text-(color:--color-foreground) ${labelTextBase}`,
+              })}
+            >
+              {t("waiver.saveForLater")}
+            </button>
+            <SubmitButton
+              pendingLabel={t("waiver.signing")}
+              className={buttonClass({
+                size: "lg",
+                className: `disabled:opacity-70 ${labelTextBase}`,
+              })}
+            >
+              {t("waiver.signButton")}
+            </SubmitButton>
+          </div>
+          <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
+          <p className="mt-1 text-sm text-muted">
+            {t("waiver.linkExpiresAt", {
+              date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
+            })}
+          </p>
         </section>
-
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="submit"
-            formAction={saveDraftAction}
-            // Drafts intentionally accept partial answers — the new
-            // `required` on signerName/acknowledged (and the pre-existing
-            // one on each medical radio) would otherwise let the browser
-            // block a legitimate "save what I have so far" submit.
-            formNoValidate
-            className={buttonClass({
-              variant: "secondary",
-              className: `text-(color:--color-foreground) ${labelTextBase}`,
-            })}
-          >
-            {t("waiver.saveForLater")}
-          </button>
-          <SubmitButton
-            pendingLabel={t("waiver.signing")}
-            className={buttonClass({
-              size: "lg",
-              className: `disabled:opacity-70 ${labelTextBase}`,
-            })}
-          >
-            {t("waiver.signButton")}
-          </SubmitButton>
-        </div>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
         {shop.contactEmail || shop.contactPhone

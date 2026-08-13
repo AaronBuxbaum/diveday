@@ -53,32 +53,32 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * Where a destination sits in the header.
  *
  * - `primary` — the tabs always on screen (Today, Check-in, Divers, Board,
- *   Orders). Every one is a place a shop lives in *during a dive day*;
- *   everything else earns its reach through the palette or a contextual door
- *   on the surface that owns it.
- * - `daily`/`setup` — inside "More". Both are empty today: the "More" menu
- *   was the IA admitting it hadn't decided, and the header no longer renders
- *   it when there is nothing to hold. The groups stay in the type so a future
- *   destination can earn a menu back deliberately rather than by default.
+ *   Orders). Every one is a place a shop lives in *during a dive day*.
+ * - `daily`/`setup` — inside "More": the header menu from `lg` up
+ *   (ShopNavLinks) and the bottom sheet rising from the phone dock's sixth
+ *   slot below it (StaffTabBar). `daily` ("Run the shop") is the operational
+ *   cadence a shop returns to on its own rhythm — the evening close-out, the
+ *   week's staffing, the course roster, the site library, the waiver log,
+ *   reviews, the monthly report. `setup` ("Set up") is what a shop configures
+ *   rather than works — team, promo codes, a staffer's own calendar feed, and
+ *   Settings itself, always last. The groups were empty for a while (the old
+ *   "More" menu was the IA admitting it hadn't decided, and it was removed
+ *   over nothing); they came back *decided* (ADR
+ *   20260813-more-is-the-shops-other-door): fourteen destinations reachable
+ *   only by ⌘K was a desktop-keyboard answer to a phone-thumb question.
  *
  * `null` means the destination is real and reachable, but not in the header —
- * it earns its place in the palette instead of one more tab (design
- * principle 8, fewer controls).
+ * it earns its place in the palette instead of one more row (design
+ * principle 8, fewer controls). What stays `null` now is only what is not a
+ * *place*: an action (`addBooking`), a way into a page (`walkIn`), a view of
+ * one (`blockers`).
  *
- * **The dock holds five tabs, and six is the ceiling.** The phone dock renders
- * every `primary` destination at ~65px per tab at 390px; a seventh pushes
- * labels below legibility, and there is no squeezing room. Settings was the
- * sixth and has been demoted — it is the one configure-rarely destination on a
- * bar the other five are worked from all day, and its door is now the header's
- * shop-identity menu, which is on screen at every width beside the shop's own
- * name. Promoting a sixth destination to `primary` therefore means one of two
- * deliberate moves, never a growing bar:
- *
- * 1. Demote another back to the palette/contextual-door story above.
- * 2. If two rare-path destinations genuinely both need tabs, the last slot
- *    becomes a "More" **bottom sheet rising from the dock** (never the old
- *    header dropdown), fed by the `daily`/`setup` groups — which is what those
- *    groups are held in reserve for.
+ * **The dock holds five destination tabs; the sixth slot is More, and that is
+ * the ceiling.** The phone dock renders every `primary` destination at ~65px
+ * per tab at 390px; the sixth slot is spent — permanently — on the "More"
+ * sheet that carries the `daily`/`setup` groups, so a seventh place never
+ * means a growing bar. Promoting a destination to `primary` means demoting
+ * another into one of these groups, never squeezing.
  */
 export type StaffNavGroup = "primary" | "daily" | "setup";
 
@@ -130,10 +130,10 @@ export type StaffDestination = {
   readonly badge?: StaffDestinationBadge;
   /**
    * Further path prefixes that should also read as "you are here" — detail
-   * views and demoted destinations living outside this one's own subtree.
-   * With the header cut to six tabs, every demoted page claims the tab that
-   * owns its door, so no staff surface is left with nothing reading as
-   * current (the promos lesson, generalised).
+   * views living outside this one's own subtree (the board claims `/trips`).
+   * Only for pages with no destination of their own: a page that *has* a nav
+   * row lights that row, and `currentStaffNavDestinationId` guarantees the
+   * two never light together.
    */
   readonly alsoMatch?: readonly string[];
 };
@@ -145,15 +145,14 @@ export type StaffDestination = {
 export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // Carries the blocked-diver badge because Today is now where blocked divers
   // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view).
+  // No claim on `/close-out` any more: Close-out has its own "Run the shop"
+  // row, so its page lights More rather than borrowing Today's tab.
   {
     id: "today",
     suffix: "",
     navGroup: "primary",
     inPalette: true,
     badge: "blockers",
-    // Close-out is Today's evening mirror (ADR 20260804-day-closeout); its
-    // door is Today's handoff card, so its page lights Today.
-    alsoMatch: ["/close-out"],
   },
   { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
   // Not a page any more: Not ready is Today's by-departure *view*, selected by
@@ -179,9 +178,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     suffix: "/schedule/board",
     navGroup: "primary",
     inPalette: true,
-    // Trips are the board's detail views; staffing is crew coverage over the
-    // same departure stream, reached from the board's world.
-    alsoMatch: ["/trips", "/staffing"],
+    // Trips are the board's detail views. (Staffing used to be claimed here
+    // too — it has its own "Run the shop" row now, and lights that instead.)
+    alsoMatch: ["/trips"],
   },
   // The global "seat a diver" door. It is an action rather than a place, so it
   // stays out of the header — the board hosts its own button and the palette
@@ -197,79 +196,81 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // shop owns the ritual, and the recorded act carries their name, so the
   // accountability is in the trail rather than a gate. It leads the "Run the
   // shop" group because it is the one destination there that is part of every
-  // single working day.
-  // Palette-reached, plus a contextual door where the ritual actually arises:
-  // Today's evening handoff card links here once the last boat is in.
-  { id: "closeOut", suffix: "/close-out", navGroup: null, inPalette: true },
-  { id: "staffing", suffix: "/staffing", navGroup: null, inPalette: true },
-  { id: "diveSites", suffix: "/dive-sites", navGroup: null, inPalette: true },
-  { id: "courses", suffix: "/courses", navGroup: null, inPalette: true },
-  // Its pending-work signal lives on Today's queue now (a `reviews_pending`
+  // single working day — its contextual door (Today's evening handoff card,
+  // once the last boat is in) is the fast path, this row is the door that is
+  // *always* there.
+  { id: "closeOut", suffix: "/close-out", navGroup: "daily", inPalette: true },
+  { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
+  { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
+  { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },
+  // The waiver template and signature log — owner/manager work, and part of
+  // running the shop rather than setting it up: the log is where a signature
+  // question gets answered on a working day.
+  {
+    id: "waivers",
+    suffix: "/waivers",
+    navGroup: "daily",
+    inPalette: true,
+    gate: "waivers",
+  },
+  // Its pending-work signal lives on Today's queue (a `reviews_pending`
   // row), the same pattern as stuck payments — a queue's badge belongs on the
   // page that ranks work, not on a nav row.
-  { id: "reviews", suffix: "/reviews", navGroup: null, inPalette: true },
-  // Money the shop reads daily — a primary tab. The monthly report keeps a
-  // door on this page's header (and its palette row) rather than a tab of its
-  // own; it is the same money, summed.
+  { id: "reviews", suffix: "/reviews", navGroup: "daily", inPalette: true },
+  // Money the shop reads daily — a primary tab. The monthly report keeps its
+  // door on this page's header; the report's own row is in "Run the shop".
   {
     id: "orders",
     suffix: "/orders",
     navGroup: "primary",
     inPalette: true,
-    // The monthly report is this page's money, summed — its door is on the
-    // Orders header, so its page lights Orders.
-    alsoMatch: ["/reports"],
   },
-  {
-    id: "waivers",
-    suffix: "/waivers",
-    navGroup: null,
-    inPalette: true,
-    gate: "waivers",
-  },
-  { id: "reports", suffix: "/reports", navGroup: null, inPalette: true, gate: "reports" },
-  // Promo codes and Team are reachable from Settings' own Money and Your-shop
-  // cards, and a destination that lives in two menus at once is the duplicate
-  // control principle 8 forbids — the header used to carry both *and* Settings,
-  // so "where do I add a colleague?" had two right answers. They keep their
-  // palette rows and their presence here (the registry is the only place a
-  // destination may be declared); the header just stops being one of the two
-  // doors. Team is also literally a Settings sub-page.
-  { id: "promoCodes", suffix: "/promos", navGroup: null, inPalette: true, gate: "reports" },
-  { id: "team", suffix: "/settings/team", navGroup: null, inPalette: true, gate: "team" },
+  // The monthly read of the money Orders tracks daily — the last beat of the
+  // "Run the shop" cadence, not configuration, so it files under `daily`
+  // rather than `setup`. Its page lights its own row now instead of borrowing
+  // the Orders tab.
+  { id: "reports", suffix: "/reports", navGroup: "daily", inPalette: true, gate: "reports" },
+  // Team and Promo codes still have doors on Settings' own cards — but a card
+  // on a page you must already be on is a cross-link, not a menu presence,
+  // and these two lead "Set up" because they are the configuration acts a
+  // shop actually repeats (a new hire, a season's discount).
+  { id: "team", suffix: "/settings/team", navGroup: "setup", inPalette: true, gate: "team" },
+  { id: "promoCodes", suffix: "/promos", navGroup: "setup", inPalette: true, gate: "reports" },
   // The one page under `/settings` that is *not* shop configuration: a
   // staffer's own calendar subscription, a personal feed of their own shifts,
   // filed there by URL only. It needs its own entry precisely because Settings
-  // above it is now gated — without a door of its own it would vanish from the
+  // above it is gated — without a door of its own it would vanish from the
   // nav and the palette for every role that most wants it, and be reachable
-  // only by typing the URL. Ungated, and palette-only: it is a once-a-year
-  // errand, not a tab.
+  // only by typing the URL. Ungated, so for daily crew it is what keeps the
+  // "Set up" group from ever rendering empty.
   {
     id: "calendarFeed",
     suffix: "/settings/calendar",
-    navGroup: null,
+    navGroup: "setup",
     inPalette: true,
   },
   // Last, always: Settings is where a shop goes when nothing else on the menu
-  // was the answer, and it is the one destination the whole "Set up" group
-  // now holds.
+  // was the answer, so it closes the "Set up" group — a group with that name
+  // ending anywhere else would be a joke missing its punchline.
   //
-  // Not a tab. It is the only thing a shop configures rather than works, and
-  // it was taking a sixth of a phone dock that the other five are tapped from
-  // all day with wet hands. Its permanent door is the header's shop-identity
-  // menu (`ShopIdentityMenu`) — the disclosure already hanging off the shop's
-  // own name, on screen at every width, which is exactly where "this shop's
-  // setup" belongs. Plus the palette, like every other demoted destination.
+  // Still not a tab: it is the one destination a shop configures rather than
+  // works, and it does not get a sixth of a phone dock the other five are
+  // tapped from all day with wet hands. It lived behind the header's
+  // shop-identity menu for a while; that door closed when the More groups
+  // arrived (ADR 20260813-more-is-the-shops-other-door) — one destination in
+  // two menus is the duplicate control principle 8 forbids, and the identity
+  // menu is about *this reader and this session* (language, sign out), not a
+  // place in the shop.
   //
-  // `alsoMatch` still earns its keep: the identity menu reads it to mark
-  // itself current, so Promo codes, Dive sites and Waivers — all reached
-  // *from* Settings' cards — light the one door that leads back to them.
+  // No `alsoMatch` any more: Promo codes, Dive sites and Waivers each light
+  // their own row now, and `/settings/*` sub-pages light this one by prefix —
+  // except Team and the calendar feed, whose own rows win by being the more
+  // specific match (`currentStaffNavDestinationId`).
   {
     id: "settings",
     suffix: "/settings",
-    navGroup: null,
+    navGroup: "setup",
     inPalette: true,
-    alsoMatch: ["/promos", "/dive-sites", "/waivers"],
     gate: "settings",
   },
 ];
@@ -334,4 +335,58 @@ export function staffPaletteDestinations(
   gates: StaffDestinationGates,
 ): readonly StaffDestination[] {
   return visibleStaffDestinations(gates).filter((destination) => destination.inPalette);
+}
+
+/**
+ * How many characters of `pathname` the prefix `href` claims — 0 when it
+ * doesn't. The shop root (Today's own href) claims only an exact match; any
+ * other prefix claims its whole subtree, so a detail page lights the
+ * destination that owns it.
+ */
+function claimedLength(pathname: string, href: string, root: string): number {
+  if (href === root) return pathname === root ? href.length : 0;
+  return pathname === href || pathname.startsWith(`${href}/`) ? href.length : 0;
+}
+
+/**
+ * The longest claim this destination has on `pathname` — its own path or an
+ * `alsoMatch` prefix — or 0 when the page isn't its.
+ */
+function destinationClaim(pathname: string, root: string, destination: StaffDestination): number {
+  let longest = claimedLength(pathname, `${root}${destination.suffix}`, root);
+  for (const prefix of destination.alsoMatch ?? []) {
+    longest = Math.max(longest, claimedLength(pathname, `${root}${prefix}`, root));
+  }
+  return longest;
+}
+
+/**
+ * Which nav destination is "you are here" for this page — exactly one, or
+ * none. Most specific claim wins, so `/settings/team` lights Team rather than
+ * both Team *and* the Settings row above it; ties fall to registry order
+ * (the shop root is Today, never the by-departure view). Only destinations
+ * that actually render somewhere in the nav (`navGroup` set) compete: the
+ * walk-in counter is a way into Check-in, and its more specific path must not
+ * steal the Check-in tab's light.
+ *
+ * Every nav consumer — the header tabs, the phone dock, the More menu and
+ * sheet — answers "which row is current?" through this one function; three of
+ * them used to answer it independently, and only one knew about `alsoMatch`.
+ */
+export function currentStaffNavDestinationId(
+  pathname: string,
+  root: string,
+  gates: StaffDestinationGates,
+): StaffDestinationId | null {
+  let currentId: StaffDestinationId | null = null;
+  let longest = 0;
+  for (const destination of visibleStaffDestinations(gates)) {
+    if (destination.navGroup === null) continue;
+    const claim = destinationClaim(pathname, root, destination);
+    if (claim > longest) {
+      currentId = destination.id;
+      longest = claim;
+    }
+  }
+  return currentId;
 }

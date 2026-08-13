@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Notice } from "@/components/account/Notice";
-import { passwordConfirmErrorText } from "@/components/account/passwordConfirmError";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import {
+  passwordConfirmErrorField,
+  passwordConfirmErrorText,
+} from "@/components/account/passwordConfirmError";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { checkAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
@@ -47,61 +50,78 @@ export default async function ResetPasswordPage({
   const check = await checkAccountToken(db, { token, purpose: "password_reset" });
   if (!check) {
     return (
-      <Notice
+      <EntryDone
+        glyph="⏳"
         title={t("account.resetPassword.unavailableTitle")}
         text={t("account.resetPassword.unavailableText")}
-        backToSignIn={t("account.common.backToSignIn")}
+        action={
+          <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            {t("account.common.backToSignIn")}
+          </Link>
+        }
       />
     );
   }
 
+  // The refusal lands on the box that earned it (docs/design/forms-and-
+  // controls.md), routed by the shared typed map beside the message resolver.
+  const errorText = error ? passwordConfirmErrorText(t, error) : undefined;
+  const errorField = error ? passwordConfirmErrorField(error) : undefined;
+
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
-      <div className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("account.resetPassword.title")}
-        </h1>
-        <p className="mt-1 text-sm text-muted">{t("account.resetPassword.description")}</p>
-        {error ? (
-          <ShopNotice tone="danger" role="alert" className="mt-4">
-            {passwordConfirmErrorText(t, error)}
-          </ShopNotice>
-        ) : null}
-        <form action={submitPasswordReset.bind(null, token)} className="mt-5 flex flex-col gap-4">
-          <FieldGrid columns={1} className="gap-y-4">
-            <Field label={t("account.resetPassword.newPassword")}>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-                maxLength={MAX_PASSWORD_LENGTH}
-                autoComplete="new-password"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("account.resetPassword.confirmPassword")}>
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-                maxLength={MAX_PASSWORD_LENGTH}
-                autoComplete="new-password"
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <SubmitButton pendingLabel={t("account.common.saving")} className={buttonClass()}>
-            {t("account.resetPassword.submit")}
-          </SubmitButton>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted">
-          <Link href="/sign-in" className="text-primary font-medium hover:underline">
+    <EntryShell
+      wordmark
+      title={t("account.resetPassword.title")}
+      description={t("account.resetPassword.description")}
+      footer={
+        <p>
+          <Link href="/sign-in" className="font-medium text-primary hover:underline">
             {t("account.common.backToSignIn")}
           </Link>
         </p>
-      </div>
-    </main>
+      }
+    >
+      {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
+      <form action={submitPasswordReset.bind(null, token)} className="flex flex-col gap-4">
+        <FieldGrid columns={1} className="gap-y-4">
+          <Field
+            label={t("account.resetPassword.newPassword")}
+            error={errorField === "password" ? errorText : undefined}
+          >
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className={controlClass}
+            />
+          </Field>
+          <Field
+            label={t("account.resetPassword.confirmPassword")}
+            error={errorField === "confirm" ? errorText : undefined}
+          >
+            <input
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <SubmitButton pendingLabel={t("account.common.saving")} className={buttonClass()}>
+          {t("account.resetPassword.submit")}
+        </SubmitButton>
+        {errorField === "form" ? (
+          <FormStatus tone="danger" className="justify-center">
+            {errorText}
+          </FormStatus>
+        ) : null}
+      </form>
+    </EntryShell>
   );
 }
