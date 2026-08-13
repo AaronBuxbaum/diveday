@@ -56,8 +56,10 @@ test.describe("owner", () => {
     await expect(page).toHaveURL(/\/close-out$/);
     await expect(page.locator("header details[open]")).toHaveCount(0);
     // …and the door that leads here is what reads as current: the More
-    // button, not a borrowed Today tab.
+    // button, not a borrowed Today tab — in color and in the tree, so a
+    // screen reader isn't left with five non-current tabs and nothing else.
     await expect(more).toHaveClass(/text-primary/);
+    await expect(more).toHaveAttribute("aria-current", "true");
     await more.click();
     await expect(
       page.locator("header details[open]").getByRole("link", { name: "Close-out" }),
@@ -187,6 +189,11 @@ test.describe("phone dock", () => {
     const sheet = page.locator("nav").getByRole("list", { name: "Run the shop" });
     await expect(sheet.getByRole("link", { name: "Close-out" })).toBeVisible();
 
+    // The sheet follows its trigger in the DOM, so the keyboard walks into
+    // what it just disclosed: Tab from the More button lands on the first row.
+    await page.keyboard.press("Tab");
+    await expect(sheet.getByRole("link", { name: "Close-out" })).toBeFocused();
+
     // Every row is a real touch target (dock test: >= 44px).
     const rowBox = await sheet.getByRole("link", { name: "Close-out" }).boundingBox();
     if (!rowBox) throw new Error("sheet row has no box");
@@ -200,9 +207,10 @@ test.describe("phone dock", () => {
       .click();
     await expect(page).toHaveURL(/\/settings$/);
     // The sheet closed with the navigation, and the More slot is what reads
-    // as current for a page that lives behind it.
+    // as current for a page that lives behind it — in color and in the tree.
     await expect(page.getByRole("list", { name: "Set up" })).toHaveCount(0);
     await expect(moreButton).toHaveClass(/text-primary/);
+    await expect(moreButton).toHaveAttribute("aria-current", "true");
   });
 
   test("the sheet dismisses on an outside tap without navigating", async ({ page }) => {

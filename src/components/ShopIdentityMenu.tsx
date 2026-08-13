@@ -1,11 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { useMenuDismissal } from "@/components/useMenuDismissal";
 
 export type ShopIdentityMenuCopy = {
   language: string;
@@ -62,40 +62,11 @@ export function ShopIdentityMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // A disclosed menu dismisses like any other: Escape hands focus back to
-  // the trigger, a tap anywhere else simply closes it. Listeners exist only
-  // while it is open (same pattern as the board's row menus).
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && rootRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
-  // Close on any (re)navigation, so an Activity-preserved re-show can never
-  // resurface an open session menu (same defensive pattern as InlineConfirm).
-  const pathname = usePathname();
-  const pathnameEffectRan = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the menu, which is the point.
-  useEffect(() => {
-    if (!pathnameEffectRan.current) {
-      pathnameEffectRan.current = true;
-      return;
-    }
-    setOpen(false);
-  }, [pathname]);
+  // A disclosed menu dismisses like any other — outside tap, Escape with
+  // focus back on the trigger, close on navigation — via the one shared
+  // contract every staff menu uses (useMenuDismissal).
+  const close = useCallback(() => setOpen(false), []);
+  useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
 
   return (
     // `flex`, so the trigger below is a flex item and shrinks when the header

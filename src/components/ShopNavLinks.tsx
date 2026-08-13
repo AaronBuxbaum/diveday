@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
   currentStaffNavDestinationId,
   STAFF_DESTINATION_BADGE_TONES,
@@ -248,7 +249,8 @@ export function ShopNavLinks({
   // elsewhere used to leave it stuck open (task 80, UX persona 11 "Kai").
   // The native `toggle` event is the source of truth for open state (it also
   // fires for a keyboard/assistive-tech toggle, not just this component's own
-  // clicks), so outside-click/Escape handlers only attach while genuinely open.
+  // clicks), so the shared dismissal contract only attaches while genuinely
+  // open.
   useEffect(() => {
     const details = detailsRef.current;
     if (!details) return;
@@ -257,27 +259,12 @@ export function ShopNavLinks({
     return () => details.removeEventListener("toggle", handleToggle);
   }, []);
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    function handlePointerDown(event: PointerEvent) {
-      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) {
-        closeMore();
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeMore();
-        // Return focus to the toggle, matching every other dismissible menu.
-        summaryRef.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [moreOpen, closeMore]);
+  useMenuDismissal({
+    open: moreOpen,
+    close: closeMore,
+    inside: [detailsRef],
+    returnFocus: summaryRef,
+  });
 
   const moreLink = (destination: StaffDestination) => (
     <MoreLink
@@ -330,6 +317,10 @@ export function ShopNavLinks({
         <details ref={detailsRef} className="relative shrink-0">
           <summary
             ref={summaryRef}
+            // The ARIA counterpart of the active pill: when the current page
+            // lives behind this menu, the door itself says so in the tree —
+            // the tabs' aria-current="page" otherwise leaves nothing current.
+            aria-current={moreIsActive ? "true" : undefined}
             className={`${navClass(moreIsActive)} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
           >
             {copy.more}
