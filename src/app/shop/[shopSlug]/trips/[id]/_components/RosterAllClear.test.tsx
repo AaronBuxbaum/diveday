@@ -56,6 +56,20 @@ describe("RosterAllClear", () => {
     expect(screen.queryByText(LABEL)).toBeNull();
   });
 
+  it("announces without claiming the page's status role", () => {
+    // `role="status"` is a page-wide namespace that staff notices already own.
+    // A second one made `getByRole("status")` ambiguous the moment a mutation
+    // cleared the last blocker, which is how a booking-cancellation assertion in
+    // e2e/recap.spec.ts started failing. The live region is kept mounted and
+    // empty so the announcement still lands.
+    const view = render(<RosterAllClear blockedCount={1} label={LABEL} />);
+    expect(document.querySelector('[aria-live="polite"]')).not.toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    view.rerender(<RosterAllClear blockedCount={0} label={LABEL} />);
+    expect(screen.getByText(LABEL)).toBeVisible();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("gets out of the way the instant someone becomes blocked again", () => {
     // A seat added mid-celebration puts a blocker back on the list right below
     // this line; the line has to go with it rather than wait out its timer.

@@ -55,8 +55,6 @@ export function RosterAllClear({ blockedCount, label }: { blockedCount: number; 
     return () => clearTimeout(timer);
   }, [blockedCount]);
 
-  if (!celebrating) return null;
-
   // Coral as a *fill* with its own foreground token, never coral ink on the
   // page: `text-accent` at this size measures ~2.9:1 on `--surface`, under AA,
   // which is the same trap `Badge`'s success/warning tones documented and
@@ -64,17 +62,29 @@ export function RosterAllClear({ blockedCount, label }: { blockedCount: number; 
   // clears 4.5:1 in both schemes, and a fill is what makes this read as a
   // moment rather than as another muted line in the header.
   //
-  // `role="status"` so it is announced rather than only seen — the staffer who
-  // cleared the last blocker may be reading this with a screen reader, and "the
-  // red went away" is not an announcement.
+  // **A live region that stays mounted, and deliberately not `role="status"`.**
+  // The moment has to be *announced* — the staffer who cleared the last blocker
+  // may be reading this with a screen reader, and "the red went away" is not an
+  // announcement. Two details make that work without breaking anything else:
+  //
+  //  - The region is always in the DOM and merely empties, which is the same
+  //    thing `OfflineManifestManager` does and for the same reason: a live
+  //    region inserted *with* its text already in it is announced unreliably.
+  //  - `aria-live="polite"` rather than `role="status"`, which is the same
+  //    announcement with no extra `status` role in the tree. That role is a
+  //    page-wide namespace: a staff surface's page notices already own it, and
+  //    adding a second one made `getByRole("status")` ambiguous the moment a
+  //    mutation cleared the last blocker — `e2e/recap.spec.ts` cancels a booking
+  //    from this very roster and asserts on the page's notice, and it failed on
+  //    a strict-mode violation. Decoration must not crowd a notice out of its
+  //    own role.
   return (
-    <p className="mt-1">
-      <span
-        role="status"
-        className="rise-in inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground"
-      >
-        {label}
-      </span>
+    <p aria-live="polite" className="mt-1 empty:mt-0">
+      {celebrating ? (
+        <span className="rise-in inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+          {label}
+        </span>
+      ) : null}
     </p>
   );
 }

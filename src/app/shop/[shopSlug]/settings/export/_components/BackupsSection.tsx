@@ -257,11 +257,17 @@ export function BackupsSection({
                 sentence has to be on screen without a guessed gesture
                 (FU-20260811-backup-delivery-history-clips-on-a-phone).
 
-                The fold is the orders index's pattern (`orders/page.tsx`): one
-                set of values, rendered into the date cell below `sm` and into
-                their own columns above it, with `hidden` doing the choosing —
-                so a screen reader is only ever offered the arrangement that is
-                actually on screen. */}
+                The fold is done by *reflowing* the row, not by rendering it
+                twice. Below `sm` the `<tr>` becomes a wrapping flex line and the
+                date and details cells claim a full line each, so the reading
+                order is: date, then run/outcome/size together, then the reason.
+                Every value exists exactly once in the DOM.
+                The first draft did render both arrangements and hid one with
+                `hidden`, which is the orders index's pattern — and it was wrong
+                here: two copies of the same text made `getByText` inside a row
+                ambiguous (`e2e/backup-export.spec.ts` failed on a strict-mode
+                violation), and it doubled the DOM of a paged list for no gain.
+                A layout switch belongs in CSS. */}
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 {/* Below `sm` the rows are self-describing stacks rather than a
@@ -275,51 +281,43 @@ export function BackupsSection({
                     <th className="py-2 font-medium">{t("backup.history.details")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {deliveries.rows.map((delivery) => {
-                    const kind =
-                      delivery.trigger === "scheduled"
-                        ? t("backup.history.trigger.scheduled")
-                        : t("backup.history.trigger.manual");
-                    const outcome = (
-                      <Badge tone={STATUS_TONE[delivery.status]}>
-                        {statusText(t, delivery.status)}
-                      </Badge>
-                    );
-                    const size =
-                      delivery.byteCount === null
-                        ? "—"
-                        : formatByteSize(delivery.byteCount, locale);
-                    const details =
-                      delivery.status === "failed" ? (
-                        deliveryErrorText(t, delivery.errorCode)
-                      ) : delivery.objectKey ? (
-                        <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
-                      ) : (
-                        "—"
-                      );
-                    return (
-                      <tr key={delivery.id}>
-                        <td className="py-2 align-top sm:pr-4 sm:whitespace-nowrap">
-                          <span className="font-medium sm:font-normal">
-                            {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
-                          </span>
-                          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
-                            {outcome}
-                            <span className="text-muted">{kind}</span>
-                            <span className="text-muted tabular-nums">{size}</span>
-                          </span>
-                          <span className="mt-1 block text-muted sm:hidden">{details}</span>
-                        </td>
-                        <td className="hidden py-2 pr-4 sm:table-cell">{kind}</td>
-                        <td className="hidden py-2 pr-4 sm:table-cell">{outcome}</td>
-                        <td className="hidden py-2 pr-4 whitespace-nowrap tabular-nums sm:table-cell">
-                          {size}
-                        </td>
-                        <td className="hidden py-2 text-muted sm:table-cell">{details}</td>
-                      </tr>
-                    );
-                  })}
+                <tbody className="block divide-y divide-border sm:table-row-group">
+                  {deliveries.rows.map((delivery) => (
+                    <tr
+                      key={delivery.id}
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2.5 sm:table-row sm:gap-0 sm:py-0"
+                    >
+                      <td className="basis-full font-medium sm:basis-auto sm:py-2 sm:pr-4 sm:font-normal sm:whitespace-nowrap">
+                        {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
+                      </td>
+                      <td className="text-muted sm:py-2 sm:pr-4 sm:text-foreground">
+                        {delivery.trigger === "scheduled"
+                          ? t("backup.history.trigger.scheduled")
+                          : t("backup.history.trigger.manual")}
+                      </td>
+                      <td className="sm:py-2 sm:pr-4">
+                        <Badge tone={STATUS_TONE[delivery.status]}>
+                          {statusText(t, delivery.status)}
+                        </Badge>
+                      </td>
+                      <td className="text-muted tabular-nums sm:py-2 sm:pr-4 sm:text-foreground sm:whitespace-nowrap">
+                        {delivery.byteCount === null
+                          ? "—"
+                          : formatByteSize(delivery.byteCount, locale)}
+                      </td>
+                      {/* Its own line below `sm`: this is the cell a shop came
+                          for on a failed row, and it is a sentence, not a chip. */}
+                      <td className="basis-full text-muted sm:basis-auto sm:py-2">
+                        {delivery.status === "failed" ? (
+                          deliveryErrorText(t, delivery.errorCode)
+                        ) : delivery.objectKey ? (
+                          <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
