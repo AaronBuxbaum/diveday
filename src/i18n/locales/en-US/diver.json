@@ -469,7 +469,8 @@
     "charterPath": "CHARTER PATH",
     "boatTrack": "Boat Track",
     "theDock": "The Dock",
-    "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}"
+    "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}",
+    "crewQuote": "“{words}”"
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",

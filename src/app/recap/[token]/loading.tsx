@@ -10,6 +10,9 @@ export default function RecapLoading() {
         <div className="h-4 w-32 rounded bg-surface-sunken" />
         <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
         <div className="mt-2 h-5 w-40 rounded bg-surface-sunken" />
+        {/* The share-button row — h-11 matches the button's 44px floor, so
+            the coral card below streams in exactly where this stood. */}
+        <div className="mt-4 h-11 w-36 rounded-lg bg-surface-sunken" />
         <div className="mt-8 h-40 rounded-2xl border border-border bg-surface" />
         <div className="mt-10 h-3 w-36 rounded bg-surface-sunken" />
         <div className="mt-4 h-56 rounded-2xl bg-surface-sunken" />

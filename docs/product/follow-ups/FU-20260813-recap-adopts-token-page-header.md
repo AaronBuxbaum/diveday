@@ -4,7 +4,7 @@
 - **Raised:** 2026-08-13 — the recap-page redesign (branch `claude/design-recap-page`)
 - **Kind:** cleanup
 - **Effort:** S
-- **Touches:** `src/app/recap/[token]/page.tsx`, `src/components/TokenPageHeader.tsx`
+- **Touches:** `src/app/recap/[token]/page.tsx`
 
 ## What I noticed
 

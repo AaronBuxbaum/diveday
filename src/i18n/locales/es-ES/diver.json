@@ -469,7 +469,8 @@
     "charterPath": "RUTA DE LA SALIDA",
     "boatTrack": "Trayecto del barco",
     "theDock": "El muelle",
-    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# sitio de buceo} other {# sitios de buceo}}"
+    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# sitio de buceo} other {# sitios de buceo}}",
+    "crewQuote": "“{words}”"
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",

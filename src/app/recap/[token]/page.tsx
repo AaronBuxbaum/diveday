@@ -8,7 +8,7 @@ import { RecapMap } from "@/components/RecapMap";
 import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
@@ -23,7 +23,7 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { openGraphSite } from "@/lib/site-metadata";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
@@ -102,26 +102,6 @@ function Notice({ title, text }: { title: string; text: string }) {
 }
 
 /**
- * One shape for every "what just happened" answer on this page — the review,
- * tip, and photo forms used to each carry their own copy of this markup.
- * Renders beside the form it answers (docs/design/forms-and-controls.md).
- */
-function FormNotice({ tone, children }: { tone: "success" | "danger"; children: React.ReactNode }) {
-  return (
-    <p
-      role={noticeRole(tone)}
-      className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
-        tone === "danger"
-          ? "border-danger/30 bg-danger/10 text-danger"
-          : "border-primary/30 bg-primary/10 text-primary"
-      }`}
-    >
-      {children}
-    </p>
-  );
-}
-
-/**
  * The small-caps label the relive sections hang from — the same grammar as
  * `EarnedMoment`'s eyebrow, so the whole first act reads as one composition
  * carried by type and space rather than a stack of boxed cards
@@ -153,6 +133,11 @@ function Kicker({
 function SiteStop({ site, lookForLabel }: { site: RecapSite; lookForLabel: string }) {
   return (
     <li className="relative">
+      {/* 31px centers the 12px dot on the ol's 2px rail: the ol gives each li
+          pl-6 (24px) from the border's inner edge, so the rail's center sits
+          24 + 1 (half the border) = 25px left of the text, and half the dot
+          (6px) more puts its left edge at 31px. Touch pl-6, border-l-2, or
+          size-3 and this number moves with them. */}
       <span
         aria-hidden="true"
         className="absolute top-1.5 -left-[31px] size-3 rounded-full border-2 border-primary bg-surface"
@@ -267,19 +252,21 @@ export default async function DiveRecapPage({
     did_not_dive: { tone: "danger", text: t("reviews.savedDidNotDive") },
     error: { tone: "danger", text: t("reviews.savedError") },
   };
-  const reviewNotice = reviewParam ? reviewNotices[reviewParam] : undefined;
+  const reviewNotice = noticeFromParam(reviewParam, reviewNotices);
   // One review ask, not two: the "share it on Google too" CTA only appears
   // right after a strong (4-5★) on-page submission just went through, folded
   // into that success state instead of a second section that used to render
-  // unconditionally underneath it (task 57).
+  // unconditionally underneath it (task 57). One spelling of that state — the
+  // submit button's demotion and the CTA block below both read this, so they
+  // can never disagree about whether the CTA is on screen.
   const justSubmittedStrongReview =
     (reviewParam === "published" || reviewParam === "pending") &&
     ownReview !== null &&
     ownReview.rating >= 4;
-  const externalReviewAsk = justSubmittedStrongReview && Boolean(shop.reviewUrl);
-  // `Object.hasOwn`, not a bare `PHOTO_NOTICES[photo]` — both params are
-  // attacker-supplied and a bare lookup walks the prototype
-  // (src/lib/staff-notices.ts).
+  const externalReviewUrl = justSubmittedStrongReview ? shop.reviewUrl : null;
+  // `Object.hasOwn` via `noticeFromParam`, never a bare `PHOTO_NOTICES[photo]`
+  // — all three params are attacker-supplied and a bare lookup walks the
+  // prototype (src/lib/staff-notices.ts).
   const photoNotice = noticeFromParam(photo, PHOTO_NOTICES);
   const tipNotice = noticeFromParam(tipParam, TIP_NOTICES);
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
@@ -359,8 +346,10 @@ export default async function DiveRecapPage({
       {shoutout ? (
         <section className="mt-10">
           <Kicker tone="primary">{t("recap.fromYourCrew")}</Kicker>
+          {/* The quote glyphs come from the bundle, not this component — each
+              locale sets its own convention (es-ES/README.md keeps “ ”). */}
           <blockquote className="mt-3 text-xl leading-relaxed font-medium text-pretty">
-            “{shoutout}”
+            {t("recap.crewQuote", { words: shoutout })}
           </blockquote>
         </section>
       ) : null}
@@ -413,7 +402,9 @@ export default async function DiveRecapPage({
         <h2 className="text-xl font-semibold tracking-tight">{t("reviews.askHeading")}</h2>
         <p className="mt-1 text-base text-muted">{t("reviews.askBody")}</p>
         {reviewNotice ? (
-          <FormNotice tone={reviewNotice.tone}>{reviewNotice.text}</FormNotice>
+          <FormStatus tone={reviewNotice.tone} className="mt-3">
+            {reviewNotice.text}
+          </FormStatus>
         ) : null}
         {ownReview ? (
           <p className="mt-3 text-sm text-muted">
@@ -452,7 +443,7 @@ export default async function DiveRecapPage({
             <SubmitButton
               pendingLabel={t("reviews.submitting")}
               className={buttonClass({
-                variant: externalReviewAsk ? "secondary" : "primary",
+                variant: externalReviewUrl ? "secondary" : "primary",
                 size: "cta",
               })}
             >
@@ -464,7 +455,7 @@ export default async function DiveRecapPage({
         {/* The one review ask left: a strong rating just landed, so offer to
             carry it further instead of stacking a second, separately-worded
             ask underneath (task 57). */}
-        {justSubmittedStrongReview && shop.reviewUrl ? (
+        {externalReviewUrl ? (
           <div className="mt-4 border-t border-border pt-4">
             <h3 className="text-base font-semibold">{t("recap.externalReviewHeading")}</h3>
             <p className="mt-1 text-sm text-muted">
@@ -473,7 +464,7 @@ export default async function DiveRecapPage({
                 : t("recap.externalReviewBodyNoComment", { shop: shop.name })}
             </p>
             <ShareReviewButton
-              reviewUrl={shop.reviewUrl}
+              reviewUrl={externalReviewUrl}
               comment={ownReview?.comment ?? null}
               cta={t("recap.externalReviewCta")}
               copiedLabel={t("recap.commentCopied")}
@@ -488,7 +479,11 @@ export default async function DiveRecapPage({
       {showTipSection ? (
         <section className="mt-10 border-t border-border pt-8">
           <h2 className="text-base font-semibold">{t("recap.tipCrew")}</h2>
-          {tipNotice ? <FormNotice tone={tipNotice.tone}>{t(tipNotice.key)}</FormNotice> : null}
+          {tipNotice ? (
+            <FormStatus tone={tipNotice.tone} className="mt-3">
+              {t(tipNotice.key)}
+            </FormStatus>
+          ) : null}
           {tip?.status === "paid" ? (
             <p className="mt-1 text-base text-muted">{t("recap.tipPaid", { shop: shop.name })}</p>
           ) : tipParam === "paid" ? (
@@ -550,11 +545,11 @@ export default async function DiveRecapPage({
         <p className="mt-1 text-base text-muted">{t("recap.photosBody", { shop: shop.name })}</p>
 
         {photoNotice ? (
-          <FormNotice tone={photoNotice.tone}>
+          <FormStatus tone={photoNotice.tone} className="mt-3">
             {photoNotice.key === "recap.photoLimit"
               ? t(photoNotice.key, { max: MAX_RECAP_PHOTOS_PER_BOOKING })
               : t(photoNotice.key)}
-          </FormNotice>
+          </FormStatus>
         ) : null}
 
         {photos.length ? (
