@@ -6,6 +6,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   daysFromNow,
+  openRosterNotes,
   openSettingsRow,
   openTripFromBoard,
   openTripTab,
@@ -386,6 +387,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+/** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
+const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
 
 /**
  * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
@@ -1934,6 +1938,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-manage", scheme);
       });
 
+      /**
+       * The other Overview: a departure that only runs with enough people and
+       * has not got them yet (ADR 20260813-minimum-head-count-departures). The
+       * reef trip above names no minimum, so its baseline can never show this
+       * band — and the band is the one surface in the feature a shop reads
+       * every day, in the window where ringing round the regulars still saves
+       * the departure. The fixture is seeded four days out with a 48-hour
+       * window (src/db/seed-minimum-seats.ts), so against the fleet's frozen
+       * clock it photographs the *short* state, not the red about-to-cancel
+       * one — deliberately, since short is the state staff can act on.
+       */
+      test(`a short departure shows its minimum head count (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, MINIMUM_SEATS_TRIP);
+        await page.getByRole("heading", { name: /divers short of the/ }).waitFor();
+        await capture(page, "trip-minimum-seats", scheme);
+      });
+
       test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
@@ -2654,22 +2676,19 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
         const row = page.locator("#roster li").filter({ visible: true }).first();
-        // A row with no notes labels the disclosure "Add a private note"; once
-        // one exists it reads "Private staff notes (N)" — match either state.
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
-        await row
-          .getByLabel("Add a note only staff can see")
-          .fill("Visual regression seed note for the undo toast.");
+        const noteBody = "Visual regression seed note for the undo toast.";
+        await openRosterNotes(row);
+        await row.getByLabel("Add a note only staff can see").fill(noteBody);
         await row.getByRole("button", { name: "Add private note" }).click();
-        await page.getByText("Private staff note added.").waitFor();
+        // Adding a note no longer navigates, so there is no longer a toast
+        // saying it worked — the note appearing in the list above the box *is*
+        // the confirmation, which is the point of the change. Wait for that.
+        await row.getByText(noteBody).waitFor();
 
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
+        // And because nothing navigated, the disclosure is still open — hence
+        // the helper, which would otherwise close it and hide the Delete
+        // button it is about to press.
+        await openRosterNotes(row);
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
 import { EmptyState } from "@/components/EmptyState";
+import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -71,7 +72,9 @@ const noticeCopy: Record<
   walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
   walkin_invalid: { tone: "danger", key: "checkIn.notice.walkinInvalid" },
-  waiver_in_person: { tone: "success", key: "checkIn.notice.waiverInPerson" },
+  // No `waiver_in_person` either, for the same reason: the diver's row loses
+  // its waiver blocker and starts offering check-in, right where the paper
+  // control was.
   waiver_medical_attestation: { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
   waiver_error: { tone: "danger", key: "checkIn.notice.waiverError" },
 };
@@ -138,6 +141,14 @@ export default async function CheckInPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* Every code this page carries is now a refusal, and the acts that
+          succeed re-render it in place without navigating (./actions.ts). So a
+          notice has to be one-shot: left in the URL, the walk-in refusal a
+          staffer read and dealt with would still be sitting above the queue
+          after the next four rows checked in — none of which navigate to
+          replace it. `?q=` is deliberately not flashed; the search is state the
+          counter is working in, not a message. */}
+      <FlashParams params={["notice", "bid", "tid"]} />
       <ShopPageHeader
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
