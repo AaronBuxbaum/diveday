@@ -26,20 +26,50 @@ describe("the daily tick", () => {
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);
   });
 
-  it("is the fastest wake-up there is, so a day is the floor on retry latency", () => {
+  it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
     // What `src/db/notifications.ts` actually depends on is not that the
     // reminders tick is the *only* daily cron — a second daily entry is fine,
-    // and `/api/cron/usage` is one — but that nothing wakes the process more
-    // often than daily. That is what makes "one attempt per pass" mean one
-    // attempt per day and the three-pass retry window mean three days. A
-    // sub-daily entry (`*/10 * * * *`, `0 */4 * * *`) would quietly make both
-    // statements false, so adding one has to be a deliberate act that comes
-    // through here.
+    // and `/api/cron/usage` is one — but that nothing **drains the notification
+    // send queue** more often than daily. That is what makes "one attempt per
+    // pass" mean one attempt per day and the three-pass retry window mean
+    // three days.
+    //
+    // This started life as "no sub-daily entry at all", which is a proxy for
+    // that and was the right proxy while every cron drained the queue by
+    // arriving. It stopped being the right proxy on 2026-08-13, when the
+    // minimum-head-count sweep landed (ADR
+    // 20260813-minimum-head-count-departures): its whole product claim is that
+    // a departure cancels itself at a moment printed on the booking page, and
+    // a daily pass makes that promise true to within about a day.
+    //
+    // So the guard is now an allowlist rather than a ban, and the bar for
+    // joining it is written here: a sub-daily route must not touch
+    // `notification_send_queue` — it may `notify()` directly and record the
+    // delivery (which is what the sweep does, for the same reason the
+    // conditions-hold send does: a message about tomorrow's boat cannot wait
+    // for tomorrow's pass), but it may not enqueue or drain. Adding another
+    // entry here is still the deliberate act it always was.
+    const SUB_DAILY_ALLOWED = new Set(["/api/cron/minimum-seats"]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");
       return minute.includes("/") || minute === "*" || hour.includes("/") || hour === "*";
     });
-    expect(subDaily).toEqual([]);
+    expect(subDaily.filter((cron) => !SUB_DAILY_ALLOWED.has(cron.path))).toEqual([]);
+  });
+
+  /**
+   * The allowlist above is only as good as this: the routes on it must not
+   * reach the durable queue. `sendNotification`/`sendNotificationBatch` are the
+   * two functions that enqueue and drain it (src/db/notifications.ts), so a
+   * sub-daily route importing either is the mistake the allowlist would
+   * otherwise silently permit.
+   */
+  it("keeps the sub-daily routes off the notification send queue", () => {
+    const route = readFileSync(
+      path.join(process.cwd(), "src/app/api/cron/minimum-seats/route.ts"),
+      "utf8",
+    );
+    expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);
   });
 });
 

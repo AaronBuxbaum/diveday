@@ -1197,7 +1197,7 @@ export function OfflineManifestView() {
                         reference facts standing open on every row here while
                         they fold there is the divergence this closes.
 
-                        `trips.manifest.diverFactsSummary`, not an offline key
+                        `manifest.diverFactsSummary`, not an offline key
                         of its own: one word list is the whole point, exactly as
                         `rollCallLabelText` is shared for the state pills above.
 
@@ -1209,7 +1209,7 @@ export function OfflineManifestView() {
                       <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
                         <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
                         <span className="group-hover/summary:underline">
-                          {t("trips.manifest.diverFactsSummary")}
+                          {t("manifest.diverFactsSummary")}
                         </span>
                       </summary>
                       <div className="mb-1 grid gap-2 rounded-xl border border-border/70 bg-surface-sunken/50 p-3 text-base">
@@ -1405,14 +1405,14 @@ export function OfflineManifestView() {
         tone={isDeparture ? "neutral" : "urgent"}
         copy={{
           heading: isDeparture
-            ? t("trips.manifest.stillToBoardHeading", { count: missingDivers.length })
-            : t("trips.manifest.notCountedBackHeading", { count: missingDivers.length }),
+            ? t("manifest.stillToBoardHeading", { count: missingDivers.length })
+            : t("manifest.notCountedBackHeading", { count: missingDivers.length }),
           statusLabel: isDeparture
-            ? t("trips.manifest.missingDiversPillDock")
-            : t("trips.manifest.missingDiversPillAfterDive"),
-          tapHint: t("trips.manifest.missingDiversTapHint"),
-          rentsKitLabel: t("trips.manifest.rentsKitLabel"),
-          ownKitLabel: t("trips.manifest.ownKitLabel"),
+            ? t("manifest.missingDiversPillDock")
+            : t("manifest.missingDiversPillAfterDive"),
+          tapHint: t("manifest.missingDiversTapHint"),
+          rentsKitLabel: t("manifest.rentsKitLabel"),
+          ownKitLabel: t("manifest.ownKitLabel"),
           blockedLabel: readinessStatusText(t, "blocked"),
         }}
       />

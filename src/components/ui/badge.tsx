@@ -39,6 +39,21 @@ const toneGlyph: Partial<Record<BadgeTone, string>> = {
   danger: "❌",
 };
 
+/**
+ * The same mark, for a status that is **not** wearing a pill.
+ *
+ * A pill is right when a status needs to stand apart from body text. It is
+ * wrong in a row of 44px controls, where a 24px pill reads as a shrunken
+ * button rather than as a different kind of thing — which is what the
+ * certification lists looked like, "Pending" boxed beside "Mark certified" and
+ * "Delete". There the status belongs against the card it is about, and the
+ * mark alone carries it. Returns `undefined` for the two tones that are labels
+ * rather than statuses, so a caller cannot mark a count.
+ */
+export function badgeToneGlyph(tone: BadgeTone): string | undefined {
+  return toneGlyph[tone];
+}
+
 const sizeClass = {
   sm: "px-2.5 py-1 text-xs",
   md: "px-3 py-1 text-sm",
