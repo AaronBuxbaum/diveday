@@ -1690,7 +1690,7 @@
         "importerNote": "Una exportación de Smartwaiver es sobre todo datos de contacto — espera que se importen personas y contactos de emergencia, y ninguna tarjeta de certificación ni talla de alquiler (un sistema de descargos no las guarda). Un descargo que tu exportación muestra como ya aceptado también se traslada, marcado como importado."
       },
       "fareharbor": {
-        "cardSummary": "Un motor de reservas para tours, no software de buceo. Conserva su botón de reservas y su red de hoteles y OTAs y lleva el día de buceo que él no puede — o deja atrás del todo la comisión por reserva. En ambos casos, trae a tus buceadores.",
+        "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede — o deja atrás la comisión por reserva.",
         "metaTitle": "FareHarbor y DiveDay — lleva el día de buceo, o cámbiate",
         "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó — controles de certificación, descargos y el listado con pase de lista — o deja atrás la comisión por reserva. Trae a tus buceadores, con una cuenta honesta de qué viene con ellos.",
         "heroEyebrow": "FareHarbor + DiveDay",
@@ -1742,7 +1742,7 @@
         "importerNote": "Una exportación de FareHarbor es sobre todo datos de contacto y reservas — se importan personas, correos, teléfonos y el contacto de emergencia que haya; las tarjetas de certificación y las tallas de alquiler no, porque una plataforma de reservas no las guarda. Importa primero el archivo de Contactos y después el de Reservas: DiveDay empareja a los buceadores por correo, así que el segundo añade cada reserva al historial del mismo buceador en vez de duplicarlo."
       },
       "rezdy": {
-        "cardSummary": "Una plataforma de reservas de tours generalista con un gran mercado de revendedores — no software de buceo. Consérvala para la distribución y lleva el día de buceo que ella no puede, o deja atrás la cuota mensual más la comisión por reserva. En ambos casos, trae a tus buceadores.",
+        "cardSummary": "Una plataforma de tours generalista con un gran mercado de revendedores, no software de buceo. Consérvala para la distribución, o deja atrás la cuota mensual y la comisión por reserva.",
         "metaTitle": "Rezdy y DiveDay — lleva el día de buceo, o cámbiate",
         "metaDescription": "¿Estás en Rezdy? Conserva su mercado de revendedores y lleva el día de buceo para el que nunca se construyó — controles de certificación, descargos y el listado con pase de lista — o deja atrás la suscripción mensual y la comisión por reserva. Trae a tus buceadores, con una cuenta honesta de qué viene con ellos.",
         "heroEyebrow": "Rezdy + DiveDay",

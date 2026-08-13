@@ -1690,7 +1690,7 @@
         "importerNote": "A Smartwaiver export is mostly contact data — expect people and emergency contacts to import, and no certification cards or rental sizes (a waiver system doesn't hold them). A waiver your export shows as already accepted comes across too, marked imported."
       },
       "fareharbor": {
-        "cardSummary": "A booking engine for tours, not dive software. Keep its booking button and hotel/OTA network and run the dive day it can't — or leave the per-booking fee behind entirely. Either way, bring your divers across.",
+        "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it can't — or leave the per-booking fee behind.",
         "metaTitle": "FareHarbor and DiveDay — run the dive day, or switch",
         "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
         "heroEyebrow": "FareHarbor + DiveDay",
@@ -1742,7 +1742,7 @@
         "importerNote": "A FareHarbor export is mostly contact and booking data — people, emails, phones, and any emergency contact import; certification cards and rental sizes don't, because a booking platform doesn't hold them. Import Contacts first, then Bookings: DiveDay matches divers by email, so the second file adds each booking to the same diver's history instead of duplicating them."
       },
       "rezdy": {
-        "cardSummary": "A general tours booking platform with a big reseller marketplace — not dive software. Keep it for distribution and run the dive day it can't, or leave the monthly fee plus per-booking cut behind. Either way, bring your divers across.",
+        "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or leave the monthly fee and per-booking cut behind.",
         "metaTitle": "Rezdy and DiveDay — run the dive day, or switch",
         "metaDescription": "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for — cert checks, waivers, and the roll-call manifest — or leave the monthly subscription and per-booking fee behind. Bring your divers across, with an honest account of what comes with them.",
         "heroEyebrow": "Rezdy + DiveDay",

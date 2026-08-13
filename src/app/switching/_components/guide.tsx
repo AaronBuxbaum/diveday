@@ -246,12 +246,8 @@ export function PhaseNotes({ notes }: { notes: string[] }) {
 export function ScopePhase({ locale, number }: { locale: DiverLocale; number: number }) {
   const t = diverTranslator(locale);
   const groups = [
-    { scope: "included" as const, label: t("switching.common.comesAcross"), tone: "bg-success" },
-    {
-      scope: "stays-behind" as const,
-      label: t("switching.common.staysBehind"),
-      tone: "bg-border-strong",
-    },
+    { scope: "included" as const, label: t("switching.common.comesAcross") },
+    { scope: "stays-behind" as const, label: t("switching.common.staysBehind") },
   ];
   return (
     <MovePhase
@@ -262,10 +258,14 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
       <div className="mt-8 space-y-8">
         {groups.map((group) => (
           <div key={group.scope}>
-            <h4 className="flex items-center gap-2 text-sm font-semibold">
-              <span aria-hidden className={`size-1.5 rounded-full ${group.tone}`} />
-              {group.label}
-            </h4>
+            {/* The shared fact, stated once for the group instead of as a
+                chip on all thirteen rows (principles.md #9). No colour dot:
+                the two words are the whole distinction, and a 6px speck of
+                `--success` beside them was decoration pretending to be a
+                signal. Set in the same small-caps as the hero's fact labels
+                and the sources footnote, so one page has one voice for
+                "this names what follows". */}
+            <h4 className="text-xs font-semibold tracking-wider uppercase">{group.label}</h4>
             <ul className="mt-3 divide-y divide-border border-y border-border">
               {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
                 <li
@@ -370,7 +370,12 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
   );
 }
 
-/** The closing band: title, one line, the CTA pair, and the way back to the hub. */
+/**
+ * The closing band: title, one line, the CTA pair, and the way back to the hub.
+ * `max-w-4xl` like every other section — it used to be `max-w-7xl`, so the
+ * last thing on the page was also the one thing that started at a different
+ * left edge from everything above it.
+ */
 export function ClosingCta({
   locale,
   source,
@@ -385,7 +390,7 @@ export function ClosingCta({
   backLabel: string;
 }) {
   return (
-    <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
+    <section className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-2 max-w-xl text-muted">{body}</p>

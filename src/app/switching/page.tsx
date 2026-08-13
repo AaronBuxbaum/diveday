@@ -169,26 +169,28 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
       {/* "Exactly what comes across" is this page's whole promise, and it used
           to be made only in prose. This is the importer's real preview step in
           miniature — mapped columns, the ignored ones named, the skipped row
-          visible — so the promise is shown before it is described. */}
+          visible — so the promise is shown before it is described.
+          Stacked inside the page's own `max-w-4xl` measure rather than beside
+          the words at `max-w-7xl`: the wide band started 130px left of every
+          other section on the page, and stacking gives the mockup ~200px more
+          width than the two-column version it replaced. */}
       <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div className="max-w-xl">
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("switching.hub.previewEyebrow")}
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                {t("switching.hub.previewTitle")}
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">{t("switching.hub.previewBody")}</p>
-            </div>
-            <MarketingMockup
-              label={t("switching.hub.previewMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
-              <ImportPreviewFallback locale={locale} />
-            </MarketingMockup>
-          </div>
+        <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+            {t("switching.hub.previewEyebrow")}
+          </p>
+          <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {t("switching.hub.previewTitle")}
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
+            {t("switching.hub.previewBody")}
+          </p>
+          <MarketingMockup
+            label={t("switching.hub.previewMockupLabel")}
+            className="mt-10 shadow-xl shadow-foreground/5"
+          >
+            <ImportPreviewFallback locale={locale} />
+          </MarketingMockup>
         </div>
       </section>
 
