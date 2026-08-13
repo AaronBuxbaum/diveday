@@ -312,7 +312,30 @@ export async function openSettingsRow(page: Page, heading: string) {
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
 export async function openRosterDetails(row: Locator): Promise<void> {
-  const details = row.locator("details").filter({ hasText: "Remove booking" }).first();
+  await openIfClosed(row.locator("details").filter({ hasText: "Remove booking" }).first());
+}
+
+/**
+ * Open a Guests roster card's private-notes disclosure — a sibling of the
+ * "Details" one above, not nested inside it, because writing a note about a
+ * diver is desk work a staffer starts from the card rather than reference.
+ *
+ * The same check-before-click matters more here than anywhere else on the
+ * roster: adding a note no longer navigates, so the disclosure a spec opened to
+ * write one is *still open* when it comes back to delete it. Clicking blind
+ * would close it and take the Delete button with it.
+ */
+export async function openRosterNotes(row: Locator): Promise<void> {
+  await openIfClosed(
+    row
+      .locator("details")
+      .filter({ hasText: /Private staff notes|Add a private note/ })
+      .first(),
+  );
+}
+
+/** Native `open` is DOM state React never touches, so check before toggling. */
+async function openIfClosed(details: Locator): Promise<void> {
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("summary").click();
 }

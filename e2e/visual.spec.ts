@@ -6,6 +6,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   daysFromNow,
+  openRosterNotes,
   openSettingsRow,
   openTripFromBoard,
   openTripTab,
@@ -2674,22 +2675,19 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
         const row = page.locator("#roster li").filter({ visible: true }).first();
-        // A row with no notes labels the disclosure "Add a private note"; once
-        // one exists it reads "Private staff notes (N)" — match either state.
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
-        await row
-          .getByLabel("Add a note only staff can see")
-          .fill("Visual regression seed note for the undo toast.");
+        const noteBody = "Visual regression seed note for the undo toast.";
+        await openRosterNotes(row);
+        await row.getByLabel("Add a note only staff can see").fill(noteBody);
         await row.getByRole("button", { name: "Add private note" }).click();
-        await page.getByText("Private staff note added.").waitFor();
+        // Adding a note no longer navigates, so there is no longer a toast
+        // saying it worked — the note appearing in the list above the box *is*
+        // the confirmation, which is the point of the change. Wait for that.
+        await row.getByText(noteBody).waitFor();
 
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
+        // And because nothing navigated, the disclosure is still open — hence
+        // the helper, which would otherwise close it and hide the Delete
+        // button it is about to press.
+        await openRosterNotes(row);
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
