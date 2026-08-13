@@ -189,11 +189,16 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <nav aria-label={t("marketing.product.arcTitle")} className="border-b border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-8 px-6 py-2 text-sm">
           <p className="py-2.5 font-semibold">{t("marketing.product.arcTitle")}</p>
-          {/* Two aligned columns on a phone rather than a wrap: five labels of
-              five different widths wrapping freely read as an accident, and a
-              horizontal scroller would hide half the day — the whole point of
-              this strip is that a visitor sees all five chapters at once. */}
-          <ol className="grid grid-cols-2 gap-x-6 sm:flex sm:flex-wrap sm:gap-x-8">
+          {/* Two aligned columns on a phone rather than a free wrap: five
+              labels of five different widths wrapping raggedly read as an
+              accident, and a horizontal scroller would hide half the day — the
+              whole point of this strip is that a visitor sees all five
+              chapters at once. `auto` on the first column, not `grid-cols-2`:
+              equal halves are 171px at 390px wide, which is narrower than the
+              longest label in either locale ("After the boat is back", "Con el
+              barco de vuelta") and broke it over two lines with its number
+              floating beside them. */}
+          <ol className="grid grid-cols-[auto_1fr] gap-x-4 sm:flex sm:flex-wrap sm:gap-x-8">
             {chapters.map((chapter, index) => (
               <li key={chapter.id}>
                 <a
@@ -498,9 +503,14 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
             <Link
               href="/switching/spreadsheet"
-              // `px-0`: the link variant keeps its `md` padding for the touch
-              // target, which indented this line 16px past the heading above it.
-              className={buttonClass({ variant: "link", className: "mt-2 px-0 text-left" })}
+              // `-ml-4`, not `px-0`: the link variant keeps its `md` size's
+              // `px-4` so the row stays a real touch target, and a `px-0` in
+              // `className` cannot take it away — Tailwind emits `.px-0`
+              // *before* `.px-4`, so the padding wins whatever order the
+              // classes are written in (measured in the built stylesheet; the
+              // link sat 17px right of its own heading). Pulling the box left
+              // by exactly that padding is what `JumpNav` does with `-ml-3`.
+              className={buttonClass({ variant: "link", className: "mt-2 -ml-4 text-left" })}
             >
               {t("marketing.product.spreadsheetLink")}
             </Link>
