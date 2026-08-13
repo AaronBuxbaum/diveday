@@ -1,7 +1,7 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 
-test("the homepage hero offers one demo door, and the diver preview lives on its moment card", async ({
+test("the homepage hero offers one demo door, and the diver preview lives on its daily-moment row", async ({
   page,
 }) => {
   await page.goto("/");
@@ -32,7 +32,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // Hero decision density: one primary action, at most one secondary. The hero
   // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
   // and every retired destination moved rather than disappeared — the roles
-  // into the in-demo switcher, the preview onto its moment card below. The
+  // into the in-demo switcher, the preview onto its daily-moment row below. The
   // mockup's "Mark boarded" buttons are `disabled` scenery, not doors, so the
   // count is of things a visitor can actually act on.
   const heroSection = page.getByRole("main").locator("section").first();
@@ -106,7 +106,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // that claim in two paragraphs and a checklist until 2026-08-12. Asserting the
   // mockup keeps it from quietly reverting to prose.
   await expect(page.getByRole("img", { name: /import preview/i })).toBeVisible();
-  await expect(page.getByText("In the export")).toBeVisible();
+  // The two directions are named, and the geometry that names them is the
+  // claim: a mirrored pair of columns for a section arguing that records leave
+  // the same way they arrive (2026-08-13 redesign, docs/product/marketing.md).
+  // Headings rather than text, so a future edit cannot demote them back into
+  // an eyebrow that leaves each column unnamed in the outline.
+  await expect(page.getByRole("heading", { name: "Coming in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Going out" })).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(

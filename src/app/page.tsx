@@ -100,11 +100,21 @@ async function LocalizedHomeBody() {
 }
 
 /**
- * The page's one kicker: a short marker word with a hairline rule running out
- * to the edge of its column. The daily-moment rows use it for where in the day
- * they sit, the portability diptych for which direction a record is travelling.
- * One marker atom, several compositions around it — a new eyebrow style per
- * band is what made the old page read as six renders of one template.
+ * The one kicker for a *part of a section*: a short marker with a hairline rule
+ * running out to the edge of its column. The daily-moment rows use it for where
+ * in the day they sit, the portability diptych for which direction a record is
+ * travelling. One atom, several compositions around it — inventing a new
+ * treatment per band is what made the old page read as six renders of one
+ * template.
+ *
+ * It is deliberately *not* the page's only small-caps-ish label: the hero's
+ * category line and the breadth band's four card eyebrows are uppercase, and
+ * they stay that way because they name a whole thing (the product category, a
+ * capability group) rather than locate a part within a section.
+ *
+ * Page-local until a second marketing page wants the same marker — at which
+ * point it belongs in `src/components/MarketingSections.tsx` with the other
+ * shared visual atoms, not copied.
  *
  * `as="h3"` where the marker is the *only* label its column has (the diptych),
  * so the section's two halves are named in the document outline; the moment
@@ -173,12 +183,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   ] as const;
   // What a shop gets back on the way out, listed rather than described — the
   // inventory is the reassurance, so it reads as a manifest, not a paragraph.
+  // Keyed by message key, never by the rendered sentence: two locales edit
+  // these independently, and a duplicated line would silently collide.
   const exportInventory = [
-    t("marketing.home.exportItem1"),
-    t("marketing.home.exportItem2"),
-    t("marketing.home.exportItem3"),
-    t("marketing.home.exportItem4"),
-  ];
+    "marketing.home.exportItem1",
+    "marketing.home.exportItem2",
+    "marketing.home.exportItem3",
+    "marketing.home.exportItem4",
+  ] as const;
 
   return (
     <main className="flex-1">
@@ -344,12 +356,12 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 rounded box beside the import mockup and read as its twin,
                 when the two halves are a picture and an inventory. */}
             <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
-              {exportInventory.map((item) => (
-                <li key={item} className="flex gap-3 py-4">
+              {exportInventory.map((itemKey) => (
+                <li key={itemKey} className="flex gap-3 py-4">
                   <span aria-hidden="true" className="font-semibold text-primary">
                     ✓
                   </span>
-                  <span>{item}</span>
+                  <span>{t(itemKey)}</span>
                 </li>
               ))}
             </ul>
@@ -417,9 +429,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
           <div className="mx-auto mt-16 flex max-w-3xl flex-col items-center gap-5 border-t border-border pt-10 text-center sm:flex-row sm:justify-between sm:gap-8 sm:text-left">
             <div>
-              <h3 className="text-xl font-semibold tracking-tight">
+              {/* An `h2` at `text-xl`: the human path is a top-level way out of
+                  this page, not a footnote under the demo — a buyer who will
+                  not self-serve either button needs it in the outline. Level
+                  and size are separate decisions; it sits quietly on purpose. */}
+              <h2 className="text-xl font-semibold tracking-tight">
                 {t("marketing.home.contactTitle")}
-              </h3>
+              </h2>
               <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
             </div>
             <a

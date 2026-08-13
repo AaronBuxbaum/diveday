@@ -210,18 +210,30 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
   the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
   shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
+- **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
+  sign-up, no card") answers the only question the button raises, and the answer is worth nothing
+  the second time: repeated under every demo button it stops reading as reassurance and starts
+  reading as insistence. It sits with the *first* demo button a reader meets — the homepage hero,
+  not the homepage close — because that is where the decision is made; a reader who scrolls past it
+  has already read it. Deleting it from a page entirely is a different change and not an allowed
+  one: `e2e/marketing.spec.ts` asserts it on `/`.
 - **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
   `/product`, the trial on `/pricing`'s card); the nav's "Start a trial" stays secondary weight so
   it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
-  destination: the roles moved into the in-demo switcher, the diver preview onto its own moment
-  card, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts the hero's
-  enabled controls so the budget can't quietly grow back.
+  destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
+  row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
+  the hero's enabled controls so the budget can't quietly grow back.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
-  user-facing labels — section eyebrows say what the reader is looking at ("Your records", "Try
-  it"), not what the strategy doc calls it.
+  user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
+  2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
+  for a whole thing (the hero's category line, the breadth band's four capability groups), and a
+  sentence-case marker with a hairline rule for a *part* of a section (a moment's place in the day,
+  a direction in the records diptych). The redesign deleted the standing section eyebrows that
+  merely restated the heading beneath them ("Your records", "Try it", "The whole shop, one place");
+  a heading that needs an eyebrow to be understood is a heading that needs rewriting.
 
 ## SEO and shared links
 
@@ -351,8 +363,11 @@ the objection lands: the fee anchor has just made switching look attractive, and
 shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
 for a reader who scans that far.
 
-**The homepage records band carries both halves as pictures**, in the order the copy argues them:
-the import preview (arriving) beside the export inventory (leaving). That band is the portability
+**The homepage records band shows both halves, in the order the copy argues them**: the import
+preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
+real preview step, because "we'll show you exactly what comes across before anything saves" is a
+claim only a screen can settle. Leaving is a list, because what a shop wants to know on the way out
+is *what is in the box*, and a mockup of a ZIP file shows nothing. That band is the portability
 wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12 it made
 that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on the
 site.
