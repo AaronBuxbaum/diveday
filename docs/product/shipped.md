@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop chooses whether it is in search results (delivered 2026-08-13)
+
+Creating a shop published it to Google, with no step in between and no switch anywhere: the sitemap
+query filtered on `is_demo` and nothing else, so a trial shop's half-typed schedule was crawled on
+its first afternoon, and a shop that evaluated DiveDay and walked away had left a page indexed
+against its business name under someone else's domain. Indexing stays **on by default** — a public
+schedule nobody can find is most of the value gone — and gains the three things it was missing. A
+nullable `search_listing_opt_out_at` drops the shop from the sitemap *and* makes its public pages
+emit `robots: noindex`, because leaving the sitemap alone would not un-index anything already found.
+A readiness condition holds a brand-new shop out until it has published at least one departure,
+which fixes most of the "indexed before it is ready" case without asking anybody anything —
+deliberately not *future* departures, so a shop between seasons stays indexed. And the sign-up form
+says so, under the box where the owner picks their public address, with the switch in Settings
+beside the review link.
+[20260813-search-listing-is-a-choice](../architecture/decisions/20260813-search-listing-is-a-choice.md).
+
 ## A shop-cancelled departure returns the money by itself (delivered 2026-08-13)
 
 DiveDay automated the refund for the cancellation the *diver* causes and automated nothing for the

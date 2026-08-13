@@ -28,3 +28,22 @@ export const openGraphSite = {
   siteName: "DiveDay",
   type: "website",
 } as const satisfies Metadata["openGraph"];
+
+/**
+ * The `robots` field for a shop's own public pages, from its opt-out stamp.
+ *
+ * A shop is indexed by default — being findable is most of the point of having
+ * a public schedule — but it can say no, and saying no has to reach the page
+ * as well as the sitemap (ADR 20260813-search-listing-is-a-choice). Dropping
+ * out of `sitemap.xml` alone would not un-index anything a crawler had already
+ * found or that anyone had linked to.
+ *
+ * Returns `undefined` when the shop has not opted out, so the page inherits
+ * the site default rather than stating an explicit `index: true` that would
+ * have to be kept in step with the root layout.
+ */
+export function shopSearchListingRobots(
+  optedOutAt: Date | null | undefined,
+): Metadata["robots"] | undefined {
+  return optedOutAt ? { index: false, follow: false } : undefined;
+}

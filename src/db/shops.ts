@@ -1,11 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq, exists, isNull } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
-import { shops } from "./schema";
+import { shops, trips } from "./schema";
 
 export async function getShopBySlug(db: AppDb, slug: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);
@@ -13,14 +14,42 @@ export async function getShopBySlug(db: AppDb, slug: string) {
 }
 
 /**
- * Every publicly-indexable shop, for the sitemap. Demo shops are excluded —
- * including the canonical `blue-mantis` fixture the e2e/visual fleet seeds
- * (docs ADR 20260724-per-visitor-demo-shops) — because a demo is a test
+ * Every publicly-indexable shop, for the sitemap. Three conditions, and the
+ * last two were added together by ADR 20260813-search-listing-is-a-choice.
+ *
+ * **Not a demo.** Including the canonical `blue-mantis` fixture the e2e/visual
+ * fleet seeds (docs ADR 20260724-per-visitor-demo-shops) — a demo is a test
  * fixture a visitor spins up, not a real shop, and has no business in search
  * results.
+ *
+ * **Has not opted out.** A shop is listed by default, because being findable
+ * is most of the reason to have a public schedule at all; a shop that would
+ * rather not be says so in Settings and this is where that lands. The page
+ * itself also emits `robots: noindex` — dropping out of the sitemap alone
+ * would not un-index anything a crawler had already found.
+ *
+ * **Has published at least one departure.** A shop on its first afternoon has
+ * a half-typed course and a test trip, and that is the version Google would
+ * cache. Deliberately *not* "has a departure in the future": a shop between
+ * seasons should stay indexed, because falling out of search is worse than
+ * never entering it.
  */
 export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]> {
-  return db.select({ slug: shops.slug }).from(shops).where(eq(shops.isDemo, false));
+  return db
+    .select({ slug: shops.slug })
+    .from(shops)
+    .where(
+      and(
+        eq(shops.isDemo, false),
+        isNull(shops.searchListingOptOutAt),
+        exists(
+          db
+            .select({ one: trips.id })
+            .from(trips)
+            .where(and(eq(trips.shopId, shops.id), eq(trips.status, "scheduled"))),
+        ),
+      ),
+    );
 }
 
 export async function getShopById(db: AppDb, id: string) {
@@ -198,6 +227,31 @@ export async function setShopAddress(
       addressPostalCode: clean(address.addressPostalCode),
       addressCountry: clean(address.addressCountry),
     })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether this shop's public pages may be listed in search engines.
+ *
+ * `listed` is the default and the state every shop starts in; `false` stamps
+ * `search_listing_opt_out_at`, which drops the shop out of `sitemap.xml` *and*
+ * makes its public pages emit `robots: noindex`
+ * (ADR 20260813-search-listing-is-a-choice). Turning it back on clears the
+ * stamp rather than recording a second one — this is a switch, not a trail;
+ * the only question anyone asks of it later is which way it is set now, and
+ * when it was last turned off.
+ */
+export async function setShopSearchListing(
+  db: AppDb,
+  shopId: string,
+  listed: boolean,
+  now: Date = nowDate(),
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ searchListingOptOutAt: listed ? null : now })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

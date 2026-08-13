@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -128,7 +128,14 @@ export async function listActiveCoursesForSitemap(
     .select({ shopSlug: shops.slug, courseSlug: courses.slug })
     .from(courses)
     .innerJoin(shops, eq(courses.shopId, shops.id))
-    .where(and(eq(courses.isActive, true), eq(shops.isDemo, false)));
+    // An active course *is* the readiness signal here, so this query needs no
+    // equivalent of the schedule query's "has published a departure" condition
+    // — but it honours the same opt-out, or a shop that asked not to be listed
+    // would still have its course pages in the sitemap
+    // (ADR 20260813-search-listing-is-a-choice).
+    .where(
+      and(eq(courses.isActive, true), eq(shops.isDemo, false), isNull(shops.searchListingOptOutAt)),
+    );
   return rows;
 }
 

@@ -1677,7 +1677,7 @@
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
       "shopLinkLabel": "Shop link",
-      "shopLinkHint": "Your shop's public web address — the page divers open to book.",
+      "shopLinkHint": "Your shop's public web address — the page divers open to book. It's findable in search engines once you schedule a departure; you can turn that off any time in Settings.",
       "shopLinkPlaceholder": "e.g. green-lagoon",
       "shopLinkTitle": "Lowercase letters, numbers, and hyphens — this becomes your shop's web address",
       "timezoneLabel": "Timezone",

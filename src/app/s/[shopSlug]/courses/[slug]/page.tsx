@@ -18,7 +18,7 @@ import { courseTotalCents } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
-import { openGraphSite } from "@/lib/site-metadata";
+import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -70,6 +70,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
+    robots: shopSearchListingRobots(shop?.searchListingOptOutAt),
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }

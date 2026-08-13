@@ -175,6 +175,18 @@ export const shops = pgTable(
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
     isDemo: boolean("is_demo").notNull().default(false),
+    /**
+     * When this shop asked to be left out of search engines. Null — the
+     * default — means its public pages are in the sitemap and indexable, which
+     * is what a shop is on DiveDay for (ADR 20260813-search-listing-is-a-choice).
+     *
+     * A timestamp rather than a boolean, matching every other reversible act
+     * on this schema: the interesting question later is *when* a shop opted
+     * out, and a `false` cannot answer it. Set it and the public schedule and
+     * course pages emit `robots: noindex` and drop out of the sitemap; clear
+     * it and they come back.
+     */
+    searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

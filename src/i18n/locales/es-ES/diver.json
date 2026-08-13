@@ -1677,7 +1677,7 @@
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
       "shopLinkLabel": "Enlace del centro",
-      "shopLinkHint": "La dirección web pública de tu centro — la página que abren los buceadores para reservar.",
+      "shopLinkHint": "La dirección web pública de tu centro — la página que abren los buceadores para reservar. Aparece en los buscadores en cuanto programes una salida; puedes desactivarlo cuando quieras en Ajustes.",
       "shopLinkPlaceholder": "p. ej. green-lagoon",
       "shopLinkTitle": "Letras minúsculas, números y guiones — esto se convierte en la dirección web de tu centro",
       "timezoneLabel": "Zona horaria",

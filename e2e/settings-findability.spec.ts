@@ -80,6 +80,30 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
   });
 
+  test("a shop can take its public pages out of search, and put them back", async ({ page }) => {
+    // Being listed used to be a consequence of signing up, with nothing to
+    // say so and nothing to undo it (ADR 20260813-search-listing-is-a-choice).
+    // The row states which way it is set at rest, and the switch round-trips.
+    await page.goto(`/shop/${SHOP}/settings`);
+    await openSettingsRow(page, "Search listing");
+    const listed = page.getByLabel("List my public pages in search engines");
+    await expect(listed).toBeChecked();
+
+    await listed.uncheck();
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "hidden from search engines" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("List my public pages in search engines")).not.toBeChecked();
+
+    // Put it back, so the rest of this worker's run sees the seeded default.
+    await page.getByLabel("List my public pages in search engines").check();
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "listed in search engines" }),
+    ).toBeVisible();
+  });
+
   test("a shop can change the zone its whole schedule is read in", async ({ page }) => {
     // Sign-up asked for a timezone once and nothing could change it
     // afterwards, so a shop that clicked past the picker read every departure

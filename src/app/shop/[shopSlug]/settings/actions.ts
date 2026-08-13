@@ -23,6 +23,7 @@ import {
   setShopRentalItems,
   setShopRentalPricing,
   setShopReviewUrl,
+  setShopSearchListing,
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
@@ -424,6 +425,26 @@ export async function saveReviewUrlAction(formData: FormData) {
   if (!parsed.success) redirect(`${settings}?notice=review_url_invalid&saved=reviewLink`);
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
   revalidateAndRedirect(settings, `${settings}?notice=review_url_saved&saved=reviewLink`);
+}
+
+/**
+ * Whether this shop is listed in search engines. One checkbox, checked by
+ * default, because a shop is listed by default — the box states the current
+ * setting rather than asking the shop to opt in to something it already has
+ * (ADR 20260813-search-listing-is-a-choice).
+ */
+export async function saveSearchListingAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
+  const listed = formData.get("searchListed") === "on";
+  await setShopSearchListing(await getDb(), session.user.shopId, listed);
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const notice = listed ? "search_listing_on" : "search_listing_off";
+  revalidateAndRedirect(settings, `${settings}?notice=${notice}&saved=searchListing`);
 }
 
 export async function disconnectAction() {
