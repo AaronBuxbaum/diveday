@@ -1922,20 +1922,19 @@
       "gettingDemoReady": "Preparando la demo…"
     },
     "pricing": {
-      "eyebrow": "Precios",
       "heroTitle": "Un precio fijo para todo el centro.",
-      "heroDescription": "Sin cuota de alta, sin cálculos por plaza, sin niveles de funciones, sin comisión sobre tus reservas — el flujo de seguridad nunca es un extra que tengas que acordarte de comprar.",
-      "completeAccess": "Acceso completo al centro",
+      "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas.",
+      "heroSafetyNote": "El flujo de seguridad nunca es un extra.",
       "earlyAccessBadge": "Acceso anticipado",
       "gettingDemoReady": "Preparando la demo…",
-      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración futura tiene coste adicional, lo diremos con claridad antes de activarla.",
+      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración tiene coste adicional, lo diremos antes de activarla.",
+      "includedLead": "Qué cubre el precio",
       "feeAnchor": {
-        "eyebrow": "La otra forma de cobrar esto",
         "title": "Un precio plano, o una parte de cada plaza que vendes.",
-        "body": "Dos de los canales de reserva que le ofrecen a un centro de buceo cobran por reserva en lugar de por mes. Esto es lo que cada uno dice de su propio precio — no lo que acaba pagando un centro concreto, que no tenemos forma de saber y no vamos a suponer.",
+        "body": "Dos de los canales de reserva que le ofrecen a un centro de buceo cobran por reserva en lugar de por mes. Esto es lo que cada uno dice de su propio precio — no lo que acaba pagando un centro concreto, que no vamos a suponer.",
         "rezdy": "El precio publicado hoy por {competitor} es una suscripción mensual más un 3% de cada reserva en línea. La opción sin cuota mensual sigue llevándose ese 3%.",
         "fareharbor": "{competitor} no publica ninguna tarifa. No cobra nada al mes y se lleva una comisión de cada reserva, añadida al precio que paga tu cliente, mientras lo uses; terceros sitúan esa comisión en torno al 6%.",
-        "ours": "DiveDay no se lleva ninguna parte de una reserva. El cobro pasa por tu propia cuenta de Stripe, y lo que nos pagas es el precio de la tarjeta de arriba — el mismo número en un agosto lleno que en un enero tranquilo.",
+        "ours": "DiveDay no se lleva ninguna parte de una reserva. El cobro pasa por tu propia cuenta de Stripe, y lo que nos pagas es el precio de arriba — el mismo número en un agosto lleno que en un enero tranquilo.",
         "sourcesNote": "Ambas descripciones vienen de las guías de cambio, donde cada una está citada a las propias páginas del proveedor.",
         "guideLink": "Cómo es dejar {competitor} →"
       },
@@ -1946,27 +1945,20 @@
         "honestNote": "Hay dos cosas que no se entregan, y la pantalla lo dice: las cuentas de acceso con sus hashes de contraseña y las credenciales push de cada teléfono. Ninguna significa nada en otro sistema, y un archivo de hashes de contraseña no es algo que deba producir un botón de descarga.",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y una línea que nombra lo que deja fuera a propósito"
       },
-      "includedEyebrow": "Incluido ahora",
-      "includedTitle": "Todo lo necesario para llevar el flujo de trabajo actual de DiveDay.",
       "seeFullList": "Ver todo lo que hace, en detalle →",
-      "faqEyebrow": "Preguntas, respondidas sin rodeos",
       "faqTitle": "Las preguntas que realmente deciden.",
       "faq": {
-        "whatIncluded": {
-          "question": "¿Qué incluye?",
-          "answer": "El precio de centro fundador cubre todos los flujos de trabajo de DiveDay actualmente disponibles, desde las reservas públicas hasta el listado del barco listo para funcionar sin conexión. No es una colección de extras separados por función."
-        },
         "billing": {
           "question": "¿Cómo funciona la facturación?",
           "answer": "Mes a mes, por ubicación. Cancela cuando quieras y llévate los registros de tu centro con el botón de exportar — sin cuota de alta y sin contrato anual."
         },
         "trialMeaning": {
           "question": "¿Qué significa \"prueba\" ahora mismo?",
-          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta."
+          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta — y nada se apaga cuando termina el plazo; lo que hayas montado sigue funcionando. Cuando quieras pasar al plan de pago, escribe a {email}."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
-          "answer": "Sí. Abre la demo en vivo para ver el día como el propietario del centro, un instructor, un divemaster, el capitán o un buceador — es un centro ya lleno de viajes de muestra. O empieza tu propio centro de prueba: comienza vacío, listo para tu primer viaje."
+          "answer": "Sí. La demo en vivo es un centro ya lleno de viajes de muestra — recorre el día como el propietario, un instructor, un divemaster, el capitán o un buceador. Tu propio centro de prueba comienza vacío, listo para tu primer viaje."
         },
         "offline": {
           "question": "¿Funciona el listado sin conexión?",
@@ -1978,7 +1970,8 @@
         },
         "switching": {
           "question": "¿Qué implica realmente cambiarse a DiveDay?",
-          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, tarjetas y tallas de alquiler — mostrando exactamente qué va a pasar antes de guardar nada. Hay guías paso a paso para {competitors}."
+          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, tarjetas y tallas de alquiler — mostrando exactamente qué va a pasar antes de guardar nada. Hay guías paso a paso para {competitors}.",
+          "guidesLink": "Ver las guías de cambio →"
         },
         "agency": {
           "question": "¿DiveDay se conecta con PADI o SSI?",
@@ -1986,10 +1979,10 @@
         },
         "pos": {
           "question": "¿DiveDay sustituye mi POS?",
-          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático: reservas, cursos, preparación, previa del viaje y el barco, pagado a través de tu propia cuenta de Stripe. Añade una línea de venta a un pedido, pero aquí no hay caja ni control de inventario — preferimos decirlo con claridad."
+          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático: reservas, cursos, preparación, previa del viaje y el barco, pagado a través de tu propia cuenta de Stripe. Añade una línea de venta minorista a un pedido, pero aquí no hay caja ni control de inventario."
         },
         "whyFounding": {
-          "question": "¿Por qué ser una centro fundador?",
+          "question": "¿Por qué ser un centro fundador?",
           "answer": "Porque los centros tempranos orientan — lo que tu equipo encuentra da forma a lo que se construye después. Los centros fundadores también fijan el precio de hoy durante dos años; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
         },
         "multipleLocations": {
@@ -1997,7 +1990,9 @@
           "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a {email} — preferimos construir eso contigo antes que fingir que ya existe."
         }
       },
-      "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Escríbenos — siempre es bienvenido.",
+      "closingTitle": "Ese es todo nuestro precio.",
+      "closingBody": "{price} {cadence}. Sin contrato anual, y tus registros se van contigo cuando quieras.",
+      "stillQuestion": "¿Te queda una pregunta? Una persona real lee cada una.",
       "emailCta": "Escribe a {email}"
     }
   },
