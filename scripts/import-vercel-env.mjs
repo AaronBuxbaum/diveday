@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureAwsLogin } from "./aws-login.mjs";
+import { dotenvMap } from "./dotenv.mjs";
 
 // Never a bare `process.env.CI`: it is a generic convention many local dev
 // tools set, not proof this is really the unattended CI deploy job. `--ci-unattended`
@@ -27,15 +28,7 @@ if (!inputPath || !["production", "preview", "development"].includes(environment
 
 // `(.*)`, not `(.+)`: a deliberately blank value must still be diffed and
 // pushed, not silently dropped from both the checkpoint and the sync.
-const envLine = /^([A-Z][A-Z0-9_]*)=(.*)$/;
-function parseDotenv(content) {
-  return new Map(
-    content.split(/\r?\n/).flatMap((line) => {
-      const match = line.match(envLine);
-      return match ? [[match[1], match[2]]] : [];
-    }),
-  );
-}
+const parseDotenv = dotenvMap;
 
 const document = readFileSync(inputPath, "utf8");
 const entries = parseDotenv(document);

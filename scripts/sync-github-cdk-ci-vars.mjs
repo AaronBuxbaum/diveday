@@ -7,13 +7,10 @@
 // failed sts:AssumeRoleWithWebIdentity impossible to read from the workflow.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { dotenvEntries } from "./dotenv.mjs";
 
 const document = readFileSync(0, "utf8");
-const envLine = /^([A-Z][A-Z0-9_]*)=(.*)$/;
-const entries = document.split(/\r?\n/).flatMap((line) => {
-  const match = line.match(envLine);
-  return match ? [[match[1], match[2]]] : [];
-});
+const entries = dotenvEntries(document);
 
 if (entries.length === 0) {
   console.error("sync-github-cdk-ci-vars: no KEY=VALUE lines on stdin; nothing to set.");

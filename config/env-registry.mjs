@@ -124,7 +124,12 @@ export const ENV_GROUPS = [
       {
         key: "SES_FROM_EMAIL",
         from: "constant",
-        value: '"DiveDay <noreply@ses.dive.day>"',
+        // The address itself, unquoted. Whatever quoting a generated file
+        // needs is added when that file is written (scripts/dotenv.mjs), never
+        // baked in here: a value carrying its own quotes reads back with them
+        // still attached, which is how SES came to be handed a display name
+        // with no address after it and refused every production send (#517).
+        value: "DiveDay <noreply@ses.dive.day>",
         targets: LOCAL_AND_VERCEL,
       },
     ],
