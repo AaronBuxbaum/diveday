@@ -1960,7 +1960,7 @@
         },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free for 3 weeks, no card required."
+          "answer": "Starting a shop is free for 3 weeks, no card required — and nothing switches off when the window ends; what you set up keeps working. When you're ready to move to paid, email {email}."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",

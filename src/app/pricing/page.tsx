@@ -17,7 +17,7 @@ import { trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -127,7 +127,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
     {
       question: t("marketing.pricing.faq.trialMeaning.question"),
-      answer: t("marketing.pricing.faq.trialMeaning.answer"),
+      // The upgrade address, not the support one: marketing.md routes "how do
+      // I move a trial shop to paid" through its own inbox, and the soft
+      // expiry ("nothing switches off") restates src/lib/trial.ts, where
+      // expiry blocks no route and no mutation.
+      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: UPGRADE_EMAIL }),
     },
     {
       question: t("marketing.pricing.faq.seeBefore.question"),
