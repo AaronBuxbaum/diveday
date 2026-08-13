@@ -198,12 +198,12 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       <main className="flex-1">
         {/* The price is the hero. A pricing page's arriving question is "what
             does it cost and what's the catch", so the first composition
-            carries the whole answer: the plan, the pinned headline, the number
-            at display scale, the no-catch sentence, both doors, the
-            processing-fee fine print, and what the number buys — no card
-            border, no shadow; the figure itself is the weight. The old page
-            answered in screenful two, inside a bordered card below a generic
-            headline band. */}
+            carries the whole answer in one piece: the plan, the headline, the
+            number at display scale, the catches removed, both doors and what
+            clicking one costs, then — behind a hairline, in the same
+            container — what the number buys. No card border, no shadow; the
+            figure itself is the weight. The old page answered in screenful
+            two, inside a bordered card below a generic headline band. */}
         <section className="border-b border-border">
           <div className="mx-auto max-w-3xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
             <div className="text-center">
