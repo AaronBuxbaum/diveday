@@ -72,20 +72,23 @@ async function LocalizedProductBody() {
 }
 
 /**
+ * The five chapters of the day, in the order the day runs them. This list is
+ * the only place the sequence exists: the anchor strip under the hero, each
+ * chapter's marker, and the `#id` they jump between all derive from it, so it
+ * cannot disagree with itself. Reordering it renumbers everything at once.
+ */
+const CHAPTER_IDS = ["booking", "readiness", "night-before", "dock", "recap"] as const;
+type ChapterId = (typeof CHAPTER_IDS)[number];
+type ChapterMark = { id: ChapterId; label: string; number: string };
+
+/**
  * The shared grammar of the day-arc chapters: a quiet numbered time-of-day
  * marker in the slot the eyebrow used to hold. The number is muted and the
  * time label carries the accent, so five of these read as one sequence while
  * each chapter's composition below stays its own.
  */
-function ChapterMarker({
-  number,
-  label,
-  centered = false,
-}: {
-  number: string;
-  label: string;
-  centered?: boolean;
-}) {
+function ChapterMarker({ mark, centered = false }: { mark: ChapterMark; centered?: boolean }) {
+  const { number, label } = mark;
   return (
     <p
       className={`flex items-baseline gap-3 text-sm font-semibold tracking-widest uppercase ${
@@ -104,16 +107,24 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
   cacheLife("max");
   const t = diverTranslator(locale);
 
-  // The five chapters of the day, in the order the day runs them. The anchor
-  // strip under the hero and each chapter's marker both read from this list,
-  // so the sequence can never disagree with itself.
-  const chapters = [
-    { id: "booking", label: t("marketing.product.bookingEyebrow") },
-    { id: "readiness", label: t("marketing.product.readinessEyebrow") },
-    { id: "night-before", label: t("marketing.product.nightBeforeEyebrow") },
-    { id: "dock", label: t("marketing.product.dockEyebrow") },
-    { id: "recap", label: t("marketing.product.recapEyebrow") },
-  ] as const;
+  const chapterLabels: Record<ChapterId, string> = {
+    booking: t("marketing.product.bookingEyebrow"),
+    readiness: t("marketing.product.readinessEyebrow"),
+    "night-before": t("marketing.product.nightBeforeEyebrow"),
+    dock: t("marketing.product.dockEyebrow"),
+    recap: t("marketing.product.recapEyebrow"),
+  };
+  const chapters: ChapterMark[] = CHAPTER_IDS.map((id, index) => ({
+    id,
+    label: chapterLabels[id],
+    number: `0${index + 1}`,
+  }));
+  // Looked up by name below rather than numbered by hand: a literal "04" on
+  // the dock chapter would go on reading 04 after the list above it changed.
+  const chapter = Object.fromEntries(chapters.map((mark) => [mark.id, mark])) as Record<
+    ChapterId,
+    ChapterMark
+  >;
 
   // Every line in the reference index below, counted once so the sentence
   // introducing it and the list itself can never disagree.
@@ -199,14 +210,14 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               barco de vuelta") and broke it over two lines with its number
               floating beside them. */}
           <ol className="grid grid-cols-[auto_1fr] gap-x-4 sm:flex sm:flex-wrap sm:gap-x-8">
-            {chapters.map((chapter, index) => (
-              <li key={chapter.id}>
+            {chapters.map((mark) => (
+              <li key={mark.id}>
                 <a
-                  href={`#${chapter.id}`}
+                  href={`#${mark.id}`}
                   className="flex min-h-11 items-center gap-2 font-medium text-muted transition-colors hover:text-foreground"
                 >
-                  <span className="text-xs tabular-nums">{`0${index + 1}`}</span>
-                  {chapter.label}
+                  <span className="text-xs tabular-nums">{mark.number}</span>
+                  {mark.label}
                 </a>
               </li>
             ))}
@@ -218,7 +229,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section id="booking" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-20 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <ChapterMarker number="01" label={t("marketing.product.bookingEyebrow")} />
+            <ChapterMarker mark={chapter.booking} />
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.product.bookingTitle")}
             </h2>
@@ -251,7 +262,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <FrontDeskReadinessFallback locale={locale} />
           </MarketingMockup>
           <div className="order-1 lg:order-2">
-            <ChapterMarker number="02" label={t("marketing.product.readinessEyebrow")} />
+            <ChapterMarker mark={chapter.readiness} />
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.product.readinessTitle")}
             </h2>
@@ -282,7 +293,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <section id="night-before" className="scroll-mt-6 border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <ChapterMarker number="03" label={t("marketing.product.nightBeforeEyebrow")} />
+            <ChapterMarker mark={chapter["night-before"]} />
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.product.prepTitle")}
             </h2>
@@ -325,7 +336,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             />
           </div>
           <div className="order-1 lg:order-2">
-            <ChapterMarker number="04" label={t("marketing.product.dockEyebrow")} />
+            <ChapterMarker mark={chapter.dock} />
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.product.dockTitle")}
             </h2>
@@ -371,7 +382,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       {/* Chapter 05 — after the boat is back: the day's earned moment, so the
           chapter narrows to a single centered thought instead of a grid. */}
       <section id="recap" className="mx-auto max-w-3xl scroll-mt-6 px-6 py-20 text-center lg:py-24">
-        <ChapterMarker number="05" label={t("marketing.product.recapEyebrow")} centered />
+        <ChapterMarker mark={chapter.recap} centered />
         <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
           {t("marketing.product.recapTitle")}
         </h2>

@@ -140,12 +140,14 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   //
   // The disclosure is gone: the index renders flat, because a section headed
   // "the whole list, plainly" that hid the list was the emptiest band on the
-  // page. So there is no DOM state here to lose, and the assertions below are
-  // ordinary auto-retrying ones. The load-gated `goto` stays — it is the
-  // navigation's own completion, never a guessed interval — and the
-  // page-architecture half of the problem is still open for the marketing
-  // pages that do keep interactive state
-  // (FU-20260812-marketing-suspense-swap-discards-interaction).
+  // page. So there is no *open/closed* state left for the swap to drop, and
+  // the assertions below are ordinary auto-retrying ones. The page still keeps
+  // one thing across the swap that the swap can spoil — scroll position, now
+  // that the hero is followed by a five-entry anchor strip — so the
+  // architecture half of this is still open, with that as its acceptance case
+  // (FU-20260812-marketing-suspense-swap-discards-interaction). The load-gated
+  // `goto` stays: it is the navigation's own completion, never a guessed
+  // interval.
   await page.goto("/product");
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
