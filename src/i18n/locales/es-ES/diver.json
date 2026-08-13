@@ -1930,7 +1930,8 @@
     },
     "pricing": {
       "heroTitle": "Un precio fijo para todo el centro.",
-      "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas. El flujo de seguridad nunca es un extra.",
+      "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas.",
+      "heroSafetyNote": "El flujo de seguridad nunca es un extra.",
       "earlyAccessBadge": "Acceso anticipado",
       "gettingDemoReady": "Preparando la demo…",
       "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración tiene coste adicional, lo diremos antes de activarla.",
@@ -1998,7 +1999,7 @@
       },
       "closingTitle": "Ese es el precio completo.",
       "closingBody": "{price} {cadence}, y sin contrato anual. Cancela cuando quieras y tus registros se van contigo.",
-      "stillQuestion": "¿Una pregunta que estas no responden? Escríbenos — una persona real lo lee.",
+      "stillQuestion": "¿Una pregunta que estas no responden? Una persona real lee cada una.",
       "emailCta": "Escribe a {email}"
     }
   },

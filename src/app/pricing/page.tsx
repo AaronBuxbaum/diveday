@@ -227,8 +227,17 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
-              <p className="mx-auto mt-8 max-w-xl text-lg leading-8 text-balance text-muted">
+              {/* Two lines by construction rather than by wrapping: the four
+                  negations answer "what's the catch" and want to be read as one
+                  scannable beat, and the claim beneath them is a different
+                  sentence doing a different job. Set as one paragraph they
+                  broke mid-clause ("No cut / of your bookings"), which is the
+                  one place on the page a ragged break is most visible. */}
+              <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-muted">
                 {t("marketing.pricing.heroDescription")}
+              </p>
+              <p className="mx-auto mt-1 max-w-2xl text-lg leading-8 text-muted">
+                {t("marketing.pricing.heroSafetyNote")}
               </p>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
@@ -252,7 +261,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   </SubmitButton>
                 </form>
               </div>
-              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-muted">
+              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-balance text-muted">
                 {t("marketing.pricing.feesNote")}
               </p>
             </div>
@@ -282,12 +291,18 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/product"
-                className={buttonClass({ variant: "link", className: "mt-4 -ml-1 px-1" })}
-              >
-                {t("marketing.pricing.seeFullList")}
-              </Link>
+              {/* The negative margin is on the wrapper, not in `className`: a
+                  size's `px-*` and one passed through `className` are two
+                  utilities for the same property, and which wins is stylesheet
+                  order rather than source order (see src/components/ui/button.ts).
+                  `px-4` was winning here, leaving the link 12 measured pixels
+                  inside the checkmarks above it — so the offset is applied
+                  where nothing competes for it. */}
+              <div className="mt-4 -ml-4">
+                <Link href="/product" className={buttonClass({ variant: "link" })}>
+                  {t("marketing.pricing.seeFullList")}
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -306,12 +321,20 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 <li key={guide.slug}>
                   <h3 className="font-semibold leading-6">{guide.competitor}</h3>
                   <p className="mt-1 leading-7 text-muted">{claim}</p>
-                  <Link
-                    href={`/switching/${guide.slug}`}
-                    className={buttonClass({ variant: "link", className: "mt-1 px-0 text-left" })}
-                  >
-                    {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
-                  </Link>
+                  {/* Flushed on the wrapper for the reason the /product link
+                      above is: the `px-0` this used to pass lost to the size's
+                      own `px-4`, so the door sat indented from the claim it
+                      belongs to. */}
+                  <div className="mt-1 -ml-4">
+                    <Link
+                      href={`/switching/${guide.slug}`}
+                      className={buttonClass({ variant: "link", className: "text-left" })}
+                    >
+                      {t("marketing.pricing.feeAnchor.guideLink", {
+                        competitor: guide.competitor,
+                      })}
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -375,12 +398,14 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 <h3 className="font-semibold leading-6">{item.question}</h3>
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
                 {item.href && item.linkLabel ? (
-                  <Link
-                    href={item.href}
-                    className={buttonClass({ variant: "link", className: "mt-1 px-0 text-left" })}
-                  >
-                    {item.linkLabel}
-                  </Link>
+                  <div className="mt-1 -ml-4">
+                    <Link
+                      href={item.href}
+                      className={buttonClass({ variant: "link", className: "text-left" })}
+                    >
+                      {item.linkLabel}
+                    </Link>
+                  </div>
                 ) : null}
               </article>
             ))}
