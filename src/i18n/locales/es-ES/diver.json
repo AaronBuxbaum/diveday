@@ -679,8 +679,7 @@
   },
   "capability": {
     "waiverReceived": "Exención recibida",
-    "waiverDone": "Papeleo terminado ✅",
-    "readinessTitle": "Tu preparación para la salida"
+    "waiverDone": "Papeleo terminado ✅"
   },
   "seatClaim": {
     "metaTitle": "Reclama tu plaza",
