@@ -103,12 +103,12 @@ export function ShopNav({
          * `lg` up the tab strip joins the row via the `order` utilities.
          */}
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
-          {/* The identity block is this shop's own disclosure: Sign out and
-              Settings live behind it rather than standing in permanent chrome
-              — the rarest controls in the header do not get all-day screen
-              time (principle 10), and Settings in particular was costing a
-              sixth of the phone dock. Home stays one tap away as Today, in
-              the tabs and the dock. */}
+          {/* The identity block is this reader's own disclosure — language
+              and Sign out — rather than standing in permanent chrome: the
+              rarest controls in the header do not get all-day screen time
+              (principle 10). Places in the shop (Settings included) live in
+              the nav's More groups instead. Home stays one tap away as
+              Today, in the tabs and the dock. */}
           {/* Below `lg` it is also the row's one flexible item, so a long shop
               name gets the width the tabs vacated. `flex-1` rather than a bare
               `min-w-0`: this row wraps, and wrapping is decided on an item's
@@ -127,14 +127,11 @@ export function ShopNav({
           <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-initial">
             <ShopIdentityMenu
               shopName={shopName}
-              root={root}
-              gates={navGates}
               signOutAction={signOutAction}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
               copy={{
-                settings: destinationLabels.settings,
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
@@ -202,6 +199,9 @@ export function ShopNav({
         labels={destinationLabels}
         navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
         badgeLabels={badgeLabels}
+        moreLabel={t("shared.shopNavLinks.more")}
+        groupDailyLabel={t("shared.shopNavLinks.groupDaily")}
+        groupSetupLabel={t("shared.shopNavLinks.groupSetup")}
       />
     </>
   );
