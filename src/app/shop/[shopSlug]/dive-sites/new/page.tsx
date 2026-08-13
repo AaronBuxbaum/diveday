@@ -117,7 +117,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.fields.difficulty,
+      difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
