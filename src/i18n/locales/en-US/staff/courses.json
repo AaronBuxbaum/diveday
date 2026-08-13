@@ -13,6 +13,9 @@
     "hideShowSrLabel": "{action} {title}",
     "previewSrLabel": "Preview {title}",
     "scheduleSrLabel": "Schedule a session of {title}",
+    "schedule": "Schedule",
+    "editSrLabel": "Edit {title}",
+    "viewPublicPage": "View public page",
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
     }

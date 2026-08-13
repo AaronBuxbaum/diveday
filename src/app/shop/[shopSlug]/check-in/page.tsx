@@ -137,7 +137,7 @@ export default async function CheckInPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}

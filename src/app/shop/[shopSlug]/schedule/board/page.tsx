@@ -442,7 +442,7 @@ export default async function ScheduleBoardPage({
           <>
             <Link
               href={publicSchedulePath(shopSlug)}
-              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {st("schedule.viewPublicPage")}
             </Link>
@@ -458,7 +458,7 @@ export default async function ScheduleBoardPage({
               <Link
                 href={`/shop/${shopSlug}/schedule/board?add=1`}
                 data-board-add
-                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+                className={buttonClass({ variant: "secondary" })}
               >
                 <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
               </Link>
@@ -467,10 +467,7 @@ export default async function ScheduleBoardPage({
                 job — a shop puts a boat on the board once and then seats
                 divers on it all week — and until now "someone just called,
                 put them on Saturday" had no door of its own at all. */}
-            <Link
-              href={`/shop/${shopSlug}/bookings/new`}
-              className={buttonClass({ className: "rounded-xl" })}
-            >
+            <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
               {st("schedule.addBooking")}
             </Link>
           </>
@@ -501,7 +498,7 @@ export default async function ScheduleBoardPage({
               page for the same form. */}
           <Link
             href={`/shop/${shopSlug}/schedule/board?add=1`}
-            className={buttonClass({ className: "mt-4 rounded-xl" })}
+            className={buttonClass({ className: "mt-4" })}
           >
             {st("schedule.scheduleTrip")}
           </Link>
