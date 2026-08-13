@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -35,6 +36,32 @@ export const metadata: Metadata = {
 // See ADR 20260804-instant-navigation.
 export const instant = true;
 
+/** The one ask, both token kinds: a title, the shop it's about, one button. */
+function ConfirmUnsubscribe({
+  title,
+  description,
+  submitLabel,
+  pendingLabel,
+  token,
+}: {
+  title: string;
+  description: string;
+  submitLabel: string;
+  pendingLabel: string;
+  token: string;
+}) {
+  // A single button needs no panel around it (docs/design/principles.md #10).
+  return (
+    <EntryShell wordmark panel={false} title={title} description={description}>
+      <form action={confirmUnsubscribe.bind(null, token)}>
+        <SubmitButton pendingLabel={pendingLabel} className={buttonClass()}>
+          {submitLabel}
+        </SubmitButton>
+      </form>
+    </EntryShell>
+  );
+}
+
 export default async function UnsubscribePage({ params }: { params: Promise<{ token: string }> }) {
   await connection();
   const { token } = await params;
@@ -45,37 +72,21 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   if (lastMinute) {
     if (lastMinute.alreadyUnsubscribed) {
       return (
-        <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-          <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {t("lastMinute.unsubscribe.confirmedTitle")}
-            </h1>
-            <p className="mt-3 text-muted">
-              {t("lastMinute.unsubscribe.confirmedText", { shopName: lastMinute.shopName })}
-            </p>
-          </section>
-        </main>
+        <EntryDone
+          glyph="🔕"
+          title={t("lastMinute.unsubscribe.confirmedTitle")}
+          text={t("lastMinute.unsubscribe.confirmedText", { shopName: lastMinute.shopName })}
+        />
       );
     }
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-        <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("lastMinute.unsubscribe.title")}
-          </h1>
-          <p className="mt-3 text-muted">
-            {t("lastMinute.unsubscribe.description", { shopName: lastMinute.shopName })}
-          </p>
-          <form action={confirmUnsubscribe.bind(null, token)} className="mt-5">
-            <SubmitButton
-              pendingLabel={t("lastMinute.unsubscribe.submitting")}
-              className={buttonClass()}
-            >
-              {t("lastMinute.unsubscribe.submit")}
-            </SubmitButton>
-          </form>
-        </section>
-      </main>
+      <ConfirmUnsubscribe
+        title={t("lastMinute.unsubscribe.title")}
+        description={t("lastMinute.unsubscribe.description", { shopName: lastMinute.shopName })}
+        submitLabel={t("lastMinute.unsubscribe.submit")}
+        pendingLabel={t("lastMinute.unsubscribe.submitting")}
+        token={token}
+      />
     );
   }
 
@@ -83,48 +94,29 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   if (courtesy) {
     if (courtesy.alreadyOptedOut) {
       return (
-        <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-          <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {t("courtesyEmailUnsubscribe.confirmedTitle")}
-            </h1>
-            <p className="mt-3 text-muted">
-              {t("courtesyEmailUnsubscribe.confirmedText", { shopName: courtesy.shopName })}
-            </p>
-          </section>
-        </main>
+        <EntryDone
+          glyph="🔕"
+          title={t("courtesyEmailUnsubscribe.confirmedTitle")}
+          text={t("courtesyEmailUnsubscribe.confirmedText", { shopName: courtesy.shopName })}
+        />
       );
     }
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-        <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("courtesyEmailUnsubscribe.title")}
-          </h1>
-          <p className="mt-3 text-muted">
-            {t("courtesyEmailUnsubscribe.description", { shopName: courtesy.shopName })}
-          </p>
-          <form action={confirmUnsubscribe.bind(null, token)} className="mt-5">
-            <SubmitButton
-              pendingLabel={t("courtesyEmailUnsubscribe.submitting")}
-              className={buttonClass()}
-            >
-              {t("courtesyEmailUnsubscribe.submit")}
-            </SubmitButton>
-          </form>
-        </section>
-      </main>
+      <ConfirmUnsubscribe
+        title={t("courtesyEmailUnsubscribe.title")}
+        description={t("courtesyEmailUnsubscribe.description", { shopName: courtesy.shopName })}
+        submitLabel={t("courtesyEmailUnsubscribe.submit")}
+        pendingLabel={t("courtesyEmailUnsubscribe.submitting")}
+        token={token}
+      />
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("lastMinute.unsubscribe.unavailableTitle")}
-        </h1>
-        <p className="mt-3 text-muted">{t("lastMinute.unsubscribe.unavailableText")}</p>
-      </section>
-    </main>
+    <EntryDone
+      glyph="⏳"
+      title={t("lastMinute.unsubscribe.unavailableTitle")}
+      text={t("lastMinute.unsubscribe.unavailableText")}
+    />
   );
 }

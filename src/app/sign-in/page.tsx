@@ -3,12 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { Suspense } from "react";
+import { EntryShell } from "@/components/account/EntryShell";
+import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
-import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
@@ -72,7 +73,7 @@ export default function SignInPage({
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<main className="flex-1" />}>
+      <Suspense fallback={<EntryShellSkeleton fields={["email", "password"]} />}>
         <SignInForm searchParams={searchParams} />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
@@ -93,62 +94,72 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
   const publicShopSlug = shopSlugFromStaffUrl(typeof callbackUrl === "string" ? callbackUrl : null);
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
-      <div className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("account.signIn.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("account.signIn.description")}</p>
-        {error ? (
-          <ShopNotice tone="danger" role="alert" className="mt-4">
-            {t("account.signIn.error")}
-          </ShopNotice>
-        ) : null}
-        <form action={authenticate} className="mt-5 flex flex-col gap-4">
-          <FieldGrid columns={1} className="gap-y-4">
-            <Field label={t("account.common.email")}>
-              <input
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("account.common.password")}>
-              <input
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <div className="flex justify-end">
-            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-              {t("account.signIn.forgotPassword")}
-            </Link>
-          </div>
-          <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
-            {t("account.signIn.submit")}
-          </SubmitButton>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted">
-          {t("account.signIn.needShop")}{" "}
-          <Link href={trialHref("sign-in")} className="text-primary font-medium hover:underline">
-            {t("account.signIn.createShop")}
-          </Link>
-        </p>
-        {publicShopSlug ? (
-          <p className="mt-2 text-center text-sm">
-            <Link
-              href={publicSchedulePath(publicShopSlug)}
-              className="text-primary hover:underline"
-            >
-              {t("account.signIn.publicSchedule")}
+    <EntryShell
+      title={t("account.signIn.title")}
+      description={t("account.signIn.description")}
+      footer={
+        <>
+          {/* A diver who followed a staff link isn't lost — their shop's own
+              schedule is the useful surface at this moment, so it leads. */}
+          {publicShopSlug ? (
+            <p>
+              <Link
+                href={publicSchedulePath(publicShopSlug)}
+                className="font-medium text-primary hover:underline"
+              >
+                {t("account.signIn.publicSchedule")}
+              </Link>
+            </p>
+          ) : null}
+          <p>
+            {t("account.signIn.needShop")}{" "}
+            <Link href={trialHref("sign-in")} className="font-medium text-primary hover:underline">
+              {t("account.signIn.createShop")}
             </Link>
           </p>
+        </>
+      }
+    >
+      <form action={authenticate} className="flex flex-col gap-4">
+        <FieldGrid columns={1} className="gap-y-4">
+          <Field label={t("account.common.email")}>
+            <input
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("account.common.password")}>
+            <input
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        {/* The link claims a full touch target (dock test); negative margins
+            keep the visual rhythm of the stack it sits in. */}
+        <Link
+          href="/forgot-password"
+          className={buttonClass({ variant: "link", size: "sm", className: "-my-2 -mr-3 self-end" })}
+        >
+          {t("account.signIn.forgotPassword")}
+        </Link>
+        <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
+          {t("account.signIn.submit")}
+        </SubmitButton>
+        {/* The refusal renders beside the control that earned it, not in a
+            banner above the page (docs/design/forms-and-controls.md). */}
+        {error ? (
+          <FormStatus tone="danger" className="justify-center">
+            {t("account.signIn.error")}
+          </FormStatus>
         ) : null}
-      </div>
-    </main>
+      </form>
+    </EntryShell>
   );
 }

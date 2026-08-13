@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -32,47 +33,52 @@ export default async function ForgotPasswordPage({
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNav />
-      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("account.forgotPassword.title")}
-          </h1>
-          <p className="mt-1 text-sm text-muted">{t("account.forgotPassword.description")}</p>
-          {sent ? (
-            <p
-              role="status"
-              className="mt-4 rounded-lg bg-success/10 px-3 py-2 text-sm text-success"
-            >
-              {t("account.forgotPassword.sent")}
-            </p>
-          ) : (
-            <form action={requestPasswordReset} className="mt-5 flex flex-col gap-4">
-              <FieldGrid columns={1} className="gap-y-4">
-                <Field label={t("account.common.email")}>
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-              <SubmitButton
-                pendingLabel={t("account.forgotPassword.sending")}
-                className={buttonClass()}
-              >
-                {t("account.forgotPassword.submit")}
-              </SubmitButton>
-            </form>
-          )}
-          <p className="mt-4 text-center text-sm text-muted">
-            <Link href="/sign-in" className="text-primary font-medium hover:underline">
+      {sent ? (
+        // The send is the whole outcome — the page has nothing left to ask,
+        // so it reads as a terminal state rather than a form with a banner.
+        <EntryDone
+          glyph="📬"
+          title={t("account.forgotPassword.sentTitle")}
+          text={t("account.forgotPassword.sent")}
+          action={
+            <Link href="/sign-in" className="font-medium text-primary hover:underline">
               {t("account.common.backToSignIn")}
             </Link>
-          </p>
-        </div>
-      </main>
+          }
+        />
+      ) : (
+        <EntryShell
+          title={t("account.forgotPassword.title")}
+          description={t("account.forgotPassword.description")}
+          footer={
+            <p>
+              <Link href="/sign-in" className="font-medium text-primary hover:underline">
+                {t("account.common.backToSignIn")}
+              </Link>
+            </p>
+          }
+        >
+          <form action={requestPasswordReset} className="flex flex-col gap-4">
+            <FieldGrid columns={1} className="gap-y-4">
+              <Field label={t("account.common.email")}>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+            <SubmitButton
+              pendingLabel={t("account.forgotPassword.sending")}
+              className={buttonClass()}
+            >
+              {t("account.forgotPassword.submit")}
+            </SubmitButton>
+          </form>
+        </EntryShell>
+      )}
       <MarketingFooter />
     </div>
   );
