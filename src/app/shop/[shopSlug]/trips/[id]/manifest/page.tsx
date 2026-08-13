@@ -10,6 +10,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
@@ -272,31 +273,22 @@ export default async function TripManifestPage({
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle
-          8). Same idiom as the trip sub-nav's track; boat-size targets because
-          this row is switched at the rail. */}
-      <nav
-        className="mt-7 flex w-fit max-w-full snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden"
-        aria-label={t("manifest.checkpointNavAriaLabel")}
-      >
-        {checkpoints.map((value) => {
-          const active = value === checkpoint;
-          return (
-            <Link
-              key={value}
-              href={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`}
-              scroll={false}
-              aria-current={active ? "page" : undefined}
-              className={`inline-flex min-h-14 shrink-0 snap-start items-center justify-center rounded-xl px-5 text-base font-semibold whitespace-nowrap transition-colors duration-200 ${
-                active
-                  ? "bg-surface text-primary shadow-sm"
-                  : "text-muted hover:bg-surface hover:text-foreground"
-              }`}
-            >
-              {rollCallCheckpointText(t, value)}
-            </Link>
-          );
-        })}
-      </nav>
+          8). The same shared track as the trip sub-nav (`SegmentedControl`),
+          at boat size because this row is switched at the rail. */}
+      <SegmentedControl
+        ariaLabel={t("manifest.checkpointNavAriaLabel")}
+        items={checkpoints.map((value) => ({
+          key: value,
+          label: rollCallCheckpointText(t, value),
+          href: `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${value}`,
+        }))}
+        currentKey={checkpoint}
+        size="boat"
+        currentIsLink
+        ariaCurrentValue="true"
+        scroll={false}
+        className="mt-7"
+      />
 
       {/* The one count surface on this page: the checkpoint's progress, the
           four numbers behind it, and — when someone is blocked — the sentence

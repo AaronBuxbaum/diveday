@@ -143,9 +143,9 @@ describe("the headline count is people, not rows", () => {
   });
 
   it("shows no badge at all when nothing is blocked", () => {
-    // A zero badge is noise; the description carries the all-clear instead.
+    // A zero badge is noise; the empty state carries the all-clear instead.
     renderGroups(queue([]));
-    expect(screen.getByText(t("blockers.description.none"))).toBeInTheDocument();
+    expect(screen.getByText(t("blockers.emptyTitle"))).toBeInTheDocument();
     expect(screen.queryByText(t("blockers.blockedCount", { count: 0 }))).not.toBeInTheDocument();
   });
 });

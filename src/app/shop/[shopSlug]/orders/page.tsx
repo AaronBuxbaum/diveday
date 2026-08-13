@@ -10,6 +10,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
@@ -427,76 +428,60 @@ export default async function OrdersIndexPage({
           )}
         </EmptyState>
       ) : (
-        // overflow-x-auto, never overflow-hidden: a clipped Amount column on a
-        // phone silently swallowed the one figure this index exists to show.
-        <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  {t("orders.index.table.diver")}
-                </th>
-                <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
-                  {t("orders.index.table.trip")}
-                </th>
-                {/* Below sm the status folds under the diver's name (only when
-                    exceptional), so Date and Amount stay on screen at 390px. */}
-                <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
-                  {t("orders.index.table.status")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  {t("orders.index.table.date")}
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">
-                  {t("orders.index.table.amount")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((row) => {
-                // Paid is the expected state and renders as quiet muted text;
-                // only the exceptional statuses earn a badge (principle 9).
-                const statusBadge =
-                  row.order.status === "paid" ? null : (
-                    <Badge tone={STATUS_TONES[row.order.status] ?? "neutral"}>
-                      {STATUS_KEYS[row.order.status]
-                        ? t(STATUS_KEYS[row.order.status])
-                        : row.order.status}
-                    </Badge>
-                  );
-                return (
-                  <tr key={row.order.id}>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/shop/${shopSlug}/orders/${row.order.id}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
-                      >
-                        {row.person.fullName}
-                      </Link>
-                      <div className="text-xs text-muted sm:hidden">
-                        {row.trip?.title ?? row.order.description ?? ""}
-                      </div>
-                      {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
-                    </td>
-                    <td className="hidden px-4 py-3 text-muted sm:table-cell">
-                      {row.trip?.title ?? row.order.description ?? "—"}
-                    </td>
-                    {/* Settled rows leave the cell empty — "Paid" on 45 of 50
-                        rows is the expected state formatted as information, so
-                        a marker appears only where a staffer is needed. */}
-                    <td className="hidden px-4 py-3 sm:table-cell">{statusBadge}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-muted tabular-nums">
-                      {formatShortDate(row.order.createdAt, locale, shop.timezone)}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
-                    </td>
-                  </tr>
+        <Table shellClassName="mt-6">
+          <THead>
+            <Th>{t("orders.index.table.diver")}</Th>
+            <Th hideBelow="sm">{t("orders.index.table.trip")}</Th>
+            {/* Below sm the status folds under the diver's name (only when
+                exceptional), so Date and Amount stay on screen at 390px. */}
+            <Th hideBelow="sm">{t("orders.index.table.status")}</Th>
+            <Th>{t("orders.index.table.date")}</Th>
+            <Th numeric>{t("orders.index.table.amount")}</Th>
+          </THead>
+          <TBody>
+            {rows.map((row) => {
+              // Paid is the expected state and renders as quiet muted text;
+              // only the exceptional statuses earn a badge (principle 9).
+              const statusBadge =
+                row.order.status === "paid" ? null : (
+                  <Badge tone={STATUS_TONES[row.order.status] ?? "neutral"}>
+                    {STATUS_KEYS[row.order.status]
+                      ? t(STATUS_KEYS[row.order.status])
+                      : row.order.status}
+                  </Badge>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
+              return (
+                <tr key={row.order.id}>
+                  <Td>
+                    <Link
+                      href={`/shop/${shopSlug}/orders/${row.order.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {row.person.fullName}
+                    </Link>
+                    <div className="text-xs text-muted sm:hidden">
+                      {row.trip?.title ?? row.order.description ?? ""}
+                    </div>
+                    {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
+                  </Td>
+                  <Td muted hideBelow="sm">
+                    {row.trip?.title ?? row.order.description ?? "—"}
+                  </Td>
+                  {/* Settled rows leave the cell empty — "Paid" on 45 of 50
+                      rows is the expected state formatted as information, so
+                      a marker appears only where a staffer is needed. */}
+                  <Td hideBelow="sm">{statusBadge}</Td>
+                  <Td muted className="whitespace-nowrap tabular-nums">
+                    {formatShortDate(row.order.createdAt, locale, shop.timezone)}
+                  </Td>
+                  <Td numeric>
+                    {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
+                  </Td>
+                </tr>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
 
       <Pager

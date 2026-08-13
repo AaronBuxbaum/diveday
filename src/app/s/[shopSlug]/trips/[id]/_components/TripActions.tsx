@@ -44,9 +44,13 @@ export function TripActions({ calendarUrl }: { calendarUrl: string }) {
         : "";
 
   return (
-    <fieldset className="mt-5 flex flex-wrap gap-2">
+    // Ghost weight, not three bordered pills: these are conveniences, and a
+    // row of same-weight boxed buttons right under the masthead outshouted
+    // the price above and the booking card below (design/principles.md #8 —
+    // nothing here competes with the one primary action).
+    <fieldset className="mt-4 -ml-3 flex flex-wrap gap-1">
       <legend className="sr-only">{t("planAndShare")}</legend>
-      <a href={calendarUrl} className={buttonClass({ variant: "secondary", size: "sm" })}>
+      <a href={calendarUrl} className={buttonClass({ variant: "ghost", size: "sm" })}>
         {t("addToCalendar")}
       </a>
       {/* No "Get directions" here. The trip page already carries the site's
@@ -57,7 +61,7 @@ export function TripActions({ calendarUrl }: { calendarUrl: string }) {
       <button
         type="button"
         onClick={shareTrip}
-        className={buttonClass({ variant: "secondary", size: "sm" })}
+        className={buttonClass({ variant: "ghost", size: "sm" })}
       >
         {label}
       </button>
