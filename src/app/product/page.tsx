@@ -383,9 +383,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           </div>
           <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-2">
             <div className="border-t border-border pt-5">
-              <dt className="font-semibold leading-6">
-                {t("marketing.product.yourAccountTitle")}
-              </dt>
+              <dt className="font-semibold leading-6">{t("marketing.product.yourAccountTitle")}</dt>
               <dd className="mt-2 text-sm leading-6 text-muted">
                 {t("marketing.product.yourAccountBody")}
               </dd>
