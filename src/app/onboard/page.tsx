@@ -384,11 +384,22 @@ export default async function OnboardPage({
           >
             {t("account.onboard.submit")}
           </SubmitButton>
-          {/* The one reassurance line, at the moment of commitment — the
-                stacked trust paragraphs this form used to carry are the
-                marketing pages' job; the button's own footnote answers the
-                only question left at this point ("what am I agreeing to?"). */}
-          <p className="text-center text-sm text-muted">{t("account.onboard.trialMeaning")}</p>
+          {/* The reassurance, as one quiet line at the moment of commitment
+              instead of the boxed checklist + scattered footnotes this form
+              used to stack. The three leads are shipped, checkable claims
+              (docs/product/marketing.md's claims inventory points here), and
+              asking for a password is the moment of maximum hesitation — so
+              they stay with the form (e2e/marketing.spec.ts pins them), just
+              at footnote weight: the claim survives, the paragraph explaining
+              it lives on the marketing pages the visitor came from. */}
+          <p className="mx-auto max-w-prose text-center text-sm text-muted">
+            {[
+              t("account.onboard.trialMeaning"),
+              t("account.onboard.reassurance.noCard.lead"),
+              t("account.onboard.reassurance.yourRecords.lead"),
+              t("account.onboard.reassurance.supportLine.lead"),
+            ].join(" ")}
+          </p>
           {errorField === "form" ? (
             <FormStatus tone="danger" className="justify-center">
               {errorText}
