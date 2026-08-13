@@ -6,6 +6,7 @@ import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalF
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -33,7 +34,6 @@ import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-sum
 import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { telHref } from "@/lib/course-inquiry";
 import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { toShopCurrency } from "@/lib/money";
@@ -229,41 +229,68 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
   );
 }
 
-/** The action a checklist item enables on this page, if any. */
+/**
+ * Which single-button action a checklist item answers with, if any. The one
+ * source of truth for `itemAction`'s button branches *and* for choosing the
+ * page's primary — one function so the two can never drift apart. The
+ * certification rows are deliberately not here: their action is the
+ * multi-field `CertificationEntry` form, whose submit stays secondary by
+ * design — a form's save is not the page's one obvious action.
+ */
+function actionButtonKind(item: DiverChecklistItem, canPay: boolean): "waiver" | "pay" | null {
+  if (item.code === "waiver_pending" || item.code === "waiver_expired") return "waiver";
+  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) return "pay";
+  return null;
+}
+
+/**
+ * The action a checklist item enables on this page, if any.
+ *
+ * `isPrimary` marks the first row whose action is a button — and only that
+ * button wears primary weight. Two actionable rows at once (a waiver and a
+ * payment, most commonly) used to render two primaries, leaving the diver to
+ * do the triage the page had already done in its own headline (design
+ * principle 8: one obvious action). Chosen among the button-bearing rows
+ * rather than blindly from `nextDiverStep`: when the next step is a
+ * certification form, demoting the one payment button with nothing promoted
+ * in its place would leave the page with no primary at all.
+ */
 function itemAction(
   item: DiverChecklistItem,
   token: string,
   canPay: boolean,
+  isPrimary: boolean,
   t: DiverTranslator,
 ): React.ReactNode {
+  const actionButton = buttonClass(
+    isPrimary ? { size: "sm" } : { variant: "secondary", size: "sm" },
+  );
+  const buttonKind = actionButtonKind(item, canPay);
   // An expired link needs the same action as a pending one — `signWaiverFromReady`
   // always issues a fresh link and opens it, superseding whatever came before,
   // so the only difference is what the button promises. Naming the difference
   // matters: "Sign your waiver" on a link the diver already knows is dead reads
   // as the page not having noticed.
-  if (item.code === "waiver_pending" || item.code === "waiver_expired") {
+  if (buttonKind === "waiver") {
     return (
       <form action={signWaiverFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel={t("ready.opening")} className={buttonClass({ size: "sm" })}>
+        <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
           {t(item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver")}
+        </SubmitButton>
+      </form>
+    );
+  }
+  if (buttonKind === "pay") {
+    return (
+      <form action={payFromReady.bind(null, token)}>
+        <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
+          {t("ready.payForTrip")}
         </SubmitButton>
       </form>
     );
   }
   if (item.code && CERT_ENTRY_CODES.has(item.code)) {
     return <CertificationEntry token={token} t={t} />;
-  }
-  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) {
-    return (
-      <form action={payFromReady.bind(null, token)}>
-        <SubmitButton
-          pendingLabel={t("ready.openingPayment")}
-          className={buttonClass({ size: "sm" })}
-        >
-          {t("ready.payForTrip")}
-        </SubmitButton>
-      </form>
-    );
   }
   return null;
 }
@@ -342,36 +369,6 @@ const RESCHEDULE_BLOCKED_KEYS: Record<
 };
 
 /**
- * The shop's own phone and email, as tappable links. Rendered wherever this
- * page tells a diver to talk to a human, so "the shop can help" is never a
- * dead end they have to go hunting for a number after reading.
- */
-function ShopContactLinks({
-  contactPhone,
-  contactEmail,
-}: {
-  contactPhone: string | null;
-  contactEmail: string | null;
-}) {
-  if (!contactPhone && !contactEmail) return null;
-  const linkClass = "font-medium text-primary hover:underline";
-  return (
-    <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base">
-      {contactPhone ? (
-        <a href={telHref(contactPhone)} className={linkClass}>
-          {contactPhone}
-        </a>
-      ) : null}
-      {contactEmail ? (
-        <a href={`mailto:${contactEmail}`} className={linkClass}>
-          {contactEmail}
-        </a>
-      ) : null}
-    </p>
-  );
-}
-
-/**
  * Where the diver is actually going, and how to reach the people who will be
  * there — name, street, phone, email, and a map of the front door.
  *
@@ -398,9 +395,8 @@ function ShopCard({
   const lines = shopAddressLines(address);
   const mapQuery = shopMapQuery(name, address);
   if (lines.length === 0 && !contactPhone && !contactEmail) return null;
-  const linkClass = "font-medium text-primary hover:underline";
   return (
-    <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-surface">
+    <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-surface">
       {mapQuery ? (
         <iframe
           title={t("ready.shopMapTitle", { shop: name })}
@@ -411,10 +407,8 @@ function ShopCard({
         />
       ) : null}
       <div className="p-5 sm:p-6">
-        <h2 className="text-sm font-bold tracking-[0.16em] text-muted uppercase">
-          {t("ready.shopHeading")}
-        </h2>
-        <p className="mt-2 text-lg font-semibold">{name}</p>
+        <h2 className="text-lg font-semibold">{t("ready.shopHeading")}</h2>
+        <p className="mt-2 text-base font-medium">{name}</p>
         {lines.length > 0 ? (
           <address className="mt-1 text-base text-muted not-italic">
             {lines.map((line) => (
@@ -424,23 +418,17 @@ function ShopCard({
             ))}
           </address>
         ) : null}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-base">
-          {contactPhone ? (
-            <a href={telHref(contactPhone)} className={linkClass}>
-              {contactPhone}
-            </a>
-          ) : null}
-          {contactEmail ? (
-            <a href={`mailto:${contactEmail}`} className={linkClass}>
-              {contactEmail}
-            </a>
-          ) : null}
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-base">
+          {/* gap-y-1 rides in on the className: when a long email wraps under
+              the phone number inside the component's own span, the lines keep
+              the same breathing room the surrounding row declares. */}
+          <ShopContactLinks phone={contactPhone} email={contactEmail} className="gap-y-1" />
           {mapQuery ? (
             <a
               href={googleMapsUrl(mapQuery)}
               target="_blank"
               rel="noreferrer"
-              className={linkClass}
+              className="font-medium text-primary hover:underline"
             >
               {t("site.openMap")}
             </a>
@@ -660,6 +648,9 @@ export default async function DiverReadinessPage({
       : null;
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
+  // The page's one primary button, chosen among the rows that render one.
+  const primaryActionItem =
+    items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
   const ready = detail.readiness.status === "ready";
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // The emergency-contact row is rendered as its own `ChecklistRow` below,
@@ -694,11 +685,14 @@ export default async function DiverReadinessPage({
     >
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
         <FlashParams params={["saved", "error", "pay"]} />
+        {/* One eyebrow, not two: this header used to stack "Your trip
+            readiness" and the shop's name as identical uppercase-primary
+            lines — a visible bug-shaped redundancy. The shop's name is the
+            context worth keeping (and it is said in full, with address and
+            map, in the shop card at the foot of the page); the page's own
+            identity is carried by the checklist heading below. */}
         <header>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            {t("capability.readinessTitle")}
-          </p>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">
+          <p className="text-sm font-medium tracking-widest text-muted uppercase">
             {detail.shop.name}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
@@ -707,7 +701,9 @@ export default async function DiverReadinessPage({
           <p className="mt-1 text-base text-muted">
             {when} · {timeRange} · {relativeWhen}
           </p>
-          <p className="mt-1 text-sm text-muted">{dockCallLine}</p>
+          {/* The one number that matters on the morning of the trip — a shade
+              stronger than the meta line above it, never shouting. */}
+          <p className="mt-1 text-base font-medium">{dockCallLine}</p>
         </header>
 
         {notice ? (
@@ -718,6 +714,9 @@ export default async function DiverReadinessPage({
           </div>
         ) : null}
 
+        {/* The ready state leads with the earned moment — the page's answer,
+            before any list. The not-ready state answers inside the spine card
+            below instead, so status is said once, not three times. */}
         {ready ? (
           <EarnedMoment
             className="mt-8"
@@ -726,58 +725,62 @@ export default async function DiverReadinessPage({
           >
             <p>{t("ready.allSetBodyReady")}</p>
           </EarnedMoment>
-        ) : (
-          <section className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-            <h2 className="text-xl font-semibold text-balance">
-              {t("ready.almostThere", { name: firstName })}
-            </h2>
-            <p className="mt-2 text-base text-muted">
-              {nextStep
-                ? t("ready.nextDetail", { detail: checklistDetailText(t, nextStep) })
-                : t("ready.allSetBody")}
-            </p>
-          </section>
-        )}
+        ) : null}
 
-        {ready ? null : (
-          <div className="mt-6">
-            <div
-              role="progressbar"
-              aria-valuenow={checklistDone}
-              aria-valuemin={0}
-              aria-valuemax={checklistTotal}
-              aria-label={t("ready.checklistProgressAriaLabel", {
-                done: checklistDone,
-                total: checklistTotal,
-              })}
-              className="h-3 w-full overflow-hidden rounded-full bg-surface-sunken"
-            >
-              <div
-                className="progress-wave-fill h-full rounded-full"
-                style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
-              />
+        {/* The spine: one card that is the page's whole reason to exist —
+            "am I ready, and what's left?" answered in the first screenful.
+            The greeting, the next step, the progress bar, and the rows were
+            four same-weight blocks before; they are one object now. */}
+        <section
+          className="mt-8 rounded-2xl border border-border bg-surface"
+          aria-labelledby="checklist-heading"
+        >
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 id="checklist-heading" className="text-lg font-semibold">
+                {t("ready.checklistHeading")}
+              </h2>
+              {ready ? null : (
+                <p className="text-sm font-medium text-muted tabular-nums">
+                  {t("ready.checklistProgress", { done: checklistDone, total: checklistTotal })}
+                </p>
+              )}
             </div>
-            <p className="mt-2 text-sm font-medium text-muted">
-              {t("ready.checklistProgress", { done: checklistDone, total: checklistTotal })}
-            </p>
+            {ready ? null : (
+              <>
+                <p className="mt-2 text-base text-muted">
+                  {t("ready.almostThere", { name: firstName })}{" "}
+                  {nextStep
+                    ? t("ready.nextDetail", { detail: checklistDetailText(t, nextStep) })
+                    : t("ready.allSetBody")}
+                </p>
+                <div
+                  role="progressbar"
+                  aria-valuenow={checklistDone}
+                  aria-valuemin={0}
+                  aria-valuemax={checklistTotal}
+                  aria-label={t("ready.checklistProgressAriaLabel", {
+                    done: checklistDone,
+                    total: checklistTotal,
+                  })}
+                  className="mt-4 h-3 w-full overflow-hidden rounded-full bg-surface-sunken"
+                >
+                  <div
+                    className="progress-wave-fill h-full rounded-full"
+                    style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
-        )}
-
-        <section className="mt-6" aria-labelledby="checklist-heading">
-          <h2
-            id="checklist-heading"
-            className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
-          >
-            {t("ready.checklistHeading")}
-          </h2>
-          <ul className="mt-3 divide-y divide-border rounded-2xl border border-border bg-surface">
+          <ul className="divide-y divide-border border-t border-border">
             {items.map((item) => (
               <ChecklistRow
                 key={item.category}
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
                 detail={checklistDetailText(t, item)}
-                action={itemAction(item, token, data.canPay, t)}
+                action={itemAction(item, token, data.canPay, item === primaryActionItem, t)}
                 t={t}
               />
             ))}
@@ -840,13 +843,13 @@ export default async function DiverReadinessPage({
           </ul>
         </section>
 
-        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-6" />
+        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
 
-        <section className="mt-6" aria-labelledby="setup-heading">
-          <h2
-            id="setup-heading"
-            className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
-          >
+        {/* Supporting, at visibly quieter weight than the spine: one heading
+            grammar for every page-level section from here down (text-lg
+            semibold), never a second card competing with the checklist. */}
+        <section className="mt-10" aria-labelledby="setup-heading">
+          <h2 id="setup-heading" className="text-lg font-semibold">
             {t("ready.gearAndSetup")}
           </h2>
           <RentalFitForm
@@ -863,15 +866,44 @@ export default async function DiverReadinessPage({
           />
         </section>
 
+        {/* What the day actually is: what to bring, and what each tank dives.
+            Below the checklist and the gear form, because this page's job is
+            still "what's left before you sail" — this is what a diver reads
+            once that is settled, and it is what they used to have to leave the
+            page to find. */}
+        {fullShop && fullTrip ? (
+          <>
+            <PackingSection
+              shop={fullShop}
+              trip={fullTrip}
+              rentalFit={data.rentalFit}
+              // Never the "every day follows this shape" note here, even on a
+              // course weekend: this page is what a diver reads the morning
+              // they sail, about the day in front of them. The booking page is
+              // where the whole itinerary is laid out.
+              multiDay={false}
+              siteBottomTimes={siteBottomTimes}
+              // This page renders no conditions card at all, so the suit line
+              // has nowhere else to land — and the morning of a dive is exactly
+              // when a diver is deciding what to put in the car.
+              temperatureStatedAbove={false}
+              locale={locale}
+            />
+            <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
+          </>
+        ) : null}
+
+        {/* The rare path, dressed as one: moving or cancelling a booking is a
+            minority act on a page most divers open to check what's left — so
+            it sits last among the actions, borderless under a rule instead of
+            wearing the same card the checklist earns (principle 8's collapse-
+            the-rare-path, held to what must stay visible). */}
         {data.manageState === "closed" ? null : (
           <section
-            className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+            className="mt-10 border-t border-border pt-6"
             aria-labelledby="change-plans-heading"
           >
-            <h2
-              id="change-plans-heading"
-              className="text-sm font-bold tracking-[0.16em] text-muted uppercase"
-            >
+            <h2 id="change-plans-heading" className="text-lg font-semibold">
               {t("ready.changePlans")}
             </h2>
 
@@ -882,9 +914,13 @@ export default async function DiverReadinessPage({
             {data.manageState === "shop_only" ? (
               <div className="mt-3">
                 <p className="text-base text-muted">{t("ready.manageShopOnly")}</p>
+                {/* The component's own null-render carries the no-contacts
+                    case — a wrapper element here would leave a stray empty
+                    paragraph exactly when the shop published nothing. */}
                 <ShopContactLinks
-                  contactPhone={shop.contactPhone}
-                  contactEmail={shop.contactEmail}
+                  phone={shop.contactPhone}
+                  email={shop.contactEmail}
+                  className="mt-2 gap-y-1 text-base"
                 />
               </div>
             ) : null}
@@ -934,8 +970,9 @@ export default async function DiverReadinessPage({
               <div className="mt-3">
                 <p className="text-base text-muted">{t(rescheduleBlockedKey)}</p>
                 <ShopContactLinks
-                  contactPhone={shop.contactPhone}
-                  contactEmail={shop.contactEmail}
+                  phone={shop.contactPhone}
+                  email={shop.contactEmail}
+                  className="mt-2 gap-y-1 text-base"
                 />
               </div>
             ) : null}
@@ -972,33 +1009,6 @@ export default async function DiverReadinessPage({
             ) : null}
           </section>
         )}
-
-        {/* What the day actually is: what to bring, and what each tank dives.
-            Below the checklist and the gear form, because this page's job is
-            still "what's left before you sail" — this is what a diver reads
-            once that is settled, and it is what they used to have to leave the
-            page to find. */}
-        {fullShop && fullTrip ? (
-          <>
-            <PackingSection
-              shop={fullShop}
-              trip={fullTrip}
-              rentalFit={data.rentalFit}
-              // Never the "every day follows this shape" note here, even on a
-              // course weekend: this page is what a diver reads the morning
-              // they sail, about the day in front of them. The booking page is
-              // where the whole itinerary is laid out.
-              multiDay={false}
-              siteBottomTimes={siteBottomTimes}
-              // This page renders no conditions card at all, so the suit line
-              // has nowhere else to land — and the morning of a dive is exactly
-              // when a diver is deciding what to put in the car.
-              temperatureStatedAbove={false}
-              locale={locale}
-            />
-            <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
-          </>
-        ) : null}
 
         <ShopCard
           name={detail.shop.name}

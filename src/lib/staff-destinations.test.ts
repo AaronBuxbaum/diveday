@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  currentStaffNavDestinationId,
   STAFF_DESTINATIONS,
   type StaffDestinationGates,
   type StaffDestinationId,
@@ -75,7 +76,7 @@ describe("permission gating", () => {
     const gated = STAFF_DESTINATIONS.filter((destination) => destination.gate !== undefined).map(
       (destination) => destination.id,
     );
-    expect(gated).toEqual(["waivers", "reports", "promoCodes", "team", "settings"]);
+    expect(gated).toEqual(["waivers", "reports", "team", "promoCodes", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -109,16 +110,23 @@ describe("permission gating", () => {
     expect(ids).not.toContain("waivers");
     expect(ids).not.toContain("team");
   });
+
+  it("never renders an empty More surface for any role: each group keeps ungated rows", () => {
+    // The dock's sixth slot and the header menu render only when they have
+    // rows. Close-out and Staffing (daily) and the calendar feed (setup) are
+    // deliberately ungated, so even the barest crew role gets both groups.
+    expect(staffNavDestinations("daily", crew).length).toBeGreaterThan(0);
+    expect(staffNavDestinations("setup", crew).length).toBeGreaterThan(0);
+  });
 });
 
 describe("what each consumer derives", () => {
-  it("lays the header out as five tabs and no More menu", () => {
-    // The header holds only places a shop lives in *during a dive day*;
-    // everything demoted keeps its palette row or a contextual
-    // door on the surface that owns it — Reports from Orders' header, Dive
-    // sites and Waivers from Settings' cards, Close-out from Today's evening
-    // handoff, Reviews as a Today queue row, and Settings itself from the
-    // header's shop-identity menu.
+  it("lays the nav out as five primary tabs plus the two More groups", () => {
+    // The five tabs are the places a shop lives in *during a dive day*; the
+    // dock has no room for a sixth destination (its sixth slot is spent on
+    // the More sheet). Everything else that is a *place* files under "Run
+    // the shop" (the operational cadence) or "Set up" (configuration), with
+    // Settings closing the menu (ADR 20260813-more-is-the-shops-other-door).
     expect(staffNavDestinations("primary", owner).map((d) => d.id)).toEqual([
       "today",
       "checkIn",
@@ -126,46 +134,37 @@ describe("what each consumer derives", () => {
       "board",
       "orders",
     ]);
-    // Both "More" groups are deliberately empty: a menu named "More" was the
-    // IA admitting it hadn't decided, and the header no longer renders one
-    // with nothing to hold.
-    expect(staffNavDestinations("daily", owner)).toEqual([]);
-    expect(staffNavDestinations("setup", owner)).toEqual([]);
+    expect(staffNavDestinations("daily", owner).map((d) => d.id)).toEqual([
+      "closeOut",
+      "staffing",
+      "courses",
+      "diveSites",
+      "waivers",
+      "reviews",
+      "reports",
+    ]);
+    expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual([
+      "team",
+      "promoCodes",
+      "calendarFeed",
+      "settings",
+    ]);
   });
 
-  it("keeps a header destination out of the Settings page's own card list, and back", () => {
-    const inHeader = (id: StaffDestinationId) => staffDestination(id).navGroup !== null;
-    // Reachable from Settings' cards → not a header row.
-    expect(inHeader("team")).toBe(false);
-    expect(inHeader("promoCodes")).toBe(false);
-    // Settings itself is no longer one either: it is the one destination a
-    // shop configures rather than works, and it was costing a sixth of the
-    // phone dock. Its permanent door is the header's shop-identity menu.
-    expect(inHeader("settings")).toBe(false);
-    // Read every day → a header row, and no Settings card.
-    expect(inHeader("orders")).toBe(true);
-    // Both still answer by name in ⌘K, which is where a destination that is
-    // not in the header has to remain reachable.
-    const palette = staffPaletteDestinations(owner).map((destination) => destination.id);
-    expect(palette).toContain("team");
-    expect(palette).toContain("promoCodes");
-  });
-
-  it("keeps the header honest for a destination that left it", () => {
-    // Promo codes is reached *from* Settings, so Settings claims `/promos` as
-    // a second "you are here" prefix — read now by the shop-identity menu,
-    // which is Settings' own door since it left the tab strip. Without it the
-    // promos page is a staff surface with nothing anywhere reading as current.
-    // Team needs no entry: `/settings/team` already sits below `/settings`.
-    expect(staffDestination("settings").alsoMatch).toEqual(["/promos", "/dive-sites", "/waivers"]);
-    expect(staffDestination("team").suffix.startsWith(staffDestination("settings").suffix)).toBe(
-      true,
+  it("keeps only non-places out of the nav", () => {
+    // `navGroup: null` is not a demotion — it is the statement that the
+    // entry is an action (addBooking), a way into a page (walkIn), or a view
+    // of one (blockers), not a place a menu should list.
+    const outOfNav = STAFF_DESTINATIONS.filter((destination) => destination.navGroup === null).map(
+      (destination) => destination.id,
     );
+    expect(outOfNav).toEqual(["blockers", "addBooking", "walkIn"]);
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
     expect(STAFF_DESTINATIONS.at(-1)?.id).toBe("settings");
     expect(staffPaletteDestinations(owner).at(-1)?.id).toBe("settings");
+    expect(staffNavDestinations("setup", owner).at(-1)?.id).toBe("settings");
   });
 
   it("puts Orders in the header, where a daily money surface belongs", () => {
@@ -174,9 +173,9 @@ describe("what each consumer derives", () => {
     expect(orders?.inPalette).toBe(true);
   });
 
-  it("offers the palette everything in the header, plus the header-free surfaces", () => {
+  it("offers the palette everything in the nav, plus the nav-free surfaces", () => {
     // Walk-in and the by-departure view are palette-only; everything in the
-    // header is also in the palette.
+    // nav is also in the palette.
     const palette = staffPaletteDestinations(owner).map((d) => d.id);
     expect(palette).toContain("walkIn");
     expect(palette).toContain("blockers");
@@ -206,7 +205,9 @@ describe("what each consumer derives", () => {
   it("keeps a trip's detail page lit on the board tab", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    expect(board?.alsoMatch).toEqual(["/trips", "/staffing"]);
+    // `/trips` only: Staffing has its own "Run the shop" row now, and a page
+    // with a row of its own lights that row, never a borrowed tab.
+    expect(board?.alsoMatch).toEqual(["/trips"]);
   });
 
   it("badges only the blocked count, on Today", () => {
@@ -241,6 +242,60 @@ describe("what each consumer derives", () => {
 });
 
 /**
+ * Every nav consumer — header tabs, phone dock, the More menu and the dock's
+ * More sheet — answers "which row reads as current?" through this one
+ * function, so at most one thing anywhere lights up, and it is the most
+ * specific claim on the page being looked at.
+ */
+describe("currentStaffNavDestinationId", () => {
+  const root = staffShopRoot("blue-mantis");
+  const current = (pathname: string, gates: StaffDestinationGates = owner) =>
+    currentStaffNavDestinationId(pathname, root, gates);
+
+  it("lights Today only at the shop root", () => {
+    expect(current(root)).toBe("today");
+    // Today's href is the root, which must never claim the whole subtree —
+    // every staff page starts with it.
+    expect(current(`${root}/orders`)).toBe("orders");
+  });
+
+  it("lights a destination for its own subtree", () => {
+    expect(current(`${root}/close-out`)).toBe("closeOut");
+    expect(current(`${root}/reviews`)).toBe("reviews");
+    expect(current(`${root}/reports`)).toBe("reports");
+    expect(current(`${root}/staffing`)).toBe("staffing");
+  });
+
+  it("gives the most specific claim the light: Team over Settings", () => {
+    expect(current(`${root}/settings`)).toBe("settings");
+    expect(current(`${root}/settings/team`)).toBe("team");
+    expect(current(`${root}/settings/calendar`)).toBe("calendarFeed");
+    // Any other settings sub-page still reads as Settings.
+    expect(current(`${root}/settings/export`)).toBe("settings");
+  });
+
+  it("lights a borrowed claim only for a page with no row of its own", () => {
+    // Trip details are the board's detail views (`alsoMatch`).
+    expect(current(`${root}/trips/42`)).toBe("board");
+    // The walk-in counter is a way into Check-in; its more specific path must
+    // not steal the tab's light (navGroup: null entries never compete).
+    expect(current(`${root}/check-in/walk-in`)).toBe("checkIn");
+  });
+
+  it("never lights a row the viewer cannot see", () => {
+    // A crew member on a gated page (deep link, say) gets no false light —
+    // the gated row is absent, and nothing else may claim the page.
+    expect(current(`${root}/settings/team`, crew)).toBeNull();
+    // But their own calendar feed, ungated, still lights.
+    expect(current(`${root}/settings/calendar`, crew)).toBe("calendarFeed");
+  });
+
+  it("answers null off the registry's map", () => {
+    expect(current(`${root}/nowhere`)).toBeNull();
+  });
+});
+
+/**
  * Settings became owner/manager work, which put the one page under it that is
  * *not* shop configuration at risk of disappearing with it: a staffer's own
  * calendar subscription is a personal feed of their own shifts, filed under
@@ -253,14 +308,21 @@ describe("the calendar subscription survives the settings gate", () => {
     expect(ids).toContain("calendarFeed");
   });
 
-  it("is offered by name in the palette, since it is not in the header", () => {
-    const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
-    expect(palette).toContain("calendarFeed");
+  it("keeps its nav row and palette row for that role", () => {
+    expect(staffNavDestinations("setup", crew).map((d) => d.id)).toContain("calendarFeed");
+    expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("calendarFeed");
   });
 
   it("hides settings and everything filed beneath it from the daily crew", () => {
     const ids = visibleStaffDestinations(crew).map((destination) => destination.id);
     expect(ids).not.toContain("settings");
     expect(ids).not.toContain("team");
+  });
+});
+
+describe("one destination by id", () => {
+  it("resolves, and throws on an id the registry lost", () => {
+    expect(staffDestination("closeOut").suffix).toBe("/close-out");
+    expect(() => staffDestination("gone" as StaffDestinationId)).toThrow(/unregistered/);
   });
 });

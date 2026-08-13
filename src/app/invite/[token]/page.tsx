@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Notice } from "@/components/account/Notice";
-import { passwordConfirmErrorText } from "@/components/account/passwordConfirmError";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import {
+  passwordConfirmErrorField,
+  passwordConfirmErrorText,
+} from "@/components/account/passwordConfirmError";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { checkAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
@@ -47,59 +50,78 @@ export default async function InvitePage({
   const check = await checkAccountToken(db, { token, purpose: "invite" });
   if (!check) {
     return (
-      <Notice
+      <EntryDone
+        glyph="⏳"
         title={t("account.invite.unavailableTitle")}
         text={t("account.invite.unavailableText")}
-        backToSignIn={t("account.common.backToSignIn")}
+        action={
+          <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            {t("account.common.backToSignIn")}
+          </Link>
+        }
       />
     );
   }
 
+  // Same field-routing as /reset-password: the refusal lands on the box that
+  // earned it, routed by the shared typed map beside the message resolver.
+  const errorText = error ? passwordConfirmErrorText(t, error) : undefined;
+  const errorField = error ? passwordConfirmErrorField(error) : undefined;
+
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
-      <div className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("account.invite.title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("account.invite.description")}</p>
-        {error ? (
-          <ShopNotice tone="danger" role="alert" className="mt-4">
-            {passwordConfirmErrorText(t, error)}
-          </ShopNotice>
-        ) : null}
-        <form action={acceptStaffInvite.bind(null, token)} className="mt-5 flex flex-col gap-4">
-          <FieldGrid columns={1} className="gap-y-4">
-            <Field label={t("account.common.password")}>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-                maxLength={MAX_PASSWORD_LENGTH}
-                autoComplete="new-password"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("account.invite.confirmPassword")}>
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-                maxLength={MAX_PASSWORD_LENGTH}
-                autoComplete="new-password"
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <SubmitButton pendingLabel={t("account.common.saving")} className={buttonClass()}>
-            {t("account.invite.submit")}
-          </SubmitButton>
-        </form>
-        <p className="mt-4 text-center text-sm text-muted">
-          <Link href="/sign-in" className="text-primary font-medium hover:underline">
+    <EntryShell
+      wordmark
+      title={t("account.invite.title")}
+      description={t("account.invite.description")}
+      footer={
+        <p>
+          <Link href="/sign-in" className="font-medium text-primary hover:underline">
             {t("account.common.backToSignIn")}
           </Link>
         </p>
-      </div>
-    </main>
+      }
+    >
+      {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
+      <form action={acceptStaffInvite.bind(null, token)} className="flex flex-col gap-4">
+        <FieldGrid columns={1} className="gap-y-4">
+          <Field
+            label={t("account.common.password")}
+            error={errorField === "password" ? errorText : undefined}
+          >
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className={controlClass}
+            />
+          </Field>
+          <Field
+            label={t("account.invite.confirmPassword")}
+            error={errorField === "confirm" ? errorText : undefined}
+          >
+            <input
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <SubmitButton pendingLabel={t("account.common.saving")} className={buttonClass()}>
+          {t("account.invite.submit")}
+        </SubmitButton>
+        {errorField === "form" ? (
+          <FormStatus tone="danger" className="justify-center">
+            {errorText}
+          </FormStatus>
+        ) : null}
+      </form>
+    </EntryShell>
   );
 }

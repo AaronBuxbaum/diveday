@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
-import { CourseGallery, CourseHero } from "./CourseSections";
+import { CourseGallery, CourseHero, CourseSessions } from "./CourseSections";
 
 /**
  * The course hero's price is a *list* price, so it follows `shops.currency` —
@@ -141,5 +141,85 @@ describe("CourseGallery captions (DATA-L4)", () => {
     const { container } = render(<CourseGallery photos={[]} title="Open Water Diver" t={t} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * The featured slot in the booking panel answers "when can I start?", so it
+ * holds the soonest *bookable* session — featuring a full one would put a
+ * waitlist in the page's most prominent slot (and leave the page with no
+ * primary action) while an open date hid in a compact row below.
+ */
+describe("CourseSessions featured date", () => {
+  function session(overrides: Partial<Parameters<typeof CourseSessions>[0]["sessions"][number]>) {
+    return {
+      id: "trip-1",
+      title: "Open Water Diver",
+      startsAt: new Date("2026-07-30T13:00:00Z"),
+      endsAt: new Date("2026-08-01T22:00:00Z"),
+      capacity: 6,
+      booked: 0,
+      ...overrides,
+    };
+  }
+  const props = {
+    shopSlug: "blue-mantis",
+    timezone: "America/New_York",
+    locale: "en-US",
+    inquiryHref: null,
+    t,
+  };
+
+  it("features the soonest session when it is open, as the page's one primary", () => {
+    render(
+      <CourseSessions
+        sessions={[
+          session({ id: "trip-1", booked: 2 }),
+          session({ id: "trip-2", startsAt: new Date("2026-08-06T13:00:00Z"), booked: 0 }),
+        ]}
+        {...props}
+      />,
+    );
+
+    expect(screen.getByText("Next date")).toBeInTheDocument();
+    const [featured] = screen.getAllByRole("link", { name: "Book this date" });
+    expect(featured).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
+  });
+
+  it("skips past a full soonest session to feature the first open one, honestly labelled", () => {
+    render(
+      <CourseSessions
+        sessions={[
+          session({ id: "trip-full", booked: 6 }),
+          session({ id: "trip-open", startsAt: new Date("2026-08-06T13:00:00Z"), booked: 1 }),
+        ]}
+        {...props}
+      />,
+    );
+
+    // The open date owns the featured slot, labelled so the slot never claims
+    // the full earlier date doesn't exist…
+    expect(screen.getByText("Next open date")).toBeInTheDocument();
+    expect(screen.queryByText("Next date")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Book this date" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-open",
+    );
+    // …and the skipped full session still shows, as a waitlist row beneath.
+    expect(screen.getByRole("link", { name: "Join the wait list" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-full",
+    );
+  });
+
+  it("falls back to the soonest session's waitlist when every date is full", () => {
+    render(<CourseSessions sessions={[session({ id: "trip-full", booked: 6 })]} {...props} />);
+
+    expect(screen.getByText("Next date")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Join the wait list" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-full",
+    );
+    expect(screen.queryByRole("link", { name: "Book this date" })).not.toBeInTheDocument();
   });
 });
