@@ -434,12 +434,15 @@ export function ClosingCta({
   backLabel: string;
 }) {
   return (
+    // `sm:shrink-0` on the action column: at `max-w-4xl` the prose was taking
+    // the width it wanted and squeezing the buttons until "Try the live demo"
+    // and "Start a trial" both broke across two lines mid-phrase.
     <section className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+      <div className="max-w-md">
+        <h2 className="text-2xl font-semibold tracking-tight text-balance">{title}</h2>
         <p className="mt-2 max-w-xl text-muted">{body}</p>
       </div>
-      <div className="flex flex-col items-stretch gap-3 sm:items-end">
+      <div className="flex flex-col items-stretch gap-3 sm:shrink-0 sm:items-end">
         <DemoTrialCtas locale={locale} source={source} />
         <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
           {backLabel}
