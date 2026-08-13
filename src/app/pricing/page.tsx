@@ -270,8 +270,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   </SubmitButton>
                 </form>
               </div>
-              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-balance text-muted">
-                {t("marketing.pricing.feesNote")}
+              {/* What the click costs, at the point of decision — the same
+                  shared line `/` and `/product` carry under their own demo
+                  doors. It was missing on the one page whose whole subject is
+                  cost, and the answer sat in a FAQ row two thousand pixels
+                  down. The processing-fee note that used to stand here is a
+                  footnote about the *price*, so it moved to the end of the
+                  block that says what the price covers. */}
+              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 font-medium text-balance text-muted">
+                {t("marketing.common.demoNote")}
               </p>
             </div>
 
@@ -310,6 +317,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               >
                 {t("marketing.pricing.seeFullList")}
               </Link>
+              {/* The one cost the price does not cover, as the footnote to the
+                  list of what it does — the same thought, finished. */}
+              <p className="mt-8 max-w-xl text-sm leading-6 text-muted">
+                {t("marketing.pricing.feesNote")}
+              </p>
             </div>
           </div>
         </section>
