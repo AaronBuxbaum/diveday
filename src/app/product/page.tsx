@@ -434,16 +434,9 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               page about money — answered the other party's half of it and left
               ours to the nav. A link, not the figure: the price has exactly one
               source (`earlyAccessPrice`, H-12) and one page that argues it. */}
-          {/* `-ml-4`, not `px-0`: the link variant keeps its `md` size's `px-4`
-              so the row stays a real touch target, and a `px-0` in `className`
-              cannot take it away — Tailwind emits `.px-0` *before* `.px-4`, so
-              the padding wins whatever order the classes are written in
-              (measured in the built stylesheet; the closing band's link sat
-              17px right of its own heading this way). Pulling the box left by
-              exactly that padding is what `JumpNav` does with `-ml-3`. */}
           <Link
             href="/pricing"
-            className={buttonClass({ variant: "link", className: "mt-8 -ml-4 text-left" })}
+            className={buttonClass({ variant: "link", flush: true, className: "mt-8 text-left" })}
           >
             {t("marketing.product.pricingLink")}
           </Link>
@@ -541,9 +534,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
             <Link
               href="/switching/spreadsheet"
-              // `-ml-4` rather than `px-0`, for the reason spelled out on the
-              // money band's link above.
-              className={buttonClass({ variant: "link", className: "mt-2 -ml-4 text-left" })}
+              className={buttonClass({ variant: "link", flush: true, className: "mt-2 text-left" })}
             >
               {t("marketing.product.spreadsheetLink")}
             </Link>

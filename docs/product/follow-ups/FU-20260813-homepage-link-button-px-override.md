@@ -19,9 +19,17 @@ utilities in one class list resolve by stylesheet order, not by the order you wr
 documents it for padding too, and carries a `flush` option that drops the size's horizontal padding
 properly, with unit tests in `src/components/ui/button.test.ts`.
 
-`/pricing` had three of these and is converted. One call site remains:
-`src/app/page.tsx:227`, `buttonClass({ variant: "link", className: "px-0" })`. It renders indented
-today, and the `px-0` in its source says an author already noticed and thought they had fixed it.
+`/pricing` had three of these and is converted. **Two** call sites remain, both on the homepage —
+`src/app/page.tsx:289` (`className: "mt-2 px-0"`) and `src/app/page.tsx:383`
+(`className: "mt-10 px-0 text-left"`). Each renders indented today, and the `px-0` in the source
+says an author already noticed and thought they had fixed it.
+
+*Amended 2026-08-13 (PR #516, the `/product` redesign):* this entry was raised naming one call site
+at `src/app/page.tsx:227`; the homepage redesign landed between the two branches and moved the line
+numbers, and there were always two. `/product` reached the same diagnosis independently and filed a
+duplicate entry, now deleted in favour of this one — its only unique content was the second call
+site, recorded above. `/product`'s own two links used `-ml-4` while this option was in flight and
+are converted to `flush` in that PR.
 
 ## Why it isn't already done
 
@@ -33,7 +41,7 @@ buttons, where the padding is correct and the `px-0` was the mistake.
 
 ## Proposed change
 
-Look at what `src/app/page.tsx:227`'s link is meant to align with in the rendered page, then either:
+Look at what each link is meant to align with in the rendered page, then, per link, either:
 
 - convert it to `buttonClass({ variant: "link", flush: true })` and account for the ~16px shift in
   the PR's visual-diff notes; or
