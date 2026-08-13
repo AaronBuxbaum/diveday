@@ -3859,6 +3859,78 @@ export const tripReviews = pgTable(
 );
 
 /**
+ * Why a shop took a review down. A code, never a sentence — the UI picks the
+ * words (ADR 20260731-domain-layer-copy-leaks) — and a deliberately short list,
+ * because the list *is* the constraint: an unconstrained hide button plus a
+ * machine-readable `aggregateRating` is how a curated set gets published as an
+ * impartial measurement (ADR 20260813-review-moderation-has-a-floor).
+ *
+ * `other` exists so a shop facing a case these four do not describe is never
+ * stuck, and it is the one value that requires `reason_note` to be filled in.
+ */
+export const reviewModerationReason = pgEnum("review_moderation_reason", [
+  /** Abusive or harassing — aimed at a person rather than the diving. */
+  "abusive",
+  /** Names a member of staff or another diver. */
+  "names_a_person",
+  /** About a different trip, a different shop, or plainly not this dive. */
+  "wrong_subject",
+  /** Spam, an advertisement, or a test submission. */
+  "spam",
+  /** Something else, stated in `reason_note`. */
+  "other",
+]);
+
+export const reviewModerationAction = pgEnum("review_moderation_action", ["published", "hidden"]);
+
+/**
+ * Every publish and hide, append-only — the trail
+ * ADR 20260813-review-moderation-has-a-floor added, shaped like
+ * `buddy_team_events` and the roll-call trails beside it.
+ *
+ * It exists for two reasons and the second is the load-bearing one. It records
+ * what a shop asserted when it took a diver's words down; and it is what makes
+ * "how much of this shop's record has been suppressed?" answerable, which
+ * decides whether DiveDay will still vouch for the shop's average in JSON-LD.
+ * A review sitting unpublished because it carries words nobody has read yet is
+ * *not* suppressed, and only a recorded `hidden` act tells the two apart.
+ */
+export const reviewModerationEvents = pgTable(
+  "review_moderation_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => tripReviews.id),
+    action: reviewModerationAction("action").notNull(),
+    /** Null on a publish: releasing a review states no case. */
+    reason: reviewModerationReason("reason"),
+    /** The shop's own words, required when `reason` is `other`. */
+    reasonNote: text("reason_note"),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("review_moderation_events_shop_idx").on(table.shopId, table.occurredAt),
+    index("review_moderation_events_review_idx").on(table.reviewId),
+    // A hide states a case or it does not happen; `other` states it in words.
+    check(
+      "review_moderation_events_hidden_has_reason",
+      sql`${table.action} <> 'hidden' or ${table.reason} is not null`,
+    ),
+    check(
+      "review_moderation_events_other_has_note",
+      sql`${table.reason} <> 'other' or length(trim(coalesce(${table.reasonNote}, ''))) > 0`,
+    ),
+  ],
+);
+
+/**
  * `waiver_document` (a scanned paper release or medical form brought in by the
  * importer) is the blob kind diver erasure owes a delete for
  * (ADR 20260802-diver-data-erasure) — the row's URL column is nulled locally

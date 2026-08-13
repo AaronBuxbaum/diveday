@@ -102,6 +102,8 @@ export const EXPORT_FILE_NOTES = {
     "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
   "trip_reviews.csv":
     "Ratings and words from divers who provably dived — each row was written through that booking's own post-trip recap link, so there are no unverified reviews here. Only is_published rows were shown publicly and only those were counted in the shop's displayed average; a review carrying a comment stayed unpublished until staff released it, while a bare rating published on arrival. One row per booking: a diver revising their review updated it in place.",
+  "review_moderation_events.csv":
+    "Every time staff published or hid a review, and for a hide, the reason they stated. A review can appear more than once: a shop that hid one and later put it back has both rows. reason is a code (abusive, names_a_person, wrong_subject, spam, other) and reason_note carries the shop's own words, which 'other' requires. Kept because it is the shop's own record of decisions it made about its public page — and because DiveDay used it to decide whether to publish the shop's average as a machine-readable rating.",
   "shop_promo_codes.csv":
     "Shop-wide discount codes as configured, with their validity window, scope, and redemption cap. status 'active' was live; 'disabled' was switched off by staff and 'failed' never minted at Stripe at all. The redemption history is in shop_promo_redemptions.csv.",
   "shop_promo_redemptions.csv":

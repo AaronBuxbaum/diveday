@@ -50,6 +50,7 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  reviewModerationEvents,
   rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
@@ -207,6 +208,13 @@ export async function loadShopExportBundleInput(
         .from(recapPhotos)
         .where(eq(recapPhotos.shopId, shopId))
         .orderBy(asc(recapPhotos.createdAt), asc(recapPhotos.id));
+
+      const reviewModerationRows = await tx
+        .select({ event: reviewModerationEvents, staffName: people.fullName })
+        .from(reviewModerationEvents)
+        .innerJoin(people, eq(people.id, reviewModerationEvents.recordedByPersonId))
+        .where(eq(reviewModerationEvents.shopId, shopId))
+        .orderBy(asc(reviewModerationEvents.occurredAt), asc(reviewModerationEvents.id));
 
       const reviewRows = await tx
         .select({ review: tripReviews, diverName: people.fullName })
@@ -557,6 +565,11 @@ export async function loadShopExportBundleInput(
             "packing_list",
             "rental_items",
             "rental_pricing",
+            // Whether the shop asked to stay out of search engines
+            // (ADR 20260813-search-listing-is-a-choice). Exported because the
+            // bundle is also the *backup*: a shop that opted out and later
+            // restored from one must not come back published.
+            "search_listing_opt_out_at",
             "created_at",
           ],
           rows: [
@@ -586,6 +599,7 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.packingList),
               JSON.stringify(shop.rentalItems),
               JSON.stringify(shop.rentalPricing),
+              shop.searchListingOptOutAt,
               shop.createdAt,
             ],
           ],
@@ -1945,6 +1959,30 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["trip_reviews.csv"],
         },
         {
+          file: "review_moderation_events.csv",
+          header: [
+            "id",
+            "review_id",
+            "action",
+            "reason",
+            "reason_note",
+            "recorded_by_person_id",
+            "recorded_by_name",
+            "occurred_at",
+          ],
+          rows: reviewModerationRows.map(({ event, staffName }) => [
+            event.id,
+            event.reviewId,
+            event.action,
+            event.reason,
+            event.reasonNote,
+            event.recordedByPersonId,
+            staffName,
+            event.occurredAt,
+          ]),
+          note: EXPORT_FILE_NOTES["review_moderation_events.csv"],
+        },
+        {
           file: "shop_promo_codes.csv",
           header: [
             "id",
@@ -2288,6 +2326,12 @@ export async function loadShopExportCounts(
     ),
     "trip_reviews.csv": await countOf(
       db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),
+    ),
+    "review_moderation_events.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(reviewModerationEvents)
+        .where(eq(reviewModerationEvents.shopId, shopId)),
     ),
     "shop_promo_codes.csv": await countOf(
       db.select({ n: count() }).from(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId)),

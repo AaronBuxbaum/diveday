@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Review moderation states its case, and a curated record loses its star rating (delivered 2026-08-13)
+
+A shop could hide any review with one unrecorded tap, and the average over what survived went out as
+schema.org `aggregateRating` — the field a search engine renders as stars beside a result. Nothing
+prevented, recorded, or disclosed a shop hiding everything below five stars and keeping a credible
+5.0. The power to take a review down is untouched, because a shop that cannot remove a review naming
+a diver by name will be angry with DiveDay rather than with the reviewer. What changes is that a hide
+now states a case — a code from a short list, `other` in the shop's own words, refused outright
+without one — and appends to an `review_moderation_events` trail. That trail is also what makes the
+second half possible: once more than one in five of the reviews a shop has *ruled on* are hidden,
+DiveDay stops publishing the rating as a machine-readable claim. A review waiting on a read has never
+been hidden and never counts against the shop. The stars stay on the shop's own page throughout,
+where they sit above the reviews they are drawn from.
+[20260813-review-moderation-has-a-floor](../architecture/decisions/20260813-review-moderation-has-a-floor.md).
+
 ## A shop chooses whether it is in search results (delivered 2026-08-13)
 
 Creating a shop published it to Google, with no step in between and no switch anywhere: the sitemap

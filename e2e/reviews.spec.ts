@@ -95,10 +95,14 @@ test.describe("as owner, reviews list", () => {
     const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
     const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
     await expect(published.getByText("Published")).toBeVisible();
-    // Hiding is one of DiveDay's land-then-undo actions (docs/design/principles.md
-    // #7, a reversible toggle): no confirm dialog — it hides immediately and
-    // offers Undo from a toast instead.
-    await published.getByRole("button", { name: "Hide" }).click();
+    // Hiding states a case (ADR 20260813-review-moderation-has-a-floor): the
+    // reason picker waits behind the Hide disclosure, and the act is recorded
+    // with whichever reason the shop chose. Still no confirm dialog — it is one
+    // of DiveDay's land-then-undo actions (docs/design/principles.md #7) and
+    // offers Undo from a toast.
+    await published.getByText("Hide", { exact: true }).click();
+    await published.getByLabel("Why are you taking it down?").selectOption("spam");
+    await published.getByRole("button", { name: "Hide this review" }).click();
     await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
     await expect(published.getByText("Waiting on you")).toBeVisible();
 
@@ -112,7 +116,9 @@ test.describe("as owner, reviews list", () => {
 
     const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
     const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
-    await published.getByRole("button", { name: "Hide" }).click();
+    await published.getByText("Hide", { exact: true }).click();
+    await published.getByLabel("Why are you taking it down?").selectOption("wrong_subject");
+    await published.getByRole("button", { name: "Hide this review" }).click();
     const toast = page.getByRole("status");
     await expect(toast.getByText("Review hidden.")).toBeVisible();
 
@@ -202,7 +208,7 @@ test.describe("as owner, bulk publish", () => {
       .filter({ hasText: "Vis was unreal and the crew found us a turtle on the second tank." })
       .filter({ visible: true });
     await expect(published.getByRole("checkbox")).toHaveCount(0);
-    await expect(published.getByRole("button", { name: "Hide" })).toBeVisible();
+    await expect(published.getByText("Hide", { exact: true })).toBeVisible();
   });
 });
 

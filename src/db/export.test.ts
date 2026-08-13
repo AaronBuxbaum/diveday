@@ -66,6 +66,7 @@ const EXPECTED_FILES = [
   "dive_site_moments.csv",
   "recap_photos.csv",
   "trip_reviews.csv",
+  "review_moderation_events.csv",
   "shop_promo_codes.csv",
   "shop_promo_redemptions.csv",
   "courses.csv",
@@ -115,6 +116,7 @@ const EXPORTED_TABLES = [
   "dive_site_moments",
   "recap_photos",
   "trip_reviews",
+  "review_moderation_events",
   "shop_promo_codes",
   "courses",
 ];
@@ -212,6 +214,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
   staff_shifts: ["shop_id"],
+  review_moderation_events: ["shop_id"],
   people: [
     "shop_id",
     // The language a diver reads, as observed from their own request's

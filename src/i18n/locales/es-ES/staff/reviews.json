@@ -9,7 +9,9 @@
     "hiddenToast": "Reseña oculta.",
     "publishedMany": "{count, plural, one {# reseña publicada} other {# reseñas publicadas}} en tu página de calendario.",
     "noneSelected": "Marca primero las reseñas que quieres publicar.",
-    "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
+    "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo.",
+    "reasonRequired": "Elige un motivo antes de ocultar una reseña: queda registrado con el cambio.",
+    "noteRequired": "Cuenta en pocas palabras qué pasó cuando el motivo es «Otro motivo»."
   },
   "overviewLabel": "Resumen de valoraciones",
   "publicRating": "Valoración pública",
@@ -43,5 +45,17 @@
   },
   "pagination": {
     "total": "{count, plural, one {# reseña} other {# reseñas}}"
+  },
+  "hideConfirm": "Ocultar esta reseña",
+  "hideReasonLabel": "¿Por qué la retiras?",
+  "hideReasonPlaceholder": "Elige un motivo…",
+  "hideNoteLabel": "Qué pasó",
+  "hideNotePlaceholder": "Solo si elegiste «Otro motivo»",
+  "hideReason": {
+    "abusive": "Ofensiva o acosadora",
+    "namesAPerson": "Nombra a alguien del equipo o a otro buceador",
+    "wrongSubject": "Habla de otra salida o de otro centro",
+    "spam": "Spam o una prueba",
+    "other": "Otro motivo"
   }
 }
