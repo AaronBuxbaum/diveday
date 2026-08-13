@@ -107,7 +107,13 @@
     "endsLabel": "Ends",
     "endsNever": "Keeps repeating",
     "endsOnChoice": "On a date",
-    "endsOnLabel": "Last date"
+    "endsOnLabel": "Last date",
+    "minimumBookingsLabel": "Minimum to run",
+    "minimumBookingsDescription": "Blank and the boat goes with whoever books. Set it and the booking page states the number — and this departure cancels itself, telling everyone aboard, if it hasn't got there by the deadline beside it.",
+    "minimumDecisionLabel": "Decide by",
+    "minimumDecisionDescription": "How long before departure the call is made. Divers are told the exact moment when they book.",
+    "diversSuffix": "divers",
+    "hoursBeforeSuffix": "hours before"
   },
   "addBooking": "Add a booking"
 }

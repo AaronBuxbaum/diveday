@@ -1,5 +1,12 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openRosterDetails,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -102,11 +109,13 @@ test.describe("staff", () => {
     // undo can't claw back, so a misclick shouldn't be one tap from done.
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
     await noraRow.getByRole("button", { name: "Never mind" }).click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 
+    await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking cancelled");
