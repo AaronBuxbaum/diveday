@@ -204,79 +204,91 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             answered in screenful two, inside a bordered card below a generic
             headline band. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-3xl px-6 pt-20 pb-14 text-center lg:pt-28">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t(earlyAccessPrice.nameKey)}
-              <span aria-hidden="true" className="mx-2 text-border-strong">
-                ·
-              </span>
-              {t("marketing.pricing.earlyAccessBadge")}
-            </p>
-            <h1 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl">
-              {t("marketing.pricing.heroTitle")}
-            </h1>
-            <p className="mt-8 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1">
-              <span className="text-7xl font-semibold tracking-[-0.06em] sm:text-8xl">
+          <div className="mx-auto max-w-3xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
+            <div className="text-center">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t(earlyAccessPrice.nameKey)}
+                <span aria-hidden="true" className="mx-2 text-border-strong">
+                  ·
+                </span>
+                {t("marketing.pricing.earlyAccessBadge")}
+              </p>
+              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
+                {t("marketing.pricing.heroTitle")}
+              </h1>
+              {/* The figure alone on its line, with the cadence as a caption
+                  beneath it rather than baseline-set beside it: paired on one
+                  line, the centred composition pushed the number itself off
+                  centre by half the cadence's width — the one element on the
+                  page that has to look deliberate. Keeping `$99` as its own
+                  element is also what lets the e2e assertion match it exactly,
+                  and the figure still resolves from `earlyAccessPrice`. */}
+              <p className="mt-10 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
                 {earlyAccessPrice.price}
-              </span>
-              <span className="text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</span>
-            </p>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.pricing.heroDescription")}
-            </p>
-            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                href={trialHref("pricing")}
-                className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
-              >
-                {t("marketing.common.startTrial")}
-              </Link>
-              <form action={enterDemoAction} className="w-full sm:w-auto">
-                <FunnelTag source="pricing" />
-                <SubmitButton
-                  pendingLabel={t("marketing.pricing.gettingDemoReady")}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "cta",
-                    className: "w-full border-border-strong disabled:opacity-70 sm:w-auto sm:px-8",
-                  })}
+              </p>
+              <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
+              <p className="mx-auto mt-8 max-w-xl text-lg leading-8 text-balance text-muted">
+                {t("marketing.pricing.heroDescription")}
+              </p>
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  href={trialHref("pricing")}
+                  className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
                 >
-                  {t("marketing.common.tryDemo")}
-                </SubmitButton>
-              </form>
+                  {t("marketing.common.startTrial")}
+                </Link>
+                <form action={enterDemoAction} className="w-full sm:w-auto">
+                  <FunnelTag source="pricing" />
+                  <SubmitButton
+                    pendingLabel={t("marketing.pricing.gettingDemoReady")}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "cta",
+                      className:
+                        "w-full border-border-strong disabled:opacity-70 sm:w-auto sm:px-8",
+                    })}
+                  >
+                    {t("marketing.common.tryDemo")}
+                  </SubmitButton>
+                </form>
+              </div>
+              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-muted">
+                {t("marketing.pricing.feesNote")}
+              </p>
             </div>
-            <p className="mx-auto mt-6 max-w-xl text-sm leading-6 text-muted">
-              {t("marketing.pricing.feesNote")}
-            </p>
-          </div>
 
-          {/* What the number buys, right under the number — the one plan's own
-              list from `earlyAccessPrice`, not a third render of the feature
-              grid. The grid's summary cards used to reappear here a thousand
-              pixels down at a third density; the inventory lives one click
-              away on /product, and this list plus that link is the whole
-              answer (docs/product/marketing.md, "never inventory the same
-              thing twice"). */}
-          <div className="mx-auto max-w-2xl px-6 pb-16 lg:pb-20">
-            <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
-              {t("marketing.pricing.includedLead")}
-            </h2>
-            <ul className="mt-5 grid gap-x-10 gap-y-3 text-left leading-6 sm:grid-cols-2">
-              {earlyAccessPrice.includedKeys.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span aria-hidden="true" className="font-semibold text-primary">
-                    ✓
-                  </span>
-                  <span className="text-muted">{t(item)}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/product"
-              className={buttonClass({ variant: "link", className: "mt-4 -ml-1 px-1" })}
-            >
-              {t("marketing.pricing.seeFullList")}
-            </Link>
+            {/* What the number buys, right under the number — the one plan's
+                own list from `earlyAccessPrice`, not a third render of the
+                feature grid. The grid's summary cards used to reappear here a
+                thousand pixels down at a third density; the inventory lives one
+                click away on /product, and this list plus that link is the
+                whole answer (docs/product/marketing.md, "never inventory the
+                same thing twice").
+
+                Same container as the pitch above it, so the list's left edge
+                lands on the headline's own margin instead of 48px inside it,
+                and a hairline marks the turn from argument to spec sheet. */}
+            <div className="mt-14 border-t border-border pt-10">
+              <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
+                {t("marketing.pricing.includedLead")}
+              </h2>
+              <ul className="mt-5 grid gap-x-10 gap-y-3 text-left leading-6 sm:grid-cols-2">
+                {earlyAccessPrice.includedKeys.map((item) => (
+                  <li key={item} className="flex gap-3">
+                    <span aria-hidden="true" className="font-semibold text-primary">
+                      ✓
+                    </span>
+                    <span className="text-muted">{t(item)}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/product"
+                className={buttonClass({ variant: "link", className: "mt-4 -ml-1 px-1" })}
+              >
+                {t("marketing.pricing.seeFullList")}
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -373,13 +385,42 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               </article>
             ))}
           </div>
-          <div className="mt-14 flex flex-col items-start gap-4 border-t border-border pt-10 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl text-lg leading-8 text-muted">
+        </section>
+
+        {/* The page opens with the number and closes with it. Between the two
+            is roughly five thousand pixels of phone scroll in which the only
+            door was the header's — the marketing nav does not stick, so a
+            reader who scrolled the objections had nothing to act on but the
+            back button. One primary here and one quiet mail door beneath it:
+            the closing restates the price rather than making a new argument,
+            and it is tagged `pricing-close` so it can be shown to have earned
+            its place instead of folding into the page's own bucket
+            (src/lib/funnel.ts). */}
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-2xl px-6 py-16 text-center lg:py-20">
+            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t("marketing.pricing.closingTitle")}
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-balance text-muted">
+              {t("marketing.pricing.closingBody", {
+                price: earlyAccessPrice.price,
+                cadence: t(earlyAccessPrice.cadenceKey),
+              })}
+            </p>
+            <div className="mt-8">
+              <Link
+                href={trialHref("pricing-close")}
+                className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
+              >
+                {t("marketing.common.startTrial")}
+              </Link>
+            </div>
+            <p className="mt-10 text-sm leading-6 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
+              className={buttonClass({ variant: "link", size: "sm" })}
             >
               {t("marketing.pricing.emailCta", { email: SUPPORT_EMAIL })}
             </a>

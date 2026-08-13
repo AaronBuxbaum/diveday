@@ -1930,10 +1930,10 @@
     },
     "pricing": {
       "heroTitle": "Un precio fijo para todo el centro.",
-      "heroDescription": "Sin cuota de alta, sin cálculos por plaza, sin niveles de funciones, sin comisión sobre tus reservas — el flujo de seguridad nunca es un extra que tengas que acordarte de comprar.",
+      "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas. El flujo de seguridad nunca es un extra.",
       "earlyAccessBadge": "Acceso anticipado",
       "gettingDemoReady": "Preparando la demo…",
-      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración futura tiene coste adicional, lo diremos con claridad antes de activarla.",
+      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración tiene coste adicional, lo diremos antes de activarla.",
       "includedLead": "Qué cubre el precio",
       "feeAnchor": {
         "title": "Un precio plano, o una parte de cada plaza que vendes.",
@@ -1964,11 +1964,11 @@
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
-          "answer": "Sí. Abre la demo en vivo para ver el día como el propietario del centro, un instructor, un divemaster, el capitán o un buceador — es un centro ya lleno de viajes de muestra. O empieza tu propio centro de prueba: comienza vacío, listo para tu primer viaje."
+          "answer": "Sí. La demo en vivo es un centro ya lleno de viajes de muestra — recorre el día como el propietario, un instructor, un divemaster, el capitán o un buceador. Tu propio centro de prueba comienza vacío, listo para tu primer viaje."
         },
         "offline": {
           "question": "¿Funciona el listado sin conexión?",
-          "answer": "Sí. El equipo guarda el listado en su teléfono antes de salir del muelle. Los pases de lista de salida y después de la inmersión funcionan a partir de esa copia, la pantalla siempre muestra cuán reciente es, y cuando vuelve el servicio DiveDay verifica cada cambio contra el listado en vivo antes de que cuente."
+          "answer": "Sí. El equipo guarda el listado en su teléfono antes de salir del muelle. Los pases de lista funcionan a partir de esa copia, la pantalla muestra cuán reciente es, y cuando vuelve el servicio cada cambio se verifica contra el listado en vivo antes de que cuente."
         },
         "dataIfNotWorking": {
           "question": "¿Qué pasa con mis registros si me voy?",
@@ -1985,10 +1985,10 @@
         },
         "pos": {
           "question": "¿DiveDay sustituye mi POS?",
-          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático: reservas, cursos, preparación, previa del viaje y el barco, pagado a través de tu propia cuenta de Stripe. Añade una línea de venta a un pedido, pero aquí no hay caja ni control de inventario — preferimos decirlo con claridad."
+          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático: reservas, cursos, preparación, previa del viaje y el barco, pagado a través de tu propia cuenta de Stripe. Añade una línea de venta minorista a un pedido, pero aquí no hay caja ni control de inventario."
         },
         "whyFounding": {
-          "question": "¿Por qué ser una centro fundador?",
+          "question": "¿Por qué ser un centro fundador?",
           "answer": "Porque los centros tempranos orientan — lo que tu equipo encuentra da forma a lo que se construye después. Los centros fundadores también fijan el precio de hoy durante dos años; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
         },
         "multipleLocations": {
@@ -1996,6 +1996,8 @@
           "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a {email} — preferimos construir eso contigo antes que fingir que ya existe."
         }
       },
+      "closingTitle": "Ese es el precio completo.",
+      "closingBody": "{price} {cadence}, y sin contrato anual. Cancela cuando quieras y tus registros se van contigo.",
       "stillQuestion": "¿Una pregunta que estas no responden? Escríbenos — una persona real lo lee.",
       "emailCta": "Escribe a {email}"
     }

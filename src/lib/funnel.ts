@@ -13,11 +13,12 @@ import { publicSchedulePath } from "./public-routes";
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
- * position (`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`)
- * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
- * sections" folds into the page total and can never be shown to have earned its
- * place. The unsuffixed tag stays the page's original one so attribution
- * history doesn't break when a new position is added beside it.
+ * position (`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`,
+ * `pricing` / `pricing-close`) — otherwise a mid-page door added to answer "one
+ * CTA at the bottom of ten sections" folds into the page total and can never be
+ * shown to have earned its place. The unsuffixed tag stays the page's original
+ * one so attribution history doesn't break when a new position is added beside
+ * it.
  */
 const FIXED_SOURCES = [
   "home-hero",
@@ -28,6 +29,7 @@ const FIXED_SOURCES = [
   "product",
   "product-mid",
   "pricing",
+  "pricing-close",
   "about-closing",
   "sign-in",
   "switching-hub",

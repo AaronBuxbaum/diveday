@@ -1930,10 +1930,10 @@
     },
     "pricing": {
       "heroTitle": "One flat price for the whole shop.",
-      "heroDescription": "No setup fee, no per-seat math, no feature tiers, no cut of your bookings — the safety workflow is never an add-on you have to remember to buy.",
+      "heroDescription": "No setup fee. No per-seat math. No feature tiers. No cut of your bookings. The safety workflow is never an add-on.",
       "earlyAccessBadge": "Early access",
       "gettingDemoReady": "Getting the demo ready…",
-      "feesNote": "Payment-processing fees stay between you and your payment provider. If a future integration ever costs extra, we'll say so clearly before you turn it on.",
+      "feesNote": "Payment-processing fees stay between you and your payment provider. If an integration ever costs extra, we'll say so before you turn it on.",
       "includedLead": "What the price covers",
       "feeAnchor": {
         "title": "A flat price, or a cut of every seat you sell.",
@@ -1964,11 +1964,11 @@
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
-          "answer": "Yes. Open the live demo to see the day as the shop owner, an instructor, a divemaster, the captain, or a diver — it's a shop already full of sample trips. Or start a trial shop of your own: it begins empty, ready for your first trip."
+          "answer": "Yes. The live demo is a shop already full of sample trips — walk the day as the owner, an instructor, a divemaster, the captain, or a diver. A trial shop of your own starts empty, ready for your first trip."
         },
         "offline": {
           "question": "Does the manifest work offline?",
-          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts."
+          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Roll calls work from that copy, the screen shows how fresh it is, and when service returns every change is checked against the live manifest before it counts."
         },
         "dataIfNotWorking": {
           "question": "What happens to my records if I leave?",
@@ -1985,7 +1985,7 @@
         },
         "pos": {
           "question": "Does DiveDay replace my POS?",
-          "answer": "No — keep your register. DiveDay runs the water side: bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. Add a retail line to an order, but there's no register or stock count here — we'd rather say so plainly."
+          "answer": "No — keep your register. DiveDay runs the water side: bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. Add a retail line to an order, but there's no register or stock count here."
         },
         "whyFounding": {
           "question": "Why be a founding shop?",
@@ -1996,6 +1996,8 @@
           "answer": "Each DiveDay shop runs one location today. If you operate more than one location, email {email} — we'd rather build that with you than pretend it's already here."
         }
       },
+      "closingTitle": "That's the whole price.",
+      "closingBody": "{price} {cadence}, and no annual contract. Cancel any month and your records leave with you.",
       "stillQuestion": "A question these don't answer? Email us — a real person reads it.",
       "emailCta": "Email {email}"
     }

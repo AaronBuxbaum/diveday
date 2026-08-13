@@ -219,13 +219,27 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // Same shared label as everywhere else — "Try the live demo first" was the
   // exact per-page synonym drift the one-label rule exists to catch.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+
+  // The page closes on the number it opened with, and that closing door is
+  // tagged apart from the hero's. Without it the only trial door below the
+  // fold was the header's, which does not stick — a reader who scrolled the
+  // objection layer had nothing left to act on. Tagged like `product-mid`, so
+  // the position can be shown to have earned its place rather than folding
+  // into the page's own bucket (src/lib/funnel.ts).
+  await expect(page.getByRole("heading", { name: "That's the whole price." })).toBeVisible();
+  const pricingMain = page.getByRole("main");
+  await expect(pricingMain.locator('a[href="/onboard?from=pricing-close"]')).toHaveCount(1);
+  await expect(pricingMain.locator('a[href="/onboard?from=pricing"]')).toHaveCount(1);
 });
 
 test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // The trial link carries the page that sent it, so demo-vs-trial can be read
   // per surface; the form hands that tag back to the action.
   await page.goto("/pricing");
-  await page.getByRole("link", { name: "Start a trial" }).last().click();
+  // Scoped to `<main>` and taken first: the header carries its own `nav`-tagged
+  // trial link, and the page now closes with a second one tagged
+  // `pricing-close`, so neither end of the document is the hero's door.
+  await page.getByRole("main").getByRole("link", { name: "Start a trial" }).first().click();
   await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
   // A hidden input can't be scoped with `.filter({ visible: true })` (it would
   // never match), and the previous route's own `input[name="source"]` (this
