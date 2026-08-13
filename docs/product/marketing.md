@@ -352,10 +352,23 @@ shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still 
 for a reader who scans that far.
 
 **The homepage records band carries both halves as pictures**, in the order the copy argues them:
-the import preview (arriving) above the export inventory card (leaving). That band is the
-portability wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12
-it made that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on
-the site.
+the import preview (arriving) beside the export inventory (leaving). That band is the portability
+wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12 it made
+that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on the
+site.
+
+**Its geometry is the claim.** On 2026-08-13 the band stopped being a copy-left / visual-right
+split — the third section in a row on that page to use one, after the hero and the first daily
+moment — and became a mirrored diptych: one statement, then two equal columns divided by a rule,
+same marker, same weight, arriving left and leaving right. "Come in clean, and *leave the same
+way*" is an argument about symmetry, so the section that makes it is the one place on the page
+where the layout should be symmetric. The two column markers ("Coming in" / "Going out") are the
+copy that used to open each paragraph — `exportDescription1` lost "Arriving is a file, not a
+project" for "A file, not a project", `exportDescription2` lost "Leaving is built to the same
+standard as arriving", and the export card's own "In the export" eyebrow retired rather than sit
+stacked under "Going out". The inventory also lost its card border and became a hairline manifest:
+a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
+picture and a list.
 
 **The homepage's four-card breadth band is deliberately still four assertions.** It renders
 `FeatureGroupsGrid` at `featuresPerGroup={1}` under the whiteboard/clipboard statement, and it is

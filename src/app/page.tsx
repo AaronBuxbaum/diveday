@@ -105,11 +105,16 @@ async function LocalizedHomeBody() {
  * they sit, the portability diptych for which direction a record is travelling.
  * One marker atom, several compositions around it — a new eyebrow style per
  * band is what made the old page read as six renders of one template.
+ *
+ * `as="h3"` where the marker is the *only* label its column has (the diptych),
+ * so the section's two halves are named in the document outline; the moment
+ * rows leave it a `<p>`, because the `<h3>` they already carry is their name
+ * and a marker heading above it would be a second, emptier one.
  */
-function SectionMarker({ children }: { children: ReactNode }) {
+function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: "p" | "h3" }) {
   return (
     <div className="flex items-center gap-4">
-      <p className="text-sm font-semibold text-primary">{children}</p>
+      <Tag className="text-sm font-semibold text-primary">{children}</Tag>
       <span aria-hidden="true" className="h-px flex-1 bg-border" />
     </div>
   );
@@ -189,7 +194,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            {/* `w-full sm:w-auto` on all three: without it the primary (inside
+            {/* `w-full sm:w-auto` on both: without it the primary (inside
                 a form, hugging its label) rendered *narrower* than the
                 stretched secondary link on phones — the demoted action was the
                 biggest target on first paint. Full-width buttons are also the
@@ -319,7 +324,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
         <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
           <div className="flex flex-col gap-5 lg:pr-14">
-            <SectionMarker>{t("marketing.home.arrivingLabel")}</SectionMarker>
+            <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
             <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
             <MarketingMockup
               label={t("marketing.home.importMockupLabel")}
@@ -330,7 +335,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           </div>
 
           <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
-            <SectionMarker>{t("marketing.home.leavingLabel")}</SectionMarker>
+            <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
             <p className="leading-7 text-muted">
               {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
             </p>
