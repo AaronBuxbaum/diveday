@@ -113,6 +113,8 @@ export type TripPatch = {
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
+  minimumBookings?: number | null;
+  minimumDecisionHours?: number | null;
   /**
    * The trip's meeting days, replaced wholesale. Omit to leave the existing
    * rows alone; pass them whenever `startsAt`/`endsAt` move, because a day row
@@ -194,6 +196,8 @@ export async function updateTrip(
         priceCents: patch.priceCents ?? null,
         depositCents: patch.depositCents ?? null,
         cancellationWindowHours: patch.cancellationWindowHours ?? null,
+        minimumBookings: patch.minimumBookings ?? null,
+        minimumDecisionHours: patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
         plannedDives,
         ...(patch.diveSiteId === undefined
           ? {}
