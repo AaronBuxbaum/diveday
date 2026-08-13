@@ -1,17 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { LogoMark } from "@/components/Logo";
-import { isDestinationCurrent, type ShopNavGates } from "@/components/ShopNavLinks";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { staffDestination, staffDestinationHref } from "@/lib/staff-destinations";
 
 export type ShopIdentityMenuCopy = {
-  settings: string;
   language: string;
   signOut: string;
   signOutConfirm: string;
@@ -20,23 +16,26 @@ export type ShopIdentityMenuCopy = {
 
 /**
  * The staff header's identity block — logo and shop name — as a small
- * disclosure holding everything that is about *this shop and this session*
- * rather than about the dive day.
+ * disclosure holding what is about *this reader, this device, this session*:
+ * the language the app speaks to them, and the way out. Nothing in it is a
+ * place in the shop.
  *
  * Sign out was the first thing filed here: it used to stand in the permanent
  * header at equal standing with Search, chrome on screen all day for a control
  * most staffers tap once a shift, and the remove-until-it-breaks test (design
- * principle 10) took it. Settings is the second, and for the same reason one
- * step further on — it was a tab, which on a phone means a sixth of the bottom
- * dock, permanently, for the one destination a shop *configures* rather than
- * works. Behind the shop's own name it is still one tap from anywhere at every
- * width, and it reads as what it is.
+ * principle 10) took it.
  *
- * Language is the third, and belongs here for the same reason: it is about
- * *this reader on this device*, not about the dive day. It is also the one
- * control a person who cannot read the rest of the header needs to find, which
- * is why the options render as their own languages' names rather than as
- * words in whichever language is currently wrong for them.
+ * Language belongs here for the same reason: it is about *this reader on this
+ * device*, not about the dive day. It is also the one control a person who
+ * cannot read the rest of the header needs to find, which is why the options
+ * render as their own languages' names rather than as words in whichever
+ * language is currently wrong for them.
+ *
+ * Settings lived here for a while, between leaving the tab strip and the
+ * "More" groups arriving — it is a *place*, and places live in the nav: the
+ * header's More menu and the dock's More sheet both end their "Set up" group
+ * with it (ADR 20260813-more-is-the-shops-other-door). Keeping a second door
+ * here too would be the duplicate control principle 8 forbids.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -44,8 +43,6 @@ export type ShopIdentityMenuCopy = {
  */
 export function ShopIdentityMenu({
   shopName,
-  root,
-  gates,
   signOutAction,
   locale,
   languages,
@@ -53,10 +50,6 @@ export function ShopIdentityMenu({
   copy,
 }: {
   shopName: string;
-  /** `/shop/<slug>`, for the destinations filed in here. */
-  root: string;
-  /** Settings is owner/manager work (H-14) — hidden entirely from everyone else. */
-  gates: ShopNavGates;
   signOutAction: () => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
@@ -94,13 +87,6 @@ export function ShopIdentityMenu({
   // Close on any (re)navigation, so an Activity-preserved re-show can never
   // resurface an open session menu (same defensive pattern as InlineConfirm).
   const pathname = usePathname();
-  // Read from the one registry, gate and `alsoMatch` included, so this door
-  // can never drift from the tabs and the palette (src/lib/staff-destinations.ts).
-  // `alsoMatch` is what keeps Promo codes, Dive sites and Waivers — reached
-  // *from* Settings' cards — marking the door that leads back to them.
-  const settings = staffDestination("settings");
-  const showSettings = gates.settings;
-  const settingsCurrent = showSettings && isDestinationCurrent(pathname, root, settings);
   const pathnameEffectRan = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the menu, which is the point.
   useEffect(() => {
@@ -150,23 +136,7 @@ export function ShopIdentityMenu({
       </button>
       {open ? (
         <div className="absolute top-full left-0 z-10 mt-2 min-w-44 rounded-xl border border-border bg-surface p-2 shadow-lg animate-scale-in">
-          {showSettings ? (
-            <Link
-              href={staffDestinationHref(root, settings)}
-              aria-current={settingsCurrent ? "page" : undefined}
-              onClick={() => setOpen(false)}
-              className={buttonClass({
-                variant: "ghost",
-                size: "sm",
-                className: `w-full justify-start rounded-lg ${
-                  settingsCurrent ? "bg-primary/10 text-primary" : ""
-                }`,
-              })}
-            >
-              {copy.settings}
-            </Link>
-          ) : null}
-          <div className={showSettings ? "mt-1 border-t border-border pt-2" : "pt-1"}>
+          <div className="pt-1">
             <p className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
               {copy.language}
             </p>
@@ -180,7 +150,7 @@ export function ShopIdentityMenu({
             </div>
           </div>
           {/* Signing out is the destructive end of the menu, so it sits below
-              the rule rather than in the same stack as a navigation row. */}
+              the rule rather than in the same stack as the language rows. */}
           <form
             action={signOutAction}
             data-scroll-reset="true"

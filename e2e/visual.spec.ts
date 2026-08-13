@@ -1478,9 +1478,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **Two captures in one test, deliberately.** `settings-trial` is
        * this shop's Settings page — the trial-status card only ever renders
        * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
-       * shop the other settings capture uses) can never show it. (A third
-       * capture, `nav-more-menu`, retired with the "More" menu itself when
-       * the header became six tabs.) Both
+       * shop the other settings capture uses) can never show it. Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. A second test would have to onboard a *second*
        * shop, because `/api/test/reset` reseeds the demo shop and purges
@@ -1525,11 +1523,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
         await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
         await capture(page, "today-empty", scheme);
-
-        // The "More" menu capture retired with the menu itself: the header is
-        // six tabs now (every former menu row is a tab, a palette row, or a
-        // contextual door), so there is no panel left to photograph — the
-        // header's own pixels are in every staff capture already.
 
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
@@ -1640,6 +1633,37 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
           .waitFor();
         await capture(page, "today", scheme);
+      });
+
+      // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
+      // the header's More menu holding the "Run the shop" / "Set up" groups.
+      // The menu only exists from `lg` up, so this capture's 390 image is
+      // deliberately the plain page — the phone door is the dock sheet below.
+      test(`the header's More menu renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis");
+        await page
+          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+          .waitFor();
+        await page.locator("header summary").filter({ hasText: "More" }).click();
+        await page
+          .locator("header details[open]")
+          .getByRole("link", { name: "Close-out" })
+          .waitFor();
+        await capture(page, "nav-more-menu", scheme);
+      });
+
+      // The same groups behind the phone dock's sixth slot, as the bottom
+      // sheet rising from the dock. Opened at the phone viewport because the
+      // dock only exists below `lg` — the 1280 image is the plain page.
+      test(`the dock's More sheet renders true to the design (${scheme})`, async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/shop/blue-mantis");
+        await page
+          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+          .waitFor();
+        await page.locator("[data-dock-more]").click();
+        await page.getByRole("list", { name: "Run the shop" }).waitFor();
+        await capture(page, "nav-more-sheet", scheme);
       });
 
       // The blocker queue — until recently the one staff surface with no

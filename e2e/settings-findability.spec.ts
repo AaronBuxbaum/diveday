@@ -52,8 +52,9 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
-    // Promo codes: in Money, where the shop's other money is. Settings is now
-    // the *only* door to both of these — the header dropped their rows.
+    // Promo codes: in Money, where the shop's other money is. These cards are
+    // the doors on the surface that owns them; the nav's "Set up" group is the
+    // other door (ADR 20260813-more-is-the-shops-other-door).
     await page.goto(`/shop/${SHOP}/settings`);
     await page.getByRole("main").getByRole("link", { name: "Promo codes", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
@@ -72,8 +73,8 @@ test.describe("as owner", () => {
     await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
     await expect(page.getByRole("main").getByRole("link", { name: "Data export" })).toHaveCount(0);
 
-    // Scoped to `main`: the shop's identity menu carries its own Settings link,
-    // and this assertion is about the page's own eyebrow.
+    // Scoped to `main`: the nav's "Set up" group carries its own Settings
+    // link, and this assertion is about the page's own eyebrow.
     await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
