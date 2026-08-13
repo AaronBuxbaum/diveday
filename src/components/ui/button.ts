@@ -43,14 +43,30 @@ const variants = {
   link: "text-primary hover:underline",
 } as const;
 
+/**
+ * Each size names its horizontal padding separately from the rest of its
+ * classes, because `flush` below has to remove exactly that and nothing else.
+ *
+ * It is a field rather than something parsed back out of one class string on
+ * the way past: a regex for "the `px-*` token" gets a variant-prefixed padding
+ * wrong in the worst available way. `/\bpx-[^\s]+/` matches the `px-6` *inside*
+ * `sm:px-6` — the `:` is a word boundary — and strips it, leaving a bare `sm:`
+ * in the class attribute, which is not a class at all. Keeping the padding in
+ * its own field means a size may hold `px-4 sm:px-6` tomorrow and `flush` still
+ * drops the whole thing, at every breakpoint, with nothing to parse.
+ *
+ * So: `x` holds every horizontal-padding utility the size wants, responsive
+ * variants included, and `rest` holds no `px-*` at all. `button.test.ts` pins
+ * both halves of that.
+ */
 const sizes = {
-  sm: "px-3 py-2 text-sm font-medium",
-  md: "px-4 py-2.5 text-sm font-medium",
-  lg: "px-5 py-2.5 text-sm font-medium",
+  sm: { x: "px-3", rest: "py-2 text-sm font-medium" },
+  md: { x: "px-4", rest: "py-2.5 text-sm font-medium" },
+  lg: { x: "px-5", rest: "py-2.5 text-sm font-medium" },
   /** Marketing calls to action: reads at 16px and carries more weight. */
-  cta: "px-5 py-3 text-base font-semibold",
+  cta: { x: "px-5", rest: "py-3 text-base font-semibold" },
   /** Dock target: a 56px, 16px-label action for wet-hands boat surfaces. */
-  boat: "min-h-14 px-6 py-3.5 text-base font-semibold",
+  boat: { x: "px-6", rest: "min-h-14 py-3.5 text-base font-semibold" },
 } as const;
 
 export type ButtonVariant = keyof typeof variants;
@@ -73,7 +89,6 @@ export type ButtonSize = keyof typeof sizes;
  * there at all, and only the horizontal half is what misaligns the text.
  */
 const FLUSH = "px-0";
-const HORIZONTAL_PADDING = /\bpx-[^\s]+/g;
 
 export function buttonClass({
   variant = "primary",
@@ -87,8 +102,6 @@ export function buttonClass({
   flush?: boolean;
   className?: string;
 } = {}) {
-  const sizeClasses = flush
-    ? `${sizes[size].replace(HORIZONTAL_PADDING, " ").replace(/\s+/g, " ").trim()} ${FLUSH}`
-    : sizes[size];
-  return `${base} ${variants[variant]} ${sizeClasses} ${className}`.trim();
+  const { x, rest } = sizes[size];
+  return `${base} ${variants[variant]} ${rest} ${flush ? FLUSH : x} ${className}`.trim();
 }
