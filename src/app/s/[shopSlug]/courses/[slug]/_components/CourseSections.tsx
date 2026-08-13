@@ -363,7 +363,10 @@ export function CourseGallery({
             key={url}
             src={url}
             // The hero photo claims "photo 1"; gallery photos continue from 2.
-            alt={resolveImageAlt(alt, t("course.photoAltFallback", { course: title, n: index + 2 }))}
+            alt={resolveImageAlt(
+              alt,
+              t("course.photoAltFallback", { course: title, n: index + 2 }),
+            )}
             className="h-40 w-full rounded-2xl border border-border sm:h-48"
             sizes="(min-width: 640px) 33vw, 50vw"
           />
