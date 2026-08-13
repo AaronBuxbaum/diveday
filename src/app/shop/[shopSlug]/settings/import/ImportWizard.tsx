@@ -260,7 +260,7 @@ export function ImportWizard({
           {/* Seven tiles across a max-w-3xl column wrapped their labels to different
               heights, which knocked the numbers off a shared baseline. Four wide,
               two rows. */}
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: copy.stats.diversInFile, value: prepared.totals.importable },
               // A certification export lists one row per card, so rows that add
@@ -276,9 +276,17 @@ export function ImportWizard({
               { label: copy.stats.waivers, value: prepared.totals.withWaiver },
               { label: copy.stats.pastVisits, value: prepared.totals.withVisit },
             ].map((stat) => (
-              <ShopStat key={stat.label} label={stat.label} value={stat.value} />
+              // `inset`: these tiles sit inside the wizard's own card, so they
+              // take the sunken tile rather than stacking card on card.
+              <ShopStat
+                key={stat.label}
+                variant="inset"
+                definition
+                label={stat.label}
+                value={stat.value}
+              />
             ))}
-          </div>
+          </dl>
 
           {/* Importing a roster is desk work, but a shop owner who opened the
               confirmation on a phone gets six columns in a 390px window and no
@@ -286,7 +294,14 @@ export function ImportWizard({
               public trip page uses over its swipeable briefings — say the
               gesture rather than redesign the table for a screen it isn't for. */}
           <p className="mt-4 text-sm font-medium text-muted sm:hidden">{copy.previewSwipeHint}</p>
-          <Table minWidth="36rem" shellClassName="mt-2 sm:mt-4">
+          {/* `flush` inside the wizard's card, with a thin border kept as the
+              boundary of the sideways-scroll region — but no card-on-card
+              shadow or second bg-surface. */}
+          <Table
+            flush
+            minWidth="36rem"
+            shellClassName="mt-2 rounded-xl border border-border sm:mt-4"
+          >
             <THead>
               <Th numeric>{copy.table.rowNumber}</Th>
               <Th>{copy.table.name}</Th>

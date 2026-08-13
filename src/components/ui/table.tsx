@@ -49,15 +49,25 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
  * clipped Amount column on a phone once silently swallowed the one figure
  * the orders index exists to show. `print:overflow-visible` keeps paper out
  * of the scroll rule entirely.
+ *
+ * Elevation follows containment, one rule: a table that *is* the surface
+ * (orders, reports, the departure log) wears the card shell; a table already
+ * inside a card says `flush` and brings no chrome of its own — the header
+ * rule and row dividers carry the structure, and a nested border-in-border
+ * box never happens. `shellClassName` may still add context framing (a
+ * margin, a visibility switch, a thin border marking a scroll region).
  */
 export function Table({
   minWidth,
+  flush = false,
   shellClassName = "",
   className = "",
   children,
 }: {
   /** Below this the shell scrolls sideways instead of crushing columns. */
   minWidth?: TableMinWidth;
+  /** Chrome-less shell for a table nested inside an existing card. */
+  flush?: boolean;
   /** Margins and visibility for the shell (e.g. `mt-6`, `hidden sm:block print:block`). */
   shellClassName?: string;
   className?: string;
@@ -65,7 +75,11 @@ export function Table({
 }) {
   return (
     <div
-      className={`overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm print:overflow-visible ${shellClassName}`.trim()}
+      className={`overflow-x-auto print:overflow-visible ${
+        flush ? "" : "rounded-2xl border border-border bg-surface shadow-sm"
+      } ${shellClassName}`
+        .replace(/\s+/g, " ")
+        .trim()}
     >
       <table
         className={`w-full text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}

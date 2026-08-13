@@ -178,11 +178,15 @@ export default async function IncidentExportPage({
         <h2 id="incident-summary-heading" className="text-lg font-semibold">
           {t("incidentExport.summaryHeading")}
         </h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {/* A <dl>, deliberately: this is the definition-list half of the
+            "table-and-definition-list document" the a11y scan expects, so a
+            screen reader keeps the label-to-figure pairing on the record a
+            shop hands an insurer. */}
+        <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {summary.map(([label, value]) => (
-            <ShopStat key={label} label={label} value={value} />
+            <ShopStat key={label} definition label={label} value={value} />
           ))}
-        </div>
+        </dl>
       </section>
 
       <section className="mt-8" aria-labelledby="incident-roster-heading">

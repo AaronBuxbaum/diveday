@@ -40,6 +40,27 @@ describe("Table", () => {
     expect(screen.getByRole("cell", { name: "Ana Reyes" })).toBeInTheDocument();
   });
 
+  it("drops the card chrome — but never the scroll shell — when flush", () => {
+    render(
+      <Table flush>
+        <TBody>
+          <tr>
+            <Td>Nested</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const shell = screen.getByRole("table").parentElement;
+    // A flush table sits inside an existing card: elevation follows
+    // containment, so it brings no border/background/shadow of its own...
+    expect(shell).not.toHaveClass("border-border");
+    expect(shell).not.toHaveClass("bg-surface");
+    expect(shell).not.toHaveClass("shadow-sm");
+    // ...but the sideways-scroll behavior is not chrome and never leaves.
+    expect(shell).toHaveClass("overflow-x-auto");
+    expect(shell).toHaveClass("print:overflow-visible");
+  });
+
   it("clamps to a minimum width on screen and releases it in print", () => {
     render(
       <Table minWidth="40rem">

@@ -269,7 +269,10 @@ export function BackupsSection({
                 ambiguous (`e2e/backup-export.spec.ts` failed on a strict-mode
                 violation), and it doubled the DOM of a paged list for no gain.
                 A layout switch belongs in CSS. */}
-            <Table shellClassName="mt-4">
+            {/* `flush` inside this card — no card-on-card shadow or second
+                bg-surface; a thin border stays as the boundary of the grid,
+                the same nested-table treatment as the import preview. */}
+            <Table flush shellClassName="mt-4 rounded-xl border border-border">
               {/* Below `sm` the rows are self-describing stacks rather than a
                   grid, so a lone "When" heading over them would be noise. */}
               <THead className="hidden sm:table-header-group">
