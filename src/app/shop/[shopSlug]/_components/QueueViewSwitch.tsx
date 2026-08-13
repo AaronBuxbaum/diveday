@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 /**
  * How the shop home's one work queue is read: ranked by urgency, or grouped by
@@ -43,31 +43,25 @@ export function QueueViewSwitch({
     { view: "departures", label: copy.departures },
   ];
   return (
-    // A `nav`, not a `role="group"` of buttons: each option is a real link to a
-    // real URL, so it opens in a new tab, bookmarks, and works without
-    // JavaScript. `min-h-11` on each option — this is tapped on a phone at a
-    // counter, so both halves clear the 44px target the design principles set
-    // for wet fingers.
-    <nav
-      aria-label={copy.label}
-      className="inline-flex shrink-0 rounded-full border border-border bg-surface-sunken p-1"
-    >
-      {options.map((option) => {
-        const active = option.view === current;
-        return (
-          <Link
-            key={option.view}
-            href={hrefFor(option.view)}
-            scroll={false}
-            aria-current={active ? "true" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
-              active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
-            }`}
-          >
-            {option.label}
-          </Link>
-        );
-      })}
-    </nav>
+    // The shared segmented track: a `nav` of real links, not a `role="group"`
+    // of buttons, so each view opens in a new tab, bookmarks, and works
+    // without JavaScript. The current view stays a clickable link (a re-tap
+    // is a harmless reload of the same URL) and `scroll={false}` holds the
+    // reader's place, since both views are the same page. This used to be a
+    // fourth hand-rolled `rounded-full` variant of the track; it now wears
+    // the one grammar every segmented choice in `/shop/**` wears.
+    <SegmentedControl
+      ariaLabel={copy.label}
+      items={options.map((option) => ({
+        key: option.view,
+        label: option.label,
+        href: hrefFor(option.view),
+      }))}
+      currentKey={current}
+      currentIsLink
+      ariaCurrentValue="true"
+      scroll={false}
+      className="shrink-0"
+    />
   );
 }

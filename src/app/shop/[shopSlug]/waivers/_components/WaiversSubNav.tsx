@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 /**
  * The waiver surface's two tabs (task 155, UX persona assessment Lens 17):
@@ -42,27 +42,12 @@ export function WaiversSubNav({
   ];
 
   return (
-    <nav
-      aria-label={copy.ariaLabel}
-      className={`flex gap-1 rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`}
-    >
-      {tabs.map(({ key, label, href }) => {
-        const active = key === current;
-        const cls = `inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
-          active
-            ? "bg-surface text-primary shadow-sm"
-            : "text-muted hover:bg-surface hover:text-foreground"
-        }`;
-        return active ? (
-          <span key={key} aria-current="page" data-tab-active="true" className={cls}>
-            {label}
-          </span>
-        ) : (
-          <Link key={key} href={href} className={cls}>
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedControl
+      ariaLabel={copy.ariaLabel}
+      items={tabs.map(({ key, label, href }) => ({ key, label, href }))}
+      currentKey={current}
+      fill
+      className={className}
+    />
   );
 }
