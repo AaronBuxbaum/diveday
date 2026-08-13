@@ -45,24 +45,36 @@ import { log } from "@/lib/log";
 const CREDENTIALS_SIGNIN = "CredentialsSignin";
 
 /**
- * Auth.js's `logger.error`, with one known cause downgraded.
+ * Auth.js's `logger.error`: one known cause downgraded, everything else
+ * structured.
  *
- * Everything that is not a refused credential keeps its current level *and its
- * current destination* — the console formatting below is a faithful copy of
- * `@auth/core`'s own default, because supplying a `logger.error` replaces the
- * built-in one outright and there is no way to delegate back to it. A real
- * Auth.js failure therefore reads in Vercel's log view exactly as it always
- * has, stack and cause included. Structuring those through `log()` too would be
- * a further improvement and a different decision: it would ship an error
- * message we do not author to CloudWatch, and Auth.js wraps adapter and
- * callback errors whose messages can carry the values that caused them.
+ * A refused credential is a `warn` with a counter behind it. Every other
+ * Auth.js failure stays at `error` and becomes an `auth.error` line through
+ * `log()` — so it is JSON like the rest of the app's own errors, queryable in
+ * CloudWatch, and counted by the `AppErrors` metric filter (`$.level = "error"`),
+ * which the ANSI-coloured line it replaces never was. A misconfigured provider
+ * firing three times in a quarter hour now pages someone.
+ *
+ * **What is shipped and what is not.** The structured line carries the `type`
+ * (an Auth.js code, part of its public API), Auth.js's own `message`, and the
+ * *class name* of a wrapped cause. It does not carry the cause's message or
+ * stack: `CallbackRouteError` and friends wrap whatever our own code threw, and
+ * a database driver's message can echo the value that caused it. Those still
+ * print to `console.error` in Auth.js's own format, so a developer reading
+ * Vercel's log view loses nothing — they just do not leave the log drain the
+ * deployment already had.
  */
 export function logAuthError(error: Error): void {
   // The same discrimination the default logger makes: an `AuthError` carries a
   // stable `type`, anything else only has a class name.
   const type = read(error, "type") ?? error.name;
   if (type !== CREDENTIALS_SIGNIN) {
-    defaultAuthErrorLine(error, type);
+    log("auth.error", "error", {
+      type,
+      message: error.message,
+      cause: causeName(error),
+    });
+    defaultAuthErrorDetail(error);
     return;
   }
   // No address, no IP, no password — AGENTS.md forbids PII in logs, and this
@@ -83,20 +95,30 @@ function read(error: Error, key: "type" | "code"): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/** The class of the error Auth.js wrapped, when it wrapped one. Never its text. */
+function causeName(error: Error): string | null {
+  const cause = error.cause;
+  if (cause && typeof cause === "object" && "err" in cause && cause.err instanceof Error) {
+    return cause.err.name;
+  }
+  return null;
+}
+
 /**
- * `@auth/core`'s built-in `logger.error`, reproduced.
+ * The cause and stack half of `@auth/core`'s built-in `logger.error`.
  *
  * Mirrored from `@auth/core/lib/utils/logger.js` (0.41.3) because that module
  * exports `setLogger`, not the default instance it builds, so an override
- * cannot call through to it. If Auth.js changes its format, this diverges
- * cosmetically and nothing else — the level and the stream are the parts that
- * matter, and both are pinned by `auth-logger.test.ts`.
+ * cannot call through to it. The `[auth][error]` headline it used to print is
+ * now the structured line above; what stays here is the debugging detail, which
+ * goes to the console only — deliberately, so an error message we did not
+ * author never reaches CloudWatch. If Auth.js changes its format this diverges
+ * cosmetically and nothing else.
  */
 const RED = "\x1b[31m";
 const RESET = "\x1b[0m";
 
-function defaultAuthErrorLine(error: Error, type: string): void {
-  console.error(`${RED}[auth][error]${RESET} ${type}: ${error.message}`);
+function defaultAuthErrorDetail(error: Error): void {
   const cause = error.cause;
   if (cause && typeof cause === "object" && "err" in cause && cause.err instanceof Error) {
     const { err, ...data } = cause as { err: Error } & Record<string, unknown>;
