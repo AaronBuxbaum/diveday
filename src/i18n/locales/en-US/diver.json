@@ -669,8 +669,7 @@
   },
   "capability": {
     "waiverReceived": "Waiver received",
-    "waiverDone": "That’s the paperwork done ✅",
-    "readinessTitle": "Your trip readiness"
+    "waiverDone": "That’s the paperwork done ✅"
   },
   "seatClaim": {
     "metaTitle": "Claim your seat",

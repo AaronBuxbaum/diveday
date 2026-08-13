@@ -230,22 +230,39 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
 }
 
 /**
+ * Which checklist rows answer with a single button this page can make primary.
+ * The certification rows are deliberately absent: their action is the
+ * multi-field `CertificationEntry` form, whose submit stays secondary by
+ * design — a form's save is not the page's one obvious action.
+ */
+function rendersActionButton(item: DiverChecklistItem, canPay: boolean): boolean {
+  if (item.state !== "action") return false;
+  if (item.code === "waiver_pending" || item.code === "waiver_expired") return true;
+  return (item.code === "payment_due" || item.code === "payment_refunded") && canPay;
+}
+
+/**
  * The action a checklist item enables on this page, if any.
  *
- * `isNext` marks the one item `nextDiverStep` named — the same one the spine's
- * "Next:" line points at — and only that item's button wears primary weight.
- * Two actionable rows at once (a waiver and a payment, most commonly) used to
- * render two primaries, leaving the diver to do the triage the page had
- * already done in its own headline (design principle 8: one obvious action).
+ * `isPrimary` marks the first row whose action is a button — and only that
+ * button wears primary weight. Two actionable rows at once (a waiver and a
+ * payment, most commonly) used to render two primaries, leaving the diver to
+ * do the triage the page had already done in its own headline (design
+ * principle 8: one obvious action). Chosen among the button-bearing rows
+ * rather than blindly from `nextDiverStep`: when the next step is a
+ * certification form, demoting the one payment button with nothing promoted
+ * in its place would leave the page with no primary at all.
  */
 function itemAction(
   item: DiverChecklistItem,
   token: string,
   canPay: boolean,
-  isNext: boolean,
+  isPrimary: boolean,
   t: DiverTranslator,
 ): React.ReactNode {
-  const actionButton = buttonClass(isNext ? { size: "sm" } : { variant: "secondary", size: "sm" });
+  const actionButton = buttonClass(
+    isPrimary ? { size: "sm" } : { variant: "secondary", size: "sm" },
+  );
   // An expired link needs the same action as a pending one — `signWaiverFromReady`
   // always issues a fresh link and opens it, superseding whatever came before,
   // so the only difference is what the button promises. Naming the difference
@@ -625,6 +642,8 @@ export default async function DiverReadinessPage({
       : null;
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
+  // The page's one primary button, chosen among the rows that render one.
+  const primaryActionItem = items.find((item) => rendersActionButton(item, data.canPay)) ?? null;
   const ready = detail.readiness.status === "ready";
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // The emergency-contact row is rendered as its own `ChecklistRow` below,
@@ -754,7 +773,7 @@ export default async function DiverReadinessPage({
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
                 detail={checklistDetailText(t, item)}
-                action={itemAction(item, token, data.canPay, item === nextStep, t)}
+                action={itemAction(item, token, data.canPay, item === primaryActionItem, t)}
                 t={t}
               />
             ))}
@@ -888,9 +907,14 @@ export default async function DiverReadinessPage({
             {data.manageState === "shop_only" ? (
               <div className="mt-3">
                 <p className="text-base text-muted">{t("ready.manageShopOnly")}</p>
-                <p className="mt-2 text-base">
-                  <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-                </p>
+                {/* The component's own null-render carries the no-contacts
+                    case — a wrapper element here would leave a stray empty
+                    paragraph exactly when the shop published nothing. */}
+                <ShopContactLinks
+                  phone={shop.contactPhone}
+                  email={shop.contactEmail}
+                  className="mt-2 text-base"
+                />
               </div>
             ) : null}
 
@@ -938,9 +962,11 @@ export default async function DiverReadinessPage({
               // picker quietly disappear the moment a payment settles.
               <div className="mt-3">
                 <p className="text-base text-muted">{t(rescheduleBlockedKey)}</p>
-                <p className="mt-2 text-base">
-                  <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-                </p>
+                <ShopContactLinks
+                  phone={shop.contactPhone}
+                  email={shop.contactEmail}
+                  className="mt-2 text-base"
+                />
               </div>
             ) : null}
 

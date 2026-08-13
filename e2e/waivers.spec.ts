@@ -174,7 +174,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // Signing sends the diver straight to "what's left" instead of stopping on
   // the signed-waiver page, whose only forward path used to be one more link.
   await expect(page).toHaveURL(/\/ready\//);
-  await expect(page.getByRole("heading", { name: "Almost there, Priya." })).toBeVisible();
+  // The greeting lives inside the checklist card's own header now (the page's
+  // one spine), as body text under the "Your pre-trip checklist" heading —
+  // not a heading of its own.
+  await expect(page.getByText(/Almost there, Priya\./)).toBeVisible();
   // The copy uses a typographic apostrophe (U+2019), not a straight one.
   await expect(page.getByText(/doctor’s sign-off may be required/)).toBeVisible();
 
