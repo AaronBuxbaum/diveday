@@ -1,5 +1,5 @@
 import type { DbExecutor } from "./client";
-import { MARINE_LIFE_BY_SLUG, marineLifeImage } from "./marine-life-catalog";
+import { isMarineLifeSlug } from "./marine-life-catalog";
 import { type DiveSpecialty, diveSiteCreatures, diveSiteMoments, diveSites } from "./schema";
 import { publishedTemplateId } from "./seed-dive-site-catalog";
 import { commonsImage } from "./seed-images";
@@ -347,10 +347,9 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
    *
    * The words used to be written out here, per site, per species — eleven
    * hand-typed rows for Molasses alone, several of them saying the same thing
-   * about the same fish at a different site. They come from
-   * `./marine-life-catalog.ts` now, which is exactly what a real shop gets when
-   * it picks a species on the dive-site form: DiveDay's words copied onto the
-   * shop's own row, where the shop edits them.
+   * about the same fish at a different site. A slug is now the whole row, which
+   * is exactly what a real shop's field guide is: a selection from
+   * `./marine-life-catalog.ts`, rendered in the reader's own language.
    *
    * One seeded site (`Christ of the Abyss` keeps its own; `Pickles Reef` is the
    * deliberate blank) is left with no guide at all. A site the shop has nothing
@@ -386,23 +385,12 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
   ];
   const creatureRows = fieldGuides.flatMap(({ site, slugs }) =>
     site
-      ? slugs.flatMap((slug, index) => {
-          const species = MARINE_LIFE_BY_SLUG.get(slug);
-          if (!species) return [];
-          return [
-            {
-              shopId,
-              diveSiteId: site.id,
-              catalogSlug: species.slug,
-              name: species.name,
-              kind: species.kind,
-              imageUrl: marineLifeImage(species.slug),
-              description: species.description,
-              preparationTip: species.preparationTip,
-              position: index,
-            },
-          ];
-        })
+      ? slugs.filter(isMarineLifeSlug).map((slug, index) => ({
+          shopId,
+          diveSiteId: site.id,
+          catalogSlug: slug,
+          position: index,
+        }))
       : [],
   );
   if (creatureRows.length > 0) await db.insert(diveSiteCreatures).values(creatureRows);

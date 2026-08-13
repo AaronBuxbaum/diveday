@@ -12,6 +12,8 @@
  */
 
 import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
 import {
   type CalendarDate,
@@ -186,6 +188,8 @@ export async function loadShopExportBundleInput(
           asc(diveSiteCreatures.position),
           asc(diveSiteCreatures.id),
         );
+
+      const creatureById = new Map(creatureRows.map((row) => [row.id, row]));
 
       const momentRows = await tx
         .select()
@@ -1835,18 +1839,28 @@ export async function loadShopExportBundleInput(
             "image_url",
             "catalog_slug",
           ],
-          rows: creatureRows.map((row) => [
-            row.id,
-            row.diveSiteId,
-            siteName.get(row.diveSiteId),
-            row.position,
-            row.name,
-            row.kind,
-            row.description,
-            row.preparationTip,
-            row.imageUrl,
-            row.catalogSlug,
-          ]),
+          // A row stores a catalog slug and a position; the words are
+          // DiveDay's and belong to no row (ADR
+          // 20260813-marine-life-is-diveday-copy). They are resolved here in
+          // the shop's own default language rather than left blank, because a
+          // bundle of ninety-three slugs is not a thing a person can read, and
+          // this file is what a shop opens in a spreadsheet. `catalog_slug` is
+          // the column to reconcile against; the rest is a rendering.
+          rows: fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => {
+            const row = creatureById.get(card.id);
+            return [
+              card.id,
+              row?.diveSiteId,
+              siteName.get(row?.diveSiteId ?? ""),
+              row?.position,
+              card.name,
+              card.kind,
+              card.description,
+              card.preparationTip,
+              card.imageUrl,
+              card.slug,
+            ];
+          }),
           note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
         },
         {

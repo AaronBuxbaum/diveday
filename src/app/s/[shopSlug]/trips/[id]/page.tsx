@@ -30,6 +30,7 @@ import {
   listTripScheduleDays,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -240,7 +241,10 @@ export default async function TripDetailPage({
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
     dive,
     diveSite,
-    creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+    creatures: fieldGuideCards(
+      diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+      t,
+    ),
     moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
   }));
   // Dive 1 first, in the dive plan's own order: where a site names its own

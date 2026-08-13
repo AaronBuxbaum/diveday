@@ -528,6 +528,41 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
     .toMatch(/\/marine-life\/southern-stingray\.jpg/);
 });
 
+test("the same saved field guide reads in Spanish for a Spanish-speaking diver", async ({
+  page,
+}) => {
+  // The point of ADR 20260813-marine-life-is-diveday-copy. Nothing about the
+  // site changes between this test and the one above it -- same shop, same
+  // seeded rows, same eight species. What changes is who is reading, and the
+  // cards follow them. Under the copy-at-pick-time model this was impossible:
+  // a row held one language, whichever the staffer's browser was in.
+  await page.goto("/s/blue-mantis");
+  await page.getByRole("banner").getByRole("button", { name: "Change language" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Español" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
+
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
+    .click();
+  for (const summary of await page.getByText("Qué buscar ahí abajo").all()) {
+    await summary.click();
+  }
+
+  // The species names, the category words and the descriptions are all
+  // Spanish, off the same `dive_site_creatures` rows the English render reads.
+  await expect(page.getByText("Loro semáforo").first()).toBeVisible();
+  await expect(page.getByText("Coral cuerno de alce").first()).toBeVisible();
+  await expect(page.getByText("Pez de arrecife").first()).toBeVisible();
+  await expect(page.getByText("Stoplight parrotfish")).toHaveCount(0);
+  // The photo is the same file -- an image is not a string, and bundling it
+  // once is the whole reason it is not in a message bundle.
+  await expect
+    .poll(() => bundledSource(page.getByRole("img", { name: "Loro semáforo" }).first()))
+    .toMatch(/\/marine-life\/stoplight-parrotfish\.jpg/);
+});
+
 test("a shop writes its own landmarks and picks its own field guide", async ({ page }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/dive-sites");
@@ -540,17 +575,25 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
     .click();
   await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
 
-  // Pick a species from DiveDay's catalog: its category, description, tip and
-  // photo all arrive filled in, and every one of them is then editable. Scoped
-  // to the field-guide fieldset — the briefing above it has a "Name" box of its
-  // own, and that one is the site's.
+  // Pick a species from DiveDay's catalog. The card is a preview, not a form:
+  // the name, the category and the sentence are DiveDay's, written in every
+  // language and resolved for whoever reads the briefing (ADR
+  // 20260813-marine-life-is-diveday-copy). What the shop chooses is which
+  // faces this site shows, and in what order.
   const guide = page.locator('fieldset:has-text("Field guide")');
   await page.getByLabel("Find a species").fill("Hogfish");
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(guide.getByRole("textbox", { name: "Category" })).toHaveValue("Reef fish");
-  await guide
-    .getByRole("textbox", { name: "How to actually see one" })
-    .fill("Ask the crew where the sand patches are.");
+  await expect(guide.getByText("Pez perro")).toHaveCount(0);
+  await expect(guide.getByText("Hogfish")).toBeVisible();
+  await expect(guide.getByText("Reef fish")).toBeVisible();
+  // Nothing on the card can be typed into.
+  await expect(guide.getByRole("textbox", { name: "Category" })).toHaveCount(0);
+
+  // A species DiveDay has no words for is refused rather than added blank —
+  // half a translated guide reads worse than one species fewer.
+  await page.getByLabel("Find a species").fill("Loch Ness monster");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(guide.getByText(/Not in DiveDay's catalog/)).toBeVisible();
 
   // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
   // the new row is the last one — `.last()` throughout, and the round-trip
@@ -567,11 +610,10 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
   await page.getByRole("button", { name: "Save dive site" }).click();
   await expect(page.getByText("Dive site saved.")).toBeVisible();
 
-  // Round-trips: the guide and the landmark come back as the shop left them.
-  await expect(guide.getByRole("textbox", { name: "Name" })).toHaveValue("Hogfish");
-  await expect(guide.getByRole("textbox", { name: "How to actually see one" })).toHaveValue(
-    "Ask the crew where the sand patches are.",
-  );
+  // Round-trips: the chosen species and the landmark come back as the shop
+  // left them, and the refused one never landed.
+  await expect(guide.getByText("Hogfish")).toBeVisible();
+  await expect(guide.getByText(/Loch Ness/)).toHaveCount(0);
   await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
     "The barrel casks",
   );
@@ -598,6 +640,6 @@ test("a template can be read in full before it is imported", async ({ page }) =>
   // The field guide came with it — a template that arrived without one left a
   // shop to retype the half of the briefing it could not see.
   await expect(
-    page.locator('fieldset:has-text("Field guide")').getByRole("textbox", { name: "Name" }).first(),
-  ).toHaveValue("Goliath grouper");
+    page.locator('fieldset:has-text("Field guide")').getByText("Goliath grouper"),
+  ).toBeVisible();
 });

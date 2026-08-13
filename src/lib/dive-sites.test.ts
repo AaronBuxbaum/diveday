@@ -140,44 +140,62 @@ describe("the briefing a shop writes in its own words", () => {
     });
   });
 
-  it("keeps the field guide the staffer assembled, catalog provenance included", () => {
+  it("keeps the species the staffer chose, in the order they chose them", () => {
+    const result = parseDiveSiteForm(
+      formEntries({
+        creatures: JSON.stringify(["stoplight-parrotfish", "green-moray"]),
+      }),
+      "meters",
+    );
+    if (!result.ok) throw new Error("a briefing with a field guide should parse");
+    expect(result.creatures).toEqual(["stoplight-parrotfish", "green-moray"]);
+  });
+
+  it("keeps nothing a post says about a species except which one it is", () => {
+    // The editor posted four free-text fields per row until 2026-08-13, and an
+    // older tab can still be open. The words are DiveDay's now, so a post
+    // carrying its own are read for the slug and nothing else — which is also
+    // what closes the injection surface those fields were on a public page.
     const result = parseDiveSiteForm(
       formEntries({
         creatures: JSON.stringify([
           {
             slug: "stoplight-parrotfish",
-            name: "Stoplight parrotfish",
-            kind: "Reef fish",
-            description: "A heavy beaked grazer.",
-            preparationTip: "Follow the crunching sound.",
-            imageUrl: "/marine-life/stoplight-parrotfish.jpg",
+            name: "Free swag, click here",
+            description: "<script>alert(1)</script>",
+            imageUrl: "https://example.com/barracuda.jpg",
           },
         ]),
       }),
       "meters",
     );
     if (!result.ok) throw new Error("a briefing with a field guide should parse");
-    expect(result.creatures).toHaveLength(1);
-    expect(result.creatures[0]).toMatchObject({
-      slug: "stoplight-parrotfish",
-      name: "Stoplight parrotfish",
-      imageUrl: "/marine-life/stoplight-parrotfish.jpg",
-    });
+    expect(result.creatures).toEqual(["stoplight-parrotfish"]);
   });
 
-  it("drops a species photo pointing at someone else's server", () => {
-    // A briefing must never make a live request to a host a staffer chose
-    // (CR-020) — the same rule the site gallery enforces by uploading.
+  it("drops a species DiveDay has no words for", () => {
+    // The safety property of the selection model: a stored slug is always one
+    // the bundles carry three strings for, so nothing downstream can render a
+    // slug at a diver.
     const result = parseDiveSiteForm(
       formEntries({
-        creatures: JSON.stringify([
-          { name: "Barracuda", imageUrl: "https://example.com/barracuda.jpg" },
-        ]),
+        creatures: JSON.stringify(["stoplight-parrotfish", "loch-ness-monster", ""]),
       }),
       "meters",
     );
     if (!result.ok) throw new Error("a briefing with a field guide should parse");
-    expect(result.creatures[0]?.imageUrl).toBe("");
+    expect(result.creatures).toEqual(["stoplight-parrotfish"]);
+  });
+
+  it("takes one card per species, however many times it was added", () => {
+    const result = parseDiveSiteForm(
+      formEntries({
+        creatures: JSON.stringify(["green-moray", "green-moray", "green-moray"]),
+      }),
+      "meters",
+    );
+    if (!result.ok) throw new Error("a briefing with a field guide should parse");
+    expect(result.creatures).toEqual(["green-moray"]);
   });
 
   it("survives a form that never posted the new fields at all", () => {

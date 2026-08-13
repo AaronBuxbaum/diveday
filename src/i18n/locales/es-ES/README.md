@@ -90,6 +90,34 @@ reading two names for one thing — which is the exact confusion the English fix
 and *ficha* below no longer names a dive-site record — it was doing the job the English word
 "briefing" wrongly did.
 
+## The field guide: `marineLife.*` is content, not chrome
+
+`diver.json`'s `marineLife` namespace is 93 species × three strings plus 18 category words, and it
+is the only block in either bundle that is **content a diver reads about the world** rather than
+words the app says about itself. It is here because a shop *picks* species from DiveDay's catalog
+and does not write them (ADR 20260813-marine-life-is-diveday-copy) — the row stores a slug, so the
+same saved briefing reads in Spanish to one diver and English to the next.
+
+Two things follow for whoever edits it:
+
+- **Common names are regional, and this catalog is the tropical western Atlantic.** Where Latin
+  America and Spain disagree, take the Caribbean name — *palometa* for the permit, *rabirrubia* for
+  the yellowtail snapper, *cherna*/*mero* for the groupers, *sábalo* for the tarpon. The Latin
+  binomial is in `src/db/marine-life-catalog.ts`, never in a bundle, and it is the tiebreak: check
+  it before renaming anything.
+- **The `tip` field is an instruction to a diver in the water**, so it takes the same tú imperative
+  as the rest of the bundle (*observa*, *acércate*, *no te arrodilles*), and the safety-flavoured
+  ones — the scorpionfish, the fire coral, the long-spined urchin, every protected species — say
+  the same thing the English says, no softer.
+
+One category label is narrower than its code and deliberately so: `eel` reads **Morena**, because
+all three species under it are morays and "anguila" would tell a diver less. Add a non-moray eel to
+the catalog and that label has to be revisited — it is the one place here where the Spanish is more
+specific than the English.
+
+`src/db/marine-life-catalog.test.ts` fails if a species loses its Spanish, gains copy for a slug the
+catalog dropped, or ends up with a description identical to the English one.
+
 ## Deliberately left alone
 
 Not everything that looks peninsular is. These stay, and changing them would be a retranslation

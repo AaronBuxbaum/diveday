@@ -1,6 +1,7 @@
 import { z } from "zod";
+import type { MarineLifeSlug } from "@/db/marine-life-catalog";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
-import { type DiveSiteCreature, parseDiveSiteCreatures } from "./dive-site-field-guide";
+import { parseFieldGuideSelection } from "./dive-site-field-guide";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
 import { DOCK_DAY_LIMITS } from "./diver-planning";
@@ -147,7 +148,7 @@ export type DiveSiteFormParse =
       expectedBottomTimeMinutes: number | null;
       route: DiveSiteFormRoute;
       landmarks: DiveSiteLandmark[];
-      creatures: DiveSiteCreature[];
+      creatures: MarineLifeSlug[];
     }
   | { ok: false; error: DiveSiteFormError };
 
@@ -188,7 +189,7 @@ export function parseDiveSiteForm(
     expectedBottomTimeMinutes:
       parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
     landmarks: parseDiveSiteLandmarks(parsed.data.landmarks),
-    creatures: parseDiveSiteCreatures(parsed.data.creatures),
+    creatures: parseFieldGuideSelection(parsed.data.creatures),
     route: {
       points: routePoints,
       zoom: parseRouteZoom(parsed.data.routeZoom),

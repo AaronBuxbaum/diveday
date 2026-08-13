@@ -5,7 +5,7 @@ import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
-import type { DiveSiteCreature } from "@/lib/dive-site-field-guide";
+
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
@@ -50,7 +50,8 @@ export type SiteFieldValues = {
   fitNote: string | null;
   fieldGuideTipsHeading: string | null;
   landmarks: DiveSiteLandmark[];
-  creatures: DiveSiteCreature[];
+  /** The catalog slugs this site's field guide shows, in order. */
+  creatures: string[];
   minimumCertificationLevel: CertificationLevel | null;
   requiredSpecialties: DiveSpecialty[];
   requiresNitrox: boolean;
@@ -428,7 +429,7 @@ export function SiteFields({
       </fieldset>
       <LandmarkEditor initialLandmarks={values?.landmarks ?? []} copy={landmarkCopy} />
       <FieldGuideEditor
-        initialCreatures={values?.creatures ?? []}
+        initialSlugs={values?.creatures ?? []}
         catalog={marineLifeCatalog}
         copy={fieldGuideCopy}
       />
