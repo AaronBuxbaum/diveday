@@ -373,7 +373,18 @@
       "rescue": "Rescue Diver",
       "divemaster": "Divemaster",
       "instructor": "Instructor"
-    }
+    },
+    "aboutHeading": "About this course",
+    "onThisPage": "On this page",
+    "jumpAbout": "About",
+    "jumpSchedule": "Day by day",
+    "jumpIncluded": "What’s included",
+    "jumpDates": "Dates",
+    "jumpQuestions": "Questions",
+    "jumpContact": "Get in touch",
+    "nextDate": "Next date",
+    "moreDates": "More dates",
+    "agesAndUp": "Ages {age} and up"
   },
   "courses": {
     "index": {
@@ -382,7 +393,8 @@
       "description": "Everything this shop teaches, from a first taste of scuba to advanced training.",
       "agencyTabsLabel": "Show courses by agency",
       "noCoursesHeading": "No courses listed yet",
-      "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point."
+      "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
+      "requires": "Requires {level} or higher"
     }
   },
   "reviews": {

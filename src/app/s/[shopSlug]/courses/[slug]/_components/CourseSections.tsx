@@ -22,6 +22,13 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * The diver-facing course page, in sections. Each renders nothing when the shop
  * left it empty, so a half-written page degrades to a shorter page rather than
  * to a row of empty headings.
+ *
+ * The composition is shaped like the course, not like a card pile (design
+ * principle 11): the hero is the poster and carries the logistics strip, the
+ * day-by-day plan is a timeline, includes read as two quiet columns, and the
+ * one tinted panel on the page is the booking moment — which also holds the
+ * page's one primary action (principle 8). Everything else is type, space,
+ * and hairlines.
  */
 
 /**
@@ -60,20 +67,29 @@ export function CourseHero({
   currency,
   locale,
   t,
+  facts = [],
 }: {
   course: Course;
   totalCents: number | null;
   bookHref: string | null;
   /** Anchor to "Get in touch", shown as the hero's fallback CTA when there's
    * no open session to book yet — otherwise a diver landing here has no
-   * visible next step until they scroll past specs, admission, overview,
-   * gallery, and the schedule (design/principles.md #2). */
+   * visible next step until they scroll the whole page (design/principles.md
+   * #2). */
   inquiryHref?: string | null;
   /** The shop's currency — a Cozumel shop's course price is pesos, not dollars. */
   currency: ShopCurrency;
   /** The shop's locale — money and dates on a public page follow it, not the server's. */
   locale: string;
   t: DiverTranslator;
+  /**
+   * Logistics only (duration, group size), rendered as a quiet strip on the
+   * hero's lower edge — the answers to "how long?" and "how many of us?"
+   * arrive with the poster instead of a tile grid below it. Admission facts
+   * (the cert gate, the minimum age) stay in CourseAdmission, which is the
+   * one place a diver reads them.
+   */
+  facts?: Array<{ label: string; value: string }>;
 }) {
   // Whole major units: a hero price reads as a headline, and the trailing
   // ".00" is noise. `minorToMajor` (not a literal 100) is what keeps a
@@ -117,8 +133,11 @@ export function CourseHero({
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}
+          {/* Secondary on purpose: this is in-page navigation, not the
+              commitment itself. The page's one primary is the next date's
+              "Book this date" inside CourseSessions (principle 8). */}
           {bookHref ? (
-            <Link href={bookHref} className={buttonClass({ size: "cta" })}>
+            <Link href={bookHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
               {t("course.seeDates")}
             </Link>
           ) : inquiryHref ? (
@@ -128,36 +147,22 @@ export function CourseHero({
           ) : null}
         </div>
       </div>
+      {facts.length > 0 ? (
+        <dl
+          aria-label={t("course.atAGlance")}
+          className="flex flex-wrap gap-x-10 gap-y-3 border-t border-border bg-surface-sunken/60 px-6 py-4 sm:px-8"
+        >
+          {facts.map((fact) => (
+            <div key={fact.label} className="min-w-0">
+              <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
+                {fact.label}
+              </dt>
+              <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
-  );
-}
-
-/**
- * How the course runs, not who may take it. Admission facts (the cert gate, the
- * minimum age, the shop's own note) all live in CourseAdmission below, so a
- * diver has exactly one place to read the answer to "can I do this?".
- */
-export function CourseSpecs({
-  items,
-  label,
-}: {
-  items: Array<{ label: string; value: string }>;
-  label: string;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <section aria-label={label} className="mt-8 max-w-2xl">
-      <dl className="grid grid-cols-2 gap-3">
-        {items.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-border bg-surface p-4">
-            <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-              {item.label}
-            </dt>
-            <dd className="mt-1 text-sm font-medium">{item.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
   );
 }
 
@@ -166,13 +171,11 @@ export function CourseSpecs({
  * "Prerequisite" chip in the spec row and again here — which is duplication a
  * shop can only get wrong: the two drift, and a diver reads whichever suits.
  *
- * What the two-block layout was protecting is kept, because it is the part that
- * matters: the agency's certification gate and the shop's own note are
- * different kinds of claim, and an unlabelled paragraph under a heading reading
- * "Prerequisite" reads as one continuous sentence — which is how a diver ends
- * up believing shop prose ("or a qualifying certification…") overrides the card
- * the desk will actually check. So the gate is a labelled term in the
- * foreground, and the note is labelled as the shop talking.
+ * One type-led line now, no card: the agency's gate (and the minimum age when
+ * there is one) in the foreground, and the shop's own prose labelled as the
+ * shop talking. The two kinds of claim stay visibly distinct — which is how a
+ * diver is kept from believing shop prose ("or a qualifying certification…")
+ * overrides the card the desk will actually check.
  */
 export function CourseAdmission({
   certificationRequired,
@@ -186,34 +189,25 @@ export function CourseAdmission({
   t: DiverTranslator;
 }) {
   return (
-    <section
-      aria-labelledby="who-can-enroll"
-      className="mt-6 max-w-2xl rounded-2xl border border-border bg-surface-sunken p-5"
-    >
-      <h2 id="who-can-enroll" className="text-sm font-semibold tracking-wide text-muted uppercase">
+    <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl">
+      <h2 id="who-can-enroll" className="text-xs font-semibold tracking-wide text-muted uppercase">
         {t("course.whoCanEnroll")}
       </h2>
-      <dl className="mt-3 grid gap-4 sm:grid-cols-2">
-        <div>
-          <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-            {t("course.certification")}
-          </dt>
-          <dd className="mt-1 font-semibold">{certificationRequired}</dd>
-        </div>
+      <p className="mt-1.5 text-lg font-medium">
+        {certificationRequired}
         {minimumAge ? (
-          <div>
-            <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-              {t("course.minimumAge")}
-            </dt>
-            <dd className="mt-1 font-semibold">
-              {t("course.minimumAgeYears", { age: minimumAge })}
-            </dd>
-          </div>
+          <>
+            <span aria-hidden="true" className="text-muted">
+              {" "}
+              ·{" "}
+            </span>
+            {t("course.agesAndUp", { age: minimumAge })}
+          </>
         ) : null}
-      </dl>
+      </p>
       {shopNote ? (
         <>
-          <h3 className="mt-4 text-sm font-semibold tracking-wide text-muted uppercase">
+          <h3 className="mt-4 text-xs font-semibold tracking-wide text-muted uppercase">
             {t("course.fromTheShop")}
           </h3>
           <p className="mt-1 text-sm leading-relaxed text-muted">{shopNote}</p>
@@ -223,16 +217,19 @@ export function CourseAdmission({
   );
 }
 
-export function CourseOverview({ overview }: { overview: string | null }) {
+export function CourseOverview({ overview, t }: { overview: string | null; t: DiverTranslator }) {
   if (!overview?.trim()) return null;
   return (
-    <section className="mt-10 max-w-2xl">
+    <section id="about" aria-labelledby="about-heading" className="mt-12 max-w-2xl scroll-mt-8">
+      <h2 id="about-heading" className="text-2xl font-semibold tracking-tight">
+        {t("course.aboutHeading")}
+      </h2>
       {overview
         .split(/\n\s*\n/)
         .map((paragraph) => paragraph.trim())
         .filter(Boolean)
         .map((paragraph) => (
-          <p key={paragraph.slice(0, 40)} className="mt-4 leading-relaxed first:mt-0">
+          <p key={paragraph.slice(0, 40)} className="mt-4 leading-relaxed">
             {paragraph}
           </p>
         ))}
@@ -240,6 +237,12 @@ export function CourseOverview({ overview }: { overview: string | null }) {
   );
 }
 
+/**
+ * The day-by-day plan as a timeline the eye can walk — a rail of hollow dots
+ * down the left, one node per day — rather than a stack of bordered cards
+ * that all weighed the same. The shape *is* the information: a three-day
+ * course looks like three steps on one path.
+ */
 export function CourseSchedule({
   days,
   locale,
@@ -252,33 +255,35 @@ export function CourseSchedule({
 }) {
   if (days.length === 0) return null;
   return (
-    <section className="mt-12">
+    <section id="how-it-runs" className="mt-14 scroll-mt-8">
       <h2 className="text-2xl font-semibold tracking-tight">{t("course.howItRunsHeading")}</h2>
-      <ol className="mt-6 grid gap-4">
-        {days.map((day) => (
-          <li key={day.title} className="rounded-2xl border border-border bg-surface p-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-lg font-semibold">{day.title}</h3>
-              {formatScheduleDayTime(day, locale) ? (
-                <p className="text-sm tabular-nums text-muted">
-                  {formatScheduleDayTime(day, locale)}
-                </p>
+      <ol className="relative mt-8 max-w-3xl">
+        {/* The rail. Dots are hollow (surface-filled) so the line reads as
+            passing behind them. Purely decorative — the ordered list already
+            carries the sequence for a screen reader. */}
+        <span aria-hidden="true" className="absolute top-2 bottom-2 left-[5px] w-px bg-border" />
+        {days.map((day) => {
+          const time = formatScheduleDayTime(day, locale);
+          return (
+            <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+              />
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="text-lg font-semibold">{day.title}</h3>
+                {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
+              </div>
+              {day.items.length > 0 ? (
+                <ul className="mt-2 grid gap-1.5 text-sm text-muted">
+                  {day.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
               ) : null}
-            </div>
-            {day.items.length > 0 ? (
-              <ul className="mt-3 grid gap-2 text-sm text-muted">
-                {day.items.map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span aria-hidden="true" className="text-primary">
-                      ·
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
@@ -295,12 +300,15 @@ export function CourseIncludes({
 }) {
   if (includes.length === 0 && excludes.length === 0) return null;
   return (
-    <section className="mt-12">
+    <section id="included" className="mt-14 scroll-mt-8">
       <h2 className="text-2xl font-semibold tracking-tight">{t("course.feeCovers")}</h2>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {/* Two quiet columns, no boxes — the ✓ and – glyphs carry the split, and
+          the muted ink on the right keeps "not included" from competing with
+          what the diver is actually buying. */}
+      <div className="mt-6 grid max-w-3xl gap-x-12 gap-y-8 sm:grid-cols-2">
         {includes.length > 0 ? (
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-sm font-semibold tracking-wide text-success uppercase">
+          <div>
+            <h3 className="text-xs font-semibold tracking-wide text-success uppercase">
               {t("trip.packProvided")}
             </h3>
             <ul className="mt-3 grid gap-2 text-sm">
@@ -316,8 +324,8 @@ export function CourseIncludes({
           </div>
         ) : null}
         {excludes.length > 0 ? (
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <h3 className="text-sm font-semibold tracking-wide text-muted uppercase">
+          <div>
+            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
               {t("course.notIncludedHeading")}
             </h3>
             <ul className="mt-3 grid gap-2 text-sm text-muted">
@@ -355,10 +363,7 @@ export function CourseGallery({
             key={url}
             src={url}
             // The hero photo claims "photo 1"; gallery photos continue from 2.
-            alt={resolveImageAlt(
-              alt,
-              t("course.photoAltFallback", { course: title, n: index + 2 }),
-            )}
+            alt={resolveImageAlt(alt, t("course.photoAltFallback", { course: title, n: index + 2 }))}
             className="h-40 w-full rounded-2xl border border-border sm:h-48"
             sizes="(min-width: 640px) 33vw, 50vw"
           />
@@ -368,7 +373,40 @@ export function CourseGallery({
   );
 }
 
+/** One session's dates/time/seats, shared by the featured row and the compact list. */
+function sessionFacts(
+  session: { startsAt: Date; endsAt: Date; capacity: number; booked: number },
+  timezone: string,
+  locale: string,
+  t: DiverTranslator,
+) {
+  // A course typically runs across days, and rendering a three-day course as
+  // "Wed, Jul 29 · 8:00 AM – 5:00 PM" hides two of them. Show the span when
+  // the session ends on a later local day.
+  const startDay = toDateInputValue(utcToWallTime(session.startsAt, timezone));
+  const endDay = toDateInputValue(utcToWallTime(session.endsAt, timezone));
+  const multiDay = startDay !== endDay;
+  const capacityLabelValue = capacityLabel(session);
+  return {
+    dates: multiDay
+      ? `${formatShortDate(session.startsAt, locale, timezone)} – ${formatShortDate(session.endsAt, locale, timezone)}`
+      : formatShortDate(session.startsAt, locale, timezone),
+    time: multiDay
+      ? t("course.startsAt", { time: formatTime(session.startsAt, locale, timezone) })
+      : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone),
+    capacity:
+      capacityLabelValue.kind === "full"
+        ? t("fallback.full")
+        : t("fallback.spotsLeft", { count: capacityLabelValue.remaining }),
+  };
+}
+
 /**
+ * The booking moment — the one tinted panel on the page, so the eye lands
+ * here from anywhere in the scroll. It leads with the *next* date (the answer
+ * a diver actually came for, principle 10) and that date's button is the
+ * page's one primary; later dates are compact hairline rows beneath it.
+ *
  * Sessions come from the schedule, not from a second booking path: each links
  * to the trip page that already owns capacity, readiness, and payment.
  */
@@ -395,78 +433,100 @@ export function CourseSessions({
   inquiryHref: string | null;
   t: DiverTranslator;
 }) {
+  const [next, ...later] = sessions;
   return (
-    <section id="dates" className="mt-12 scroll-mt-8">
-      <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
-      {sessions.length === 0 ? (
-        <p className="mt-4 max-w-2xl text-muted">
-          {t("course.noDatesLead")}{" "}
-          <Link
-            href={publicSchedulePath(shopSlug)}
-            className="font-medium text-primary hover:underline"
-          >
-            {t("course.seeFullSchedule")}
-          </Link>
-          {inquiryHref ? (
-            <>
-              , or{" "}
-              <Link href={inquiryHref} className="font-medium text-primary hover:underline">
-                {t("course.orAskUs")}
-              </Link>
-              .
-            </>
-          ) : (
-            ` ${t("course.orGetInTouch")}`
-          )}
-        </p>
-      ) : (
-        <ul className="mt-6 grid gap-3">
-          {sessions.map((session) => {
-            const full = isFull(session);
-            // A course typically runs across days, and rendering a three-day
-            // course as "Wed, Jul 29 · 8:00 AM – 5:00 PM" hides two of them.
-            // Show the span when the session ends on a later local day.
-            const startDay = toDateInputValue(utcToWallTime(session.startsAt, timezone));
-            const endDay = toDateInputValue(utcToWallTime(session.endsAt, timezone));
-            const multiDay = startDay !== endDay;
-            const capacityLabelValue = capacityLabel(session);
-            const capacityText =
-              capacityLabelValue.kind === "full"
-                ? t("fallback.full")
-                : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
-            return (
-              <li
-                key={session.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-5"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    {formatShortDate(session.startsAt, locale, timezone)}
-                    {multiDay ? ` – ${formatShortDate(session.endsAt, locale, timezone)}` : ""}
-                  </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {multiDay
-                      ? t("course.startsAt", {
-                          time: formatTime(session.startsAt, locale, timezone),
-                        })
-                      : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone)}{" "}
-                    · {capacityText}
-                  </p>
-                </div>
-                <Link
-                  href={publicTripPath(shopSlug, session.id)}
-                  className={buttonClass({
-                    variant: full ? "secondary" : "primary",
-                    className: full ? "text-foreground" : "",
-                  })}
-                >
-                  {full ? t("course.joinWaitList") : t("course.bookThisDate")}
+    <section id="dates" className="mt-14 scroll-mt-8">
+      <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
+        <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
+        {!next ? (
+          <p className="mt-4 max-w-2xl text-muted">
+            {t("course.noDatesLead")}{" "}
+            <Link
+              href={publicSchedulePath(shopSlug)}
+              className="font-medium text-primary hover:underline"
+            >
+              {t("course.seeFullSchedule")}
+            </Link>
+            {inquiryHref ? (
+              <>
+                , or{" "}
+                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
+                  {t("course.orAskUs")}
                 </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                .
+              </>
+            ) : (
+              ` ${t("course.orGetInTouch")}`
+            )}
+          </p>
+        ) : (
+          <>
+            {(() => {
+              const facts = sessionFacts(next, timezone, locale, t);
+              const full = isFull(next);
+              return (
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+                      {t("course.nextDate")}
+                    </p>
+                    <p className="mt-1 text-xl font-semibold">{facts.dates}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {facts.time} · {facts.capacity}
+                    </p>
+                  </div>
+                  <Link
+                    href={publicTripPath(shopSlug, next.id)}
+                    className={buttonClass({
+                      variant: full ? "secondary" : "primary",
+                      size: "cta",
+                      className: full ? "text-foreground" : "",
+                    })}
+                  >
+                    {full ? t("course.joinWaitList") : t("course.bookThisDate")}
+                  </Link>
+                </div>
+              );
+            })()}
+            {later.length > 0 ? (
+              <div className="mt-8">
+                <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
+                  {t("course.moreDates")}
+                </h3>
+                <ul className="mt-1 divide-y divide-border">
+                  {later.map((session) => {
+                    const facts = sessionFacts(session, timezone, locale, t);
+                    const full = isFull(session);
+                    return (
+                      <li
+                        key={session.id}
+                        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">{facts.dates}</p>
+                          <p className="mt-0.5 text-sm text-muted">
+                            {facts.time} · {facts.capacity}
+                          </p>
+                        </div>
+                        <Link
+                          href={publicTripPath(shopSlug, session.id)}
+                          className={buttonClass({
+                            variant: "secondary",
+                            size: "sm",
+                            className: full ? "text-foreground" : "",
+                          })}
+                        >
+                          {full ? t("course.joinWaitList") : t("course.bookThisDate")}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -474,15 +534,14 @@ export function CourseSessions({
 export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator }) {
   if (faqs.length === 0) return null;
   return (
-    <section className="mt-12">
+    <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8">
       <h2 className="text-2xl font-semibold tracking-tight">{t("course.faqsHeading")}</h2>
-      <div className="mt-6 grid gap-2">
+      {/* Quiet disclosures on hairlines — a question list is a list, not a
+          stack of cards; the borders that survive are the ones that separate. */}
+      <div className="mt-4 divide-y divide-border border-y border-border">
         {faqs.map((faq) => (
-          <details
-            key={faq.question}
-            className="group rounded-2xl border border-border bg-surface px-5 py-4"
-          >
-            <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 font-medium">
+          <details key={faq.question} className="group">
+            <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 py-3 font-medium">
               {faq.question}
               <span
                 aria-hidden="true"
@@ -491,7 +550,7 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
                 +
               </span>
             </summary>
-            <p className="mt-3 leading-relaxed text-muted">{faq.answer}</p>
+            <p className="pb-4 leading-relaxed text-muted">{faq.answer}</p>
           </details>
         ))}
       </div>
