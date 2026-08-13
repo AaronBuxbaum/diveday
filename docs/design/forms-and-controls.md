@@ -170,6 +170,25 @@ text but still claims a full target). Sizes: `sm`, `md`, `lg`. Pass one-off adju
 `className`; do not rebuild the base. If you find yourself cancelling a variant's own styles, the
 variant is wrong — add one.
 
+**A `link` that must line up with the prose above it passes `flush: true`, never `className:
+"px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
+wrote them in the attribute, and Tailwind emits `px-0` before the size's `px-4` — so the size wins
+and the label renders indented, while the `px-0` in the source reads as though someone already
+fixed it. Three links on `/pricing` and two on the homepage sat 16 measured pixels inside the text
+above them that way. `flush` drops the size's horizontal padding at every breakpoint and keeps
+`min-h-11` and the vertical padding, so the touch target survives.
+
+```tsx
+// Wrong: the size's px-4 wins, the label renders indented
+<Link className={buttonClass({ variant: "link", className: "px-0" })}>See the full list →</Link>
+
+// Right
+<Link className={buttonClass({ variant: "link", flush: true })}>See the full list →</Link>
+```
+
+The same trap applies to the type scale, which is why it lives on the sizes: a `text-base` passed
+through `className` cannot reliably beat a size's `text-sm`. Pick the size that already says it.
+
 **Anything else that sets a `min-h-*` floor** — a `<summary>`, a nav chip, a wrapper — still has to
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.

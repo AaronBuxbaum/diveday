@@ -20,14 +20,8 @@
  * and 11 alarms (8 + the 3 alarmed vitals), so it sits 3 metrics and 1 alarm
  * over the free allowance at about $1.00/month. Adding a counted signal costs
  * $0.40/month -- $0.30 for the metric and $0.10 for the alarm -- which is the
- * real number to weigh, not zero and not the free-tier cliff it looks like
- * from the alarm count alone.
- *
- * The most recent one, `SignInRefusals`, was bought deliberately: Auth.js was
- * already writing a line per refused password, but at error level and as plain
- * text, so it cost nothing and counted nothing while making the error-level
- * search 10% noise (issue #517). $0.40/month converts that into something an
- * alarm can actually read.
+ * real number to weigh, not zero and not the free-tier cliff it looks like from
+ * the alarm count alone.
  *
  * The rationing still holds at those prices: this app emits ~40 distinct event
  * codes, so a filter per code would be ~$12/month plus ~$4 of alarms, for a set
@@ -121,9 +115,9 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     //
     // The cost of one is a page for a single terminal failure. That is
     // acceptable here in a way it would not be for most signals: the SDK
-    // already retries throttling and 5xx itself, and a bounce is a webhook
-    // rather than this path, so what reaches this line is a send that will
-    // never happen -- someone's waiver link -- and not a transient blip.
+    // already retries throttling and 5xx itself, and a bounce arrives by
+    // webhook rather than on this path, so what reaches this line is a send
+    // that will never happen -- someone's waiver link -- not a transient blip.
     threshold: 1,
     periodMinutes: 60,
     response:
@@ -169,26 +163,6 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "Check the Neon console for a suspended endpoint first, then docs/engineering/incident-response-runbook.md.",
   },
   {
-    metricName: "SignInRefusals",
-    title: "Sign-ins being refused in bulk",
-    why:
-      "A wrong password is the most ordinary event on a sign-in form, so `auth.sign_in_refused` is written at " +
-      "warn and is noise one at a time. In bulk it is the opposite: somebody working through a credential list. " +
-      "Auth.js used to write each one at error level, which was loud enough to notice by eye and counted by " +
-      "nothing -- the metric filters match a JSON `$.event`, and that line was plain text. This is the trade " +
-      "made honest: quieter per attempt, and actually counted.",
-    events: ["auth.sign_in_refused"],
-    // Well above a person fumbling a password, well below a list being worked
-    // through. `src/lib/rate-limit.ts` already refuses at its own per-IP and
-    // per-email ceilings, so this alarm is not the defence -- it is how anyone
-    // finds out the defence is being leaned on.
-    threshold: 30,
-    periodMinutes: 15,
-    response:
-      "Read the rate-limit refusals beside it. If one IP or one account dominates, this is credential stuffing " +
-      "against a known email; see docs/engineering/rate-limiting-runbook.md. The line names no address by design.",
-  },
-  {
     metricName: "RateLimitStoreFailures",
     title: "Rate limiting is failing open",
     why:
@@ -199,6 +173,27 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     periodMinutes: 60,
     response:
       "Every guarded public write boundary is currently unguarded. See docs/engineering/rate-limiting-runbook.md.",
+  },
+  {
+    metricName: "SignInRefusals",
+    title: "Sign-ins being refused in bulk",
+    why:
+      "One refused sign-in is somebody mistyping a password, which is why it is a warn line and not an " +
+      "error one. A hundred in a quarter hour is credential stuffing, and nothing else in the stack can " +
+      "tell those two apart -- the per-IP and per-email rate limiters each see one slice of it and refuse " +
+      "quietly. Alarms on rate, never on presence.",
+    events: ["auth.sign_in_refused"],
+    // A refusal is counted on *every* attempt, including the ones the rate
+    // limiter turned away before it ever looked at the password -- so this
+    // metric sees the whole flood rather than the slice that got through, which
+    // is what makes it the right place to watch. 100 in a quarter hour is
+    // ~7/minute sustained against a product whose real sign-in traffic is a few
+    // dozen shop staff a day; one locked-out owner cannot reach it (the per-email
+    // cap is 8 per 15 minutes, per src/lib/rate-limit.ts).
+    threshold: 100,
+    periodMinutes: 15,
+    response:
+      "Open the 'Event volume by code' saved query and read the surrounding window. Real stuffing shows as a flat, sustained rate; a shop locked out of its own account shows as a short burst that stops. docs/engineering/rate-limiting-runbook.md.",
   },
   {
     metricName: "ManifestStreamsRefused",

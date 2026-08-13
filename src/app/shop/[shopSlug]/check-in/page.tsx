@@ -68,6 +68,11 @@ const noticeCopy: Record<
     tone: "warning",
     key: "checkIn.notice.walkinAddedWaiverUndelivered",
   },
+  // Every walk-in *refusal* now lands back on the walk-in form with the boat
+  // still chosen and says which gate it was (`SEAT_SURFACES["walk-in"]`), so
+  // the queue only ever carries the two outcomes above. The refusal codes stay
+  // mapped here because a link with one on it — a bookmark, a back-navigation
+  // to an older URL — should still say something true rather than nothing.
   walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
   walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },

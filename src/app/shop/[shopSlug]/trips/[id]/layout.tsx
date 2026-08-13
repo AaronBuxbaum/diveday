@@ -3,7 +3,6 @@ import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { BulkWaiverSelectionProvider } from "./_components/RosterBulkWaiverSelection";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
 // Restored after CI. ARCH-7 removed this as provably-unread by
@@ -34,13 +33,6 @@ export const instant = false;
  * Auto / Land / Boat control all live here and stay mounted across tab
  * switches. The choice itself is per-device and persists in `localStorage`
  * (`AmbientGlareDetector`).
- *
- * Also owns `BulkWaiverSelectionProvider` (Guests' "tick a few divers, then
- * send" state) for the same reason: it must survive the Guests page body's
- * own re-renders across a diver-add redirect, which this layout — staying
- * mounted while only `{children}` swaps — does for free. See that
- * component's docstring for the failure mode this avoids. Wrapping it here
- * costs nothing on Overview/Manifest/Prep: nothing there reads the context.
  */
 export default async function TripLayout({
   children,
@@ -93,7 +85,7 @@ export default async function TripLayout({
           }}
         />
       </div>
-      <BulkWaiverSelectionProvider>{children}</BulkWaiverSelectionProvider>
+      {children}
     </main>
   );
 }

@@ -28,8 +28,13 @@ describe("dive-site library", () => {
    */
   it("imports a catalog template beside a same-named site instead of violating the unique index", async () => {
     const { db, shop } = await seededShopContext();
-    const [catalogEntry] = (await listGlobalDiveSiteTemplates(db)).templates;
-    if (!catalogEntry) throw new Error("seed: no published dive-site template");
+    // By name, not "the first card": the catalog is a real library of Florida
+    // sites ordered by slug now, and only this one collides with a site the
+    // seeded shop already holds — which is the collision under test.
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+      (row) => row.version.briefing.name === "Molasses Reef",
+    );
+    if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
 
     const first = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
     expect(first?.name).toBe("Molasses Reef 2");
@@ -51,7 +56,7 @@ describe("dive-site library", () => {
     const site = await createDiveSite(db, {
       shopId: shop.id,
       name: "Molasses North",
-      difficulty: "Intermediate",
+      difficultyLevel: "intermediate" as const,
       depthRange: "30–55 ft",
       currentNote: "Expect a gentle northbound drift.",
       divePlan: "Enter on the mooring and finish at the stern line.",
@@ -62,7 +67,7 @@ describe("dive-site library", () => {
     });
 
     expect(site).toMatchObject({
-      difficulty: "Intermediate",
+      difficultyLevel: "intermediate" as const,
       depthRange: "30–55 ft",
       currentNote: "Expect a gentle northbound drift.",
       divePlan: "Enter on the mooring and finish at the stern line.",
@@ -75,7 +80,7 @@ describe("dive-site library", () => {
     const edited = await updateDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
-      difficulty: "Advanced",
+      difficultyLevel: "advanced" as const,
       depthRange: "40–70 ft",
       currentNote: "Check the tide before departure.",
       divePlan: "Follow the reef edge and return along the mooring line.",
@@ -86,7 +91,7 @@ describe("dive-site library", () => {
     });
 
     expect(edited).toMatchObject({
-      difficulty: "Advanced",
+      difficultyLevel: "advanced" as const,
       depthRange: "40–70 ft",
       landmarks: ["New anchor"],
       minimumCertificationLevel: "rescue",

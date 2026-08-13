@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
@@ -17,6 +18,11 @@ import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import {
+  fieldGuideEditorCopy,
+  landmarkEditorCopy,
+  marineLifeCatalogEntries,
+} from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -53,7 +59,12 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const { shopSlug } = await params;
   const back = `/shop/${shopSlug}/dive-sites`;
   const shop = await getShopById(await getDb(), session.user.shopId);
-  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
+  // The species picker previews what a *diver* will read off this site's
+  // briefing, so its words come from the diver bundle -- in the staffer's own
+  // language, resolved from the same locale.
+  const diverT = diverTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
 
   async function createAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
@@ -79,10 +90,6 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
     if (!specialties.success) return refuse("invalid");
-    const landmarks = parsed.fields.landmarks
-      .split("\n")
-      .map((landmark) => landmark.trim())
-      .filter(Boolean);
     // Uploaded from the staffer's own device straight into first-party
     // storage — there is no pasted URL for a public page to fetch (CR-020).
     const photos = await uploadDiveSitePhotos(formData);
@@ -110,13 +117,20 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.fields.difficulty,
+      difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
-      landmarks,
+      fitTone: parsed.fields.fitTone,
+      fitNote: parsed.fields.fitNote,
+      fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
+      landmarks: parsed.landmarks,
+      // The field guide is written on this same form now, so a brand-new site
+      // can arrive with one — every species the staffer picked from the
+      // catalog, in the order they put them.
+      creatures: parsed.creatures,
       routePoints: parsed.route.points,
       routeLabel: parsed.route.label,
       routeNote: parsed.route.note,
@@ -145,6 +159,9 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           t={t}
           depthUnit={depthUnit}
           routeCopy={routeEditorCopy(t)}
+          landmarkCopy={landmarkEditorCopy(t)}
+          fieldGuideCopy={fieldGuideEditorCopy(t)}
+          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
           certificationDescription={t("diveSites.new.certificationDescription")}
         />
         <SubmitButton

@@ -165,6 +165,18 @@ export function SpecialtyCards({
                         </SubmitButton>
                       </form>
                     ) : null}
+                    {needsImportConfirm(card) ? (
+                      <ConfirmImportedCard
+                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                        certificationId={card.id}
+                        confirmationText={t("divers.specialty.confirmDisclosure", {
+                          what: t("divers.specialty.whatSpecialtyDive", {
+                            specialty: t(SPECIALTY_KEYS[card.specialty]),
+                          }),
+                        })}
+                        t={t}
+                      />
+                    ) : null}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
@@ -177,21 +189,6 @@ export function SpecialtyCards({
                     </form>
                   </div>
                 </div>
-                {/* Below the row, not inside the badge group: the panel is a
-                      paragraph of text, and expanding it must not shove the
-                      card's own title around. */}
-                {needsImportConfirm(card) ? (
-                  <ConfirmImportedCard
-                    action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                    certificationId={card.id}
-                    confirmationText={t("divers.specialty.confirmDisclosure", {
-                      what: t("divers.specialty.whatSpecialtyDive", {
-                        specialty: t(SPECIALTY_KEYS[card.specialty]),
-                      }),
-                    })}
-                    t={t}
-                  />
-                ) : null}
               </li>
             );
           })}
@@ -239,6 +236,17 @@ export function SpecialtyCards({
                         </SubmitButton>
                       </form>
                     ) : null}
+                    {needsImportConfirm(card) ? (
+                      <ConfirmImportedCard
+                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                        certificationId={card.id}
+                        cardType="nitrox"
+                        confirmationText={t("divers.specialty.confirmDisclosure", {
+                          what: t("divers.specialty.whatNitroxFill"),
+                        })}
+                        t={t}
+                      />
+                    ) : null}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <input type="hidden" name="cardType" value="nitrox" />
@@ -252,17 +260,6 @@ export function SpecialtyCards({
                     </form>
                   </div>
                 </div>
-                {needsImportConfirm(card) ? (
-                  <ConfirmImportedCard
-                    action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                    certificationId={card.id}
-                    cardType="nitrox"
-                    confirmationText={t("divers.specialty.confirmDisclosure", {
-                      what: t("divers.specialty.whatNitroxFill"),
-                    })}
-                    t={t}
-                  />
-                ) : null}
               </li>
             );
           })}
@@ -284,6 +281,15 @@ export function SpecialtyCards({
  *
  * Deliberately per-card and deliberately not offered in bulk: a "confirm all"
  * would be the same unlabelled tap this replaces, times twelve.
+ *
+ * **At rest it is one button in the card's own control row**, exactly like the
+ * level card's Confirm card beside it (`CertificationCards`). It used to sit
+ * *below* the row instead, which made two cards on one screen answer the same
+ * question in two shapes — a level card with its confirm inline next to Delete,
+ * a specialty card with its confirm stranded under the card number — and read
+ * as two different features rather than one act with an attestation on it. The
+ * attestation is unchanged: it is the panel this button opens, anchored under
+ * the row so expanding it never shoves the card's own title around.
  */
 function ConfirmImportedCard({
   action,
@@ -300,7 +306,7 @@ function ConfirmImportedCard({
   t: StaffTranslator;
 }) {
   return (
-    <details>
+    <details className="relative">
       <summary
         className={buttonClass({
           variant: "secondary",
@@ -310,9 +316,14 @@ function ConfirmImportedCard({
       >
         {t("divers.certifications.confirmCard")}
       </summary>
+      {/* Anchored to the button rather than laid out under the whole card: the
+          row keeps the level card's shape whether this is open or shut.
+          `right-0` on the wide layout so a panel opened at the right-hand edge
+          of the row stays on screen; `max-sm:left-0` because on a phone the
+          controls stack left and there is no right edge to hang from. */}
       <form
         action={action}
-        className="mt-2 max-w-sm rounded-lg border border-border bg-surface-sunken/50 p-3"
+        className="absolute top-full right-0 z-10 mt-2 w-72 rounded-lg border border-border bg-surface p-3 shadow-lg max-sm:right-auto max-sm:left-0"
       >
         <input type="hidden" name="certificationId" value={certificationId} />
         {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}

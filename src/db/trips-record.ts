@@ -1,5 +1,6 @@
 import { and, asc, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { AppDb, DbExecutor } from "./client";
 import type { Trip } from "./schema";
@@ -54,7 +55,8 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
 export type TripSitePeek = {
   name: string;
   description: string | null;
-  difficulty: string | null;
+  /** A `dive_site_difficulty` code; the surface prints a translated label. */
+  difficultyLevel: DiveSiteDifficulty | null;
   depthRange: string | null;
   imageUrls: string[];
 };
@@ -74,7 +76,7 @@ export async function getTripDiveSitesPeek(
   const peekColumns = {
     name: diveSites.name,
     description: diveSites.description,
-    difficulty: diveSites.difficulty,
+    difficultyLevel: diveSites.difficultyLevel,
     depthRange: diveSites.depthRange,
     imageUrls: diveSites.imageUrls,
   };

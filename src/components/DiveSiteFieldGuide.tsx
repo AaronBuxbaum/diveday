@@ -1,24 +1,32 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
+import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 
-type FieldGuideCreature = {
-  id: string;
-  name: string;
-  kind: string;
-  imageUrl: string | null;
-  description: string | null;
-  preparationTip: string | null;
-};
+/**
+ * A species as the guide renders it: DiveDay's words for the slug this site
+ * chose, already in the reader's language (`src/i18n/marine-life-labels.ts`).
+ * The caller resolves them, because a translator lives where the locale is
+ * known and this component is handed one for its own headings anyway.
+ */
+type FieldGuideCreature = MarineLifeCard & { id: string };
 
 export function DiveSiteFieldGuide({
   creatures,
   summary,
   highlights,
+  tipsHeading,
   t,
 }: {
   creatures: FieldGuideCreature[];
   summary: string | null;
   highlights: string | null;
+  /**
+   * The shop's own heading over the tips aside. Null falls back to DiveDay's
+   * ("See more by slowing down"), which is a fine line and was, until this
+   * prop, the only line — a shop could write every tip under it and not the
+   * three words above them.
+   */
+  tipsHeading?: string | null;
   t: DiverTranslator;
 }) {
   if (creatures.length === 0 && !summary && !highlights) return null;
@@ -50,19 +58,16 @@ export function DiveSiteFieldGuide({
         <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-4">
           {creatures.map((creature) => (
             <figure key={creature.id} className="min-w-0">
-              {creature.imageUrl ? (
-                <StoredPhoto
-                  src={creature.imageUrl}
-                  alt={creature.name}
-                  className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
-                  // Two tiles per row on a phone, four from `sm:grid-cols-4` up.
-                  sizes="(min-width: 640px) 25vw, 50vw"
-                />
-              ) : (
-                <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-primary/10 text-2xl font-semibold text-primary">
-                  {creature.name.slice(0, 1)}
-                </div>
-              )}
+              {/* Every catalog species ships a bundled photo, so there is no
+                  initial-letter fallback here any more -- a guide row is a
+                  catalog slug now, and a slug with no picture cannot exist. */}
+              <StoredPhoto
+                src={creature.imageUrl}
+                alt={creature.name}
+                className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
+                // Two tiles per row on a phone, four from `sm:grid-cols-4` up.
+                sizes="(min-width: 640px) 25vw, 50vw"
+              />
               <figcaption className="pt-2">
                 <p className="text-[0.7rem] font-medium tracking-widest text-primary uppercase">
                   {creature.kind}
@@ -83,7 +88,7 @@ export function DiveSiteFieldGuide({
             ◌
           </span>
           <div>
-            <h4 className="font-semibold">{t("site.seeMoreHeading")}</h4>
+            <h4 className="font-semibold">{tipsHeading || t("site.seeMoreHeading")}</h4>
             <p className="mt-1 text-sm leading-relaxed text-muted">{tips.slice(0, 2).join(" ")}</p>
           </div>
         </aside>

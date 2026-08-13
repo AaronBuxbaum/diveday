@@ -189,10 +189,9 @@ export async function createTrip(
  * The e2e fleet configures no email provider, so the shared
  * `WaiverSendControl` always falls to its private-link affordance instead of
  * "Waiver sent to …", and that inline `role="status"` result is where the
- * link lives. The button label is matched exactly so it targets the per-diver
- * control rather than the roster's "Send waivers to selected" bulk button,
- * and the whole thing is scoped to the Divers section so it can't pick up a
- * crew or wait-list control with a similar name.
+ * link lives. The button label is matched exactly, and the whole thing is
+ * scoped to the Divers section so it can't pick up a crew or wait-list
+ * control with a similar name.
  *
  * Caller must already be on the trip's Guests tab (`openTripTab(page,
  * "Guests")`); this deliberately does not navigate, because several specs

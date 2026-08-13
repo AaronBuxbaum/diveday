@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -15,14 +16,21 @@ import { getDb } from "@/db/client";
 import {
   currentGlobalDiveSiteVersions,
   diveSiteLibraryStats,
+  type GlobalDiveSiteTemplateRow,
+  getGlobalDiveSiteTemplate,
   importGlobalDiveSiteTemplate,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { getShopById } from "@/db/shops";
-import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
+import { marineLifeCard } from "@/i18n/marine-life-labels";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -50,15 +58,25 @@ export default async function DiveSitesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; q?: string; page?: string; view?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    q?: string;
+    page?: string;
+    view?: string;
+    template?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, q, page, view } = await searchParams;
+  const { notice, q, page, view, template } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
+  // A template's field guide is diver copy, so the catalog preview reads it
+  // through the diver bundle -- in the staffer's own language, same locale.
+  const diverT = diverTranslator(locale);
 
   // The published site catalog re-sorts nothing of the library's own evidence
   // — it is DiveDay's own dataset — but it was reachable from exactly two
@@ -66,7 +84,7 @@ export default async function DiveSitesPage({
   // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
   // one route, a `?view=` switch, and a 308 from the URL it used to own.
   if (view === "catalog") {
-    return <CatalogView shopSlug={shopSlug} t={t} page={page} />;
+    return <CatalogView shopSlug={shopSlug} t={t} diverT={diverT} page={page} slug={template} />;
   }
 
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
@@ -331,20 +349,25 @@ export default async function DiveSitesPage({
 async function CatalogView({
   shopSlug,
   t,
+  diverT,
   page,
+  slug,
 }: {
   shopSlug: string;
   t: StaffTranslator;
+  diverT: DiverTranslator;
   page?: string;
+  /** A template to open in full before deciding — `?view=catalog&template=<slug>`. */
+  slug?: string;
 }) {
   const back = `/shop/${shopSlug}/dive-sites`;
+  const catalogHref = `${back}?view=catalog`;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
   const catalog = await listGlobalDiveSiteTemplates(await getDb(), {
     page: Number.parseInt(page ?? "", 10),
   });
-  const pageHref = (target: number) =>
-    target > 1 ? `${back}?view=catalog&page=${target}` : `${back}?view=catalog`;
+  const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
   async function importAction(formData: FormData) {
     "use server";
     const active = await requireStaffSession();
@@ -353,6 +376,25 @@ async function CatalogView({
     if (!site) revalidateAndRedirect(back);
     revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
   }
+
+  // Reading a template before taking it. Importing was a one-tap commitment
+  // against a name and one sentence — so a shop found out what it had adopted
+  // by opening the site it now owned and deleting it again. The whole briefing
+  // is public DiveDay content; there was never a reason to withhold it.
+  const previewSlug = slug?.trim();
+  const preview = previewSlug ? await getGlobalDiveSiteTemplate(await getDb(), previewSlug) : null;
+  if (previewSlug && preview) {
+    return (
+      <TemplatePreview
+        template={preview}
+        backHref={catalogHref}
+        importAction={importAction}
+        t={t}
+        diverT={diverT}
+      />
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
@@ -372,16 +414,37 @@ async function CatalogView({
               {t("diveSites.catalog.templateVersion", { version: version.version })}
             </p>
             <h2 className="mt-1 text-xl font-semibold">{version.briefing.name}</h2>
+            {version.briefing.locationName ? (
+              <p className="mt-0.5 text-sm text-muted">{version.briefing.locationName}</p>
+            ) : null}
             <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
-            <form action={importAction} className="mt-5">
-              <input type="hidden" name="templateId" value={template.id} />
-              <SubmitButton
-                pendingLabel={t("diveSites.catalog.importing")}
-                className={buttonClass()}
+            {/* Two doors, and neither is this page's primary — a grid of
+                twenty-four identical filled buttons is exactly what principle 8
+                forbids, and the act itself belongs on the page that shows what
+                is being taken. The card carrying only "Import to my library"
+                made adopting a template the one way to find out what was in it;
+                reading it first is the door that leads now. */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link
+                href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {t("diveSites.catalog.importToLibrary")}
-              </SubmitButton>
-            </form>
+                {t("diveSites.catalog.preview")}
+              </Link>
+              <form action={importAction}>
+                <input type="hidden" name="templateId" value={template.id} />
+                <SubmitButton
+                  pendingLabel={t("diveSites.catalog.importing")}
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "sm",
+                    className: "text-foreground",
+                  })}
+                >
+                  {t("diveSites.catalog.importToLibrary")}
+                </SubmitButton>
+              </form>
+            </div>
           </li>
         ))}
       </ul>
@@ -393,6 +456,192 @@ async function CatalogView({
         t={t}
         className="mt-6"
       />
+    </main>
+  );
+}
+
+/**
+ * One catalog template, whole, before a shop decides to take it.
+ *
+ * Deliberately not the diver-facing briefing component: this is the *staff*
+ * question "what would I be adopting, and what would I still have to write?",
+ * so it shows the fields as fields — including the ones a diver never sees as
+ * a list, like the cert gate and the field guide's species names.
+ */
+function TemplatePreview({
+  template,
+  backHref,
+  importAction,
+  t,
+  diverT,
+}: {
+  template: GlobalDiveSiteTemplateRow;
+  backHref: string;
+  // i18n-exempt: type annotation, not copy.
+  importAction: (formData: FormData) => void | Promise<void>;
+  t: StaffTranslator;
+  /** The field guide is diver copy; the preview shows it as a diver will read it. */
+  diverT: DiverTranslator;
+}) {
+  const briefing = template.version.briefing;
+  // Resolved for the reader, exactly as the imported site's own briefing will
+  // render it -- the preview's whole job is showing what you are about to take.
+  const templateDifficulty = diveSiteDifficultyLabel(
+    briefing.difficultyLevel ?? parseDiveSiteDifficulty(briefing.difficulty),
+    diverT,
+  );
+  const species = (briefing.creatureSlugs ?? [])
+    .filter(isMarineLifeSlug)
+    .map((slug) => marineLifeCard(slug, diverT));
+  const facts: Array<{ label: string; value: string }> = [
+    briefing.locationName
+      ? { label: t("diveSites.catalog.preview_location"), value: briefing.locationName }
+      : null,
+    briefing.depthRange
+      ? { label: t("diveSites.catalog.preview_depth"), value: briefing.depthRange }
+      : null,
+    // Resolved for the reader, like the field guide below it: an older
+    // published version holds free text here, a newer one a code, and both
+    // narrow to the same three readings.
+    templateDifficulty
+      ? { label: t("diveSites.catalog.preview_difficulty"), value: templateDifficulty }
+      : null,
+    briefing.currentNote
+      ? { label: t("diveSites.catalog.preview_conditions"), value: briefing.currentNote }
+      : null,
+  ].filter((fact) => fact !== null);
+
+  return (
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <Link href={backHref} className="text-sm font-medium text-primary hover:underline">
+        {t("diveSites.catalog.backToCatalog")}
+      </Link>
+      <div className="mt-4">
+        <ShopPageHeader
+          eyebrow={t("diveSites.catalog.templateVersion", {
+            version: template.version.version,
+          })}
+          title={briefing.name}
+          description={briefing.description ?? ""}
+          actions={
+            <form action={importAction}>
+              <input type="hidden" name="templateId" value={template.template.id} />
+              <SubmitButton
+                pendingLabel={t("diveSites.catalog.importing")}
+                className={buttonClass({ className: "rounded-xl" })}
+              >
+                {t("diveSites.catalog.importToLibrary")}
+              </SubmitButton>
+            </form>
+          }
+        />
+      </div>
+      <p className="mt-2 text-sm text-muted">{t("diveSites.catalog.previewNote")}</p>
+
+      {facts.length > 0 ? (
+        <dl className="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
+          {facts.map((fact) => (
+            <div key={fact.label}>
+              <dt className="text-xs font-medium tracking-widest text-muted uppercase">
+                {fact.label}
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {briefing.minimumCertificationLevel ||
+      briefing.requiresNitrox ||
+      (briefing.requiredSpecialties?.length ?? 0) > 0 ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
+            {t("diveSites.catalog.preview_requirements")}
+          </h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {briefing.minimumCertificationLevel ? (
+              <Badge tone="primary" size="sm">
+                {t(CERTIFICATION_LEVEL_KEYS[briefing.minimumCertificationLevel])}
+              </Badge>
+            ) : null}
+            {(briefing.requiredSpecialties ?? []).map((specialty) => (
+              <Badge key={specialty} tone="neutral" size="sm">
+                {t(SPECIALTY_KEYS[specialty])}
+              </Badge>
+            ))}
+            {briefing.requiresNitrox ? (
+              <Badge tone="warning" size="sm">
+                {t("diveSites.list.nitroxBadge")}
+              </Badge>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {briefing.fitNote ? (
+        <section className="mt-6 rounded-2xl bg-primary/10 p-5">
+          <h2 className="font-semibold text-primary">{t("diveSites.catalog.preview_fit")}</h2>
+          <p className="mt-1 text-sm text-muted">{briefing.fitNote}</p>
+        </section>
+      ) : null}
+
+      {briefing.divePlan ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
+            {t("diveSites.catalog.preview_divePlan")}
+          </h2>
+          <p className="mt-2 leading-relaxed text-muted">{briefing.divePlan}</p>
+        </section>
+      ) : null}
+
+      {briefing.marineLifeDescription ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
+            {t("diveSites.catalog.preview_underwater")}
+          </h2>
+          <p className="mt-2 leading-relaxed text-muted">{briefing.marineLifeDescription}</p>
+        </section>
+      ) : null}
+
+      {(briefing.landmarks?.length ?? 0) > 0 ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
+            {t("diveSites.catalog.preview_landmarks")}
+          </h2>
+          <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-surface">
+            {(briefing.landmarks ?? []).map((landmark) => (
+              <li key={landmark.name} className="px-4 py-3">
+                <p className="font-medium">{landmark.name}</p>
+                {landmark.note ? (
+                  <p className="mt-0.5 text-sm text-muted">{landmark.note}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {species.length > 0 ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
+            {t("diveSites.catalog.preview_fieldGuide")}
+          </h2>
+          <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4">
+            {species.map((entry) => (
+              <li key={entry.slug}>
+                <StoredPhoto
+                  src={entry.imageUrl}
+                  alt={entry.name}
+                  className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
+                  sizes="(min-width: 640px) 25vw, 50vw"
+                />
+                <p className="mt-1.5 text-sm font-medium leading-tight">{entry.name}</p>
+                <p className="text-xs text-muted">{entry.kind}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }

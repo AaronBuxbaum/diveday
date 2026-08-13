@@ -44,7 +44,12 @@
     "walkinAddedWaiverUndelivered": "Added to this boat’s list — but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "walkinFull": "That boat is full — try the wait list from its trip page instead.",
     "walkinAlready": "That diver is already on this boat.",
-    "walkinUnavailable": "Can’t add this diver to that boat right now — open its trip page for the reason.",
+    "walkinCourseUnstaffed": "That's a course session with no instructor assigned yet — assign one from its trip page first.",
+    "walkinCoursePrerequisite": "That course needs a verified prerequisite card this diver doesn't have on file.",
+    "walkinCourseRatioFull": "That session is at its instructor-to-student ratio — another instructor, or the wait list.",
+    "walkinCourseMinAge": "That diver is under the course's minimum age on the day it runs, going by the date of birth on file.",
+    "walkinTripPrerequisite": "That diver's cards don't reach what this boat and its dive sites require.",
+    "walkinUnavailable": "That diver can’t take a seat on this boat right now.",
     "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
   },
   "walkIn": {
@@ -52,6 +57,7 @@
     "title": "Walk-in",
     "description": "Pick today’s boat, then find the diver or add them fresh — no email required at the counter.",
     "backToQueue": "Back to check-in",
+    "backToPicker": "Pick a different boat",
     "tripLabel": "Which boat?",
     "tripEmpty": "No boats sail in the next day and a half — check the schedule instead.",
     "tripEmptyAction": "View the schedule",

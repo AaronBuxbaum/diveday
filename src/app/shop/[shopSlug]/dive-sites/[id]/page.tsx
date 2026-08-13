@@ -12,14 +12,17 @@ import {
   copyDiveSite,
   deleteDiveSite,
   getDiveSite,
+  listDiveSiteCreatures,
   listDiveSites,
   listUpcomingTripsForSite,
   updateDiveSite,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -29,6 +32,11 @@ import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/di
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import {
+  fieldGuideEditorCopy,
+  landmarkEditorCopy,
+  marineLifeCatalogEntries,
+} from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -78,6 +86,10 @@ export default async function EditDiveSitePage({
   if (!site) notFound();
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
+  // The species picker previews what a *diver* will read off this site's
+  // briefing, so its words come from the diver bundle -- in the staffer's own
+  // language, resolved from the same locale.
+  const diverT = diverTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
   // Both params are attacker-supplied. The ternaries these replace also had a
   // second problem: their `else` branch meant *any* `?notice=` value at all —
@@ -85,7 +97,10 @@ export default async function EditDiveSitePage({
   // that never happened. An unrecognized code now renders nothing.
   const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
   const errorKey = noticeFromParam(error, ERROR_KEYS);
-  const upcomingTrips = await listUpcomingTripsForSite(db, session.user.shopId, id);
+  const [upcomingTrips, creatures] = await Promise.all([
+    listUpcomingTripsForSite(db, session.user.shopId, id),
+    listDiveSiteCreatures(db, session.user.shopId, id),
+  ]);
 
   async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
@@ -112,10 +127,6 @@ export default async function EditDiveSitePage({
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
     if (!specialties.success) return refuse("invalid");
-    const landmarks = parsed.fields.landmarks
-      .split("\n")
-      .map((landmark) => landmark.trim())
-      .filter(Boolean);
     // The site as stored, re-read rather than closed over: this action runs
     // long after the page rendered, and it decides what a blank file input
     // means (keep what is there) and which objects this save orphans.
@@ -149,13 +160,17 @@ export default async function EditDiveSitePage({
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.fields.difficulty,
+      difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
       divePlan: parsed.fields.divePlan,
-      landmarks,
+      fitTone: parsed.fields.fitTone,
+      fitNote: parsed.fields.fitNote,
+      fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
+      landmarks: parsed.landmarks,
+      creatures: parsed.creatures,
       routePoints: parsed.route.points,
       routeLabel: parsed.route.label,
       routeNote: parsed.route.note,
@@ -294,8 +309,19 @@ export default async function EditDiveSitePage({
         <SiteFields
           t={t}
           depthUnit={depthUnit}
-          values={site}
+          values={{
+            ...site,
+            // Both lists are normalised for the editors rather than handed over
+            // raw: a row written before landmarks carried notes holds plain
+            // strings, and the guide lives in its own table.
+            landmarks: parseDiveSiteLandmarks(site.landmarks),
+            creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
+          }}
           routeCopy={routeEditorCopy(t)}
+          landmarkCopy={landmarkEditorCopy(t)}
+          fieldGuideCopy={fieldGuideEditorCopy(t)}
+          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+          siteId={site.id}
           certificationDescription={t("diveSites.edit.certificationDescription")}
           requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
         />

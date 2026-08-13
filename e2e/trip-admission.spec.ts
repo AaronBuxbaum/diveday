@@ -191,19 +191,18 @@ test.describe("as owner", () => {
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
 
-    await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}&diverq=Diego+Alvarez`);
+    await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
 
-    // `refusals: "coarse"` — the counter deliberately shows one blunt line
-    // instead of the specific gate, and the structured payload is dropped with
-    // it rather than trailing an unreadable param on the queue's URL. The
-    // notice code itself is one-shot (`FlashParams` on the queue), so the URL
-    // settles back to the bare queue — which also proves the structured
-    // payload never trailed on it.
-    await expect(page).toHaveURL("/shop/blue-mantis/check-in");
-    await expect(page).not.toHaveURL(/gate=/);
+    // The counter names the gate now, on the form that produced the refusal,
+    // with the boat still chosen. It used to collapse every gate into "open its
+    // trip page for the reason", which sent the staffer to a different page at
+    // the moment they had least time to go there. The structured detail rides a
+    // signed `?gate=` bound to the departure in this route's own path, so the
+    // banner can say which card is missing and what the diver holds.
+    await expect(page).toHaveURL(new RegExp(`/check-in/walk-in/${tripId}\\?`));
     await expect(
-      page.getByText("Can’t add this diver to that boat right now — open its trip page"),
+      page.getByText(/Advanced Open Water|cards on file|cards don’t reach/),
     ).toBeVisible();
   });
 

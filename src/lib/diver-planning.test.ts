@@ -183,14 +183,41 @@ describe("a dive site's own time in the water", () => {
 describe("booking delight planning", () => {
   it("explains site fit from evidence without turning it into a gate", () => {
     expect(
-      siteFit({ difficulty: "advanced", depthRange: "25–30 m", currentNote: "strong current" })
-        .tone,
+      siteFit({
+        difficultyLevel: "advanced",
+        depthRange: "25–30 m",
+        currentNote: "strong current",
+      }).tone,
     ).toBe("demanding");
     expect(
-      siteFit({ difficulty: "beginner", depthRange: "8–12 m", currentNote: "gentle" }).tone,
+      siteFit({ difficultyLevel: "beginner", depthRange: "8–12 m", currentNote: "gentle" }).tone,
     ).toBe("welcoming");
     // No published facts at all is its own answer, never a guess either way.
-    expect(siteFit({ difficulty: null, depthRange: null, currentNote: null }).tone).toBe("unknown");
+    expect(siteFit({ difficultyLevel: null, depthRange: null, currentNote: null }).tone).toBe(
+      "unknown",
+    );
+  });
+
+  it("takes the shop's chosen difficulty over what the free text hints", () => {
+    // The regression the code half of this change exists for: the sniff reads
+    // text the shop wrote for another purpose, and a gentle reef whose current
+    // note mentions a deep channel used to read as demanding with nothing able
+    // to take it back. A chosen level now settles it.
+    expect(
+      siteFit({
+        difficultyLevel: "beginner",
+        depthRange: "8–12 m",
+        currentNote: "watch the deep channel on the swim back",
+      }).tone,
+    ).toBe("welcoming");
+    // …and with no level chosen, the sniff still has the last word.
+    expect(
+      siteFit({
+        difficultyLevel: null,
+        depthRange: "8–12 m",
+        currentNote: "watch the deep channel on the swim back",
+      }).tone,
+    ).toBe("demanding");
   });
 
   it("separates what a diver brings from requested rental gear", () => {

@@ -12,6 +12,8 @@
  */
 
 import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
 import {
   type CalendarDate,
@@ -178,7 +180,21 @@ export async function loadShopExportBundleInput(
         .select()
         .from(diveSiteCreatures)
         .where(eq(diveSiteCreatures.shopId, shopId))
-        .orderBy(asc(diveSiteCreatures.diveSiteId), asc(diveSiteCreatures.id));
+        // The order the shop put its field guide in, then id — the same total
+        // order `listDiveSiteCreatures` reads, so an export and a briefing can
+        // never disagree about which face comes first.
+        .orderBy(
+          asc(diveSiteCreatures.diveSiteId),
+          asc(diveSiteCreatures.position),
+          asc(diveSiteCreatures.id),
+        );
+
+      const cardById = new Map(
+        fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => [
+          card.id,
+          card,
+        ]),
+      );
 
       const momentRows = await tx
         .select()
@@ -1749,12 +1765,15 @@ export async function loadShopExportBundleInput(
             "name",
             "location_name",
             "description",
-            "difficulty",
+            "difficulty_level",
             "depth_range",
             "max_depth_meters",
             "expected_bottom_time_minutes",
             "current_note",
             "dive_plan",
+            "fit_tone",
+            "fit_note",
+            "field_guide_tips_heading",
             "marine_life",
             "marine_life_description",
             "landmarks",
@@ -1778,12 +1797,19 @@ export async function loadShopExportBundleInput(
             row.name,
             row.locationName,
             row.description,
-            row.difficulty,
+            // The code, not the legacy free text beside it: `difficulty_level`
+            // is what the app reads and what the shop chose (ADR
+            // 20260813-dive-site-difficulty-is-a-code). The column keeps its
+            // three stable values, so a destination system can map them.
+            row.difficultyLevel,
             row.depthRange,
             row.maxDepthMeters,
             row.expectedBottomTimeMinutes,
             row.currentNote,
             row.divePlan,
+            row.fitTone,
+            row.fitNote,
+            row.fieldGuideTipsHeading,
             row.marineLife,
             row.marineLifeDescription,
             JSON.stringify(row.landmarks),
@@ -1814,22 +1840,43 @@ export async function loadShopExportBundleInput(
             "id",
             "dive_site_id",
             "dive_site_name",
+            "position",
             "name",
             "kind",
             "description",
             "preparation_tip",
             "image_url",
+            "catalog_slug",
           ],
-          rows: creatureRows.map((row) => [
-            row.id,
-            row.diveSiteId,
-            siteName.get(row.diveSiteId),
-            row.name,
-            row.kind,
-            row.description,
-            row.preparationTip,
-            row.imageUrl,
-          ]),
+          // A row stores a catalog slug and a position; the words are
+          // DiveDay's and belong to no row (ADR
+          // 20260813-marine-life-is-diveday-copy). They are resolved here in
+          // the shop's own default language rather than left blank, because a
+          // bundle of ninety-three slugs is not a thing a person can read, and
+          // this file is what a shop opens in a spreadsheet. `catalog_slug` is
+          // the column to reconcile against; the rest is a rendering.
+          //
+          // Iterated over the *rows* rather than over the resolved cards, so a
+          // row DiveDay has no words for still appears with its id, its site
+          // and its position. The briefing skips such a row; an export must
+          // not. A shop's data-out bundle is the one place where "we dropped
+          // something and said nothing" is the worst possible behaviour --
+          // this file is what a shop reconciles against when it leaves.
+          rows: creatureRows.map((row) => {
+            const card = cardById.get(row.id);
+            return [
+              row.id,
+              row.diveSiteId,
+              siteName.get(row.diveSiteId),
+              row.position,
+              card?.name,
+              card?.kind,
+              card?.description,
+              card?.preparationTip,
+              card?.imageUrl,
+              row.catalogSlug,
+            ];
+          }),
           note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
         },
         {

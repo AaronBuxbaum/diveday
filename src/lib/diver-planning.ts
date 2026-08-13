@@ -1,3 +1,4 @@
+import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import type { RentableItemKind } from "@/lib/rentals";
 
 /**
@@ -262,9 +263,15 @@ export function dockDayTimeline(
 }
 
 export type SitePlanningFacts = {
-  difficulty: string | null;
+  /** A `dive_site_difficulty` code, or null when the shop has not said. */
+  difficultyLevel: DiveSiteDifficulty | null;
   depthRange: string | null;
   currentNote: string | null;
+  /**
+   * The shop's own answer, when it has given one. Null means "read it off the
+   * facts below", which is what every site said before a shop could choose.
+   */
+  fitTone?: SiteFitTone | null;
 };
 
 /** Which of the three fit readings a site's published facts support. */
@@ -275,9 +282,25 @@ export type SiteFitTone = "demanding" | "welcoming" | "unknown";
  * *tone*, not prose, for the same reason `dockDayTimeline` returns steps: the
  * component looks up `trip.siteFit<Tone>Label`/`Detail` in the reader's own
  * language.
+ *
+ * A shop that has chosen a tone wins outright. The keyword sniff below is a
+ * *guess* at what free text a shop wrote for another purpose implies — good
+ * enough to be worth having as the default, and wrong often enough that a shop
+ * needs a way to say so: a gentle reef whose current note mentioned a "deep
+ * channel" told divers to bring recent experience, and no field on the site
+ * could take that back.
  */
 export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
-  const evidence = [facts.difficulty, facts.depthRange, facts.currentNote]
+  if (facts.fitTone) return { tone: facts.fitTone };
+  // A difficulty the shop actually chose is evidence, not a guess, so it is
+  // read before the keyword sniff rather than thrown into it. It used to be
+  // free text and went into the same regex soup as the depth range and the
+  // current note; now that it is one of three codes, "the shop said advanced"
+  // and "the shop's current note happens to contain the word deep" are no
+  // longer the same quality of signal and are no longer treated alike.
+  if (facts.difficultyLevel === "advanced") return { tone: "demanding" };
+  if (facts.difficultyLevel === "beginner") return { tone: "welcoming" };
+  const evidence = [facts.depthRange, facts.currentNote]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
   const text = evidence.join(" ").toLowerCase();

@@ -1,13 +1,11 @@
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import type {
-  DiveSiteLandmark,
-  DiveSiteLandmarkDescription,
-  DiveSiteLandmarkKind,
-} from "@/lib/dive-site-landmarks";
+import type { DiveSiteLandmark, DiveSiteLandmarkKind } from "@/lib/dive-site-landmarks";
 
 /**
- * `buildDiveSiteLandmarks` returns codes, not prose (src/lib/dive-site-landmarks.ts) —
- * these two maps are where each one becomes a word in the diver bundle.
+ * A landmark's `kind` is a code (src/lib/dive-site-landmarks.ts) — this map is
+ * where it becomes a word in the diver's own language. Its `note` is not: that
+ * is the shop's own sentence about its own reef, written in the shop's own
+ * language, and it renders exactly as typed.
  */
 const LANDMARK_KIND_KEYS: Record<DiveSiteLandmarkKind, DiverMessageKey> = {
   navigationMark: "site.landmarkKinds.navigationMark",
@@ -16,17 +14,6 @@ const LANDMARK_KIND_KEYS: Record<DiveSiteLandmarkKind, DiverMessageKey> = {
   underwaterMonument: "site.landmarkKinds.underwaterMonument",
   reefFormation: "site.landmarkKinds.reefFormation",
   pointOfInterest: "site.landmarkKinds.pointOfInterest",
-};
-
-const LANDMARK_DESCRIPTION_KEYS: Record<DiveSiteLandmarkDescription, DiverMessageKey> = {
-  molassesReefLight: "site.landmarkDescriptions.molassesReefLight",
-  shipsWinch: "site.landmarkDescriptions.shipsWinch",
-  spanishAnchor: "site.landmarkDescriptions.spanishAnchor",
-  flightDeckAndCranes: "site.landmarkDescriptions.flightDeckAndCranes",
-  wellDeck: "site.landmarkDescriptions.wellDeck",
-  christOfAbyssStatue: "site.landmarkDescriptions.christOfAbyssStatue",
-  dryRocksSandChannels: "site.landmarkDescriptions.dryRocksSandChannels",
-  generic: "site.landmarkDescriptions.generic",
 };
 
 export function DiveSiteLandmarks({
@@ -63,9 +50,14 @@ export function DiveSiteLandmarks({
               {t(LANDMARK_KIND_KEYS[landmark.kind])}
             </p>
             <h4 className="relative mt-2 text-lg font-semibold">{landmark.name}</h4>
-            <p className="relative mt-2 max-w-prose text-sm leading-relaxed text-muted">
-              {t(LANDMARK_DESCRIPTION_KEYS[landmark.description])}
-            </p>
+            {/* A landmark the shop has not written about is a name and a
+                category — which is the whole of what it knows, and reads better
+                than DiveDay inventing a sentence about someone else's reef. */}
+            {landmark.note ? (
+              <p className="relative mt-2 max-w-prose text-sm leading-relaxed text-muted">
+                {landmark.note}
+              </p>
+            ) : null}
           </article>
         ))}
       </div>

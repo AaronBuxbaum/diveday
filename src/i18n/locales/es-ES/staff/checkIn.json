@@ -44,7 +44,12 @@
     "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "walkinFull": "Ese barco está completo — prueba la lista de espera desde su página de salida.",
     "walkinAlready": "Ese buceador ya está en este barco.",
-    "walkinUnavailable": "No se puede añadir a este buceador a ese barco ahora mismo: abre su página de salida para ver el motivo.",
+    "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado — asigna uno desde su página de salida primero.",
+    "walkinCoursePrerequisite": "Ese curso exige una titulación previa verificada que este buceador no tiene registrada.",
+    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno — otro instructor, o la lista de espera.",
+    "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
+    "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
+    "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
     "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in."
   },
   "walkIn": {
@@ -52,6 +57,7 @@
     "title": "Walk-in",
     "description": "Elige el barco de hoy y luego busca al buceador o añádelo de cero — sin necesidad de correo en el mostrador.",
     "backToQueue": "Volver al check-in",
+    "backToPicker": "Elegir otro barco",
     "tripLabel": "¿Qué barco?",
     "tripEmpty": "No sale ningún barco en el próximo día y medio — consulta el calendario en su lugar.",
     "tripEmptyAction": "Ver el calendario",

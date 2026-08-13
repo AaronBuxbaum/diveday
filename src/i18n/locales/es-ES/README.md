@@ -8,6 +8,33 @@ Rules that outrank everything below: key names and key order never change, only 
 placeholder (`{name}`, `{count, plural, …}`, `{hasShop, select, …}`) survives verbatim; and a key
 added here is added to `../en-US/` in the same change. `pnpm check:locale` fails on any of those.
 
+## Who writes the Spanish
+
+**The agent writing the feature writes the Spanish, in the same change.** There is no translation
+queue, no `TODO: translate`, and no waiting on a native reviewer — a key missing from one locale
+fails `pnpm check:locale`, so a string that ships in English ships in Spanish or does not ship.
+That is a deliberate call (2026-08-13) about where the bar sits before there are paying shops: a
+same-day imperfect Spanish page beats a perfect one that is three releases behind the English.
+
+What that buys is a whole-product Spanish surface. What it costs is that nobody with Spanish as a
+first language has read most of it. So:
+
+- **This file is the memory.** Every terminology decision below was made once and is binding, which
+  is what stops two agents rendering the same word two ways. Add to it when you settle something
+  new; never re-litigate what is already here.
+- **Match the register, do not improve it.** Short, warm, second person. If a sentence needs to be
+  clever in English, it may be plain in Spanish — a translation that reaches for the joke and misses
+  is worse than one that states the thing.
+- **Regional vocabulary follows the market**, which is Latin America and the Caribbean. Where Spain
+  and Latin America differ, take Latin America; where the Caribbean has its own word for a fish or a
+  reef feature, take the Caribbean one (see the field-guide section below).
+- **Anything with legal or medical weight is exempt** and stays English pending a human sign-off —
+  the waiver body and the medical questionnaire, below.
+
+A native review is still worth having and is not blocked by any of this: the bundles are one file
+per locale, so a reviewer can read them end to end without touching code. That is a decision for
+whoever is selling into a Spanish-speaking market, not a gate on shipping.
+
 ## The shop is **el centro**
 
 One entity, one word. "Tienda" and "centro" were both in use for the dive shop — sometimes on the
@@ -89,6 +116,34 @@ reading two names for one thing — which is the exact confusion the English fix
 *Briefing* keeps its English form where crews already use it (`shared.tripDiveFields.footerNote`),
 and *ficha* below no longer names a dive-site record — it was doing the job the English word
 "briefing" wrongly did.
+
+## The field guide: `marineLife.*` is content, not chrome
+
+`diver.json`'s `marineLife` namespace is 148 species × three strings plus 18 category words, and it
+is the only block in either bundle that is **content a diver reads about the world** rather than
+words the app says about itself. It is here because a shop *picks* species from DiveDay's catalog
+and does not write them (ADR 20260813-marine-life-is-diveday-copy) — the row stores a slug, so the
+same saved briefing reads in Spanish to one diver and English to the next.
+
+Two things follow for whoever edits it:
+
+- **Common names are regional, and this catalog is the wider Caribbean.** Where Latin
+  America and Spain disagree, take the Caribbean name — *palometa* for the permit, *rabirrubia* for
+  the yellowtail snapper, *cherna*/*mero* for the groupers, *sábalo* for the tarpon. The Latin
+  binomial is in `src/db/marine-life-catalog.ts`, never in a bundle, and it is the tiebreak: check
+  it before renaming anything.
+- **The `tip` field is an instruction to a diver in the water**, so it takes the same tú imperative
+  as the rest of the bundle (*observa*, *acércate*, *no te arrodilles*), and the safety-flavoured
+  ones — the scorpionfish, the fire coral, the long-spined urchin, every protected species — say
+  the same thing the English says, no softer.
+
+One category label is narrower than its code and deliberately so: `eel` reads **Morena**, because
+all three species under it are morays and "anguila" would tell a diver less. Add a non-moray eel to
+the catalog and that label has to be revisited — it is the one place here where the Spanish is more
+specific than the English.
+
+`src/db/marine-life-catalog.test.ts` fails if a species loses its Spanish, gains copy for a slug the
+catalog dropped, or ends up with a description identical to the English one.
 
 ## Deliberately left alone
 
