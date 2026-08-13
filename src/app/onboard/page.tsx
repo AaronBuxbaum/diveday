@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EntryShell } from "@/components/account/EntryShell";
 import { DetectTimezone } from "@/components/DetectTimezone";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
-import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SuggestShopLink } from "@/components/SuggestShopLink";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
@@ -87,6 +88,43 @@ function onboardErrorMessage(
   return Object.hasOwn(ONBOARD_ERROR_MESSAGES, error)
     ? ONBOARD_ERROR_MESSAGES[error as keyof typeof ONBOARD_ERROR_MESSAGES](t, ctx)
     : t("account.onboard.errors.invalidInput");
+}
+
+/**
+ * Which box each refusal lands on (docs/design/forms-and-controls.md): a slug
+ * problem names the shop-link field, a taken email names the email field, and
+ * only the codes about the submission as a whole (rate limit, create/sign-in
+ * failure) fall back to the form's action row. An unknown code is form-level,
+ * like the generic message it resolves to.
+ */
+const ONBOARD_ERROR_FIELDS: Record<
+  keyof typeof ONBOARD_ERROR_MESSAGES,
+  "shopName" | "shopSlug" | "timezone" | "ownerName" | "ownerEmail" | "ownerPassword" | "form"
+> = {
+  rate_limited: "form",
+  invalid_input: "form",
+  shop_slug_taken: "shopSlug",
+  email_taken: "ownerEmail",
+  email_reserved: "ownerEmail",
+  create_failed: "form",
+  signin_failed: "form",
+  shop_name_required: "shopName",
+  shop_slug_required: "shopSlug",
+  shop_slug_invalid: "shopSlug",
+  timezone_required: "timezone",
+  timezone_invalid: "timezone",
+  owner_name_required: "ownerName",
+  owner_email_invalid: "ownerEmail",
+  owner_password_too_short: "ownerPassword",
+  owner_password_too_long: "ownerPassword",
+};
+
+function onboardErrorField(
+  error: string,
+): (typeof ONBOARD_ERROR_FIELDS)[keyof typeof ONBOARD_ERROR_FIELDS] {
+  return Object.hasOwn(ONBOARD_ERROR_FIELDS, error)
+    ? ONBOARD_ERROR_FIELDS[error as keyof typeof ONBOARD_ERROR_FIELDS]
+    : "form";
 }
 
 /**
@@ -180,214 +218,184 @@ export default async function OnboardPage({
   const source = eventSource(from);
   const t = diverTranslator(await requestLocale());
 
-  /**
-   * The reassurance a shop owner needs at the moment they're being asked for a
-   * password by a vendor they'd never heard of an hour ago. Every line is a
-   * shipped, checkable fact — no card field exists, the export button works
-   * on day one, and email support reaches a real person (not a founder-direct
-   * response-time promise — see the product-owner decision in
-   * docs/product/human-decisions.md).
-   */
-  const reassurance = [
-    {
-      lead: t("account.onboard.reassurance.noCard.lead"),
-      body: t("account.onboard.reassurance.noCard.body"),
-    },
-    {
-      lead: t("account.onboard.reassurance.yourRecords.lead"),
-      body: t("account.onboard.reassurance.yourRecords.body"),
-    },
-    {
-      lead: t("account.onboard.reassurance.supportLine.lead"),
-      body: t("account.onboard.reassurance.supportLine.body"),
-    },
-  ] as const;
+  // The refusal lands on the box that earned it, not in a banner above the
+  // whole form (docs/design/forms-and-controls.md); only a code about the
+  // submission as a whole falls back to the action row.
+  const errorText = error ? onboardErrorMessage(t, error, { shopSlug }) : undefined;
+  const errorField = error ? onboardErrorField(error) : undefined;
+  const fieldError = (field: (typeof ONBOARD_ERROR_FIELDS)[keyof typeof ONBOARD_ERROR_FIELDS]) =>
+    errorField === field ? errorText : undefined;
 
   return (
     <div className="flex flex-1 flex-col">
       {/* The nav's trial CTA would link to the page it's on and compete with
           the form's own "Create shop & start trial" — the one primary here. */}
       <MarketingNav hideTrialCta />
-      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-12 sm:py-24">
-        <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 shadow-sm">
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-            {t("account.onboard.eyebrow")}
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {t("account.onboard.title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted">{t("account.onboard.description")}</p>
-
-          {error ? (
-            <ShopNotice tone="danger" role="alert" className="mt-4">
-              {onboardErrorMessage(t, error, { shopSlug })}
-            </ShopNotice>
-          ) : null}
-
-          <form action={onboardAction} className="mt-6 flex flex-col gap-5">
-            <input type="hidden" name="source" value={source} />
-            <section className="flex flex-col gap-4">
-              <h2 className="text-lg font-semibold border-b border-border pb-1">
-                {t("account.onboard.shopSectionTitle")}
-              </h2>
-              <FieldGrid columns={2}>
-                <Field label={t("account.onboard.shopNameLabel")}>
-                  <input
-                    id="shop-name"
-                    name="shopName"
-                    type="text"
-                    required
-                    autoComplete="organization"
-                    defaultValue={shopName ?? ""}
-                    placeholder={t("account.onboard.shopNamePlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("account.onboard.shopLinkLabel")}
-                  hint={t("account.onboard.shopLinkHint")}
-                >
-                  <input
-                    id="shop-slug"
-                    name="shopSlug"
-                    type="text"
-                    required
-                    defaultValue={shopSlug ?? ""}
-                    placeholder={t("account.onboard.shopLinkPlaceholder")}
-                    pattern="^[a-z0-9-]+$"
-                    title={t("account.onboard.shopLinkTitle")}
-                    className={controlClass}
-                  />
-                </Field>
-                {/* Outside the Field slots (see the DetectTimezone note below)
+      <EntryShell
+        width="lg"
+        eyebrow={t("account.onboard.eyebrow")}
+        title={t("account.onboard.title")}
+        description={t("account.onboard.description")}
+        footer={
+          <>
+            <p>
+              {t("account.onboard.demoNote")}{" "}
+              <Link href="/" className="font-medium text-primary hover:underline">
+                {t("account.onboard.tryLiveDemo")}
+              </Link>
+            </p>
+            <p>
+              {t("account.onboard.alreadyHaveShop")}{" "}
+              <Link href="/sign-in" className="font-medium text-primary hover:underline">
+                {t("account.onboard.signIn")}
+              </Link>
+            </p>
+          </>
+        }
+      >
+        {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
+        <form action={onboardAction} className="flex flex-col gap-5">
+          <input type="hidden" name="source" value={source} />
+          <section className="flex flex-col gap-4">
+            <h2 className="text-lg font-semibold border-b border-border pb-1">
+              {t("account.onboard.shopSectionTitle")}
+            </h2>
+            <FieldGrid columns={2}>
+              <Field label={t("account.onboard.shopNameLabel")} error={fieldError("shopName")}>
+                <input
+                  id="shop-name"
+                  name="shopName"
+                  type="text"
+                  required
+                  autoComplete="organization"
+                  defaultValue={shopName ?? ""}
+                  placeholder={t("account.onboard.shopNamePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("account.onboard.shopLinkLabel")}
+                hint={t("account.onboard.shopLinkHint")}
+                error={fieldError("shopSlug")}
+              >
+                <input
+                  id="shop-slug"
+                  name="shopSlug"
+                  type="text"
+                  required
+                  defaultValue={shopSlug ?? ""}
+                  placeholder={t("account.onboard.shopLinkPlaceholder")}
+                  pattern="^[a-z0-9-]+$"
+                  title={t("account.onboard.shopLinkTitle")}
+                  className={controlClass}
+                />
+              </Field>
+              {/* Outside the Field slots (see the DetectTimezone note below)
                     and rendering nothing: writes the link the shop's name
                     implies into the slug box until the owner types their own. */}
-                <SuggestShopLink nameId="shop-name" slugId="shop-slug" />
-              </FieldGrid>
-              <FieldGrid columns={1}>
-                <Field label={t("account.onboard.timezoneLabel")}>
-                  {/* `required` is load-bearing twice over: the browser gate,
+              <SuggestShopLink nameId="shop-name" slugId="shop-slug" />
+            </FieldGrid>
+            <FieldGrid columns={1}>
+              <Field label={t("account.onboard.timezoneLabel")} error={fieldError("timezone")}>
+                {/* `required` is load-bearing twice over: the browser gate,
                       and `Field`'s required asterisk, which it reads off this
                       child's own props. */}
-                  <select
-                    id="shop-timezone"
-                    name="timezone"
-                    required
-                    defaultValue={timezone || DEFAULT_TIMEZONE}
-                    className={controlClass}
-                  >
-                    <TimezoneOptions
-                      selected={timezone || DEFAULT_TIMEZONE}
-                      groupLabels={{
-                        americas: t(TIMEZONE_GROUP_KEYS.americas),
-                        caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
-                        europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
-                        asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
-                        allZones: t(TIMEZONE_GROUP_KEYS.allZones),
-                      }}
-                      zoneLabels={
-                        Object.fromEntries(
-                          Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [
-                            zone,
-                            t(key),
-                          ]),
-                        ) as TimezoneZoneLabels
-                      }
-                    />
-                  </select>
-                </Field>
-                {/* Outside the Field, and rendering nothing: Field wires the
+                <select
+                  id="shop-timezone"
+                  name="timezone"
+                  required
+                  defaultValue={timezone || DEFAULT_TIMEZONE}
+                  className={controlClass}
+                >
+                  <TimezoneOptions
+                    selected={timezone || DEFAULT_TIMEZONE}
+                    groupLabels={{
+                      americas: t(TIMEZONE_GROUP_KEYS.americas),
+                      caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
+                      europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
+                      asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
+                      allZones: t(TIMEZONE_GROUP_KEYS.allZones),
+                    }}
+                    zoneLabels={
+                      Object.fromEntries(
+                        Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [zone, t(key)]),
+                      ) as TimezoneZoneLabels
+                    }
+                  />
+                </select>
+              </Field>
+              {/* Outside the Field, and rendering nothing: Field wires the
                     label and the required marker by cloning a *single* native
                     control child, so a sibling in that slot would silently
                     cost this picker both. Preselects the device's own zone
                     when the shop hasn't chosen one — a bounce back to this
                     form carries `?timezone=`, and that answer always wins. */}
-                <DetectTimezone selectId="shop-timezone" detect={!timezone} />
-              </FieldGrid>
-            </section>
+              <DetectTimezone selectId="shop-timezone" detect={!timezone} />
+            </FieldGrid>
+          </section>
 
-            <section className="flex flex-col gap-4 mt-2">
-              <h2 className="text-lg font-semibold border-b border-border pb-1">
-                {t("account.onboard.youSectionTitle")}
-              </h2>
-              <FieldGrid columns={1}>
-                <Field label={t("account.onboard.fullNameLabel")}>
-                  <input
-                    name="ownerName"
-                    type="text"
-                    required
-                    autoComplete="name"
-                    defaultValue={ownerName ?? ""}
-                    placeholder={t("account.onboard.fullNamePlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-              <FieldGrid columns={2}>
-                <Field label={t("account.common.email")}>
-                  <input
-                    name="ownerEmail"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    defaultValue={ownerEmail ?? ""}
-                    placeholder={t("account.onboard.emailPlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("account.common.password")}>
-                  <input
-                    name="ownerPassword"
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder={t("account.onboard.passwordPlaceholder")}
-                    minLength={8}
-                    maxLength={72}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-            </section>
+          <section className="flex flex-col gap-4 mt-2">
+            <h2 className="text-lg font-semibold border-b border-border pb-1">
+              {t("account.onboard.youSectionTitle")}
+            </h2>
+            <FieldGrid columns={1}>
+              <Field label={t("account.onboard.fullNameLabel")} error={fieldError("ownerName")}>
+                <input
+                  name="ownerName"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  defaultValue={ownerName ?? ""}
+                  placeholder={t("account.onboard.fullNamePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+            <FieldGrid columns={2}>
+              <Field label={t("account.common.email")} error={fieldError("ownerEmail")}>
+                <input
+                  name="ownerEmail"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  defaultValue={ownerEmail ?? ""}
+                  placeholder={t("account.onboard.emailPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("account.common.password")} error={fieldError("ownerPassword")}>
+                <input
+                  name="ownerPassword"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  placeholder={t("account.onboard.passwordPlaceholder")}
+                  minLength={8}
+                  maxLength={72}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </section>
 
-            <ul className="mt-2 flex flex-col gap-3 rounded-lg border border-border bg-surface-sunken p-4">
-              {reassurance.map((item) => (
-                <li key={item.lead} className="flex gap-3 text-sm leading-6 text-muted">
-                  <span aria-hidden className="font-semibold text-primary">
-                    ✓
-                  </span>
-                  <span>
-                    <span className="font-semibold text-foreground">{item.lead}</span> {item.body}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <p className="text-xs text-muted">
-              {t("account.onboard.exploreNote")}{" "}
-              <Link href="/" className="text-primary font-medium hover:underline">
-                {t("account.onboard.tryLiveDemo")}
-              </Link>
-              .
-            </p>
-
-            <SubmitButton
-              pendingLabel={t("account.onboard.settingUp")}
-              className={buttonClass({ className: "mt-2" })}
-            >
-              {t("account.onboard.submit")}
-            </SubmitButton>
-            <p className="text-center text-xs text-muted">{t("account.onboard.trialMeaning")}</p>
-          </form>
-
-          <p className="text-center text-sm text-muted mt-6">
-            {t("account.onboard.alreadyHaveShop")}{" "}
-            <Link href="/sign-in" className="text-primary font-medium hover:underline">
-              {t("account.onboard.signIn")}
-            </Link>
-          </p>
-        </div>
-      </main>
+          <SubmitButton
+            pendingLabel={t("account.onboard.settingUp")}
+            className={buttonClass({ className: "mt-2" })}
+          >
+            {t("account.onboard.submit")}
+          </SubmitButton>
+          {/* The one reassurance line, at the moment of commitment — the
+                stacked trust paragraphs this form used to carry are the
+                marketing pages' job; the button's own footnote answers the
+                only question left at this point ("what am I agreeing to?"). */}
+          <p className="text-center text-sm text-muted">{t("account.onboard.trialMeaning")}</p>
+          {errorField === "form" ? (
+            <FormStatus tone="danger" className="justify-center">
+              {errorText}
+            </FormStatus>
+          ) : null}
+        </form>
+      </EntryShell>
       <MarketingFooter />
     </div>
   );

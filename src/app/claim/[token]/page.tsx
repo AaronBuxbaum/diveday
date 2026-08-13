@@ -38,15 +38,16 @@ const CLAIM_NOTICES: Record<string, { tone: "danger" | "neutral"; key: DiverMess
 };
 
 function Unavailable({ t }: { t: DiverTranslator }) {
+  // A dead link is the whole page — the terminal warm pattern, no card border
+  // (docs/design/principles.md #4). No way onward: the diver arrived from a
+  // shared chat link, and the fix is a fresh link from their organizer, not
+  // any page of ours.
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("seatClaim.unavailableHeading")}
-        </h1>
-        <p className="mt-3 text-muted">{t("seatClaim.unavailableBody")}</p>
-      </section>
-    </main>
+    <EntryDone
+      glyph="⏳"
+      title={t("seatClaim.unavailableHeading")}
+      text={t("seatClaim.unavailableBody")}
+    />
   );
 }
 

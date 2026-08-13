@@ -856,6 +856,7 @@
     "forgotPassword": {
       "title": "Restablece tu contraseña",
       "description": "Introduce el correo de tu cuenta de DiveDay y te enviaremos un enlace para crear una nueva.",
+      "sentTitle": "Revisa tu correo",
       "sent": "Si ese correo tiene una cuenta de DiveDay, un enlace de restablecimiento está en camino.",
       "sending": "Enviando…",
       "submit": "Enviar enlace de restablecimiento"
@@ -964,6 +965,7 @@
         }
       },
       "exploreNote": "Tu centro empieza vacío y listo para tus propios viajes y buceadores. ¿Quieres explorar primero un centro ya lleno de viajes de muestra?",
+      "demoNote": "¿Quieres explorar primero un centro de muestra?",
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
       "submit": "Crear centro y empezar la prueba",

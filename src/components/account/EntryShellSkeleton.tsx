@@ -10,12 +10,15 @@
  */
 export function EntryShellSkeleton({
   wordmark = false,
+  eyebrow = false,
   width = "sm",
   panel = true,
   fields = [],
   footnote = true,
 }: {
   wordmark?: boolean;
+  /** Stands in for the small uppercase line above the title. */
+  eyebrow?: boolean;
   width?: "sm" | "lg";
   panel?: boolean;
   fields?: readonly string[];
@@ -27,6 +30,7 @@ export function EntryShellSkeleton({
     >
       <div className="animate-pulse">
         {wordmark ? <div className="mx-auto h-6 w-28 rounded bg-surface-sunken" /> : null}
+        {eyebrow ? <div className="mx-auto mb-2 h-4 w-24 rounded bg-surface-sunken" /> : null}
         <div
           className={`mx-auto h-8 w-56 max-w-full rounded bg-surface-sunken ${wordmark ? "mt-8" : ""}`}
         />

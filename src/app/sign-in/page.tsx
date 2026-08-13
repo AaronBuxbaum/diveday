@@ -145,7 +145,11 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             keep the visual rhythm of the stack it sits in. */}
         <Link
           href="/forgot-password"
-          className={buttonClass({ variant: "link", size: "sm", className: "-my-2 -mr-3 self-end" })}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            className: "-my-2 -mr-3 self-end",
+          })}
         >
           {t("account.signIn.forgotPassword")}
         </Link>

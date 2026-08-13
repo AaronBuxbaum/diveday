@@ -856,6 +856,7 @@
     "forgotPassword": {
       "title": "Reset your password",
       "description": "Enter the email on your DiveDay account and we'll send a link to set a new one.",
+      "sentTitle": "Check your email",
       "sent": "If that email has a DiveDay account, a reset link is on its way.",
       "sending": "Sending…",
       "submit": "Send reset link"
@@ -964,6 +965,7 @@
         }
       },
       "exploreNote": "Your shop starts empty and ready for your own trips and divers. Want to explore a shop that's already full of sample trips first?",
+      "demoNote": "Want to explore a sample shop first?",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
