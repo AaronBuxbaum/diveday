@@ -221,7 +221,9 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   reports, close-out) default to `max-w-5xl`; a wide board or dense table (the schedule board, the
   divers roster, staffing) earns `max-w-6xl`; a reading or settings surface (Settings, the course
   catalog and editor) stays at `max-w-3xl`, a comfortable line length. Don't pick a width per
-  page from scratch — and a route's `loading.tsx` wears the **exact same width** as its page,
+  page from scratch; a page still sitting between tiers (check-in's `max-w-4xl`) is legacy —
+  move it to a tier when redesigning that page, never in passing. And a route's `loading.tsx`
+  wears the **exact same width** as its page,
   because a skeleton narrower or wider than what replaces it is a sideways layout jump on every
   navigation into the route.
 
