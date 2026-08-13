@@ -156,6 +156,7 @@ export function TripFullSection({
   errorMessage,
   contactEmail,
   contactPhone,
+  terms,
 }: {
   shopSlug: string;
   trip: Trip;
@@ -164,8 +165,17 @@ export function TripFullSection({
   errorMessage?: string;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /**
+   * The same money fine print (`TripTerms`) the open form renders beside its
+   * button. A wait-list join commits the diver to these terms the moment a
+   * seat opens, so a full boat states them too — before this they rendered
+   * only on the open state, and a deposit-taking trip's cancellation window
+   * vanished the moment it sold out.
+   */
+  terms?: React.ReactNode;
 }) {
   const t = useTranslations("booking");
+  const tTrip = useTranslations("trip");
   return (
     // Same `#book` anchor as `BookSpotSection` below — the sticky mobile CTA
     // (trips/[id]/page.tsx) targets it whether or not the trip is full
@@ -176,7 +186,7 @@ export function TripFullSection({
     // raised card, and a boat with no seats must not wear the same surface —
     // full *feels* like less is on offer before a word is read. The wait list
     // is still a real form, so it keeps the full form treatment inside.
-    <section id="book" className="mt-10 rounded-2xl bg-surface-sunken p-5 sm:p-6">
+    <section id="book" className="mt-10 scroll-mt-4 rounded-2xl bg-surface-sunken p-5 sm:p-6">
       <h2 className="text-xl font-semibold">{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
         {t("fullBody", { capacity: trip.capacity })}{" "}
@@ -195,6 +205,15 @@ export function TripFullSection({
         <div>
           <h3 className="font-semibold">{t("waitlistHeading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("waitlistBody")}</p>
+          {/* The open form states the age with its attestation checkbox; the
+              wait list has no such checkbox, so a course's minimum age is said
+              here in plain words — a parent deciding whether to queue their
+              kid needs the answer before a seat opens, not after (task 23). */}
+          {trip.course?.minimumAge ? (
+            <p className="mt-1 text-sm text-muted">
+              {tTrip("minimumAge", { age: trip.course.minimumAge })}
+            </p>
+          ) : null}
         </div>
         <BookingPartyFields
           maxPartySize={remaining}
@@ -209,6 +228,9 @@ export function TripFullSection({
           >
             {t("waitlistHeading")}
           </SubmitButton>
+          {/* Same placement as the open form: the fine print sits under the
+              button it qualifies. */}
+          {terms}
           <ErrorNotice message={errorMessage} />
         </div>
       </form>

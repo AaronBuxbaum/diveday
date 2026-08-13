@@ -491,6 +491,7 @@ export default async function TripDetailPage({
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
             partySeats={partySeats}
+            terms={<TripTerms shop={shop} trip={trip} locale={locale} cancellationOnly />}
           />
         ) : waitlistConfirmation ? (
           <WaitlistConfirmation
@@ -511,6 +512,7 @@ export default async function TripDetailPage({
             errorMessage={errorMessage}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
+            terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         ) : (
           <BookSpotSection

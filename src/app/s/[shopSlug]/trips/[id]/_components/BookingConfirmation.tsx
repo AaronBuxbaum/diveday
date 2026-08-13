@@ -111,6 +111,7 @@ export function BookingConfirmation({
   readinessLink,
   emailsOnTheWay,
   partySeats,
+  terms,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -141,6 +142,14 @@ export function BookingConfirmation({
    * renders no panel at all.
    */
   partySeats: PartyClaimSeat[];
+  /**
+   * The cancellation window (`TripTerms` in `cancellationOnly` mode) — the one
+   * money term still ahead of a diver who has already booked. The deposit
+   * split and fee breakdown stay out: the payment panel above it records what
+   * was actually charged, and restating the pre-purchase arithmetic under it
+   * would say the same fact twice (design/principles.md #9).
+   */
+  terms?: React.ReactNode;
 }) {
   const t = diverTranslator(locale);
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
@@ -202,6 +211,7 @@ export function BookingConfirmation({
         payRef={fitRef}
         locale={locale}
       />
+      {terms}
 
       <div className="mt-4 rounded-xl border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (

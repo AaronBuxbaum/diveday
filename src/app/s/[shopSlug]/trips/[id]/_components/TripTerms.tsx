@@ -17,7 +17,24 @@ import type { Shop, Trip } from "./types";
  * `BookSpotSection` (a Client Component) as a prop, so the deposit/cancel
  * arithmetic in `src/lib/deposits.ts` never ships to the browser.
  */
-export function TripTerms({ shop, trip, locale }: { shop: Shop; trip: Trip; locale: string }) {
+export function TripTerms({
+  shop,
+  trip,
+  locale,
+  cancellationOnly = false,
+}: {
+  shop: Shop;
+  trip: Trip;
+  locale: string;
+  /**
+   * On the confirmation, the deposit split and course-fee breakdown are
+   * superseded by the payment panel's own record of what was actually charged
+   * — restating the pre-purchase arithmetic under it would say the same fact
+   * twice (design/principles.md #9). The cancellation window is the one term
+   * still ahead of a booked diver, so it is the one line that renders there.
+   */
+  cancellationOnly?: boolean;
+}) {
   const t = diverTranslator(locale);
   // List prices in the shop's own currency (docs ADR 20260731-shop-currency).
   const currency = toShopCurrency(shop.currency);
@@ -33,8 +50,9 @@ export function TripTerms({ shop, trip, locale }: { shop: Shop; trip: Trip; loca
   const courseFeeCents = breakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
   const eLearningFeeCents =
     breakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
-  const hasBreakdown = courseFeeCents !== null && eLearningFeeCents !== null;
-  if (!hasBreakdown && !charge?.isDeposit && !deadline) return null;
+  const hasBreakdown = !cancellationOnly && courseFeeCents !== null && eLearningFeeCents !== null;
+  const showDeposit = !cancellationOnly && Boolean(charge?.isDeposit);
+  if (!hasBreakdown && !showDeposit && !deadline && !charge?.isDeposit) return null;
   return (
     <div className="mt-3 space-y-1 text-sm text-muted">
       {hasBreakdown ? (
@@ -45,7 +63,7 @@ export function TripTerms({ shop, trip, locale }: { shop: Shop; trip: Trip; loca
           })}
         </p>
       ) : null}
-      {charge?.isDeposit ? (
+      {showDeposit && charge ? (
         <p className="tabular-nums">
           {t("trip.depositLine", {
             deposit: formatMoneyCents(charge.amountCents, currency, locale),
