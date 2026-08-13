@@ -1,10 +1,6 @@
 {
   "blockedCount": "{count, plural, one {# diver} other {# divers}}",
   "title": "Not ready",
-  "description": {
-    "none": "Everyone booked on an upcoming departure is ready to board.",
-    "some": "Spread across {departures, plural, one {# departure} other {# departures}}. Clearing a row takes you straight to the fix."
-  },
   "alsoBlockedOn": "Also blocked on {trips} — same diver, fix once.",
   "tripBlockedCount": "{blocked} of {booked} blocked",
   "sendAllWaivers": "{count, plural, one {Send all # waiver} other {Send all # waivers}}",

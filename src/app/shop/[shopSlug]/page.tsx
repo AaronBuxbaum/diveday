@@ -5,7 +5,10 @@ import { Suspense } from "react";
 import { DepartureBoard } from "@/app/shop/[shopSlug]/_components/today/DepartureBoard";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
-import { RoleOrientationCard } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
+import {
+  RoleOrientationCard,
+  RoleOrientationLine,
+} from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { TodayQueue } from "@/app/shop/[shopSlug]/_components/today/TodayQueue";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { FlashParams } from "@/components/FlashParams";
@@ -263,6 +266,10 @@ async function TodayBody({
       ? (departures.find((departure) => crewedSet.has(departure.tripId)) ?? null)
       : null;
   const firstName = session.user.name?.split(" ")[0] ?? "there";
+  // The page's one idea is the work (ADR 20260720-today-work-queue), so
+  // instructional content sizes itself against whether any exists: a queue
+  // row or a boat on today's board means orientation shrinks to a line.
+  const hasWorkToShow = actions.length > 0 || departures.length > 0;
 
   // The by-departure view's own grouping pass, run only when it is the view on
   // screen — the default urgency view must not pay for a query it never
@@ -285,6 +292,21 @@ async function TodayBody({
     const search = query.toString();
     return search ? `/shop/${shopSlug}?${search}` : `/shop/${shopSlug}`;
   }
+  // The view switch exists only while the queue has something to sort — a
+  // toggle between two empty states is a control with nothing to govern. The
+  // by-departure view always keeps it, so there is always a way back.
+  const queueSwitch =
+    actions.length > 0 || queueView === "departures" ? (
+      <QueueViewSwitch
+        current={queueView}
+        hrefFor={queueViewHref}
+        copy={{
+          label: t("shopHome.queueView.label"),
+          urgency: t("shopHome.queueView.byUrgency"),
+          departures: t("shopHome.queueView.byDeparture"),
+        }}
+      />
+    ) : null;
 
   return (
     <>
@@ -309,6 +331,43 @@ async function TodayBody({
                   })}`
                 : ""}
             </p>
+            {/* A day with no boats answers its follow-up question right here.
+                The summary sentence above already says "No boats out today";
+                the bordered "No boats out today" card that used to restate it
+                lower down said a shared fact twice (principle 9) and cost a
+                whole section to carry one sentence — so the sentence lives
+                where the question arises, and the card is gone. */}
+            {departures.length === 0 && nextDeparture ? (
+              <p className="mt-1 max-w-2xl text-muted">
+                {t.rich("shopHome.nextDeparture", {
+                  link: (chunks) => (
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                  title: nextDeparture.title,
+                  date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
+                  time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
+                })}
+              </p>
+            ) : null}
+            {/* Nothing on the books at all (and past first-run, whose
+                checklist owns "schedule your first trip"): one teaching
+                sentence and the door, not a boxed section. */}
+            {departures.length === 0 && !nextDeparture && !showFirstRunChecklist ? (
+              <p className="mt-1 max-w-2xl text-muted">
+                {t("shopHome.noDeparturesEmpty")}{" "}
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board?add=1`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {t("shopHome.scheduleTrip")}
+                </Link>
+              </p>
+            ) : null}
             {/* No window sentence, and no pivot to Check-in. Today and
                 Check-in do still read one shared window
                 (src/lib/operational-window.ts), but saying so out loud —
@@ -342,56 +401,82 @@ async function TodayBody({
             viewAsDiver: t("shopHome.firstBookable.viewAsDiver"),
           }}
         />
-      ) : created ? (
-        <div className="mb-6">
-          <ShopNotice>
-            {seriesCount > 1
-              ? t("shopHome.createdNotice.series", { title: created, count: seriesCount })
-              : t("shopHome.createdNotice.single", { title: created })}
-          </ShopNotice>
-        </div>
       ) : null}
-      {reset ? (
-        <div className="mb-6">
-          <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice>
-        </div>
-      ) : null}
-      {email ? (
-        <div className="mb-6">
-          {/* A failed send must announce itself (noticeRole: danger → alert);
-              without a role this read as ambient status to screen readers. */}
-          <ShopNotice
-            tone={email === "sent" ? "success" : "danger"}
-            role={noticeRole(email === "sent" ? "success" : "danger")}
-          >
-            {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
-          </ShopNotice>
-        </div>
-      ) : null}
-      {authNoticeKey ? (
-        <div className="mb-6">
-          <ShopNotice tone="warning" role="status">
-            {t(authNoticeKey)}
-          </ShopNotice>
+
+      {/* One notice surface. What used to be four independent slots — each
+          hand-wrapped in its own spaced div, each able to stack on the others
+          above the day's work — is one block with one rhythm. A visit rarely
+          carries more than one of these; when it does, they read as one
+          stack of arrivals rather than four competing banners. */}
+      {(created && !firstBookableMoment) || reset || email || authNoticeKey ? (
+        <div className="mb-6 flex flex-col gap-2">
+          {created && !firstBookableMoment ? (
+            <ShopNotice>
+              {seriesCount > 1
+                ? t("shopHome.createdNotice.series", { title: created, count: seriesCount })
+                : t("shopHome.createdNotice.single", { title: created })}
+            </ShopNotice>
+          ) : null}
+          {reset ? <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice> : null}
+          {email ? (
+            // A failed send must announce itself (noticeRole: danger → alert);
+            // without a role this read as ambient status to screen readers.
+            <ShopNotice
+              tone={email === "sent" ? "success" : "danger"}
+              role={noticeRole(email === "sent" ? "success" : "danger")}
+            >
+              {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
+            </ShopNotice>
+          ) : null}
+          {authNoticeKey ? (
+            <ShopNotice tone="warning" role="status">
+              {t(authNoticeKey)}
+            </ShopNotice>
+          ) : null}
         </div>
       ) : null}
 
+      {/* Orientation earns its size from the day. On a Today with nothing to
+          show it is the full card; the moment there is real work or a boat on
+          the board, it compresses to one quiet line — the pointer and the
+          dismissal survive, the tinted box that pushed the queue off a phone
+          screen does not. */}
       {showOrientation && orientationRole ? (
-        <RoleOrientationCard
-          tourHref={orientationTourHref(
-            shopSlug,
-            orientationRole,
-            nextDeparture ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest` : undefined,
-          )}
-          dismissAction={dismissOrientationAction}
-          copy={{
-            heading: t("shopHome.orientation.heading"),
-            subtitle: t("shopHome.orientation.subtitle"),
-            tryLabel: t("shopHome.orientation.tryLabel"),
-            dismiss: t("shopHome.orientation.dismiss"),
-            ...orientationTourText(t, orientationRole),
-          }}
-        />
+        hasWorkToShow ? (
+          <RoleOrientationLine
+            tourHref={orientationTourHref(
+              shopSlug,
+              orientationRole,
+              nextDeparture
+                ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest`
+                : undefined,
+            )}
+            dismissAction={dismissOrientationAction}
+            copy={{
+              heading: t("shopHome.orientation.heading"),
+              dismiss: t("shopHome.orientation.dismiss"),
+              tryThis: orientationTourText(t, orientationRole).tryThis,
+            }}
+          />
+        ) : (
+          <RoleOrientationCard
+            tourHref={orientationTourHref(
+              shopSlug,
+              orientationRole,
+              nextDeparture
+                ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest`
+                : undefined,
+            )}
+            dismissAction={dismissOrientationAction}
+            copy={{
+              heading: t("shopHome.orientation.heading"),
+              subtitle: t("shopHome.orientation.subtitle"),
+              tryLabel: t("shopHome.orientation.tryLabel"),
+              dismiss: t("shopHome.orientation.dismiss"),
+              ...orientationTourText(t, orientationRole),
+            }}
+          />
+        )
       ) : null}
 
       {lens === "sessions" ? (
@@ -433,96 +518,8 @@ async function TodayBody({
           clearToBoard: t("shared.today.departureBoard.clearToBoard"),
           blockedWarningNamed: t("shared.today.departureBoard.blockedWarningNamed"),
           sailingToday: t("shared.today.departureBoard.sailingToday"),
-          sailingTodaySubtitle: t("shared.today.departureBoard.sailingTodaySubtitle"),
         }}
       />
-
-      {/* The evening handoff. The registry calls the close-out "Today's evening
-          mirror" (src/lib/staff-destinations.ts), but nothing on Today ever
-          said so — it was reachable only from the palette, which is where a
-          daily ritual goes to be forgotten.
-
-          It keys on **any** boat being back (`anyBoatIsIn`), not all of them.
-          Waiting for the last one meant no card on precisely the days a shop
-          wants one: an evening with a night dive still on the board, or a boat
-          running late, is when someone starts writing the day up
-          (FU-20260811-close-out-has-one-conditional-door). `lastBoatIsIn` then
-          picks the words, because "the last boat is in" is a sentence that must
-          not be said over a boat still at sea.
-
-          One calm card, never a banner (design/principles.md #8): the queue
-          below it is still the page's work, so the link is `secondary` weight
-          and the card carries no second control. Closing is a ritual, never a
-          gate (ADR 20260804-day-closeout) — nothing here nags, and the card is
-          simply absent on a day where nothing has come home yet. */}
-      {anyBoatIsIn(departures, now) ? (
-        <section
-          aria-labelledby="close-out-handoff-heading"
-          className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
-        >
-          <h2 id="close-out-handoff-heading" className="font-semibold">
-            {lastBoatIsIn(departures, now)
-              ? t("shopHome.closeOut.heading")
-              : t("shopHome.closeOut.headingBoatStillOut")}
-          </h2>
-          <p className="mt-1 text-muted">
-            {lastBoatIsIn(departures, now)
-              ? t("shopHome.closeOut.body")
-              : t("shopHome.closeOut.bodyBoatStillOut")}
-          </p>
-          <Link
-            href={`/shop/${shopSlug}/close-out`}
-            className={buttonClass({ variant: "secondary", className: "mt-4" })}
-          >
-            {t("shopHome.closeOut.action")}
-          </Link>
-        </section>
-      ) : null}
-
-      {/* On a brand-new shop (no departures, nothing coming up, checklist
-          showing) this card would render its heading and nothing else — the
-          first-run checklist right below already owns "schedule your first
-          trip", so an empty bordered box would be the owner's first screen.
-          The card sits out until it has something to say. */}
-      {departures.length === 0 && (nextDeparture || !showFirstRunChecklist) ? (
-        <section
-          aria-labelledby="no-departures-heading"
-          className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
-        >
-          <h2 id="no-departures-heading" className="font-semibold">
-            {t("shopHome.noDeparturesHeading")}
-          </h2>
-          {nextDeparture ? (
-            <p className="mt-1 text-muted">
-              {t.rich("shopHome.nextDeparture", {
-                link: (chunks) => (
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {chunks}
-                  </Link>
-                ),
-                title: nextDeparture.title,
-                date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
-                time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
-              })}
-            </p>
-          ) : (
-            <>
-              <p className="mt-1 text-muted">{t("shopHome.noDeparturesEmpty")}</p>
-              {/* Straight into the board's add panel — creating a departure
-                  is one place now (ADR 20260806-one-trip-create-form). */}
-              <Link
-                href={`/shop/${shopSlug}/schedule/board?add=1`}
-                className={buttonClass({ className: "mt-4" })}
-              >
-                {t("shopHome.scheduleTrip")}
-              </Link>
-            </>
-          )}
-        </section>
-      ) : null}
 
       {showFirstRunChecklist ? (
         <FirstRunChecklist
@@ -562,22 +559,10 @@ async function TodayBody({
         />
       ) : null}
 
-      {/* One block, two views. The switch sits on the queue it switches rather
-          than under the page header: the departure board above it is not a
-          queue view, and a control floating above something it does not govern
-          is how a toggle starts reading as a page-wide filter. */}
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-        <QueueViewSwitch
-          current={queueView}
-          hrefFor={queueViewHref}
-          copy={{
-            label: t("shopHome.queueView.label"),
-            urgency: t("shopHome.queueView.byUrgency"),
-            departures: t("shopHome.queueView.byDeparture"),
-          }}
-        />
-      </div>
-
+      {/* One block, two views. The switch rides the queue's own heading row —
+          it governs exactly that block, and it renders at all only while the
+          queue has something to sort (a switch between two empty views is a
+          control with nothing to govern). */}
       {queueView === "departures" && blockerQueue ? (
         <BlockerGroups
           queue={blockerQueue}
@@ -587,6 +572,7 @@ async function TodayBody({
           locale={locale}
           pageHref={(target) => queueViewHref("departures", target)}
           headingId="queue-heading"
+          viewSwitch={queueSwitch}
           t={t}
         />
       ) : (
@@ -597,8 +583,52 @@ async function TodayBody({
           timezone={shop.timezone}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           locale={locale}
+          viewSwitch={queueSwitch}
         />
       )}
+
+      {/* The evening handoff, after the queue — writing the day up is what
+          comes *after* the work, and on the evenings it matters the queue
+          above it has thinned to nothing. The registry calls the close-out
+          "Today's evening mirror" (src/lib/staff-destinations.ts); this is
+          its one door on the page.
+
+          It keys on **any** boat being back (`anyBoatIsIn`), not all of them.
+          Waiting for the last one meant no card on precisely the days a shop
+          wants one: an evening with a night dive still on the board, or a boat
+          running late, is when someone starts writing the day up
+          (FU-20260811-close-out-has-one-conditional-door). `lastBoatIsIn` then
+          picks the words, because "the last boat is in" is a sentence that must
+          not be said over a boat still at sea.
+
+          One calm card, never a banner (design/principles.md #8): the queue is
+          still the page's work, so the link is `secondary` weight and the card
+          carries no second control. Closing is a ritual, never a gate (ADR
+          20260804-day-closeout) — nothing here nags, and the card is simply
+          absent on a day where nothing has come home yet. */}
+      {anyBoatIsIn(departures, now) ? (
+        <section
+          aria-labelledby="close-out-handoff-heading"
+          className="mt-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+        >
+          <h2 id="close-out-handoff-heading" className="font-semibold">
+            {lastBoatIsIn(departures, now)
+              ? t("shopHome.closeOut.heading")
+              : t("shopHome.closeOut.headingBoatStillOut")}
+          </h2>
+          <p className="mt-1 text-muted">
+            {lastBoatIsIn(departures, now)
+              ? t("shopHome.closeOut.body")
+              : t("shopHome.closeOut.bodyBoatStillOut")}
+          </p>
+          <Link
+            href={`/shop/${shopSlug}/close-out`}
+            className={buttonClass({ variant: "secondary", className: "mt-4" })}
+          >
+            {t("shopHome.closeOut.action")}
+          </Link>
+        </section>
+      ) : null}
     </>
   );
 }

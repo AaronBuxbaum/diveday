@@ -21,7 +21,6 @@
   "emailResent": "Correo de confirmación reenviado.",
   "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
   "crewingBoat": "Estás en la tripulación del {title} de las {time}.",
-  "noDeparturesHeading": "Hoy no sale ningún barco",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
   "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
   "scheduleTrip": "Programar una salida",
