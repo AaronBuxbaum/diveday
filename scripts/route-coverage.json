@@ -130,6 +130,7 @@
   },
   "/shop/[shopSlug]": {
     "e2e": [
+      "blockers.spec.ts",
       "boat-loop.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
@@ -141,7 +142,14 @@
       "staff-nav.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["today", "today-empty", "today-first-bookable", "nav-more-menu", "nav-more-sheet"]
+    "visual": [
+      "today",
+      "today-empty",
+      "today-first-bookable",
+      "blockers",
+      "nav-more-menu",
+      "nav-more-sheet"
+    ]
   },
   "/shop/[shopSlug]/bookings/new": {
     "e2e": ["add-diver.spec.ts"],

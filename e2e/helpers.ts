@@ -294,7 +294,9 @@ export async function openSettingsRow(page: Page, heading: string) {
     .filter({ has: page.getByRole("heading", { level: 3, name: heading, exact: true }) })
     .first();
   const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
-  if (!isOpen) await details.locator("summary").click();
+  // `> summary` for the same reason as `openIfClosed` below: a settings row can
+  // hold its own nested disclosures, and only a direct summary opens this one.
+  if (!isOpen) await details.locator("> summary").click();
 }
 
 /**
@@ -334,8 +336,15 @@ export async function openRosterNotes(row: Locator): Promise<void> {
   );
 }
 
-/** Native `open` is DOM state React never touches, so check before toggling. */
+/**
+ * Native `open` is DOM state React never touches, so check before toggling.
+ *
+ * `> summary`, not `summary`: these panels contain other disclosures (the
+ * emergency-contact edit form is one), and a descendant `<summary>` would make
+ * this ambiguous under strict mode — or, worse, click the wrong one and leave
+ * the panel shut. A `<details>` is opened only by its own direct summary.
+ */
 async function openIfClosed(details: Locator): Promise<void> {
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
-  if (!isOpen) await details.locator("summary").click();
+  if (!isOpen) await details.locator("> summary").click();
 }

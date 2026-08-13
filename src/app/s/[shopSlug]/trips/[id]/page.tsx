@@ -69,6 +69,7 @@ import { PackingSection } from "./_components/PackingSection";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
+import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -411,8 +412,15 @@ export default async function TripDetailPage({
         )}
 
         <TripHeader shop={shop} trip={trip} meetingDays={meetingDays} locale={locale} />
+        {/* The one warning panel this page ever wears — the same shape as the
+            conditions-changed panel below, on purpose. Two amber boxes with
+            different radii and border weights read as two different systems
+            warning about one weather call. */}
         {trip.conditionsHold ? (
-          <div role="status" className="mt-5 rounded-lg border border-warning/40 bg-warning/10 p-4">
+          <div
+            role="status"
+            className="mt-5 rounded-2xl border border-warning/40 bg-warning/10 p-5"
+          >
             <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
           </div>
@@ -425,7 +433,10 @@ export default async function TripDetailPage({
             count is met, because then there is nothing conditional left to
             say, and on a departure that already sailed or was cancelled. */}
         {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
-          <p className="mt-5 rounded-lg border border-border bg-surface-sunken p-4 text-sm text-muted">
+          // Sunken fill, no border: a stated fact about the departure, not a
+          // warning — it wears the same quiet material as the supporting
+          // reading, one step below the amber conditions banner above.
+          <p className="mt-5 rounded-xl bg-surface-sunken p-4 text-sm text-muted">
             {t("trip.minimumSeatsNotice", {
               minimum: minimumSeats.minimum,
               deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
@@ -480,6 +491,7 @@ export default async function TripDetailPage({
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
             partySeats={partySeats}
+            terms={<TripTerms shop={shop} trip={trip} locale={locale} cancellationOnly />}
           />
         ) : waitlistConfirmation ? (
           <WaitlistConfirmation
@@ -500,6 +512,7 @@ export default async function TripDetailPage({
             errorMessage={errorMessage}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
+            terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         ) : (
           <BookSpotSection
@@ -519,6 +532,7 @@ export default async function TripDetailPage({
             contactPhone={shop.contactPhone}
             rentalItems={shop.rentalItems}
             rentalPricing={shop.rentalPricing}
+            terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}
 
@@ -535,7 +549,7 @@ export default async function TripDetailPage({
           confirmed.booking.conditionsBriefedAt,
         ) ? (
           <section
-            className="mt-6 rounded-xl border border-warning bg-warning/10 p-5"
+            className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-5"
             role="status"
           >
             <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>

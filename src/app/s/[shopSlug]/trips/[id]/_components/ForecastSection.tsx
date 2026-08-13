@@ -49,16 +49,21 @@ export function ForecastSection({
   // such reading (see `AutomatedMarineForecast`).
   const visibilityMeters = crewPrediction ? trip.visibilityMeters : null;
   return (
-    <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
-      <p className="text-sm font-medium tracking-widest text-primary uppercase">
+    // No outer card: this is supporting reading under the page's one raised
+    // booking card, and the reading tiles are their own shape. The border box
+    // it used to wear made a forecast weigh the same as the purchase
+    // (design/principles.md #11 — differentiate by shape, not by stacking
+    // equal boxes). The eyebrow is a real heading so the outline keeps it.
+    <section className="mt-12">
+      <h2 className="text-sm font-medium tracking-widest text-primary uppercase">
         {crewPrediction ? t("trip.crewPrediction") : t("trip.automatedOutlook")}
-      </p>
+      </h2>
       {crewPrediction && trip.conditionsSummary ? (
         <p className="mt-3 text-muted">{trip.conditionsSummary}</p>
       ) : null}
-      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+      <dl className="mt-4 grid gap-3 sm:grid-cols-3">
         {waterTemperatureC !== null ? (
-          <div className="rounded-lg bg-surface-sunken p-3">
+          <div className="rounded-xl bg-surface-sunken p-4">
             <dt className="text-sm text-muted">{t("trip.waterTemperature")}</dt>
             <dd className="mt-1 text-lg font-semibold">
               {temperatureText(t, waterTemperatureC, temperatureUnit)}
@@ -76,7 +81,7 @@ export function ForecastSection({
           </div>
         ) : null}
         {visibilityMeters !== null ? (
-          <div className="rounded-lg bg-surface-sunken p-3">
+          <div className="rounded-xl bg-surface-sunken p-4">
             <dt className="text-sm text-muted">{t("trip.visibility")}</dt>
             <dd className="mt-1 text-lg font-semibold">
               {depthText(t, visibilityMeters, depthUnit)}
@@ -84,7 +89,7 @@ export function ForecastSection({
           </div>
         ) : null}
         {surfaceText ? (
-          <div className="rounded-lg bg-surface-sunken p-3">
+          <div className="rounded-xl bg-surface-sunken p-4">
             <dt className="text-sm text-muted">{t("trip.surface")}</dt>
             <dd className="mt-1 text-lg font-semibold">{surfaceText}</dd>
             {/* What the band means for the day, on the automated path only —

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -260,12 +261,6 @@ export function DiverList({
    * the chips are how you widen back out.
    */
   const showViews = divers.length > 0 || narrowed;
-  const chipClass = (active: boolean) =>
-    `inline-flex min-h-11 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
-      active
-        ? "border-primary bg-primary/10 text-primary"
-        : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
-    }`;
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
@@ -273,23 +268,25 @@ export function DiverList({
           whenever a search or chip narrowed the list, so the way back out
           stays on screen. */}
       {showViews ? (
-        <nav aria-label={copy.viewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
-          {VIEWS.map((view) => (
-            <Link
-              key={view.filter}
-              // `typed`, not `query`: the chip carries what is in the box right
-              // now, not the last search that reached the URL. Built from `query`
-              // it re-applied a search the staffer had just cleared but whose
-              // debounce had not landed yet.
-              href={hrefFor(typed, view.filter)}
-              scroll={false}
-              onClick={cancelPendingSearch}
-              className={chipClass(filter === view.filter)}
-            >
-              {view.label}
-            </Link>
-          ))}
-        </nav>
+        <FilterChips
+          label={copy.viewsAriaLabel}
+          className="mb-4"
+          // Dropped before the URL changes: a keystroke that has not reached
+          // the URL yet was scheduled against the view being left, and letting
+          // it land would replace the URL with that stale view (see
+          // `cancelPendingSearch`).
+          onNavigate={cancelPendingSearch}
+          chips={VIEWS.map((view) => ({
+            key: view.filter,
+            // `typed`, not `query`: the chip carries what is in the box right
+            // now, not the last search that reached the URL. Built from `query`
+            // it re-applied a search the staffer had just cleared but whose
+            // debounce had not landed yet.
+            href: hrefFor(typed, view.filter),
+            active: filter === view.filter,
+            label: view.label,
+          }))}
+        />
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -436,7 +433,11 @@ export function DiverList({
             ))}
           </ul>
           <div className="relative mt-4 hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm sm:block">
-            <table className="w-full min-w-180 border-collapse text-left">
+            {/* No `min-w-*` floor: this is a two-column table, and the 720px
+                floor it used to carry forced a sideways scroll on exactly the
+                narrow-desktop widths the phone cards no longer cover. The
+                wrapper's `overflow-x-auto` stays as the safety net. */}
+            <table className="w-full border-collapse text-left">
               <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">
