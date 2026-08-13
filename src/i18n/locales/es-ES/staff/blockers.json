@@ -1,10 +1,6 @@
 {
   "blockedCount": "{count, plural, one {# buceador} other {# buceadores}}",
   "title": "No listos",
-  "description": {
-    "none": "Todos los reservados en una próxima salida están listos para embarcar.",
-    "some": "Repartidos entre {departures, plural, one {# salida} other {# salidas}}. Resolver una fila te lleva directo a la solución."
-  },
   "alsoBlockedOn": "También bloqueado en {trips} — mismo buceador, se resuelve una vez.",
   "tripBlockedCount": "{blocked} de {booked} bloqueados",
   "sendAllWaivers": "{count, plural, one {Enviar # exención} other {Enviar las # exenciones}}",

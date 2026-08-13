@@ -31,7 +31,14 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     // the page needs it any more: the row used to wear a "tap again to undo"
     // sentence, and a settled control that a finger just put into that state
     // is its own affordance.
-    revalidateAndRedirect(back, back);
+    //
+    // And **no redirect**, not even to this same path. `redirect(back)` is a
+    // navigation whatever it targets: the counter lost its `?q=` search, threw
+    // the page back to the top, and re-drew a queue the staffer was working
+    // down — for a mutation whose whole visible result is one row settling.
+    // `revalidatePath` re-renders the same page in place instead.
+    revalidatePath(back);
+    return;
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
@@ -62,8 +69,9 @@ export async function undoCheckInAction(shopSlug: string, formData: FormData) {
   if (outcome.ok) {
     // Same rule as checking in: the row reverting to its tappable "Check in ○"
     // state is the confirmation — no banner restating it from the top of the
-    // page.
-    revalidateAndRedirect(back, back);
+    // page, and no navigation to deliver one.
+    revalidatePath(back);
+    return;
   }
   revalidatePath(back);
   redirect(
@@ -93,14 +101,21 @@ export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: 
     recordedByPersonId: session.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });
+  // Landing it in place, like the two above: the diver is standing at the
+  // counter, and the answer they are waiting for is their own row losing its
+  // "Waiver has not been sent" blocker and offering check-in. Redirecting for
+  // a success banner threw away the search that found them, so the next act —
+  // actually checking them in — began by typing their name again.
+  if (outcome.ok) {
+    revalidatePath(back);
+    return;
+  }
   revalidateAndRedirect(
     back,
     `${back}?notice=${
-      outcome.ok
-        ? "waiver_in_person"
-        : outcome.reason === "medical_attestation_required"
-          ? "waiver_medical_attestation"
-          : "waiver_error"
+      outcome.reason === "medical_attestation_required"
+        ? "waiver_medical_attestation"
+        : "waiver_error"
     }`,
   );
 }

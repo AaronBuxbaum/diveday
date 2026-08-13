@@ -108,32 +108,43 @@ export default async function PublicCoursesPage({
           <p className="mt-1 text-sm text-muted">{t("courses.index.noCoursesBody")}</p>
         </EmptyState>
       ) : (
-        <ul className="mt-8 flex flex-col gap-3">
+        // The ladder, not a card pile: one agency's courses in progression
+        // order read as a single hairline ledger, and row ink is spent only on
+        // what differs between rungs — the name, the pitch, the time it takes,
+        // the card it requires, the price (design principle 9). A course with
+        // no prerequisite says nothing about prerequisites: "None" is not a
+        // status, and on this list "no certification required" was rendering
+        // on almost every row.
+        <ul className="mt-8 divide-y divide-border border-y border-border">
           {courseList.map((course) => {
             const totalCents = courseTotalCents(course);
+            const detailLine = [
+              course.durationText,
+              course.minimumCertificationLevel
+                ? t("courses.index.requires", {
+                    level: t(DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
+                  })
+                : null,
+            ].filter((part): part is string => Boolean(part));
             return (
               <li key={course.id}>
                 <Link
                   href={publicCoursePath(shopSlug, course.slug)}
-                  className="group card-scale-hint flex flex-col gap-2 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between"
+                  className="group -mx-3 flex flex-col gap-2 rounded-2xl px-3 py-5 transition-colors duration-200 hover:bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
                 >
                   <div className="min-w-0">
-                    <h2 className="font-medium group-hover:text-primary">{course.title}</h2>
+                    <h2 className="text-lg font-semibold group-hover:text-primary">
+                      {course.title}
+                    </h2>
                     {course.summary ? (
-                      <p className="mt-1 text-sm text-muted">{course.summary}</p>
+                      <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
                     ) : null}
-                    <p className="mt-1 text-sm text-muted">
-                      {course.minimumCertificationLevel
-                        ? t("course.certificationOrHigher", {
-                            level: t(
-                              DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel],
-                            ),
-                          })
-                        : t("course.noCertification")}
-                    </p>
+                    {detailLine.length > 0 ? (
+                      <p className="mt-2 text-sm text-muted">{detailLine.join(" · ")}</p>
+                    ) : null}
                   </div>
                   {totalCents !== null ? (
-                    <p className="shrink-0 text-sm font-semibold tabular-nums">
+                    <p className="shrink-0 text-base font-semibold tabular-nums">
                       {formatMoneyCents(totalCents, currency, locale)}
                     </p>
                   ) : null}

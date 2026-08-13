@@ -135,7 +135,9 @@ const NOTICE_KEYS: Record<
   },
   "diver-unavailable": { form: "add-diver", tone: "danger", key: "trips.notices.diverUnavailable" },
   "waiver-complete": { form: "roster", tone: "success", key: "trips.notices.waiverComplete" },
-  "waiver-in-person": { form: "roster", tone: "success", key: "trips.notices.waiverInPerson" },
+  // No `waiver-in-person` entry: recording a paper signature no longer
+  // navigates, so there is no notice to carry. The card says it instead — the
+  // control becomes "Signed on paper · <date>" where the finger just was.
   "waiver-medical-attestation": {
     form: "roster",
     tone: "danger",

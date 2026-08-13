@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
-import { Notice } from "@/components/account/Notice";
+import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -51,7 +52,8 @@ export default async function VerifyAccountPage({
       return (
         <>
           <FlashParams params={["confirmed"]} />
-          <Notice
+          <EntryDone
+            glyph="🎉"
             title={t("account.verify.confirmedTitle")}
             text={t("account.verify.confirmedText")}
           />
@@ -68,25 +70,33 @@ export default async function VerifyAccountPage({
     // always a way back to sign in, the same recovery `/invite` and
     // `/reset-password` already offer their own dead links.
     return (
-      <Notice
+      <EntryDone
+        glyph="⏳"
         title={t("account.verify.unavailableTitle")}
         text={t("account.verify.unavailableText")}
-        backToSignIn={t("account.common.backToSignIn")}
+        action={
+          <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            {t("account.common.backToSignIn")}
+          </Link>
+        }
       />
     );
   }
 
+  // One question, one button — a panel around a single control is chrome
+  // (docs/design/principles.md #10), so the shell renders none.
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("account.verify.title")}</h1>
-        <p className="mt-3 text-muted">{t("account.verify.description")}</p>
-        <form action={confirmEmailVerification.bind(null, token)} className="mt-5">
-          <SubmitButton pendingLabel={t("account.verify.confirming")} className={buttonClass()}>
-            {t("account.verify.submit")}
-          </SubmitButton>
-        </form>
-      </section>
-    </main>
+    <EntryShell
+      wordmark
+      panel={false}
+      title={t("account.verify.title")}
+      description={t("account.verify.description")}
+    >
+      <form action={confirmEmailVerification.bind(null, token)}>
+        <SubmitButton pendingLabel={t("account.verify.confirming")} className={buttonClass()}>
+          {t("account.verify.submit")}
+        </SubmitButton>
+      </form>
+    </EntryShell>
   );
 }

@@ -130,6 +130,7 @@
   },
   "/shop/[shopSlug]": {
     "e2e": [
+      "blockers.spec.ts",
       "boat-loop.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
@@ -138,9 +139,17 @@
       "role-permissions.spec.ts",
       "search.spec.ts",
       "staff-invite.spec.ts",
+      "staff-nav.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["today", "today-empty", "today-first-bookable"]
+    "visual": [
+      "today",
+      "today-empty",
+      "today-first-bookable",
+      "blockers",
+      "nav-more-menu",
+      "nav-more-sheet"
+    ]
   },
   "/shop/[shopSlug]/bookings/new": {
     "e2e": ["add-diver.spec.ts"],
@@ -326,6 +335,7 @@
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "last-minute-fill.spec.ts",
+      "minimum-seats.spec.ts",
       "nitrox.spec.ts",
       "promo-codes.spec.ts",
       "recap.spec.ts",
@@ -337,6 +347,7 @@
     "visual": [
       "trip-manage",
       "trip-manage-course-requirements",
+      "trip-minimum-seats",
       "trip-repeating-cadence",
       "trip-repeating-panel"
     ]

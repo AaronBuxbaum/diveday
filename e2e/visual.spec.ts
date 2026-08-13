@@ -6,6 +6,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   daysFromNow,
+  openRosterNotes,
   openSettingsRow,
   openTripFromBoard,
   openTripTab,
@@ -387,6 +388,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+/** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
+const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
+
 /**
  * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
  * be refused for exactly one reason, which is what lets a refusal capture show
@@ -755,6 +759,32 @@ function publicReefCard(page: Page) {
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, REEF_TRIP);
+}
+
+/**
+ * Wait until this page is *controlled* by the offline service worker, before
+ * navigating into a shell surface that photographs it.
+ *
+ * `OfflineShellVersionBanner` renders "A newer version of DiveDay is ready"
+ * off a `controllerchange` event, which fires exactly once per context: when
+ * the worker `primeOfflineManifestShell()` just registered activates and
+ * claims its clients. Whether that lands before or after `capture()` is a
+ * straight race, and it decided a baseline — `offline-manifest-list-dark`
+ * carried the banner on `fc0950b` and not on the run after it, on a commit
+ * that touched neither the shell nor the worker.
+ *
+ * Waiting here rather than on the shell page is the whole point: once the
+ * controller is in place *before* the shell loads, the banner's listener
+ * mounts with nothing left to hear, so the surface is photographed in the
+ * steady state a crew member actually meets. Masking the banner would have
+ * hidden a real control instead.
+ *
+ * Only for captures that reach the shell through a primed manifest page. The
+ * empty/discarded states deliberately suppress priming, so no worker ever
+ * claims them and there is no race to cut.
+ */
+async function settleOfflineShellWorker(page: Page) {
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
 }
 
 /**
@@ -1478,9 +1508,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **Two captures in one test, deliberately.** `settings-trial` is
        * this shop's Settings page — the trial-status card only ever renders
        * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
-       * shop the other settings capture uses) can never show it. (A third
-       * capture, `nav-more-menu`, retired with the "More" menu itself when
-       * the header became six tabs.) Both
+       * shop the other settings capture uses) can never show it. Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. A second test would have to onboard a *second*
        * shop, because `/api/test/reset` reseeds the demo shop and purges
@@ -1525,11 +1553,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
         await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
         await capture(page, "today-empty", scheme);
-
-        // The "More" menu capture retired with the menu itself: the header is
-        // six tabs now (every former menu row is a tab, a palette row, or a
-        // contextual door), so there is no panel left to photograph — the
-        // header's own pixels are in every staff capture already.
 
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
@@ -1640,6 +1663,37 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
           .waitFor();
         await capture(page, "today", scheme);
+      });
+
+      // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
+      // the header's More menu holding the "Run the shop" / "Set up" groups.
+      // The menu only exists from `lg` up, so this capture's 390 image is
+      // deliberately the plain page — the phone door is the dock sheet below.
+      test(`the header's More menu renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis");
+        await page
+          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+          .waitFor();
+        await page.locator("header summary").filter({ hasText: "More" }).click();
+        await page
+          .locator("header details[open]")
+          .getByRole("link", { name: "Close-out" })
+          .waitFor();
+        await capture(page, "nav-more-menu", scheme);
+      });
+
+      // The same groups behind the phone dock's sixth slot, as the bottom
+      // sheet rising from the dock. Opened at the phone viewport because the
+      // dock only exists below `lg` — the 1280 image is the plain page.
+      test(`the dock's More sheet renders true to the design (${scheme})`, async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/shop/blue-mantis");
+        await page
+          .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
+          .waitFor();
+        await page.locator("[data-dock-more]").click();
+        await page.getByRole("list", { name: "Run the shop" }).waitFor();
+        await capture(page, "nav-more-sheet", scheme);
       });
 
       // The blocker queue — until recently the one staff surface with no
@@ -1934,6 +1988,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-manage", scheme);
       });
 
+      /**
+       * The other Overview: a departure that only runs with enough people and
+       * has not got them yet (ADR 20260813-minimum-head-count-departures). The
+       * reef trip above names no minimum, so its baseline can never show this
+       * band — and the band is the one surface in the feature a shop reads
+       * every day, in the window where ringing round the regulars still saves
+       * the departure. The fixture is seeded four days out with a 48-hour
+       * window (src/db/seed-minimum-seats.ts), so against the fleet's frozen
+       * clock it photographs the *short* state, not the red about-to-cancel
+       * one — deliberately, since short is the state staff can act on.
+       */
+      test(`a short departure shows its minimum head count (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, MINIMUM_SEATS_TRIP);
+        await page.getByRole("heading", { name: /divers short of the/ }).waitFor();
+        await capture(page, "trip-minimum-seats", scheme);
+      });
+
       test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
@@ -1992,6 +2064,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await settleOfflineShellWorker(page);
         await page.goto("/offline-manifest");
         await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
         await capture(page, "offline-manifest-list", scheme);
@@ -2013,6 +2086,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await settleOfflineShellWorker(page);
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
         // The roster is what proves the record was read back and decrypted —
@@ -2328,8 +2402,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The courses catalog: the agency tab strip that replaced the per-row
       // PADI/SSI pill, the list in progression order rather than alphabetical,
-      // and the three row controls — schedule a session, the eye visibility
-      // toggle, the link out to the public page.
+      // and the dissolved row — the row's own tap opens the course's editor,
+      // with only the two worded list-level acts (Schedule, Hide/Show) on the
+      // rail and the public-catalog door up in the header.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
@@ -2653,22 +2728,19 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
         const row = page.locator("#roster li").filter({ visible: true }).first();
-        // A row with no notes labels the disclosure "Add a private note"; once
-        // one exists it reads "Private staff notes (N)" — match either state.
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
-        await row
-          .getByLabel("Add a note only staff can see")
-          .fill("Visual regression seed note for the undo toast.");
+        const noteBody = "Visual regression seed note for the undo toast.";
+        await openRosterNotes(row);
+        await row.getByLabel("Add a note only staff can see").fill(noteBody);
         await row.getByRole("button", { name: "Add private note" }).click();
-        await page.getByText("Private staff note added.").waitFor();
+        // Adding a note no longer navigates, so there is no longer a toast
+        // saying it worked — the note appearing in the list above the box *is*
+        // the confirmation, which is the point of the change. Wait for that.
+        await row.getByText(noteBody).waitFor();
 
-        await row
-          .getByText(/Private staff notes|Add a private note/)
-          .filter({ visible: true })
-          .click();
+        // And because nothing navigated, the disclosure is still open — hence
+        // the helper, which would otherwise close it and hide the Delete
+        // button it is about to press.
+        await openRosterNotes(row);
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);

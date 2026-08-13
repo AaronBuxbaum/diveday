@@ -11,6 +11,7 @@ import {
   staffInviteEmail,
   tripBlowoutEmail,
   tripConditionsHoldEmail,
+  tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
   usageCeilingAlertEmail,
@@ -53,6 +54,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_recap") return tripRecapEmail(notification);
   if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);
+  if (notification.kind === "trip_minimum_not_met") return tripMinimumNotMetEmail(notification);
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);

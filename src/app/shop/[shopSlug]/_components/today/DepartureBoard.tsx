@@ -32,7 +32,6 @@ export type DepartureBoardCopy = {
   everyoneAboard: string;
   clearToBoard: string;
   sailingToday: string;
-  sailingTodaySubtitle: string;
 };
 
 function DepartureCard({
@@ -314,13 +313,18 @@ export function DepartureBoard({
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);
   return (
-    <section aria-labelledby="departures-heading" className="mb-10">
+    <section aria-labelledby="departures-heading" className="mb-8">
+      {/* The heading and nothing else — the cards are their own explanation,
+          and the how-to sentence that used to sit here rendered every single
+          day for staff who boarded a boat yesterday. */}
       <h2 id="departures-heading" className="text-lg font-semibold">
         {copy.sailingToday}
       </h2>
-      <p className="mt-1 text-sm text-muted">{copy.sailingTodaySubtitle}</p>
 
-      <ul className="mt-4 flex flex-col gap-3">
+      {/* Two abreast on a wide screen once more than one boat sails, so a
+          two-boat day answers "can they sail?" in the height of one card.
+          A single boat keeps the full line — the board is shaped by the day. */}
+      <ul className={`mt-4 grid gap-3 ${departures.length > 1 ? "lg:grid-cols-2" : ""}`}>
         {departures.map((departure) => (
           <DepartureCard
             key={departure.tripId}

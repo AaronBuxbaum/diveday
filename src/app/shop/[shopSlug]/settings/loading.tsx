@@ -4,7 +4,9 @@
  */
 export default function SettingsLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    // max-w-3xl to match SettingsPage — a wider skeleton made every navigation
+    // into Settings jump sideways when the real page landed.
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <div className="h-4 w-20 rounded bg-surface-sunken" />
         <div className="mt-3 h-9 w-48 rounded bg-surface-sunken" />

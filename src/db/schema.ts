@@ -987,6 +987,21 @@ export const trips = pgTable(
      * money movement in this slice. Null means the shop states no window (H-07).
      */
     cancellationWindowHours: integer("cancellation_window_hours"),
+    /**
+     * The head count this departure needs to run, and how many hours before it
+     * leaves the shop makes that call. Both null — every trip that exists
+     * today — means the boat goes with whoever booked, and nothing changes.
+     *
+     * Set, they are a **published promise**: the booking page states the
+     * minimum and the exact moment the answer arrives, and a weekly sweep
+     * cancels the departure at that moment if it is still short
+     * (src/lib/minimum-seats.ts, src/db/trips-minimum.ts). A null
+     * `minimum_decision_hours` beside a set minimum reads as the default
+     * window rather than as "no deadline", so a shop can name a minimum
+     * without having to have an opinion about the window.
+     */
+    minimumBookings: integer("minimum_bookings"),
+    minimumDecisionHours: integer("minimum_decision_hours"),
     status: tripStatus("status").notNull().default("scheduled"),
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
@@ -1036,6 +1051,22 @@ export const trips = pgTable(
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
     check("trips_planned_dives_range", sql`${table.plannedDives} between 1 and 4`),
+    // Deliberately **not** `minimum_bookings <= capacity`. A shop that later
+    // drops the boat from a nine-seater to a four-seat RIB would then be
+    // refused the capacity edit by a constraint about something else, and the
+    // honest reading of a minimum above capacity is "every seat" rather than
+    // "this can never run" — `effectiveMinimum` clamps it on read
+    // (src/lib/minimum-seats.ts). The bounds here are only the ones that make
+    // a stored value meaningless: a minimum of zero is no minimum, and a
+    // decision window of zero hours is the departure itself.
+    check(
+      "trips_minimum_bookings_range",
+      sql`${table.minimumBookings} is null or ${table.minimumBookings} between 1 and 60`,
+    ),
+    check(
+      "trips_minimum_decision_hours_range",
+      sql`${table.minimumDecisionHours} is null or ${table.minimumDecisionHours} between 1 and 336`,
+    ),
     check("trips_price_nonnegative", sql`${table.priceCents} is null or ${table.priceCents} >= 0`),
     check(
       "trips_deposit_nonnegative",
@@ -1695,6 +1726,11 @@ export const notificationKind = pgEnum("notification_kind", [
   // The weather blow-out cascade message: the cancellation, the diver's money
   // story, and the alternatives they qualify for (ADR 20260804-blowout-cascade).
   "trip_blowout",
+  // "This one did not fill." Sent per booking when the minimum-head-count
+  // sweep cancels a departure whose deadline passed while it was still short
+  // (src/lib/minimum-seats.ts). Tracked per booking like every other trip
+  // message, so a shop can see who was told.
+  "trip_minimum_not_met",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
