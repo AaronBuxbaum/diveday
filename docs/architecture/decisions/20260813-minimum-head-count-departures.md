@@ -1,6 +1,7 @@
 # 20260813-minimum-head-count-departures — A departure can require a head count, and cancels itself if it does not get one
 
 - **Status:** Accepted
+- **Amended by:** [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md) — the sweep refunds now, and its mail says so.
 - **Date:** 2026-08-13
 
 ## Context
@@ -80,6 +81,8 @@ deciding on the morning of; this is a deadline the diver was told about before t
 message has to say so. "We needed 4 and had 2 by the moment we said we'd decide" reads as a promise
 kept. The blow-out's wording would read as a shop that simply changed its mind.
 
+*(Superseded 2026-08-13: the sweep refunds every active seat and the message states the outcome —
+see [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md).)*
 The message deliberately says nothing about money. Refunds stay staff-initiated on the per-booking
 path (H-07), and a template that promised a refund would be writing a policy this app does not
 enforce.
@@ -119,10 +122,11 @@ email them, and to be reinstatable. Flipping the trip's status alone is what mak
 - The sweep is the **only** thing that cancels for a minimum. Staff keep their ordinary cancel
   button, and nothing else in the app reads these columns as a gate — a diver can still book a
   departure that is short, which is the whole point of it being short.
-- Deferred, and genuinely open: **automatic refunds.** The cancellation is automatic; the money is
-  not. H-07 keeps refunds a staff act, so a swept departure leaves paid seats for a human to settle
-  exactly as an ordinary cancellation does. Making that automatic is a money-movement decision, not
-  an engineering one.
+- ~~Deferred, and genuinely open: **automatic refunds.**~~ **Decided 2026-08-13** — the sweep
+  refunds every active seat on a departure it cancels, and the mail says what happened. The
+  reasoning below stands as the reason it was a decision for the owner rather than a default:
+  making it automatic was a money-movement decision, not an engineering one. See
+  [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md).
 - Also deferred: **the wait list is not consulted.** A short departure with three people on another
   trip's wait list is not offered them. That is a good idea and a different feature (the last-minute
   deal blast is the existing tool), and wiring it into the sweep would make an automatic

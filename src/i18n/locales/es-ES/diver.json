@@ -2817,6 +2817,8 @@
     "tripMinimumNotMet": {
       "subject": "Salida cancelada — {tripTitle}",
       "body": "{shopName} realiza {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijeron que lo decidirían, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
+      "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
@@ -2825,6 +2827,8 @@
       "moneyNone": "No se te ha cobrado nada por esta salida.",
       "moneyDeposit": "Tu depósito está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
       "moneyPaid": "Tu pago está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
       "alternativesIntro": "¿Quieres volver al agua? Estas salidas próximas ya cumplen con tus certificaciones:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "Ninguna de las próximas salidas coincide con tus certificaciones por ahora, pero se añaden salidas nuevas constantemente.",

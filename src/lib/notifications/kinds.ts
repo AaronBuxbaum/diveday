@@ -256,6 +256,12 @@ const tripMinimumNotMetSchema = z.object({
   /** What the departure needed, and what it had when the call was made. */
   minimumBookings: z.number().int().min(1).max(60),
   bookedCount: z.number().int().min(0).max(60),
+  /**
+   * What happened to this seat's money, same codes as `trip_blowout`. Optional
+   * only so a message queued before ADR 20260813-shop-cancellation-refunds-itself
+   * still parses on retry; the sweep always states it.
+   */
+  paymentStory: z.enum(["none", "refunded", "refund_owed"]).optional(),
   /** Back to the shop's own schedule, to find another day. */
   scheduleUrl: z.url().max(2_000),
 });
@@ -280,12 +286,19 @@ const tripBlowoutSchema = z.object({
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /**
-   * The diver's money position, as data: `paid` / `deposit` when that much has
-   * been captured, `none` when nothing is owed on this seat (unpaid, waived,
-   * or already refunded). Never an amount and never a promise — the existing
-   * refund machinery stays the only thing that moves money.
+   * The diver's money position, as data. Never an amount.
+   *
+   * `refunded` — the capture has been reversed to their card, which is what a
+   * shop-called cancellation now does by itself
+   * (ADR 20260813-shop-cancellation-refunds-itself). `refund_owed` — money was
+   * captured and could not be reversed from here (counter payment,
+   * disconnected account, Stripe refusal), so the shop owes it by hand.
+   * `none` — nothing is owed on this seat.
+   *
+   * `paid`/`deposit` are the pre-refund codes and stay parseable: a message
+   * queued for retry before that change still carries one.
    */
-  paymentStory: z.enum(["none", "deposit", "paid"]),
+  paymentStory: z.enum(["none", "deposit", "paid", "refunded", "refund_owed"]),
   /** Soonest-first, already admission-filtered for this diver (src/lib/blowout.ts). */
   alternatives: z
     .array(

@@ -11,12 +11,14 @@ import {
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { refundBookingOnShopCancellation, shopCancellationPaymentStory } from "./refunds";
 import type { BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
   bookings,
@@ -48,13 +50,16 @@ import { setTripStatus } from "./trips-record";
  * rows and no others, and the notification's idempotency key (the diver row's
  * own id) means even a racing double-tap converges on one send per diver.
  *
- * **No money moves here.** The existing refund machinery
- * (`refundBookingOnCancellation`) is built for a *diver-initiated* cancel —
- * its window/forfeit arithmetic would forfeit a paid seat the *shop* just
- * cancelled, which is the wrong answer on a weather call. The cascade reports
- * each diver's payment position to staff and tells the diver their money is
- * safe; refunds continue through the per-booking staff path that already
- * respects the refund role gate (H-14).
+ * **Money moves here, in phase two.** Each claimed row is refunded before its
+ * message is composed, through `refundBookingOnShopCancellation` — the same
+ * Stripe path as a diver-initiated cancel with the window/forfeit arithmetic
+ * removed, because a window is a rule about a diver changing their mind and the
+ * shop just cancelled the trip (ADR 20260813-shop-cancellation-refunds-itself).
+ * The message then says what actually happened rather than that the money is
+ * safe. A counter payment or a disconnected account still lands on the staff
+ * path behind the H-14 refund role, and the diver is told that in as many
+ * words. Refunding inside the claim keeps it once-per-diver, and a booking that
+ * already reads `refunded` is a no-op, so a resume never reverses twice.
  */
 
 export type CallBlowoutOutcome =
@@ -80,6 +85,8 @@ export type CallBlowoutInput = {
   now?: Date;
   /** Injectable for tests; defaults to the environment-configured provider. */
   provider?: NotificationProvider;
+  /** Injectable for tests; defaults to the environment-configured Stripe seam. */
+  checkout?: CheckoutProvider;
 };
 
 export async function callTripBlowout(
@@ -170,6 +177,7 @@ export async function callTripBlowout(
     trip: setup.trip,
     now,
     provider: input.provider,
+    checkout: input.checkout,
   });
 
   const [{ total }] = await db
@@ -185,15 +193,6 @@ export async function callTripBlowout(
   await publishManifestEvent(db, input.shopId, input.tripId);
 
   return { ok: true, blowoutId: setup.blowoutId, resumed: setup.resumed, total, ...summary };
-}
-
-/** The message-facing money story for a payment status: codes, never amounts. */
-function paymentStoryFor(status: PaymentStatus | undefined): "none" | "deposit" | "paid" {
-  if (status === "paid") return "paid";
-  if (status === "deposit_paid") return "deposit";
-  // unpaid, waived, refunded, or no payment row at all: nothing for the diver
-  // to worry about, nothing for this message to promise.
-  return "none";
 }
 
 /** One diver's cert evidence at this shop — the same rows the booking gate reads. */
@@ -296,6 +295,7 @@ async function sendPendingBlowoutMessages(
     trip: typeof trips.$inferSelect;
     now: Date;
     provider?: NotificationProvider;
+    checkout?: CheckoutProvider;
   },
 ): Promise<SendSummary> {
   const summary: SendSummary = { sent: 0, queued: 0, failed: 0, noEmail: 0 };
@@ -341,12 +341,6 @@ async function sendPendingBlowoutMessages(
         )
     ).map((row) => [row.id, row]),
   );
-  const payments = await paymentsByBooking(
-    db,
-    input.shopId,
-    pending.map((row) => row.diver.bookingId),
-  );
-
   for (const row of pending) {
     // Claim the row before doing anything with it: pending → sending,
     // conditionally. A concurrent second call ("did you call it?" — "I'll
@@ -362,6 +356,15 @@ async function sendPendingBlowoutMessages(
       .returning({ id: tripBlowoutDivers.id });
     if (!claimed) continue;
     try {
+      // Money first, then the message that describes it. Inside the claim, so
+      // one diver is refunded once; a booking already `refunded` reads back as
+      // `unpaid` and no second reversal is attempted, which is what makes a
+      // resume safe (ADR 20260813-shop-cancellation-refunds-itself).
+      const refund = await refundBookingOnShopCancellation(
+        db,
+        { shopId: input.shopId, bookingId: row.diver.bookingId },
+        input.checkout,
+      );
       // The diver's other active seats — never offer a boat they're already on.
       const activeSeats = await db
         .select({ tripId: bookings.tripId })
@@ -408,7 +411,7 @@ async function sendPendingBlowoutMessages(
         tripTitle: input.trip.title,
         startsAt: input.trip.startsAt,
         timezone: shop.timezone,
-        paymentStory: paymentStoryFor(payments.get(row.diver.bookingId)?.status),
+        paymentStory: shopCancellationPaymentStory(refund),
         alternatives: offeredTripIds.flatMap((tripId) => {
           const candidate = candidateTitles.get(tripId);
           return candidate

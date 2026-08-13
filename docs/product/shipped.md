@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop-cancelled departure returns the money by itself (delivered 2026-08-13)
+
+DiveDay automated the refund for the cancellation the *diver* causes and automated nothing for the
+two it causes itself. Both now refund. A weather blow-out reverses each seat's capture inside the
+cascade row it already claims, before composing that diver's message; the hourly minimum-head-count
+sweep refunds every active seat on each departure it cancels — including the walk-ins it has no
+address for, because money comes back whether or not anyone can be told. The stated cancellation
+window is *bypassed* rather than reused: it answers "may this diver cancel free?", and a diver who
+did nothing should not be measured against it. Degradation is unchanged — a counter payment, a
+disconnected account, or a Stripe refusal still leaves the refund to staff — and the diver is now
+told which of the two happened rather than that their money is "safe". The ledger records
+`shop_cancellation_refund` so the two kinds of cancellation stay distinguishable.
+[20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md),
+amending [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md) and
+[20260813-minimum-head-count-departures](../architecture/decisions/20260813-minimum-head-count-departures.md).
+
 ## A reader picks their own language (delivered 2026-08-12)
 
 **The switcher DiveDay deliberately did not have.** Language was negotiated from `Accept-Language`

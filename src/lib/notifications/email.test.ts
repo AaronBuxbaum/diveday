@@ -9,6 +9,7 @@ import {
   passwordResetEmail,
   tripBlowoutEmail,
   tripConditionsHoldEmail,
+  tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
   usageCeilingAlertEmail,
@@ -73,6 +74,38 @@ describe("tripConditionsHoldEmail", () => {
   });
 });
 
+describe("tripMinimumNotMetEmail", () => {
+  const swept = {
+    ...base,
+    minimumBookings: 4,
+    bookedCount: 2,
+    scheduleUrl: "https://diveday.example/s/blue-mantis",
+  };
+
+  it("says the numbers, and says the money came back", () => {
+    const email = tripMinimumNotMetEmail({ ...swept, paymentStory: "refunded" });
+    expect(email.text).toContain("at least 4 divers");
+    expect(email.text).toContain("refunded in full");
+  });
+
+  it("says a refund is owed when the card could not be reversed", () => {
+    const email = tripMinimumNotMetEmail({ ...swept, paymentStory: "refund_owed" });
+    expect(email.text).toContain("owed a full refund");
+  });
+
+  it("says nothing about money to a diver who never paid", () => {
+    const email = tripMinimumNotMetEmail({ ...swept, paymentStory: "none" });
+    expect(email.text).not.toContain("refund");
+    expect(email.html).not.toContain("refund");
+  });
+
+  it("stays sendable for a message queued before refunds existed", () => {
+    const email = tripMinimumNotMetEmail(swept);
+    expect(email.text).toContain("at least 4 divers");
+    expect(email.text).not.toContain("refund");
+  });
+});
+
 describe("tripBlowoutEmail", () => {
   it("carries the cancellation, the money story, and each alternative as a link", () => {
     const email = tripBlowoutEmail({
@@ -93,6 +126,28 @@ describe("tripBlowoutEmail", () => {
     expect(email.text).toContain("Night Dive — City of Washington");
     expect(email.text).toContain("https://diveday.example/s/blue-mantis/trips/trip-2");
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-2"');
+  });
+
+  it("tells a refunded diver the money is already on its way back", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      paymentStory: "refunded",
+      alternatives: [],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.text).toContain("refunded in full");
+    expect(email.text).not.toContain("will be in touch");
+  });
+
+  it("tells a diver whose card could not be reversed that a refund is owed", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      paymentStory: "refund_owed",
+      alternatives: [],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.text).toContain("owed a full refund");
+    expect(email.text).toContain("Blue Mantis");
   });
 
   it("degrades gracefully to the schedule when no alternative qualifies", () => {

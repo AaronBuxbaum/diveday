@@ -1782,6 +1782,15 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
   "order_refunded",
   /** The automated cancellation-window refund reversed a Stripe capture. */
   "cancellation_refund",
+  /**
+   * The *shop* cancelled the departure — a weather blow-out or the
+   * minimum-head-count sweep — and the capture was reversed unconditionally.
+   * Deliberately distinct from `cancellation_refund`: that one is a diver
+   * changing their mind inside a stated window, this one is the shop taking the
+   * trip away, and only the first has a window that could have refused it
+   * (ADR 20260813-shop-cancellation-refunds-itself).
+   */
+  "shop_cancellation_refund",
 ]);
 
 /**

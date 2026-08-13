@@ -2817,6 +2817,8 @@
     "tripMinimumNotMet": {
       "subject": "Trip cancelled — {tripTitle}",
       "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they'd decide — so it's off. Your seat is released, and there's nothing you need to do.",
+      "moneyRefunded": "You’ve been refunded in full — the money is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
@@ -2825,6 +2827,8 @@
       "moneyNone": "You haven't been charged anything for this trip.",
       "moneyDeposit": "Your deposit is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
       "moneyPaid": "Your payment is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
+      "moneyRefunded": "You’ve been refunded in full — the money is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "alternativesIntro": "Want to get back in the water? Here are upcoming trips you already qualify for:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "None of the upcoming departures match your certifications right now, but new trips are added all the time.",

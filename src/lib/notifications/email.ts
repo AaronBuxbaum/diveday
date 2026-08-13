@@ -204,6 +204,8 @@ export type TripMinimumNotMetEmailInput = {
   timezone: string;
   minimumBookings: number;
   bookedCount: number;
+  /** What happened to this seat's money; absent only on a pre-refund retry. */
+  paymentStory?: "none" | "refunded" | "refund_owed";
   scheduleUrl: string;
 };
 
@@ -215,9 +217,12 @@ export type TripMinimumNotMetEmailInput = {
  * changed its mind; "we run this one with at least 4 divers and had 2 by the
  * moment we said we'd decide" reads as the promise the booking page made,
  * kept — and it is the difference between a diver who books the next one and a
- * diver who books somewhere else. It does not mention money: refunds stay
- * staff-initiated on the per-booking path (H-07), and a template that promised
- * one would be writing a policy this app does not enforce.
+ * diver who books somewhere else.
+ *
+ * It also says what happened to the money, because now something has: a machine
+ * cancelling a paid seat at 4 AM refunds it in the same pass
+ * (ADR 20260813-shop-cancellation-refunds-itself). A diver holding a captured
+ * charge for a departure the shop called off must not have to ask.
  */
 export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
@@ -238,10 +243,19 @@ export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): Noti
     date: escapeHtml(date),
   });
   const findAnother = t("notifications.tripMinimumNotMet.findAnother");
+  // Nothing captured means nothing to say: a diver who never paid does not need
+  // a paragraph about money (design/principles.md #9 — never render "None" as a
+  // status). A pre-refund retry carries no code and reads the same way.
+  const money =
+    input.paymentStory === "refunded"
+      ? t("notifications.tripMinimumNotMet.moneyRefunded")
+      : input.paymentStory === "refund_owed"
+        ? t("notifications.tripMinimumNotMet.moneyRefundOwed", { shopName: input.shopName })
+        : null;
   return {
     subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${escapeHtml(input.scheduleUrl)}">${findAnother}</a></p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}<p><a href="${escapeHtml(input.scheduleUrl)}">${findAnother}</a></p>`,
   };
 }
 
@@ -253,11 +267,38 @@ export type TripBlowoutEmailInput = {
   startsAt: Date;
   timezone: string;
   /** Codes, not amounts — see the kind's schema (docs ADR 20260804-blowout-cascade). */
-  paymentStory: "none" | "deposit" | "paid";
+  paymentStory: "none" | "deposit" | "paid" | "refunded" | "refund_owed";
   /** Soonest-first, admission-filtered for this diver; empty is a real answer. */
   alternatives: { title: string; startsAt: Date; bookingUrl: string }[];
   scheduleUrl: string;
 };
+
+/**
+ * Which sentence a money code gets. `paid`/`deposit` are the pre-refund codes —
+ * only a message queued before ADR 20260813-shop-cancellation-refunds-itself
+ * still carries one, and it keeps the wording it was written with.
+ */
+function blowoutMoneyKey(
+  story: TripBlowoutEmailInput["paymentStory"],
+):
+  | "notifications.tripBlowout.moneyNone"
+  | "notifications.tripBlowout.moneyPaid"
+  | "notifications.tripBlowout.moneyDeposit"
+  | "notifications.tripBlowout.moneyRefunded"
+  | "notifications.tripBlowout.moneyRefundOwed" {
+  switch (story) {
+    case "refunded":
+      return "notifications.tripBlowout.moneyRefunded";
+    case "refund_owed":
+      return "notifications.tripBlowout.moneyRefundOwed";
+    case "paid":
+      return "notifications.tripBlowout.moneyPaid";
+    case "deposit":
+      return "notifications.tripBlowout.moneyDeposit";
+    default:
+      return "notifications.tripBlowout.moneyNone";
+  }
+}
 
 /**
  * The blow-out cascade message: the cancellation in one sentence, the diver's
@@ -280,15 +321,7 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
     tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
     date: escapeHtml(date),
   });
-  const money =
-    input.paymentStory === "none"
-      ? t("notifications.tripBlowout.moneyNone")
-      : t(
-          input.paymentStory === "paid"
-            ? "notifications.tripBlowout.moneyPaid"
-            : "notifications.tripBlowout.moneyDeposit",
-          { shopName: input.shopName },
-        );
+  const money = t(blowoutMoneyKey(input.paymentStory), { shopName: input.shopName });
   const seeSchedule = t("notifications.tripBlowout.seeSchedule");
 
   if (input.alternatives.length === 0) {

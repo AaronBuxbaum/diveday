@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { recordNotificationDelivery } from "@/db/notifications";
+import { refundBookingsForShopCancelledTrip, shopCancellationPaymentStory } from "@/db/refunds";
 import { cancelDeparturesBelowMinimum, listMinimumNotMetRecipients } from "@/db/trips";
 import { log } from "@/lib/log";
 import { notify, publicAppUrl } from "@/lib/notifications";
@@ -73,8 +74,24 @@ export async function GET(request: Request) {
     const origin = publicAppUrl();
     let notified = 0;
     let unreachable = 0;
+    let refunded = 0;
+    /** Captured money this pass could not reverse — a staff queue, never silence. */
+    let refundsOwed = 0;
 
     for (const departure of sweep.cancelled) {
+      // The money half of the same promise. A diver who paid a full fare for a
+      // departure a machine cancelled at 4 AM must not be holding a captured
+      // charge when they read the mail — and the refund runs over every active
+      // seat, not just the reachable ones, so a walk-in with no address gets
+      // their money back too (ADR 20260813-shop-cancellation-refunds-itself).
+      const refunds = await refundBookingsForShopCancelledTrip(db, {
+        shopId: departure.shopId,
+        tripId: departure.tripId,
+      });
+      for (const outcome of refunds.values()) {
+        if (outcome.status === "refunded") refunded += 1;
+        else if (outcome.status !== "unpaid") refundsOwed += 1;
+      }
       const recipients = await listMinimumNotMetRecipients(db, departure.shopId, departure.tripId);
       for (const recipient of recipients) {
         // No email on file is not a failure to retry — it is a walk-in the
@@ -105,6 +122,9 @@ export async function GET(request: Request) {
           timezone: departure.shopTimezone,
           minimumBookings: departure.minimum,
           bookedCount: departure.booked,
+          paymentStory: shopCancellationPaymentStory(
+            refunds.get(recipient.bookingId) ?? { status: "unpaid" },
+          ),
           scheduleUrl: new URL(publicSchedulePath(departure.shopSlug), `${origin}/`).toString(),
         });
         await recordNotificationDelivery(db, {
@@ -125,6 +145,8 @@ export async function GET(request: Request) {
       deferred: sweep.deferred,
       notified,
       unreachable,
+      refunded,
+      refundsOwed,
     });
 
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
@@ -134,6 +156,8 @@ export async function GET(request: Request) {
       deferred: sweep.deferred,
       notified,
       unreachable,
+      refunded,
+      refundsOwed,
     });
   } catch (error) {
     Sentry.captureException(error, { tags: { cron_scan: "minimum_seats" } });

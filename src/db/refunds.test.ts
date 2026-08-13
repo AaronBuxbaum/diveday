@@ -6,13 +6,17 @@ import { fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
-import { getBookingPayment, setBookingPayment } from "./payments";
-import { refundBookingOnCancellation } from "./refunds";
+import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
+import {
+  refundBookingOnCancellation,
+  refundBookingOnShopCancellation,
+  refundBookingsForShopCancelledTrip,
+} from "./refunds";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 const REEF_PRICE_CENTS = 18_000;
 
@@ -591,5 +595,140 @@ describe("refundBookingOnCancellation", () => {
       fakeCheckout({ status: "refunded" }),
     );
     expect(outcome).toEqual({ status: "failed" });
+  });
+});
+
+/**
+ * The shop-cancelled arm (ADR 20260813-shop-cancellation-refunds-itself). The
+ * tests that matter are the ones whose answer differs from the sibling above:
+ * past the deadline and with no stated window at all, this arm still refunds,
+ * because neither concept is about a trip the shop took away.
+ */
+describe("refundBookingOnShopCancellation", () => {
+  it("refunds past the deadline, where a diver-initiated cancel would forfeit", async () => {
+    const { db, shop, bookingId, capturedCents, pastDeadline } = await paidBookingContext(48);
+    // Same booking, same instant, both arms — the contrast *is* the decision.
+    const forfeited = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: pastDeadline },
+      fakeCheckout({ status: "refunded" }, [], capturedCents),
+    );
+    expect(forfeited).toEqual({ status: "forfeit" });
+
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_shop" }, [], capturedCents),
+    );
+    expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    const payment = await getBookingPayment(db, shop.id, bookingId);
+    expect(payment?.status).toBe("refunded");
+    expect(payment?.amountCents).toBe(REEF_PRICE_CENTS);
+    expect(payment?.providerRef).toBe("re_shop");
+  });
+
+  it("refunds a trip that states no cancellation window at all", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(null);
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_nopolicy" }, [], capturedCents),
+    );
+    expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
+  });
+
+  it("records the shop's own operation code on the trail, not the diver-cancel one", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(48);
+    await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_trail" }, [], capturedCents),
+    );
+    // Newest first.
+    const trail = await listBookingPaymentEvents(db, shop.id, bookingId);
+    expect(trail[0]?.operation).toBe("shop_cancellation_refund");
+    expect(trail.some((event) => event.operation === "cancellation_refund")).toBe(false);
+  });
+
+  it("hands a counter (non-Stripe) payment to staff and leaves the money where it is", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: REEF_PRICE_CENTS,
+      note: "cash at counter",
+    });
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded" }),
+    );
+    expect(outcome).toEqual({ status: "manual", reason: "not_stripe" });
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("leaves the payment paid when Stripe refuses, so staff see it as owed", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "failed" }),
+    );
+    expect(outcome).toEqual({ status: "failed" });
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("moves no money the second time — what makes a resumed cascade safe", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(48);
+    const calls: RefundCall[] = [];
+    const checkout = fakeCheckout(
+      { status: "refunded", refundId: "re_once" },
+      calls,
+      capturedCents,
+    );
+    await refundBookingOnShopCancellation(db, { shopId: shop.id, bookingId }, checkout);
+    const again = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      checkout,
+    );
+    expect(again).toEqual({ status: "unpaid" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("is tenant-scoped: another shop cannot refund this booking", async () => {
+    const { db, bookingId } = await paidBookingContext(48);
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: crypto.randomUUID(), bookingId },
+      fakeCheckout({ status: "refunded" }),
+    );
+    expect(outcome).toEqual({ status: "failed" });
+  });
+});
+
+describe("refundBookingsForShopCancelledTrip", () => {
+  it("refunds every active seat on the departure, not just the reachable ones", async () => {
+    const { db, shop, reef, bookingIds, capturedCents } = await paidBookingContext(48);
+    // The demo trip is already carrying seeded seats beside this party's two;
+    // every one of them is a diver the shop just cancelled on, so the count to
+    // match is the roster's, not the party's.
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const outcomes = await refundBookingsForShopCancelledTrip(
+      db,
+      { shopId: shop.id, tripId: reef.id },
+      fakeCheckout({ status: "refunded", refundId: "re_all" }, [], capturedCents),
+    );
+    expect(outcomes.size).toBe(roster.length);
+    for (const bookingId of bookingIds) {
+      expect(outcomes.get(bookingId)).toEqual({
+        status: "refunded",
+        amountCents: REEF_PRICE_CENTS,
+      });
+      expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
+    }
   });
 });

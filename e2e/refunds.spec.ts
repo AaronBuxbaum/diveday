@@ -10,12 +10,19 @@ import {
 } from "./helpers";
 
 /**
- * Refunds are staff-run (docs H-07): cancelling a paid booking never moves
- * money by itself unless the trip states a cancellation window and the
- * payment was captured through Stripe. These specs exercise the two
- * non-Stripe outcomes a shop hits constantly — a counter/cash payment marked
- * paid by hand, and a cancellation past the stated deadline — without
- * depending on a live Stripe connection.
+ * A **diver-initiated** cancel refunds itself only inside a stated window and
+ * only for a Stripe capture (docs H-07); everything else is staff-run. These
+ * specs exercise the two non-Stripe outcomes a shop hits constantly — a
+ * counter/cash payment marked paid by hand, and a cancellation past the stated
+ * deadline — without depending on a live Stripe connection.
+ *
+ * A **shop-initiated** cancel is the other rule and is not exercised here: a
+ * weather blow-out or the minimum-head-count sweep refunds unconditionally,
+ * window or no window (ADR 20260813-shop-cancellation-refunds-itself). That
+ * arm needs a connected account to show anything, so it is covered in
+ * src/db/refunds.test.ts, where the Stripe seam is injectable — including the
+ * case this file's second test asserts the opposite of: past the deadline, the
+ * shop-cancelled arm still refunds.
  */
 test.describe("refunds", () => {
   signedInAsOwner();
