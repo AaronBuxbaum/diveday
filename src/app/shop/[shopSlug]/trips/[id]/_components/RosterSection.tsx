@@ -28,6 +28,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -379,17 +380,14 @@ export function RosterSection({
             // training, which an instructor may well have already planned around
             // (H-08). It sits apart from the blocker list for that reason.
             const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
-            // A settled diver — ready, waiver signed, contact on file, nothing
-            // advisory — has no work left on this tab, so the card collapses to
-            // its header line and the detail waits behind a disclosure: detail
-            // at the moment it's needed, not on every row (design principle 9).
-            // Any open question keeps the whole card expanded.
-            const settled =
-              readiness?.status === "ready" &&
-              waiverStatus === "complete" &&
-              !identityUnconfirmed &&
-              hasEmergencyContact &&
-              depth?.status !== "exceeds";
+            const notes = notesByBooking.get(booking.id) ?? [];
+            // Payment due is a readiness blocker (`BLOCKER_CATEGORY`), so the
+            // control that clears it is outstanding work and stays in the
+            // open; a settled seat's payment line is reference and goes behind
+            // the disclosure with everything else that is merely true.
+            const paymentBlocking = Boolean(
+              readiness?.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "payment"),
+            );
             const headerLeft = (
               <div className="flex min-w-0 items-start gap-3">
                 {/* Joins the bulk selection above via shared client state
@@ -482,17 +480,91 @@ export function RosterSection({
                 ) : null}
               </>
             );
-            const detail = (
-              <>
-                {booking.groupPreference ? (
-                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-                    <span className="font-semibold text-foreground">
-                      {t("trips.roster.buddyGroupNote")}
-                    </span>{" "}
-                    {booking.groupPreference}
-                  </p>
-                ) : null}
+            // Staff record or correct a contact from the same form wherever it
+            // is rendered — in the open when the seat has none (that is work),
+            // behind the disclosure when it does (that is reference).
+            const emergencyContactForm = (
+              <details className="mt-2">
+                <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+                  {hasEmergencyContact
+                    ? t("trips.roster.emergencyContactEdit")
+                    : t("trips.roster.emergencyContactAdd")}
+                </summary>
+                <form
+                  action={saveEmergencyContactAction}
+                  className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+                >
+                  <input type="hidden" name="bookingId" value={booking.id} />
+                  <FieldGrid columns={2}>
+                    <Field label={t("trips.roster.emergencyContactNameLabel")}>
+                      <input
+                        name="emergencyContactName"
+                        autoComplete="name"
+                        maxLength={120}
+                        defaultValue={person.emergencyContactName ?? ""}
+                        className={controlClass}
+                      />
+                    </Field>
+                    <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+                      <input
+                        name="emergencyContactPhone"
+                        type="tel"
+                        autoComplete="tel"
+                        maxLength={40}
+                        defaultValue={person.emergencyContactPhone ?? ""}
+                        className={controlClass}
+                      />
+                    </Field>
+                  </FieldGrid>
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("trips.roster.savingContact")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("trips.roster.saveEmergencyContact")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              </details>
+            );
 
+            /**
+             * **Work**: everything this seat still owes, always in the open.
+             *
+             * The split this half is one side of — work in the open, reference
+             * behind one disclosure — replaces a card that made the choice the
+             * other way round. Every fact a booking carries used to render at
+             * full height on every row: two column headings, a rental-fit line
+             * reading "No fit on file", an emergency contact, a payment
+             * selector, an orders link and a remove button, and a notes
+             * disclosure, whether or not any of it was outstanding. A boat of
+             * nine ran past four screens, and the disclosure that could have
+             * shortened it was offered *only* to the rows with nothing in them
+             * — a diver with a blocker, which is to say every row a staffer is
+             * actually working, could not be collapsed at all.
+             *
+             * So the question each block answers is no longer "is this true?"
+             * but "is there anything to do about it?". Nothing that needs
+             * doing is ever behind a tap, and nothing that does not is ever in
+             * front of one.
+             */
+            // Whether anything at all rendered above the disclosure. It
+            // decides only the rule: a card with work on it earns a divider
+            // between that work and the "Details" line, and a settled card —
+            // a name, an email, a quiet ✓ — does not, because a rule across an
+            // otherwise empty card is furniture. Kept as one expression beside
+            // the blocks it describes so the two cannot drift.
+            const hasOutstanding = Boolean(
+              (readiness && readiness.status !== "ready") ||
+                depth?.status === "exceeds" ||
+                identityUnconfirmed ||
+                waiverControl.action ||
+                waiverStatus === "medical_review" ||
+                (requiresPayment && paymentBlocking) ||
+                !hasEmergencyContact,
+            );
+            const outstanding = (
+              <>
                 {readiness && readiness.status !== "ready" ? (
                   <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
                     {readiness.blockers.map((blocker) => (
@@ -520,7 +592,7 @@ export function RosterSection({
                     it can board on that person's certs/waiver — the one action
                     that clears the identity_unconfirmed blocker above. */}
                 {identityUnconfirmed ? (
-                  <form action={confirmIdentityAction} className="mt-2">
+                  <form action={confirmIdentityAction} className="mt-3">
                     <input type="hidden" name="bookingId" value={booking.id} />
                     {/* Blocking confirm, not an undo banner: this attestation clears
                         the identity_unconfirmed blocker on someone else's evidence
@@ -539,54 +611,122 @@ export function RosterSection({
                   </form>
                 ) : null}
 
-                <div className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
+                {/* The waiver, when there is one to send. No "Waiver" column
+                    heading over it any more: the control's own face is the
+                    status and its label is the next action, so the heading was
+                    a word above a word (design principle 9). A signed waiver
+                    has no control at all — its date line is reference, and
+                    lives in the panel below. */}
+                {waiverControl.action ? (
+                  <div className="mt-3">
+                    <WaiverSendControl
+                      shopSlug={shopSlug}
+                      surface="roster"
+                      tripId={tripId}
+                      bookingIds={[booking.id]}
+                      label={waiverControl.label}
+                      hint={waiverControl.hint}
+                      pendingLabel={
+                        waiverControl.action === "send"
+                          ? t("trips.roster.sending")
+                          : t("trips.roster.resending")
+                      }
+                      confirmMessage={
+                        waiverControl.confirm
+                          ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
+                          : undefined
+                      }
+                      className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
+                      wrapperClassName=""
+                      copy={waiverSendCopy(t)}
+                    />
+                    {/* A diver who signed on paper or on shore: let a non-diver
+                        record it so the waiver gate isn't held up by a signature
+                        the app never sees. */}
+                    <PaperWaiverControl
+                      action={markWaiverInPersonAction}
+                      bookingId={booking.id}
+                      t={t}
+                    />
+                  </div>
+                ) : null}
+
+                {/* Safety-critical and never disclosed: a flagged medical answer
+                    is the one thing on this card that must be read before the
+                    diver boards. */}
+                {waiverStatus === "medical_review" ? (
+                  <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                    <p className="font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
+                    {flaggedPrompts.length > 0 ? (
+                      <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                        {flaggedPrompts.map((prompt) => (
+                          <li key={prompt}>{prompt}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
+                    )}
+                    {currentWaiver ? (
+                      <Link
+                        href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
+                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                      >
+                        {t("trips.roster.viewSignedRecord")}
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {requiresPayment && paymentBlocking ? (
+                  <div className="mt-3">
+                    <PaymentStatusControl
+                      bookingId={booking.id}
+                      status={paymentStatus ?? "unpaid"}
+                      action={markPaymentAction}
+                      sourceNote={paymentSource}
+                      refundNote={null}
+                      copy={paymentStatusCopy}
+                    />
+                  </div>
+                ) : null}
+
+                {/* A missing emergency contact is not a readiness blocker, so
+                    if this sat behind the disclosure with the contact that *is*
+                    on file, the one card that needed the form would be the one
+                    hiding it. Task 144 — Today used to send staff here with
+                    "ask at the counter" and no field to type it into. */}
+                {hasEmergencyContact ? null : (
+                  <div className="mt-3">
+                    <p className="text-sm text-warning">
+                      {t("trips.roster.emergencyContactMissing")}
+                    </p>
+                    {emergencyContactForm}
+                  </div>
+                )}
+              </>
+            );
+
+            /**
+             * **Reference**: what is merely true about this seat, one tap away.
+             */
+            const reference = (
+              <>
+                {booking.groupPreference ? (
+                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+                    <span className="font-semibold text-foreground">
+                      {t("trips.roster.buddyGroupNote")}
+                    </span>{" "}
+                    {booking.groupPreference}
+                  </p>
+                ) : null}
+
+                <div className="mt-3 grid gap-5 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
                       {t("trips.roster.waiverColumnHeading")}
                     </p>
-                    <div className="mt-2">
-                      {waiverControl.action ? (
-                        <WaiverSendControl
-                          shopSlug={shopSlug}
-                          surface="roster"
-                          tripId={tripId}
-                          bookingIds={[booking.id]}
-                          label={waiverControl.label}
-                          hint={waiverControl.hint}
-                          pendingLabel={
-                            waiverControl.action === "send"
-                              ? t("trips.roster.sending")
-                              : t("trips.roster.resending")
-                          }
-                          confirmMessage={
-                            waiverControl.confirm
-                              ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
-                              : undefined
-                          }
-                          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
-                          wrapperClassName=""
-                          copy={waiverSendCopy(t)}
-                        />
-                      ) : (
-                        <span
-                          className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium ${waiverControl.tone}`}
-                        >
-                          {waiverControl.label}
-                        </span>
-                      )}
-                    </div>
-                    {waiverControl.action ? (
-                      // A diver who signed on paper or on shore: let a non-diver
-                      // record it so the waiver gate isn't held up by a signature
-                      // the app never sees.
-                      <PaperWaiverControl
-                        action={markWaiverInPersonAction}
-                        bookingId={booking.id}
-                        t={t}
-                      />
-                    ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
-                      <p className="mt-2 text-sm text-muted">
+                      <p className="mt-1 text-sm text-muted">
                         {currentWaiver.signatureMethod === "in_person_attested"
                           ? t("trips.roster.signedPaper", {
                               date: formatDateTimeTz(
@@ -611,36 +751,16 @@ export function RosterSection({
                                 ),
                               })}
                       </p>
-                    ) : null}
-                    {waiverStatus === "medical_review" ? (
-                      <div className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                        <p className="font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
-                        {flaggedPrompts.length > 0 ? (
-                          <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-                            {flaggedPrompts.map((prompt) => (
-                              <li key={prompt}>{prompt}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-                        )}
-                        {currentWaiver ? (
-                          <Link
-                            href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
-                            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                          >
-                            {t("trips.roster.viewSignedRecord")}
-                          </Link>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    ) : (
+                      <p className="mt-1 text-sm text-muted">{waiverControl.label}</p>
+                    )}
                   </div>
 
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">
                       {t("trips.roster.rentalFitColumnHeading")}
                     </p>
-                    <p className="mt-2 text-sm text-muted">
+                    <p className="mt-1 text-sm text-muted">
                       {rentalFitLineText(
                         t,
                         locale,
@@ -648,7 +768,7 @@ export function RosterSection({
                       )}
                     </p>
                     {nitrox ? (
-                      <p className="mt-2 text-sm font-medium text-primary">
+                      <p className="mt-1 text-sm font-medium text-primary">
                         {nitrox.approved
                           ? t("trips.roster.nitroxApproved")
                           : t("trips.roster.nitroxUnverified")}
@@ -657,74 +777,23 @@ export function RosterSection({
                   </div>
                 </div>
 
-                {/* Task 144 — Today used to send staff here with "ask at the
-                    counter" and no field to type it into. Read-only summary
-                    plus a collapsed edit form, matching the "mark signed on
-                    paper" pattern above; writes through the same
-                    `saveBookingEmergencyContact` the diver's own /ready and
-                    /waivers capture uses. Prints on the manifest. */}
-                <div className="mt-4 border-t border-border pt-4">
-                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                    {t("trips.roster.emergencyContactHeading")}
-                  </p>
-                  {hasEmergencyContact ? (
-                    <p className="mt-2 text-sm text-muted">
+                {hasEmergencyContact ? (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                      {t("trips.roster.emergencyContactHeading")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted">
                       {t("trips.roster.emergencyContactOnFile", {
                         name: person.emergencyContactName ?? "",
                         phone: person.emergencyContactPhone ?? "",
                       })}
                     </p>
-                  ) : (
-                    <p className="mt-2 text-sm text-warning">
-                      {t("trips.roster.emergencyContactMissing")}
-                    </p>
-                  )}
-                  <details className="mt-2">
-                    <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-                      {hasEmergencyContact
-                        ? t("trips.roster.emergencyContactEdit")
-                        : t("trips.roster.emergencyContactAdd")}
-                    </summary>
-                    <form
-                      action={saveEmergencyContactAction}
-                      className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
-                    >
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <FieldGrid columns={2}>
-                        <Field label={t("trips.roster.emergencyContactNameLabel")}>
-                          <input
-                            name="emergencyContactName"
-                            autoComplete="name"
-                            maxLength={120}
-                            defaultValue={person.emergencyContactName ?? ""}
-                            className={controlClass}
-                          />
-                        </Field>
-                        <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
-                          <input
-                            name="emergencyContactPhone"
-                            type="tel"
-                            autoComplete="tel"
-                            maxLength={40}
-                            defaultValue={person.emergencyContactPhone ?? ""}
-                            className={controlClass}
-                          />
-                        </Field>
-                      </FieldGrid>
-                      <div>
-                        <SubmitButton
-                          pendingLabel={t("trips.roster.savingContact")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {t("trips.roster.saveEmergencyContact")}
-                        </SubmitButton>
-                      </div>
-                    </form>
-                  </details>
-                </div>
+                    {emergencyContactForm}
+                  </div>
+                ) : null}
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
-                  {requiresPayment ? (
+                {requiresPayment && !paymentBlocking ? (
+                  <div className="mt-4 border-t border-border pt-4">
                     <PaymentStatusControl
                       bookingId={booking.id}
                       status={paymentStatus ?? "unpaid"}
@@ -739,64 +808,69 @@ export function RosterSection({
                       }
                       copy={paymentStatusCopy}
                     />
-                  ) : null}
-                  {/* One orders door per card, and only when the shop can take
-                      money at all: "Connect payments" is a shop-level fact that
-                      used to repeat on every diver (principle 9 — Settings and
-                      the Orders index own that door), and "View orders" sat
-                      beside "Create order" doing half the same job (principle
-                      8 — the orders index reachable from the diver record
-                      already lists them). */}
-                  {paymentsConnected ? (
-                    <Link
-                      href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                      className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
-                    >
-                      {t("trips.roster.createOrder")}
-                    </Link>
-                  ) : null}
-                  {/* A cancel inside the shop's refund window fires an automatic
-                      Stripe refund that the Undo banner can't claw back — a real
-                      send of money, not a purely reversible edit — so this gets a
-                      blocking confirm too (docs/design/principles.md §7). */}
-                  {/* Last in the row, not flung to its far right. The
-                      `sm:ml-auto` this replaces put a gulf between "Create
-                      order" and "Remove booking" wide enough to read as a
-                      separate control belonging to something else — and on a
-                      card whose actions are otherwise a left-aligned run, a
-                      lone right-hung one is the shape a *primary* action
-                      takes. It is already the least prominent thing here (ghost
-                      weight, muted ink, danger only on hover) and it already
-                      confirms before it fires; its position was carrying a
-                      third warning nobody asked it to. */}
-                  <form action={removeBookingAction}>
-                    <input type="hidden" name="bookingId" value={booking.id} />
-                    <InlineConfirm
-                      triggerLabel={t("trips.roster.removeBooking")}
-                      message={t("trips.roster.confirmRemoveBooking", {
-                        name: person.fullName,
-                      })}
-                      confirmLabel={t("trips.roster.removeBookingConfirmButton")}
-                      cancelLabel={t("trips.roster.neverMind")}
-                      pendingLabel={t("trips.roster.removing")}
-                      triggerClassName="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
-                      confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                    />
-                  </form>
+                  </div>
+                ) : null}
+
+                {/* `-mx-3` on the row, and both controls at the same `sm`
+                    padding. "Remove booking" used to carry a hand-written
+                    `px-3` while "Create order" beside it carried none, so the
+                    one destructive control on the card was also the only one
+                    whose label started a third of a centimetre further in —
+                    reading as a nested or misaligned item rather than a peer.
+                    The negative margin gives the padded pair back the text
+                    column every other line in this panel sits on. */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">
+                    {/* One orders door per card, and only when the shop can take
+                        money at all: "Connect payments" is a shop-level fact that
+                        used to repeat on every diver (principle 9 — Settings and
+                        the Orders index own that door), and "View orders" sat
+                        beside "Create order" doing half the same job (principle
+                        8 — the orders index reachable from the diver record
+                        already lists them). */}
+                    {paymentsConnected ? (
+                      <Link
+                        href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                        className={buttonClass({ variant: "link", size: "sm" })}
+                      >
+                        {t("trips.roster.createOrder")}
+                      </Link>
+                    ) : null}
+                    {/* A cancel inside the shop's refund window fires an automatic
+                        Stripe refund that the Undo banner can't claw back — a real
+                        send of money, not a purely reversible edit — so this gets a
+                        blocking confirm too (docs/design/principles.md §7).
+                        Last in the row, not flung to its far right: it is already
+                        the least prominent thing here and it already confirms
+                        before it fires. */}
+                    <form action={removeBookingAction}>
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <InlineConfirm
+                        triggerLabel={t("trips.roster.removeBooking")}
+                        message={t("trips.roster.confirmRemoveBooking", {
+                          name: person.fullName,
+                        })}
+                        confirmLabel={t("trips.roster.removeBookingConfirmButton")}
+                        cancelLabel={t("trips.roster.neverMind")}
+                        pendingLabel={t("trips.roster.removing")}
+                        triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                        confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                      />
+                    </form>
+                  </div>
                 </div>
+
                 <details className="mt-4 border-t border-border pt-4">
                   <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
                     {/* A zero count is the absence of information formatted as
                         information (principle 9) — with no notes the disclosure
                         is simply the door to writing the first one. */}
-                    {(notesByBooking.get(booking.id)?.length ?? 0) === 0
+                    {notes.length === 0
                       ? t("trips.roster.addFirstNoteSummary")
-                      : t("trips.roster.privateStaffNotes", {
-                          count: notesByBooking.get(booking.id)?.length ?? 0,
-                        })}
+                      : t("trips.roster.privateStaffNotes", { count: notes.length })}
                   </summary>
                   <div className="mt-2 grid gap-3">
-                    {(notesByBooking.get(booking.id) ?? []).map(({ note, authorName }) => (
+                    {notes.map(({ note, authorName }) => (
                       <div
                         key={note.id}
                         className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
@@ -821,7 +895,12 @@ export function RosterSection({
                         </form>
                       </div>
                     ))}
-                    <form action={addNoteAction} className="grid gap-2">
+                    {/* Keyed on the note count so a landed note empties the box.
+                        Adding one no longer navigates (see `addInternalNoteAction`),
+                        and an uncontrolled textarea React never remounts would
+                        otherwise still hold the text of the note now listed
+                        above it — inviting the same note twice. */}
+                    <form key={notes.length} action={addNoteAction} className="grid gap-2">
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
                         {t("trips.roster.addNoteLabel")}
@@ -857,72 +936,54 @@ export function RosterSection({
                 id={`booking-${booking.id}`}
                 className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
               >
-                {settled ? (
-                  <>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      {headerLeft}
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        {checkedInPill}
-                        {/* Quiet text, not the green Badge: on a good morning
-                            every row here is settled, and a success pill
-                            repeated down the list is the exact noise this
-                            collapse exists to remove (principle 9). The glyph
-                            stays — never color (or its absence) alone. */}
-                        <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
-                          <span aria-hidden="true">✓</span>
-                          {readinessStatusText(t, "ready")}
-                        </span>
-                      </div>
-                    </div>
-                    {/* The disclosure toggle is its own <summary> below the
-                        header rather than wrapping it: a summary is itself
-                        interactive, so the diver-name link inside it would be
-                        an interactive element nested in another (axe
-                        nested-interactive). Deep links (Today, the manifest's
-                        "Resolve blockers") land mid-page at one diver;
-                        AutoOpenDetails opens this when the hash names the row,
-                        so a collapsed card never swallows what the link
-                        promised. */}
-                    <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group -mt-2">
-                      <summary
-                        // Ten of these in a list all read "Details" alone; the
-                        // accessible name says whose (same pattern as the
-                        // roster's other per-row controls).
-                        aria-label={t("trips.roster.detailsSummaryLabel", {
-                          name: person.fullName,
-                        })}
-                        className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
-                      >
-                        {t("trips.roster.detailsSummary")}
-                        <svg
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          stroke="currentColor"
-                          aria-hidden="true"
-                          className="size-4 transition-transform duration-200 group-open:rotate-180"
-                        >
-                          <path
-                            d="m6 8 4 4 4-4"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </summary>
-                      {detail}
-                    </AutoOpenDetails>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      {headerLeft}
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        {headerBadges}
-                      </div>
-                    </div>
-                    {detail}
-                  </>
-                )}
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  {headerLeft}
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {headerBadges}
+                  </div>
+                </div>
+                {outstanding}
+                {/* Every card carries this, collapsed — including the ones with
+                    work outstanding, which used to be exactly the cards that
+                    could not be collapsed. The toggle is its own <summary>
+                    below the header rather than wrapping it: a summary is
+                    itself interactive, so the diver-name link inside it would
+                    be an interactive element nested in another (axe
+                    nested-interactive). Deep links (Today, the manifest's
+                    "Resolve blockers") land mid-page at one diver;
+                    AutoOpenDetails opens this when the hash names the row, so a
+                    collapsed card never swallows what the link promised. */}
+                <AutoOpenDetails
+                  openOnHash={`booking-${booking.id}`}
+                  className={`group ${hasOutstanding ? "mt-3 border-t border-border pt-1" : "mt-1"}`}
+                >
+                  <summary
+                    // Ten of these in a list all read "Details" alone; the
+                    // accessible name says whose (same pattern as the
+                    // roster's other per-row controls).
+                    aria-label={t("trips.roster.detailsSummaryLabel", {
+                      name: person.fullName,
+                    })}
+                    className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
+                  >
+                    {t("trips.roster.detailsSummary")}
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                      className="size-4 transition-transform duration-200 group-open:rotate-180"
+                    >
+                      <path
+                        d="m6 8 4 4 4-4"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </summary>
+                  {reference}
+                </AutoOpenDetails>
               </li>
             );
           })}

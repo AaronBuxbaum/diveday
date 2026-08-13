@@ -159,18 +159,14 @@ export function RollCallControls({
           label={
             isCrew
               ? boarded
-                ? t("trips.manifest.crewAboardCheck")
-                : t("trips.manifest.crewMarkAboard")
+                ? t("manifest.crewAboardCheck")
+                : t("manifest.crewMarkAboard")
               : boarded
-                ? t("trips.manifest.boardedCheck")
-                : t("trips.manifest.markBoarded")
+                ? t("manifest.boardedCheck")
+                : t("manifest.markBoarded")
           }
           pendingLabel={
-            isCrew
-              ? t("trips.manifest.saving")
-              : boarded
-                ? t("trips.manifest.undoing")
-                : t("trips.manifest.boarding")
+            isCrew ? t("manifest.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
           }
           className={`${BOAT_TARGET_CLASS} ${
             boarded
@@ -210,20 +206,20 @@ export function RollCallControls({
           recordedNotBoarded
             ? isDeparture
               ? isCrew
-                ? t("trips.manifest.crewNotAboardCheck")
-                : t("trips.manifest.notBoardedCheck")
+                ? t("manifest.crewNotAboardCheck")
+                : t("manifest.notBoardedCheck")
               : isCrew
-                ? t("trips.manifest.crewNotBackAboardActive")
-                : t("trips.manifest.notBackAboardActive")
+                ? t("manifest.crewNotBackAboardActive")
+                : t("manifest.notBackAboardActive")
             : isDeparture
               ? isCrew
-                ? t("trips.manifest.crewMarkNotAboard")
-                : t("trips.manifest.markNotBoarded")
+                ? t("manifest.crewMarkNotAboard")
+                : t("manifest.markNotBoarded")
               : isCrew
-                ? t("trips.manifest.crewMarkNotBackAboard")
-                : t("trips.manifest.markNotBackAboard")
+                ? t("manifest.crewMarkNotBackAboard")
+                : t("manifest.markNotBackAboard")
         }
-        pendingLabel={t("trips.manifest.saving")}
+        pendingLabel={t("manifest.saving")}
         noteDraftFor={noteDraftFor}
         className={
           notBackAboard
@@ -255,7 +251,7 @@ export function RollCallControls({
           hiding it for crew taught the deck that a mis-tap on a divemaster
           was permanent. */}
       {recordedHere && notBackAboard ? (
-        <p className="text-sm text-muted">{t("trips.manifest.tapToUndoNotBackAboard")}</p>
+        <p className="text-sm text-muted">{t("manifest.tapToUndoNotBackAboard")}</p>
       ) : null}
     </div>
   );

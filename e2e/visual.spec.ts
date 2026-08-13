@@ -387,6 +387,9 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+/** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
+const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
+
 /**
  * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
  * be refused for exactly one reason, which is what lets a refusal capture show
@@ -1932,6 +1935,24 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "trip-manage", scheme);
+      });
+
+      /**
+       * The other Overview: a departure that only runs with enough people and
+       * has not got them yet (ADR 20260813-minimum-head-count-departures). The
+       * reef trip above names no minimum, so its baseline can never show this
+       * band — and the band is the one surface in the feature a shop reads
+       * every day, in the window where ringing round the regulars still saves
+       * the departure. The fixture is seeded four days out with a 48-hour
+       * window (src/db/seed-minimum-seats.ts), so against the fleet's frozen
+       * clock it photographs the *short* state, not the red about-to-cancel
+       * one — deliberately, since short is the state staff can act on.
+       */
+      test(`a short departure shows its minimum head count (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, MINIMUM_SEATS_TRIP);
+        await page.getByRole("heading", { name: /divers short of the/ }).waitFor();
+        await capture(page, "trip-minimum-seats", scheme);
       });
 
       test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {

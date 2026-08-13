@@ -314,11 +314,6 @@ export function BookSpotSection({
           <p className="mt-1 text-muted">{requirementNote}</p>
         </div>
       ) : null}
-      {trip.course?.isIntroCourse ? (
-        <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted">
-          <strong className="text-foreground">{t("giftTitle")}</strong> {t("giftBody")}
-        </p>
-      ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <BookingPartyFields
           maxPartySize={remaining}

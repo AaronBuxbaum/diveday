@@ -17,7 +17,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
@@ -71,7 +71,7 @@ function DiverFacts({
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
-        <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
+        <span className="font-bold">{t("manifest.emergencyContactLabel")}</span>
         <span className="mt-0.5 block text-muted">
           {diver.emergencyContactName && diver.emergencyContactPhone ? (
             columns === 1 ? (
@@ -94,7 +94,7 @@ function DiverFacts({
               `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
             )
           ) : (
-            t("trips.manifest.notOnFile")
+            t("manifest.notOnFile")
           )}
         </span>
       </p>
@@ -105,10 +105,10 @@ function DiverFacts({
           request always shows — that's an operational fact. */}
       {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
         <p>
-          <span className="font-bold">{t("trips.manifest.rentalFitLabel")}</span>
+          <span className="font-bold">{t("manifest.rentalFitLabel")}</span>
           <span className="mt-0.5 block text-muted">
             {rentalFitLineText(t, locale, diver.rentalFit)}
-            {diver.nitroxRequested ? t("trips.manifest.nitroxRequestedSuffix") : ""}
+            {diver.nitroxRequested ? t("manifest.nitroxRequestedSuffix") : ""}
           </span>
         </p>
       ) : null}
@@ -116,10 +116,10 @@ function DiverFacts({
         <p>
           <span className="font-bold">
             {diver.medicalWaiver.source === "paper"
-              ? t("trips.manifest.medicalReviewedPaper")
+              ? t("manifest.medicalReviewedPaper")
               : diver.medicalWaiver.source === "imported"
-                ? t("trips.manifest.medicalClearanceImported")
-                : t("trips.manifest.medicalWaiverSigned")}
+                ? t("manifest.medicalClearanceImported")
+                : t("manifest.medicalWaiverSigned")}
           </span>
           <span className="mt-0.5 block text-muted">
             {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
@@ -150,6 +150,65 @@ const ROW_DISCLOSURE_SUMMARY_CLASS =
 const ROW_DISCLOSURE_PANEL_CLASS =
   "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
+/**
+ * One diver's private staff notes, as written on the Guests tab.
+ *
+ * Two kinds of note used to live on this departure with no path between them:
+ * the **desk note** a staffer writes against a booking ("nervous, first boat
+ * dive since her course — keep her with a DM"), and the **roll-call note** the
+ * crew writes at a checkpoint. The first is exactly the sort of thing the
+ * second is for, and the crew reading this page could not see it — it was two
+ * taps away on another tab, on a card that had to be found and expanded. So it
+ * reads here, on the row it is about.
+ *
+ * Read-only, and deliberately so: writing one is a desk act with an author, an
+ * activity-trail entry and an undo, and duplicating that at the rail would be
+ * a second door onto one thing. The crew's own note field is right beside this.
+ *
+ * `print:hidden`, unlike every other fact on this row. The printed manifest is
+ * the sheet that goes ashore with the dock and into a coastguard's hands; a
+ * note a shop wrote for itself about a customer is not a document either of
+ * them asked for, and paper cannot be un-handed.
+ */
+function DeskNotes({
+  notes,
+  locale,
+  timezone,
+  t,
+}: {
+  notes: ReadonlyArray<DeskNote>;
+  locale: string;
+  timezone: string;
+  t: StaffTranslator;
+}) {
+  if (notes.length === 0) return null;
+  return (
+    <section className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 print:hidden">
+      <h4 className="text-xs font-semibold tracking-widest text-muted uppercase">
+        {t("manifest.deskNotesHeading")}
+      </h4>
+      <ul className="mt-1 flex flex-col gap-1.5">
+        {notes.map((entry) => (
+          <li key={entry.id} className="text-base">
+            {entry.body}
+            <span className="ms-1 text-sm text-muted">
+              — {entry.authorName} · {formatDateTimeTz(entry.createdAt, locale, timezone)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** One private staff note, flattened to what this page renders. */
+export type DeskNote = {
+  id: string;
+  body: string;
+  authorName: string;
+  createdAt: Date;
+};
+
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
   divers,
@@ -159,6 +218,7 @@ export function DiverRollCall({
   tripId,
   locale,
   timezone,
+  deskNotesByBooking,
   rollCallAction,
   saveRollCallNoteAction,
   rollCallButtonCopy,
@@ -172,6 +232,8 @@ export function DiverRollCall({
   tripId: string;
   locale: string;
   timezone: string;
+  /** The Guests tab's private notes, by booking — see `DeskNotes`. */
+  deskNotesByBooking: ReadonlyMap<string, ReadonlyArray<DeskNote>>;
   rollCallAction: RollCallAction;
   saveRollCallNoteAction: (
     bookingId: string,
@@ -190,30 +252,26 @@ export function DiverRollCall({
 }) {
   return (
     <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">
-            {t("trips.manifest.checkpointRollCallHeading", {
-              checkpoint: rollCallCheckpointText(t, checkpoint),
-            })}
-          </h2>
-          {/* The control that isn't "Boarded" means something different once
-              the boat is out, and the crew tapping it in the dark should be
-              told which one they are looking at (DOM-H3). */}
-          {isDeparture ? null : (
-            <p className="mt-1 max-w-prose text-base font-semibold text-warning-strong">
-              {t("trips.manifest.notBackAboardDescription")}
-            </p>
-          )}
-        </div>
-        {/* The zone by the name a captain says, never the IANA id it is stored
-            under (`formatTimeZoneName`) — "Shop time: America/New_York" was
-            the page showing its own storage format. */}
-        <p className="text-sm text-muted">
-          {t("trips.manifest.shopTimeLabel", {
-            timezone: formatTimeZoneName(locale, timezone),
+      {/* No "Shop time: Eastern Daylight Time" beside the heading. Every time
+          on this page is already the shop's own — that is the app's rule
+          everywhere (`shops.timezone`, `pnpm check:timezone`), not a property
+          of this screen — and a crew reading a roll call at their own dock has
+          no second zone to confuse it with. It named the one thing on the page
+          nobody was in doubt about. */}
+      <div>
+        <h2 className="text-lg font-semibold">
+          {t("manifest.checkpointRollCallHeading", {
+            checkpoint: rollCallCheckpointText(t, checkpoint),
           })}
-        </p>
+        </h2>
+        {/* The control that isn't "Boarded" means something different once
+            the boat is out, and the crew tapping it in the dark should be
+            told which one they are looking at (DOM-H3). */}
+        {isDeparture ? null : (
+          <p className="mt-1 max-w-prose text-base font-semibold text-warning-strong">
+            {t("manifest.notBackAboardDescription")}
+          </p>
+        )}
       </div>
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
         {divers.map((diver, index) => {
@@ -316,7 +374,7 @@ export function DiverRollCall({
                         This is informational only: it never gates roll
                         call. */}
                     {diver.checkedIn ? (
-                      <Badge tone="neutral">{t("trips.manifest.checkedInPill")}</Badge>
+                      <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
                     ) : null}
                     {/* The captain reading the boarding list has no other way
                         to know a booked diver is 12 (H-21). Words, not colour
@@ -329,12 +387,12 @@ export function DiverRollCall({
                     {diver.age !== null && diver.age !== undefined ? (
                       diver.minor ? (
                         <Badge tone="warning" tabularNums>
-                          {t("trips.manifest.minorAge", { age: diver.age })}
+                          {t("manifest.minorAge", { age: diver.age })}
                         </Badge>
                       ) : (
                         <span className="hidden print:inline-flex">
                           <Badge tone="neutral" tabularNums>
-                            {t("trips.manifest.age", { age: diver.age })}
+                            {t("manifest.age", { age: diver.age })}
                           </Badge>
                         </span>
                       )
@@ -395,10 +453,18 @@ export function DiverRollCall({
                         href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
                         className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline print:hidden"
                       >
-                        {t("trips.manifest.resolveBlockersLink")}
+                        {t("manifest.resolveBlockersLink")}
                       </Link>
                     </>
                   ) : null}
+                  {/* What the desk already knows about this diver, where the
+                      crew reading the roll call can see it. */}
+                  <DeskNotes
+                    notes={deskNotesByBooking.get(diver.bookingId) ?? []}
+                    locale={locale}
+                    timezone={timezone}
+                    t={t}
+                  />
                   {/* The row's two secondary paths, on one line. Reference
                       facts are disclosed on demand — nine emergency contacts
                       and six rental lists at permanent height were dock-prep
@@ -428,8 +494,8 @@ export function DiverRollCall({
                         <DisclosureCaret className="group-open/facts:rotate-90" />
                         <span className="group-hover/summary:underline">
                           {diver.medicalWaiver
-                            ? t("trips.manifest.diverFactsSummaryWithMedical")
-                            : t("trips.manifest.diverFactsSummary")}
+                            ? t("manifest.diverFactsSummaryWithMedical")
+                            : t("manifest.diverFactsSummary")}
                         </span>
                       </summary>
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
@@ -453,7 +519,7 @@ export function DiverRollCall({
                       <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
                         <DisclosureCaret className="group-open/note:rotate-90" />
                         <span className="group-hover/summary:underline">
-                          {t("trips.manifest.addNoteSummary")}
+                          {t("manifest.addNoteSummary")}
                         </span>
                       </summary>
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
@@ -494,13 +560,13 @@ export function DiverRollCall({
                   {rc && !rc.implied ? (
                     <p className="mt-3 text-sm text-muted">
                       {rc.note
-                        ? t("trips.manifest.rollCallRecordedByWithNote", {
+                        ? t("manifest.rollCallRecordedByWithNote", {
                             label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
                             date: formatDateTimeTz(rc.occurredAt, locale, timezone),
                             name: rc.recordedByName,
                             note: rc.note,
                           })
-                        : t("trips.manifest.rollCallRecordedByPlain", {
+                        : t("manifest.rollCallRecordedByPlain", {
                             label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
                             date: formatDateTimeTz(rc.occurredAt, locale, timezone),
                             name: rc.recordedByName,
@@ -511,7 +577,7 @@ export function DiverRollCall({
                     // this diver never left the dock (DOM-H3). Boarding after a
                     // dive is a head count, so it never depends on readiness.
                     <p className="mt-3 text-sm text-muted">
-                      {t("trips.manifest.carriedForwardFromDock")}
+                      {t("manifest.carriedForwardFromDock")}
                     </p>
                   ) : null}
                 </div>

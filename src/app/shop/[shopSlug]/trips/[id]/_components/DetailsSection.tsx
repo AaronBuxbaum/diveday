@@ -4,6 +4,12 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
+import {
+  MAX_DECISION_HOURS,
+  MAX_MINIMUM_BOOKINGS,
+  MIN_DECISION_HOURS,
+  MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
+} from "@/lib/minimum-seats";
 import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
 import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -255,6 +261,42 @@ export function DetailsSection({
                     className={`${controlClass} tabular-nums sm:w-28`}
                   />
                   <span className="text-sm text-muted">{t("trips.details.hoursSuffix")}</span>
+                </div>
+              </Field>
+              <Field
+                label={t("trips.details.minimumBookingsLabel")}
+                description={t("trips.details.minimumBookingsDescription")}
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    name="minimumBookings"
+                    type="number"
+                    step={1}
+                    min={1}
+                    max={MAX_MINIMUM_BOOKINGS}
+                    placeholder="4"
+                    defaultValue={trip.minimumBookings ?? ""}
+                    className={`${controlClass} tabular-nums sm:w-28`}
+                  />
+                  <span className="text-sm text-muted">{t("trips.details.diversSuffix")}</span>
+                </div>
+              </Field>
+              <Field
+                label={t("trips.details.minimumDecisionLabel")}
+                description={t("trips.details.minimumDecisionDescription")}
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    name="minimumDecisionHours"
+                    type="number"
+                    step={1}
+                    min={MIN_DECISION_HOURS}
+                    max={MAX_DECISION_HOURS}
+                    placeholder={String(MINIMUM_SEATS_DECISION_HOURS_DEFAULT)}
+                    defaultValue={trip.minimumDecisionHours ?? ""}
+                    className={`${controlClass} tabular-nums sm:w-28`}
+                  />
+                  <span className="text-sm text-muted">{t("trips.details.hoursBeforeSuffix")}</span>
                 </div>
               </Field>
             </FieldGrid>

@@ -17,6 +17,7 @@ import {
 } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
@@ -131,6 +132,17 @@ const addSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.coerce.number().int().min(0).max(720).optional(),
   ),
+  // The head count this departure needs to run, and how long before it leaves
+  // the shop makes that call. Blank is every trip that exists today — the boat
+  // goes with whoever booked (src/lib/minimum-seats.ts).
+  minimumBookings: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(1).max(MAX_MINIMUM_BOOKINGS).optional(),
+  ),
+  minimumDecisionHours: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(MIN_DECISION_HOURS).max(MAX_DECISION_HOURS).optional(),
+  ),
   courseId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   diveSiteId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   // "0" means it does not repeat; any other value is the number of weeks between
@@ -179,6 +191,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     priceDollars,
     depositDollars,
     cancellationWindowHours,
+    minimumBookings,
+    minimumDecisionHours,
     courseId,
     diveSiteId,
     repeatIntervalWeeks,
@@ -260,6 +274,10 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     priceCents,
     depositCents,
     cancellationWindowHours: cancellationWindowHours ?? null,
+    minimumBookings: minimumBookings ?? null,
+    // A window with no minimum beside it is not a policy — it would sit in the
+    // row saying nothing and read as one on the next edit.
+    minimumDecisionHours: minimumBookings ? (minimumDecisionHours ?? null) : null,
   };
 
   if (repeatIntervalWeeks > 0) {

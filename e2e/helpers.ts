@@ -144,6 +144,8 @@ export async function createTrip(
     capacity?: number;
     price?: number;
     cancellationWindowHours?: number;
+    minimumBookings?: number;
+    minimumDecisionHours?: number;
   },
 ): Promise<void> {
   // Always the full depth (`?add=full`), even for a caller that only fills the
@@ -169,6 +171,12 @@ export async function createTrip(
   }
   if (options.cancellationWindowHours !== undefined) {
     await page.getByLabel("Free cancellation window").fill(String(options.cancellationWindowHours));
+  }
+  if (options.minimumBookings !== undefined) {
+    await page.getByLabel("Minimum to run").fill(String(options.minimumBookings));
+  }
+  if (options.minimumDecisionHours !== undefined) {
+    await page.getByLabel("Decide by").fill(String(options.minimumDecisionHours));
   }
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(options.title);

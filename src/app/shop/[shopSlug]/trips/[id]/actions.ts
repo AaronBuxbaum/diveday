@@ -27,6 +27,7 @@ import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
   changeTripCrew,
+  clearMinimumSeats,
   getTripWithBooked,
   listTripDiverContacts,
   setSeriesRepeat,
@@ -45,6 +46,7 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
+import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
@@ -94,6 +96,17 @@ const detailsSchema = z.object({
   cancellationWindowHours: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().int().min(0).max(720).optional(),
+  ),
+  // The head count this departure needs to run, and when the call is made.
+  // Blank clears the policy, which is also how staff take a swept departure
+  // off the sweep's list by hand (src/lib/minimum-seats.ts).
+  minimumBookings: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(1).max(MAX_MINIMUM_BOOKINGS).optional(),
+  ),
+  minimumDecisionHours: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().min(MIN_DECISION_HOURS).max(MAX_DECISION_HOURS).optional(),
   ),
 });
 
@@ -196,6 +209,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     priceDollars,
     depositDollars,
     cancellationWindowHours,
+    minimumBookings,
+    minimumDecisionHours,
   } = parsed.data;
   const sw = parseWallTime(date, startTime);
   const ew = parseWallTime(date, endTime);
@@ -247,6 +262,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     priceCents: priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency),
     depositCents: depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency),
     cancellationWindowHours: cancellationWindowHours ?? null,
+    minimumBookings: minimumBookings ?? null,
+    minimumDecisionHours: minimumDecisionHours ?? null,
     diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
     dives: tripDiveDraftsFromForm(formData, plannedDives),
   });
@@ -363,7 +380,15 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
 export async function reinstateTripAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  await setTripStatus(await getDb(), s.user.shopId, tripId, "scheduled");
+  const db = await getDb();
+  await setTripStatus(db, s.user.shopId, tripId, "scheduled");
+  // Putting a departure back **is** the shop saying "run it anyway", so the
+  // minimum it was cancelled under is spent. Without this the hourly sweep
+  // would cancel it again within the hour and the shop would be arguing with a
+  // cron job (ADR 20260813-minimum-head-count-departures). Unconditional: a
+  // trip reinstated after an ordinary cancellation had no minimum to clear, so
+  // this is a no-op there rather than a branch.
+  await clearMinimumSeats(db, s.user.shopId, tripId);
   revalidateAndRedirect(back, `${back}?notice=reinstated`);
 }
 
@@ -533,6 +558,22 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
   revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
 }
 
+/**
+ * Adds a note **without navigating.** A note is written from a textarea inside
+ * an open `<details>` two thirds of the way down a roster card, and the
+ * `revalidateAndRedirect(...?notice=note-added)` this used to end with was a
+ * real navigation: the page returned scrolled to its top with every disclosure
+ * on it shut, so the staffer who had just written one note about diver seven
+ * had to find diver seven again to write the second. `revalidatePath` alone
+ * re-renders the same page in place — the note appears in the list directly
+ * above the box it was typed in, which is the confirmation the banner was
+ * standing in for (docs/design/forms-and-controls.md; design principle 9).
+ * The form is keyed on the note count in `RosterSection`, so landing one
+ * clears the box.
+ *
+ * A refusal still redirects: an empty or over-long note leaves nothing on the
+ * page to read the outcome from, so it keeps the banner it has always had.
+ */
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
@@ -544,7 +585,8 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
     bookingId,
     body,
   });
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "note-added" : "invalid"}`);
+  if (!saved) revalidateAndRedirect(back, `${back}?notice=invalid`);
+  revalidatePath(back);
 }
 
 /**
@@ -853,6 +895,15 @@ export async function confirmDiverIdentityAction(
  * roster action; the accountable staff member is stamped on the record. Requires
  * an explicit medical-clear attestation — a flagged medical must go through the
  * diver-facing link, which captures the questionnaire and routes to review.
+ *
+ * Success does not navigate. The control lives inside a `<details>` on one
+ * card of a roster that can run a boat long, and redirecting for a success
+ * banner threw the page back to its top with every disclosure shut — for news
+ * the card itself delivers better: the waiver control the finger was just on
+ * becomes "Signed on paper · <date>", and the blocker above it clears. Same
+ * rule the counter queue already states in its own `noticeCopy` table. A
+ * refusal keeps its redirect: the attestation was not given, so there is no
+ * new row state to read the answer from.
  */
 export async function markWaiverInPersonAction(
   shopSlug: string,
@@ -869,12 +920,14 @@ export async function markWaiverInPersonAction(
     recordedByPersonId: s.user.personId,
     medicalAttested: formData.get("medicalAttested") === "on",
   });
-  const notice = outcome.ok
-    ? "waiver-in-person"
-    : outcome.reason === "medical_attestation_required"
-      ? "waiver-medical-attestation"
-      : "waiver-error";
-  revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+  if (!outcome.ok) {
+    const notice =
+      outcome.reason === "medical_attestation_required"
+        ? "waiver-medical-attestation"
+        : "waiver-error";
+    revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+  }
+  revalidatePath(back);
 }
 
 /**

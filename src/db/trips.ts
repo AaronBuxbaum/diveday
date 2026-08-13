@@ -12,6 +12,7 @@
  * | `./trips-series.ts` | recurring series: create, extend the horizon, apply details across, cancel the run |
  * | `./trips-record.ts` | one departure's own record: read it, edit details/dives/conditions/status |
  * | `./trips-schedule.ts` | the schedule builder's move / copy / remove and their refusals |
+ * | `./trips-minimum.ts` | the minimum-head-count sweep: cancel what did not fill by its own deadline |
  * | `./trips-crew.ts` | who is working it, and the guards on changing that |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
@@ -39,6 +40,15 @@ export {
   type TripCrewMemberInput,
   tripCrewByTrip,
 } from "./trips-crew";
+export {
+  cancelDeparturesBelowMinimum,
+  clearMinimumSeats,
+  listDeparturesAwaitingMinimumDecision,
+  listMinimumNotMetRecipients,
+  MINIMUM_SEATS_SWEEP_LIMIT,
+  type MinimumSeatsSweepResult,
+  type SweptDeparture,
+} from "./trips-minimum";
 export {
   countShopTrips,
   listTripIdsInOfflineManifestWindow,

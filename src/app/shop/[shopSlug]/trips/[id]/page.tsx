@@ -40,6 +40,7 @@ import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
+import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
@@ -373,6 +374,19 @@ export default async function ManageTripPage({
       />
 
       <TripNoticeBanner notice={pageNotice} locale={locale} />
+
+      {/* Above the sections, and above the role gate below it: a departure
+          that will cancel itself tonight is news for whoever is looking at it,
+          not only for whoever can edit it (ADR
+          20260813-minimum-head-count-departures). Renders nothing on a trip
+          with no minimum, or one that has met it. */}
+      <MinimumSeatsBand
+        trip={trip}
+        booked={trip.booked}
+        locale={locale}
+        timeZone={shop.timezone}
+        t={t}
+      />
 
       {/* No "you're viewing this trip" notice for staff without configure
           rights. The editable sections simply aren't rendered, which is the

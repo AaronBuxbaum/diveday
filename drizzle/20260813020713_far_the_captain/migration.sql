@@ -1,0 +1,1 @@
+ALTER TYPE "notification_kind" ADD VALUE 'trip_minimum_not_met';
