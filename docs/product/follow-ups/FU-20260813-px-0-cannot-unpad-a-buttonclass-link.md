@@ -34,8 +34,8 @@ the box left by exactly its own padding so the label lines up while the touch ta
 
 `/` and `/pricing` are other pages, and this design sweep has had a branch per surface — editing
 two files I do not own to fix a 16px indent is the kind of drive-by that produces merge conflicts
-with whoever is redesigning them. The fix is also arguably not "add `-ml-4` in two more places":
-four call sites reaching for the same workaround says the wrapper is missing a way to say it,
+with whoever is redesigning them. The fix is also arguably not "add `-ml-4` in three more places":
+four call sites reaching for the same workaround say the wrapper is missing a way to say it,
 which is a `src/components/ui/button.ts` API call and belongs with a look at
 `docs/design/forms-and-controls.md` rather than in a page diff.
 
