@@ -158,16 +158,17 @@ does not depend on the account's age or plan. What that covers, and what this st
 
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
-| 10 custom metrics | 12 (7 signals + 5 web vitals) | 2 × $0.30 = **$0.60** |
-| 10 standard-resolution alarms | 10 (7 signals + 3 alarmed vitals) | **$0.00** — exactly at the line |
+| 10 custom metrics | 13 (8 signals + 5 web vitals) | 3 × $0.30 = **$0.90** |
+| 10 standard-resolution alarms | 11 (8 signals + 3 alarmed vitals) | 1 × $0.10 = **$0.10** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
 | 1 Contributor Insights rule | 0 | — |
 | 1,800 minutes of Live Tail | 0 | — |
 
-So the fixed monthly cost of everything in this runbook is about **$0.60**, and the next counted
+So the fixed monthly cost of everything in this runbook is about **$1.00**, and the next counted
 signal added to the registry costs **$0.40** — $0.30 for the metric plus $0.10 for the alarm. The
-alarm count reads like a cliff and is not one; the metric half is what is worth rationing.
+alarm count read like a cliff while it sat exactly at ten and never was one; both halves are now
+past the allowance and priced the same way.
 
 **RUM is the exception and the one to watch.** Its 1,000,000 events is a one-time trial, *not* an
 always-free allowance, and past it RUM is $1.00 per 100,000 events with no ceiling.
