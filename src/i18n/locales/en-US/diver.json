@@ -1969,7 +1969,7 @@
         },
         "offline": {
           "question": "Does the manifest work offline?",
-          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Roll calls work from that copy, the screen shows how fresh it is, and when service returns every change is checked against the live manifest before it counts."
+          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts."
         },
         "dataIfNotWorking": {
           "question": "What happens to my records if I leave?",
@@ -1997,9 +1997,9 @@
           "answer": "Each DiveDay shop runs one location today. If you operate more than one location, email {email} — we'd rather build that with you than pretend it's already here."
         }
       },
-      "closingTitle": "That's the whole price.",
-      "closingBody": "{price} {cadence}, and no annual contract. Cancel any month and your records leave with you.",
-      "stillQuestion": "A question these don't answer? A real person reads every one.",
+      "closingTitle": "That's our whole price.",
+      "closingBody": "{price} {cadence}. No annual contract, and your records leave with you whenever you go.",
+      "stillQuestion": "Still have a question? A real person reads every one.",
       "emailCta": "Email {email}"
     }
   },

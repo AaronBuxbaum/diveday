@@ -115,11 +115,13 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
   // "What is included?" left this list on 2026-08-13: the hero now answers it
   // in the first screenful, and a FAQ row restating the screen above it is the
   // duplication the three-densities rule exists to stop.
+  // `link` is one optional pair, not two independent optional fields: a row
+  // carrying an href with no label (or the reverse) would render no door at
+  // all, silently and with nothing to typecheck against.
   const faq: readonly {
     question: string;
     answer: string;
-    href?: string;
-    linkLabel?: string;
+    link?: { href: string; label: string };
   }[] = [
     {
       question: t("marketing.pricing.faq.billing.question"),
@@ -154,8 +156,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       // The one row whose answer is a door as much as a sentence: the guides
       // it names live at /switching, and without this link the footer is the
       // only path to them from here.
-      href: "/switching",
-      linkLabel: t("marketing.pricing.faq.switching.guidesLink"),
+      link: { href: "/switching", label: t("marketing.pricing.faq.switching.guidesLink") },
     },
     {
       question: t("marketing.pricing.faq.agency.question"),
@@ -206,11 +207,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
         <section className="border-b border-border">
           <div className="mx-auto max-w-3xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
             <div className="text-center">
+              {/* The spaces around the separator are load-bearing, not
+                  formatting: the middot is `aria-hidden`, and JSX drops the
+                  newlines between these three children, so without them the
+                  accessible name is the single word "Founding shopEarly
+                  access". */}
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t(earlyAccessPrice.nameKey)}
-                <span aria-hidden="true" className="mx-2 text-border-strong">
+                {t(earlyAccessPrice.nameKey)}{" "}
+                <span aria-hidden="true" className="mx-1 text-border-strong">
                   ·
-                </span>
+                </span>{" "}
                 {t("marketing.pricing.earlyAccessBadge")}
               </p>
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
@@ -227,12 +233,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
-              {/* Two lines by construction rather than by wrapping: the four
-                  negations answer "what's the catch" and want to be read as one
-                  scannable beat, and the claim beneath them is a different
-                  sentence doing a different job. Set as one paragraph they
-                  broke mid-clause ("No cut / of your bookings"), which is the
-                  one place on the page a ragged break is most visible. */}
+              {/* Two blocks rather than one paragraph: the four negations
+                  answer "what's the catch" and want to be read as one scannable
+                  beat, and the claim beneath them is a different sentence doing
+                  a different job. Set as one paragraph they broke mid-clause
+                  ("No cut / of your bookings") directly under the figure, which
+                  is where a ragged break is most visible. How many lines each
+                  block takes is the locale's business — the longer Spanish
+                  negations wrap, and wrap between sentences, which is the
+                  break this split was protecting. */}
               <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-muted">
                 {t("marketing.pricing.heroDescription")}
               </p>
@@ -281,7 +290,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
                 {t("marketing.pricing.includedLead")}
               </h2>
-              <ul className="mt-5 grid gap-x-10 gap-y-3 text-left leading-6 sm:grid-cols-2">
+              <ul className="mt-5 grid gap-x-10 gap-y-3 leading-6 sm:grid-cols-2">
                 {earlyAccessPrice.includedKeys.map((item) => (
                   <li key={item} className="flex gap-3">
                     <span aria-hidden="true" className="font-semibold text-primary">
@@ -291,18 +300,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   </li>
                 ))}
               </ul>
-              {/* The negative margin is on the wrapper, not in `className`: a
-                  size's `px-*` and one passed through `className` are two
-                  utilities for the same property, and which wins is stylesheet
-                  order rather than source order (see src/components/ui/button.ts).
-                  `px-4` was winning here, leaving the link 12 measured pixels
-                  inside the checkmarks above it — so the offset is applied
-                  where nothing competes for it. */}
-              <div className="mt-4 -ml-4">
-                <Link href="/product" className={buttonClass({ variant: "link" })}>
-                  {t("marketing.pricing.seeFullList")}
-                </Link>
-              </div>
+              {/* `flush`, not `className: "px-0"`: the size's own `px-4` wins
+                  a `className` override (stylesheet order, not source order —
+                  see src/components/ui/button.ts), which is why this link used
+                  to render 12 measured pixels inside the checkmarks above it. */}
+              <Link
+                href="/product"
+                className={buttonClass({ variant: "link", flush: true, className: "mt-4" })}
+              >
+                {t("marketing.pricing.seeFullList")}
+              </Link>
             </div>
           </div>
         </section>
@@ -321,20 +328,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 <li key={guide.slug}>
                   <h3 className="font-semibold leading-6">{guide.competitor}</h3>
                   <p className="mt-1 leading-7 text-muted">{claim}</p>
-                  {/* Flushed on the wrapper for the reason the /product link
-                      above is: the `px-0` this used to pass lost to the size's
-                      own `px-4`, so the door sat indented from the claim it
-                      belongs to. */}
-                  <div className="mt-1 -ml-4">
-                    <Link
-                      href={`/switching/${guide.slug}`}
-                      className={buttonClass({ variant: "link", className: "text-left" })}
-                    >
-                      {t("marketing.pricing.feeAnchor.guideLink", {
-                        competitor: guide.competitor,
-                      })}
-                    </Link>
-                  </div>
+                  <Link
+                    href={`/switching/${guide.slug}`}
+                    className={buttonClass({
+                      variant: "link",
+                      flush: true,
+                      className: "mt-1 text-left",
+                    })}
+                  >
+                    {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -403,15 +406,17 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <article key={item.question}>
                 <h3 className="font-semibold leading-6">{item.question}</h3>
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
-                {item.href && item.linkLabel ? (
-                  <div className="mt-1 -ml-4">
-                    <Link
-                      href={item.href}
-                      className={buttonClass({ variant: "link", className: "text-left" })}
-                    >
-                      {item.linkLabel}
-                    </Link>
-                  </div>
+                {item.link ? (
+                  <Link
+                    href={item.link.href}
+                    className={buttonClass({
+                      variant: "link",
+                      flush: true,
+                      className: "mt-1 text-left",
+                    })}
+                  >
+                    {item.link.label}
+                  </Link>
                 ) : null}
               </article>
             ))}

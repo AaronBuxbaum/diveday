@@ -226,10 +226,23 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // objection layer had nothing left to act on. Tagged like `product-mid`, so
   // the position can be shown to have earned its place rather than folding
   // into the page's own bucket (src/lib/funnel.ts).
-  await expect(page.getByRole("heading", { name: "That's the whole price." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That's our whole price." })).toBeVisible();
   const pricingMain = page.getByRole("main");
+  // Visible, not merely present: `toHaveCount` passes on a `display:none`
+  // anchor, and a closing door nobody can see is the bug this one exists to
+  // fix rather than a fix for it.
+  await expect(pricingMain.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
   await expect(pricingMain.locator('a[href="/onboard?from=pricing-close"]')).toHaveCount(1);
   await expect(pricingMain.locator('a[href="/onboard?from=pricing"]')).toHaveCount(1);
+
+  // The switching guides' door out of the FAQ. Without it the footer is the
+  // only path to /switching from this page, and the row's href and label are
+  // one optional pair in the page's own type precisely so half of it cannot go
+  // missing — which renders no link at all, silently.
+  await expect(page.getByRole("link", { name: "Browse the switching guides →" })).toHaveAttribute(
+    "href",
+    "/switching",
+  );
 });
 
 test("the sign-up form answers the hesitation it creates", async ({ page }) => {

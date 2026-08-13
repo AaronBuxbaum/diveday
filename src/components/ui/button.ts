@@ -56,14 +56,39 @@ const sizes = {
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 
+/**
+ * The horizontal padding, dropped. For a `link`-variant button that has to sit
+ * flush with the prose it belongs to — a "See the full list →" under a
+ * checklist, a guide link under the claim it cites — where the size's `px-*`
+ * reads as an unexplained indent.
+ *
+ * It is an option rather than something a caller passes through `className`
+ * because passing it there **does not work**, for the same reason the type
+ * scale lives on the sizes: two utilities for one property resolve by
+ * stylesheet order, not by the order you wrote them, and Tailwind emits `px-0`
+ * before `px-4`, so the size always wins. Three links on `/pricing` rendered 12
+ * measured pixels inside the text above them while asking for `px-0`.
+ *
+ * Vertical padding and `min-h-11` stay: the touch target is why the padding is
+ * there at all, and only the horizontal half is what misaligns the text.
+ */
+const FLUSH = "px-0";
+const HORIZONTAL_PADDING = /\bpx-[^\s]+/g;
+
 export function buttonClass({
   variant = "primary",
   size = "md",
+  flush = false,
   className = "",
 }: {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Drop the size's horizontal padding so the label sits flush with adjacent text. */
+  flush?: boolean;
   className?: string;
 } = {}) {
-  return `${base} ${variants[variant]} ${sizes[size]} ${className}`.trim();
+  const sizeClasses = flush
+    ? `${sizes[size].replace(HORIZONTAL_PADDING, " ").replace(/\s+/g, " ").trim()} ${FLUSH}`
+    : sizes[size];
+  return `${base} ${variants[variant]} ${sizeClasses} ${className}`.trim();
 }

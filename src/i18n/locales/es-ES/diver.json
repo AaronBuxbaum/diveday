@@ -1969,7 +1969,7 @@
         },
         "offline": {
           "question": "¿Funciona el listado sin conexión?",
-          "answer": "Sí. El equipo guarda el listado en su teléfono antes de salir del muelle. Los pases de lista funcionan a partir de esa copia, la pantalla muestra cuán reciente es, y cuando vuelve el servicio cada cambio se verifica contra el listado en vivo antes de que cuente."
+          "answer": "Sí. El equipo guarda el listado en su teléfono antes de salir del muelle. Los pases de lista de salida y después de la inmersión funcionan a partir de esa copia, la pantalla siempre muestra cuán reciente es, y cuando vuelve el servicio DiveDay verifica cada cambio contra el listado en vivo antes de que cuente."
         },
         "dataIfNotWorking": {
           "question": "¿Qué pasa con mis registros si me voy?",
@@ -1997,9 +1997,9 @@
           "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a {email} — preferimos construir eso contigo antes que fingir que ya existe."
         }
       },
-      "closingTitle": "Ese es el precio completo.",
-      "closingBody": "{price} {cadence}, y sin contrato anual. Cancela cuando quieras y tus registros se van contigo.",
-      "stillQuestion": "¿Una pregunta que estas no responden? Una persona real lee cada una.",
+      "closingTitle": "Ese es todo nuestro precio.",
+      "closingBody": "{price} {cadence}. Sin contrato anual, y tus registros se van contigo cuando quieras.",
+      "stillQuestion": "¿Te queda una pregunta? Una persona real lee cada una.",
       "emailCta": "Escribe a {email}"
     }
   },
