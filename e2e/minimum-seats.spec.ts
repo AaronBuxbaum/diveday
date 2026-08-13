@@ -19,6 +19,15 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   page,
   request,
 }) => {
+  // Five sequential journeys before the assertions even begin: build a
+  // departure through the full add panel, find it on the board, read it as
+  // staff, read it again as a diver, and fire the sweep twice. Same
+  // aggregate-cost reasoning add-diver.spec.ts and booking.spec.ts state for
+  // their own multi-navigation flows — every individual step resolves, the
+  // total just runs past the default 15s budget. Not a hang this would mask:
+  // the failing trace showed the trip built and its Overview painted.
+  test.setTimeout(30_000);
+
   const title = `Minimum Charter ${e2eNow().getTime()}`;
   // Departs tomorrow with a 48-hour decision window, so its moment is already a
   // day behind the fleet's frozen clock — the sweep has a decision to make on
@@ -95,6 +104,10 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   page,
   request,
 }) => {
+  // Same reasoning as the test above: build a departure, find it, seat a diver
+  // through the Guests form, then two more page loads and a sweep.
+  test.setTimeout(30_000);
+
   const title = `Filled Charter ${e2eNow().getTime()}`;
   await createTrip(page, {
     title,
