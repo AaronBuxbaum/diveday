@@ -197,10 +197,14 @@ export function CourseAdmission({
         {certificationRequired}
         {minimumAge ? (
           <>
+            {/* The spaces live outside the aria-hidden span: a screen reader
+                that drops the hidden separator must still hear a word break
+                between the two claims, not "…or higherAges 12 and up" — this
+                is the page's admission line, the one safety-adjacent sentence
+                on it. */}{" "}
             <span aria-hidden="true" className="text-muted">
-              {" "}
-              ·{" "}
-            </span>
+              ·
+            </span>{" "}
             {t("course.agesAndUp", { age: minimumAge })}
           </>
         ) : null}
@@ -257,34 +261,38 @@ export function CourseSchedule({
   return (
     <section id="how-it-runs" className="mt-14 scroll-mt-8">
       <h2 className="text-2xl font-semibold tracking-tight">{t("course.howItRunsHeading")}</h2>
-      <ol className="relative mt-8 max-w-3xl">
-        {/* The rail. Dots are hollow (surface-filled) so the line reads as
-            passing behind them. Purely decorative — the ordered list already
-            carries the sequence for a screen reader. */}
+      {/* The rail lives on a wrapper div, not inside the <ol> — an ol may
+          contain only li children, and a decorative span in there is invalid
+          HTML even when browsers tolerate it. Dots are hollow (surface-filled)
+          so the line reads as passing behind them. Purely decorative — the
+          ordered list already carries the sequence for a screen reader. */}
+      <div className="relative mt-8 max-w-3xl">
         <span aria-hidden="true" className="absolute top-2 bottom-2 left-[5px] w-px bg-border" />
-        {days.map((day) => {
-          const time = formatScheduleDayTime(day, locale);
-          return (
-            <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
-              <span
-                aria-hidden="true"
-                className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
-              />
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <h3 className="text-lg font-semibold">{day.title}</h3>
-                {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
-              </div>
-              {day.items.length > 0 ? (
-                <ul className="mt-2 grid gap-1.5 text-sm text-muted">
-                  {day.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
+        <ol>
+          {days.map((day) => {
+            const time = formatScheduleDayTime(day, locale);
+            return (
+              <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+                />
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="text-lg font-semibold">{day.title}</h3>
+                  {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
+                </div>
+                {day.items.length > 0 ? (
+                  <ul className="mt-2 grid gap-1.5 text-sm text-muted">
+                    {day.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }
@@ -436,7 +444,20 @@ export function CourseSessions({
   inquiryHref: string | null;
   t: DiverTranslator;
 }) {
-  const [next, ...later] = sessions;
+  // The featured slot answers "when can I start?" — so it holds the soonest
+  // date a diver can actually book, not merely the soonest date. When the
+  // very next session is full but a later one is open, featuring the full one
+  // would put a waitlist in the page's most prominent slot while the bookable
+  // date hid in a compact row below (and would leave the page with no primary
+  // at all, breaking its principle-8 promise). The skipped full session still
+  // shows in the rows beneath, in date order, so nothing is hidden — and the
+  // label switches to "Next open date" so the slot never claims a full
+  // earlier date doesn't exist. Only when every session is full does the
+  // featured slot carry the waitlist, secondary on purpose: joining a
+  // waitlist is a fallback, never the page's one primary act.
+  const next = sessions.find((session) => !isFull(session)) ?? sessions[0];
+  const later = sessions.filter((session) => session !== next);
+  const nextIsSoonest = next === sessions[0];
   return (
     <section id="dates" className="mt-14 scroll-mt-8">
       <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
@@ -471,7 +492,7 @@ export function CourseSessions({
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold tracking-wide text-primary uppercase">
-                      {t("course.nextDate")}
+                      {nextIsSoonest ? t("course.nextDate") : t("course.nextOpenDate")}
                     </p>
                     <p className="mt-1 text-xl font-semibold">{facts.dates}</p>
                     <p className="mt-1 text-sm text-muted">

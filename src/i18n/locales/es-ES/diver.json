@@ -345,9 +345,6 @@
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",
-    "certification": "Titulación",
-    "minimumAge": "Edad mínima",
-    "minimumAgeYears": "{age} años",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
     "galleryHeading": "Fotos del curso {course}",
@@ -383,6 +380,7 @@
     "jumpQuestions": "Preguntas",
     "jumpContact": "Contacto",
     "nextDate": "Próxima fecha",
+    "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
     "agesAndUp": "A partir de {age} años"
   },

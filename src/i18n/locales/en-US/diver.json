@@ -345,9 +345,6 @@
     "seeDates": "See dates",
     "askAboutDates": "Ask about dates",
     "whoCanEnroll": "Who can enroll",
-    "certification": "Certification",
-    "minimumAge": "Minimum age",
-    "minimumAgeYears": "{age} years",
     "fromTheShop": "From the shop",
     "feeCovers": "What the fee covers",
     "galleryHeading": "Photos from the {course} course",
@@ -383,6 +380,7 @@
     "jumpQuestions": "Questions",
     "jumpContact": "Get in touch",
     "nextDate": "Next date",
+    "nextOpenDate": "Next open date",
     "moreDates": "More dates",
     "agesAndUp": "Ages {age} and up"
   },
