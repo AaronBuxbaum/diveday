@@ -56,9 +56,7 @@ export function EntryShell({
   children: ReactNode;
 }) {
   return (
-    <main
-      className={`mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16`}
-    >
+    <main className={entryMainClass(width)}>
       <header className="text-center">
         {wordmark ? <EntryWordmark className="mb-8 justify-center" /> : null}
         {eyebrow ? (
@@ -74,9 +72,7 @@ export function EntryShell({
         {description ? <p className="mx-auto mt-2 max-w-prose text-muted">{description}</p> : null}
       </header>
       {panel ? (
-        <div className="mt-8 sm:rounded-2xl sm:border sm:border-border sm:bg-surface sm:p-8">
-          {children}
-        </div>
+        <div className={entryPanelClass}>{children}</div>
       ) : (
         <div className="mt-8 flex flex-col items-center gap-4 text-center">{children}</div>
       )}
@@ -88,6 +84,22 @@ export function EntryShell({
     </main>
   );
 }
+
+/**
+ * The centered column every door shares. Exported so `EntryShellSkeleton`
+ * wears the *same* frame as the shell that replaces it — a skeleton narrower
+ * or wider than its page is a sideways layout jump on every navigation into
+ * the route (docs/design/principles.md #10), and two width-mismatched
+ * loading files were found exactly that way. Shared constants make the
+ * drift structurally impossible.
+ */
+export function entryMainClass(width: "sm" | "lg") {
+  return `mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16`;
+}
+
+/** The form panel: borderless on a phone, a bordered surface from `sm` up. */
+export const entryPanelClass =
+  "mt-8 sm:rounded-2xl sm:border sm:border-border sm:bg-surface sm:p-8";
 
 /**
  * A terminal outcome as the whole page: email confirmed, link expired, emails

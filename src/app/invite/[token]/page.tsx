@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
-import { passwordConfirmErrorText } from "@/components/account/passwordConfirmError";
+import {
+  passwordConfirmErrorField,
+  passwordConfirmErrorText,
+} from "@/components/account/passwordConfirmError";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
@@ -61,16 +64,9 @@ export default async function InvitePage({
   }
 
   // Same field-routing as /reset-password: the refusal lands on the box that
-  // earned it, and only the generic code falls back to the action row.
+  // earned it, routed by the shared typed map beside the message resolver.
   const errorText = error ? passwordConfirmErrorText(t, error) : undefined;
-  const errorField =
-    error === "password_too_short" || error === "password_too_long"
-      ? "password"
-      : error === "passwords_mismatch"
-        ? "confirm"
-        : error
-          ? "form"
-          : undefined;
+  const errorField = error ? passwordConfirmErrorField(error) : undefined;
 
   return (
     <EntryShell

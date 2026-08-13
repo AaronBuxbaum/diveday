@@ -32,3 +32,28 @@ export function passwordConfirmErrorText(t: DiverTranslator, error: string): str
     ? PASSWORD_CONFIRM_ERROR_MESSAGES[error as keyof typeof PASSWORD_CONFIRM_ERROR_MESSAGES](t)
     : PASSWORD_CONFIRM_ERROR_MESSAGES.invalid_input(t);
 }
+
+/**
+ * Which box the refusal lands on (docs/design/forms-and-controls.md): a
+ * length problem names the new-password field, a mismatch names the
+ * confirmation, and anything else — including an unknown code — falls back to
+ * the form's action row. Keyed by the same `PasswordConfirmErrorCode` union
+ * the schema's messages are checked against (`satisfies` in
+ * src/lib/onboarding.ts), so a new code can't be added without this map
+ * failing to compile. Shared by `/invite/[token]` and
+ * `/reset-password/[token]`.
+ */
+const PASSWORD_CONFIRM_ERROR_FIELDS: Record<
+  PasswordConfirmErrorCode,
+  "password" | "confirm" | "form"
+> = {
+  password_too_short: "password",
+  password_too_long: "password",
+  passwords_mismatch: "confirm",
+};
+
+export function passwordConfirmErrorField(error: string): "password" | "confirm" | "form" {
+  return Object.hasOwn(PASSWORD_CONFIRM_ERROR_FIELDS, error)
+    ? PASSWORD_CONFIRM_ERROR_FIELDS[error as PasswordConfirmErrorCode]
+    : "form";
+}

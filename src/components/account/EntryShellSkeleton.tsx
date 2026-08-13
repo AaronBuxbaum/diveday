@@ -1,9 +1,12 @@
+import { entryMainClass, entryPanelClass } from "@/components/account/EntryShell";
+
 /**
  * Body-shaped skeleton matching `EntryShell` (design principle 1): centered
  * title and description bars, then either the form panel (borderless on a
- * phone, a bordered surface from `sm` up — the same responsive classes as the
- * real panel, so nothing shifts when the page streams in) or, for the
- * single-button doors (`panel={false}`), a centered button bar.
+ * phone, a bordered surface from `sm` up — the *same* exported class
+ * constants as the real shell, so nothing can drift or shift when the page
+ * streams in) or, for the single-button doors (`panel={false}`), a centered
+ * button bar.
  *
  * `fields` is a list of slot names, one per stacked label+control pair, so
  * each page's skeleton carries the same number of rows as its real form.
@@ -25,9 +28,7 @@ export function EntryShellSkeleton({
   footnote?: boolean;
 }) {
   return (
-    <main
-      className={`mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16`}
-    >
+    <main className={entryMainClass(width)}>
       <div className="animate-pulse">
         {wordmark ? <div className="mx-auto h-6 w-28 rounded bg-surface-sunken" /> : null}
         {eyebrow ? <div className="mx-auto mb-2 h-4 w-24 rounded bg-surface-sunken" /> : null}
@@ -36,7 +37,7 @@ export function EntryShellSkeleton({
         />
         <div className="mx-auto mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
         {panel ? (
-          <div className="mt-8 sm:rounded-2xl sm:border sm:border-border sm:bg-surface sm:p-8">
+          <div className={entryPanelClass}>
             {fields.map((slot, index) => (
               <div key={slot} className={index === 0 ? "" : "mt-4"}>
                 <div className="h-4 w-28 rounded bg-surface-sunken" />
