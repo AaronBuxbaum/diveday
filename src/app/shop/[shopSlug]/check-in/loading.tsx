@@ -5,7 +5,9 @@
  */
 export default function CheckInLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    // flex-1 to match the page it stands in for — without it the shop layout's
+    // footer hugs the skeleton, then drops when the real page lands.
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <div className="h-4 w-24 rounded bg-surface-sunken" />
         <div className="mt-3 h-9 w-64 rounded bg-surface-sunken" />

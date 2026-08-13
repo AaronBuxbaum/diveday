@@ -2350,8 +2350,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The courses catalog: the agency tab strip that replaced the per-row
       // PADI/SSI pill, the list in progression order rather than alphabetical,
-      // and the three row controls — schedule a session, the eye visibility
-      // toggle, the link out to the public page.
+      // and the dissolved row — the row's own tap opens the course's editor,
+      // with only the two worded list-level acts (Schedule, Hide/Show) on the
+      // rail and the public-catalog door up in the header.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
