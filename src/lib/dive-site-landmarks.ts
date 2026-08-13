@@ -16,6 +16,8 @@
  * rendered as typed.
  */
 
+import { safeJson } from "./safe-json";
+
 /**
  * The categorical "type" of a named landmark — a code, not a rendered word.
  * `pointOfInterest` is the fallback for a landmark whose kind was never chosen.
@@ -93,12 +95,4 @@ export function parseDiveSiteLandmarks(raw: unknown): DiveSiteLandmark[] {
     });
   }
   return landmarks;
-}
-
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }

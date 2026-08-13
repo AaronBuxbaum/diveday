@@ -25,6 +25,8 @@
  * Codes and geometry only, no sentences (AGENTS.md).
  */
 
+import { safeJson } from "./safe-json";
+
 /** One waypoint, as a percentage of the satellite frame. */
 export type RoutePoint = { x: number; y: number };
 
@@ -77,14 +79,6 @@ export function parseRoutePoints(raw: unknown): RoutePoint[] {
     points.push({ x: clampCoordinate(x), y: clampCoordinate(y) });
   }
   return points;
-}
-
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
 
 /** A stored or submitted zoom, clamped to what the editor can actually draw at. */

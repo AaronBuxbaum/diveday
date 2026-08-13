@@ -15,6 +15,8 @@
  * "juvenile reef fish" is a category a shop invents, not one DiveDay enumerates.
  */
 
+import { safeJson } from "./safe-json";
+
 export type DiveSiteCreature = {
   /** The catalog entry this started from, or empty for a species typed by hand. */
   slug: string;
@@ -77,12 +79,4 @@ export function parseDiveSiteCreatures(raw: unknown): DiveSiteCreature[] {
     });
   }
   return creatures;
-}
-
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
