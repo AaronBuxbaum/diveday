@@ -529,6 +529,32 @@ export function RosterSection({
                 </form>
               </details>
             );
+            // One block, rendered in exactly one of two places and never both:
+            // in the open half when the seat has no contact (that is work
+            // Today sends staff here to do, and it prints on the manifest), in
+            // the reference panel when it has one (that is a fact about the
+            // seat). Written once so the two placements cannot drift apart in
+            // heading, form, or wording.
+            const emergencyContactBlock = (
+              <div>
+                <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                  {t("trips.roster.emergencyContactHeading")}
+                </p>
+                {hasEmergencyContact ? (
+                  <p className="mt-1 text-sm text-muted">
+                    {t("trips.roster.emergencyContactOnFile", {
+                      name: person.emergencyContactName ?? "",
+                      phone: person.emergencyContactPhone ?? "",
+                    })}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-warning">
+                    {t("trips.roster.emergencyContactMissing")}
+                  </p>
+                )}
+                {emergencyContactForm}
+              </div>
+            );
 
             /**
              * **Work**: everything this seat still owes, always in the open.
@@ -735,17 +761,7 @@ export function RosterSection({
                     under the staffer who typed it; that is real, and it is
                     handled where it belongs — `savedContactBookingId` opens
                     that row's panel on the way back. */}
-                {hasEmergencyContact ? null : (
-                  <div className="mt-3">
-                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      {t("trips.roster.emergencyContactHeading")}
-                    </p>
-                    <p className="mt-1 text-sm text-warning">
-                      {t("trips.roster.emergencyContactMissing")}
-                    </p>
-                    {emergencyContactForm}
-                  </div>
-                )}
+                {hasEmergencyContact ? null : <div className="mt-3">{emergencyContactBlock}</div>}
 
                 {/* One disclosure, at the top level of the card rather than
                     nested inside "Details" — writing a note about a diver is
@@ -890,20 +906,7 @@ export function RosterSection({
                       what this panel is for. Only this state appears here — a
                       missing one is work and stays in the open above, so the
                       card never states the same thing twice (principle 9). */}
-                  {hasEmergencyContact ? (
-                    <div>
-                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                        {t("trips.roster.emergencyContactHeading")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted">
-                        {t("trips.roster.emergencyContactOnFile", {
-                          name: person.emergencyContactName ?? "",
-                          phone: person.emergencyContactPhone ?? "",
-                        })}
-                      </p>
-                      {emergencyContactForm}
-                    </div>
-                  ) : null}
+                  {hasEmergencyContact ? emergencyContactBlock : null}
                 </div>
 
                 {/* `-mx-3` on the row, and both controls at the same `sm`
