@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
@@ -100,6 +100,22 @@ async function LocalizedHomeBody() {
 }
 
 /**
+ * The page's one kicker: a short marker word with a hairline rule running out
+ * to the edge of its column. The daily-moment rows use it for where in the day
+ * they sit, the portability diptych for which direction a record is travelling.
+ * One marker atom, several compositions around it — a new eyebrow style per
+ * band is what made the old page read as six renders of one template.
+ */
+function SectionMarker({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-4">
+      <p className="text-sm font-semibold text-primary">{children}</p>
+      <span aria-hidden="true" className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+/**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
  * message-bundle copy and the migration-guide competitor list. Nothing
@@ -150,6 +166,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       mockup: marketingMockups.frontDeskReadiness,
     },
   ] as const;
+  // What a shop gets back on the way out, listed rather than described — the
+  // inventory is the reassurance, so it reads as a manifest, not a paragraph.
+  const exportInventory = [
+    t("marketing.home.exportItem1"),
+    t("marketing.home.exportItem2"),
+    t("marketing.home.exportItem3"),
+    t("marketing.home.exportItem4"),
+  ];
 
   return (
     <main className="flex-1">
@@ -221,7 +245,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
             {t("marketing.home.momentsTitle")}
           </h2>
-          <p className="mt-4 text-lg leading-8 text-muted">
+          <p className="mt-4 text-lg leading-8 text-pretty text-muted">
             {t("marketing.home.momentsDescription")}
           </p>
         </div>
@@ -230,8 +254,8 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           {dailyMoments.map((moment, index) => (
             <div key={moment.title} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
               <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
-                <p className="text-sm font-semibold text-primary">{moment.when}</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                <SectionMarker>{moment.when}</SectionMarker>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   {moment.title}
                 </h3>
                 <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
@@ -282,65 +306,60 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
+      {/* The portability band, and the one section whose geometry *is* its
+          argument: records come in clean and leave the same way, so the two
+          directions are a mirrored pair of equal columns under one statement —
+          same marker, same rule, same weight — rather than the copy-left /
+          visual-right split it shared with the hero and the first moment row.
+          Arriving reads first (docs/product/marketing.md). */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.home.exportTitle")}
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription1")}
-            </p>
-            <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
-            </p>
-            {/* One door to the whole switching surface — the hub fronts both
-                the incumbent guides and the spreadsheet path, so two stacked
-                link CTAs here were one door pretending to be two. */}
-            <Link
-              href="/switching"
-              className={buttonClass({ variant: "link", className: "mt-4 px-0 text-left" })}
-            >
-              {t("marketing.home.guidesLink", { competitors })}
-            </Link>
-          </div>
-          {/* The band's two directions, each with something to look at rather
-              than only a paragraph: the importer's real preview step for
-              arriving, the export inventory for leaving. Same order the copy
-              argues in (docs/product/marketing.md — arriving first, leaving
-              second), which is why the mockup sits above the card. */}
-          <div className="space-y-5">
+        <h2 className="max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          {t("marketing.home.exportTitle")}
+        </h2>
+
+        <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
+          <div className="flex flex-col gap-5 lg:pr-14">
+            <SectionMarker>{t("marketing.home.arrivingLabel")}</SectionMarker>
+            <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
             <MarketingMockup
               label={t("marketing.home.importMockupLabel")}
               className="shadow-xl shadow-foreground/5"
             >
               <ImportPreviewFallback locale={locale} />
             </MarketingMockup>
-            <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-              <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.home.inExportEyebrow")}
-              </p>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem1")}</span>
+          </div>
+
+          <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
+            <SectionMarker>{t("marketing.home.leavingLabel")}</SectionMarker>
+            <p className="leading-7 text-muted">
+              {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
+            </p>
+            {/* A manifest, not a card: hairline rows echoing the marker rule
+                above them. The bordered card this replaced put a second
+                rounded box beside the import mockup and read as its twin,
+                when the two halves are a picture and an inventory. */}
+            <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
+              {exportInventory.map((item) => (
+                <li key={item} className="flex gap-3 py-4">
+                  <span aria-hidden="true" className="font-semibold text-primary">
+                    ✓
+                  </span>
+                  <span>{item}</span>
                 </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem2")}</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem3")}</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t("marketing.home.exportItem4")}</span>
-                </li>
-              </ul>
-            </div>
+              ))}
+            </ul>
           </div>
         </div>
+
+        {/* One door to the whole switching surface — the hub fronts both the
+            incumbent guides and the spreadsheet path, so two stacked link CTAs
+            here were one door pretending to be two. */}
+        <Link
+          href="/switching"
+          className={buttonClass({ variant: "link", className: "mt-10 px-0 text-left" })}
+        >
+          {t("marketing.home.guidesLink", { competitors })}
+        </Link>
       </section>
 
       {/* The one close. Until 2026-08-13 the page ended on three consecutive
