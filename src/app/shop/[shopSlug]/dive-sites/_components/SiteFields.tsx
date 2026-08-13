@@ -5,6 +5,7 @@ import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
+import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
@@ -40,7 +41,7 @@ export type SiteFieldValues = {
   imageUrls: string[];
   marineLife: string | null;
   marineLifeDescription: string | null;
-  difficulty: string | null;
+  difficultyLevel: DiveSiteDifficulty | null;
   depthRange: string | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
@@ -110,6 +111,7 @@ export function SiteFields({
   landmarkCopy,
   fieldGuideCopy,
   marineLifeCatalog,
+  siteId,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -127,6 +129,8 @@ export function SiteFields({
   fieldGuideCopy: FieldGuideEditorCopy;
   /** DiveDay's species catalog, as the field-guide picker's autocomplete source. */
   marineLifeCatalog: FieldGuideCatalogEntry[];
+  /** The site being edited, so a species request carries what they were writing. */
+  siteId?: string | null;
 }) {
   // `ImageFileInput` is a Client Component, so its words arrive resolved.
   const imageInputCopy = {
@@ -312,13 +316,23 @@ export function SiteFields({
       </FieldGrid>
       <FieldGrid columns={2} className="gap-y-5">
         <Field label={t("diveSites.form.difficultyLabel")} hint={t("diveSites.form.optionalHint")}>
-          <input
+          {/* A picker, not a text box: the word ends up on a diver's briefing
+              and has to arrive in their language, so it is a code with a
+              translated label (ADR 20260813-marine-life-is-diveday-copy applies
+              the same reasoning to species). Every value any shop had typed
+              here was already one of these three. */}
+          <select
             name="difficulty"
-            maxLength={120}
-            defaultValue={values?.difficulty ?? ""}
-            placeholder={t("diveSites.form.difficultyPlaceholder")}
+            defaultValue={values?.difficultyLevel ?? ""}
             className={controlClass}
-          />
+          >
+            <option value="">{t("diveSites.form.difficultyUnset")}</option>
+            {DIVE_SITE_DIFFICULTIES.map((level) => (
+              <option key={level} value={level}>
+                {t(`diveSites.form.difficultyLevels.${level}`)}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label={t("diveSites.form.depthRangeLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
@@ -432,6 +446,7 @@ export function SiteFields({
         initialSlugs={values?.creatures ?? []}
         catalog={marineLifeCatalog}
         copy={fieldGuideCopy}
+        siteId={siteId}
       />
       <FieldGrid columns={1} className="gap-y-5">
         <Field

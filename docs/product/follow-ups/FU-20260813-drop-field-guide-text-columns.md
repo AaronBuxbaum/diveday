@@ -1,4 +1,4 @@
-# FU-20260813-drop-field-guide-text-columns — Finish the expand/contract: drop the five dead text columns on `dive_site_creatures`
+# FU-20260813-drop-field-guide-text-columns — Finish the expand/contract: drop six dead columns left by the field-guide and difficulty changes
 
 - **Status:** Open
 - **Raised:** 2026-08-13 — branch `claude/marine-catalog-spanish-copy-0431m5`, the change that made
@@ -17,6 +17,11 @@ nothing. They still hold the words shops and the seed wrote before 2026-08-13.
 (`drizzle/20260813191826_curly_speed/`) purely so the new insert, which supplies neither, would
 work. That is half of an expand/contract with no ticket behind the other half, which is the shape
 that quietly becomes permanent.
+
+**A sixth column is in exactly the same state**: `dive_sites.difficulty`, replaced by the
+`difficulty_level` enum in `drizzle/20260813203912_lean_emma_frost/` (ADR
+20260813-dive-site-difficulty-is-a-code). Same release, same reason, same one-release wait — do
+both in one migration.
 
 ## Why it isn't already done
 
@@ -41,8 +46,8 @@ the sentence the marker exists for:
 ALTER TABLE "dive_site_creatures" DROP COLUMN "name";
 ```
 
-Delete the five columns from `diveSiteCreatures` in `src/db/schema.ts` (the block already marks them
-`Legacy:` and points here) and regenerate. Nothing else needs to change: the CSV export already
+Delete the five columns from `diveSiteCreatures` and `difficulty` from `diveSites` in
+`src/db/schema.ts` (every one is already marked `Legacy:` and points here) and regenerate. Nothing else needs to change: the CSV export already
 resolves its word columns from the bundle rather than from the row, and no test asserts on them.
 
 **Not proposed:** dropping `catalog_slug`'s nullability at the same time. It is nullable because
@@ -65,12 +70,15 @@ grammar, and why this is refused without one), the `diveSiteCreatures` block in 
 (the five columns are marked `Legacy:`), and scripts/check-migrations.mjs.
 
 Do this: delete `name`, `kind`, `imageUrl`, `description` and `preparationTip` from
-`diveSiteCreatures` in src/db/schema.ts, run `pnpm db:generate`, and add a
+`diveSiteCreatures`, and `difficulty` from `diveSites`, in src/db/schema.ts, run `pnpm db:generate`,
+and add a
 `-- diveday:allow-destructive drop-column dive_site_creatures.<column>: <why>` line to the generated
 SQL for each -- one marker per column; the guard refuses a marker that excuses nothing and one that
 blankets a file. Leave `catalog_slug` nullable.
 
-Confirm by grep that nothing in src/ reads those five fields before you drop them.
+Confirm by grep that nothing in src/ reads those six fields before you drop them. For
+`dive_sites.difficulty`, note that `GlobalDiveSiteBriefing.difficulty` is a *jsonb* field on
+immutable published snapshots and must stay -- it is not the column.
 
 Done when `pnpm check` is green and `pnpm test src/db/export.test.ts` passes. Delete
 docs/product/follow-ups/FU-20260813-drop-field-guide-text-columns.md as part of the change.

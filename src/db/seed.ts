@@ -27,6 +27,7 @@ import {
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  marineLifeRequests,
   nitroxCertifications,
   notificationDeliveries,
   notificationDeliveryAttempts,
@@ -762,6 +763,13 @@ export async function resetDemoSchedule(
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
+  // A species request points at the site the staffer was writing when they hit
+  // the wall, so it goes before the sites — the FK is `ON DELETE SET NULL`, but
+  // the row's own `shop_id` is not, and leaving it would block the shop delete
+  // outright. Cleared on a schedule reset too: nothing seeds it, so an empty
+  // table is the demo shop's correct state, and the e2e suite writes one every
+  // time it exercises the picker's refusal.
+  await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
   // A course inquiry references its course without cascade (a lead is
   // evidence, not something a schedule reset should silently vanish), so it

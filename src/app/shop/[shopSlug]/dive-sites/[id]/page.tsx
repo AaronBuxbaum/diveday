@@ -160,7 +160,7 @@ export default async function EditDiveSitePage({
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.fields.difficulty,
+      difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
@@ -321,6 +321,7 @@ export default async function EditDiveSitePage({
           landmarkCopy={landmarkEditorCopy(t)}
           fieldGuideCopy={fieldGuideEditorCopy(t)}
           marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+          siteId={site.id}
           certificationDescription={t("diveSites.edit.certificationDescription")}
           requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
         />

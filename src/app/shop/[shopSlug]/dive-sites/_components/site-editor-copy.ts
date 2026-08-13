@@ -59,6 +59,8 @@ export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
     empty: t("diveSites.form.fieldGuide.empty"),
     full: t("diveSites.form.fieldGuide.full", { max: MAX_SITE_CREATURES }),
     notFound: t("diveSites.form.fieldGuide.notFound"),
+    requestSpecies: t("diveSites.form.fieldGuide.requestSpecies"),
+    requestSent: t("diveSites.form.fieldGuide.requestSent", { name: NAME_TOKEN }),
     remove: t("diveSites.form.fieldGuide.remove"),
     removeAriaLabel: t("diveSites.form.fieldGuide.removeAriaLabel", { name: NAME_TOKEN }),
     moveUp: t("diveSites.form.fieldGuide.moveUp"),

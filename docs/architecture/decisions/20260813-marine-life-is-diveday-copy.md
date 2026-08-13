@@ -89,8 +89,13 @@ sells to the Caribbean, where the operating language is frequently not English.
 escape hatch: DiveDay's words by default, the shop's if it typed any. Rejected for this change
 because it is not one model but two, and the surface has to explain both — a card that is sometimes
 translated and sometimes not is the half-translated guide again, arrived at one row at a time. It is
-also a strictly additive change later, which is why the register carries it as a decision rather
-than a regret (`FU-20260813-field-guide-has-no-escape-hatch`).
+also a strictly additive change later.
+
+*Resolved 2026-08-13, same day:* the escape hatch is a **request path**, not a shop-authored card.
+The picker's refusal now writes a `marine_life_requests` row (`src/db/marine-life-requests.ts`) and
+the catalog grew to cover the wider Caribbean rather than Florida alone. So a shop outside the
+catalog's water gets one card fewer and a way to say so, and every card that does render is still
+translated — which is the guarantee this ADR was written to buy, kept.
 
 **Join the guide to a catalog table in the database** — rejected in the amended ADR because it made
 DiveDay's words live on a shop's published page. That objection is now the *intent*, so it does not
