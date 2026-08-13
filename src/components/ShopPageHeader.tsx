@@ -159,7 +159,9 @@ export function ShopStat({
           : "rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
       }
     >
-      <Label className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}>
+      <Label
+        className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
+      >
         {label}
       </Label>
       <Value
