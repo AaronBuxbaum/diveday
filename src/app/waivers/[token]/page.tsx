@@ -8,7 +8,9 @@ import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
@@ -127,6 +129,28 @@ function readMedicalAnswers(
  * the token-valued utility, which does win.
  */
 const labelTextBase = "text-(length:--text-base) leading-6";
+
+/**
+ * The step markers that make "do this" read differently from "read this": the
+ * release above the form is an unboxed document, and each thing the diver
+ * actually acts on — health check, emergency contact, signature — announces
+ * itself as a numbered step. The number is decorative (`aria-hidden`); the
+ * heading text is what assistive tech reads, so the published questionnaire
+ * title passes through unreworded.
+ */
+function StepHeading({ number, children }: { number: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        aria-hidden="true"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary tabular-nums"
+      >
+        {number}
+      </span>
+      <h2 className="text-lg font-semibold">{children}</h2>
+    </div>
+  );
+}
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -474,11 +498,7 @@ export default async function WaiverPage({
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
       <FlashParams params={["saved", "error", "field"]} />
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-          {t("waiver.beforeDockTitle")}
-        </h1>
+      <TokenPageHeader eyebrow={shopName} title={t("waiver.beforeDockTitle")}>
         <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
         {tripHeader ? (
           <p className="mt-3 text-base font-medium text-foreground">
@@ -494,21 +514,13 @@ export default async function WaiverPage({
             })}
           </p>
         ) : null}
-        <p className="mt-2 text-sm text-muted">
-          {t("waiver.linkExpiresAt", {
-            date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
-          })}
-        </p>
-      </header>
+      </TokenPageHeader>
 
-      {saved ? (
-        <p
-          role="status"
-          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
-        >
-          {t("waiver.progressSaved")}
-        </p>
-      ) : null}
+      {/* One flash surface, never a stack. A refused submit and a saved draft
+          arrive on different redirects, so at most one has something to say —
+          and the refusal wins if both codes ever land on one URL. The
+          English-only note is not a flash at all; it sits with the document it
+          is about, below. */}
       {errorText ? (
         <p
           id="waiver-error"
@@ -522,21 +534,42 @@ export default async function WaiverPage({
             </a>
           ) : null}
         </p>
-      ) : null}
-
-      {locale !== DEFAULT_DIVER_LOCALE ? (
-        <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {t("waiver.englishOnlyNotice")}
+      ) : saved ? (
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          {t("waiver.progressSaved")}
         </p>
       ) : null}
+      {/* The jump link above is the sighted affordance; this is the same move
+          made for the keyboard — scroll to the named control, focus it, ring it
+          briefly (docs/design/forms-and-controls.md). Only for refusals that
+          name a real control: "medical" names a whole section, and focusing
+          eleven fieldsets at once helps nobody — the link handles that one. */}
+      {fieldError && fieldError.anchor !== "medical-questionnaire" ? (
+        <FieldErrorFocus key={fieldError.anchor} field={fieldError.anchor} />
+      ) : null}
 
-      <section className="mt-8 rounded-lg border border-border bg-surface p-5">
-        <p className="text-sm font-medium text-muted">
+      {/* The release reads as a document, not a widget: no card, no box — a
+          quiet titled rule above, the text set at reading size, a closing rule
+          below. The form after it is where the boxes are, so "read this" and
+          "do this" stop looking like the same component. */}
+      <section className="mt-10">
+        <p className="border-b border-border pb-3 text-sm font-medium text-muted">
           {t("waiver.templateVersion", {
             title: record.templateTitle,
             version: record.templateVersion,
           })}
         </p>
+        {locale !== DEFAULT_DIVER_LOCALE ? (
+          // Attached to the document it is about — the reader meets the "this
+          // text is English-only" warning at the top of the English text, not
+          // as a third bar stacked under the page title.
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+            {t("waiver.englishOnlyNotice")}
+          </p>
+        ) : null}
         {/* `wrap-anywhere`, not just `whitespace-pre-wrap`. A shop's waiver text
             is pasted in, usually out of a PDF or a word processor, and real
             releases carry runs a line break can't fall inside: a signature rule
@@ -548,13 +581,13 @@ export default async function WaiverPage({
             empty space beside the page (2026-08-06 review). */}
         <div
           data-waiver-template-body
-          className="mt-3 wrap-anywhere whitespace-pre-wrap text-base leading-7"
+          className="mt-4 wrap-anywhere whitespace-pre-wrap border-b border-border pb-8 text-base leading-7"
         >
           {record.templateBody}
         </div>
       </section>
 
-      <form action={completeAction} className="mt-8 flex flex-col gap-6">
+      <form action={completeAction} className="mt-8 flex flex-col gap-10">
         <section id="medical-questionnaire">
           <QuestionnaireProgress
             total={
@@ -562,7 +595,7 @@ export default async function WaiverPage({
             }
             labelTemplate={t("waiver.questionsAnswered")}
           >
-            <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
+            <StepHeading number={1}>{questionnaire.title}</StepHeading>
             {/* The published form's directions paragraph used to sit here. It
                 asked the diver to memorise which question numbers carry an
                 asterisk and then apply the rule to their own answers, which is
@@ -588,8 +621,11 @@ export default async function WaiverPage({
           </QuestionnaireProgress>
         </section>
 
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
+        {/* No card here: the heading, helper line, and the two fields carry
+            the section by themselves (principle 10 — type and space before
+            boxes). The one card left in the form is the signature block. */}
+        <section>
+          <StepHeading number={2}>{t("waiver.emergencyContact")}</StepHeading>
           {/* Editable whether or not something is on file. It used to go
               read-only the moment a contact existed, on the reasoning that a
               correction was staff work — but this is the one screen a diver
@@ -598,7 +634,7 @@ export default async function WaiverPage({
               never lets a blank overwrite a stored value, so re-showing the
               fields can only ever improve what the crew has. */}
           {emergencyContact?.name && emergencyContact?.phone ? (
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-2 text-sm text-muted">
               {t("waiver.emergencyOnFile", {
                 name: emergencyContact.name,
                 phone: emergencyContact.phone,
@@ -606,7 +642,7 @@ export default async function WaiverPage({
               {t("waiver.emergencyContactChangeHint")}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
+            <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
           )}
           <FieldGrid columns={2} className="mt-4">
             <Field label={t("waiver.contactName")}>
@@ -632,8 +668,13 @@ export default async function WaiverPage({
           </FieldGrid>
         </section>
 
-        <section className="rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-lg font-semibold">{t("waiver.signature")}</h2>
+        {/* The signature block is the one card in the form — the formal act at
+            the end of a paper release gets the same visual weight here. The
+            link's own expiry sits in its fine print, next to "Save and finish
+            later", because "can I come back to this?" is asked at the moment of
+            signing, not while reading the page title. */}
+        <section className="rounded-xl border border-border bg-surface p-5">
+          <StepHeading number={3}>{t("waiver.signature")}</StepHeading>
           <FieldGrid columns={1} className="mt-4">
             <Field
               label={t("waiver.typeFullName")}
@@ -677,35 +718,43 @@ export default async function WaiverPage({
             />
             <span>{t("waiver.agreementCheckbox")}</span>
           </label>
-          <p className="mt-3 text-sm text-muted">{t("waiver.signatureNote")}</p>
+          {/* The actions live in the signature block — signing is what this
+              card is, so its button belongs on it (principle 10: actions ride
+              on their objects), and "Save and finish later" sits beside the
+              expiry fine print that explains why you'd want it. */}
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="submit"
+              formAction={saveDraftAction}
+              // Drafts intentionally accept partial answers — the new
+              // `required` on signerName/acknowledged (and the pre-existing
+              // one on each medical radio) would otherwise let the browser
+              // block a legitimate "save what I have so far" submit.
+              formNoValidate
+              className={buttonClass({
+                variant: "secondary",
+                className: `text-(color:--color-foreground) ${labelTextBase}`,
+              })}
+            >
+              {t("waiver.saveForLater")}
+            </button>
+            <SubmitButton
+              pendingLabel={t("waiver.signing")}
+              className={buttonClass({
+                size: "lg",
+                className: `disabled:opacity-70 ${labelTextBase}`,
+              })}
+            >
+              {t("waiver.signButton")}
+            </SubmitButton>
+          </div>
+          <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
+          <p className="mt-1 text-sm text-muted">
+            {t("waiver.linkExpiresAt", {
+              date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
+            })}
+          </p>
         </section>
-
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="submit"
-            formAction={saveDraftAction}
-            // Drafts intentionally accept partial answers — the new
-            // `required` on signerName/acknowledged (and the pre-existing
-            // one on each medical radio) would otherwise let the browser
-            // block a legitimate "save what I have so far" submit.
-            formNoValidate
-            className={buttonClass({
-              variant: "secondary",
-              className: `text-(color:--color-foreground) ${labelTextBase}`,
-            })}
-          >
-            {t("waiver.saveForLater")}
-          </button>
-          <SubmitButton
-            pendingLabel={t("waiver.signing")}
-            className={buttonClass({
-              size: "lg",
-              className: `disabled:opacity-70 ${labelTextBase}`,
-            })}
-          >
-            {t("waiver.signButton")}
-          </SubmitButton>
-        </div>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
         {shop.contactEmail || shop.contactPhone
