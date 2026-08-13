@@ -26,8 +26,10 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     // each refuse for exactly one reason (the AOW course session, the
     // Advanced-only drift, the Duane deep sailing, and the nitrox charter), and
     // 46 before `seed-counter-blockers.ts` added the one boat that demands
-    // everything at once — the counter's five-reason card.
-    expect(upcoming).toHaveLength(47);
+    // everything at once — the counter's five-reason card, and 47 before
+    // `seed-minimum-seats.ts` added the long-range run that only sails with
+    // six aboard (ADR 20260813-minimum-head-count-departures).
+    expect(upcoming).toHaveLength(48);
 
     const starts = upcoming.map((t) => t.startsAt.getTime());
     expect(starts).toEqual([...starts].sort((a, b) => a - b));

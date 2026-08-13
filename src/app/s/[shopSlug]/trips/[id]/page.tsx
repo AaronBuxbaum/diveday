@@ -40,13 +40,13 @@ import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatShortDate } from "@/lib/format";
-import { googleMapsUrl } from "@/lib/maps";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
+import { minimumSeatsState } from "@/lib/minimum-seats";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
@@ -342,6 +342,11 @@ export default async function TripDetailPage({
   }));
 
   const inPast = trip.startsAt <= nowDate();
+  // Where this departure stands against the head count it needs, if it named
+  // one. A departure that already sailed has nothing conditional left to
+  // promise; a cancelled one returned far above this line, at the `status`
+  // check that renders `CancelledTripNotice` instead of the booking page.
+  const minimumSeats = inPast ? ({ kind: "none" } as const) : minimumSeatsState(trip, trip.booked);
   const full = isFull(trip);
   const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
@@ -412,14 +417,22 @@ export default async function TripDetailPage({
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
           </div>
         ) : null}
-        {!isEmbed ? (
-          <TripActions
-            calendarUrl={publicTripCalendarPath(shopSlug, tripId)}
-            directionsUrl={
-              trip.diveSite?.locationName ? googleMapsUrl(trip.diveSite.locationName) : null
-            }
-          />
+        {/* The promise, stated before anyone pays: what this departure needs to
+            run, and the exact moment the answer arrives. It is what makes the
+            automatic cancellation fair rather than abrupt — a diver who books
+            a boat that needs four people knows that, and knows when they'll
+            hear (ADR 20260813-minimum-head-count-departures). Dropped once the
+            count is met, because then there is nothing conditional left to
+            say, and on a departure that already sailed or was cancelled. */}
+        {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
+          <p className="mt-5 rounded-lg border border-border bg-surface-sunken p-4 text-sm text-muted">
+            {t("trip.minimumSeatsNotice", {
+              minimum: minimumSeats.minimum,
+              deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
+            })}
+          </p>
         ) : null}
+        {!isEmbed ? <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} /> : null}
         {/* Full keeps the same sticky CTA rather than hiding it — a diver who
             scrolls to a full boat still has one obvious next step (the wait
             list), not a dead-ended thumb (task 12). Both destinations share

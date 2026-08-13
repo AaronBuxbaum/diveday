@@ -14,6 +14,7 @@ import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
+import { listBookingNotes } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -33,7 +34,7 @@ import { requireStaffSession } from "@/lib/session";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DiverRollCall } from "./_components/DiverRollCall";
+import { type DeskNote, DiverRollCall } from "./_components/DiverRollCall";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
@@ -84,15 +85,18 @@ export default async function TripManifestPage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
-  // The manifest rows and the raw team membership don't depend on one another —
-  // resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList] = await Promise.all([
+  // The manifest rows, the raw team membership, and the desk's own notes don't
+  // depend on one another — resolve them together instead of serially.
+  const [completeManifests, buddyTeamsList, bookingNotes] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
     // until dissolved), while the manifest derivation already dropped that
     // member from every row's team (ADR 20260804-buddy-teams).
     listTripBuddyTeams(db, shop.id, tripId),
+    // The private staff notes written on the Guests tab. Read here, never
+    // written here — see `DeskNotes`.
+    listBookingNotes(db, shop.id, tripId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -173,13 +177,13 @@ export default async function TripManifestPage({
   };
   const buddyErrorText =
     buddyError === "duplicate"
-      ? t("trips.manifest.buddyErrorDuplicate")
+      ? t("manifest.buddyErrorDuplicate")
       : buddyError === "teamed"
-        ? t("trips.manifest.buddyErrorAlreadyTeamed")
+        ? t("manifest.buddyErrorAlreadyTeamed")
         : buddyError === "few"
-          ? t("trips.manifest.buddyErrorTooFew")
+          ? t("manifest.buddyErrorTooFew")
           : buddyError
-            ? t("trips.manifest.buddyErrorGeneric")
+            ? t("manifest.buddyErrorGeneric")
             : null;
   // A refusal renders beside the form that produced it
   // (docs/design/forms-and-controls.md). `few` is the one code only the
@@ -187,6 +191,16 @@ export default async function TripManifestPage({
   // every other code can come from any of the per-team add/remove/dissolve
   // forms and has no single home, so it stays at the top of the panel.
   const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
+
+  // Grouped by booking, oldest first (the query's own order) — the way a desk
+  // note reads is as a running thread on that seat.
+  const deskNotesByBooking = new Map<string, DeskNote[]>();
+  for (const { note, authorName } of bookingNotes) {
+    if (!note.bookingId) continue;
+    const rows = deskNotesByBooking.get(note.bookingId) ?? [];
+    rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
+    deskNotesByBooking.set(note.bookingId, rows);
+  }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -213,7 +227,7 @@ export default async function TripManifestPage({
 
   return (
     <div>
-      <SkipLink href="#roll-call-list" label={t("trips.manifest.skipToRollCall")} />
+      <SkipLink href="#roll-call-list" label={t("manifest.skipToRollCall")} />
       {/* The same header the other three tabs wear (`TripPageHeader`). This
           page used to hand-roll its own — a smaller `<h1>`, a rule underneath,
           the date line at a different offset — so switching to the Manifest
@@ -232,7 +246,7 @@ export default async function TripManifestPage({
         // said by the checkpoint nav and the "Active checkpoint" panel below,
         // both of which name the current one; saying it a third time up here
         // was the page explaining itself before it showed itself.
-        description={t("trips.manifest.description")}
+        description={t("manifest.description")}
         // Just the printer. "Generate log" used to stand here too, which put
         // a hand-to-authorities document one tap from "Mark boarded" on the
         // page a crew works at the rail — writing the day up is an evening
@@ -249,7 +263,7 @@ export default async function TripManifestPage({
           correct itself, so nothing here moves after the sheet comes off the
           printer. */}
       <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
-        {t("trips.manifest.soulsOnBoardLine", {
+        {t("manifest.soulsOnBoardLine", {
           divers: manifest.summary.totalDivers,
           crew: manifest.crew.length,
           souls: manifest.summary.totalDivers + manifest.crew.length,
@@ -262,7 +276,7 @@ export default async function TripManifestPage({
           this row is switched at the rail. */}
       <nav
         className="mt-7 flex w-fit max-w-full snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden"
-        aria-label={t("trips.manifest.checkpointNavAriaLabel")}
+        aria-label={t("manifest.checkpointNavAriaLabel")}
       >
         {checkpoints.map((value) => {
           const active = value === checkpoint;
@@ -315,6 +329,7 @@ export default async function TripManifestPage({
         tripId={tripId}
         locale={locale}
         timezone={shop.timezone}
+        deskNotesByBooking={deskNotesByBooking}
         rollCallAction={boundRollCallAction}
         saveRollCallNoteAction={boundSaveRollCallNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}

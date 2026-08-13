@@ -197,9 +197,10 @@ test.describe("as owner", () => {
     // `refusals: "coarse"` — the counter deliberately shows one blunt line
     // instead of the specific gate, and the structured payload is dropped with
     // it rather than trailing an unreadable param on the queue's URL. The
-    // check-in queue runs no `FlashParams`, so both halves of that are stable
-    // to assert on the URL.
-    await expect(page).toHaveURL(/\/check-in\?notice=walkin_unavailable$/);
+    // notice code itself is one-shot (`FlashParams` on the queue), so the URL
+    // settles back to the bare queue — which also proves the structured
+    // payload never trailed on it.
+    await expect(page).toHaveURL("/shop/blue-mantis/check-in");
     await expect(page).not.toHaveURL(/gate=/);
     await expect(
       page.getByText("Can’t add this diver to that boat right now — open its trip page"),

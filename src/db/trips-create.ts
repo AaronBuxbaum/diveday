@@ -29,6 +29,8 @@ export type NewTrip = {
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
+  minimumBookings?: number | null;
+  minimumDecisionHours?: number | null;
   scheduleDays?: TripScheduleDayInput[];
 };
 
@@ -154,6 +156,8 @@ export async function insertTripInstance(
     priceCents?: number | null;
     depositCents?: number | null;
     cancellationWindowHours?: number | null;
+    minimumBookings?: number | null;
+    minimumDecisionHours?: number | null;
     drafts: ReturnType<typeof normalizedDiveDrafts>;
     scheduleDays?: TripScheduleDayInput[];
   },
@@ -173,6 +177,8 @@ export async function insertTripInstance(
       priceCents: params.priceCents,
       depositCents: params.depositCents,
       cancellationWindowHours: params.cancellationWindowHours,
+      minimumBookings: params.minimumBookings,
+      minimumDecisionHours: params.minimumDecisionHours,
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
     })
@@ -230,6 +236,8 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       priceCents: input.priceCents,
       depositCents: input.depositCents,
       cancellationWindowHours: input.cancellationWindowHours,
+      minimumBookings: input.minimumBookings,
+      minimumDecisionHours: input.minimumDecisionHours,
       drafts,
       scheduleDays: input.scheduleDays,
     });
