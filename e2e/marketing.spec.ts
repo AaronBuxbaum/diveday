@@ -122,33 +122,32 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
 
-  // The click-through above has done its job — the Product link leads here. The
-  // disclosure below is exercised from a fresh `goto`, and deliberately not
-  // from the page this client-side navigation left us on.
+  // The click-through above has done its job — the Product link leads here.
+  // The capability index is re-checked from a fresh `goto`, so it is asserted
+  // against a directly-rendered document as well as a client navigation.
   //
-  // `/product` paints a **default-locale body as its own Suspense fallback**
-  // and swaps in the negotiated-locale one when it resolves (see
-  // `ProductPage`). For an en-US run both render identical copy, so every
-  // assertion above passes against either — but the swap replaces the subtree,
-  // and `<details>` open/closed is DOM state that a replaced subtree does not
-  // carry over. A click that lands in that window opens a disclosure that is
-  // about to be thrown away, and the assertion that follows then queries a
-  // *closed* `<details>` — whose contents are outside the accessibility tree,
-  // so `getByRole` reports "element(s) not found" rather than "not visible".
-  // That is exactly the failure this line produced on CI (shard 3/4, run
-  // 31549005047) and never once in local repeats, which is the signature of a
-  // race that only opens up under load.
+  // This block used to click a `<details>` open, and that click was the one
+  // interaction on the page that could lose a race. `/product` paints a
+  // **default-locale body as its own Suspense fallback** and swaps in the
+  // negotiated-locale one when it resolves (see `ProductPage`); for an en-US
+  // run both render identical copy, but the swap replaces the subtree, and
+  // `<details>` open/closed is DOM state a replaced subtree does not carry
+  // over. A click landing in that window opened a disclosure that was about to
+  // be thrown away, and the next assertion then queried a *closed* `<details>`
+  // — contents outside the accessibility tree, so `getByRole` reported
+  // "element(s) not found" rather than "not visible". That is exactly how this
+  // failed on CI (shard 3/4, run 31549005047) and never once locally.
   //
-  // `goto` is load-gated, so the streamed body has landed before the click.
-  // Not a timing shim: nothing here waits a guessed interval or retries — the
-  // navigation's own completion is the signal, which is what the whole page
-  // lacked on the client-side path. The user-facing half of this — a visitor
-  // who opens the disclosure fast enough watches it snap shut — is filed as
-  // FU-20260812-marketing-suspense-swap-discards-interaction.
+  // The disclosure is gone: the index renders flat, because a section headed
+  // "the whole list, plainly" that hid the list was the emptiest band on the
+  // page. So there is no DOM state here to lose, and the assertions below are
+  // ordinary auto-retrying ones. The load-gated `goto` stays — it is the
+  // navigation's own completion, never a guessed interval — and the
+  // page-architecture half of the problem is still open for the marketing
+  // pages that do keep interactive state
+  // (FU-20260812-marketing-suspense-swap-discards-interaction).
   await page.goto("/product");
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
-  // The full capability index sits behind a disclosure by default.
-  await page.getByText("The full list").click();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page —

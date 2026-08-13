@@ -115,6 +115,13 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
     { id: "recap", label: t("marketing.product.recapEyebrow") },
   ] as const;
 
+  // Every line in the reference index below, counted once so the sentence
+  // introducing it and the list itself can never disagree.
+  const capabilityCount = productCapabilityIndex.reduce(
+    (total, group) => total + group.items.length,
+    0,
+  );
+
   const notCovered = [
     {
       title: t("marketing.product.notCovered.pos.title"),
@@ -182,7 +189,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       <nav aria-label={t("marketing.product.arcTitle")} className="border-b border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-8 px-6 py-2 text-sm">
           <p className="py-2.5 font-semibold">{t("marketing.product.arcTitle")}</p>
-          <ol className="flex flex-wrap gap-x-8">
+          {/* Two aligned columns on a phone rather than a wrap: five labels of
+              five different widths wrapping freely read as an accident, and a
+              horizontal scroller would hide half the day — the whole point of
+              this strip is that a visitor sees all five chapters at once. */}
+          <ol className="grid grid-cols-2 gap-x-6 sm:flex sm:flex-wrap sm:gap-x-8">
             {chapters.map((chapter, index) => (
               <li key={chapter.id}>
                 <a
@@ -296,7 +307,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       {/* Chapter 04 — at the dock: the differentiator gets the phone. */}
       <section id="dock" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-20 lg:py-24">
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.8fr] lg:items-center">
+        {/* The phone gets the narrower column, not the wider one: it is a
+            fixed 384px object, so a 1.1fr column left it floating in ~110px of
+            slack on either side and pushed the story it illustrates away from
+            it. */}
+        <div className="grid gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
           <div className="order-2 lg:order-1">
             <CaptainPhoneFrame
               label={t("marketing.product.captainPhoneLabel")}
@@ -381,7 +396,10 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.product.paymentDescription")}
             </p>
           </div>
-          <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-2">
+          {/* Two facts, held to the same 4xl measure as the paragraph above
+              them: stretched across the full 6xl grid each line ran ~95
+              characters, which is a wall, not a fact. */}
+          <dl className="mt-12 grid max-w-4xl gap-x-12 gap-y-8 md:grid-cols-2">
             <div className="border-t border-border pt-5">
               <dt className="font-semibold leading-6">{t("marketing.product.yourAccountTitle")}</dt>
               <dd className="mt-2 text-sm leading-6 text-muted">
@@ -399,9 +417,16 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The reference index: every shipped capability, set like a spec sheet
-          — group name on the left, plain lines flowing in columns on the
-          right, hairline rules between groups. No cards, no check marks; a
-          buyer scanning for one feature reads down the left rail and across. */}
+          — group name on the left, terse lines flowing in two columns on the
+          right, hairline rules between groups. No cards, no check marks, and
+          no disclosure: a section headed "the whole list, plainly" that showed
+          a heading, two lines, and a "The full list" link in 350px of empty
+          band was the emptiest thing on the page, and the list it hid is what
+          a buyer comparing feature pages actually came for. Rendering it flat
+          also puts it in find-in-page, in the accessibility tree, and out of
+          reach of the localized-body swap that used to snap the disclosure
+          shut mid-click (FU-20260812, which still stands for the pages that
+          keep interactive state). */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
@@ -411,44 +436,31 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.product.boxTitle")}
             </h2>
+            {/* Counted off the registry rather than written down, so the
+                number can never drift from the list printed under it. */}
             <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.product.boxDescription")}
+              {t("marketing.product.boxDescription", { count: capabilityCount })}
             </p>
           </div>
-          <details className="mt-10 group">
-            <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold text-primary [&::-webkit-details-marker]:hidden">
-              {t("marketing.product.fullListSummary")}
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-4 transition-transform group-open:rotate-180"
+          <div className="mt-14">
+            {productCapabilityIndex.map((group) => (
+              <section
+                key={group.title}
+                className="grid gap-x-12 gap-y-3 border-t border-border py-8 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]"
               >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </summary>
-            <div className="mt-8">
-              {productCapabilityIndex.map((group) => (
-                <section
-                  key={group.title}
-                  className="grid gap-x-12 gap-y-3 border-t border-border py-7 md:grid-cols-[240px_1fr]"
-                >
-                  <h3 className="text-base font-semibold tracking-tight">{t(group.title)}</h3>
-                  <ul className="gap-x-12 text-sm leading-6 text-muted sm:columns-2">
-                    {group.items.map((item) => (
-                      <li key={item} className="break-inside-avoid py-1">
-                        {t(item)}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          </details>
+                <h3 className="text-base font-semibold tracking-tight text-balance">
+                  {t(group.title)}
+                </h3>
+                <ul className="gap-x-12 text-sm leading-6 text-muted sm:columns-2">
+                  {group.items.map((item) => (
+                    <li key={item} className="break-inside-avoid py-1">
+                      {t(item)}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -475,7 +487,10 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       <section className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
+        {/* `max-w-6xl`, like every band above it. At 7xl this one sat 64px
+            further left than the rest of the page at desktop width — the only
+            section whose left edge missed the column. */}
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
               {t("marketing.product.closingTitle")}
@@ -483,7 +498,9 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
             <Link
               href="/switching/spreadsheet"
-              className={buttonClass({ variant: "link", className: "mt-3 text-left" })}
+              // `px-0`: the link variant keeps its `md` padding for the touch
+              // target, which indented this line 16px past the heading above it.
+              className={buttonClass({ variant: "link", className: "mt-2 px-0 text-left" })}
             >
               {t("marketing.product.spreadsheetLink")}
             </Link>
