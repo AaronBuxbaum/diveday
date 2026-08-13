@@ -27,13 +27,7 @@
 import { hkdfSync } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  ENV_KEYS,
-  envEntry,
-  goesTo,
-  isOverridable,
-  isStackProduced,
-} from "../config/env-registry.mjs";
+import { ENV_KEYS, goesTo, isOverridable, isStackProduced } from "../config/env-registry.mjs";
 import { formatEnvValue, parseDotenv } from "./dotenv.mjs";
 
 const [target, outputPath] = process.argv.slice(2);
@@ -109,7 +103,7 @@ const lines = ENV_KEYS.filter((key) => goesTo(key, target))
   // the file always shows the whole shape and `pnpm check:env` can say what is
   // unset. For Vercel and GitHub an empty value is dropped instead: pushing one
   // would overwrite a variable set by hand in a console with nothing.
-  .map((key) => [key, values[key] ?? envEntry(key)?.value ?? ""])
+  .map((key) => [key, values[key] ?? ""])
   .filter(([, value]) => target === "local" || value !== "")
   .map(([key, value]) => `${key}=${formatEnvValue(value)}`);
 

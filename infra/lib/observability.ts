@@ -16,12 +16,18 @@
  * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
- * This registry currently declares 12 metrics (7 log signals + 5 web vitals)
- * and 10 alarms (7 + the 3 alarmed vitals), so it sits 2 metrics over the free
- * allowance at about $0.60/month, with the alarm count exactly at the line.
- * Adding a counted signal therefore costs $0.40/month -- $0.30 for the metric
- * and $0.10 for the alarm -- which is the real number to weigh, not zero and
- * not the free-tier cliff it looks like from the alarm count alone.
+ * This registry currently declares 13 metrics (8 log signals + 5 web vitals)
+ * and 11 alarms (8 + the 3 alarmed vitals), so it sits 3 metrics and 1 alarm
+ * over the free allowance at about $1.00/month. Adding a counted signal costs
+ * $0.40/month -- $0.30 for the metric and $0.10 for the alarm -- which is the
+ * real number to weigh, not zero and not the free-tier cliff it looks like
+ * from the alarm count alone.
+ *
+ * The most recent one, `SignInRefusals`, was bought deliberately: Auth.js was
+ * already writing a line per refused password, but at error level and as plain
+ * text, so it cost nothing and counted nothing while making the error-level
+ * search 10% noise (issue #517). $0.40/month converts that into something an
+ * alarm can actually read.
  *
  * The rationing still holds at those prices: this app emits ~40 distinct event
  * codes, so a filter per code would be ~$12/month plus ~$4 of alarms, for a set
@@ -106,7 +112,19 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "notification.sns_sms_send_failed",
       "notification.whatsapp_send_failed",
     ],
-    threshold: 5,
+    // One, not the five this used to ask for. Every outbound email failed for
+    // an unknown stretch before issue #517 and this alarm stayed silent the
+    // whole time: at DiveDay's volume a *total* outage produced about seven
+    // failures in twenty-four hours, so a 100% failure rate never reached five
+    // in any single hour. A raw count cannot see an outage on a low-traffic
+    // deployment, and the smaller the shop base the blinder it gets.
+    //
+    // The cost of one is a page for a single terminal failure. That is
+    // acceptable here in a way it would not be for most signals: the SDK
+    // already retries throttling and 5xx itself, and a bounce is a webhook
+    // rather than this path, so what reaches this line is a send that will
+    // never happen -- someone's waiver link -- and not a transient blip.
+    threshold: 1,
     periodMinutes: 60,
     response:
       "Read the error code on the log lines, then follow the matching provider runbook (ses-email, sms-delivery-receipts, whatsapp-cloud-api).",
@@ -149,6 +167,26 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     periodMinutes: 5,
     response:
       "Check the Neon console for a suspended endpoint first, then docs/engineering/incident-response-runbook.md.",
+  },
+  {
+    metricName: "SignInRefusals",
+    title: "Sign-ins being refused in bulk",
+    why:
+      "A wrong password is the most ordinary event on a sign-in form, so `auth.sign_in_refused` is written at " +
+      "warn and is noise one at a time. In bulk it is the opposite: somebody working through a credential list. " +
+      "Auth.js used to write each one at error level, which was loud enough to notice by eye and counted by " +
+      "nothing -- the metric filters match a JSON `$.event`, and that line was plain text. This is the trade " +
+      "made honest: quieter per attempt, and actually counted.",
+    events: ["auth.sign_in_refused"],
+    // Well above a person fumbling a password, well below a list being worked
+    // through. `src/lib/rate-limit.ts` already refuses at its own per-IP and
+    // per-email ceilings, so this alarm is not the defence -- it is how anyone
+    // finds out the defence is being leaned on.
+    threshold: 30,
+    periodMinutes: 15,
+    response:
+      "Read the rate-limit refusals beside it. If one IP or one account dominates, this is credential stuffing " +
+      "against a known email; see docs/engineering/rate-limiting-runbook.md. The line names no address by design.",
   },
   {
     metricName: "RateLimitStoreFailures",

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { trackEvent } from "@/lib/analytics";
 import { authConfig } from "@/lib/auth.config";
+import { logAuthError } from "@/lib/auth-logger";
 import { verifyCredentials } from "@/lib/credentials";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -15,6 +16,10 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  // A refused password stops being an `error` line and becomes a counted
+  // `warn`; everything else Auth.js reports is untouched. See auth-logger.ts —
+  // `warn` and `debug` are deliberately left to the default logger.
+  logger: { error: (error) => logAuthError(error) },
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },

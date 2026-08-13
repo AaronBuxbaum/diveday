@@ -65,7 +65,6 @@ afterEach(() => {
 /** What a deployed stack hands over: everything it mints, and nothing else. */
 const source = [
   "APP_SECRET_SEED=stable-root-material",
-  "APP_HOST=https://dive.day",
   "SES_AWS_ACCESS_KEY_ID=ses-id",
   "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack",
   "PLACES_AWS_SECRET_ACCESS_KEY=minted-secret",
@@ -119,18 +118,11 @@ describe("distribute-env", () => {
     expect(vercel).toContain("DATABASE_URL=postgres://neon");
   });
 
-  it("lets .env.manual override a checked-in constant, which is not a minted value", () => {
-    // Pointing APP_HOST at localhost for Stripe Connect testing is a legitimate
-    // thing to want, and the code already accepts it outside production. The
-    // refusal above is about credentials the stack mints, not about defaults.
-    const cwd = workspace();
-    writeFileSync(join(cwd, ".env.manual"), "APP_HOST=http://localhost:3000\n");
-
-    const { status, output } = distribute("local", cwd, source);
-
-    expect(status).toBe(0);
-    expect(output).toContain("APP_HOST=http://localhost:3000");
-  });
+  // The checked-in constants this used to cover are gone -- DiveDay's own
+  // origin, sender, Connect client id and Sentry DSN now live in the code that
+  // reads them (src/lib/configured.ts), so `.env.manual` speaks for exactly
+  // the manual keys and nothing else. The refusal above is the rule that
+  // remains, and it has its own case.
 
   it("derives three independent app secrets from the seed", () => {
     const output = distribute("local", workspace(), source).output;
@@ -145,7 +137,7 @@ describe("distribute-env", () => {
   });
 
   it("refuses to distribute a document from before the stack was deployed", () => {
-    const { status, stderr } = distribute("local", workspace(), "APP_HOST=https://dive.day\n");
+    const { status, stderr } = distribute("local", workspace(), "SES_AWS_ACCESS_KEY_ID=ses-id\n");
     expect(status).toBe(1);
     expect(stderr).toContain("APP_SECRET_SEED");
   });

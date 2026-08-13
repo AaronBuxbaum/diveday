@@ -12,6 +12,18 @@ import { messageFor } from "./render";
  * to the retryable/terminal answer the send queue acts on.
  */
 
+/**
+ * The verified sender every DiveDay email goes out as, on the `ses.dive.day`
+ * identity the stack grants (docs/engineering/ses-email-runbook.md).
+ *
+ * Compiled in rather than deployed as configuration. It travelled as an
+ * environment variable until issue #517, where the quotes its spaces required
+ * in a dotenv file survived all the way to SES and every production send was
+ * refused. A value the repository already knows has no business making that
+ * journey; `SES_FROM_EMAIL` remains only as a fork/self-host override.
+ */
+export const DEFAULT_SENDER = "DiveDay <noreply@ses.dive.day>";
+
 export function formatSender(value: string): string {
   // Keep an explicitly branded sender untouched, while giving the common
   // `notifications@...` environment value the friendly name recipients see.

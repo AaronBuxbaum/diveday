@@ -17,8 +17,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { constantValue, ENV_GROUPS } from "../config/env-registry.mjs";
-import { formatEnvValue } from "./dotenv.mjs";
+import { ENV_GROUPS } from "../config/env-registry.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const ENV_EXAMPLE_PATH = join(root, ".env.example");
@@ -53,7 +52,7 @@ const HEADER = [
 export function renderEnvExample() {
   const blocks = ENV_GROUPS.map((group) => [
     ...group.doc.map((line) => (line ? `# ${line}` : "#")),
-    ...group.keys.map((entry) => `${entry.key}=${formatEnvValue(constantValue(entry.key))}`),
+    ...group.keys.map((entry) => `${entry.key}=`),
   ]);
   return [...HEADER, ...blocks.flatMap((block) => [...block, ""])].join("\n").replace(/\n+$/, "\n");
 }
