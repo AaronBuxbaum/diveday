@@ -1964,7 +1964,8 @@
         },
         "switching": {
           "question": "What does switching to DiveDay actually involve?",
-          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, cards, and rental sizes — showing exactly what will happen before anything is saved. Step-by-step guides cover {competitors}."
+          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, cards, and rental sizes — showing exactly what will happen before anything is saved. Step-by-step guides cover {competitors}.",
+          "guidesLink": "Browse the switching guides →"
         },
         "agency": {
           "question": "Does DiveDay connect to PADI or SSI?",

@@ -1964,7 +1964,8 @@
         },
         "switching": {
           "question": "¿Qué implica realmente cambiarse a DiveDay?",
-          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, tarjetas y tallas de alquiler — mostrando exactamente qué va a pasar antes de guardar nada. Hay guías paso a paso para {competitors}."
+          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, tarjetas y tallas de alquiler — mostrando exactamente qué va a pasar antes de guardar nada. Hay guías paso a paso para {competitors}.",
+          "guidesLink": "Ver las guías de cambio →"
         },
         "agency": {
           "question": "¿DiveDay se conecta con PADI o SSI?",

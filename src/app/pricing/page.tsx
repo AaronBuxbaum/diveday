@@ -115,7 +115,12 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
   // "What is included?" left this list on 2026-08-13: the hero now answers it
   // in the first screenful, and a FAQ row restating the screen above it is the
   // duplication the three-densities rule exists to stop.
-  const faq = [
+  const faq: readonly {
+    question: string;
+    answer: string;
+    href?: string;
+    linkLabel?: string;
+  }[] = [
     {
       question: t("marketing.pricing.faq.billing.question"),
       answer: t("marketing.pricing.faq.billing.answer"),
@@ -142,6 +147,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     {
       question: t("marketing.pricing.faq.switching.question"),
       answer: t("marketing.pricing.faq.switching.answer", { competitors }),
+      // The one row whose answer is a door as much as a sentence: the guides
+      // it names live at /switching, and without this link the footer is the
+      // only path to them from here.
+      href: "/switching",
+      linkLabel: t("marketing.pricing.faq.switching.guidesLink"),
     },
     {
       question: t("marketing.pricing.faq.agency.question"),
@@ -159,7 +169,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       question: t("marketing.pricing.faq.multipleLocations.question"),
       answer: t("marketing.pricing.faq.multipleLocations.answer", { email: SUPPORT_EMAIL }),
     },
-  ] as const;
+  ];
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -348,6 +358,14 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <article key={item.question}>
                 <h3 className="font-semibold leading-6">{item.question}</h3>
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
+                {item.href && item.linkLabel ? (
+                  <Link
+                    href={item.href}
+                    className={buttonClass({ variant: "link", className: "mt-1 px-0 text-left" })}
+                  >
+                    {item.linkLabel}
+                  </Link>
+                ) : null}
               </article>
             ))}
           </div>
