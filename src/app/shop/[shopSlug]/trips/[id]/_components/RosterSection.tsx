@@ -137,6 +137,7 @@ export function RosterSection({
   tripDate,
   rosterFilter,
   canAddDivers,
+  savedContactBookingId,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -145,6 +146,15 @@ export function RosterSection({
   booked: number;
   capacity: number;
   roster: RosterEntry[];
+  /**
+   * The booking whose emergency contact was just saved (`?bid=`), if any.
+   *
+   * Saving a contact moves it from work into reference, so the block the
+   * staffer was typing in lands inside the collapsed panel. This opens that
+   * one row on the way back, which is what `AutoOpenDetails`'s `open` prop is
+   * for — without it the save would look like the form vanished.
+   */
+  savedContactBookingId?: string;
   /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
   rosterFilter: RosterFilter;
   /**
@@ -712,27 +722,30 @@ export function RosterSection({
                 ) : null}
 
                 {/* Task 144 — Today used to send staff here with "ask at the
-                    counter" and no field to type it into. Both states in the
-                    open: a missing contact is work, and a contact just saved
-                    has to stay where the staffer typed it. */}
-                <div className="mt-3">
-                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                    {t("trips.roster.emergencyContactHeading")}
-                  </p>
-                  {hasEmergencyContact ? (
-                    <p className="mt-1 text-sm text-muted">
-                      {t("trips.roster.emergencyContactOnFile", {
-                        name: person.emergencyContactName ?? "",
-                        phone: person.emergencyContactPhone ?? "",
-                      })}
+                    counter" and no field to type it into, so a *missing*
+                    contact is work and stays in the open.
+
+                    A contact on file is reference, and lives in the panel
+                    below. It sat here in both states for one release, which
+                    cost every settled card the heading, the value and an edit
+                    link it had no reason to show — a roster of nine grew by
+                    about a thousand pixels, which is the opposite of what
+                    collapsing the cards was for. The reason given for keeping
+                    it open was that a contact just saved must not vanish from
+                    under the staffer who typed it; that is real, and it is
+                    handled where it belongs — `savedContactBookingId` opens
+                    that row's panel on the way back. */}
+                {hasEmergencyContact ? null : (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                      {t("trips.roster.emergencyContactHeading")}
                     </p>
-                  ) : (
                     <p className="mt-1 text-sm text-warning">
                       {t("trips.roster.emergencyContactMissing")}
                     </p>
-                  )}
-                  {emergencyContactForm}
-                </div>
+                    {emergencyContactForm}
+                  </div>
+                )}
 
                 {/* One disclosure, at the top level of the card rather than
                     nested inside "Details" — writing a note about a diver is
@@ -872,6 +885,25 @@ export function RosterSection({
                       </p>
                     ) : null}
                   </div>
+
+                  {/* A contact already on file: a fact about the seat, which is
+                      what this panel is for. Only this state appears here — a
+                      missing one is work and stays in the open above, so the
+                      card never states the same thing twice (principle 9). */}
+                  {hasEmergencyContact ? (
+                    <div>
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        {t("trips.roster.emergencyContactHeading")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted">
+                        {t("trips.roster.emergencyContactOnFile", {
+                          name: person.emergencyContactName ?? "",
+                          phone: person.emergencyContactPhone ?? "",
+                        })}
+                      </p>
+                      {emergencyContactForm}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* `-mx-3` on the row, and both controls at the same `sm`
@@ -951,6 +983,7 @@ export function RosterSection({
                     collapsed card never swallows what the link promised. */}
                 <AutoOpenDetails
                   openOnHash={`booking-${booking.id}`}
+                  open={savedContactBookingId === booking.id}
                   className="group mt-3 border-t border-border pt-1"
                 >
                   <summary
