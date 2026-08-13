@@ -222,26 +222,17 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
                 {t("marketing.pricing.heroTitle")}
               </h1>
-              {/* The figure alone on its line, with the cadence as a caption
-                  beneath it rather than baseline-set beside it: paired on one
-                  line, the centred composition pushed the number itself off
-                  centre by half the cadence's width — the one element on the
-                  page that has to look deliberate. Keeping `$99` as its own
-                  element is also what lets the e2e assertion match it exactly,
-                  and the figure still resolves from `earlyAccessPrice`. */}
+              {/* Cadence below the figure, not baseline-set beside it: paired
+                  on one line, centring the pair pushed `$99` itself off centre
+                  by half the cadence's width. */}
               <p className="mt-10 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
-              {/* Two blocks rather than one paragraph: the four negations
-                  answer "what's the catch" and want to be read as one scannable
-                  beat, and the claim beneath them is a different sentence doing
-                  a different job. Set as one paragraph they broke mid-clause
-                  ("No cut / of your bookings") directly under the figure, which
-                  is where a ragged break is most visible. How many lines each
-                  block takes is the locale's business — the longer Spanish
-                  negations wrap, and wrap between sentences, which is the
-                  break this split was protecting. */}
+              {/* Two blocks, not one paragraph: as one they broke mid-clause
+                  ("No cut / of your bookings") directly under the figure. The
+                  split protects the break, not a line count — the longer
+                  Spanish negations wrap, and wrap between sentences. */}
               <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-muted">
                 {t("marketing.pricing.heroDescription")}
               </p>
@@ -272,11 +263,8 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               </div>
               {/* What the click costs, at the point of decision — the same
                   shared line `/` and `/product` carry under their own demo
-                  doors. It was missing on the one page whose whole subject is
-                  cost, and the answer sat in a FAQ row two thousand pixels
-                  down. The processing-fee note that used to stand here is a
-                  footnote about the *price*, so it moved to the end of the
-                  block that says what the price covers. */}
+                  doors. On this page the answer used to sit in a FAQ row two
+                  thousand pixels down. */}
               <p className="mx-auto mt-6 max-w-lg text-sm leading-6 font-medium text-balance text-muted">
                 {t("marketing.common.demoNote")}
               </p>
