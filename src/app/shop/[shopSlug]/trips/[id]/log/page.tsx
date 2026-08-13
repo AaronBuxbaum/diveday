@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { PrintButton } from "@/components/PrintButton";
+import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getIncidentExport } from "@/db/incident-export";
@@ -176,14 +178,11 @@ export default async function IncidentExportPage({
         <h2 id="incident-summary-heading" className="text-lg font-semibold">
           {t("incidentExport.summaryHeading")}
         </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {summary.map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface px-4 py-3">
-              <dt className="text-xs font-medium tracking-wide text-muted uppercase">{label}</dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
-            </div>
+            <ShopStat key={label} label={label} value={value} />
           ))}
-        </dl>
+        </div>
       </section>
 
       <section className="mt-8" aria-labelledby="incident-roster-heading">
@@ -193,81 +192,65 @@ export default async function IncidentExportPage({
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("incidentExport.rosterDescription")}
         </p>
-        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[40rem] border-collapse bg-surface text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-3 py-2 font-semibold">{t("incidentExport.colDiver")}</th>
-                <th className="px-3 py-2 font-semibold">
-                  {t("incidentExport.colEmergencyContact")}
-                </th>
-                <th className="px-3 py-2 font-semibold">{t("incidentExport.colBuddy")}</th>
-                {doc.meta.checkpoints.map((checkpoint) => (
-                  <th key={checkpoint} className="px-3 py-2 font-semibold">
-                    {checkpointText(checkpoint)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {doc.roster.map((diver, index) => (
-                <tr
-                  key={diver.bookingId}
-                  className="break-inside-avoid border-b border-border last:border-b-0"
-                >
-                  <td className="px-3 py-2 align-top">
-                    <span className="font-semibold">
-                      {String(index + 1).padStart(2, "0")} {diver.fullName}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 align-top text-muted">
-                    {diver.emergencyContactName && diver.emergencyContactPhone
-                      ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                      : t("incidentExport.notOnFile")}
-                  </td>
-                  <td className="px-3 py-2 align-top text-muted">
-                    {diver.buddy ? (
-                      <>
-                        <span className="font-medium text-foreground">
-                          {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
-                        </span>{" "}
-                        {/* Every other member, and crew marked as crew — the
+        <Table minWidth="40rem" shellClassName="mt-3">
+          <THead>
+            <Th>{t("incidentExport.colDiver")}</Th>
+            <Th>{t("incidentExport.colEmergencyContact")}</Th>
+            <Th>{t("incidentExport.colBuddy")}</Th>
+            {doc.meta.checkpoints.map((checkpoint) => (
+              <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+            ))}
+          </THead>
+          <TBody>
+            {doc.roster.map((diver, index) => (
+              <tr key={diver.bookingId}>
+                <Td>
+                  <span className="font-semibold">
+                    {String(index + 1).padStart(2, "0")} {diver.fullName}
+                  </span>
+                </Td>
+                <Td muted>
+                  {diver.emergencyContactName && diver.emergencyContactPhone
+                    ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                    : t("incidentExport.notOnFile")}
+                </Td>
+                <Td muted>
+                  {diver.buddy ? (
+                    <>
+                      <span className="font-medium text-foreground">
+                        {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
+                      </span>{" "}
+                      {/* Every other member, and crew marked as crew — the
                             distinction this document exists to keep, since
                             "accompanied by a divemaster" and "nobody paired
                             them" used to print the same. */}
-                        {memberList.format(
-                          diver.buddy.members.map((member) =>
-                            member.isCrew
-                              ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
-                              : member.fullName,
-                          ),
-                        )}
-                        <span className="block text-xs">
-                          {diver.buddy.pairedByName && diver.buddy.pairedAt
-                            ? t("incidentExport.buddyPairedBy", {
-                                name: diver.buddy.pairedByName,
-                                at: dateTime(diver.buddy.pairedAt),
-                              })
-                            : t("incidentExport.buddyPairedByUnknown")}
-                        </span>
-                      </>
-                    ) : (
-                      t("incidentExport.noBuddyRecorded")
-                    )}
-                  </td>
-                  {diver.rollCall.map((result) => (
-                    <RollCallCell
-                      key={result.checkpoint}
-                      t={t}
-                      result={result}
-                      dateTime={dateTime}
-                    />
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      {memberList.format(
+                        diver.buddy.members.map((member) =>
+                          member.isCrew
+                            ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
+                            : member.fullName,
+                        ),
+                      )}
+                      <span className="block text-xs">
+                        {diver.buddy.pairedByName && diver.buddy.pairedAt
+                          ? t("incidentExport.buddyPairedBy", {
+                              name: diver.buddy.pairedByName,
+                              at: dateTime(diver.buddy.pairedAt),
+                            })
+                          : t("incidentExport.buddyPairedByUnknown")}
+                      </span>
+                    </>
+                  ) : (
+                    t("incidentExport.noBuddyRecorded")
+                  )}
+                </Td>
+                {diver.rollCall.map((result) => (
+                  <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
+                ))}
+              </tr>
+            ))}
+          </TBody>
+        </Table>
       </section>
 
       <section className="mt-8" aria-labelledby="incident-crew-heading">
@@ -277,59 +260,52 @@ export default async function IncidentExportPage({
         {doc.crew.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("incidentExport.crewNone")}</p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[40rem] border-collapse bg-surface text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-3 py-2 font-semibold">{t("incidentExport.colCrewMember")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("incidentExport.colRoles")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("incidentExport.colCrewTeams")}</th>
-                  {doc.meta.checkpoints.map((checkpoint) => (
-                    <th key={checkpoint} className="px-3 py-2 font-semibold">
-                      {checkpointText(checkpoint)}
-                    </th>
+          <Table minWidth="40rem" shellClassName="mt-3">
+            <THead>
+              <Th>{t("incidentExport.colCrewMember")}</Th>
+              <Th>{t("incidentExport.colRoles")}</Th>
+              <Th>{t("incidentExport.colCrewTeams")}</Th>
+              {doc.meta.checkpoints.map((checkpoint) => (
+                <Th key={checkpoint}>{checkpointText(checkpoint)}</Th>
+              ))}
+            </THead>
+            <TBody>
+              {doc.crew.map((member, index) => (
+                <tr
+                  // Two crew can share a full name, and the document carries
+                  // no person id on purpose (the hash covers printed facts
+                  // only). Static list, never reordered.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
+                  key={index}
+                >
+                  <Td className="font-semibold">{member.fullName}</Td>
+                  <Td muted>
+                    {member.roles
+                      .map((role) => (roleKey[role] ? t(roleKey[role]) : role))
+                      .join(", ")}
+                  </Td>
+                  {/* Plural on purpose: one divemaster commonly leads
+                      several groups on one boat, and this document must
+                      print all of them (ADR 20260804-buddy-teams). */}
+                  <Td muted>
+                    {member.buddyTeamNumbers.length === 0
+                      ? t("incidentExport.crewNoTeams")
+                      : member.buddyTeamNumbers
+                          .map((number) => t("incidentExport.buddyTeam", { number }))
+                          .join(", ")}
+                  </Td>
+                  {member.rollCall.map((result) => (
+                    <RollCallCell
+                      key={result.checkpoint}
+                      t={t}
+                      result={result}
+                      dateTime={dateTime}
+                    />
                   ))}
                 </tr>
-              </thead>
-              <tbody>
-                {doc.crew.map((member, index) => (
-                  <tr
-                    // Two crew can share a full name, and the document carries
-                    // no person id on purpose (the hash covers printed facts
-                    // only). Static list, never reordered.
-                    // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
-                    key={index}
-                    className="break-inside-avoid border-b border-border last:border-b-0"
-                  >
-                    <td className="px-3 py-2 align-top font-semibold">{member.fullName}</td>
-                    <td className="px-3 py-2 align-top text-muted">
-                      {member.roles
-                        .map((role) => (roleKey[role] ? t(roleKey[role]) : role))
-                        .join(", ")}
-                    </td>
-                    {/* Plural on purpose: one divemaster commonly leads
-                        several groups on one boat, and this document must
-                        print all of them (ADR 20260804-buddy-teams). */}
-                    <td className="px-3 py-2 align-top text-muted">
-                      {member.buddyTeamNumbers.length === 0
-                        ? t("incidentExport.crewNoTeams")
-                        : member.buddyTeamNumbers
-                            .map((number) => t("incidentExport.buddyTeam", { number }))
-                            .join(", ")}
-                    </td>
-                    {member.rollCall.map((result) => (
-                      <RollCallCell
-                        key={result.checkpoint}
-                        t={t}
-                        result={result}
-                        dateTime={dateTime}
-                      />
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
 
@@ -474,7 +450,7 @@ function RollCallCell({
   dateTime: (isoString: string) => string;
 }) {
   return (
-    <td className="px-3 py-2 align-top">
+    <Td>
       <span
         className={
           result.label === "not_back_aboard"
@@ -499,7 +475,7 @@ function RollCallCell({
           {t("incidentExport.noteLine", { note: result.note })}
         </span>
       ) : null}
-    </td>
+    </Td>
   );
 }
 

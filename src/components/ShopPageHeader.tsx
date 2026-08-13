@@ -88,35 +88,85 @@ export function ShopPageHeader({
   );
 }
 
+/**
+ * The one stat tile: a quiet label, the figure at headline size, and an
+ * optional plain-language line under it. This anatomy used to exist twice —
+ * here as a label-plus-pill card, and on Reports as a local `Metric` with the
+ * big number — two shapes for the same concept, one click apart. The big
+ * number won: a stat's value is the content, not a badge on the content, and
+ * `tabular-nums` keeps a wall of these inspectable at a glance (design
+ * principle 6).
+ *
+ * `tone` colors the figure itself — emphasis, never the sole carrier of
+ * meaning: the label and detail line always say the words.
+ */
 export function ShopStat({
   label,
   value,
   detail,
   tone = "default",
+  celebrate = false,
+  linkHref,
+  linkLabel,
 }: {
   label: string;
   value: string | number;
-  detail: string;
+  detail?: string;
   tone?: "default" | "primary" | "warning" | "success";
+  /** Mark a finished state (e.g. every waiver in) with a success check + words. */
+  celebrate?: boolean;
+  /** One quiet jump to the surface behind the number (e.g. Reports' revenue → Orders). */
+  linkHref?: string;
+  linkLabel?: string;
 }) {
+  // The -strong feedback tokens, not the raw hues: success/warning text on
+  // bg-surface measured just under AA (see ui/badge.tsx).
   const toneClass =
     tone === "primary"
-      ? "bg-primary/10 text-primary"
+      ? "text-primary"
       : tone === "warning"
-        ? "bg-warning/10 text-warning"
+        ? "text-warning-strong"
         : tone === "success"
-          ? "bg-success/10 text-success"
-          : "bg-surface-sunken text-foreground";
+          ? "text-success-strong"
+          : "text-foreground";
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted">{label}</p>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClass}`}>
-          {value}
-        </span>
-      </div>
-      <p className="mt-3 text-sm text-muted">{detail}</p>
+      <p className="text-sm font-medium text-muted">{label}</p>
+      <p className={`mt-2 text-3xl font-semibold tracking-tight tabular-nums ${toneClass}`}>
+        {value}
+      </p>
+      {detail ? (
+        <p
+          className={`mt-2 flex items-center gap-1.5 text-sm ${
+            celebrate ? "text-success-strong" : "text-muted"
+          }`}
+        >
+          {celebrate ? (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="size-4 shrink-0"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-3.5-3.5a1 1 0 1 1 1.4-1.4l2.8 2.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : null}
+          {detail}
+        </p>
+      ) : null}
+      {linkHref && linkLabel ? (
+        <Link
+          href={linkHref}
+          className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      ) : null}
     </div>
   );
 }
