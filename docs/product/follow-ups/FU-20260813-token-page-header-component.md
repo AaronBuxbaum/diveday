@@ -44,7 +44,7 @@ and children (meta lines), rendering the /ready grammar (eyebrow: text-sm font-m
 tracking-widest text-muted uppercase; title: text-3xl font-semibold tracking-tight text-balance).
 Use it from all three pages. No data reads or translators inside it — pages pass resolved
 strings. Done when the three pages render one header grammar and their e2e specs
-(e2e/readiness.spec.ts, e2e/waiver.spec.ts, e2e/recap.spec.ts) plus the visual captures for
+(e2e/readiness.spec.ts, e2e/waivers.spec.ts, e2e/recap.spec.ts) plus the visual captures for
 readiness/waiver/recap pass with only the intended eyebrow-color diffs on waiver and recap.
 Run pnpm check and the filtered visual spec; account for visual diffs in the PR body.
 Delete docs/product/follow-ups/FU-20260813-token-page-header-component.md as part of the change.

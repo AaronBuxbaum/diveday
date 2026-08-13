@@ -230,15 +230,17 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
 }
 
 /**
- * Which checklist rows answer with a single button this page can make primary.
- * The certification rows are deliberately absent: their action is the
+ * Which single-button action a checklist item answers with, if any. The one
+ * source of truth for `itemAction`'s button branches *and* for choosing the
+ * page's primary — one function so the two can never drift apart. The
+ * certification rows are deliberately not here: their action is the
  * multi-field `CertificationEntry` form, whose submit stays secondary by
  * design — a form's save is not the page's one obvious action.
  */
-function rendersActionButton(item: DiverChecklistItem, canPay: boolean): boolean {
-  if (item.state !== "action") return false;
-  if (item.code === "waiver_pending" || item.code === "waiver_expired") return true;
-  return (item.code === "payment_due" || item.code === "payment_refunded") && canPay;
+function actionButtonKind(item: DiverChecklistItem, canPay: boolean): "waiver" | "pay" | null {
+  if (item.code === "waiver_pending" || item.code === "waiver_expired") return "waiver";
+  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) return "pay";
+  return null;
 }
 
 /**
@@ -263,12 +265,13 @@ function itemAction(
   const actionButton = buttonClass(
     isPrimary ? { size: "sm" } : { variant: "secondary", size: "sm" },
   );
+  const buttonKind = actionButtonKind(item, canPay);
   // An expired link needs the same action as a pending one — `signWaiverFromReady`
   // always issues a fresh link and opens it, superseding whatever came before,
   // so the only difference is what the button promises. Naming the difference
   // matters: "Sign your waiver" on a link the diver already knows is dead reads
   // as the page not having noticed.
-  if (item.code === "waiver_pending" || item.code === "waiver_expired") {
+  if (buttonKind === "waiver") {
     return (
       <form action={signWaiverFromReady.bind(null, token)}>
         <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
@@ -277,10 +280,7 @@ function itemAction(
       </form>
     );
   }
-  if (item.code && CERT_ENTRY_CODES.has(item.code)) {
-    return <CertificationEntry token={token} t={t} />;
-  }
-  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) {
+  if (buttonKind === "pay") {
     return (
       <form action={payFromReady.bind(null, token)}>
         <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
@@ -288,6 +288,9 @@ function itemAction(
         </SubmitButton>
       </form>
     );
+  }
+  if (item.code && CERT_ENTRY_CODES.has(item.code)) {
+    return <CertificationEntry token={token} t={t} />;
   }
   return null;
 }
@@ -416,7 +419,10 @@ function ShopCard({
           </address>
         ) : null}
         <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-base">
-          <ShopContactLinks phone={contactPhone} email={contactEmail} />
+          {/* gap-y-1 rides in on the className: when a long email wraps under
+              the phone number inside the component's own span, the lines keep
+              the same breathing room the surrounding row declares. */}
+          <ShopContactLinks phone={contactPhone} email={contactEmail} className="gap-y-1" />
           {mapQuery ? (
             <a
               href={googleMapsUrl(mapQuery)}
@@ -643,7 +649,8 @@ export default async function DiverReadinessPage({
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
   // The page's one primary button, chosen among the rows that render one.
-  const primaryActionItem = items.find((item) => rendersActionButton(item, data.canPay)) ?? null;
+  const primaryActionItem =
+    items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
   const ready = detail.readiness.status === "ready";
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // The emergency-contact row is rendered as its own `ChecklistRow` below,
@@ -913,7 +920,7 @@ export default async function DiverReadinessPage({
                 <ShopContactLinks
                   phone={shop.contactPhone}
                   email={shop.contactEmail}
-                  className="mt-2 text-base"
+                  className="mt-2 gap-y-1 text-base"
                 />
               </div>
             ) : null}
@@ -965,7 +972,7 @@ export default async function DiverReadinessPage({
                 <ShopContactLinks
                   phone={shop.contactPhone}
                   email={shop.contactEmail}
-                  className="mt-2 text-base"
+                  className="mt-2 gap-y-1 text-base"
                 />
               </div>
             ) : null}
