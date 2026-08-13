@@ -3,6 +3,7 @@ import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
+import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -83,6 +84,42 @@ const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
  * `${Token[...]}` is no use for the second of those.
  */
 const APP_LOG_GROUP_NAME = "/diveday/app";
+
+/**
+ * Where the full-cluster `pg_dump` lands, under the same bucket as the per-shop
+ * bundles (S11) but its own prefix, its own lifecycle rule, and its own writer.
+ * A trailing slash so it reads as a folder in every place it is concatenated.
+ */
+const DUMP_PREFIX = "dumps/";
+
+/**
+ * How long a dump is kept. Deliberately short, and deliberately not the
+ * bundles' "never expire": the file holds every password hash and every medical
+ * answer in the platform, and it answers a question ("Neon is gone and PITR
+ * cannot reach back far enough") that is asked within days of the loss, never
+ * months. Five weeks leaves room for a missed run plus a holiday and still keeps
+ * the window bounded. Change this one number if H-02 lands somewhere else.
+ */
+const DUMP_RETENTION_DAYS = 35;
+
+/**
+ * The direct (non-pooled) connection string, in its own secret because the dump
+ * job is the only thing that reads it and it is the only credential in this
+ * stack that a human supplies rather than CloudFormation minting (S17's
+ * `database-dump-connection` action).
+ *
+ * Not folded into `diveday/env`: that secret is the stack's *outbound* hand-off
+ * document, rewritten on every deploy from a rendered `.env.example`, so a value
+ * pasted into it would be overwritten by the next `cdk deploy`.
+ */
+const DUMP_CONNECTION_SECRET_NAME = "diveday/database-url-unpooled";
+
+/**
+ * The Postgres major version the dump is taken with. `pg_dump` may be newer than
+ * the server but never older, so this is a floor to raise when Neon's project is
+ * upgraded -- and raising it is the whole maintenance burden of the image choice.
+ */
+const DUMP_POSTGRES_MAJOR = 17;
 
 export class InfraStack extends cdk.Stack {
   /**
@@ -851,6 +888,29 @@ exports.handler = async (event) => {
           // A multipart upload interrupted mid-flight bills for its parts
           // indefinitely and is not a usable backup.
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+        },
+        {
+          // The `pg_dump` layer (S20) is the opposite retention story to the
+          // bundles above, on purpose. A bundle is a *portability* artifact with
+          // no credentials in it, and H-02 makes its waiver rows indefinite. A
+          // dump is a full-cluster disaster-recovery artifact: every password
+          // hash and every medical answer in one file. It exists to answer "the
+          // Neon project is gone and PITR cannot reach far enough back", which is
+          // a question asked within days of the loss, never months. So it is kept
+          // for a bounded window and then deleted -- holding a file like this for
+          // longer than it can plausibly be used is a liability, not a backup.
+          //
+          // DUMP_RETENTION_DAYS is the one number to change if H-02 lands
+          // somewhere else; nothing else keys on it.
+          id: "expire-database-dumps",
+          enabled: true,
+          prefix: DUMP_PREFIX,
+          expiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
+          // Never transitioned to a colder class first: IA has a 30-day minimum
+          // billing duration, so aging an object that expires before then costs
+          // *more* than leaving it standard.
+          noncurrentVersionExpiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
       ],
     });
@@ -1695,7 +1755,27 @@ exports.handler = async (event) => {
           "Read the secret and scroll to the 'Not .env values' section; each block names its destination.",
         ],
         store:
-          "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> nowhere yet; the scheduled export has no runner (backup-and-restore-runbook.md).",
+          "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> Vercel Production as the four PLATFORM_BACKUP_* values, read by the weekly /api/cron/platform-backup route (it left the 'Not .env values' section on 2026-08-12, when the runner landed).",
+      },
+      {
+        id: "database-dump-connection",
+        title: "Give the weekly database dump its connection string",
+        category: "Credentials",
+        when: "once, before the first Monday after this stack is deployed, and again if the Neon connection string changes",
+        why: "The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.",
+        run: [
+          "aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'",
+          "aws codebuild start-build --project-name diveday-database-dump",
+        ],
+        produces:
+          "A weekly full-cluster pg_dump at s3://<backup bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days.",
+        store:
+          "AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.",
+        verify: [
+          "aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'",
+          "AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive",
+        ],
+        note: "A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why its prefix expires after 35 days while the export bundles never do, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.",
       },
       {
         id: "usage-guardrail-tokens",
@@ -1892,6 +1972,13 @@ exports.handler = async (event) => {
         // post-deploy wizard can run unattended (ADR 20260811-ci-deploy-full-wizard).
         "ci-github-admin-token",
         "ci-vercel-deploy-token",
+        // Same class again: Neon's direct connection string is another vendor's
+        // credential, so no CLI here can learn the value even though one can
+        // place it. It earns the short list on consequence rather than only on
+        // class -- until it is done, the one backup layer that can restore a
+        // login does not exist, and the export bundles cannot cover for it
+        // (ADR 20260812-platform-database-dump).
+        "database-dump-connection",
         "ses-production-access",
         "sns-sms-account-limits",
         // Clicking a link in an email is the whole step, and no CLI can do it
@@ -2194,6 +2281,7 @@ exports.handler = async (event) => {
         BUCKET: backupBucket.bucketName,
         TOPIC_ARN: observabilityAlarms.topicArn,
         MAX_AGE_DAYS: String(backupMaxAgeDays),
+        DUMP_PREFIX,
       },
       // Inline for the same reason as the SMS forwarder in S10: a couple of
       // dozen lines against SDK clients the runtime already ships, where a
@@ -2221,9 +2309,50 @@ async function alarm(subject, message) {
   }));
 }
 
+// The dump (S20) is the layer that can restore a *login*, and it has exactly the
+// same blind spot as the bundles: its writer is write-only, so nothing on the
+// writing side can tell that the object arrived. Checked here rather than in a
+// second watchdog -- it is one more ListObjectsV2 over one more prefix, and two
+// alarms with the same trigger and the same reader is one too many.
+//
+// Checked *before* the bundle logic below, because that logic returns early on
+// each of its own failures: a week where both layers broke has to raise both
+// alarms, not whichever one is tested first.
+async function checkDump(bucket, maxAgeDays) {
+  const prefix = process.env.DUMP_PREFIX;
+  const runs = await s3.send(new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: prefix,
+    Delimiter: "/",
+  }));
+  const dates = (runs.CommonPrefixes ?? [])
+    .map((entry) => (entry.Prefix ?? "").slice(prefix.length).replace(/\\/$/, ""))
+    .filter((name) => /^\\d{4}-\\d{2}-\\d{2}$/.test(name))
+    .sort();
+  const latest = dates[dates.length - 1] ?? null;
+  const ageDays = latest
+    ? Math.floor((Date.now() - Date.parse(latest + "T00:00:00Z")) / DAY_MS)
+    : null;
+
+  if (ageDays === null || ageDays > maxAgeDays) {
+    await alarm(
+      "DiveDay backup: no database dump in " + (ageDays === null ? "ever" : ageDays + " days"),
+      "The newest full-cluster dump under " + prefix + " in " + bucket + " is " +
+      (latest ?? "absent entirely") + ". The export bundles cannot restore a login " +
+      "(user_accounts, account_tokens and calendar_feeds are excluded by design), so without a " +
+      "dump the only recovery for those is Neon PITR. Check the diveday-database-dump CodeBuild " +
+      "project's most recent build, and that the diveday/database-url-unpooled secret is filled " +
+      "in. See docs/engineering/backup-and-restore-runbook.md section 2c."
+    );
+  }
+  return { newestDump: latest, dumpAgeDays: ageDays };
+}
+
 exports.handler = async () => {
   const bucket = process.env.BUCKET;
   const maxAgeDays = Number(process.env.MAX_AGE_DAYS);
+
+  const dump = await checkDump(bucket, maxAgeDays);
 
   const runs = await s3.send(new ListObjectsV2Command({
     Bucket: bucket,
@@ -2242,7 +2371,7 @@ exports.handler = async () => {
       "/api/cron/platform-backup pass has never succeeded, or it is writing somewhere else. " +
       "See docs/engineering/backup-and-restore-runbook.md section 2."
     );
-    return { status: "never_run" };
+    return { status: "never_run", ...dump };
   }
 
   const latest = dates[dates.length - 1];
@@ -2264,7 +2393,7 @@ exports.handler = async () => {
       "Vercel cron log for /api/cron/platform-backup and the diveday-platform-backup Sentry " +
       "monitor. See docs/engineering/backup-and-restore-runbook.md section 2."
     );
-    return { status: "stale", latest, ageDays, bundles: bundles.length };
+    return { status: "stale", latest, ageDays, bundles: bundles.length, ...dump };
   }
 
   if (bundles.length === 0) {
@@ -2273,7 +2402,7 @@ exports.handler = async () => {
       "The run " + latest + " in " + bucket + " has a prefix but no .zip bundles under it. " +
       "The pass started and stored nothing. See docs/engineering/backup-and-restore-runbook.md section 2."
     );
-    return { status: "empty", latest, ageDays };
+    return { status: "empty", latest, ageDays, ...dump };
   }
 
   console.log(JSON.stringify({
@@ -2281,8 +2410,9 @@ exports.handler = async () => {
     latest,
     ageDays,
     bundles: bundles.length,
+    ...dump,
   }));
-  return { status: "ok", latest, ageDays, bundles: bundles.length };
+  return { status: "ok", latest, ageDays, bundles: bundles.length, ...dump };
 };
 `),
     });
@@ -2334,6 +2464,211 @@ exports.handler = async () => {
       value: backupFreshnessCheck.functionName,
       description:
         "Weekly watchdog over the platform backup bucket. Alerts to the observability topic when the newest export is missing, stale, or empty. Invoke it by hand to test: aws lambda invoke --function-name diveday-backup-freshness-check /dev/stdout",
+    });
+
+    // 20. The full-cluster dump -- the layer that can restore a login. See ADR
+    // 20260812-platform-database-dump, and S11 for the bucket and the lifecycle
+    // rule that expires this prefix.
+    //
+    // The per-shop bundles in S2 of the runbook are built from the *export* seam,
+    // which exists so a shop can leave. Its NOT_INCLUDED list deliberately
+    // withholds `user_accounts`, `account_tokens` and `calendar_feeds` -- correct
+    // for portability (a departing shop must not receive password hashes), and it
+    // means a restore from bundles alone reconstitutes every shop, every booking
+    // and every waiver, and nobody who can sign in. Until now the only thing
+    // covering that gap was Neon PITR, for however long its window is.
+    //
+    // Why CodeBuild and not a Lambda: `pg_dump` is a binary this account does not
+    // otherwise have, and a full dump is not a memory-bounded 300-second job.
+    // CodeBuild runs an arbitrary public image on a schedule with no VPC, no NAT
+    // and no cluster to keep warm, which makes it the cheapest host in AWS for
+    // "run one Postgres client tool once a week". The image is pinned to the
+    // Postgres major version (DUMP_POSTGRES_MAJOR) so the client is never older
+    // than the server -- the one direction `pg_dump` refuses.
+    //
+    // Cost: build.general1.small is billed by the minute; a dump of this database
+    // is a couple of minutes, so this is cents a month, plus the S3 storage the
+    // 35-day expiry bounds.
+    const dumpConnectionSecret = new secretsmanager.Secret(this, "DatabaseDumpConnection", {
+      secretName: DUMP_CONNECTION_SECRET_NAME,
+      description:
+        "The direct (non-pooled) Postgres connection string the weekly pg_dump uses. Filled in by a human -- see the DatabaseDumpSetup output and S17.",
+      // A placeholder rather than a generated value: nothing can invent Neon's
+      // connection string, and an *empty* secret would make the build fail with a
+      // parse error instead of the named refusal the buildspec prints.
+      secretStringValue: cdk.SecretValue.unsafePlainText("unset"),
+      // The one secret in the stack whose value a human owns. Deleting the
+      // construct must not take it with them mid-incident.
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const dumpLogs = new logs.LogGroup(this, "DatabaseDumpLogs", {
+      logGroupName: "/aws/codebuild/diveday-database-dump",
+      retention: logs.RetentionDays.THREE_MONTHS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Write-only into one prefix, and read of one secret. The same posture as the
+    // uploader user in S11 and for the same reason: the principal that runs
+    // unattended every week must not be able to read a dump back out, because a
+    // dump is the most sensitive object in this account. Restoring one is a human
+    // act with the admin profile.
+    const dumpRole = new iam.Role(this, "DatabaseDumpRole", {
+      assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
+      description: "Runs the weekly full-cluster pg_dump (S20). Write-only into the dumps/ prefix.",
+    });
+    dumpRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "WriteDatabaseDumpsOnly",
+        actions: ["s3:PutObject", "s3:AbortMultipartUpload"],
+        resources: [backupBucket.arnForObjects(`${DUMP_PREFIX}*`)],
+      }),
+    );
+    dumpRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ConfirmDatabaseDumpLanded",
+        // The size read-back at the end of the buildspec. `s3:GetObject` is
+        // needed for HeadObject, so it is scoped to the prefix this job wrote and
+        // nothing else -- it cannot reach a shop's exported waivers under
+        // `exports/`.
+        actions: ["s3:GetObject"],
+        resources: [backupBucket.arnForObjects(`${DUMP_PREFIX}*`)],
+      }),
+    );
+    dumpConnectionSecret.grantRead(dumpRole);
+    dumpLogs.grantWrite(dumpRole);
+
+    // Written as a CfnProject rather than through the codebuild construct
+    // library: the L2 pulls in a source/artifact model this has no use for (there
+    // is no repository to clone and no artifact to publish -- the job's output is
+    // an S3 PUT it makes itself), and NO_SOURCE with an inline buildspec is the
+    // whole configuration.
+    const dumpProject = new codebuild.CfnProject(this, "DatabaseDumpProject", {
+      name: "diveday-database-dump",
+      description:
+        "Weekly full-cluster pg_dump to the backup bucket's dumps/ prefix. See docs/engineering/backup-and-restore-runbook.md section 2c.",
+      serviceRole: dumpRole.roleArn,
+      artifacts: { type: "NO_ARTIFACTS" },
+      // 30 minutes is far more than a dump of this database needs and costs
+      // nothing unless it is used; what it buys is that a slow night finishes
+      // rather than leaving a truncated object behind.
+      timeoutInMinutes: 30,
+      environment: {
+        type: "LINUX_CONTAINER",
+        computeType: "BUILD_GENERAL1_SMALL",
+        // The official Postgres image via AWS's own ECR Public mirror, so the
+        // pull needs no Docker Hub credential and is not rate-limited.
+        image: `public.ecr.aws/docker/library/postgres:${DUMP_POSTGRES_MAJOR}-alpine`,
+        imagePullCredentialsType: "CODEBUILD",
+        environmentVariables: [
+          { name: "BUCKET", value: backupBucket.bucketName },
+          { name: "PREFIX", value: DUMP_PREFIX },
+          { name: "CONNECTION_SECRET", value: dumpConnectionSecret.secretName },
+        ],
+      },
+      logsConfig: {
+        cloudWatchLogs: { status: "ENABLED", groupName: dumpLogs.logGroupName },
+      },
+      source: {
+        type: "NO_SOURCE",
+        // `sh`, not bash: the alpine image has no bash, and CodeBuild runs each
+        // command through the image's own /bin/sh.
+        //
+        // The dump is *streamed*: pg_dump writes its custom-format output to
+        // stdout, gzip compresses it, and `aws s3 cp -` multipart-uploads it. No
+        // temporary file, so the job needs no disk headroom and a failure part-way
+        // leaves an aborted multipart upload (expired after a day by S11's
+        // lifecycle rule) rather than a half-written object that looks complete.
+        //
+        // `set -o pipefail` is what makes that safe. Without it the exit status is
+        // the *last* command's -- the upload -- so a pg_dump that died mid-stream
+        // would upload a truncated dump and report success, which is the single
+        // worst outcome available here.
+        buildSpec: JSON.stringify(
+          {
+            version: "0.2",
+            phases: {
+              install: {
+                commands: [
+                  // The image has psql tooling and no AWS CLI; alpine's own
+                  // package is enough to read a secret and PUT an object.
+                  "apk add --no-cache aws-cli",
+                ],
+              },
+              build: {
+                commands: [
+                  "set -eu",
+                  "set -o pipefail",
+                  'CONNECTION="$(aws secretsmanager get-secret-value --secret-id "$CONNECTION_SECRET" --query SecretString --output text)"',
+                  // The named refusal. A stack deployed but never handed a
+                  // connection string must fail loudly on its first run rather
+                  // than emit a zero-byte object every week.
+                  `if [ -z "$CONNECTION" ] || [ "$CONNECTION" = "unset" ]; then echo "The ${DUMP_CONNECTION_SECRET_NAME} secret has not been filled in -- see the DatabaseDumpSetup stack output."; exit 1; fi`,
+                  // `$PREFIX` unbraced: the next character is a `$`, so the
+                  // variable name cannot run on, and it keeps this out of the
+                  // `${...}`-in-a-string shape that reads as a botched template
+                  // literal to every linter and every reviewer.
+                  'KEY="$PREFIX$(date -u +%Y-%m-%d)/diveday.dump.gz"',
+                  'echo "Dumping to s3://$BUCKET/$KEY"',
+                  // --no-owner/--no-privileges: the restore target is a fresh
+                  // Neon branch whose roles are not this cluster's, and a dump
+                  // that insists on them fails on every GRANT.
+                  // --format=custom so pg_restore can reorder, parallelise, and
+                  // restore a single table without replaying the whole file.
+                  'pg_dump --dbname="$CONNECTION" --format=custom --no-owner --no-privileges --compress=0 | gzip -6 | aws s3 cp - "s3://$BUCKET/$KEY" --expected-size 1073741824',
+                  // Read the object's own size back rather than trusting the
+                  // upload's exit code alone -- the one check that distinguishes
+                  // "PUT accepted" from "a dump is there".
+                  'aws s3api head-object --bucket "$BUCKET" --key "$KEY" --query ContentLength --output text',
+                ],
+              },
+            },
+          },
+          null,
+          2,
+        ),
+      },
+    });
+
+    // Weekly, Monday 05:30 UTC: after the export pass (05:00, vercel.json) and
+    // well before the Tuesday 06:00 watchdog that now checks this prefix too, so
+    // one week's dump and one week's bundles are always the same run date.
+    const dumpSchedulerRole = new iam.Role(this, "DatabaseDumpSchedulerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
+      description: "Lets EventBridge Scheduler start the weekly database dump build.",
+    });
+    dumpSchedulerRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "StartDatabaseDumpBuild",
+        actions: ["codebuild:StartBuild"],
+        resources: [dumpProject.attrArn],
+      }),
+    );
+
+    new scheduler.CfnSchedule(this, "DatabaseDumpSchedule", {
+      name: "diveday-database-dump",
+      description:
+        "Weekly full-cluster pg_dump into the backup bucket's dumps/ prefix (S20). The layer that can restore a login.",
+      flexibleTimeWindow: { mode: "OFF" },
+      scheduleExpression: "cron(30 5 ? * MON *)",
+      scheduleExpressionTimezone: "Etc/UTC",
+      target: {
+        // A universal target: Scheduler calls the CodeBuild API directly, so
+        // there is no Lambda in the middle whose only job is one SDK call.
+        arn: "arn:aws:scheduler:::aws-sdk:codebuild:startBuild",
+        roleArn: dumpSchedulerRole.roleArn,
+        input: JSON.stringify({ ProjectName: dumpProject.name }),
+        retryPolicy: {
+          maximumRetryAttempts: 3,
+          maximumEventAgeInSeconds: 3600,
+        },
+      },
+    });
+
+    new cdk.CfnOutput(this, "DatabaseDumpSetup", {
+      value: `${dumpConnectionSecret.secretName} <- put DATABASE_URL_UNPOOLED here`,
+      description:
+        "The weekly full-cluster pg_dump (diveday-database-dump) reads its connection string from this secret, which deploys holding the literal 'unset' and fails loudly until a human fills it in: aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<direct Neon connection string>'. Run it by hand to test: aws codebuild start-build --project-name diveday-database-dump. See docs/engineering/backup-and-restore-runbook.md section 2c.",
     });
   }
 }

@@ -55,6 +55,35 @@ of a restore, so it would wipe and rebuild a shared, publicly bookable shop ever
 diver has a complaint about. Twenty-one days restores the demo while it still reads as a working dive
 shop, and with a daily check the restore lands the day the board crosses that line.
 
+### 2026-08-12 amendment — a second, much smaller pass for *today*
+
+The runway threshold keeps the **diver's** half of the demo stocked, and that is all it keeps. A diver
+reads what is coming up, so three weeks of board is a healthy demo to them; staff read **today**, and
+between restores — roughly forty days out of every six-week cycle — nothing sails today, so
+`/shop/blue-mantis`'s Today queue, its manifests and its close-out all render an empty day in
+production (FU-20260812-canonical-demo-has-no-today-between-restores). The seed states the invariant
+this breaks in `demoTodayDepartureStart`'s own comment: *today always has a board*.
+
+So `ensureDemoSailsToday` runs beside the runway check, on the same tick and behind the same `isDemo`
+guard: when nothing sails on the shop's own calendar day, move the **nearest upcoming non-series
+departure** onto today's `demoTodayDepartureStart` slot, preserving its duration, and touch nothing
+else. One `UPDATE` of one row. A departure that has already sailed and come home counts as today's
+board — the day is not blank, and the shop home reads an ended departure as work (its close-out
+handoff keys on exactly that).
+
+Not by lowering `DEMO_SCHEDULE_MIN_RUNWAY_DAYS`: that reseeds a few thousand rows of a publicly
+bookable shop, wiping whatever a visitor did, to fix one missing row.
+
+Series instances are excluded. A moved one keeps its `series_occurrence_date` precisely so the nightly
+roll does not re-fill the date it left (ADR 20260810-open-ended-recurring-trips), so dragging one onto
+today would punch a permanent hole in a cadence staff can see. The demo seeds no series today; the
+guard is there so that stays safe if it ever does.
+
+**The trade-off, stated up front:** the roster, waivers and crew attached to the moved trip travel with
+it, so today's board shows a departure whose story was written for a different day. That is the price
+of not wiping the shop, and it is cheap against an empty day — a demo with a full boat on it teaches
+what DiveDay does, and one with nothing on it teaches nothing.
+
 ## Alternatives considered
 
 - **Point the homepage link at a freshly minted demo instead** (reuse `enterDemoAction`'s
@@ -87,3 +116,9 @@ shop, and with a daily check the restore lands the day the board crosses that li
 - With `CRON_SECRET` unconfigured (a fork, a preview deployment), nothing runs and the demo ages
   exactly as it does today — the failure mode is the current behavior, not a worse one.
 - The e2e fleet is unaffected: it seeds fresh and resets per test, so no pass ever fires under it.
+- The canonical demo's **staff** surfaces are kept current too, as of the 2026-08-12 amendment above,
+  which is what makes them safe to point a prospect, a support session or a pitch screenshot at. The
+  cost is one moved trip per day at most, logged as `todayDeparture` on the existing
+  `cron_demo_refresh.pass_complete` line — no second cron, and no second Sentry monitor. A run of
+  `no_candidate` there means the board is healthy but every upcoming departure is a series instance the
+  nudge refuses to move.

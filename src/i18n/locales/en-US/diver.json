@@ -779,7 +779,6 @@
     "fieldGuideEyebrow": "Reef field guide",
     "fieldGuideHeading": "A few faces to learn",
     "likelySightings": "{count, plural, one {# likely sighting} other {# likely sightings}}",
-    "terrainViewIllustrative": "Terrain view · illustrative route",
     "openMap": "Open map ↗",
     "terrainMapTitle": "Terrain map of {site}",
     "landmarkKinds": {
@@ -1197,6 +1196,20 @@
       "skippedBadge": "skipped",
       "cardLine": "{level} · imported",
       "emptyValue": "—"
+    },
+    "export": {
+      "label": "Data export",
+      "eyebrow": "Settings",
+      "title": "Everything, as plain CSV.",
+      "download": "Download export",
+      "bundleHeading": "What's in the bundle",
+      "fileCount": "44 files, with a row count for each",
+      "contactsNote": "One flat row per person, shaped for another system's import wizard.",
+      "waiversNote": "Signed waivers with their integrity hash and the template text that was signed.",
+      "bookingsNote": "Every booking with its trip, diver, and payment state.",
+      "rowCount": "{count} rows",
+      "notIncludedLabel": "Not included, on purpose:",
+      "notIncludedText": "login accounts and password hashes, and per-device push credentials — credentials never leave."
     }
   },
   "demo": {
@@ -1920,6 +1933,13 @@
         "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price on the card above — the same number in a busy August as in a quiet January.",
         "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent's own pages.",
         "guideLink": "What moving off {competitor} looks like →"
+      },
+      "dataExit": {
+        "eyebrow": "If you leave",
+        "title": "The exit is a button, not a support ticket.",
+        "body": "Every diver, booking, signed waiver and payment history, as documented CSVs — plus every photo the shop stored, as real files rather than links. One ZIP, downloaded by the shop's owner from Settings, on any day including the first day of a trial.",
+        "honestNote": "Two things it will not hand over, and the screen says so: login accounts with their password hashes, and the push credentials tied to a particular phone. Neither means anything in another system, and a file of password hashes is not something a download button should produce.",
+        "mockupLabel": "The Data export screen in DiveDay, listing the bundle's files with a row count for each and a line naming what it deliberately leaves out"
       },
       "includedEyebrow": "Included now",
       "includedTitle": "Everything needed to run the current DiveDay workflow.",

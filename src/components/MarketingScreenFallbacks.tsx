@@ -196,6 +196,86 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
+/**
+ * Settings → Data export, in miniature — the screen behind "you can leave with
+ * your records any day", which `/pricing` had been arguing in a paragraph.
+ *
+ * Every element mirrors the real surface
+ * (`src/app/shop/[shopSlug]/settings/export/page.tsx`): its eyebrow and title,
+ * the one download button in its header, the "What's in the bundle" row with the
+ * file count on it, file cards carrying a real `EXPORT_FILE_NOTES` note and a row
+ * count each, and the "Not included, on purpose:" line.
+ *
+ * That last line is the point of drawing this at all. It is the unflattering
+ * part — it says out loud that login accounts and password hashes never leave —
+ * and a mockup that cropped it out would be an illustration rather than a claim
+ * (docs/product/marketing.md). The three files shown are three real entries from
+ * `EXPORT_FILE_NOTES`, carrying their own notes, and the file count is the real
+ * length of that list. Deliberately no `photos/` row: the bundled images are a
+ * *directory* in the zip, not one of the counted files, so a row for them would
+ * be an element the real screen does not have — the band's own copy is where the
+ * photos claim belongs.
+ */
+export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  const files = [
+    // i18n-exempt: the bundle's own file names, shown verbatim as they arrive
+    { file: "contacts.csv", note: t("fallback.export.contactsNote"), rows: "128" },
+    { file: "waiver_records.csv", note: t("fallback.export.waiversNote"), rows: "412" },
+    { file: "bookings.csv", note: t("fallback.export.bookingsNote"), rows: "1,204" },
+  ];
+  return (
+    <div className="bg-background">
+      <AppBar label={t("fallback.export.label")} />
+      <div className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium tracking-widest text-primary uppercase">
+              {t("fallback.export.eyebrow")}
+            </p>
+            <h3 className="mt-1 text-xl font-semibold tracking-tight">
+              {t("fallback.export.title")}
+            </h3>
+          </div>
+          <button
+            type="button"
+            disabled
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
+          >
+            {t("fallback.export.download")}
+          </button>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold">{t("fallback.export.bundleHeading")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("fallback.export.fileCount")}</p>
+          </div>
+          {files.map(({ file, note, rows }) => (
+            <div
+              key={file}
+              className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="font-mono text-sm text-foreground">{file}</p>
+                <p className="mt-0.5 text-xs text-muted">{note}</p>
+              </div>
+              <span className="shrink-0 text-xs font-medium text-muted tabular-nums">
+                {t("fallback.export.rowCount", { count: rows })}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs leading-5 text-muted">
+          <span className="font-medium text-foreground">
+            {t("fallback.export.notIncludedLabel")}
+          </span>{" "}
+          {t("fallback.export.notIncludedText")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   const trips = [

@@ -704,18 +704,42 @@ export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetin
 export type DepartureEnd = { endsAt: Date };
 
 /**
+ * Is there anything to close out yet — has *any* departure today come home?
+ *
+ * This is the trigger for Today's evening handoff to the close-out. It used to
+ * be {@link lastBoatIsIn}, which asked whether *every* boat was in, and that
+ * turned out to be the wrong question for the days a shop most needs the door:
+ * an evening with a night dive still on the board, or a boat running late, is
+ * exactly when a staffer starts writing the day up — and on those days the card
+ * never appeared (FU-20260811-close-out-has-one-conditional-door). A departure
+ * that is home is work the close-out can take, whatever else is still out.
+ *
+ * Deliberately **not** a new detector: it reads the departures `getTodayWork`
+ * already returned (today's own, in the shop's calendar day) against the same
+ * `now` the page renders with. No clock band, either — a shop whose boat is in
+ * at 14:00 has something to write up at 14:00, and one still counting heads at
+ * 19:00 does not; a wall-clock hour would be right about neither.
+ *
+ * A day with no departures at all is `false`: nothing sailed, so there is
+ * nothing to hand over. The close-out is still one ⌘K away — this is a handoff,
+ * not the only door.
+ */
+export function anyBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
+  return departures.some((departure) => departure.endsAt <= now);
+}
+
+/**
  * Has the day's diving finished — every departure today back at the dock?
  *
- * This is the trigger for Today's evening handoff to the close-out, and it is
- * deliberately **not** a new detector: it reads the departures `getTodayWork`
- * already returned (today's own, in the shop's calendar day) against the same
- * `now` the page renders with. No clock band, either — a shop whose last boat
- * is in at 14:00 is done at 14:00, and one still counting heads at 19:00 is
- * not; a wall-clock hour would be right about neither.
+ * No longer decides *whether* the handoff card renders ({@link anyBoatIsIn}
+ * does); it decides which words the card carries. "The last boat is in" is a
+ * true and worth-marking sentence, and it must not be said over a shop with a
+ * boat still at sea, so the two states get two sets of copy rather than one
+ * vague one.
  *
- * A day with no departures at all is `false`: nothing sailed, so there is no
- * "last boat in" moment to mark. The close-out is still one nav click away —
- * this is a handoff, not the only door.
+ * Same inputs and the same reasoning about clock bands as `anyBoatIsIn` above.
+ * A day with no departures is `false` here too, though the card is already
+ * absent by then.
  */
 export function lastBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
   return departures.length > 0 && departures.every((departure) => departure.endsAt <= now);

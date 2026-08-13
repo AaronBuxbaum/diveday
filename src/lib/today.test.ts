@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessBlocker } from "./readiness";
 import {
+  anyBoatIsIn,
   collapseDiverActions,
   diverBlockerAction,
   getSeasonalBriefing,
@@ -541,10 +542,41 @@ describe("getTimeOfDayGreeting", () => {
   });
 });
 
-describe("lastBoatIsIn", () => {
+describe("anyBoatIsIn", () => {
   // The trigger for Today's evening handoff to the close-out. It reads the
   // departures `getTodayWork` already returned — no second detector, no
   // wall-clock band.
+  const departure = (hoursFromNowEnd: number) => ({ endsAt: hoursFromNow(hoursFromNowEnd) });
+
+  it("is true once one of today's departures is home, with another still out", () => {
+    // The case the card used to miss entirely: an evening with a night dive
+    // still on the board is exactly when a shop starts writing the day up
+    // (FU-20260811-close-out-has-one-conditional-door).
+    expect(anyBoatIsIn([departure(-4), departure(2)], NOW)).toBe(true);
+  });
+
+  it("is true once every boat is in", () => {
+    expect(anyBoatIsIn([departure(-4), departure(-1)], NOW)).toBe(true);
+  });
+
+  it("is false while every boat is still out — there is nothing to write up yet", () => {
+    expect(anyBoatIsIn([departure(1), departure(4)], NOW)).toBe(false);
+  });
+
+  it("counts a boat due back exactly now as in", () => {
+    expect(anyBoatIsIn([departure(0)], NOW)).toBe(true);
+  });
+
+  it("is false on a day with no departures — nothing sailed, so nothing to hand over", () => {
+    // The close-out is still one palette search away; this is a handoff, not
+    // the door.
+    expect(anyBoatIsIn([], NOW)).toBe(false);
+  });
+});
+
+describe("lastBoatIsIn", () => {
+  // No longer gates the handoff card — it picks the card's words, so that "the
+  // last boat is in" is never said over a boat still at sea.
   const departure = (hoursFromNowEnd: number) => ({ endsAt: hoursFromNow(hoursFromNowEnd) });
 
   it("is true once every one of today's departures is back at the dock", () => {
@@ -560,7 +592,6 @@ describe("lastBoatIsIn", () => {
   });
 
   it("is false on a day with no departures — nothing sailed, so no last boat", () => {
-    // The close-out is still a nav click away; this is a handoff, not the door.
     expect(lastBoatIsIn([], NOW)).toBe(false);
   });
 });

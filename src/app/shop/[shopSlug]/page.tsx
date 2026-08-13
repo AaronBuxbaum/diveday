@@ -37,6 +37,7 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
+  anyBoatIsIn,
   getTimeOfDayGreeting,
   lastBoatIsIn,
   leadWithCrewed,
@@ -438,24 +439,37 @@ async function TodayBody({
 
       {/* The evening handoff. The registry calls the close-out "Today's evening
           mirror" (src/lib/staff-destinations.ts), but nothing on Today ever
-          said so — it was reachable only from the nav's More drawer, which is
-          where a daily ritual goes to be forgotten. Once every boat is back at
-          the dock, this card says the day is closable and hands over.
+          said so — it was reachable only from the palette, which is where a
+          daily ritual goes to be forgotten.
+
+          It keys on **any** boat being back (`anyBoatIsIn`), not all of them.
+          Waiting for the last one meant no card on precisely the days a shop
+          wants one: an evening with a night dive still on the board, or a boat
+          running late, is when someone starts writing the day up
+          (FU-20260811-close-out-has-one-conditional-door). `lastBoatIsIn` then
+          picks the words, because "the last boat is in" is a sentence that must
+          not be said over a boat still at sea.
 
           One calm card, never a banner (design/principles.md #8): the queue
           below it is still the page's work, so the link is `secondary` weight
           and the card carries no second control. Closing is a ritual, never a
           gate (ADR 20260804-day-closeout) — nothing here nags, and the card is
-          simply absent on a day with no departures. */}
-      {lastBoatIsIn(departures, now) ? (
+          simply absent on a day where nothing has come home yet. */}
+      {anyBoatIsIn(departures, now) ? (
         <section
           aria-labelledby="close-out-handoff-heading"
           className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
         >
           <h2 id="close-out-handoff-heading" className="font-semibold">
-            {t("shopHome.closeOut.heading")}
+            {lastBoatIsIn(departures, now)
+              ? t("shopHome.closeOut.heading")
+              : t("shopHome.closeOut.headingBoatStillOut")}
           </h2>
-          <p className="mt-1 text-muted">{t("shopHome.closeOut.body")}</p>
+          <p className="mt-1 text-muted">
+            {lastBoatIsIn(departures, now)
+              ? t("shopHome.closeOut.body")
+              : t("shopHome.closeOut.bodyBoatStillOut")}
+          </p>
           <Link
             href={`/shop/${shopSlug}/close-out`}
             className={buttonClass({ variant: "secondary", className: "mt-4" })}

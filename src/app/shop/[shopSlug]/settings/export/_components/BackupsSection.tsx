@@ -247,9 +247,32 @@ export function BackupsSection({
           <p className="mt-2 text-sm text-muted">{t("backup.history.empty")}</p>
         ) : (
           <>
+            {/* Five columns at `sm` and up; one stacked block below it.
+                `overflow-x-auto` stays as the desktop-narrow safety net, but it
+                cannot be the phone answer: a horizontal scroller nested in a
+                vertically-scrolling settings page advertises itself to nobody
+                on a phone, and the column it was hiding is Details — where a
+                *failed* delivery says why. A shop opens this list precisely to
+                find out that last Monday's backup did not land, so that
+                sentence has to be on screen without a guessed gesture
+                (FU-20260811-backup-delivery-history-clips-on-a-phone).
+
+                The fold is done by *reflowing* the row, not by rendering it
+                twice. Below `sm` the `<tr>` becomes a wrapping flex line and the
+                date and details cells claim a full line each, so the reading
+                order is: date, then run/outcome/size together, then the reason.
+                Every value exists exactly once in the DOM.
+                The first draft did render both arrangements and hid one with
+                `hidden`, which is the orders index's pattern — and it was wrong
+                here: two copies of the same text made `getByText` inside a row
+                ambiguous (`e2e/backup-export.spec.ts` failed on a strict-mode
+                violation), and it doubled the DOM of a paged list for no gain.
+                A layout switch belongs in CSS. */}
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                {/* Below `sm` the rows are self-describing stacks rather than a
+                    grid, so a lone "When" heading over them would be noise. */}
+                <thead className="hidden sm:table-header-group">
                   <tr className="border-b border-border text-left text-xs text-muted uppercase">
                     <th className="py-2 pr-4 font-medium">{t("backup.history.when")}</th>
                     <th className="py-2 pr-4 font-medium">{t("backup.history.kind")}</th>
@@ -258,28 +281,33 @@ export function BackupsSection({
                     <th className="py-2 font-medium">{t("backup.history.details")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="block divide-y divide-border sm:table-row-group">
                   {deliveries.rows.map((delivery) => (
-                    <tr key={delivery.id}>
-                      <td className="py-2 pr-4 whitespace-nowrap">
+                    <tr
+                      key={delivery.id}
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2.5 sm:table-row sm:gap-0 sm:py-0"
+                    >
+                      <td className="basis-full font-medium sm:basis-auto sm:py-2 sm:pr-4 sm:font-normal sm:whitespace-nowrap">
                         {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
                       </td>
-                      <td className="py-2 pr-4">
+                      <td className="text-muted sm:py-2 sm:pr-4 sm:text-foreground">
                         {delivery.trigger === "scheduled"
                           ? t("backup.history.trigger.scheduled")
                           : t("backup.history.trigger.manual")}
                       </td>
-                      <td className="py-2 pr-4">
+                      <td className="sm:py-2 sm:pr-4">
                         <Badge tone={STATUS_TONE[delivery.status]}>
                           {statusText(t, delivery.status)}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-4 whitespace-nowrap tabular-nums">
+                      <td className="text-muted tabular-nums sm:py-2 sm:pr-4 sm:text-foreground sm:whitespace-nowrap">
                         {delivery.byteCount === null
                           ? "—"
                           : formatByteSize(delivery.byteCount, locale)}
                       </td>
-                      <td className="py-2 text-muted">
+                      {/* Its own line below `sm`: this is the cell a shop came
+                          for on a failed row, and it is a sentence, not a chip. */}
+                      <td className="basis-full text-muted sm:basis-auto sm:py-2">
                         {delivery.status === "failed" ? (
                           deliveryErrorText(t, delivery.errorCode)
                         ) : delivery.objectKey ? (

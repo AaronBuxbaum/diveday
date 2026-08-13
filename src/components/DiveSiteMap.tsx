@@ -95,9 +95,6 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
             vectorEffect="non-scaling-stroke"
           />
         </svg>
-        <div className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-          {t("site.terrainViewIllustrative")}
-        </div>
       </MapEmbed>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">
         <div>

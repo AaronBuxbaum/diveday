@@ -1,9 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
-import { shops } from "./schema";
+import { shops, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
+import { demoTodayDepartureStart } from "./seed-clock";
 import { upcomingScheduleRange } from "./trips";
 
 /**
@@ -25,10 +27,18 @@ import { upcomingScheduleRange } from "./trips";
  * 20260724-per-visitor-demo-shops); only the canonical fixture ages, and it is
  * the one a marketing page points the public at.
  *
- * This is the pass that keeps that promise true: when the board has run down to
- * less than {@link DEMO_SCHEDULE_MIN_RUNWAY_DAYS} of departures, restore the
- * whole demo playground against today's clock. See ADR
+ * Two passes keep that promise true, and they are deliberately different sizes
+ * because a diver and a staffer read different halves of the demo. See ADR
  * 20260812-demo-schedule-keeper.
+ *
+ * 1. **The restore.** When the board has run down to less than
+ *    {@link DEMO_SCHEDULE_MIN_RUNWAY_DAYS} of departures, rebuild the whole demo
+ *    playground against today's clock. This is what keeps the diver-facing
+ *    schedule the homepage links to from emptying.
+ * 2. **The today nudge** ({@link ensureDemoSailsToday}). A board three weeks deep
+ *    satisfies a diver and still leaves the staff surfaces looking at an empty
+ *    day, because "today" is what staff read. When nothing sails today, move the
+ *    nearest upcoming departure onto today's slot — one row, no wipe.
  *
  * It is deliberately **not** re-exported from `@/db/seed` the way the demo
  * lifecycle helpers are: it imports `resetDemoSchedule` from there, and
@@ -48,6 +58,16 @@ import { upcomingScheduleRange } from "./trips";
  */
 export const DEMO_SCHEDULE_MIN_RUNWAY_DAYS = 21;
 
+/**
+ * What the narrow today pass did.
+ *
+ * - `already` — a departure was already on today's board; nothing was touched.
+ * - `moved` — the nearest upcoming departure was pulled onto today's slot.
+ * - `restored` — the full restore ran, which seeds a boat sailing today itself.
+ * - `no_candidate` — nothing sails today and nothing upcoming could be moved.
+ */
+export type DemoTodayOutcome = "already" | "moved" | "restored" | "no_candidate";
+
 export type DemoScheduleRefresh = {
   /** False when no canonical demo shop exists — a database seeded around one, not an error. */
   found: boolean;
@@ -55,6 +75,8 @@ export type DemoScheduleRefresh = {
   runwayDays: number | null;
   /** Whether this pass restored the playground. */
   refreshed: boolean;
+  /** What it took to keep a boat on today's board. Null when there is no demo shop. */
+  today: DemoTodayOutcome | null;
 };
 
 /**
@@ -83,21 +105,107 @@ export async function refreshCanonicalDemoSchedule(
   const minRunwayDays = opts.minRunwayDays ?? DEMO_SCHEDULE_MIN_RUNWAY_DAYS;
 
   const [shop] = await db
-    .select({ id: shops.id })
+    .select({ id: shops.id, timezone: shops.timezone })
     .from(shops)
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
     .limit(1);
-  if (!shop) return { found: false, runwayDays: null, refreshed: false };
+  if (!shop) return { found: false, runwayDays: null, refreshed: false, today: null };
 
   // The furthest-out departure, not the soonest: what is being measured is how
   // much board is left, and a shop whose next boat is tomorrow and whose last is
   // tomorrow has none.
   const { last } = await upcomingScheduleRange(db, shop.id, now);
   const runwayDays = last ? Math.floor((last.getTime() - now.getTime()) / DAY_MS) : 0;
-  if (runwayDays >= minRunwayDays) return { found: true, runwayDays, refreshed: false };
+  if (runwayDays < minRunwayDays) {
+    await db.transaction(async (tx) => {
+      await resetDemoSchedule(tx, shop.id, { history: true });
+    });
+    // A restore reseeds from `demoTodayDepartureStart`, so today has a boat by
+    // construction — the narrow pass below would find one and do nothing.
+    return { found: true, runwayDays, refreshed: true, today: "restored" };
+  }
 
-  await db.transaction(async (tx) => {
-    await resetDemoSchedule(tx, shop.id, { history: true });
-  });
-  return { found: true, runwayDays, refreshed: true };
+  return {
+    found: true,
+    runwayDays,
+    refreshed: false,
+    today: await ensureDemoSailsToday(db, shop.id, shop.timezone, now),
+  };
+}
+
+/**
+ * Keep one boat on the demo's board *today*, without wiping the shop.
+ *
+ * The restore above is what keeps the diver-facing schedule stocked, and it is
+ * the only thing that has ever moved the demo's dates — which leaves a gap the
+ * runway threshold cannot close. A diver looks at what is *coming up*, so three
+ * weeks of board is a healthy demo to them; staff look at **today**, and between
+ * restores (roughly every six weeks) nothing sails today, so `/shop/blue-mantis`'s
+ * Today queue, its manifests and its close-out all render an empty day in
+ * production (FU-20260812-canonical-demo-has-no-today-between-restores).
+ *
+ * Lowering `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` was the wrong lever: it reseeds a few
+ * thousand rows of a publicly bookable shop — wiping whatever a visitor did — to
+ * fix one missing row. This moves the nearest upcoming departure onto today's
+ * slot instead and touches nothing else.
+ *
+ * **The trade-off, stated:** the roster, waivers and crew attached to that trip
+ * travel with it, so today's board shows a departure whose story was written for
+ * a different day. That is the price of not wiping the shop, and it is cheap
+ * next to an empty day: a demo with a full boat on it teaches what DiveDay does,
+ * and one with nothing on it teaches nothing.
+ *
+ * "Today already has one" counts a departure that has already sailed and
+ * returned — the invariant is that today's board is not blank, and the shop home
+ * (and now its close-out handoff) reads an ended departure as work, not as
+ * absence.
+ */
+export async function ensureDemoSailsToday(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<DemoTodayOutcome> {
+  const { from, to } = shopDayBounds(now, timeZone);
+  const [sailingToday] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, from),
+        lt(trips.startsAt, to),
+      ),
+    )
+    .limit(1);
+  if (sailingToday) return "already";
+
+  const [candidate] = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gt(trips.startsAt, now),
+        // Never a series instance. A moved one keeps its `series_occurrence_date`
+        // precisely so the nightly roll does not re-fill the slot it left
+        // (ADR 20260810-open-ended-recurring-trips), so pulling one onto today
+        // would punch a permanent hole in a cadence a shop can see.
+        isNull(trips.seriesId),
+      ),
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(1);
+  if (!candidate) return "no_candidate";
+
+  // Same duration, new start — a two-tank morning stays a two-tank morning
+  // rather than becoming a trip that returns before it leaves.
+  const startsAt = demoTodayDepartureStart(now, timeZone);
+  const endsAt = new Date(
+    startsAt.getTime() + (candidate.endsAt.getTime() - candidate.startsAt.getTime()),
+  );
+  await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, candidate.id));
+  return "moved";
 }

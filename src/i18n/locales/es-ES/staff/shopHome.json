@@ -2,6 +2,8 @@
   "closeOut": {
     "heading": "El último barco ya está en puerto",
     "body": "Todas las salidas de hoy han vuelto al muelle. Un repaso en el cierre del día — cómo terminó cada barco, qué sigue abierto y con qué abre mañana — y a casa.",
+    "headingBoatStillOut": "El cierre del día ya está abierto",
+    "bodyBoatStillOut": "Todavía no han vuelto todos los barcos, así que el día no ha terminado. Puedes anotar ya las salidas que están en puerto — cómo terminó cada una y qué sigue abierto — y retomar el resto cuando atraque el último.",
     "action": "Cerrar el día"
   },
   "createdNotice": {

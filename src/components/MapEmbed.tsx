@@ -38,7 +38,7 @@ export function MapEmbed({
    * should not be a stop in the tab order either.
    */
   interactive?: boolean;
-  /** Overlays drawn over the map — the route SVG, a caption chip, a click surface. */
+  /** Overlays drawn over the map — the route SVG, a click surface. */
   children?: ReactNode;
 }) {
   return (

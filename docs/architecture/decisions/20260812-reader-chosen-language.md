@@ -75,6 +75,17 @@ public pages are a shop's storefront.
 - A shared device accumulates one person's choice for a year. Acceptable for the shop counter (the
   next staffer switches it back in two taps, and it is in the same menu as Sign out); it is the
   reason the cookie is not written on mere *negotiation*, only on a deliberate pick.
+- **2026-08-12 — the one-year lifetime is settled, deliberately, for both surfaces.** The question
+  was raised and closed by the owner: the shared-counter case the paragraph above concedes is
+  currently *hypothetical*, because DiveDay has no surface a shop hands to a diver on the shop's own
+  device. Every diver-facing page is reached on the diver's own phone from a link or a QR code; the
+  staff surfaces are staff-only end to end. So there is no device on which a customer's pick can
+  strand a staffer, and the two alternatives that were on the table — a session-length cookie under
+  `/shop/**`, or a per-person staff language on the `people` row — would both be paying real
+  complexity (the same control behaving differently in two places; a second per-person locale column
+  to reconcile with ADR 20260731-per-person-notification-locale) to solve a problem no shop can
+  currently have. Revisit if a counter-kiosk or a hand-the-tablet-over flow is ever built: that
+  feature is what would create the shared device, and it should carry this decision with it.
 - **Supersedes** the "no switcher" clause of ADR 20260729-diver-copy-localization. That record's
   no-`[locale]`-route decision stands and is reaffirmed above.
 - Escape hatch: if a shop ever needs to *force* its own language (a single-language storefront where

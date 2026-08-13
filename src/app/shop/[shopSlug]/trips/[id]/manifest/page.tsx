@@ -359,59 +359,95 @@ export default async function TripManifestPage({
         t={t}
       />
 
-      {/* The offline copy and the push opt-in, at the foot of the page: a
-          backstop, not the way in. The shop-wide auto-prime already saves the
-          near-term board on any /shop page visit (ADR
-          20260726-shopwide-offline-manifest-priming), and once a boat is truly
-          out of signal this live page does not load at all — /offline-manifest
-          is what a captain opens. Sitting first, it cost the head count the
-          top of every screen. */}
-      <OfflineManifestManager
-        locale={locale}
-        payload={serializeManifests(
-          completeManifests,
-          { slug: shopSlug, name: shop.name, timezone: shop.timezone },
-          (blocker) => readinessBlockerText(t, blocker),
-        )}
-        copy={
-          {
-            checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
-            reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
-            reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
-            reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
-            reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
-            reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
-            reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
-            savingMessage: t("trips.offlineManifestManager.savingMessage"),
-            saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
-            offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
-            offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
-            refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
-            heading: t("trips.offlineManifestManager.heading"),
-            body: t("trips.offlineManifestManager.body"),
-            connectivityOfflineWithCopy: t(
-              "trips.offlineManifestManager.connectivityOfflineWithCopy",
-            ),
-            connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
-            connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
-            connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
-            connectivityOfflineTitle: t("trips.offlineManifestManager.connectivityOfflineTitle"),
-            freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
-            freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
-            freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
-            savedSummary: t("trips.offlineManifestManager.savedSummary"),
-            refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
-            refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
-            openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
-          } satisfies OfflineManifestManagerCopy
-        }
-        pushOptIn={
-          // Keyed: the manager renders this prop in a child position React
-          // treats as a list slot, and the un-keyed element was the page's one
-          // dev-overlay warning ("each child in a list should have a unique
-          // key") — noise that hides a real issue when one appears.
+      {/* Everything this *device* does, in one quiet group at the foot of the
+          page: hold an offline copy, wake itself for a refresh, ignore spray on
+          the glass. All three are per-phone preferences rather than anything
+          about this departure, and they used to read as three unrelated
+          leftovers — a bordered card with the push opt-in nested inside it, and
+          then a lone checkbox floating underneath, which was the weakest
+          composition on the page (FU-20260810-manifest-device-housekeeping-group).
+
+          Still at the foot, and still a backstop rather than the way in: the
+          shop-wide auto-prime already saves the near-term board on any /shop
+          page visit (ADR 20260726-shopwide-offline-manifest-priming), and once a
+          boat is truly out of signal this live page does not load at all —
+          /offline-manifest is what a captain opens. Sitting first, it cost the
+          head count the top of every screen.
+
+          Deliberately not a disclosure: the offline copy's connectivity and
+          freshness ("Saved 4 hours ago") has to be readable without a tap,
+          because a stale copy that looks current is the failure mode this whole
+          mechanism exists to prevent. */}
+      <section
+        aria-labelledby="on-this-phone-heading"
+        className="mt-8 rounded-xl border border-border bg-surface p-4 print:hidden"
+      >
+        <h2
+          id="on-this-phone-heading"
+          className="text-xs font-semibold tracking-widest text-muted uppercase"
+        >
+          {t("trips.onThisPhone")}
+        </h2>
+        <div className="mt-3">
+          <OfflineManifestManager
+            locale={locale}
+            payload={serializeManifests(
+              completeManifests,
+              { slug: shopSlug, name: shop.name, timezone: shop.timezone },
+              (blocker) => readinessBlockerText(t, blocker),
+            )}
+            copy={
+              {
+                checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
+                reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
+                reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
+                reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
+                reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
+                reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
+                reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
+                savingMessage: t("trips.offlineManifestManager.savingMessage"),
+                saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
+                offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
+                offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),
+                refreshNoSignal: t("trips.offlineManifestManager.refreshNoSignal"),
+                heading: t("trips.offlineManifestManager.heading"),
+                body: t("trips.offlineManifestManager.body"),
+                connectivityOfflineWithCopy: t(
+                  "trips.offlineManifestManager.connectivityOfflineWithCopy",
+                ),
+                connectivityOffline: t("trips.offlineManifestManager.connectivityOffline"),
+                connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
+                connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
+                connectivityOfflineTitle: t(
+                  "trips.offlineManifestManager.connectivityOfflineTitle",
+                ),
+                freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
+                freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
+                freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
+                savedSummary: t("trips.offlineManifestManager.savedSummary"),
+                refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
+                refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
+                openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
+              } satisfies OfflineManifestManagerCopy
+            }
+          />
+        </div>
+
+        {/* Push is the third refresh trigger for the copy above it, so it stays
+            next to it — now as a sibling row of the group rather than nested
+            inside the offline card, which is what let all three members share
+            one border and one rhythm.
+
+            `empty:hidden` because both remaining rows render *nothing* under
+            ordinary conditions — `PushOptIn` while it is still checking the
+            device, and on any deployment with no VAPID keys configured; the
+            spray-guard toggle until it has read this device's stored preference
+            — and a separator above nothing is a rule across an empty band, which
+            is the exact stray-furniture look this group exists to remove. The
+            wrapper carries the rhythm so neither shared component has to know it
+            is in a group (`WaterLockerToggle` is also on the offline viewer). */}
+        <div className="mt-4 border-t border-border pt-4 empty:hidden">
           <PushOptIn
-            key="push-opt-in"
             publicKey={webPushPublicKey()}
             subscribeAction={subscribePushAction.bind(null, tripId)}
             unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
@@ -432,19 +468,20 @@ export default async function TripManifestPage({
               } satisfies PushOptInCopy
             }
           />
-        }
-      />
+        </div>
 
-      {/* The spray guard is a *this device* preference, like the offline copy
-          and the push opt-in above it — not a checkpoint. It used to sit in
-          the checkpoint nav, where it read as a fifth destination beside
-          "Before departure" and "After dive 1" and put a settings toggle in
-          the one row a captain taps to change what the page is showing. */}
-      <div className="mt-4 print:hidden">
-        <WaterLockerToggle
-          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-        />
-      </div>
+        {/* The spray guard is a *this device* preference like the two above it,
+            not a checkpoint. It used to sit in the checkpoint nav, where it read
+            as a fifth destination beside "Before departure" and "After dive 1"
+            and put a settings toggle in the one row a captain taps to change
+            what the page is showing — and then spent a while as a lone checkbox
+            below the offline card, which is what this group fixes. */}
+        <div className="mt-4 border-t border-border pt-4 empty:hidden">
+          <WaterLockerToggle
+            copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+          />
+        </div>
+      </section>
 
       <WaterLocker
         copy={{

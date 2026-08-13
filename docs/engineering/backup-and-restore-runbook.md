@@ -1,13 +1,19 @@
 # Backup and restore runbook
 
-How DiveDay's production data is protected and how it comes back. Two layers: Neon's own
-point-in-time recovery over the Postgres project provisioned by Vercel's Marketplace integration
-([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)), and
-a scheduled logical export built on the existing per-shop export seam
-(`loadShopExportBundleInput` in `src/db/export.ts` → `buildExportBundle` → `zipExportBundle` in
-`src/lib/export.ts`) written to the private, versioned `DatabaseBackupBucket` in
-`infra/lib/infra-stack.ts` §11. The reasoning for both is
-[ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
+How DiveDay's production data is protected and how it comes back. Three DiveDay-side layers:
+
+1. **Neon's own point-in-time recovery** over the Postgres project provisioned by Vercel's Marketplace
+   integration ([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)).
+   §1.
+2. **A scheduled logical export** built on the existing per-shop export seam
+   (`loadShopExportBundleInput` in `src/db/export.ts` → `buildExportBundle` → `zipExportBundle` in
+   `src/lib/export.ts`) written to the private, versioned `DatabaseBackupBucket` in
+   `infra/lib/infra-stack.ts` §11. §2. The reasoning for both of the above is
+   [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
+3. **A weekly full-cluster `pg_dump`** into the same bucket under `dumps/`, shipped 2026-08-12
+   ([ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md)).
+   §2c. It exists because the export bundles cannot carry credentials, so layer 2 alone restores a
+   platform nobody can sign in to.
 
 A third, complementary layer shipped 2026-08-04 (§2's own scheduler followed on 2026-08-12): the
 **shop-owned weekly backup** (§2b below) — the same export bundle, delivered by cron to a bucket
@@ -25,17 +31,25 @@ history we cannot produce.
 
 | Store | What's in it | Primary recovery | Secondary copy |
 | --- | --- | --- | --- |
-| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | Scheduled export bundles in S3, per shop |
+| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump under `dumps/` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles under `exports/` |
 | Vercel Blob (`*.public.blob.vercel-storage.com`) | Certification card photos, recap photos, course/dive-site media, imported waiver source documents | None built in — Vercel Blob has no PITR and no versioning | The `photos/` directory inside each export bundle (see the gap below) |
 | Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/AWS SES/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
 
 ## 1. Neon point-in-time recovery
 
-> `TODO(owner)` — **Look up and record the actual PITR retention window for this Neon project.**
-> Neon console → the DiveDay project → **Settings → Storage** (labelled *History retention* /
-> *Restore window*). Write the number of days here, next to the plan name, and the date you checked
-> it. **Do not guess this number** — every procedure below is scoped by it, and a wrong value in a
-> runbook is worse than an absent one because it will be trusted during an incident.
+> **2026-08-12 — the owner's answer: the window is short, and not long enough to rely on.** That is
+> the decision-relevant half of this question and it has been acted on: it is what moved the
+> full-cluster `pg_dump` (§2c) from "the obvious next increment" to shipped, on the reasoning in
+> [ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md).
+> Read the first row of the table below as the operative one.
+>
+> `TODO(owner)` — **still record the exact number.** Neon console → the DiveDay project →
+> **Settings → Storage** (labelled *History retention* / *Restore window*). Write the days here, next
+> to the plan name, and the date you checked it. **Do not guess it** — every procedure below is scoped
+> by it, and a wrong value in a runbook is worse than an absent one because it will be trusted during
+> an incident. What the exact figure changes now is narrow but real: whether §2c is day-to-day recovery
+> (hours) or vendor-independence insurance (7+ days), and therefore whether its weekly cadence is
+> right.
 
 The plausible values and what each one means for the procedures below:
 
@@ -218,14 +232,68 @@ Operationally distinct from §2 in every way that matters during an incident:
 destination credential unreadable, which surfaces as `credential_unreadable` delivery failures
 until each shop re-enters its key. Treat that as part of any key-rotation plan.
 
-### Adding a `pg_dump` layer (the obvious next increment)
+## 2c. Full-cluster `pg_dump` (running since 2026-08-12)
 
-The per-shop export cannot cover `user_accounts`, `account_tokens`, or `calendar_feeds` by design. A
-plain `pg_dump` against `DATABASE_URL_UNPOOLED` (the direct connection — a transaction-mode pooler is
-unreliable for this, same reason migrations use it) covers all of them and is a strictly larger
-backup. It is not shipped because it needs a host to run on and somewhere to hold the direct
-connection string. When it lands, it belongs in this section, and the per-shop export goes back to
-being purely the portability feature it was built as.
+The layer that can restore a **login**, decided in
+[ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md).
+Everything §2 and §2b describe is built from the export seam, which withholds credentials by design —
+so before this existed, a restore from bundles alone produced every shop, every booking, every waiver,
+and nobody who could sign in. This closes that, and the per-shop export goes back to being purely the
+portability feature it was built as.
+
+| Property | Reality |
+| --- | --- |
+| What it is | `pg_dump --format=custom --no-owner --no-privileges` over the whole cluster, gzipped. Covers `user_accounts`, `account_tokens` and `calendar_feeds` — and everything else — in one file |
+| Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), image `public.ecr.aws/docker/library/postgres:17-alpine`. Pinned to the Postgres **major** version: `pg_dump` may be newer than its server, never older, so `DUMP_POSTGRES_MAJOR` is a floor to raise when Neon upgrades |
+| Cadence | Weekly, **Mondays 05:30 UTC**, EventBridge Scheduler → `codebuild:StartBuild`. Half an hour after the export pass, a day before the watchdog, so one week's dump and one week's bundles share a run date |
+| Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in the same `DatabaseBackupBucket` |
+| Retention | **35 days, then deleted** — its own lifecycle rule, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
+| Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). Deploys holding the literal `unset`; a build refuses with a named message until a human fills it in |
+| Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` — it cannot reach the shop bundles under `exports/`, and it cannot delete. Reading a dump back needs the admin profile |
+| Streaming | `pg_dump \| gzip \| aws s3 cp -` under `set -o pipefail`. No temp file. **`pipefail` is load-bearing**: without it the build's status is the upload's, so a `pg_dump` that died mid-stream would store a truncated dump and report success |
+| Monitors | The same weekly `diveday-backup-freshness-check` — it lists `dumps/` too and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms |
+
+Set it up (once), and run one by hand:
+
+```bash
+# The direct endpoint from Neon — not the -pooler one.
+AWS_PROFILE=diveday-admin aws secretsmanager put-secret-value \
+  --secret-id diveday/database-url-unpooled --secret-string '<DATABASE_URL_UNPOOLED>'
+
+AWS_PROFILE=diveday-admin aws codebuild start-build --project-name diveday-database-dump
+AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive
+```
+
+### Restore procedure — accounts and everything else
+
+A full recovery is two parts, in this order, and the order matters: the dump is the base and the
+bundles are what happened after it.
+
+1. **Branch or provision a target.** A fresh Neon branch (or project, if the account itself is what was
+   lost), and its direct connection string.
+2. **Fetch the newest dump and check its size** before trusting it — a few hundred bytes means a failed
+   run stored something, which the `pipefail` guard should make impossible but is worth a glance.
+
+   ```bash
+   AWS_PROFILE=diveday-admin aws s3 cp \
+     s3://diveday-backups/dumps/<YYYY-MM-DD>/diveday.dump.gz . && ls -l diveday.dump.gz
+   ```
+3. **Restore it.** `--no-owner --no-privileges` again on the way in, because the target's roles are not
+   the source cluster's:
+
+   ```bash
+   gunzip -c diveday.dump.gz | pg_restore --dbname="<target direct URL>" \
+     --no-owner --no-privileges --exit-on-error
+   ```
+4. **Sign in.** This is the step that was impossible before this layer existed: staff accounts,
+   password hashes and tokens are present, so nobody has to be re-invited and no password reset has to
+   be forced.
+5. **Replay anything newer than the dump** from the export bundles (§2, and the import path in §4's
+   step 5). The dump is at most a week old; the bundles are the same age, so in practice this step
+   covers the gap between the two run times rather than a week of work.
+
+Photos are still the gap §3 describes: the dump carries the blob *URLs*, not the bytes. The bundles'
+`photos/` directories are the only copy.
 
 ## 3. Vercel Blob posture
 
@@ -246,7 +314,8 @@ provider failure does not lose track of an object. That is a consistency mechani
 A backup nobody has restored is a hypothesis. Run this once a quarter and record the result in the
 log below. It should take under an hour.
 
-1. **Pick a target** — a timestamp roughly 24 hours ago, and one shop's most recent export bundle.
+1. **Pick a target** — a timestamp roughly 24 hours ago, one shop's most recent export bundle, and the
+   most recent dump under `dumps/`.
 2. **Branch the database.** Neon console → new branch from the production branch at that timestamp.
    Note how long the branch takes to become available; that number is your real RTO.
 3. **Connect and verify.** Point a local `DATABASE_URL`/`DATABASE_URL_UNPOOLED` at the branch and
@@ -260,16 +329,20 @@ log below. It should take under an hour.
 5. **Exercise the import path** for at least one CSV through
    `src/app/shop/[shopSlug]/settings/import/` into a scratch shop, so the round trip is proven and
    not assumed.
-6. **Tear down** — delete the Neon branch and the scratch shop. Leaving a restore branch alive costs
+6. **Restore the dump into an empty branch and sign in** (§2c's procedure). This is the step that
+   proves the layer the bundles cannot cover: a `pg_restore` that completes without `--exit-on-error`
+   firing, followed by a real sign-in with a real staff password. A dump that restores but whose
+   accounts do not authenticate is a failed test, not a partial pass — record it as one.
+7. **Tear down** — delete the Neon branch and the scratch shop. Leaving a restore branch alive costs
    storage and, worse, invites someone to connect to it later thinking it is production.
-7. **Record the run below**, including anything that surprised you. "Everything fine" with no notes
+8. **Record the run below**, including anything that surprised you. "Everything fine" with no notes
    is the least useful possible entry.
 
 ### Restore test log
 
-| Date run | Who | Neon window at the time | Branch-available time (RTO) | Bundle verified | Findings |
-| --- | --- | --- | --- | --- | --- |
-| _never_ | — | — | — | — | `TODO(owner)` — no restore has ever been tested. The first run is also the first evidence any of this works. |
+| Date run | Who | Neon window at the time | Branch-available time (RTO) | Bundle verified | Dump restored + sign-in | Findings |
+| --- | --- | --- | --- | --- | --- | --- |
+| _never_ | — | — | — | — | — | `TODO(owner)` — no restore has ever been tested. The first run is also the first evidence any of this works. |
 
 ## What this runbook does not cover
 
@@ -277,9 +350,15 @@ log below. It should take under an hour.
   quarterly restore-test log below still reads `never`. A backup nobody has restored is a
   hypothesis; what changed is that there is now evidence it is being *written* (the watchdog), not
   evidence it can be *read*. Run the test in §4 before describing recovery as proven.
-- **The export's two gaps are unchanged by the runner.** Credentials are never exported, so a
-  restore from bundles alone yields every shop record and nobody who can sign in; and a photo that
-  fails to fetch is still dropped silently. Both are stated in §2 above and neither got better.
+- **The export's credential gap is now covered elsewhere, not fixed in the export.** §2c's
+  full-cluster dump carries `user_accounts`, `account_tokens` and `calendar_feeds`; the bundles still
+  do not and still should not. What that means practically: a restore from bundles *alone* still yields
+  nobody who can sign in, so recovery is the two-part procedure in §2c rather than one artifact.
+- **The photo gap is unchanged, by either layer.** A photo that fails to fetch is still dropped
+  silently from a bundle (§2), and the dump carries blob *URLs*, not bytes — so the bundles' `photos/`
+  directories remain the only copy of an image.
+- **Nobody has restored a dump either.** The layer is written and watched; §4's step 6 is what will
+  turn it from a hypothesis into evidence.
 - **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
   in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
   write-only uploader is the mitigation, and it is a partial one.
@@ -296,7 +375,9 @@ log below. It should take under an hour.
 | Symptom | Look at |
 | --- | --- |
 | The branch you need is older than Neon will go | The PITR window at the top of this file — if it is unrecorded, that is the finding. Fall back to the newest export bundle in S3 and accept its gaps (no credentials, possibly missing photos) |
-| Restored app boots but nobody can sign in | Expected when restoring from export bundles: `user_accounts`/`account_tokens` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Re-invite staff and force password resets |
+| Restored app boots but nobody can sign in | Expected when restoring from export bundles alone: `user_accounts`/`account_tokens` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Restore the newest dump under `dumps/` first (§2c) and layer the bundles on top; re-inviting staff and forcing password resets is now the fallback for when no dump is available, not the standard procedure |
+| No dump under `dumps/` at all | The `diveday/database-url-unpooled` secret was never filled in, so every build refused (§2c). The weekly watchdog alarms on exactly this. Check the `diveday-database-dump` project's last build log for the named refusal |
+| `pg_restore` fails on ownership or grants | The dump is taken `--no-owner --no-privileges`; pass both on the way in too — the target branch's roles are not the source cluster's |
 | A waiver renders but its integrity hash does not verify | Compare `waiver_templates.csv`'s `body` for that `template_version` against what the app is rendering — a restore that mixed a current template with an old record is the usual cause |
 | `photos/` is short of what the CSVs reference | `fetchExportPhotos` dropped them silently (`src/lib/export.ts`). Check whether the blob objects still exist; if they do, re-run the export for that shop, if they do not, the document is gone and the incident is a data-loss incident |
 | Export bundle is missing a table you expected | The table was never added to `src/db/export.ts`. Confirm against `EXPORT_FILE_NOTES` in `src/lib/export.ts` — a table absent there is absent from every historical bundle too |

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
@@ -63,18 +63,11 @@ export function OfflineManifestManager({
   payload,
   locale,
   copy,
-  pushOptIn,
 }: {
   payload: OfflineManifestPayload;
   /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
   locale: string;
   copy: OfflineManifestManagerCopy;
-  /**
-   * The Web Push opt-in, passed as a slot rather than rendered here: it is a
-   * server-composed element carrying server actions, and this is a Client
-   * Component. Optional so every other caller and every test is unaffected.
-   */
-  pushOptIn?: ReactNode;
 }) {
   const router = useRouter();
   const tripId = payload.manifests[0]?.trip.id ?? "";
@@ -446,15 +439,21 @@ export function OfflineManifestManager({
           </div>
         </div>
       ) : null}
-      <section
-        className="mt-5 rounded-xl border border-border bg-surface p-4 print:hidden"
-        aria-labelledby="offline-heading"
-      >
+      {/* No card chrome and no top margin of its own: this is the first member
+          of the manifest page's "On this phone" group, which owns the border,
+          the padding and the rhythm the three per-device concerns share (see
+          the group in `trips/[id]/manifest/page.tsx`). It was a bordered card
+          with a lone spray-guard checkbox floating underneath it, which read as
+          two unrelated leftovers rather than one quiet group. */}
+      <section className="print:hidden" aria-labelledby="offline-heading">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <h2 id="offline-heading" className="font-semibold">
+            {/* h3, under the group's own h2 — and the freshness state below is
+                never behind a disclosure: a stale copy must never be able to
+                look current (docs/design/principles.md). */}
+            <h3 id="offline-heading" className="font-semibold">
               {copy.heading}
-            </h2>
+            </h3>
             <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <ConnectivityStatus
@@ -507,7 +506,6 @@ export function OfflineManifestManager({
             ) : null}
           </div>
         </div>
-        {pushOptIn}
       </section>
     </>
   );

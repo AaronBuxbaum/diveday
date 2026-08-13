@@ -6,7 +6,8 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
-import { FeatureGroupsGrid } from "@/components/MarketingSections";
+import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
+import { FeatureGroupsGrid, MarketingMockup } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
@@ -290,6 +291,42 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               {t("marketing.pricing.feeAnchor.sourcesNote")}
             </p>
+          </div>
+        </section>
+
+        {/* The page's other big claim, and until now its only paragraph-shaped
+            one: you can leave with your records any day. It sits here rather
+            than in the FAQ because this is where the objection actually lands —
+            the fee anchor above has just made switching look attractive, and the
+            next thought a shop owner has is about being stuck again. The FAQ row
+            (`faq.dataIfNotWorking`) still answers it in words for someone
+            scanning that far; this answers it with the screen.
+
+            The mockup is a claim, so it mirrors the real Settings → Data export
+            element for element — including the "Not included, on purpose:" line
+            that says credentials never leave (docs/product/marketing.md). */}
+        <section className="border-t border-border">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-20">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.pricing.dataExit.eyebrow")}
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("marketing.pricing.dataExit.title")}
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-muted">
+                {t("marketing.pricing.dataExit.body")}
+              </p>
+              <p className="mt-4 leading-7 text-muted">
+                {t("marketing.pricing.dataExit.honestNote")}
+              </p>
+            </div>
+            <MarketingMockup
+              label={t("marketing.pricing.dataExit.mockupLabel")}
+              className="shadow-xl shadow-foreground/5"
+            >
+              <ExportBundleFallback locale={locale} />
+            </MarketingMockup>
           </div>
         </section>
 

@@ -70,7 +70,18 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
     note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
 
-[7] Mint the Vercel and Neon usage read tokens
+[7] Give the weekly database dump its connection string
+    when     once, before the first Monday after this stack is deployed, and again if the Neon connection string changes
+    why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
+    run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
+             aws codebuild start-build --project-name diveday-database-dump
+    produces A weekly full-cluster pg_dump at s3://<backup bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days.
+    store    AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.
+    verify   aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'
+             AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive
+    note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why its prefix expires after 35 days while the export bundles never do, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
+
+[8] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -83,14 +94,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[8] Request SES production access
+[9] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[9] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[10] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -99,7 +110,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[10] Confirm the observability alarm subscription email
+[11] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
@@ -112,7 +123,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[11] Confirm the usage monitor reports numbers and reaches a real inbox
+[12] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

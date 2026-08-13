@@ -64,8 +64,8 @@
     "tooManyPhotos": "{max, plural, one {A site holds up to # photo.} other {A site holds up to # photos.}}",
     "route": {
       "legend": "The route you swim",
-      "description": "Click the terrain view to drop a waypoint, in the order you swim them. The map can't be dragged — it's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
-      "needsCoordinates": "Fill in the forecast latitude and longitude above and the terrain view appears here, ready to draw on.",
+      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged — it's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
+      "needsCoordinates": "Fill in the forecast latitude and longitude above and the map appears here, ready to draw on.",
       "labelLabel": "What the route is called",
       "labelPlaceholder": "Reef garden loop",
       "noteLabel": "One line about the route",
@@ -75,7 +75,7 @@
       "zoomOut": "Zoom out",
       "undo": "Undo point",
       "clear": "Clear route",
-      "mapAriaLabel": "Terrain view — click to add a route waypoint",
+      "mapAriaLabel": "Map — click to add a route waypoint",
       "status": {
         "empty": "Click where the dive starts.",
         "one": "One waypoint down — click where it goes next.",

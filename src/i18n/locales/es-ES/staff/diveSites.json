@@ -64,8 +64,8 @@
     "tooManyPhotos": "{max, plural, one {Un sitio admite hasta # foto.} other {Un sitio admite hasta # fotos.}}",
     "route": {
       "legend": "La ruta que se bucea",
-      "description": "Toca la vista topográfica para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
-      "needsCoordinates": "Completa la latitud y la longitud de arriba y aquí aparecerá la vista topográfica, lista para dibujar.",
+      "description": "Toca el mapa para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
+      "needsCoordinates": "Completa la latitud y la longitud de arriba y aquí aparecerá el mapa, listo para dibujar.",
       "labelLabel": "Cómo se llama la ruta",
       "labelPlaceholder": "Vuelta por el jardín de coral",
       "noteLabel": "Una línea sobre la ruta",
@@ -75,7 +75,7 @@
       "zoomOut": "Alejar",
       "undo": "Deshacer punto",
       "clear": "Borrar ruta",
-      "mapAriaLabel": "Vista topográfica: toca para añadir un punto de la ruta",
+      "mapAriaLabel": "Mapa: toca para añadir un punto de la ruta",
       "status": {
         "empty": "Toca donde empieza la inmersión.",
         "one": "Un punto marcado: toca dónde sigue.",

@@ -779,7 +779,6 @@
     "fieldGuideEyebrow": "Guía de campo del arrecife",
     "fieldGuideHeading": "Algunas caras que aprender",
     "likelySightings": "{count, plural, one {# avistamiento probable} other {# avistamientos probables}}",
-    "terrainViewIllustrative": "Vista topográfica · ruta ilustrativa",
     "openMap": "Abrir mapa ↗",
     "terrainMapTitle": "Mapa topográfico de {site}",
     "landmarkKinds": {
@@ -1197,6 +1196,20 @@
       "skippedBadge": "omitido",
       "cardLine": "{level} · importado",
       "emptyValue": "—"
+    },
+    "export": {
+      "label": "Exportar datos",
+      "eyebrow": "Ajustes",
+      "title": "Todo, en CSV normal.",
+      "download": "Descargar exportación",
+      "bundleHeading": "Qué incluye el paquete",
+      "fileCount": "44 archivos, con el número de filas de cada uno",
+      "contactsNote": "Una fila por persona, con el formato que espera el importador de otro sistema.",
+      "waiversNote": "Exenciones firmadas con su hash de integridad y el texto que se firmó.",
+      "bookingsNote": "Cada reserva con su salida, su buceador y su estado de pago.",
+      "rowCount": "{count} filas",
+      "notIncludedLabel": "Lo que no se incluye, a propósito:",
+      "notIncludedText": "cuentas de acceso y hashes de contraseña, y credenciales push de cada dispositivo: las credenciales nunca salen."
     }
   },
   "demo": {
@@ -1920,6 +1933,13 @@
         "ours": "DiveDay no se lleva ninguna parte de una reserva. El cobro pasa por tu propia cuenta de Stripe, y lo que nos pagas es el precio de la tarjeta de arriba — el mismo número en un agosto lleno que en un enero tranquilo.",
         "sourcesNote": "Ambas descripciones vienen de las guías de cambio, donde cada una está citada a las propias páginas del proveedor.",
         "guideLink": "Cómo es dejar {competitor} →"
+      },
+      "dataExit": {
+        "eyebrow": "Si te vas",
+        "title": "La salida es un botón, no una solicitud de soporte.",
+        "body": "Cada buceador, reserva, exención firmada e historial de pagos, en CSV documentado — y cada foto que guardó la tienda, como archivos reales en lugar de enlaces. Un ZIP que descarga el propietario desde Ajustes, cualquier día, incluido el primero de la prueba.",
+        "honestNote": "Hay dos cosas que no se entregan, y la pantalla lo dice: las cuentas de acceso con sus hashes de contraseña y las credenciales push de cada teléfono. Ninguna significa nada en otro sistema, y un archivo de hashes de contraseña no es algo que deba producir un botón de descarga.",
+        "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y una línea que nombra lo que deja fuera a propósito"
       },
       "includedEyebrow": "Incluido ahora",
       "includedTitle": "Todo lo necesario para llevar el flujo de trabajo actual de DiveDay.",
