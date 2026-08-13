@@ -75,13 +75,41 @@ function licenceOk(name) {
   return ALLOWED.some((allowed) => value.startsWith(allowed));
 }
 
-/** Commons wraps `Artist` and friends in markup; the credit line wants the text. */
+const ENTITIES = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&#039;": "'",
+  "&nbsp;": " ",
+};
+
+/**
+ * Commons wraps `Artist` and friends in markup; the credit line wants the text.
+ *
+ * Two things here are deliberate rather than fussy, both flagged by CodeQL on
+ * the first version and both real. This is a string arriving from a third party
+ * that ends up written into a file in the repo, so it gets treated like one.
+ *
+ * **Tags are stripped until the result stops changing.** A single pass over
+ * `/<[^>]*>/` is not a sanitizer: `<scr<x>ipt>` loses the inner tag and leaves
+ * `<script>` behind, which is the classic incomplete-multi-character-sanitization
+ * shape.
+ *
+ * **Entities are decoded in one pass, not a chain of replaces.** Chained
+ * replaces double-unescape — `&amp;quot;` becomes `&quot;` on the first pass and
+ * then `"` on the second, so an author name containing a literal `&quot;`
+ * silently turns into a quote character.
+ */
 function plain(html) {
-  return (html ?? "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
+  let text = html ?? "";
+  for (let previous = null; previous !== text; ) {
+    previous = text;
+    text = text.replace(/<[^>]*>/g, "");
+  }
+  return text
+    .replace(/&(?:amp|lt|gt|quot|nbsp|#0?39);/g, (entity) => ENTITIES[entity] ?? entity)
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -173,12 +201,19 @@ async function recordCredit(slug, pick) {
     `- \`${slug}.jpg\` — [${pick.title.replace(/^File:/, "")}](${pick.descriptionUrl})` +
     ` · ${pick.licence}${pick.artist ? ` · ${pick.artist}` : ""}`;
   const body = await readFile(README, "utf8");
-  if (body.includes(`\`${slug}.jpg\``)) {
-    const replaced = body.replace(new RegExp(`^- \`${slug}\\.jpg\`.*$`, "m"), line);
-    await writeFile(README, replaced);
+  const lines = body.split("\n");
+  // Matched by prefix rather than by a regex built from the slug. The slug is a
+  // command-line argument, so `new RegExp(\`^- \\\`${slug}\\.jpg\\\`\`)` is a
+  // regex-injection sink -- a slug carrying `.*` or an unbalanced `(` either
+  // rewrites the wrong line or throws. `startsWith` cannot be injected into and
+  // says the same thing.
+  const prefix = `- \`${slug}.jpg\``;
+  const existing = lines.findIndex((entry) => entry.startsWith(prefix));
+  if (existing !== -1) {
+    lines[existing] = line;
+    await writeFile(README, lines.join("\n"));
     return;
   }
-  const lines = body.split("\n");
   const first = lines.findIndex((entry) => entry.startsWith("- `"));
   let at = lines.length;
   for (let index = first; index < lines.length; index += 1) {
