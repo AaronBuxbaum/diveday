@@ -123,20 +123,35 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusalNotice: TRIP_REFUSAL_NOTICE,
   },
   /**
-   * The counter walk-in. Settles on the check-in queue, where the diver the
-   * staffer just added is the next row to work, and speaks the deliberately
-   * blunt three-code vocabulary that pairs with `refusals: "coarse"`.
+   * The counter walk-in. A seated diver settles on the check-in queue, where
+   * they are the next row to work; a *refused* one lands back on the walk-in
+   * form with the boat still chosen, so the staffer can try someone else
+   * without re-picking the departure.
+   *
+   * It used to speak a deliberately blunt three-code vocabulary
+   * (`refusals: "coarse"`) that collapsed all eight gates into "can't add this
+   * diver to that boat right now — open its trip page for the reason", on the
+   * grounds that a staffer with a queue waiting should not be asked to
+   * distinguish four rare course gates. The brevity was right and the
+   * conclusion was not: that sentence saves no decision, it sends the staffer
+   * to a *different page* to learn what happened, at the moment they have least
+   * time to go there. "This boat is full" is both shorter and useful.
    */
   "walk-in": {
     entry: "walk_in",
-    refusals: "coarse",
+    refusals: "specific",
     email: "optional",
     seatedPath: ({ shopSlug }) => `/shop/${segment(shopSlug)}/check-in`,
-    refusedPath: ({ shopSlug }) => `/shop/${segment(shopSlug)}/check-in`,
-    // `refusals: "coarse"` collapses every gate to one blunt line, so the
-    // structured detail is dropped rather than trailing an unreadable param on
-    // the queue's URL.
-    gateScope: () => null,
+    refusedPath: ({ shopSlug, tripId }) =>
+      tripId
+        ? `/shop/${segment(shopSlug)}/check-in/walk-in/${segment(tripId)}`
+        : `/shop/${segment(shopSlug)}/check-in/walk-in`,
+    // The departure is a path segment on that landing route, which is what lets
+    // the signature bind to something its reader can re-derive without trusting
+    // the query — and what lets a refusal add only its own `?notice=` to a
+    // query-less URL (see `SEAT_SURFACES["new-booking"]` for what appending to
+    // an already-queried one did instead).
+    gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "walkin_added",
     seatedWaiverUndeliveredNotice: "walkin_added_waiver_undelivered",
     carriesBookingId: true,
@@ -144,11 +159,11 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusalNotice: {
       trip_full: "walkin_full",
       already_booked: "walkin_already",
-      course_unstaffed: "walkin_unavailable",
-      course_prerequisite: "walkin_unavailable",
-      course_ratio_full: "walkin_unavailable",
-      course_min_age: "walkin_unavailable",
-      trip_prerequisite: "walkin_unavailable",
+      course_unstaffed: "walkin_course_unstaffed",
+      course_prerequisite: "walkin_course_prerequisite",
+      course_ratio_full: "walkin_course_ratio_full",
+      course_min_age: "walkin_course_min_age",
+      trip_prerequisite: "walkin_trip_prerequisite",
       trip_unavailable: "walkin_unavailable",
       person_not_found: "walkin_unavailable",
       unavailable: "walkin_unavailable",

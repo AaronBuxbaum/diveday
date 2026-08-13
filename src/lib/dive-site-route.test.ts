@@ -7,6 +7,7 @@ import {
   MIN_ROUTE_ZOOM,
   parseRoutePoints,
   parseRouteZoom,
+  routeFocus,
   routeMapQuery,
   routePathD,
 } from "./dive-site-route";
@@ -143,5 +144,83 @@ describe("the map frame a route is drawn against", () => {
     expect(routeMapQuery({ forecastLatitude: null, forecastLongitude: -80.3764 })).toBeNull();
     expect(routeMapQuery({ forecastLatitude: 25.0117, forecastLongitude: null })).toBeNull();
     expect(routeMapQuery({ forecastLatitude: null, forecastLongitude: null })).toBeNull();
+  });
+});
+
+describe("cropping the briefing frame to the route", () => {
+  /** Where a frame percentage lands in the window, under one focus transform. */
+  const project = (focus: { scale: number; translateX: number; translateY: number }, at: number) =>
+    focus.translateX + focus.scale * at;
+
+  it("puts a small route's centre in the middle of the window", () => {
+    // Four waypoints inside the middle fifth of the frame — the shape the
+    // editor produces for a short swim around one mooring, and the case the
+    // briefing used to render as a correct line too small to read.
+    const focus = routeFocus([
+      { x: 44, y: 46 },
+      { x: 50, y: 42 },
+      { x: 56, y: 50 },
+      { x: 50, y: 54 },
+    ]);
+    if (!focus) throw new Error("a tight route should be worth cropping");
+    expect(focus.scale).toBeGreaterThan(1);
+    expect(project(focus, 50)).toBeCloseTo(50, 5);
+  });
+
+  it("leaves air around the route rather than cropping to its exact box", () => {
+    const points = [
+      { x: 40, y: 50 },
+      { x: 60, y: 50 },
+    ];
+    const focus = routeFocus(points);
+    if (!focus) throw new Error("a tight route should be worth cropping");
+    // Both ends stay comfortably inside the window; a route touching the edge
+    // reads as a line running off the picture.
+    expect(project(focus, 40)).toBeGreaterThan(5);
+    expect(project(focus, 60)).toBeLessThan(95);
+  });
+
+  it("never pulls the edge of the map inside the window", () => {
+    // A route in the corner is where an unclamped centre would leave a strip of
+    // nothing beside the reef.
+    const focus = routeFocus([
+      { x: 2, y: 3 },
+      { x: 9, y: 8 },
+    ]);
+    if (!focus) throw new Error("a tight route should be worth cropping");
+    expect(project(focus, 0)).toBeLessThanOrEqual(0);
+    expect(project(focus, 100)).toBeGreaterThanOrEqual(100);
+  });
+
+  it("declines to crop a route that already fills the frame", () => {
+    expect(
+      routeFocus([
+        { x: 6, y: 8 },
+        { x: 50, y: 40 },
+        { x: 94, y: 92 },
+      ]),
+    ).toBeNull();
+  });
+
+  it("declines when there is no route to crop to", () => {
+    expect(routeFocus([])).toBeNull();
+    expect(routeFocus([{ x: 50, y: 50 }])).toBeNull();
+    // Two waypoints on the same spot are a dot, not a path — cropping to it
+    // would divide by zero and ask for infinite magnification.
+    expect(
+      routeFocus([
+        { x: 50, y: 50 },
+        { x: 50, y: 50 },
+      ]),
+    ).toBeNull();
+  });
+
+  it("caps how far it will magnify a raster map", () => {
+    const focus = routeFocus([
+      { x: 49.5, y: 50 },
+      { x: 50.5, y: 50 },
+    ]);
+    if (!focus) throw new Error("a tight route should be worth cropping");
+    expect(focus.scale).toBeLessThanOrEqual(2.6);
   });
 });

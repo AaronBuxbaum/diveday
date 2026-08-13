@@ -77,6 +77,7 @@ import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
+import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
@@ -124,6 +125,8 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
+ * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
+ * | `./seed-reviews.ts` | verified diver reviews and the post-trip tips the recap collects |
  * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
@@ -485,6 +488,10 @@ export async function seedDemoSchedule(
     db,
     shopId,
   );
+  // DiveDay's own catalog first: the shop's Molasses Reef records which
+  // template version it came from, and the library reads that back to offer the
+  // newer one.
+  await seedDiveSiteCatalog(db);
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     instructor,

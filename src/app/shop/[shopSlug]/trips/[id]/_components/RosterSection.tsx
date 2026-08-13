@@ -32,7 +32,6 @@ import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterAllClear } from "./RosterAllClear";
-import { BulkWaiverCheckbox, BulkWaiverSendButton } from "./RosterBulkWaiverSelection";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -227,10 +226,6 @@ export function RosterSection({
     rosterRowNeedsWaiver(waiverState(waiverByBooking.get(booking.id)?.waiver ?? null));
   const isBlocked = ({ booking }: RosterEntry) =>
     rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness);
-  // The bulk control acts on exactly the divers the "Needs waiver" chip counts
-  // — one predicate, so staff can never be shown a count the button won't act
-  // on. `WAIVER_CONTROLS[…].action` still decides each row's own control.
-  const sendableCount = roster.filter(needsWaiver).length;
   const filterCounts = {
     all: roster.length,
     needs_waiver: roster.filter(needsWaiver).length,
@@ -274,27 +269,13 @@ export function RosterSection({
             />
           ) : null}
         </div>
-        {/* Bulk waiver send — the same `WaiverSendControl` every other surface
-            uses (Lens 17: one waiver-send control, not two divergent ones),
-            fed by `BulkWaiverSelectionProvider`'s shared client state rather
-            than a fixed prop (the provider itself lives in TripLayout, above
-            this page's dynamic content, so a diver-add redirect's re-render
-            can't wipe a tick mid-selection — see RosterBulkWaiverSelection.tsx).
-            Only appears when a diver is actually sendable, so it's never a
-            dead control. */}
-        {sendableCount > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted">{t("trips.roster.tickDiversThen")}</span>
-            <BulkWaiverSendButton
-              shopSlug={shopSlug}
-              tripId={tripId}
-              label={t("trips.roster.sendWaiversToSelected")}
-              pendingLabel={t("trips.roster.sending")}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-              copy={waiverSendCopy(t)}
-            />
-          </div>
-        ) : null}
+        {/* No bulk waiver send here. "Tick divers, then Send waivers to
+            selected" asked staff to learn a selection mode — a column of
+            checkboxes, a count, a second send control — to save taps on the
+            one control every row already carries. The per-row
+            `WaiverSendControl` below is the whole feature, and the "Needs
+            waiver" chip beside it is how staff narrow the roster to exactly
+            the rows that want one. */}
       </div>
       {roster.length > 0 ? (
         <nav aria-label={t("trips.roster.filterAriaLabel")} className="mt-4 flex flex-wrap gap-2">
@@ -392,24 +373,6 @@ export function RosterSection({
             const notes = notesByBooking.get(booking.id) ?? [];
             const headerLeft = (
               <div className="flex min-w-0 items-start gap-3">
-                {/* Joins the bulk selection above via shared client state
-                        (`BulkWaiverSelectionProvider`), not form association —
-                        only sendable divers get one. */}
-                {waiverControl.action ? (
-                  // A bare checkbox has a ~16px hit area — too small for wet or gloved
-                  // fingers (design/principles.md #2). The wrapping <label> covers only
-                  // the checkbox itself (the diver name below is a separate, sibling
-                  // <Link>, untouched by this), so a tap anywhere in the 44px box
-                  // forwards to the input — a plain wrapper <span> would not.
-                  <BulkWaiverCheckbox
-                    bookingId={booking.id}
-                    ariaLabel={t("trips.roster.selectToSendWaiverAriaLabel", {
-                      name: person.fullName,
-                    })}
-                    labelClassName="flex min-h-11 min-w-11 shrink-0 items-center justify-center"
-                    className="size-4 shrink-0"
-                  />
-                ) : null}
                 <div className="min-w-0">
                   {/* A real target, not a 21px text line: inside the collapsed
                       row's <summary> this link sits against another clickable

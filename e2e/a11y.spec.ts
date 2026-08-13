@@ -89,6 +89,16 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
     page,
   }) => {
+    // Six navigations, a sign-out, a booking, and three full axe scans: 11.2s
+    // measured on an idle worker, against the file's 15s default. That 3.8s of
+    // headroom is not enough under 2-worker contention, where this test times
+    // out mid-scan — not on a violation, on the clock. Raised rather than
+    // trimmed because every leg of it is load-bearing: the scan has to happen
+    // on the *signed-out* page (a staff session adds a preview banner no diver
+    // sees) and on the confirmation, and neither can be reached without the
+    // trip this creates. Same treatment, and the same reasoning, as the
+    // cost-bound tests in add-diver.spec.ts.
+    test.setTimeout(30_000);
     const title = `A11y Scan Trip ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(title);

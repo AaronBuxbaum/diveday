@@ -798,16 +798,6 @@
       "underwaterMonument": "Monumento submarino",
       "reefFormation": "Formación del arrecife",
       "pointOfInterest": "Punto de interés"
-    },
-    "landmarkDescriptions": {
-      "molassesReefLight": "El faro del arrecife es la referencia más fácil sobre el agua y una buena forma de orientarte alrededor del arrecife central.",
-      "shipsWinch": "Cerca del faro descansa un gran cabrestante de barco: una pieza compacta de historia marítima ya integrada en el arrecife.",
-      "spanishAnchor": "Entre las formaciones de coral se encuentra un ancla antigua. Deja que la tripulación te la señale; se camufla sorprendentemente bien en el arrecife.",
-      "flightDeckAndCranes": "La amplia cubierta de vuelo y sus dos grúas hacen evidente la escala del barco. Mantente fuera de la estructura y sigue la línea del guía.",
-      "wellDeck": "La cubierta pozo abierta es uno de los espacios exteriores más espectaculares del pecio, con luz cambiante y espacio para grandes bancos de peces.",
-      "christOfAbyssStatue": "La estatua de bronce de 2,6 metros se alza sobre un pedestal de hormigón en aguas poco profundas: la pieza central inconfundible de esta inmersión.",
-      "dryRocksSandChannels": "Canales de arena brillante serpentean entre las formaciones de coral alrededor de la estatua y son buenos lugares para buscar rayas, meros y morenas.",
-      "generic": "Una referencia memorable que la tripulación puede señalar durante el briefing del punto."
     }
   },
   "inquiry": {

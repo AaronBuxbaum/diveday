@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
@@ -166,6 +166,10 @@
   "/shop/[shopSlug]/check-in/walk-in": {
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in"]
+  },
+  "/shop/[shopSlug]/check-in/walk-in/[tripId]": {
+    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["check-in-walk-in-diver"]
   },
   "/shop/[shopSlug]/close-out": {
     "e2e": ["a11y.spec.ts", "closeout.spec.ts"],

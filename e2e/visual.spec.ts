@@ -1759,12 +1759,28 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing", scheme);
       });
 
-      // The fast walk-in flow: pick today's boat, then search or hand-enter
-      // a diver — no trip page detour, no required email at the counter.
+      // The fast walk-in flow, both halves: pick today's boat, then search or
+      // hand-enter a diver — no trip page detour, no required email at the
+      // counter. Two captures and two tests, for the same reason the
+      // Add-booking door below has two: the picker and the diver form never
+      // share a screen, so one shot would leave half the surface with no
+      // baseline at all.
       test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in");
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in", scheme);
+      });
+
+      test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/check-in/walk-in");
+        await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
+        await page
+          .getByRole("link", { name: /Reef|Wreck|Dive|Course/ })
+          .first()
+          .click();
+        await page.waitForURL(/\/check-in\/walk-in\/[^/?]+$/);
+        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await capture(page, "check-in-walk-in-diver", scheme);
       });
 
       // The global Add-booking door, both halves: the departure picker with

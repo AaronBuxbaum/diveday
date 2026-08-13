@@ -1,15 +1,23 @@
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import type { DiveSpecialty } from "@/db/schema";
+import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
+import type { DiveSiteCreature } from "@/lib/dive-site-field-guide";
+import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
 import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import {
+  type FieldGuideCatalogEntry,
+  FieldGuideEditor,
+  type FieldGuideEditorCopy,
+} from "./FieldGuideEditor";
+import { LandmarkEditor, type LandmarkEditorCopy } from "./LandmarkEditor";
 import { RouteEditor, type RouteEditorCopy } from "./RouteEditor";
 
 /**
@@ -38,7 +46,11 @@ export type SiteFieldValues = {
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
   divePlan: string | null;
-  landmarks: string[];
+  fitTone: DiveSiteFitTone | null;
+  fitNote: string | null;
+  fieldGuideTipsHeading: string | null;
+  landmarks: DiveSiteLandmark[];
+  creatures: DiveSiteCreature[];
   minimumCertificationLevel: CertificationLevel | null;
   requiredSpecialties: DiveSpecialty[];
   requiresNitrox: boolean;
@@ -94,6 +106,9 @@ export function SiteFields({
   certificationDescription,
   requiredSpecialtiesLabel,
   routeCopy,
+  landmarkCopy,
+  fieldGuideCopy,
+  marineLifeCatalog,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -106,6 +121,11 @@ export function SiteFields({
   requiredSpecialtiesLabel?: string;
   /** Every word the route editor renders, resolved here (it is a Client Component). */
   routeCopy: RouteEditorCopy;
+  /** Same for the landmark and field-guide editors, which are Client Components too. */
+  landmarkCopy: LandmarkEditorCopy;
+  fieldGuideCopy: FieldGuideEditorCopy;
+  /** DiveDay's species catalog, as the field-guide picker's autocomplete source. */
+  marineLifeCatalog: FieldGuideCatalogEntry[];
 }) {
   // `ImageFileInput` is a Client Component, so its words arrive resolved.
   const imageInputCopy = {
@@ -376,12 +396,52 @@ export function SiteFields({
             className={controlClass}
           />
         </Field>
-        <Field label={t("diveSites.form.landmarksLabel")} hint={t("diveSites.form.landmarksHint")}>
-          <textarea
-            name="landmarks"
-            rows={3}
-            maxLength={4000}
-            defaultValue={values?.landmarks.join("\n") ?? ""}
+      </FieldGrid>
+      {/* Who this site suits, in the shop's own words. The label above it is a
+          translated status word the shop picks; the sentence under it is
+          whatever the shop wants to say instead of DiveDay's canned line. Left
+          on "work it out", the label is still read off the facts above — which
+          is what every site did before this fieldset existed. */}
+      <fieldset className="rounded-lg border border-border p-4">
+        <legend className="px-1 text-sm font-medium">{t("diveSites.form.fitLegend")}</legend>
+        <p className="mt-1 text-sm text-muted">{t("diveSites.form.fitDescription")}</p>
+        <FieldGrid columns={1} className="mt-4 gap-y-5">
+          <Field label={t("diveSites.form.fitToneLabel")}>
+            <select name="fitTone" defaultValue={values?.fitTone ?? ""} className={controlClass}>
+              <option value="">{t("diveSites.form.fitToneDerive")}</option>
+              <option value="welcoming">{t("diveSites.form.fitToneWelcoming")}</option>
+              <option value="demanding">{t("diveSites.form.fitToneDemanding")}</option>
+              <option value="unknown">{t("diveSites.form.fitToneAskCrew")}</option>
+            </select>
+          </Field>
+          <Field label={t("diveSites.form.fitNoteLabel")} hint={t("diveSites.form.optionalHint")}>
+            <textarea
+              name="fitNote"
+              rows={2}
+              maxLength={400}
+              defaultValue={values?.fitNote ?? ""}
+              placeholder={t("diveSites.form.fitNotePlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+      </fieldset>
+      <LandmarkEditor initialLandmarks={values?.landmarks ?? []} copy={landmarkCopy} />
+      <FieldGuideEditor
+        initialCreatures={values?.creatures ?? []}
+        catalog={marineLifeCatalog}
+        copy={fieldGuideCopy}
+      />
+      <FieldGrid columns={1} className="gap-y-5">
+        <Field
+          label={t("diveSites.form.tipsHeadingLabel")}
+          hint={t("diveSites.form.tipsHeadingHint")}
+        >
+          <input
+            name="fieldGuideTipsHeading"
+            maxLength={80}
+            defaultValue={values?.fieldGuideTipsHeading ?? ""}
+            placeholder={t("diveSites.form.tipsHeadingPlaceholder")}
             className={controlClass}
           />
         </Field>

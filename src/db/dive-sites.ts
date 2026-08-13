@@ -13,11 +13,15 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import type { DiveSiteCreature } from "@/lib/dive-site-field-guide";
+import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
+import { MARINE_LIFE_BY_SLUG, marineLifeImage } from "./marine-life-catalog";
 import { offsetPage } from "./paging";
 import {
+  type DiveSiteFitTone,
   type DiveSpecialty,
   diveSiteCreatures,
   diveSiteMoments,
@@ -48,7 +52,18 @@ export type DiveSiteInput = {
   expectedBottomTimeMinutes?: number | null;
   currentNote?: string;
   divePlan?: string;
-  landmarks?: string[];
+  /** Which fit reading the briefing shows; null/undefined derives it (src/lib/diver-planning.ts). */
+  fitTone?: DiveSiteFitTone | null;
+  fitNote?: string;
+  fieldGuideTipsHeading?: string;
+  landmarks?: DiveSiteLandmark[] | string[];
+  /**
+   * The site's field guide, replaced wholesale on every save — it is a list the
+   * staffer edits as one thing, so a diff would only be a slower way to reach
+   * the same rows. Undefined leaves the existing guide alone, which is what a
+   * caller that does not manage creatures (the CSV import, a copy) means.
+   */
+  creatures?: DiveSiteCreature[];
   /** The site's inherent cert gate; composed into every trip that visits it. */
   minimumCertificationLevel?: CertificationLevel | null;
   requiredSpecialties?: DiveSpecialty[];
@@ -222,6 +237,9 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
+      fitTone: input.fitTone ?? null,
+      fitNote: input.fitNote || null,
+      fieldGuideTipsHeading: input.fieldGuideTipsHeading || null,
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
@@ -233,6 +251,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
+  if (input.creatures) await replaceDiveSiteCreatures(db, input.shopId, site.id, input.creatures);
   return site;
 }
 
@@ -264,6 +283,9 @@ export async function updateDiveSite(
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
+      fitTone: input.fitTone ?? null,
+      fitNote: input.fitNote || null,
+      fieldGuideTipsHeading: input.fieldGuideTipsHeading || null,
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
@@ -277,7 +299,13 @@ export async function updateDiveSite(
     })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .returning();
-  return site ?? null;
+  if (!site) return null;
+  // Only when the caller manages the guide. An undefined list means "leave it
+  // alone", which is what the CSV import and any other partial writer means —
+  // an empty array is the staffer clearing the guide, and those are different
+  // things.
+  if (input.creatures) await replaceDiveSiteCreatures(db, shopId, siteId, input.creatures);
+  return site;
 }
 
 /** Keep historical trip briefings intact while removing a site from new-trip pickers. */
@@ -294,7 +322,19 @@ export async function deleteDiveSite(db: AppDb, shopId: string, siteId: string) 
 export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, name: string) {
   const source = await getDiveSite(db, shopId, siteId);
   if (!source) return null;
+  // The field guide travels with the copy. A "copy and tailor" that produced a
+  // site with the same reef and no species on it was handing the staffer half
+  // the briefing back to retype.
+  const sourceCreatures = await listDiveSiteCreatures(db, shopId, siteId);
   return createDiveSite(db, {
+    creatures: sourceCreatures.map((creature) => ({
+      slug: creature.catalogSlug ?? "",
+      name: creature.name,
+      kind: creature.kind,
+      description: creature.description ?? "",
+      preparationTip: creature.preparationTip ?? "",
+      imageUrl: creature.imageUrl ?? "",
+    })),
     shopId,
     name,
     description: source.description ?? undefined,
@@ -312,6 +352,9 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
+    fitTone: source.fitTone,
+    fitNote: source.fitNote ?? undefined,
+    fieldGuideTipsHeading: source.fieldGuideTipsHeading ?? undefined,
     landmarks: source.landmarks,
     minimumCertificationLevel: source.minimumCertificationLevel,
     requiredSpecialties: source.requiredSpecialties,
@@ -324,10 +367,52 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
 }
 
 export async function listDiveSiteCreatures(db: AppDb, shopId: string, siteId: string) {
-  return db
-    .select()
-    .from(diveSiteCreatures)
+  return (
+    db
+      .select()
+      .from(diveSiteCreatures)
+      .where(and(eq(diveSiteCreatures.shopId, shopId), eq(diveSiteCreatures.diveSiteId, siteId)))
+      // The order the shop put them in. Unordered, this query returned whatever
+      // the planner produced, so a briefing could reshuffle its own field guide
+      // between two renders of the same page; `id` is the tiebreak that keeps the
+      // order total for rows written in one batch at the same position.
+      .orderBy(asc(diveSiteCreatures.position), asc(diveSiteCreatures.id))
+  );
+}
+
+/**
+ * Replace one site's whole field guide with what the staffer just posted.
+ *
+ * Delete-then-insert rather than a per-row diff: the editor hands back the list
+ * as one value (order included), so matching rows up would be a slower route to
+ * the same end state. Creature rows carry nothing anyone can reference — no
+ * booking, no readiness, no audit trail hangs off one — so replacing them loses
+ * nothing, which is exactly why they are safe to treat this way and the site
+ * row itself is not.
+ */
+export async function replaceDiveSiteCreatures(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  creatures: DiveSiteCreature[],
+): Promise<void> {
+  await db
+    .delete(diveSiteCreatures)
     .where(and(eq(diveSiteCreatures.shopId, shopId), eq(diveSiteCreatures.diveSiteId, siteId)));
+  if (creatures.length === 0) return;
+  await db.insert(diveSiteCreatures).values(
+    creatures.map((creature, index) => ({
+      shopId,
+      diveSiteId: siteId,
+      catalogSlug: creature.slug || null,
+      name: creature.name,
+      kind: creature.kind,
+      imageUrl: creature.imageUrl || null,
+      description: creature.description || null,
+      preparationTip: creature.preparationTip || null,
+      position: index,
+    })),
+  );
 }
 
 export async function listPublishedDiveSiteMoments(db: AppDb, shopId: string, siteId: string) {
@@ -368,7 +453,8 @@ export async function listDiveSiteBriefingExtras(
       .from(diveSiteCreatures)
       .where(
         and(eq(diveSiteCreatures.shopId, shopId), inArray(diveSiteCreatures.diveSiteId, unique)),
-      ),
+      )
+      .orderBy(asc(diveSiteCreatures.position), asc(diveSiteCreatures.id)),
     db
       .select()
       .from(diveSiteMoments)
@@ -462,6 +548,36 @@ export async function listGlobalDiveSiteTemplates(
 }
 
 /**
+ * One published template by slug, at its current version — what the catalog's
+ * preview reads.
+ *
+ * By slug rather than id, because the slug is what a preview URL carries: it is
+ * stable, human-readable in a shared link, and the same identifier
+ * `./dive-site-templates.ts` publishes under. Null for a slug that names
+ * nothing, which the caller renders as the catalog rather than a 404 — a stale
+ * link to a withdrawn template should land a staffer on the list, not on an
+ * error.
+ */
+export async function getGlobalDiveSiteTemplate(
+  db: AppDb,
+  slug: string,
+): Promise<GlobalDiveSiteTemplateRow | null> {
+  const [row] = await db
+    .select({ template: globalDiveSites, version: globalDiveSiteVersions })
+    .from(globalDiveSites)
+    .innerJoin(
+      globalDiveSiteVersions,
+      and(
+        eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
+        eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
+      ),
+    )
+    .where(eq(globalDiveSites.slug, slug))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Current published version for the given templates, as a lookup.
  *
  * The library's "a newer version of this site is published" badge needs one
@@ -535,11 +651,15 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     .limit(1);
   if (!row) return null;
   const briefing = row.version.briefing;
+  // `creatureSlugs` names catalog rows rather than repeating their words, so it
+  // is not a site column — it is resolved here into the shop's own field-guide
+  // rows, which the shop then edits like anything else it typed.
+  const { creatureSlugs, ...columns } = briefing;
   const [site] = await db
     .insert(diveSites)
     .values({
       shopId,
-      ...briefing,
+      ...columns,
       name: await availableSiteName(db, shopId, briefing.name),
       sourceTemplateId: row.template.id,
       sourceTemplateVersion: row.version.version,
@@ -547,7 +667,27 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
       landmarks: briefing.landmarks ?? [],
     })
     .returning();
-  return site ?? null;
+  if (!site) return null;
+  const creatures = (creatureSlugs ?? []).flatMap((slug) => {
+    const species = MARINE_LIFE_BY_SLUG.get(slug);
+    // A slug the catalog no longer carries is dropped rather than imported as a
+    // blank card: an older published version can outlive a species entry, and a
+    // shop should get one species fewer, not one nameless tile.
+    return species
+      ? [
+          {
+            slug: species.slug,
+            name: species.name,
+            kind: species.kind,
+            description: species.description,
+            preparationTip: species.preparationTip,
+            imageUrl: marineLifeImage(species.slug),
+          },
+        ]
+      : [];
+  });
+  if (creatures.length > 0) await replaceDiveSiteCreatures(db, shopId, site.id, creatures);
+  return site;
 }
 
 /**
