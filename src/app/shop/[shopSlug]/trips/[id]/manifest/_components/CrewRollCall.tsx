@@ -49,9 +49,7 @@ function CrewFacts({
   const { emergencyContactName: name, emergencyContactPhone: phone } = member;
   return (
     <p className="text-base">
-      {labelled ? (
-        <span className="font-bold">{t("trips.manifest.emergencyContactLabel")}</span>
-      ) : null}
+      {labelled ? <span className="font-bold">{t("manifest.emergencyContactLabel")}</span> : null}
       <span className={`text-muted${labelled ? " mt-0.5 block" : ""}`}>
         {name && phone ? (
           <>
@@ -66,7 +64,7 @@ function CrewFacts({
           // contact at hire, so absence is the common case — and an empty space
           // on the sheet reads as "nothing to say here" rather than "we do not
           // know who to call for the divemaster".
-          t("trips.manifest.notOnFile")
+          t("manifest.notOnFile")
         )}
       </span>
     </p>
@@ -106,7 +104,7 @@ export function CrewRollCall({
   const crewAssigned = crew.length;
   return (
     <section className="mt-9">
-      <h2 className="text-lg font-semibold">{t("trips.manifest.crewHeading")}</h2>
+      <h2 className="text-lg font-semibold">{t("manifest.crewHeading")}</h2>
       {crewAssigned === 0 ? (
         // An empty crew list holds the checkpoint open (`crew_none_assigned`),
         // so the one thing to say here is how to close it. This replaces the
@@ -118,18 +116,18 @@ export function CrewRollCall({
         // whose crew half is open (dive-domain review 20260804). Only the
         // button is screen-only — a link is not an action on paper.
         <div className="mt-3 rounded-2xl border border-warning/50 bg-warning/10 p-4">
-          <p className="max-w-prose text-sm">{t("trips.manifest.noCrew")}</p>
+          <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
           <Link
             href={`/shop/${shopSlug}/trips/${tripId}#crew`}
             className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
           >
-            {t("trips.manifest.addCrewToTrip")}
+            {t("manifest.addCrewToTrip")}
           </Link>
         </div>
       ) : (
         <>
           <p className="mt-1 max-w-prose text-sm text-muted">
-            {t("trips.manifest.crewRollCallDescription")}
+            {t("manifest.crewRollCallDescription")}
           </p>
           {/* Per-person crew roll call — the whole crew half of the head
               count since ADR 20260804-crew-roll-call-is-per-person (DOM-H1).
@@ -203,7 +201,7 @@ export function CrewRollCall({
                         <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
                           <DisclosureCaret className="group-open/crewfacts:rotate-90" />
                           <span className="group-hover/summary:underline">
-                            {t("trips.manifest.emergencyContactLabel")}
+                            {t("manifest.emergencyContactLabel")}
                           </span>
                         </summary>
                         <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
@@ -215,7 +213,7 @@ export function CrewRollCall({
                       </div>
                       {rc && !rc.implied ? (
                         <p className="mt-2 text-sm text-muted">
-                          {t("trips.manifest.crewRollCallRecordedBy", {
+                          {t("manifest.crewRollCallRecordedBy", {
                             label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
                             date: formatDateTimeTz(rc.occurredAt, locale, timezone),
                             name: rc.recordedByName,
@@ -250,7 +248,7 @@ export function CrewRollCall({
           href={`/shop/${shopSlug}/trips/${tripId}#crew`}
           className={buttonClass({ variant: "secondary", className: "mt-4 print:hidden" })}
         >
-          {t("trips.manifest.manageCrewOnTrip")}
+          {t("manifest.manageCrewOnTrip")}
         </Link>
       ) : null}
     </section>

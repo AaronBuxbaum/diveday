@@ -97,7 +97,10 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // No email was collected, so no waiver could be mailed — and the notice says
   // so rather than implying one is on its way. This is the *ordinary* counter
   // outcome, not an edge case: the diver is seated and the link is still owed.
-  await expect(page).toHaveURL(/\/check-in\?notice=walkin_added_waiver_undelivered/);
+  // The bare queue URL, asserted rather than a `?notice=` this page erases:
+  // `toHaveURL` retries, so this waits for `FlashParams` to strip the code and
+  // proves it actually did — a looser pattern would pass either way.
+  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
   await expect(
     page.getByText("Added to this boat’s list — but their waiver wasn’t emailed."),
   ).toBeVisible();
@@ -143,7 +146,10 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
-  await expect(page).toHaveURL(/\/check-in\?notice=walkin_full/);
+  // Landed back on the bare queue URL: the `walkin_full` code is one-shot
+  // (`FlashParams`), and this asserts it was actually stripped rather than
+  // merely tolerating either state.
+  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
@@ -187,22 +193,27 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
     }
   });
   await card.getByRole("button", { name: "Record paper signature" }).click();
-  await expect(page).toHaveURL(/notice=waiver_medical_attestation/);
+  // The banner, not the query param: `?notice=` is one-shot now (`FlashParams`
+  // on the page strips it once the words are on screen), so the words are the
+  // contract and the URL is an implementation detail mid-erase.
   await expect(
     page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
 
+  // A refusal is the one outcome here that still navigates, and it lands on the
+  // bare queue — so the search has to be retyped to get back to her.
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await card.getByText("Mark signed on paper").click();
   await card.getByLabel("I have this diver's signed release on file", { exact: false }).check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
-  await expect(page).toHaveURL(/notice=waiver_in_person/);
-  await expect(page.getByText("Paper waiver recorded")).toBeVisible();
 
-  // Same immutable record a self-service signature produces, so the blocker is
-  // genuinely gone rather than merely hidden — the queue now offers check-in.
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
+  // Success lands **in place**: no banner, no navigation, and — the point of
+  // it — the search that found her is still in the box and still in the URL,
+  // so the next act is one tap rather than typing her name a third time. Same
+  // immutable record a self-service signature produces, so the blocker is
+  // genuinely gone rather than merely hidden.
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
+  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
+  await expect(page.getByText("Paper waiver recorded")).toHaveCount(0);
 });

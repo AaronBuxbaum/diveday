@@ -22,24 +22,40 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
 }) => {
   await page.goto("/s/blue-mantis");
   const header = page.getByRole("banner");
-  // Only the language *not* in force, written in itself — a public header is
-  // one line a diver reads past, and the language they are already reading is
-  // not a fact they need a control to tell them.
-  await expect(header.getByRole("button", { name: "English" })).toHaveCount(0);
+  // A picker, not a swap. The header used to render the alternatives alone —
+  // one button reading "Español" — which cannot say which language you are in
+  // and has no honest rendering at three languages. The trigger names the one
+  // in force; the panel lists every language DiveDay carries, the current one
+  // marked (`LanguagePicker`).
+  await expect(header.getByRole("button", { name: "Change language" })).toContainText("English");
 
+  await header.getByRole("button", { name: "Change language" }).click();
+  // The language in force is *in* the list, marked. Without this a regression
+  // that went back to filtering it out would still pass every other assertion
+  // here — the alternative stays selectable in both directions either way.
+  await expect(header.getByRole("button", { name: "English" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   await header.getByRole("button", { name: "Español" }).click();
 
   // The words change; the address does not.
   await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
   await expect(page).toHaveURL("/s/blue-mantis");
-  await expect(header.getByRole("button", { name: "Español" })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "Cambiar de idioma" })).toContainText("Español");
 
   // A cookie, not page state: a fresh load of a different public page is still
   // Spanish, which is the whole difference from a switcher that forgets.
   await page.goto("/s/blue-mantis/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Cursos" })).toBeVisible();
 
-  // …and back, from the same control, which now offers the other direction.
+  // …and back, from the same control, which offers every language either way
+  // round rather than only the other one.
+  await page.getByRole("banner").getByRole("button", { name: "Cambiar de idioma" }).click();
+  await expect(page.getByRole("banner").getByRole("button", { name: "Español" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   await page.getByRole("banner").getByRole("button", { name: "English" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
 });

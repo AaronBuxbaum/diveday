@@ -38,7 +38,6 @@
     "notFound": "That booking could not be found.",
     "staffNotFound": "Your staff access could not be confirmed.",
     "invalid": "Choose a diver from the queue before checking in.",
-    "waiverInPerson": "Paper waiver recorded — signed and on file.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
     "waiverError": "That paper waiver couldn’t be recorded. Try again, or open the diver’s trip to see why.",
     "walkinAdded": "Added to this boat’s list — check them in when they arrive.",

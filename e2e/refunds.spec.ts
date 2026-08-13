@@ -1,6 +1,13 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openRosterDetails,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 /**
  * Refunds are staff-run (docs H-07): cancelling a paid booking never moves
@@ -104,6 +111,7 @@ test.describe("refunds", () => {
     const noraRow = await bookAndMarkPaid(page, title, "refund");
 
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
+    await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(
@@ -134,6 +142,7 @@ test.describe("refunds", () => {
     const noraRow = await bookAndMarkPaid(page, title, "forfeit");
 
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
+    await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     // The cancellation itself still succeeded (the seat is freed either way),

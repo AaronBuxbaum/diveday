@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, signOut } from "./helpers";
+import { openRosterDetails, openSettingsRow, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -164,6 +164,9 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // The roster lives on the Guests tab now, not the trip overview.
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
+  // Removing a seat is administrative rather than the work of the day, so it
+  // sits behind the card's own "Details" disclosure.
+  await openRosterDetails(diverRow);
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
