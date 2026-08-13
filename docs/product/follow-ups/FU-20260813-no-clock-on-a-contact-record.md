@@ -94,7 +94,7 @@ them buries the easy one inside the one that is waiting on counsel.
 
 ```text
 Give contact records a retention clock: today src/lib/retention.ts prunes six append-only trails and
-nothing ever expires a people, course_inquiries, or trip_waitlist_entries row.
+nothing ever expires a row in people, course_inquiries, or trip_waitlist_entries.
 
 Read first:
   - docs/product/follow-ups/FU-20260813-no-clock-on-a-contact-record.md (the full write-up)
