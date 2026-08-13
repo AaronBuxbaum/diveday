@@ -28,7 +28,6 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
-import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -381,13 +380,6 @@ export function RosterSection({
             // (H-08). It sits apart from the blocker list for that reason.
             const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
             const notes = notesByBooking.get(booking.id) ?? [];
-            // Payment due is a readiness blocker (`BLOCKER_CATEGORY`), so the
-            // control that clears it is outstanding work and stays in the
-            // open; a settled seat's payment line is reference and goes behind
-            // the disclosure with everything else that is merely true.
-            const paymentBlocking = Boolean(
-              readiness?.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "payment"),
-            );
             const headerLeft = (
               <div className="flex min-w-0 items-start gap-3">
                 {/* Joins the bulk selection above via shared client state
@@ -543,26 +535,18 @@ export function RosterSection({
              * — a diver with a blocker, which is to say every row a staffer is
              * actually working, could not be collapsed at all.
              *
-             * So the question each block answers is no longer "is this true?"
-             * but "is there anything to do about it?". Nothing that needs
-             * doing is ever behind a tap, and nothing that does not is ever in
-             * front of one.
+             * So the panel holds what this card can only *tell* you, and the
+             * open half holds everything it can also *do*. The membership is
+             * decided by the kind of thing, never by its current value — a
+             * first attempt sorted by state ("is payment still due?", "is a
+             * contact missing?") and produced a card whose controls moved the
+             * instant they were used: mark a seat Paid and the selector you
+             * just used dropped into a collapsed panel; save an emergency
+             * contact and the value you just typed did the same. A control
+             * that leaves from under the finger that operated it is worse than
+             * the line of chrome it saved, so payment, the contact, and the
+             * notes stay put in both states.
              */
-            // Whether anything at all rendered above the disclosure. It
-            // decides only the rule: a card with work on it earns a divider
-            // between that work and the "Details" line, and a settled card —
-            // a name, an email, a quiet ✓ — does not, because a rule across an
-            // otherwise empty card is furniture. Kept as one expression beside
-            // the blocks it describes so the two cannot drift.
-            const hasOutstanding = Boolean(
-              (readiness && readiness.status !== "ready") ||
-                depth?.status === "exceeds" ||
-                identityUnconfirmed ||
-                waiverControl.action ||
-                waiverStatus === "medical_review" ||
-                (requiresPayment && paymentBlocking) ||
-                !hasEmergencyContact,
-            );
             const outstanding = (
               <>
                 {readiness && readiness.status !== "ready" ? (
@@ -677,32 +661,127 @@ export function RosterSection({
                   </div>
                 ) : null}
 
-                {requiresPayment && paymentBlocking ? (
+                {/* Whenever this departure takes money — never relocated by
+                    what the status happens to be. It briefly lived in the work
+                    area while payment was a readiness blocker and behind the
+                    disclosure once it was not, which meant the control a
+                    staffer had just used to mark a seat Paid vanished into a
+                    collapsed panel at the instant it landed. A control that
+                    moves out from under the finger that used it is worse than
+                    a line of chrome, and "Payment: Paid · Paid on Stripe" is
+                    one quiet line, not the bulk this card was carrying. */}
+                {requiresPayment ? (
                   <div className="mt-3">
                     <PaymentStatusControl
                       bookingId={booking.id}
                       status={paymentStatus ?? "unpaid"}
                       action={markPaymentAction}
                       sourceNote={paymentSource}
-                      refundNote={null}
+                      refundNote={
+                        refundEligible && cancellationDeadline
+                          ? t("trips.roster.refundEligibleUntil", {
+                              date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
+                            })
+                          : null
+                      }
                       copy={paymentStatusCopy}
                     />
                   </div>
                 ) : null}
 
-                {/* A missing emergency contact is not a readiness blocker, so
-                    if this sat behind the disclosure with the contact that *is*
-                    on file, the one card that needed the form would be the one
-                    hiding it. Task 144 — Today used to send staff here with
-                    "ask at the counter" and no field to type it into. */}
-                {hasEmergencyContact ? null : (
-                  <div className="mt-3">
-                    <p className="text-sm text-warning">
+                {/* Task 144 — Today used to send staff here with "ask at the
+                    counter" and no field to type it into. Both states in the
+                    open: a missing contact is work, and a contact just saved
+                    has to stay where the staffer typed it. */}
+                <div className="mt-3">
+                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                    {t("trips.roster.emergencyContactHeading")}
+                  </p>
+                  {hasEmergencyContact ? (
+                    <p className="mt-1 text-sm text-muted">
+                      {t("trips.roster.emergencyContactOnFile", {
+                        name: person.emergencyContactName ?? "",
+                        phone: person.emergencyContactPhone ?? "",
+                      })}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-warning">
                       {t("trips.roster.emergencyContactMissing")}
                     </p>
-                    {emergencyContactForm}
+                  )}
+                  {emergencyContactForm}
+                </div>
+
+                {/* One disclosure, at the top level of the card rather than
+                    nested inside "Details" — writing a note about a diver is
+                    desk work a staffer starts from here, and behind two taps it
+                    stopped being that. */}
+                <details className="mt-3 border-t border-border pt-3">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+                    {/* A zero count is the absence of information formatted as
+                        information (principle 9) — with no notes the disclosure
+                        is simply the door to writing the first one. */}
+                    {notes.length === 0
+                      ? t("trips.roster.addFirstNoteSummary")
+                      : t("trips.roster.privateStaffNotes", { count: notes.length })}
+                  </summary>
+                  <div className="mt-2 grid gap-3">
+                    {notes.map(({ note, authorName }) => (
+                      <div
+                        key={note.id}
+                        className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p>{note.body}</p>
+                          <p className="mt-1 text-xs text-muted">
+                            {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
+                          </p>
+                        </div>
+                        <form action={deleteNoteAction} className="shrink-0">
+                          <input type="hidden" name="noteId" value={note.id} />
+                          {/* No confirm dialog: the delete lands and a toast offers
+                              a one-tap undo (recreates the note) — a purely
+                              reversible edit, not a real send (principle 7). */}
+                          <SubmitButton
+                            pendingLabel={t("trips.roster.deletingEllipsis")}
+                            className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                          >
+                            {t("trips.roster.delete")}
+                          </SubmitButton>
+                        </form>
+                      </div>
+                    ))}
+                    {/* Keyed on the note count so a landed note empties the box.
+                        Adding one no longer navigates (see `addInternalNoteAction`),
+                        and an uncontrolled textarea React never remounts would
+                        otherwise still hold the text of the note now listed
+                        above it — inviting the same note twice. */}
+                    <form key={notes.length} action={addNoteAction} className="grid gap-2">
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
+                        {t("trips.roster.addNoteLabel")}
+                      </label>
+                      <textarea
+                        id={`note-${booking.id}`}
+                        name="note"
+                        required
+                        maxLength={1000}
+                        rows={2}
+                        className={controlClass}
+                      />
+                      <SubmitButton
+                        pendingLabel={t("trips.roster.adding")}
+                        className={buttonClass({
+                          variant: "secondary",
+                          size: "sm",
+                          className: "justify-self-start",
+                        })}
+                      >
+                        {t("trips.roster.addPrivateNote")}
+                      </SubmitButton>
+                    </form>
                   </div>
-                )}
+                </details>
               </>
             );
 
@@ -777,40 +856,6 @@ export function RosterSection({
                   </div>
                 </div>
 
-                {hasEmergencyContact ? (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      {t("trips.roster.emergencyContactHeading")}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {t("trips.roster.emergencyContactOnFile", {
-                        name: person.emergencyContactName ?? "",
-                        phone: person.emergencyContactPhone ?? "",
-                      })}
-                    </p>
-                    {emergencyContactForm}
-                  </div>
-                ) : null}
-
-                {requiresPayment && !paymentBlocking ? (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <PaymentStatusControl
-                      bookingId={booking.id}
-                      status={paymentStatus ?? "unpaid"}
-                      action={markPaymentAction}
-                      sourceNote={paymentSource}
-                      refundNote={
-                        refundEligible && cancellationDeadline
-                          ? t("trips.roster.refundEligibleUntil", {
-                              date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
-                            })
-                          : null
-                      }
-                      copy={paymentStatusCopy}
-                    />
-                  </div>
-                ) : null}
-
                 {/* `-mx-3` on the row, and both controls at the same `sm`
                     padding. "Remove booking" used to carry a hand-written
                     `px-3` while "Create order" beside it carried none, so the
@@ -859,73 +904,6 @@ export function RosterSection({
                     </form>
                   </div>
                 </div>
-
-                <details className="mt-4 border-t border-border pt-4">
-                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-                    {/* A zero count is the absence of information formatted as
-                        information (principle 9) — with no notes the disclosure
-                        is simply the door to writing the first one. */}
-                    {notes.length === 0
-                      ? t("trips.roster.addFirstNoteSummary")
-                      : t("trips.roster.privateStaffNotes", { count: notes.length })}
-                  </summary>
-                  <div className="mt-2 grid gap-3">
-                    {notes.map(({ note, authorName }) => (
-                      <div
-                        key={note.id}
-                        className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
-                      >
-                        <div className="min-w-0">
-                          <p>{note.body}</p>
-                          <p className="mt-1 text-xs text-muted">
-                            {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
-                          </p>
-                        </div>
-                        <form action={deleteNoteAction} className="shrink-0">
-                          <input type="hidden" name="noteId" value={note.id} />
-                          {/* No confirm dialog: the delete lands and a toast offers
-                              a one-tap undo (recreates the note) — a purely
-                              reversible edit, not a real send (principle 7). */}
-                          <SubmitButton
-                            pendingLabel={t("trips.roster.deletingEllipsis")}
-                            className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-danger/10"
-                          >
-                            {t("trips.roster.delete")}
-                          </SubmitButton>
-                        </form>
-                      </div>
-                    ))}
-                    {/* Keyed on the note count so a landed note empties the box.
-                        Adding one no longer navigates (see `addInternalNoteAction`),
-                        and an uncontrolled textarea React never remounts would
-                        otherwise still hold the text of the note now listed
-                        above it — inviting the same note twice. */}
-                    <form key={notes.length} action={addNoteAction} className="grid gap-2">
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
-                        {t("trips.roster.addNoteLabel")}
-                      </label>
-                      <textarea
-                        id={`note-${booking.id}`}
-                        name="note"
-                        required
-                        maxLength={1000}
-                        rows={2}
-                        className={controlClass}
-                      />
-                      <SubmitButton
-                        pendingLabel={t("trips.roster.adding")}
-                        className={buttonClass({
-                          variant: "secondary",
-                          size: "sm",
-                          className: "justify-self-start",
-                        })}
-                      >
-                        {t("trips.roster.addPrivateNote")}
-                      </SubmitButton>
-                    </form>
-                  </div>
-                </details>
               </>
             );
             return (
@@ -955,7 +933,7 @@ export function RosterSection({
                     collapsed card never swallows what the link promised. */}
                 <AutoOpenDetails
                   openOnHash={`booking-${booking.id}`}
-                  className={`group ${hasOutstanding ? "mt-3 border-t border-border pt-1" : "mt-1"}`}
+                  className="group mt-3 border-t border-border pt-1"
                 >
                   <summary
                     // Ten of these in a list all read "Details" alone; the

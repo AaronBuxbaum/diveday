@@ -37,6 +37,12 @@ import { at, nextCreatedAt } from "./seed-clock";
  *   row seeded before it moves (`nextCreatedAt` is shared across scenarios).
  * - **5 seats left** (capacity 8, three sold): the e2e fleet matches trips by
  *   remaining seats, and 3, 6, 7, and Full are spoken for.
+ * - **No price.** Every departure on the demo board is deliberately unpriced,
+ *   which is what makes the board's group-level "None of these departures has
+ *   a price yet" flag the one notice rather than a pill on every row — and
+ *   `schedule-builder.spec.ts` rests on exactly that. Pricing this one charter
+ *   made the board mixed and quietly retired the flag. A price adds nothing to
+ *   what this fixture is for, which is a head count.
  */
 const DEMO_MINIMUM_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
 const DEMO_MINIMUM_DIVERS = [
@@ -74,7 +80,6 @@ export async function seedMinimumSeats(
       endsAt,
       capacity: 8,
       plannedDives: 3,
-      priceCents: 32_500,
       minimumBookings: 6,
       minimumDecisionHours: 48,
     })

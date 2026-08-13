@@ -296,3 +296,23 @@ export async function openSettingsRow(page: Page, heading: string) {
   const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
   if (!isOpen) await details.locator("summary").click();
 }
+
+/**
+ * Open a Guests roster card's "Details" disclosure.
+ *
+ * The roster keeps **work** in the open — blockers, the waiver control, the
+ * payment selector, the emergency contact, the private notes — and files what
+ * the card can only *tell* you behind one tap: the signed-waiver date, rental
+ * fit, the orders link, and "Remove booking". Removing a seat is the one
+ * administrative act several specs reach for as a teardown, hence this helper
+ * rather than the same three lines in four files.
+ *
+ * The disclosure is uncontrolled — its `open` is native DOM state React does
+ * not touch — so this checks before clicking rather than toggling blindly,
+ * exactly like `openPrivateNotes` in add-diver.spec.ts.
+ */
+export async function openRosterDetails(row: Locator): Promise<void> {
+  const details = row.locator("details").filter({ hasText: "Remove booking" }).first();
+  const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
+  if (!isOpen) await details.locator("summary").click();
+}
