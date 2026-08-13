@@ -47,8 +47,11 @@ cancellation window is bypassed rather than reused.**
   about a diver changing their mind. The full capture goes back.
 - `callTripBlowout` refunds inside each claimed cascade row, before composing that diver's message.
   The claim (`pending` → `sending`) is what already made the send once-per-diver, so it makes the
-  refund once-per-diver too; and a booking that already reads `refunded` returns `unpaid` from the
-  refund arm, so a resumed cascade never reverses twice.
+  refund once-per-diver too; and a booking that already reads `refunded` comes back as
+  `already_refunded`, so a resumed cascade never reverses twice. That outcome is deliberately
+  distinct from `unpaid`: the message a resume composes is picked from it, and reading an
+  already-reversed capture as "nothing was captured" would tell a diver who paid and was refunded
+  that they were never charged.
 - The minimum-seats cron refunds **every active seat** on each swept departure
   (`refundBookingsForShopCancelledTrip`), not just the seats it can email. A walk-in with no address
   is unreachable and has just as much money with the shop.

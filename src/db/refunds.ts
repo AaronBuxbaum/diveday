@@ -150,7 +150,15 @@ export async function refundBookingOnCancellation(
  */
 export type ShopCancellationRefundOutcome =
   | { status: "refunded"; amountCents: number }
-  /** Nothing was captured (unpaid, waived, or already refunded). */
+  /**
+   * This seat's capture was already reversed — by an earlier pass of the same
+   * cascade or sweep, or by staff. Distinct from `unpaid` because the diver's
+   * message depends on it: a resumed cascade that read this as "nothing was
+   * captured" would tell someone who paid and was refunded that they were never
+   * charged.
+   */
+  | { status: "already_refunded" }
+  /** Nothing was captured (unpaid or waived). */
   | { status: "unpaid" }
   /** Money is owed but no card can be reversed from here — staff must return it. */
   | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
@@ -193,6 +201,7 @@ export async function refundBookingOnShopCancellation(
   if (!booking) return { status: "failed" };
 
   const payment = await getBookingPayment(db, input.shopId, input.bookingId);
+  if (payment?.status === "refunded") return { status: "already_refunded" };
   if (!payment || (payment.status !== "paid" && payment.status !== "deposit_paid")) {
     return { status: "unpaid" };
   }
@@ -263,7 +272,10 @@ export function shopCancellationPaymentStory(
   outcome: ShopCancellationRefundOutcome,
 ): "none" | "refunded" | "refund_owed" {
   if (outcome.status === "unpaid") return "none";
-  if (outcome.status === "refunded") return "refunded";
+  // `already_refunded` reads the same to the diver as a reversal this pass made
+  // — the money is on its way back either way, and a resumed cascade must not
+  // tell somebody who paid that they were never charged.
+  if (outcome.status === "refunded" || outcome.status === "already_refunded") return "refunded";
   return "refund_owed";
 }
 

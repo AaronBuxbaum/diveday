@@ -11,6 +11,7 @@ import {
   refundBookingOnCancellation,
   refundBookingOnShopCancellation,
   refundBookingsForShopCancelledTrip,
+  shopCancellationPaymentStory,
 } from "./refunds";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
@@ -695,7 +696,11 @@ describe("refundBookingOnShopCancellation", () => {
       { shopId: shop.id, bookingId },
       checkout,
     );
-    expect(again).toEqual({ status: "unpaid" });
+    // `already_refunded`, never `unpaid` — a resumed cascade reads this to pick
+    // the diver's money story, and "unpaid" would mail somebody who paid and
+    // was refunded to say they were never charged.
+    expect(again).toEqual({ status: "already_refunded" });
+    expect(shopCancellationPaymentStory(again)).toBe("refunded");
     expect(calls).toHaveLength(1);
   });
 
