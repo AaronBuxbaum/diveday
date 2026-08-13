@@ -87,14 +87,24 @@ function firstInvalidWaiverField(
 
 /**
  * Where a refused submit sends the diver back to: the same page, the refused
- * field's name, and a nonce (`at`) so the client can tell one attempt from the
- * next — a diver who repeats the identical mistake still gets the
- * scroll-and-ring a remounted `FieldErrorFocus` provides, which an unchanged
- * URL would silently skip. `FlashParams` strips both params after render.
+ * field's name, a nonce, and — when the refusal names a control — that
+ * control's own `#anchor`. The anchor is what makes the refusal reachable
+ * with no JavaScript at all: the browser lands the redirect on the named
+ * control, where the refusal's words are rendered (a name-mismatch is the one
+ * refusal a JS-less browser can actually reach — native `required` validation
+ * blocks the empty-field cases before the server ever sees them). The nonce
+ * (`at`) tells one attempt from the next so a diver who repeats the identical
+ * mistake still gets the scroll-and-ring a remounted `FieldErrorFocus`
+ * provides; only the signature-card refusals consume it, and `FlashParams`
+ * strips it with the other flash params after render.
  */
 function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined) {
   const nonce = crypto.randomUUID().slice(0, 8);
-  return `/waivers/${token}?error=invalid${field ? `&field=${field}` : ""}&at=${nonce}`;
+  const anchor =
+    field && WAIVER_FIELD_ERROR[field].anchor !== "medical-questionnaire"
+      ? `#${WAIVER_FIELD_ERROR[field].anchor}`
+      : "";
+  return `/waivers/${token}?error=invalid${field ? `&field=${field}` : ""}&at=${nonce}${anchor}`;
 }
 
 /** Copy and same-page anchor for each field a fallback submit can name as missing. */
