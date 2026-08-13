@@ -229,13 +229,23 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
   );
 }
 
-/** The action a checklist item enables on this page, if any. */
+/**
+ * The action a checklist item enables on this page, if any.
+ *
+ * `isNext` marks the one item `nextDiverStep` named — the same one the spine's
+ * "Next:" line points at — and only that item's button wears primary weight.
+ * Two actionable rows at once (a waiver and a payment, most commonly) used to
+ * render two primaries, leaving the diver to do the triage the page had
+ * already done in its own headline (design principle 8: one obvious action).
+ */
 function itemAction(
   item: DiverChecklistItem,
   token: string,
   canPay: boolean,
+  isNext: boolean,
   t: DiverTranslator,
 ): React.ReactNode {
+  const actionButton = buttonClass(isNext ? { size: "sm" } : { variant: "secondary", size: "sm" });
   // An expired link needs the same action as a pending one — `signWaiverFromReady`
   // always issues a fresh link and opens it, superseding whatever came before,
   // so the only difference is what the button promises. Naming the difference
@@ -244,7 +254,7 @@ function itemAction(
   if (item.code === "waiver_pending" || item.code === "waiver_expired") {
     return (
       <form action={signWaiverFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel={t("ready.opening")} className={buttonClass({ size: "sm" })}>
+        <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
           {t(item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver")}
         </SubmitButton>
       </form>
@@ -256,10 +266,7 @@ function itemAction(
   if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) {
     return (
       <form action={payFromReady.bind(null, token)}>
-        <SubmitButton
-          pendingLabel={t("ready.openingPayment")}
-          className={buttonClass({ size: "sm" })}
-        >
+        <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
           {t("ready.payForTrip")}
         </SubmitButton>
       </form>
@@ -747,7 +754,7 @@ export default async function DiverReadinessPage({
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
                 detail={checklistDetailText(t, item)}
-                action={itemAction(item, token, data.canPay, t)}
+                action={itemAction(item, token, data.canPay, item === nextStep, t)}
                 t={t}
               />
             ))}
