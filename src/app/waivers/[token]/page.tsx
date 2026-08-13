@@ -355,6 +355,7 @@ export default async function WaiverPage({
           sites={diveSitesList}
           heading={t("waiver.scheduledSites")}
           subheading={t("waiver.sitesPeek")}
+          t={t}
         />
       </main>
     );

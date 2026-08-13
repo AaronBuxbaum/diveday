@@ -37,7 +37,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
         marineLifeDescription:
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
-        difficulty: "beginner",
+        difficultyLevel: "beginner",
         depthRange: "6–12 m",
         maxDepthMeters: 12,
         currentNote: "Usually gentle; the crew confirms the final plan.",
@@ -102,7 +102,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Goliath grouper · barracuda · jacks · soft coral",
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
-        difficulty: "advanced",
+        difficultyLevel: "advanced",
         depthRange: "18–40 m",
         maxDepthMeters: 40,
         currentNote: "Open-water current can be strong; the crew confirms the line plan.",
@@ -146,7 +146,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Sergeant majors · blue tangs · French angelfish · coral gardens",
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
-        difficulty: "beginner",
+        difficultyLevel: "beginner",
         depthRange: "5–8 m",
         maxDepthMeters: 8,
         currentNote: "Usually gentle; the crew confirms the final plan.",
@@ -192,7 +192,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Sergeant majors · glassy sweepers · moray eels · yellowtail snapper",
         marineLifeDescription:
           "The hull is a fish apartment block: look into every gap and something is home.",
-        difficulty: "intermediate",
+        difficultyLevel: "intermediate",
         depthRange: "8–15 m",
         maxDepthMeters: 15,
         currentNote: "Mild, but the site sits in open water — the crew calls the drop.",
@@ -225,7 +225,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Nurse sharks · green morays · parrotfish · barracuda",
         marineLifeDescription:
           "The overhangs hide sleeping nurse sharks; check the ceilings, not just the sand.",
-        difficulty: "beginner",
+        difficultyLevel: "beginner",
         depthRange: "6–14 m",
         maxDepthMeters: 14,
         currentNote: "Usually gentle; the crew confirms the final plan.",
@@ -268,7 +268,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Goliath grouper · barracuda · amberjack · schooling grunts",
         marineLifeDescription:
           "A resident goliath grouper often holds near the wheelhouse; look into the blue for jacks working the current.",
-        difficulty: "advanced",
+        difficultyLevel: "advanced",
         depthRange: "15–37 m",
         maxDepthMeters: 37,
         currentNote: "Can run strong on the surface; the crew calls the line and the drop.",
@@ -307,7 +307,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLife: "Blue tangs · stoplight parrotfish · French angelfish · sergeant majors",
         marineLifeDescription:
           "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
-        difficulty: "beginner",
+        difficultyLevel: "beginner",
         depthRange: "5–12 m",
         maxDepthMeters: 12,
         currentNote: "Usually gentle; the crew confirms the final plan.",
