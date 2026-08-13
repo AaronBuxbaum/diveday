@@ -259,18 +259,20 @@ export async function duplicateTrip(
       .limit(1);
     if (!shop) return null;
     const shift = tripShiftPlan(source.startsAt, startsAt, shop.timezone);
-    const [dives, days] = await Promise.all([
-      tx
-        .select()
-        .from(tripDives)
-        .where(eq(tripDives.tripId, tripId))
-        .orderBy(asc(tripDives.diveNumber)),
-      tx
-        .select()
-        .from(tripScheduleDays)
-        .where(eq(tripScheduleDays.tripId, tripId))
-        .orderBy(asc(tripScheduleDays.dayNumber)),
-    ]);
+    // Sequential, not `Promise.all`: a transaction is one checked-out client,
+    // so concurrent queries on `tx` cannot overlap anyway -- pg queues them and
+    // warns that it will stop accepting them in pg@9. The parallelism was
+    // never real; only the deprecation warning was (issue #517).
+    const dives = await tx
+      .select()
+      .from(tripDives)
+      .where(eq(tripDives.tripId, tripId))
+      .orderBy(asc(tripDives.diveNumber));
+    const days = await tx
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId))
+      .orderBy(asc(tripScheduleDays.dayNumber));
     const { ok, course } = await resolveCourse(tx, shopId, source.courseId ?? undefined);
     if (!ok) return null;
 

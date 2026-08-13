@@ -25,7 +25,35 @@ if [ "$1" = "sts" ]; then printf '%s' '{"Account":"123456789012"}'; fi
   );
   chmodSync(join(bin, "aws"), 0o755);
   chmodSync(join(cdkDirectory, "cdk"), 0o755);
+  // An AWS home with no profiles in it. Without this the scripts read the
+  // developer's real ~/.aws, so `selectDeployProfile` finds whatever profiles
+  // that machine happens to have installed and the "nothing is configured"
+  // cases below assert against someone's workstation instead of a fixture.
+  mkdirSync(join(directory, "aws-home"), { recursive: true });
   return directory;
+}
+
+/**
+ * The environment for a case that means "no AWS anything": no ambient
+ * credentials, no selected profile, and no profiles on disk to discover.
+ *
+ * `PATH` is emptied rather than inherited on purpose -- a real `aws` binary on
+ * the developer's PATH is exactly what these cases must not find. `cdk` is
+ * still reached, because infra-cdk.mjs runs `node_modules/.bin/cdk` by
+ * absolute path rather than resolving it through PATH.
+ */
+function unconfigured(directory) {
+  const environment = { ...process.env, DIVEDAY_CDK_LOG: join(directory, "cdk.log") };
+  delete environment.AWS_PROFILE;
+  delete environment.INFRA_DEPLOY_PROFILE;
+  delete environment.AWS_ACCESS_KEY_ID;
+  delete environment.AWS_SECRET_ACCESS_KEY;
+  delete environment.AWS_SESSION_TOKEN;
+  delete environment.AWS_SHARED_CREDENTIALS_FILE;
+  delete environment.AWS_CONFIG_FILE;
+  environment.AWS_PROFILE_HOME = join(directory, "aws-home");
+  environment.PATH = "";
+  return environment;
 }
 
 afterEach(() => {
@@ -61,12 +89,7 @@ describe("infra-cdk", () => {
     // template fails loudly even when AWS_CDK_DIFF_ROLE_ARN hasn't been set
     // up yet. ensureAwsDeploymentLogin would fail immediately in this
     // environment; synth must never call it.
-    const environment = { ...process.env, DIVEDAY_CDK_LOG: join(directory, "cdk.log") };
-    delete environment.AWS_PROFILE;
-    delete environment.AWS_ACCESS_KEY_ID;
-    delete environment.AWS_SECRET_ACCESS_KEY;
-    delete environment.AWS_SESSION_TOKEN;
-    environment.PATH = process.env.PATH ?? "";
+    const environment = unconfigured(directory);
 
     const result = spawnSync(
       process.execPath,
@@ -80,15 +103,10 @@ describe("infra-cdk", () => {
 
   it("still verifies the selected administrator session before diff", () => {
     const directory = fixture();
-    const environment = { ...process.env, DIVEDAY_CDK_LOG: join(directory, "cdk.log") };
-    delete environment.AWS_PROFILE;
-    delete environment.AWS_ACCESS_KEY_ID;
-    delete environment.AWS_SECRET_ACCESS_KEY;
-    delete environment.AWS_SESSION_TOKEN;
-    // No `aws` stub on PATH: ensureAwsDeploymentLogin has nothing to
+    // No `aws` reachable at all: ensureAwsDeploymentLogin has nothing to
     // successfully call, so diff -- unlike synth -- must fail rather than
     // proceed to invoke cdk at all.
-    environment.PATH = process.env.PATH ?? "";
+    const environment = unconfigured(directory);
 
     const result = spawnSync(
       process.execPath,

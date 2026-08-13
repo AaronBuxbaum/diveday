@@ -22,23 +22,15 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { constantValue, ENV_GROUPS, isManual, isOverridable } from "../config/env-registry.mjs";
+import { parseDotenv } from "./dotenv.mjs";
 
 // Resolved against the working directory, not this file: the deploy runs from
 // the repo root, and a test runs from a temporary one.
 const MANUAL_PATH = join(process.cwd(), ".env.manual");
 const LOCAL_PATH = join(process.cwd(), ".env.local");
 
-const ENV_LINE = /^([A-Z][A-Z0-9_]*)=(.*)$/;
-
 /** Every `KEY=value` line in a dotenv document, as an object. */
-export function parseEnvDocument(text) {
-  return Object.fromEntries(
-    text.split(/\r?\n/).flatMap((line) => {
-      const match = line.match(ENV_LINE);
-      return match ? [[match[1], match[2]]] : [];
-    }),
-  );
-}
+export const parseEnvDocument = parseDotenv;
 
 const read = (path) => (existsSync(path) ? readFileSync(path, "utf8") : "");
 

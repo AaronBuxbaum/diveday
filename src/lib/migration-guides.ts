@@ -486,11 +486,13 @@ const fareharbor: MigrationGuide = {
   heroTitle: "marketing.guides.fareharbor.heroTitle",
   heroLede: "marketing.guides.fareharbor.heroLede",
 
+  // Three paragraphs, not four: the fourth ("so there are two honest ways
+  // DiveDay fits a FareHarbor shop…") announced the section immediately below
+  // it, whose own heading and leave-path box say it better and say it twice.
   context: [
     "marketing.guides.fareharbor.context.item1",
     "marketing.guides.fareharbor.context.item2",
     "marketing.guides.fareharbor.context.item3",
-    "marketing.guides.fareharbor.context.item4",
   ],
 
   coexist: {
@@ -578,11 +580,11 @@ const rezdy: MigrationGuide = {
   heroTitle: "marketing.guides.rezdy.heroTitle",
   heroLede: "marketing.guides.rezdy.heroLede",
 
+  // Three paragraphs — same cut as FareHarbor's, for the same reason.
   context: [
     "marketing.guides.rezdy.context.item1",
     "marketing.guides.rezdy.context.item2",
     "marketing.guides.rezdy.context.item3",
-    "marketing.guides.rezdy.context.item4",
   ],
 
   coexist: {

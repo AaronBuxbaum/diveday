@@ -13,21 +13,31 @@ import { publicSchedulePath } from "./public-routes";
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
- * position (`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`)
- * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
- * sections" folds into the page total and can never be shown to have earned its
- * place. The unsuffixed tag stays the page's original one so attribution
- * history doesn't break when a new position is added beside it.
+ * position (`home-hero` / `home-closing`, `product` / `product-mid`,
+ * `pricing` / `pricing-close`) — otherwise a mid-page door added to answer "one
+ * CTA at the bottom of ten sections" folds into the page total and can never be
+ * shown to have earned its place. The unsuffixed tag stays the page's original
+ * one so attribution history doesn't break when a new position is added beside
+ * it.
+ *
+ * A tag stays registered after its door is removed, so the history it collected
+ * still reads — but a retired tag is **not** free to reuse, because new traffic
+ * would land in the same bucket as the old and neither could be read on its own.
+ * `home-mid` is retired: the homepage's mid-page demo door came out on
+ * 2026-08-13 when three consecutive banded CTAs merged into one close. A new
+ * mid-page door on `/` needs a new tag.
  */
 const FIXED_SOURCES = [
   "home-hero",
   "home-diver-moment",
+  // Retired 2026-08-13 — kept for history, not for reuse. See above.
   "home-mid",
   "home-closing",
   "nav",
   "product",
   "product-mid",
   "pricing",
+  "pricing-close",
   "about-closing",
   "sign-in",
   "switching-hub",

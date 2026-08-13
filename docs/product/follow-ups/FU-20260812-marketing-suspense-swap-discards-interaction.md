@@ -39,13 +39,31 @@ the route, so the delay never applied to the payload the navigation actually use
 mechanism above is the best explanation the evidence supports, not a proven one. What *is* certain
 is that the assertion ran against a closed `<details>`.
 
+## Amendment — 2026-08-13: the disclosure is gone, the mechanism isn't
+
+The `/product` design pass deleted the `<details>`. The capability index renders flat now (a
+section headed "the whole list, plainly" that hid the list was the emptiest band on the page), so
+**the repro above cannot be reproduced** and no marketing page holds `<details>` open state any
+more. Nothing about the mechanism changed: the fallback is still the whole body, the swap still
+tears down and rebuilds the subtree.
+
+What it can still cost a visitor, on `/product` specifically, is **scroll position**. The page now
+opens with a five-entry anchor strip ("One dive day"), and an `es-ES` visitor is served the English
+body first. Tapping `#recap` before `LocalizedProductBody` resolves scrolls to that heading in the
+English subtree; the Spanish body is taller in every section above it, so the preserved scroll
+offset lands the reader somewhere in the payment band instead. Quieter than a disclosure snapping
+shut, and harder to attribute — the page just feels like it jumped.
+
+So: same bug, new instance, and the next interactive control on any of these pages inherits it
+again. Use the anchor strip as the acceptance case in place of the disclosure.
+
 ## Why it isn't already done
 
 Two reasons.
 
-The **test** was fixed in PR #473 (the disclosure is now exercised after a load-gated
+The **test** was fixed in PR #473 (the disclosure was exercised after a load-gated
 `page.goto("/product")`, with the click-through assertion kept above it), so nothing is red. That
-fix does nothing for real visitors — it only stops the test standing in the window.
+fix did nothing for real visitors — it only stopped the test standing in the window.
 
 The **product** fix is a change to how every marketing route renders, which is an
 instant-navigation architecture decision (ADR 20260804-instant-navigation) and much bigger than the
@@ -62,10 +80,10 @@ Pick one, deliberately:
    "instant, real content" quality these pages were built for.
 2. **Drop the double render**: make the body render once, and let the segment's `loading.tsx` cover
    the request-scoped read. Same cost, less machinery.
-3. **Keep the swap, keep interaction**: hoist the disclosure's open state above the Suspense
-   boundary (a small client component with the state in context, or `?list=open` in the URL) so a
-   replaced subtree restores it. Narrowest fix, and it only covers the one control that has state
-   today — a future interactive marketing control would reintroduce the bug.
+3. **Keep the swap, keep the interaction**: hoist whatever state the page holds above the
+   Suspense boundary (a small client component holding it in context, or a query param) and
+   re-anchor scroll after the swap. Narrowest fix, and it only covers the controls that exist
+   today — the next interactive marketing control reintroduces the bug.
 
 Check the other marketing routes for the same shape before choosing: `/`, `/pricing`, and the
 switching guides all use the fallback-is-the-body pattern, and any of them that grows an
@@ -86,8 +104,8 @@ Read first:
 - src/app/product/page.tsx — the `<Suspense fallback={<ProductBody locale={DEFAULT_DIVER_LOCALE} />}>`
   around `LocalizedProductBody`, which is the whole of it
 - docs/architecture/decisions/20260804-instant-navigation.md — why the fallback is a full body
-- e2e/marketing.spec.ts — the disclosure block, and the comment explaining why it now uses a
-  load-gated goto
+- e2e/marketing.spec.ts — the /product capability-index block, and the comment explaining the
+  race and why it uses a load-gated goto
 - src/app/page.tsx, src/app/pricing/page.tsx, src/app/switching/[competitor]/page.tsx — check
   whether they share the pattern
 
@@ -96,12 +114,14 @@ for an en-US reader, so the swap is invisible in every screenshot, every en-US a
 local run — and it still tears down and rebuilds the DOM, dropping `<details>` open state and any
 other uncommitted interaction. Do not "verify" a fix by checking the page looks the same.
 
-Done means: a visitor who opens `/product`'s "The full list" disclosure as early as the browser
-allows still has it open once the localized body lands, proven by an e2e test that widens the
-window deterministically (intercept the RSC payload with `page.route` AND disable prefetch for that
-link, or navigate with prefetch off — the naive interception alone does nothing, because Next has
-usually already prefetched). If option 1 or 2 is chosen, update ADR 20260804-instant-navigation
-with what changed and why. Delete this follow-up file as part of the change.
+Done means: an es-ES visitor who taps `/product`'s "One dive day" anchor strip as early as the
+browser allows is still looking at the chapter they asked for once the localized body lands (the
+disclosure that originally raised this was deleted on 2026-08-13 — see the amendment in the file),
+proven by an e2e test that widens the window deterministically (intercept the RSC payload with
+`page.route` AND disable prefetch for that link, or navigate with prefetch off — the naive
+interception alone does nothing, because Next has usually already prefetched). If option 1 or 2
+is chosen, update ADR 20260804-instant-navigation with what changed and why. Delete this follow-up
+file as part of the change.
 
 Checks: pnpm check, pnpm e2e e2e/marketing.spec.ts --reporter=line, and a visual run — options 1
 and 2 change what these routes paint first, so baselines will move.

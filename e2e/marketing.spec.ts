@@ -1,7 +1,7 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 
-test("the homepage hero offers one demo door, and the diver preview lives on its moment card", async ({
+test("the homepage hero offers one demo door, and the diver preview lives on its daily-moment row", async ({
   page,
 }) => {
   await page.goto("/");
@@ -18,9 +18,12 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
       .getByText("The demo opens a working sample shop in one click — no sign-up, no card.")
       .first(),
   ).toBeVisible();
-  // Exactly three demo buttons (hero, mid-page, closing) — the five-chip role
-  // picker is gone from the hero; role switching is the in-demo switcher's job.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  // Exactly two demo buttons (hero, closing) — the five-chip role picker is
+  // gone from the hero (role switching is the in-demo switcher's job), and the
+  // mid-page door retired on 2026-08-13 when the page's three consecutive
+  // banded CTAs merged into one close, putting the closing door a full band
+  // nearer (docs/product/marketing.md).
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
   // The old label is gone site-wide, not merely replaced here: one action
   // wearing two names is what the single-label rule exists to stop, and the
   // rename has to stay renamed (docs/product/marketing.md, Voice).
@@ -29,7 +32,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // Hero decision density: one primary action, at most one secondary. The hero
   // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
   // and every retired destination moved rather than disappeared — the roles
-  // into the in-demo switcher, the preview onto its moment card below. The
+  // into the in-demo switcher, the preview onto its daily-moment row below. The
   // mockup's "Mark boarded" buttons are `disabled` scenery, not doors, so the
   // count is of things a visitor can actually act on.
   const heroSection = page.getByRole("main").locator("section").first();
@@ -38,12 +41,13 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
   // The diver preview moved out of the hero (where it was a third competing
-  // door) onto the "For the diver" moment card, still tagged for attribution.
+  // door) onto the diver's row of the daily-moments section, still tagged for
+  // attribution.
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
   // for funnel attribution the same way the trial link is. The source moved to
-  // the "For the diver" moment card when the hero's role picker was retired
+  // the diver's daily-moments row when the hero's role picker was retired
   // (#328); the path is the split public namespace's.
   expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
 
@@ -102,7 +106,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // that claim in two paragraphs and a checklist until 2026-08-12. Asserting the
   // mockup keeps it from quietly reverting to prose.
   await expect(page.getByRole("img", { name: /import preview/i })).toBeVisible();
-  await expect(page.getByText("In the export")).toBeVisible();
+  // The two directions are named, and the geometry that names them is the
+  // claim: a mirrored pair of columns for a section arguing that records leave
+  // the same way they arrive (2026-08-13 redesign, docs/product/marketing.md).
+  // Headings rather than text, so a future edit cannot demote them back into
+  // an eyebrow that leaves each column unnamed in the outline.
+  await expect(page.getByRole("heading", { name: "Coming in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Going out" })).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
@@ -122,33 +132,34 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
 
-  // The click-through above has done its job — the Product link leads here. The
-  // disclosure below is exercised from a fresh `goto`, and deliberately not
-  // from the page this client-side navigation left us on.
+  // The click-through above has done its job — the Product link leads here.
+  // The capability index is re-checked from a fresh `goto`, so it is asserted
+  // against a directly-rendered document as well as a client navigation.
   //
-  // `/product` paints a **default-locale body as its own Suspense fallback**
-  // and swaps in the negotiated-locale one when it resolves (see
-  // `ProductPage`). For an en-US run both render identical copy, so every
-  // assertion above passes against either — but the swap replaces the subtree,
-  // and `<details>` open/closed is DOM state that a replaced subtree does not
-  // carry over. A click that lands in that window opens a disclosure that is
-  // about to be thrown away, and the assertion that follows then queries a
-  // *closed* `<details>` — whose contents are outside the accessibility tree,
-  // so `getByRole` reports "element(s) not found" rather than "not visible".
-  // That is exactly the failure this line produced on CI (shard 3/4, run
-  // 31549005047) and never once in local repeats, which is the signature of a
-  // race that only opens up under load.
+  // This block used to click a `<details>` open, and that click was the one
+  // interaction on the page that could lose a race. `/product` paints a
+  // **default-locale body as its own Suspense fallback** and swaps in the
+  // negotiated-locale one when it resolves (see `ProductPage`); for an en-US
+  // run both render identical copy, but the swap replaces the subtree, and
+  // `<details>` open/closed is DOM state a replaced subtree does not carry
+  // over. A click landing in that window opened a disclosure that was about to
+  // be thrown away, and the next assertion then queried a *closed* `<details>`
+  // — contents outside the accessibility tree, so `getByRole` reported
+  // "element(s) not found" rather than "not visible". That is exactly how this
+  // failed on CI (shard 3/4, run 31549005047) and never once locally.
   //
-  // `goto` is load-gated, so the streamed body has landed before the click.
-  // Not a timing shim: nothing here waits a guessed interval or retries — the
-  // navigation's own completion is the signal, which is what the whole page
-  // lacked on the client-side path. The user-facing half of this — a visitor
-  // who opens the disclosure fast enough watches it snap shut — is filed as
-  // FU-20260812-marketing-suspense-swap-discards-interaction.
+  // The disclosure is gone: the index renders flat, because a section headed
+  // "the whole list, plainly" that hid the list was the emptiest band on the
+  // page. So there is no *open/closed* state left for the swap to drop, and
+  // the assertions below are ordinary auto-retrying ones. The page still keeps
+  // one thing across the swap that the swap can spoil — scroll position, now
+  // that the hero is followed by a five-entry anchor strip — so the
+  // architecture half of this is still open, with that as its acceptance case
+  // (FU-20260812-marketing-suspense-swap-discards-interaction). The load-gated
+  // `goto` stays: it is the navigation's own completion, never a guessed
+  // interval.
   await page.goto("/product");
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
-  // The full capability index sits behind a disclosure by default.
-  await page.getByText("The full list").click();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page —
@@ -219,13 +230,40 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // Same shared label as everywhere else — "Try the live demo first" was the
   // exact per-page synonym drift the one-label rule exists to catch.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+
+  // The page closes on the number it opened with, and that closing door is
+  // tagged apart from the hero's. Without it the only trial door below the
+  // fold was the header's, which does not stick — a reader who scrolled the
+  // objection layer had nothing left to act on. Tagged like `product-mid`, so
+  // the position can be shown to have earned its place rather than folding
+  // into the page's own bucket (src/lib/funnel.ts).
+  await expect(page.getByRole("heading", { name: "That's our whole price." })).toBeVisible();
+  const pricingMain = page.getByRole("main");
+  // Visible, not merely present: `toHaveCount` passes on a `display:none`
+  // anchor, and a closing door nobody can see is the bug this one exists to
+  // fix rather than a fix for it.
+  await expect(pricingMain.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
+  await expect(pricingMain.locator('a[href="/onboard?from=pricing-close"]')).toHaveCount(1);
+  await expect(pricingMain.locator('a[href="/onboard?from=pricing"]')).toHaveCount(1);
+
+  // The switching guides' door out of the FAQ. Without it the footer is the
+  // only path to /switching from this page, and the row's href and label are
+  // one optional pair in the page's own type precisely so half of it cannot go
+  // missing — which renders no link at all, silently.
+  await expect(page.getByRole("link", { name: "Browse the switching guides →" })).toHaveAttribute(
+    "href",
+    "/switching",
+  );
 });
 
 test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // The trial link carries the page that sent it, so demo-vs-trial can be read
   // per surface; the form hands that tag back to the action.
   await page.goto("/pricing");
-  await page.getByRole("link", { name: "Start a trial" }).last().click();
+  // Scoped to `<main>` and taken first: the header carries its own `nav`-tagged
+  // trial link, and the page now closes with a second one tagged
+  // `pricing-close`, so neither end of the document is the hero's door.
+  await page.getByRole("main").getByRole("link", { name: "Start a trial" }).first().click();
   await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
   // A hidden input can't be scoped with `.filter({ visible: true })` (it would
   // never match), and the previous route's own `input[name="source"]` (this
@@ -378,7 +416,8 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     "href",
     "/onboard?from=switching-eve",
   );
-  // Three doors out: the hero, the repeat under the scope table, and the close.
+  // Three doors out, and only three: the hero, the hinge between the argument
+  // and the mechanics, and the close.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
   await expect(
     page.getByRole("heading", { name: "Rather see it than read about it?" }),

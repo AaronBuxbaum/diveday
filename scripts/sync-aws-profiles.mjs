@@ -2,22 +2,17 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { parseDotenv } from "./dotenv.mjs";
 
 const repairConfigOnly = process.argv.includes("--repair-config");
 const source = repairConfigOnly ? "" : readFileSync(0, "utf8");
 const awsDirectory = process.env.AWS_PROFILE_HOME?.trim() || join(homedir(), ".aws");
 const credentialsPath = join(awsDirectory, "credentials");
 const configPath = join(awsDirectory, "config");
-const envLine = /^([A-Z][A-Z0-9_]*)=(.*)$/;
 const iniSection = /^\[([^\]]+)\]$/;
 const iniValue = /^\s*([a-z_]+)\s*=\s*(.*)$/;
 
-const values = Object.fromEntries(
-  source.split(/\r?\n/).flatMap((line) => {
-    const match = line.match(envLine);
-    return match ? [[match[1], match[2]]] : [];
-  }),
-);
+const values = parseDotenv(source);
 
 function commentedIni(document) {
   const profiles = new Map();
