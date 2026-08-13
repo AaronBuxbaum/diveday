@@ -358,8 +358,14 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             The mockup is a claim, so it mirrors the real Settings → Data export
             element for element — including the "Not included, on purpose:" line
             that says credentials never leave (docs/product/marketing.md). */}
+        {/* `max-w-5xl`, the same measure as the FAQ below it: the page was
+            running three different left edges down the desktop viewport (88px
+            here, 152px at the FAQ, 280px for the single-column bands), which
+            reads as three unrelated pages stacked. Two measures now — narrow
+            for prose, wide for the two-column bands — and the columns land at
+            a more readable ~470px besides. */}
         <section className="border-b border-border">
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
+          <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
             <div>
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                 {t("marketing.pricing.dataExit.eyebrow")}
