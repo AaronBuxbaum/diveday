@@ -54,6 +54,13 @@ export default defineConfig({
     env: {
       DATABASE_URL: "",
       DATABASE_URL_UNPOOLED: "",
+      // Set-but-empty is this repo's "off" switch (src/lib/configured.ts), and
+      // the DSN needs one now that it is compiled in rather than supplied by
+      // the environment: `register()` is called directly by
+      // instrumentation.test.ts, so without this the unit suite initializes
+      // real Sentry and reports its own deliberate failures to the production
+      // project. `pnpm e2e:build` switches it off the same way.
+      NEXT_PUBLIC_SENTRY_DSN: "",
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
     },
   },

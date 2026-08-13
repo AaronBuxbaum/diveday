@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { constantValue, ENV_KEYS } from "../config/env-registry.mjs";
 import { dotenvMap, formatEnvValue, parseDotenv, unquoteEnvValue } from "./dotenv.mjs";
 
 /**
@@ -88,40 +87,28 @@ describe("the write/read round trip", () => {
   const values = [
     "DiveDay <noreply@ses.dive.day>",
     "https://dive.day",
-    "ca_UvlITl41g1jCgVxyi3vqYguVm8l2dliH",
+    "postgres://user:pass@host/db?sslmode=verify-full",
     "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA=",
     "",
     "  leading and trailing  ",
     "value with 'inner' single quotes",
   ];
 
+  /**
+   * The property that protects production. A value crosses this pair of
+   * functions four times on its way to a deployment: written into
+   * `.env.example`, embedded into the credentials secret, distributed into
+   * `.env.vercel`, and pushed to Vercel. Anything that does not survive the
+   * round trip arrives at runtime as a different string than the one written
+   * -- which is exactly what happened to the SES sender in issue #517, where
+   * the quotes its space required became part of the address.
+   *
+   * The cases are held here as literals rather than read from the registry:
+   * every checked-in constant has since moved into the code that reads it
+   * (`src/lib/configured.ts`), so the registry has none left to enumerate, and
+   * the parser still has to be right for the values that do flow through it.
+   */
   it.each(values)("survives being written and read back: %j", (value) => {
     expect(parseDotenv(`KEY=${formatEnvValue(value)}\n`).KEY).toBe(value);
-  });
-
-  /**
-   * The property that actually protects production: every constant the
-   * registry ships is written into `.env.example`, embedded into the
-   * credentials secret, distributed to `.env.vercel`, and pushed to Vercel --
-   * four hops through this pair of functions. Any constant that does not
-   * round-trip arrives at runtime as a different string than the one declared.
-   */
-  it.each(ENV_KEYS.filter((key) => constantValue(key)))(
-    "every registry constant round-trips: %s",
-    (key) => {
-      const value = constantValue(key);
-      expect(parseDotenv(`${key}=${formatEnvValue(value)}\n`)[key]).toBe(value);
-    },
-  );
-
-  /**
-   * The specific value that broke, asserted as itself rather than only as an
-   * instance of the property above: whatever SES is handed as a sender must
-   * end in a real `<local@domain>`, since that is the exact thing SES refused.
-   */
-  it("delivers SES_FROM_EMAIL to the provider as a usable sender", () => {
-    const declared = constantValue("SES_FROM_EMAIL");
-    const delivered = parseDotenv(`SES_FROM_EMAIL=${formatEnvValue(declared)}\n`).SES_FROM_EMAIL;
-    expect(delivered).toMatch(/^[^"']+<[^@\s"']+@[^@\s"']+\.[A-Za-z]{2,}>$/);
   });
 });

@@ -21,7 +21,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { constantValue, ENV_GROUPS, isManual, isOverridable } from "../config/env-registry.mjs";
+import { ENV_GROUPS, isManual, isOverridable } from "../config/env-registry.mjs";
 import { parseDotenv } from "./dotenv.mjs";
 
 // Resolved against the working directory, not this file: the deploy runs from
@@ -76,10 +76,6 @@ function run() {
   const values = {};
   for (const [key, value] of Object.entries({ ...adopted, ...existingManual })) {
     if (!value || !isOverridable(key)) continue;
-    // A constant is carried only when it differs from the checked-in default:
-    // a `.env.local` that merely echoes `https://dive.day` is not an override,
-    // and copying it in would turn a default into a second thing to maintain.
-    if (!isManual(key) && value === constantValue(key)) continue;
     values[key] = value;
   }
 

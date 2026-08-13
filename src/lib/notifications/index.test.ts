@@ -2,6 +2,7 @@ import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { describe, expect, it, vi } from "vitest";
 import { bookingConfirmationEmail, waitlistInviteEmail, waiverRequestEmail } from "./email";
 import {
+  APP_ORIGIN,
   checkPublicHost,
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
@@ -520,9 +521,21 @@ describe("email rendering", () => {
 });
 
 describe("publicAppUrl", () => {
-  it("accepts a configured canonical origin and rejects an unconfigured one", () => {
+  it("accepts a configured canonical origin", () => {
     expect(publicAppUrl({ APP_HOST: "https://diveday.example/" })).toBe("https://diveday.example");
-    expect(publicAppUrl({})).toBeNull();
+  });
+
+  // The origin is compiled in now (issue #517 follow-up): an absent APP_HOST
+  // means "nobody overrode DiveDay's own", where it used to leave every
+  // bearer-token link relative. Only an explicit empty value still means off.
+  it("falls back to DiveDay's own origin when nothing overrides it", () => {
+    expect(publicAppUrl({})).toBe(APP_ORIGIN);
+    expect(APP_ORIGIN).toBe("https://dive.day");
+  });
+
+  it("treats an explicitly empty APP_HOST as unconfigured", () => {
+    expect(publicAppUrl({ APP_HOST: "" })).toBeNull();
+    expect(publicAppUrl({ APP_HOST: "   " })).toBeNull();
   });
 
   it("returns null for a malformed value instead of throwing", () => {

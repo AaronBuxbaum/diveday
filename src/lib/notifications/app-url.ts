@@ -9,11 +9,26 @@
  * silently mis-linking.
  */
 
+import { configuredValue } from "@/lib/configured";
 import type { NotificationEnvironment } from "./provider";
+
+/**
+ * DiveDay's own public origin. Compiled in rather than deployed as
+ * configuration -- see `src/lib/configured.ts` for why, and note that this is
+ * the value a *missing* `APP_HOST` now resolves to, where it used to leave
+ * every bearer-token link relative. `APP_HOST` still overrides it, which is
+ * what a fork, a staging deploy, or the e2e build uses.
+ */
+export const APP_ORIGIN = "https://dive.day";
+
+/** The configured origin before validation: the override, or DiveDay's own. */
+export function appHost(env: NotificationEnvironment = process.env): string | undefined {
+  return configuredValue(env.APP_HOST, APP_ORIGIN);
+}
 
 /** A server-only canonical origin for bearer-token links; never derive this from a request header. */
 export function publicAppUrl(env: NotificationEnvironment = process.env): string | null {
-  const result = checkPublicHost(env.APP_HOST, env.NODE_ENV === "production");
+  const result = checkPublicHost(appHost(env), env.NODE_ENV === "production");
   return result.status === "valid" ? result.origin : null;
 }
 

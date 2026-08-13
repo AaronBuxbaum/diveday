@@ -46,21 +46,12 @@ describe("env-manual", () => {
     expect(manual).not.toContain("AKIA_TYPED_BY_HAND");
   });
 
-  it("carries a constant only when it differs from the checked-in default", () => {
-    const cwd = workspace();
-    writeFileSync(
-      join(cwd, ".env.local"),
-      'APP_HOST=http://localhost:3000\nSES_FROM_EMAIL="DiveDay <noreply@ses.dive.day>"\n',
-    );
-
-    envManual(cwd);
-    const manual = readFileSync(join(cwd, ".env.manual"), "utf8");
-
-    expect(manual).toContain("APP_HOST=http://localhost:3000");
-    // Echoing the default is not an override; copying it in would turn a
-    // default into a second thing to maintain.
-    expect(manual).not.toContain("SES_FROM_EMAIL");
-  });
+  // The case that lived here covered a checked-in constant being carried into
+  // .env.manual only when it differed from the default. There are no checked-in
+  // constants any more -- DiveDay's own origin, sender, Connect client id and
+  // Sentry DSN moved into the code that reads them (src/lib/configured.ts) --
+  // so .env.manual carries exactly the manual keys, which the cases around
+  // this one already cover.
 
   it("is idempotent, and never overwrites a value already set", () => {
     const cwd = workspace();

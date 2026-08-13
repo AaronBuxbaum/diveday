@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { redactBreadcrumb, redactEvent } from "@/app/observability";
+import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 /**
  * Runs once per server instance before it accepts requests. APP_HOST is
@@ -31,15 +32,18 @@ export async function register() {
     after(task);
   });
 
-  const { checkPublicHost } = await import("@/lib/notifications");
-  const result = checkPublicHost(process.env.APP_HOST, process.env.NODE_ENV === "production");
+  // Validates the *effective* origin, not the raw variable: with the default
+  // compiled in, an override is the only thing that can be malformed, and it
+  // is still the thing that must fail the boot rather than mis-link.
+  const { appHost, checkPublicHost } = await import("@/lib/notifications");
+  const result = checkPublicHost(appHost(), process.env.NODE_ENV === "production");
   if (result.status === "invalid") {
     throw new Error(`Invalid APP_HOST configuration: ${result.reason}`);
   }
 
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  if (SENTRY_DSN) {
     Sentry.init({
-      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      dsn: SENTRY_DSN,
       environment: process.env.NODE_ENV,
       tracesSampleRate: 0,
       beforeSend: redactEvent,

@@ -106,7 +106,19 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "notification.sns_sms_send_failed",
       "notification.whatsapp_send_failed",
     ],
-    threshold: 5,
+    // One, not the five this used to ask for. Every outbound email failed for
+    // an unknown stretch before issue #517 and this alarm stayed silent the
+    // whole time: at DiveDay's volume a *total* outage produced about seven
+    // failures in twenty-four hours, so a 100% failure rate never reached five
+    // in any single hour. A raw count cannot see an outage on a low-traffic
+    // deployment, and the smaller the shop base the blinder it gets.
+    //
+    // The cost of one is a page for a single terminal failure. That is
+    // acceptable here in a way it would not be for most signals: the SDK
+    // already retries throttling and 5xx itself, and a bounce arrives by
+    // webhook rather than on this path, so what reaches this line is a send
+    // that will never happen -- someone's waiver link -- not a transient blip.
+    threshold: 1,
     periodMinutes: 60,
     response:
       "Read the error code on the log lines, then follow the matching provider runbook (ses-email, sms-delivery-receipts, whatsapp-cloud-api).",
