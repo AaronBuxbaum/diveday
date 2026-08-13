@@ -798,16 +798,6 @@
       "underwaterMonument": "Underwater monument",
       "reefFormation": "Reef formation",
       "pointOfInterest": "Point of interest"
-    },
-    "landmarkDescriptions": {
-      "molassesReefLight": "The reef light is the easiest above-water reference and a useful way to stay oriented around the central reef.",
-      "shipsWinch": "A large ship's winch rests near the reef light—a compact piece of maritime history now folded into the reef.",
-      "spanishAnchor": "An old anchor lies among the coral formations. Let the crew point it out; it can disappear surprisingly well into the reef.",
-      "flightDeckAndCranes": "The broad flight deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
-      "wellDeck": "The open well deck is one of the wreck's most dramatic exterior spaces, with changing light and room for big schools of fish.",
-      "christOfAbyssStatue": "The 8.6-foot bronze statue stands on a concrete pedestal in shallow water—the unmistakable centrepiece of this dive.",
-      "dryRocksSandChannels": "Bright sand channels weave between coral formations around the statue and are good places to look for rays, grouper, and moray eels.",
-      "generic": "A memorable reference point the crew can identify during the site briefing."
     }
   },
   "inquiry": {

@@ -20,6 +20,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
+import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
@@ -725,6 +726,14 @@ export const courseInquiries = pgTable(
 );
 
 /**
+ * Which fit reading a site's briefing shows, when the shop names one rather
+ * than letting `siteFit` read it off the published facts. `unknown` is a real
+ * choice, not an absence — "ask the crew" is the honest answer for a site whose
+ * character depends entirely on the day.
+ */
+export const diveSiteFitTone = pgEnum("dive_site_fit_tone", ["welcoming", "demanding", "unknown"]);
+
+/**
  * A reusable, shop-owned briefing for one dive site. Trip conditions are
  * intentionally kept on the dated trip: a site library entry is evergreen,
  * while water temperature and visibility are not.
@@ -786,7 +795,41 @@ export const diveSites = pgTable(
     expectedBottomTimeMinutes: integer("expected_bottom_time_minutes"),
     currentNote: text("current_note"),
     divePlan: text("dive_plan"),
-    landmarks: jsonb("landmarks").$type<string[]>().notNull().default([]),
+    /**
+     * Which fit reading the briefing shows above the facts table — "Welcoming
+     * dive" or "Best with recent experience". Null means *derive it* from
+     * `difficulty`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
+     * which is what every site did before this column existed and is still the
+     * ordinary case.
+     *
+     * It exists because the derivation is a regex over free text a shop wrote
+     * for a different purpose: a reef whose current note mentions a "deep
+     * channel" read as demanding, and a shop had no way to say otherwise. A
+     * code, not a sentence — the *label* is a translated status word, the same
+     * shape a readiness status has. The shop's own words go in `fit_note`.
+     */
+    fitTone: diveSiteFitTone("fit_tone"),
+    /**
+     * The shop's own sentence under that label, replacing DiveDay's canned one.
+     * Null leaves the canned line standing, which is a true sentence about a
+     * site nobody has written about yet.
+     */
+    fitNote: text("fit_note"),
+    /**
+     * The heading over the field guide's "slow down and you'll see more" aside
+     * — the one DiveDay wrote ("See more by slowing down") unless the shop has
+     * its own. The tips under it are the shop's already: they come off its own
+     * `dive_site_creatures` rows.
+     */
+    fieldGuideTipsHeading: text("field_guide_tips_heading"),
+    /**
+     * Named things the crew points at, each with the shop's own note on it —
+     * `{ name, kind, note }` (src/lib/dive-site-landmarks.ts). Plain strings
+     * are still read (that is all this column held until landmarks carried
+     * their own words, and what the CSV import posts), as a name with nothing
+     * said about it.
+     */
+    landmarks: jsonb("landmarks").$type<DiveSiteLandmark[] | string[]>().notNull().default([]),
     /**
      * The underwater route, as waypoints a staffer clicked onto the site's
      * satellite view. Percentages of that view's box (0–100, origin top-left),
@@ -859,6 +902,45 @@ export const globalDiveSites = pgTable(
   (table) => [index("global_dive_sites_slug_idx").on(table.slug)],
 );
 
+/**
+ * One published version of a catalog site, as a whole briefing.
+ *
+ * It carries everything the dive-site form can write, because a template a shop
+ * cannot take whole is a template it has to finish by hand: the first version
+ * of this shape held eight fields, so importing "Molasses Reef" produced a site
+ * with no cert gate, no landmarks worth reading, and an empty field guide. The
+ * two lists are the same shapes the form posts, and `creatureSlugs` names rows
+ * of `./marine-life-catalog.ts` rather than repeating their words — the import
+ * copies those words onto the shop's own rows, where the shop edits them.
+ */
+export type GlobalDiveSiteBriefing = {
+  name: string;
+  description?: string;
+  locationName?: string;
+  forecastLatitude?: number;
+  forecastLongitude?: number;
+  satelliteImageUrl?: string;
+  routeImageUrl?: string;
+  imageUrls?: string[];
+  marineLife?: string;
+  marineLifeDescription?: string;
+  difficulty?: string;
+  depthRange?: string;
+  maxDepthMeters?: number;
+  expectedBottomTimeMinutes?: number;
+  currentNote?: string;
+  divePlan?: string;
+  fitTone?: (typeof diveSiteFitTone.enumValues)[number];
+  fitNote?: string;
+  fieldGuideTipsHeading?: string;
+  landmarks?: DiveSiteLandmark[];
+  /** Catalog slugs, resolved to the shop's own field-guide rows at import. */
+  creatureSlugs?: string[];
+  minimumCertificationLevel?: (typeof certificationLevel.enumValues)[number];
+  requiredSpecialties?: (typeof diveSpecialty.enumValues)[number][];
+  requiresNitrox?: boolean;
+};
+
 /** Immutable published snapshots; a later correction never rewrites a shop's source evidence. */
 export const globalDiveSiteVersions = pgTable(
   "global_dive_site_versions",
@@ -868,26 +950,7 @@ export const globalDiveSiteVersions = pgTable(
       .notNull()
       .references(() => globalDiveSites.id),
     version: integer("version").notNull(),
-    briefing: jsonb("briefing")
-      .$type<{
-        name: string;
-        description?: string;
-        locationName?: string;
-        forecastLatitude?: number;
-        forecastLongitude?: number;
-        satelliteImageUrl?: string;
-        routeImageUrl?: string;
-        imageUrls?: string[];
-        marineLife?: string;
-        marineLifeDescription?: string;
-        difficulty?: string;
-        depthRange?: string;
-        maxDepthMeters?: number;
-        currentNote?: string;
-        divePlan?: string;
-        landmarks?: string[];
-      }>()
-      .notNull(),
+    briefing: jsonb("briefing").$type<GlobalDiveSiteBriefing>().notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -895,7 +958,11 @@ export const globalDiveSiteVersions = pgTable(
   ],
 );
 
-/** Visual, educational field-card content a shop can tailor after import. */
+/**
+ * Visual, educational field-card content a shop can tailor after import — the
+ * site's own field guide, written and reordered on the dive-site form
+ * (`src/lib/dive-site-field-guide.ts`).
+ */
 export const diveSiteCreatures = pgTable(
   "dive_site_creatures",
   {
@@ -906,11 +973,25 @@ export const diveSiteCreatures = pgTable(
     diveSiteId: uuid("dive_site_id")
       .notNull()
       .references(() => diveSites.id),
+    /**
+     * The DiveDay catalog entry this was copied from, or null for a species a
+     * shop typed itself. Provenance only — nothing is looked up through it at
+     * render time, because the words on this row are the shop's the moment it
+     * lands and a later catalog edit must never rewrite them.
+     */
+    catalogSlug: text("catalog_slug"),
     name: text("name").notNull(),
     kind: text("kind").notNull(),
     imageUrl: text("image_url"),
     description: text("description"),
     preparationTip: text("preparation_tip"),
+    /**
+     * Where this face sits in the guide. The list had no order at all until the
+     * shop could edit it — the query returned whatever the planner felt like,
+     * so a briefing reshuffled its own field guide between renders and the
+     * visual suite could not hold a baseline for one.
+     */
+    position: integer("position").notNull().default(0),
   },
   (table) => [index("dive_site_creatures_site_idx").on(table.diveSiteId)],
 );
@@ -4034,6 +4115,7 @@ export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type Certification = typeof certifications.$inferSelect;
 export type SpecialtyCertification = typeof specialtyCertifications.$inferSelect;
 export type DiveSpecialty = (typeof diveSpecialty.enumValues)[number];
+export type DiveSiteFitTone = (typeof diveSiteFitTone.enumValues)[number];
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;

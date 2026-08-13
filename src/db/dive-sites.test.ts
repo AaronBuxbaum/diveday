@@ -28,8 +28,13 @@ describe("dive-site library", () => {
    */
   it("imports a catalog template beside a same-named site instead of violating the unique index", async () => {
     const { db, shop } = await seededShopContext();
-    const [catalogEntry] = (await listGlobalDiveSiteTemplates(db)).templates;
-    if (!catalogEntry) throw new Error("seed: no published dive-site template");
+    // By name, not "the first card": the catalog is a real library of Florida
+    // sites ordered by slug now, and only this one collides with a site the
+    // seeded shop already holds — which is the collision under test.
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+      (row) => row.version.briefing.name === "Molasses Reef",
+    );
+    if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
 
     const first = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
     expect(first?.name).toBe("Molasses Reef 2");

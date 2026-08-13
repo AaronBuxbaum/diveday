@@ -1,5 +1,11 @@
 import type { DiverTranslator } from "@/i18n/messages";
-import { hasRoute, type RoutePoint, routeMapQuery, routePathD } from "@/lib/dive-site-route";
+import {
+  hasRoute,
+  type RoutePoint,
+  routeFocus,
+  routeMapQuery,
+  routePathD,
+} from "@/lib/dive-site-route";
 import { googleMapsUrl, googleTerrainEmbedUrl } from "@/lib/maps";
 import { MapEmbed } from "./MapEmbed";
 
@@ -43,59 +49,87 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
   const path = routePathD(site.routePoints);
   const start = site.routePoints[0];
   const finish = site.routePoints[site.routePoints.length - 1];
+  // Crop in on the route itself. A shop draws on the whole frame — that is the
+  // editor's rule — so a short swim around one mooring lands in the middle
+  // fifth of a picture that is mostly open water. One transform on the wrapper
+  // moves the embed and the SVG together, which is what keeps a percentage
+  // pointing at the water it always pointed at (src/lib/dive-site-route.ts).
+  const focus = routeFocus(site.routePoints);
+  // The crop magnifies the overlay along with the map, so the line and its two
+  // end dots are divided back out — a `non-scaling-stroke` is constant in the
+  // SVG's own box, not in the scaled result, and 2.25 at 2.6x is a rope across
+  // the reef rather than a route.
+  const zoom = focus?.scale ?? 1;
+  const strokeWidth = 2.25 / zoom;
+  const markerRadius = 2.4 / zoom;
+  const markerStroke = 1.1 / zoom;
 
   return (
     <figure className="overflow-hidden border-b border-border bg-surface-sunken">
-      {/* Never pannable, for the same reason the staff route editor's own frame
-          isn't (`dive-sites/_components/RouteEditor.tsx`): the route is an SVG
-          in *frame* coordinates laid over this embed, so the instant a reader
-          drags the map the drawn path stops describing the reef under it — the
-          line stays put while the water moves. A diver reading a briefing has
-          no way to tell they have done that, and nothing puts the frame back
-          except a reload. Exploring the site for real is the "Open map" link in
-          the caption, which opens Google Maps properly rather than a 256px-tall
-          pretend one — which is also why `MapEmbed` can crop the provider's own
-          controls away without taking anything from the reader. */}
-      <MapEmbed
-        title={t("site.terrainMapTitle", { site: site.name })}
-        src={googleTerrainEmbedUrl(query, site.routeZoom)}
-        className="h-64 sm:h-80"
-      >
-        <svg
-          viewBox="0 0 100 100"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          aria-hidden="true"
-          preserveAspectRatio="none"
+      <div className="relative h-64 overflow-hidden sm:h-80">
+        <div
+          className="absolute inset-0 origin-top-left"
+          style={
+            focus
+              ? {
+                  transform: `translate(${focus.translateX}%, ${focus.translateY}%) scale(${focus.scale})`,
+                }
+              : undefined
+          }
         >
-          <path
-            d={path}
-            fill="none"
-            stroke="var(--accent)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.25"
-            vectorEffect="non-scaling-stroke"
-          />
-          <circle
-            cx={start.x}
-            cy={start.y}
-            r="2.4"
-            fill="var(--primary)"
-            stroke="var(--surface)"
-            strokeWidth="1.1"
-            vectorEffect="non-scaling-stroke"
-          />
-          <circle
-            cx={finish.x}
-            cy={finish.y}
-            r="2.4"
-            fill="var(--accent)"
-            stroke="var(--surface)"
-            strokeWidth="1.1"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      </MapEmbed>
+          {/* Never pannable, for the same reason the staff route editor's own
+              frame isn't (`dive-sites/_components/RouteEditor.tsx`): the route is
+              an SVG in *frame* coordinates laid over this embed, so the instant a
+              reader drags the map the drawn path stops describing the reef under
+              it — the line stays put while the water moves. A diver reading a
+              briefing has no way to tell they have done that, and nothing puts
+              the frame back except a reload. Exploring the site for real is the
+              "Open map" link in the caption, which opens Google Maps properly
+              rather than a 256px-tall pretend one — which is also why `MapEmbed`
+              can crop the provider's own controls away without taking anything
+              from the reader. */}
+          <MapEmbed
+            title={t("site.terrainMapTitle", { site: site.name })}
+            src={googleTerrainEmbedUrl(query, site.routeZoom)}
+            className="h-full w-full"
+          >
+            <svg
+              viewBox="0 0 100 100"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              aria-hidden="true"
+              preserveAspectRatio="none"
+            >
+              <path
+                d={path}
+                fill="none"
+                stroke="var(--accent)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={strokeWidth}
+                vectorEffect="non-scaling-stroke"
+              />
+              <circle
+                cx={start.x}
+                cy={start.y}
+                r={markerRadius}
+                fill="var(--primary)"
+                stroke="var(--surface)"
+                strokeWidth={markerStroke}
+                vectorEffect="non-scaling-stroke"
+              />
+              <circle
+                cx={finish.x}
+                cy={finish.y}
+                r={markerRadius}
+                fill="var(--accent)"
+                stroke="var(--surface)"
+                strokeWidth={markerStroke}
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </MapEmbed>
+        </div>
+      </div>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">
         <div>
           {/* Both lines are the shop's own words about its own reef, so an

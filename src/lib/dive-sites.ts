@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
+import { type DiveSiteCreature, parseDiveSiteCreatures } from "./dive-site-field-guide";
+import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
 import { DOCK_DAY_LIMITS } from "./diver-planning";
 
@@ -87,7 +89,29 @@ export const diveSiteFormSchema = z.object({
   ]),
   currentNote: z.string().trim().max(500),
   divePlan: z.string().trim().max(1_200),
-  landmarks: z.string().max(4_000),
+  /**
+   * Which fit reading the briefing shows, or `""` for "work it out from the
+   * facts" — the default, and what every site said before the shop could
+   * choose (`siteFit`, ./diver-planning.ts).
+   */
+  fitTone: z.preprocess(
+    // Absent as well as blank: an older form, or a hand-rolled post, is saying
+    // "work it out", not submitting something unusable.
+    (value) => (value === "" || value === undefined ? null : value),
+    z.enum(["welcoming", "demanding", "unknown"]).nullable(),
+  ),
+  fitNote: z.string().trim().max(400).optional().default(""),
+  fieldGuideTipsHeading: z.string().trim().max(80).optional().default(""),
+  /**
+   * Landmarks and field-guide species arrive as one JSON string each, from
+   * their editors' hidden inputs — the same shape the route uses, and
+   * normalised by their own modules rather than described here: both are lists
+   * with per-entry caps and a length cap, which Zod could only express by
+   * repeating those rules in a second place. Absent (an older form, a
+   * hand-rolled post) reads as an empty list, which is what most sites have.
+   */
+  landmarks: z.string().max(8_000).optional(),
+  creatures: z.string().max(8_000).optional(),
   minimumCertificationLevel: z.preprocess(
     (value) => (value === "" ? null : value),
     z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
@@ -122,6 +146,8 @@ export type DiveSiteFormParse =
       /** The typed override in minutes, or null when the shop's own figure stands. */
       expectedBottomTimeMinutes: number | null;
       route: DiveSiteFormRoute;
+      landmarks: DiveSiteLandmark[];
+      creatures: DiveSiteCreature[];
     }
   | { ok: false; error: DiveSiteFormError };
 
@@ -161,6 +187,8 @@ export function parseDiveSiteForm(
     maxDepthMeters,
     expectedBottomTimeMinutes:
       parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
+    landmarks: parseDiveSiteLandmarks(parsed.data.landmarks),
+    creatures: parseDiveSiteCreatures(parsed.data.creatures),
     route: {
       points: routePoints,
       zoom: parseRouteZoom(parsed.data.routeZoom),

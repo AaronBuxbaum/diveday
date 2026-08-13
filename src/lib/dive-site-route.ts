@@ -25,6 +25,8 @@
  * Codes and geometry only, no sentences (AGENTS.md).
  */
 
+import { safeJson } from "./safe-json";
+
 /** One waypoint, as a percentage of the satellite frame. */
 export type RoutePoint = { x: number; y: number };
 
@@ -79,14 +81,6 @@ export function parseRoutePoints(raw: unknown): RoutePoint[] {
   return points;
 }
 
-function safeJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 /** A stored or submitted zoom, clamped to what the editor can actually draw at. */
 export function parseRouteZoom(raw: unknown): number {
   const value = typeof raw === "string" ? Number.parseInt(raw, 10) : raw;
@@ -138,6 +132,90 @@ export function routePathD(points: readonly RoutePoint[]): string {
     d += ` C ${round(control1.x)} ${round(control1.y)}, ${round(control2.x)} ${round(control2.y)}, ${round(next.x)} ${round(next.y)}`;
   }
   return d;
+}
+
+/**
+ * How much of the frame, either side of the route, the briefing keeps around it
+ * — as a fraction of the route's own longer side. A route hugging the frame's
+ * edges would read as a line that runs off the picture.
+ */
+const ROUTE_FOCUS_PADDING = 0.35;
+
+/**
+ * The furthest in a briefing will zoom. The frame it magnifies is a raster map
+ * embed, so past roughly this much the tiles are visibly soft — and a two-point
+ * route across ten metres of reef would otherwise ask for 20x.
+ */
+const MAX_ROUTE_FOCUS = 2.6;
+
+/** Below this the crop is not worth the softness it costs. */
+const MIN_WORTHWHILE_FOCUS = 1.08;
+
+/**
+ * A CSS crop of the site's frame, in the same percentage units the waypoints
+ * are stored in — `transform: translate(Xn%, Yn%) scale(n)` with a `0 0`
+ * transform origin, applied to the embed and its route overlay together.
+ */
+export type RouteFocus = { scale: number; translateX: number; translateY: number };
+
+/**
+ * Where to crop and how far to magnify the site's frame so the drawn route
+ * fills it, with air around it.
+ *
+ * A shop draws its route on the *whole* frame — that is the editor's rule, and
+ * the reason the map there cannot be panned (see the note at the top of this
+ * file). Which means a short swim around one mooring is stored as four points
+ * in the middle 15% of a picture mostly showing open water, and the briefing
+ * used to render exactly that: a correct line, too small to read, on a frame
+ * that answered "where is the reef" instead of "where do we swim".
+ *
+ * The returned numbers are a CSS crop, not a different map: `scale` and the two
+ * origins apply the *same* transform to the embed and to the SVG laid over it,
+ * so a percentage still points at the water it always pointed at. Nothing about
+ * the stored route or the map's own zoom changes — which is what keeps this
+ * safe. Re-centring the embed and raising its `z` instead would be sharper, and
+ * would also mean a reef that has no imagery at that zoom renders as grey
+ * squares, on the one surface whose whole job is telling a diver where they are
+ * going.
+ *
+ * Returns null when there is nothing to gain: no route, or a route that already
+ * spans most of the frame.
+ */
+export function routeFocus(points: readonly RoutePoint[]): RouteFocus | null {
+  if (!hasRoute(points)) return null;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  // Squared off in *percentage* space on purpose. A percentage box maps to a
+  // frame-shaped rectangle, so a square here is the frame's own aspect ratio —
+  // which is what lets one uniform scale crop it without stretching the map.
+  const span = Math.max(maxX - minX, maxY - minY);
+  const padded = span * (1 + 2 * ROUTE_FOCUS_PADDING);
+  if (padded <= 0) return null;
+  const scale = Math.min(MAX_ROUTE_FOCUS, 100 / padded);
+  if (scale < MIN_WORTHWHILE_FOCUS) return null;
+  // The point the crop centres on, held far enough from the edges that the
+  // magnified frame still covers the whole window: at scale s a centre outside
+  // [50/s, 100 - 50/s] would pull an edge of the map inside the window and
+  // leave a strip of nothing beside the reef.
+  const margin = 50 / scale;
+  const clampCentre = (value: number) => Math.min(100 - margin, Math.max(margin, value));
+  const centreX = clampCentre((minX + maxX) / 2);
+  const centreY = clampCentre((minY + maxY) / 2);
+  const round = (value: number) => Math.round(value * 100) / 100;
+  // `translate(…) scale(…)` about a `0 0` origin is the composition `p ↦ t + s·p`
+  // in the frame's own fractions, and a CSS translate percentage resolves
+  // against the *unscaled* box — so putting the route's centre at the window's
+  // centre is `t = 50 - s·centre`, in the same percent units the waypoints are
+  // already stored in.
+  return {
+    scale: round(scale),
+    translateX: round(50 - scale * centreX),
+    translateY: round(50 - scale * centreY),
+  };
 }
 
 /**

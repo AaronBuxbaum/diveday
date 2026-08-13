@@ -104,10 +104,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
     .filter({ visible: true });
   // The whole waiver is a single button; for an unsent diver it reads "Send
-  // waiver". Exact, so it targets the per-diver control and not the roster's
-  // "Send waivers to selected" bulk button. e2e has no email provider
-  // configured, so the shared WaiverSendControl always falls to its private
-  // link affordance here rather than "Waiver sent to …".
+  // waiver". Exact, so it can't pick up a longer label on a neighbouring
+  // control. e2e has no email provider configured, so the shared
+  // WaiverSendControl always falls to its private link affordance here rather
+  // than "Waiver sent to …".
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   const resultNotice = diverSection.getByRole("status");
   await expect(resultNotice).toContainText("send email from this deployment yet");

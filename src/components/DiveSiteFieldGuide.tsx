@@ -14,11 +14,19 @@ export function DiveSiteFieldGuide({
   creatures,
   summary,
   highlights,
+  tipsHeading,
   t,
 }: {
   creatures: FieldGuideCreature[];
   summary: string | null;
   highlights: string | null;
+  /**
+   * The shop's own heading over the tips aside. Null falls back to DiveDay's
+   * ("See more by slowing down"), which is a fine line and was, until this
+   * prop, the only line — a shop could write every tip under it and not the
+   * three words above them.
+   */
+  tipsHeading?: string | null;
   t: DiverTranslator;
 }) {
   if (creatures.length === 0 && !summary && !highlights) return null;
@@ -83,7 +91,7 @@ export function DiveSiteFieldGuide({
             ◌
           </span>
           <div>
-            <h4 className="font-semibold">{t("site.seeMoreHeading")}</h4>
+            <h4 className="font-semibold">{tipsHeading || t("site.seeMoreHeading")}</h4>
             <p className="mt-1 text-sm leading-relaxed text-muted">{tips.slice(0, 2).join(" ")}</p>
           </div>
         </aside>

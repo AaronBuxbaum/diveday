@@ -178,7 +178,14 @@ export async function loadShopExportBundleInput(
         .select()
         .from(diveSiteCreatures)
         .where(eq(diveSiteCreatures.shopId, shopId))
-        .orderBy(asc(diveSiteCreatures.diveSiteId), asc(diveSiteCreatures.id));
+        // The order the shop put its field guide in, then id — the same total
+        // order `listDiveSiteCreatures` reads, so an export and a briefing can
+        // never disagree about which face comes first.
+        .orderBy(
+          asc(diveSiteCreatures.diveSiteId),
+          asc(diveSiteCreatures.position),
+          asc(diveSiteCreatures.id),
+        );
 
       const momentRows = await tx
         .select()
@@ -1755,6 +1762,9 @@ export async function loadShopExportBundleInput(
             "expected_bottom_time_minutes",
             "current_note",
             "dive_plan",
+            "fit_tone",
+            "fit_note",
+            "field_guide_tips_heading",
             "marine_life",
             "marine_life_description",
             "landmarks",
@@ -1784,6 +1794,9 @@ export async function loadShopExportBundleInput(
             row.expectedBottomTimeMinutes,
             row.currentNote,
             row.divePlan,
+            row.fitTone,
+            row.fitNote,
+            row.fieldGuideTipsHeading,
             row.marineLife,
             row.marineLifeDescription,
             JSON.stringify(row.landmarks),
@@ -1814,21 +1827,25 @@ export async function loadShopExportBundleInput(
             "id",
             "dive_site_id",
             "dive_site_name",
+            "position",
             "name",
             "kind",
             "description",
             "preparation_tip",
             "image_url",
+            "catalog_slug",
           ],
           rows: creatureRows.map((row) => [
             row.id,
             row.diveSiteId,
             siteName.get(row.diveSiteId),
+            row.position,
             row.name,
             row.kind,
             row.description,
             row.preparationTip,
             row.imageUrl,
+            row.catalogSlug,
           ]),
           note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
         },

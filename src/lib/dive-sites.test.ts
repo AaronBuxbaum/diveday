@@ -17,7 +17,11 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
     expectedBottomTime: "",
     currentNote: "",
     divePlan: "",
-    landmarks: "",
+    fitTone: "",
+    fitNote: "",
+    fieldGuideTipsHeading: "",
+    landmarks: "[]",
+    creatures: "[]",
     minimumCertificationLevel: "",
     ...overrides,
   };
@@ -94,6 +98,104 @@ describe("parseDiveSiteForm", () => {
     expect(parseDiveSiteForm(formEntries({ name: "  " }), "meters")).toEqual({
       ok: false,
       error: "invalid",
+    });
+  });
+});
+
+describe("the briefing a shop writes in its own words", () => {
+  it("takes the shop's own fit reading over the one derived from its facts", () => {
+    const result = parseDiveSiteForm(
+      formEntries({ fitTone: "welcoming", fitNote: "A good first ocean dive." }),
+      "meters",
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      fields: { fitTone: "welcoming", fitNote: "A good first ocean dive." },
+    });
+  });
+
+  it("reads a blank fit tone as 'work it out from the facts'", () => {
+    const result = parseDiveSiteForm(formEntries(), "meters");
+    expect(result).toMatchObject({ ok: true, fields: { fitTone: null } });
+  });
+
+  it("refuses a fit tone that is not one of the three readings", () => {
+    expect(parseDiveSiteForm(formEntries({ fitTone: "terrifying" }), "meters").ok).toBe(false);
+  });
+
+  it("keeps each landmark's own note and kind", () => {
+    const result = parseDiveSiteForm(
+      formEntries({
+        landmarks: JSON.stringify([
+          { name: "Reef light", kind: "navigationMark", note: "Easiest reference above water." },
+        ]),
+      }),
+      "meters",
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      landmarks: [
+        { name: "Reef light", kind: "navigationMark", note: "Easiest reference above water." },
+      ],
+    });
+  });
+
+  it("keeps the field guide the staffer assembled, catalog provenance included", () => {
+    const result = parseDiveSiteForm(
+      formEntries({
+        creatures: JSON.stringify([
+          {
+            slug: "stoplight-parrotfish",
+            name: "Stoplight parrotfish",
+            kind: "Reef fish",
+            description: "A heavy beaked grazer.",
+            preparationTip: "Follow the crunching sound.",
+            imageUrl: "/marine-life/stoplight-parrotfish.jpg",
+          },
+        ]),
+      }),
+      "meters",
+    );
+    if (!result.ok) throw new Error("a briefing with a field guide should parse");
+    expect(result.creatures).toHaveLength(1);
+    expect(result.creatures[0]).toMatchObject({
+      slug: "stoplight-parrotfish",
+      name: "Stoplight parrotfish",
+      imageUrl: "/marine-life/stoplight-parrotfish.jpg",
+    });
+  });
+
+  it("drops a species photo pointing at someone else's server", () => {
+    // A briefing must never make a live request to a host a staffer chose
+    // (CR-020) — the same rule the site gallery enforces by uploading.
+    const result = parseDiveSiteForm(
+      formEntries({
+        creatures: JSON.stringify([
+          { name: "Barracuda", imageUrl: "https://example.com/barracuda.jpg" },
+        ]),
+      }),
+      "meters",
+    );
+    if (!result.ok) throw new Error("a briefing with a field guide should parse");
+    expect(result.creatures[0]?.imageUrl).toBe("");
+  });
+
+  it("survives a form that never posted the new fields at all", () => {
+    // An older form, or a hand-rolled post: every one of these is optional, and
+    // absent has to read as "nothing said" rather than as a refusal.
+    const {
+      fitTone: _fitTone,
+      fitNote: _fitNote,
+      fieldGuideTipsHeading: _tipsHeading,
+      landmarks: _landmarks,
+      creatures: _creatures,
+      ...bare
+    } = formEntries();
+    expect(parseDiveSiteForm(bare, "meters")).toMatchObject({
+      ok: true,
+      landmarks: [],
+      creatures: [],
+      fields: { fitTone: null, fitNote: "", fieldGuideTipsHeading: "" },
     });
   });
 });

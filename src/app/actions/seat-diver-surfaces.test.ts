@@ -92,12 +92,22 @@ describe("gate scope matches the id in each landing path", () => {
     ["trip-guests", { kind: "trip", id: landing.tripId }],
     ["new-booking", { kind: "trip", id: landing.tripId }],
     ["diver-record", { kind: "diver", id: landing.personId }],
+    // The counter used to be the exception here: `refusals: "coarse"` collapsed
+    // every gate into "open its trip page for the reason", so there was no
+    // specific refusal for a signature to carry and `gateScope` returned null.
+    // It says which gate it was now, and the departure is a path segment on the
+    // route it lands back on — which is the id the signature binds to.
+    ["walk-in", { kind: "trip", id: landing.tripId }],
   ] as const)("%s binds to %o", (id, scope) => {
     expect(SEAT_SURFACES[id].gateScope(landing)).toEqual(scope);
   });
 
-  it("the counter carries no gate at all, matching its coarse refusals", () => {
-    expect(SEAT_SURFACES["walk-in"].refusals).toBe("coarse");
-    expect(SEAT_SURFACES["walk-in"].gateScope(landing)).toBeNull();
+  it("carries no gate on a surface with no departure to bind one to", () => {
+    // A submission so broken that zod could not even read a trip id off it.
+    // There is no route to land on that owns one, so there is nothing a
+    // signature could be verified against — better silent than unverifiable.
+    const noTrip: SeatLanding = { ...landing, tripId: "" };
+    expect(SEAT_SURFACES["walk-in"].gateScope(noTrip)).toBeNull();
+    expect(SEAT_SURFACES["new-booking"].gateScope(noTrip)).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { diveSites } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
-import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
+import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { siteFit } from "@/lib/diver-planning";
 import { DiveSiteFieldGuide } from "./DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "./DiveSiteLandmarks";
@@ -53,7 +53,7 @@ export function DiveBriefingCard({
   // with one site look like a mismatch between the sites and the briefings.
   const subheading = site ? site.locationName : t("trip.siteToBeConfirmed");
   const fit = site ? siteFit(site) : null;
-  const landmarks = site ? buildDiveSiteLandmarks(site.name, site.landmarks) : [];
+  const landmarks = site ? parseDiveSiteLandmarks(site.landmarks) : [];
   // The long-tail site content folds behind one tap so the page stays a
   // briefing, not a scroll marathon — the essentials above stay in view.
   const hasSiteExtras =
@@ -106,10 +106,15 @@ export function DiveBriefingCard({
         ) : (
           <p className="mt-4 text-muted">{t("trip.siteRouteAtDock")}</p>
         )}
-        {site && (site.difficulty || site.depthRange || site.currentNote) ? (
+        {site && (site.difficulty || site.depthRange || site.currentNote || site.fitNote) ? (
           <div className="mt-5 rounded-lg bg-primary/10 p-4">
             <p className="font-semibold text-primary">{fit ? t(fitLabelKey[fit.tone]) : null}</p>
-            <p className="mt-1 text-sm text-muted">{fit ? t(fitDetailKey[fit.tone]) : null}</p>
+            {/* The shop's own sentence about who this site suits, when it has
+                written one — DiveDay's canned line only stands in for a site
+                nobody has said anything about yet. */}
+            <p className="mt-1 text-sm text-muted">
+              {site.fitNote || (fit ? t(fitDetailKey[fit.tone]) : null)}
+            </p>
             <p className="mt-2 text-xs text-muted">{t("trip.sitePlanningGuide")}</p>
           </div>
         ) : null}
@@ -165,6 +170,7 @@ export function DiveBriefingCard({
                 creatures={creatures}
                 summary={site.marineLifeDescription}
                 highlights={site.marineLife}
+                tipsHeading={site.fieldGuideTipsHeading}
                 t={t}
               />
             ) : null}

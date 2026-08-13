@@ -238,7 +238,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(siteName);
     // No coordinates yet: there is no frame to draw on, and the editor says so
     // rather than showing a map centred on a guess.
-    await expect(page.getByText(/Fill in the forecast latitude and longitude/)).toBeVisible();
+    await expect(page.getByText(/Fill in the GPS location above/)).toBeVisible();
 
     await page.getByLabel("Latitude").fill("25.101");
     await page.getByLabel("Longitude").fill("-80.404");
@@ -305,7 +305,7 @@ test.describe("staff", () => {
     await expect(page.getByTitle(`Terrain map of ${siteName}`)).toBeVisible();
   });
 
-  test("a half-entered forecast point is named as the reason, and nothing typed is lost", async ({
+  test("a half-entered GPS location is named as the reason, and nothing typed is lost", async ({
     page,
   }) => {
     // Both legs of the same bug (R4). A rejected briefing used to
@@ -325,7 +325,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save dive site" }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
-    const refusal = page.getByText(/Add both forecast coordinates/);
+    const refusal = page.getByText(/Add both GPS coordinates/);
     await expect(refusal).toBeVisible();
     // …and *inside the form*, not in a banner above twenty fields. The refusal
     // used to render above the whole briefing, a full screen from the Save
@@ -349,7 +349,7 @@ test.describe("staff", () => {
     await page.getByLabel("Underwater briefing").fill("Turtles rest below the coral heads.");
     await page.getByRole("button", { name: "Save dive site" }).click();
     // Not `getByRole("alert")` — Next's own route announcer is one too.
-    await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
+    await expect(page.getByText(/Add both GPS coordinates/)).toBeVisible();
     await expect(page.getByLabel("Underwater briefing")).toHaveValue(
       "Turtles rest below the coral heads.",
     );
@@ -504,8 +504,16 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
     page.getByRole("heading", { name: "Landmarks that tell the story" }).first(),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef Light" })).toBeVisible();
-  await expect(page.getByText("11 likely sightings")).toBeVisible();
+  await expect(page.getByText("8 likely sightings")).toBeVisible();
   await expect(page.getByRole("img", { name: "Stoplight parrotfish" }).first()).toBeVisible();
+  // Both the landmark's paragraph and the fit line under "Welcoming dive" are
+  // the *shop's* words now, off its own row — they used to come from a
+  // hard-coded table keyed by site name and from a canned sentence per tone,
+  // neither of which any field on the site could change.
+  await expect(
+    page.getByText("The steel tower is the easiest above-water reference on the reef"),
+  ).toBeVisible();
+  await expect(page.getByText("a good first ocean dive after a pool course").first()).toBeVisible();
   // What these two assert is the CR-020 property: a public page serves the
   // bundled first-party copy, never a live third-party Commons URL. Read it
   // through `bundledSource` rather than off `src` directly — these photos go
@@ -513,9 +521,83 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
   // `/_next/image?...` request, and matching the raw attribute would only be
   // asserting which optimizer is in front of it.
   await expect
-    .poll(() => bundledSource(page.getByRole("img", { name: "Finger sponge" })))
-    .toMatch(/\/dive-sites\//);
+    .poll(() => bundledSource(page.getByRole("img", { name: "Elkhorn coral" })))
+    .toMatch(/\/marine-life\//);
   await expect
     .poll(() => bundledSource(page.getByRole("img", { name: /southern stingray/i })))
-    .toMatch(/Dasyatis%20americana%20NOAA\.jpg/);
+    .toMatch(/\/marine-life\/southern-stingray\.jpg/);
+});
+
+test("a shop writes its own landmarks and picks its own field guide", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/dive-sites");
+  // Pickles Reef is the seeded site with an empty field guide — the state a
+  // real shop's brand-new site is in, and the one this form had no way out of
+  // until the picker existed.
+  await page
+    .getByRole("link", { name: /Pickles Reef/ })
+    .first()
+    .click();
+  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+
+  // Pick a species from DiveDay's catalog: its category, description, tip and
+  // photo all arrive filled in, and every one of them is then editable. Scoped
+  // to the field-guide fieldset — the briefing above it has a "Name" box of its
+  // own, and that one is the site's.
+  const guide = page.locator('fieldset:has-text("Field guide")');
+  await page.getByLabel("Find a species").fill("Hogfish");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(guide.getByRole("textbox", { name: "Category" })).toHaveValue("Reef fish");
+  await guide
+    .getByRole("textbox", { name: "How to actually see one" })
+    .fill("Ask the crew where the sand patches are.");
+
+  // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
+  // the new row is the last one — `.last()` throughout, and the round-trip
+  // assertions below read that same row back after the save.
+  await page.getByRole("button", { name: "Add a landmark" }).click();
+  const landmarks = page.locator('fieldset:has-text("Landmarks that tell the story")');
+  await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
+  await landmarks
+    .getByRole("textbox", { name: "What to say about it" })
+    .last()
+    .fill("Cement that hardened in its barrels and outlasted the ship.");
+  await landmarks.getByLabel("What kind").last().selectOption("reefHistory");
+
+  await page.getByRole("button", { name: "Save dive site" }).click();
+  await expect(page.getByText("Dive site saved.")).toBeVisible();
+
+  // Round-trips: the guide and the landmark come back as the shop left them.
+  await expect(guide.getByRole("textbox", { name: "Name" })).toHaveValue("Hogfish");
+  await expect(guide.getByRole("textbox", { name: "How to actually see one" })).toHaveValue(
+    "Ask the crew where the sand patches are.",
+  );
+  await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
+    "The barrel casks",
+  );
+  await expect(landmarks.getByLabel("What kind").last()).toHaveValue("reefHistory");
+});
+
+test("a template can be read in full before it is imported", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
+  // The catalog pages, ordered by slug — this one is on the first page and
+  // carries both of the things a one-tap import used to hand a shop sight
+  // unseen: a cert gate, and a field guide.
+  const card = page.locator("li").filter({ hasText: "Eagle Wreck" });
+  await card.getByRole("link", { name: "Read it first" }).click();
+  await page.waitForURL(/template=eagle-wreck/);
+
+  await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();
+  await expect(page.getByText("Advanced Open Water")).toBeVisible();
+  await expect(page.getByText("Wheelhouse and mast")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Goliath grouper" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Import to my library" }).click();
+  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+  // The field guide came with it — a template that arrived without one left a
+  // shop to retype the half of the briefing it could not see.
+  await expect(
+    page.locator('fieldset:has-text("Field guide")').getByRole("textbox", { name: "Name" }).first(),
+  ).toHaveValue("Goliath grouper");
 });

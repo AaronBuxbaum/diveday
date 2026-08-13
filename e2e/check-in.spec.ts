@@ -80,7 +80,10 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   const tripTitle = tripText.split(" · ")[0];
   if (!tripTitle) throw new Error("could not read a trip title from the walk-in picker");
   await firstTrip.click();
-  await expect(page).toHaveURL(/tripId=/);
+  // The departure is a path segment, not a `?tripId=` — which is what lets a
+  // refusal land back on this same form with the boat still chosen and name
+  // the gate it hit.
+  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}$/);
   // The chosen boat is echoed back so the crew can confirm before adding anyone.
   await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
 
@@ -142,14 +145,17 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
 
   // The boat is now full — a counter walk-in onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.
+  // The old `?tripId=` shape still lands on the diver step rather than losing
+  // the choice — the departure moved into the path when the counter learned to
+  // say *why* a diver bounced.
   await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
+  await page.waitForURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
   await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
-  // Landed back on the bare queue URL: the `walkin_full` code is one-shot
-  // (`FlashParams`), and this asserts it was actually stripped rather than
-  // merely tolerating either state.
-  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
+  // A refusal lands back on the walk-in form with the boat still chosen — the
+  // staffer's next move is another diver or another boat, not a trip page.
+  await expect(page).toHaveURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
@@ -157,9 +163,6 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await expect(
     page.getByText("That boat is full — try the wait list from its trip page instead."),
   ).toBeVisible();
-  await expect(
-    page.locator("article").filter({ hasText: "Turned Away Tara" }).filter({ visible: true }),
-  ).toHaveCount(0);
 });
 
 /**
