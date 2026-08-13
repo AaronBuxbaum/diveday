@@ -1,6 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -9,6 +8,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
+import { CardStatusMark } from "./CardStatusMark";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
@@ -135,9 +135,15 @@ export async function CertificationCards({
                 key={card.id}
                 className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <p className="font-medium">
-                    {t(AGENCY_KEYS[card.agency])} · {t(CERTIFICATION_LEVEL_KEYS[card.level])}
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 font-medium">
+                    <CardStatusMark
+                      tone={statusTone(display)}
+                      label={t(CARD_STATUS_KEYS[display])}
+                    />
+                    <span>
+                      {t(AGENCY_KEYS[card.agency])} · {t(CERTIFICATION_LEVEL_KEYS[card.level])}
+                    </span>
                   </p>
                   <p className="mt-1 break-all text-sm text-muted">
                     {card.identifier}
@@ -151,22 +157,26 @@ export async function CertificationCards({
                         )}
                       </span>
                     ) : null}
+                    {/* Provenance, on the line that already carries the card's
+                        own small print — not a pill in the control row. Where
+                        a card came from is a fact about the card, and it never
+                        needed to be the same shape as a status. */}
+                    {isImportedCard(card) ? (
+                      <span>
+                        {" · "}
+                        {card.importedFromLabel
+                          ? t("divers.certifications.importedWithSource", {
+                              source: card.importedFromLabel,
+                            })
+                          : t("divers.certifications.importedLabel")}
+                      </span>
+                    ) : null}
                   </p>
                   {card.reviewNote ? (
                     <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={statusTone(display)}>{t(CARD_STATUS_KEYS[display])}</Badge>
-                  {isImportedCard(card) ? (
-                    <Badge tone="neutral">
-                      {card.importedFromLabel
-                        ? t("divers.certifications.importedWithSource", {
-                            source: card.importedFromLabel,
-                          })
-                        : t("divers.certifications.importedLabel")}
-                    </Badge>
-                  ) : null}
                   {card.status === "pending" || needsImportConfirm(card) ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />

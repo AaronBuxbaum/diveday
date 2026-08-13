@@ -88,36 +88,143 @@ export function ShopPageHeader({
   );
 }
 
+/**
+ * The one stat tile: a quiet label, the figure at headline size, and an
+ * optional plain-language line under it. This anatomy used to exist twice —
+ * here as a label-plus-pill card, and on Reports as a local `Metric` with the
+ * big number — two shapes for the same concept, one click apart. The big
+ * number won: a stat's value is the content, not a badge on the content, and
+ * `tabular-nums` keeps a wall of these inspectable at a glance (design
+ * principle 6).
+ *
+ * `tone` colors the figure itself — emphasis, never the sole carrier of
+ * meaning: the label and detail line always say the words.
+ *
+ * Elevation follows containment, the same rule the Table shell keeps: a stat
+ * on the page wears the card (`variant="card"`, the default); a stat already
+ * inside a card sits `inset` — a sunken tile, one size down, no border or
+ * shadow of its own — so surface never stacks on surface. The anatomy is the
+ * vocabulary; only the container adapts.
+ *
+ * `definition` renders the label/value pair as `<dt>`/`<dd>` for tiles that
+ * sit in a `<dl>` — the departure log's summary is a definition-list document
+ * an insurer's screen-reader user must be able to navigate as one, and the
+ * import confirmation keeps the same shape.
+ */
 export function ShopStat({
   label,
   value,
   detail,
   tone = "default",
+  variant = "card",
+  definition = false,
+  celebrate = false,
+  linkHref,
+  linkLabel,
 }: {
   label: string;
   value: string | number;
-  detail: string;
+  detail?: string;
   tone?: "default" | "primary" | "warning" | "success";
+  /** `card` on the page; `inset` (sunken, chrome-less) inside an existing card. */
+  variant?: "card" | "inset";
+  /** Render label/value as `<dt>`/`<dd>` — the tile must then sit in a `<dl>`. */
+  definition?: boolean;
+  /** Mark a finished state (e.g. every waiver in) with a success check + words. */
+  celebrate?: boolean;
+  /** One quiet jump to the surface behind the number (e.g. Reports' revenue → Orders). */
+  linkHref?: string;
+  linkLabel?: string;
 }) {
+  // The -strong feedback tokens, not the raw hues: success/warning text on
+  // bg-surface measured just under AA (see ui/badge.tsx).
   const toneClass =
     tone === "primary"
-      ? "bg-primary/10 text-primary"
+      ? "text-primary"
       : tone === "warning"
-        ? "bg-warning/10 text-warning"
+        ? "text-warning-strong"
         : tone === "success"
-          ? "bg-success/10 text-success"
-          : "bg-surface-sunken text-foreground";
+          ? "text-success-strong"
+          : "text-foreground";
+
+  const Label = definition ? "dt" : "p";
+  const Value = definition ? "dd" : "p";
+  const inset = variant === "inset";
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted">{label}</p>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClass}`}>
-          {value}
-        </span>
-      </div>
-      <p className="mt-3 text-sm text-muted">{detail}</p>
+    <div
+      className={
+        inset
+          ? "rounded-xl bg-surface-sunken px-4 py-3"
+          : "rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
+      }
+    >
+      <Label
+        className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
+      >
+        {label}
+      </Label>
+      <Value
+        className={`font-semibold tracking-tight tabular-nums ${
+          inset ? "mt-0.5 text-2xl" : "mt-2 text-3xl"
+        } ${toneClass}`}
+      >
+        {value}
+        {/* In definition mode the detail and link live inside the <dd> — a
+            <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
+            of the value's definition. */}
+        {definition ? statDetail({ detail, celebrate, linkHref, linkLabel }) : null}
+      </Value>
+      {definition ? null : statDetail({ detail, celebrate, linkHref, linkLabel })}
     </div>
+  );
+}
+
+function statDetail({
+  detail,
+  celebrate,
+  linkHref,
+  linkLabel,
+}: {
+  detail?: string;
+  celebrate: boolean;
+  linkHref?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <>
+      {detail ? (
+        <span
+          className={`mt-2 flex items-center gap-1.5 text-sm font-normal tracking-normal ${
+            celebrate ? "text-success-strong" : "text-muted"
+          }`}
+        >
+          {celebrate ? (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="size-4 shrink-0"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-3.5-3.5a1 1 0 1 1 1.4-1.4l2.8 2.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : null}
+          {detail}
+        </span>
+      ) : null}
+      {linkHref && linkLabel ? (
+        <Link
+          href={linkHref}
+          className="mt-2 inline-block text-sm font-medium tracking-normal text-primary hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      ) : null}
+    </>
   );
 }
 

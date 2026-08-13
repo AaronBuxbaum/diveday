@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Pager } from "@/components/Pager";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import {
   canPersonViewShopReports,
@@ -44,59 +45,6 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Reports — DiveDay",
 };
-
-/** A headline number with a plain-language line under it. Semantic tokens only. */
-function Metric({
-  label,
-  value,
-  detail,
-  celebrate = false,
-  linkHref,
-  linkLabel,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  /** Mark a finished state (e.g. every waiver in) with a success check + words. */
-  celebrate?: boolean;
-  /** The revenue card's "View orders" jump (task 158) — omitted on every other metric. */
-  linkHref?: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-      <p className="text-sm font-medium text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">{value}</p>
-      <p
-        className={`mt-2 flex items-center gap-1.5 text-sm ${celebrate ? "text-success" : "text-muted"}`}
-      >
-        {celebrate ? (
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="size-4 shrink-0"
-          >
-            <path
-              fillRule="evenodd"
-              d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-3.5-3.5a1 1 0 1 1 1.4-1.4l2.8 2.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        ) : null}
-        {detail}
-      </p>
-      {linkHref && linkLabel ? (
-        <Link
-          href={linkHref}
-          className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-        >
-          {linkLabel}
-        </Link>
-      ) : null}
-    </div>
-  );
-}
 
 /**
  * A slim, labelled share bar — fill or waiver completion as a portion of a
@@ -353,7 +301,7 @@ export default async function ReportsPage({
             aria-label={t("reports.numbersLabel")}
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           >
-            <Metric
+            <ShopStat
               label={t("reports.metrics.revenueLabel")}
               value={formatReportMoney(report.revenueCents, currency, locale)}
               detail={t("reports.metrics.revenueDetail")}
@@ -367,17 +315,17 @@ export default async function ReportsPage({
               the month reconcile against the shop's Stripe dashboard, while
               "Revenue collected" keeps meaning what its detail line says.
             */}
-            <Metric
+            <ShopStat
               label={t("reports.metrics.tipsLabel")}
               value={formatReportMoney(report.tipsCents, currency, locale)}
               detail={t("reports.metrics.tipsDetail", { count: report.tipCount })}
             />
-            <Metric
+            <ShopStat
               label={t("reports.metrics.bookingsLabel")}
               value={String(report.seatsBooked)}
               detail={bookingsDetail}
             />
-            <Metric
+            <ShopStat
               label={t("reports.metrics.seatFillLabel")}
               value={formatPercent(report.fillRate)}
               detail={t("reports.metrics.seatFillDetail", {
@@ -386,7 +334,7 @@ export default async function ReportsPage({
                 count: report.atCapacityTrips,
               })}
             />
-            <Metric
+            <ShopStat
               label={t("reports.metrics.waiversLabel")}
               value={formatPercent(report.waiverCompletion)}
               celebrate={report.waiverCompletion === 1}
@@ -400,77 +348,67 @@ export default async function ReportsPage({
 
           <section aria-label={t("reports.tripsThisMonth")} className="mt-8">
             <h2 className="mb-3 text-lg font-semibold">{t("reports.tripsThisMonth")}</h2>
-            <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
-                    <th scope="col" className="px-4 py-3 font-semibold">
-                      {t("reports.table.trip")}
-                    </th>
-                    <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">
-                      {t("reports.table.seats")}
-                    </th>
-                    <th scope="col" className="px-4 py-3 font-semibold">
-                      {t("reports.table.fill")}
-                    </th>
-                    <th scope="col" className="px-4 py-3 font-semibold">
-                      {t("reports.table.waivers")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {trips.map((trip) => {
-                    const waiverRatio =
-                      trip.activeBookings > 0 ? trip.waiverComplete / trip.activeBookings : null;
-                    return (
-                      <tr key={trip.tripId}>
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
-                            className="font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {trip.title}
-                          </Link>
-                          <div className="text-xs text-muted">
-                            {formatShortDate(trip.startsAt, locale, tz)}
-                            {/* The raw ratio the Seats column carries on wider screens,
-                                folded in here so a phone never loses "70% of what?". */}
-                            <span className="tabular-nums sm:hidden">
-                              {" · "}
-                              {t("reports.seatsMobile", {
-                                booked: trip.activeBookings,
-                                capacity: trip.capacity,
-                              })}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="hidden px-4 py-3 tabular-nums text-muted sm:table-cell">
-                          {trip.activeBookings}/{trip.capacity}
-                        </td>
-                        <td className="px-4 py-3">
-                          <ShareBar
-                            ratio={tripFillRate(trip)}
-                            label={t("reports.fillLabel", {
+            <Table>
+              <THead>
+                <Th>{t("reports.table.trip")}</Th>
+                <Th numeric hideBelow="sm">
+                  {t("reports.table.seats")}
+                </Th>
+                <Th>{t("reports.table.fill")}</Th>
+                <Th>{t("reports.table.waivers")}</Th>
+              </THead>
+              <TBody>
+                {trips.map((trip) => {
+                  const waiverRatio =
+                    trip.activeBookings > 0 ? trip.waiverComplete / trip.activeBookings : null;
+                  return (
+                    <tr key={trip.tripId}>
+                      <Td>
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {trip.title}
+                        </Link>
+                        <div className="text-xs text-muted">
+                          {formatShortDate(trip.startsAt, locale, tz)}
+                          {/* The raw ratio the Seats column carries on wider screens,
+                              folded in here so a phone never loses "70% of what?". */}
+                          <span className="tabular-nums sm:hidden">
+                            {" · "}
+                            {t("reports.seatsMobile", {
                               booked: trip.activeBookings,
                               capacity: trip.capacity,
                             })}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <ShareBar
-                            ratio={waiverRatio}
-                            label={t("reports.waiversRowLabel", {
-                              complete: trip.waiverComplete,
-                              total: trip.activeBookings,
-                            })}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </span>
+                        </div>
+                      </Td>
+                      <Td numeric muted hideBelow="sm">
+                        {trip.activeBookings}/{trip.capacity}
+                      </Td>
+                      <Td>
+                        <ShareBar
+                          ratio={tripFillRate(trip)}
+                          label={t("reports.fillLabel", {
+                            booked: trip.activeBookings,
+                            capacity: trip.capacity,
+                          })}
+                        />
+                      </Td>
+                      <Td>
+                        <ShareBar
+                          ratio={waiverRatio}
+                          label={t("reports.waiversRowLabel", {
+                            complete: trip.waiverComplete,
+                            total: trip.activeBookings,
+                          })}
+                        />
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </TBody>
+            </Table>
             <Pager
               page={tripPage.page}
               pageCount={tripPage.pageCount}
