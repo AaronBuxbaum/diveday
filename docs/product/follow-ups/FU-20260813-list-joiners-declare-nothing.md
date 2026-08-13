@@ -59,11 +59,31 @@ version and told us whether they want it.
    `CERTIFICATION_LEVEL_KEYS` from `src/i18n/readiness-labels.ts`) plus a "nitrox certified"
    checkbox. Optional, both of them: a required question on a marketing opt-in costs more sign-ups
    than it saves mistakes, and a joiner who skips it simply shows as "not said".
-2. **Store it where the app already understands it.** Write a `pending` certification against the
-   resolved `people` row — the same state the staff "capture a card for review" path produces, so it
-   is already visibly unverified everywhere, already feeds readiness once a staffer verifies it, and
-   already travels through export and erasure. Do **not** add a parallel column on
-   `last_minute_list_entries`; the person is the right home, and both lists resolve to one.
+2. **Store it where the app already understands it — but mind three gaps in that plan.** The
+   intent is a `pending` certification against the resolved `people` row: the same state the staff
+   "capture a card for review" path produces, so it is visibly unverified everywhere, feeds
+   readiness once a staffer verifies it, and travels through export and erasure. Do **not** add a
+   parallel column on `last_minute_list_entries` — the person is the right home, and both lists
+   resolve to one. What the current schema does *not* give you, and what this step therefore has to
+   decide first:
+
+   - **`certifications` has no self-declared marker.** Its only provenance is `imported_at` /
+     `imported_from_label`, which means "came from a CSV a shop uploaded" — a different and more
+     trustworthy thing than "a stranger typed it into a marketing opt-in". Add an explicit
+     provenance value (a `source` column, or an `imported_from_label`-style marker with its own
+     word) so a staffer reading the row can tell the two apart. Without it, this feature quietly
+     launders a self-declaration into something that looks shop-supplied.
+   - **`identifier` is required and a joiner has no card number.** Decide what a level-only
+     declaration stores. Recommendation: make `identifier` nullable *for self-declared rows only*
+     (a check constraint keyed on the new provenance value), rather than writing a placeholder
+     string — a fake card number is worse than an absent one, and "PENDING" in a card-number column
+     will be read as a card number by somebody eventually.
+   - **`reviewAction` promotes any pending card to `verified` on one tap, with no card-sighting
+     step.** That is safe today because every pending card came from a staffer holding something.
+     A self-declared row would inherit that one tap. Gate it: a self-declared card must require the
+     staffer to enter the agency and card number they are looking at before it can be verified —
+     which is the same act as capturing a card, and is the point at which the diver's claim stops
+     being the evidence.
 3. **Show it to the human doing the sending.** The level, marked self-declared, beside each name in
    `LastMinuteDealSection`'s recipient count/preview and in `WaitlistSection`'s rows. This is the
    change that actually prevents the bad email.
@@ -92,11 +112,17 @@ Read first, in this order:
     src/app/shop/[shopSlug]/divers/[personId]/
   - the i18n-copy and e2e-and-visual skills
 
-The constraint that makes this non-obvious: DiveDay's admission gate reads VERIFIED certification
-cards, and a list joiner has none. Store what they declare as a `pending` card on their people row
-(the same state the staff "capture for review" path produces) and surface it to staff marked as
-self-declared. Do not filter the blast or the wait-list invite on it — informing, not gating, is
-deliberate here and is written up in the follow-up.
+The constraints that make this non-obvious:
+
+  1. DiveDay's admission gate reads VERIFIED certification cards, and a list joiner has none. Store
+     what they declare as a `pending` card on their people row and surface it to staff marked as
+     self-declared. Do NOT filter the blast or the wait-list invite on it — informing, not gating,
+     is deliberate here and is argued in the follow-up.
+  2. The `certifications` table is not shaped for this yet: it has no self-declared provenance (only
+     CSV-import provenance), `identifier` is NOT NULL and a joiner has no card number, and
+     `reviewAction` can promote any pending card to verified on one tap with no card-sighting step.
+     Read the follow-up's step 2 — all three have to be answered before a single row is written, or
+     the feature launders a stranger's typing into something that reads as shop-verified.
 
 Done means: both public join forms ask for a certification level and nitrox, both optional; the
 answer lands as a pending card on the person; the level shows, marked self-declared, beside each

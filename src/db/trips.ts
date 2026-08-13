@@ -42,11 +42,11 @@ export {
 } from "./trips-crew";
 export {
   cancelDeparturesBelowMinimum,
-  clearMinimumSeats,
   listDeparturesAwaitingMinimumDecision,
   listMinimumNotMetRecipients,
   MINIMUM_SEATS_SWEEP_LIMIT,
   type MinimumSeatsSweepResult,
+  reinstateTripClearingMinimum,
   type SweptDeparture,
 } from "./trips-minimum";
 export {

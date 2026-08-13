@@ -501,14 +501,21 @@ export default async function ManageTripPage({
           20260813-minimum-head-count-departures). Renders nothing on a trip
           with no minimum, or one that has met it — so on the great majority of
           departures the pulse is still the only thing between the header and
-          Details. */}
-      <MinimumSeatsBand
-        trip={trip}
-        booked={trip.booked}
-        locale={locale}
-        timeZone={shop.timezone}
-        t={t}
-      />
+          Details.
+
+          Gated on `pulseNeeded` for the same reason the pulse is: the band
+          classifies the *policy*, not the departure's lifecycle, so a cancelled
+          trip that never made its numbers would go on announcing that DiveDay
+          is about to cancel it — about a trip that is already off the board. */}
+      {pulseNeeded ? (
+        <MinimumSeatsBand
+          trip={trip}
+          booked={trip.booked}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
+      ) : null}
 
       {/* No "you're viewing this trip" notice for staff without configure
           rights. The editable sections simply aren't rendered, which is the

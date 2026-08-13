@@ -549,6 +549,20 @@ export function RosterSection({
              */
             const outstanding = (
               <>
+                {/* What the diver themselves asked for, in the open. It is
+                    the one line on this card they wrote, it only renders when
+                    they wrote one, and the crew forms buddy teams from it —
+                    filing a diver's own request behind a tap is the same
+                    mistake as leaving a desk note off the manifest. */}
+                {booking.groupPreference ? (
+                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+                    <span className="font-semibold text-foreground">
+                      {t("trips.roster.buddyGroupNote")}
+                    </span>{" "}
+                    {booking.groupPreference}
+                  </p>
+                ) : null}
+
                 {readiness && readiness.status !== "ready" ? (
                   <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
                     {readiness.blockers.map((blocker) => (
@@ -790,15 +804,6 @@ export function RosterSection({
              */
             const reference = (
               <>
-                {booking.groupPreference ? (
-                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-                    <span className="font-semibold text-foreground">
-                      {t("trips.roster.buddyGroupNote")}
-                    </span>{" "}
-                    {booking.groupPreference}
-                  </p>
-                ) : null}
-
                 <div className="mt-3 grid gap-5 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold tracking-widest text-muted uppercase">

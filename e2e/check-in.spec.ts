@@ -97,9 +97,10 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // No email was collected, so no waiver could be mailed — and the notice says
   // so rather than implying one is on its way. This is the *ordinary* counter
   // outcome, not an edge case: the diver is seated and the link is still owed.
-  // The banner rather than the query param — `?notice=` is one-shot here
-  // (`FlashParams`), so it is mid-erase by the time this reads it.
-  await expect(page).toHaveURL(/\/check-in(\?|$)/);
+  // The bare queue URL, asserted rather than a `?notice=` this page erases:
+  // `toHaveURL` retries, so this waits for `FlashParams` to strip the code and
+  // proves it actually did — a looser pattern would pass either way.
+  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
   await expect(
     page.getByText("Added to this boat’s list — but their waiver wasn’t emailed."),
   ).toBeVisible();
@@ -145,10 +146,10 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
-  // Landed back on the queue. Not `?notice=walkin_full`: the code is one-shot
-  // (`FlashParams`), so asserting it races the erase — the banner below is the
-  // contract, and it is the thing a person actually reads.
-  await expect(page).toHaveURL(/\/check-in(\?|$)/);
+  // Landed back on the bare queue URL: the `walkin_full` code is one-shot
+  // (`FlashParams`), and this asserts it was actually stripped rather than
+  // merely tolerating either state.
+  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".

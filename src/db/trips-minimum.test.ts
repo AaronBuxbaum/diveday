@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { getTripWithBooked, setTripStatus } from "./trips";
+import { getTripWithBooked } from "./trips";
 import { createTrip } from "./trips-create";
 import {
   cancelDeparturesBelowMinimum,
-  clearMinimumSeats,
   listDeparturesAwaitingMinimumDecision,
   listMinimumNotMetRecipients,
+  reinstateTripClearingMinimum,
 } from "./trips-minimum";
 
 /**
@@ -208,6 +208,33 @@ describe("cancelDeparturesBelowMinimum", () => {
     expect(recipients[0]?.email).toBe("hana-told@example.test");
   });
 
+  /**
+   * The race a conditional `UPDATE` exists to close: a seat sells between the
+   * pass listing this departure and cancelling it. The seat has to win — the
+   * boat now makes its numbers, and cancelling it would take a paying diver's
+   * seat away over a count that was true a moment ago.
+   */
+  it("leaves a departure alone when the seat that saves it sells mid-pass", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await departure(db, shop.id, {
+      startsAt: TOMORROW,
+      minimumBookings: 2,
+      title: "Saved at the buzzer",
+    });
+    await seat(db, shop.id, trip.id, "Ivy Early");
+
+    // Exactly what the pass holds after listing: one seat short.
+    const due = await listDeparturesAwaitingMinimumDecision(db, { now: NOW });
+    expect(due.map((row) => row.tripId)).toContain(trip.id);
+
+    // …and then the second diver books, before the write lands.
+    await seat(db, shop.id, trip.id, "Jonas Late");
+
+    const result = await cancelDeparturesBelowMinimum(db, { now: NOW });
+    expect(result.cancelled.map((row) => row.tripId)).not.toContain(trip.id);
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.status).toBe("scheduled");
+  });
+
   /** A second tick must not re-cancel, re-report, or re-email anybody. */
   it("is a no-op on a second pass", async () => {
     const { db, shop } = await seededShopContext();
@@ -229,8 +256,7 @@ describe("cancelDeparturesBelowMinimum", () => {
     const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Run it anyway" });
     await cancelDeparturesBelowMinimum(db, { now: NOW });
 
-    await clearMinimumSeats(db, shop.id, trip.id);
-    await setTripStatus(db, shop.id, trip.id, "scheduled");
+    await reinstateTripClearingMinimum(db, shop.id, trip.id);
 
     const again = await cancelDeparturesBelowMinimum(db, { now: NOW });
     expect(again.cancelled.map((row) => row.tripId)).not.toContain(trip.id);

@@ -95,6 +95,14 @@ export async function listDeparturesAwaitingMinimumDecision(
       ),
     )
     .groupBy(trips.id, shops.id)
+    // **Short, in SQL.** The below-minimum test has to run before `limit`, not
+    // after it: filtering in TypeScript meant the cap counted departures that
+    // had already filled, so a shop whose first 200 due departures all made
+    // their numbers would have the 201st — a genuinely short one — silently
+    // skipped, and `deferred` would report 0 while doing it. `least(...)` is
+    // `effectiveMinimum`'s clamp said in SQL; the two are asserted against each
+    // other in this file's tests.
+    .having(sql`count(${bookings.id}) < least(${trips.minimumBookings}, ${trips.capacity})`)
     // Oldest deadline first, so a capped pass always clears the departures
     // whose divers have been waiting longest for an answer.
     .orderBy(asc(trips.startsAt))
@@ -108,6 +116,8 @@ export async function listDeparturesAwaitingMinimumDecision(
       },
       row.capacity,
     );
+    // Belt and braces: `having` above has already excluded these, so this is a
+    // type narrowing rather than a second opinion.
     if (minimum === null || row.booked >= minimum) return [];
     return [
       {
@@ -132,13 +142,26 @@ export async function listDeparturesAwaitingMinimumDecision(
  * reason `bookSpot` does not send the confirmation: a write that also sends
  * mail cannot be tested, retried, or reasoned about as one thing.
  *
- * Each cancellation is its own conditional update rather than one bulk
- * statement, and the condition re-states `status = 'scheduled'`: between the
- * read above and this write, a staffer may have cancelled the departure by
- * hand or a diver may have booked the seat that saves it. The status guard
- * makes the first case a no-op; the booked count is deliberately *not*
- * re-checked, because a seat sold in that window is a race the shop should win
- * — so the pass re-reads the count immediately before writing.
+ * **The whole rule rides on the `UPDATE` itself.** Every reason not to cancel
+ * — the departure is no longer scheduled, its minimum has been cleared, a seat
+ * sold that saves it — is a `WHERE` clause here rather than a check performed
+ * before the write, so there is no window between deciding and doing. The
+ * three races that closes are all real and all lose a shop something:
+ *
+ *  - **A seat sells.** The subquery counts active bookings inside the same
+ *    statement, so a booking that commits first makes this a no-op rather than
+ *    cancelling a departure that had just made its numbers.
+ *  - **Staff cancel by hand.** `status = 'scheduled'` makes it a no-op.
+ *  - **Staff reinstate.** Reinstating clears the minimum in the same statement
+ *    that sets the status (`reinstateTripAction`), and `minimum_bookings is not
+ *    null` here means a pass already in flight cannot cancel it straight back
+ *    out from under them.
+ *
+ * This is deliberately *not* a `SELECT … FOR UPDATE` around a read-then-write:
+ * that would need the booking path to take the same lock to mean anything, and
+ * putting a new lock on `bookSpot` — the money- and capacity-critical
+ * transaction — to protect a once-an-hour sweep is the wrong trade. One
+ * conditional statement needs no lock at all.
  */
 export async function cancelDeparturesBelowMinimum(
   db: AppDb,
@@ -146,24 +169,29 @@ export async function cancelDeparturesBelowMinimum(
 ): Promise<MinimumSeatsSweepResult> {
   const due = await listDeparturesAwaitingMinimumDecision(db, { now, limit });
   const deferred = Math.max(0, due.length - limit);
+  const considered = due.length - deferred;
   const cancelled: SweptDeparture[] = [];
 
   for (const departure of due.slice(0, limit)) {
-    const [{ booked }] = await db
-      .select({ booked: count(bookings.id) })
-      .from(bookings)
-      .where(and(eq(bookings.tripId, departure.tripId), ne(bookings.status, "cancelled")));
-    if (booked >= departure.minimum) continue;
-
     const [row] = await db
       .update(trips)
       .set({ status: "cancelled" })
-      .where(and(eq(trips.id, departure.tripId), eq(trips.status, "scheduled")))
+      .where(
+        and(
+          eq(trips.id, departure.tripId),
+          eq(trips.status, "scheduled"),
+          isNotNull(trips.minimumBookings),
+          sql`(
+            select count(*) from ${bookings}
+            where ${bookings.tripId} = ${trips.id} and ${bookings.status} <> 'cancelled'
+          ) < least(${trips.minimumBookings}, ${trips.capacity})`,
+        ),
+      )
       .returning({ id: trips.id });
-    if (row) cancelled.push({ ...departure, booked });
+    if (row) cancelled.push(departure);
   }
 
-  return { considered: due.length - deferred, cancelled, deferred };
+  return { considered, cancelled, deferred };
 }
 
 /**
@@ -196,14 +224,25 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
 }
 
 /**
- * Clear a departure's minimum. Called when staff reinstate a trip the sweep
- * took off the board: without this the next pass would cancel it again inside
- * the hour, and the shop would be arguing with a cron job. Reinstating *is* the
- * shop saying "run it anyway", so the promise the minimum encoded is spent.
+ * Put a departure back on the board **and** spend its minimum, in one
+ * statement.
+ *
+ * Reinstating *is* the shop saying "run it anyway", so the promise the minimum
+ * encoded is over — without clearing it the next hourly pass would cancel the
+ * trip again and the shop would be arguing with a cron job.
+ *
+ * The two writes are one `UPDATE` rather than a status flip followed by a
+ * clear, because between those two statements the departure is `scheduled`
+ * with its minimum still set and still short — which is precisely what the
+ * sweep looks for. A pass landing in that gap would cancel the trip a staffer
+ * had just reinstated, and the clear would then arrive to tidy up a departure
+ * that was cancelled again.
  */
-export async function clearMinimumSeats(db: AppDb, shopId: string, tripId: string) {
-  await db
+export async function reinstateTripClearingMinimum(db: AppDb, shopId: string, tripId: string) {
+  const [trip] = await db
     .update(trips)
-    .set({ minimumBookings: null, minimumDecisionHours: null })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    .set({ status: "scheduled", minimumBookings: null, minimumDecisionHours: null })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .returning();
+  return trip ?? null;
 }

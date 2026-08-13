@@ -27,9 +27,9 @@ import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
   changeTripCrew,
-  clearMinimumSeats,
   getTripWithBooked,
   listTripDiverContacts,
+  reinstateTripClearingMinimum,
   setSeriesRepeat,
   setTripStatus,
   type TripCrewChange,
@@ -380,15 +380,15 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
 export async function reinstateTripAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const db = await getDb();
-  await setTripStatus(db, s.user.shopId, tripId, "scheduled");
-  // Putting a departure back **is** the shop saying "run it anyway", so the
-  // minimum it was cancelled under is spent. Without this the hourly sweep
-  // would cancel it again within the hour and the shop would be arguing with a
-  // cron job (ADR 20260813-minimum-head-count-departures). Unconditional: a
-  // trip reinstated after an ordinary cancellation had no minimum to clear, so
-  // this is a no-op there rather than a branch.
-  await clearMinimumSeats(db, s.user.shopId, tripId);
+  // Status and minimum in one statement. Putting a departure back **is** the
+  // shop saying "run it anyway", so the minimum it was cancelled under is
+  // spent — and the two writes cannot be separate, or a sweep landing between
+  // them would see a scheduled, still-short departure carrying its old minimum
+  // and cancel it straight back out from under the staffer (ADR
+  // 20260813-minimum-head-count-departures). A trip reinstated after an
+  // ordinary cancellation had no minimum to clear, so this is the same
+  // statement either way rather than a branch.
+  await reinstateTripClearingMinimum(await getDb(), s.user.shopId, tripId);
   revalidateAndRedirect(back, `${back}?notice=reinstated`);
 }
 

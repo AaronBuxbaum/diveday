@@ -30,6 +30,13 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
   await expect(header.getByRole("button", { name: "Change language" })).toContainText("English");
 
   await header.getByRole("button", { name: "Change language" }).click();
+  // The language in force is *in* the list, marked. Without this a regression
+  // that went back to filtering it out would still pass every other assertion
+  // here — the alternative stays selectable in both directions either way.
+  await expect(header.getByRole("button", { name: "English" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   await header.getByRole("button", { name: "Español" }).click();
 
   // The words change; the address does not.
@@ -45,6 +52,10 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
   // …and back, from the same control, which offers every language either way
   // round rather than only the other one.
   await page.getByRole("banner").getByRole("button", { name: "Cambiar de idioma" }).click();
+  await expect(page.getByRole("banner").getByRole("button", { name: "Español" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   await page.getByRole("banner").getByRole("button", { name: "English" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
 });

@@ -75,7 +75,7 @@ export async function seedMinimumSeats(
       diveSiteId: site.id,
       title: DEMO_MINIMUM_TRIP,
       description:
-        "A full day offshore. We run this one with at least six divers aboard — if it hasn't filled two days out, we call it off and let everyone know.",
+        "A long day offshore. We run this one with at least six divers aboard — if it hasn't filled two days out, we call it off and let everyone know.",
       startsAt,
       endsAt,
       capacity: 8,
