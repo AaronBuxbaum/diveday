@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { JsonLd } from "@/components/JsonLd";
+import { JumpNav } from "@/components/JumpNav";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
@@ -29,7 +30,6 @@ import {
   CourseOverview,
   CourseSchedule,
   CourseSessions,
-  CourseSpecs,
 } from "./_components/CourseSections";
 import { submitCourseInquiryAction } from "./actions";
 
@@ -108,11 +108,25 @@ export default async function CoursePage({
     : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and
   // belong to CourseAdmission, which is the one place a diver reads them.
-  const specs = [
+  const facts = [
     course.durationText ? { label: t("course.duration"), value: course.durationText } : null,
     course.groupSizeText ? { label: t("course.groupSize"), value: course.groupSizeText } : null,
-  ].filter((spec) => spec !== null);
+  ].filter((fact) => fact !== null);
   const inquiryHref = shop.contactEmail ? "#get-in-touch" : null;
+
+  // The one way down a long page (the same grammar Settings and the diver
+  // record wear) — only the sections this course actually renders, in page
+  // order, so a half-written page never promises an anchor with nothing at it.
+  const jumpItems = [
+    course.overview?.trim() ? { id: "about", label: t("course.jumpAbout") } : null,
+    course.scheduleDays.length > 0 ? { id: "how-it-runs", label: t("course.jumpSchedule") } : null,
+    course.includes.length > 0 || course.excludes.length > 0
+      ? { id: "included", label: t("course.jumpIncluded") }
+      : null,
+    { id: "dates", label: t("course.jumpDates") },
+    course.faqs.length > 0 ? { id: "faqs", label: t("course.jumpQuestions") } : null,
+    inquiryHref ? { id: "get-in-touch", label: t("course.jumpContact") } : null,
+  ].filter((item) => item !== null);
 
   // A hidden course is a staff preview, not a public document — emitting a
   // Course graph for a page divers cannot reach would advertise something that
@@ -159,15 +173,18 @@ export default async function CoursePage({
         currency={toShopCurrency(shop.currency)}
         locale={locale}
         t={t}
+        facts={facts}
       />
-      <CourseSpecs items={specs} label={t("course.atAGlance")} />
       <CourseAdmission
         certificationRequired={certificationRequired}
         minimumAge={course.minimumAge}
         shopNote={course.prerequisiteNote}
         t={t}
       />
-      <CourseOverview overview={course.overview} />
+      {jumpItems.length > 1 ? (
+        <JumpNav ariaLabel={t("course.onThisPage")} items={jumpItems} className="mt-10" />
+      ) : null}
+      <CourseOverview overview={course.overview} t={t} />
       <CourseGallery photos={course.galleryPhotos} title={course.title} t={t} />
       <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />

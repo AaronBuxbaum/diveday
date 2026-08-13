@@ -345,9 +345,6 @@
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",
-    "certification": "Titulación",
-    "minimumAge": "Edad mínima",
-    "minimumAgeYears": "{age} años",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
     "galleryHeading": "Fotos del curso {course}",
@@ -373,7 +370,19 @@
       "rescue": "Buceador de Rescate",
       "divemaster": "Divemaster",
       "instructor": "Instructor"
-    }
+    },
+    "aboutHeading": "Sobre el curso",
+    "onThisPage": "En esta página",
+    "jumpAbout": "El curso",
+    "jumpSchedule": "Día a día",
+    "jumpIncluded": "Qué incluye",
+    "jumpDates": "Fechas",
+    "jumpQuestions": "Preguntas",
+    "jumpContact": "Contacto",
+    "nextDate": "Próxima fecha",
+    "nextOpenDate": "Próxima fecha disponible",
+    "moreDates": "Más fechas",
+    "agesAndUp": "A partir de {age} años"
   },
   "courses": {
     "index": {
@@ -382,7 +391,8 @@
       "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
       "agencyTabsLabel": "Ver cursos por agencia",
       "noCoursesHeading": "Todavía no hay cursos publicados",
-      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida."
+      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
+      "requires": "Requiere {level} o superior"
     }
   },
   "reviews": {
