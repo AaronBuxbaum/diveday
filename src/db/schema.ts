@@ -959,9 +959,14 @@ export const globalDiveSiteVersions = pgTable(
 );
 
 /**
- * Visual, educational field-card content a shop can tailor after import — the
- * site's own field guide, written and reordered on the dive-site form
+ * Which species a dive site's field guide shows, and in what order — the site's
+ * own selection from DiveDay's catalog, chosen on the dive-site form
  * (`src/lib/dive-site-field-guide.ts`).
+ *
+ * A row is a slug and a position. Every word a person reads off it comes from
+ * `marineLife.*` in *their* language, resolved at render by
+ * `src/i18n/marine-life-labels.ts` — so one saved briefing reads in English to
+ * one diver and in Spanish to the next (ADR 20260813-marine-life-is-diveday-copy).
  */
 export const diveSiteCreatures = pgTable(
   "dive_site_creatures",
@@ -974,14 +979,22 @@ export const diveSiteCreatures = pgTable(
       .notNull()
       .references(() => diveSites.id),
     /**
-     * The DiveDay catalog entry this was copied from, or null for a species a
-     * shop typed itself. Provenance only — nothing is looked up through it at
-     * render time, because the words on this row are the shop's the moment it
-     * lands and a later catalog edit must never rewrite them.
+     * Which species this is: a `MARINE_LIFE_CATALOG` slug, and the key its
+     * words are held under in every locale's bundle. Nullable in the column
+     * only because rows written before the catalog became app copy could name a
+     * species a shop had typed itself; a row with no slug has no words and is
+     * skipped by every reader (`fieldGuideCards`). Nothing writes null now.
      */
     catalogSlug: text("catalog_slug"),
-    name: text("name").notNull(),
-    kind: text("kind").notNull(),
+    /**
+     * Legacy: the shop's own copy of a species' words, written by releases up
+     * to 2026-08-13 and read by nothing since. Kept for one release because the
+     * migration lands while the previous deployment is still serving and still
+     * selecting them (ADR 20260806-destructive-migration-guard); the follow-up
+     * register carries the drop.
+     */
+    name: text("name"),
+    kind: text("kind"),
     imageUrl: text("image_url"),
     description: text("description"),
     preparationTip: text("preparation_tip"),

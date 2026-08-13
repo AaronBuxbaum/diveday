@@ -12,6 +12,8 @@
  */
 
 import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
 import {
   type CalendarDate,
@@ -186,6 +188,13 @@ export async function loadShopExportBundleInput(
           asc(diveSiteCreatures.position),
           asc(diveSiteCreatures.id),
         );
+
+      const cardById = new Map(
+        fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => [
+          card.id,
+          card,
+        ]),
+      );
 
       const momentRows = await tx
         .select()
@@ -1835,18 +1844,35 @@ export async function loadShopExportBundleInput(
             "image_url",
             "catalog_slug",
           ],
-          rows: creatureRows.map((row) => [
-            row.id,
-            row.diveSiteId,
-            siteName.get(row.diveSiteId),
-            row.position,
-            row.name,
-            row.kind,
-            row.description,
-            row.preparationTip,
-            row.imageUrl,
-            row.catalogSlug,
-          ]),
+          // A row stores a catalog slug and a position; the words are
+          // DiveDay's and belong to no row (ADR
+          // 20260813-marine-life-is-diveday-copy). They are resolved here in
+          // the shop's own default language rather than left blank, because a
+          // bundle of ninety-three slugs is not a thing a person can read, and
+          // this file is what a shop opens in a spreadsheet. `catalog_slug` is
+          // the column to reconcile against; the rest is a rendering.
+          //
+          // Iterated over the *rows* rather than over the resolved cards, so a
+          // row DiveDay has no words for still appears with its id, its site
+          // and its position. The briefing skips such a row; an export must
+          // not. A shop's data-out bundle is the one place where "we dropped
+          // something and said nothing" is the worst possible behaviour --
+          // this file is what a shop reconciles against when it leaves.
+          rows: creatureRows.map((row) => {
+            const card = cardById.get(row.id);
+            return [
+              row.id,
+              row.diveSiteId,
+              siteName.get(row.diveSiteId),
+              row.position,
+              card?.name,
+              card?.kind,
+              card?.description,
+              card?.preparationTip,
+              card?.imageUrl,
+              row.catalogSlug,
+            ];
+          }),
           note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
         },
         {

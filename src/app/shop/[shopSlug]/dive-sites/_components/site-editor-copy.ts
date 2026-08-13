@@ -1,4 +1,5 @@
-import { MARINE_LIFE_CATALOG, marineLifeImage } from "@/db/marine-life-catalog";
+import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
+import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import { MAX_SITE_LANDMARKS } from "@/lib/dive-site-landmarks";
@@ -55,16 +56,9 @@ export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
     searchLabel: t("diveSites.form.fieldGuide.searchLabel"),
     searchPlaceholder: t("diveSites.form.fieldGuide.searchPlaceholder"),
     add: t("diveSites.form.fieldGuide.add"),
-    addBlank: t("diveSites.form.fieldGuide.addBlank"),
     empty: t("diveSites.form.fieldGuide.empty"),
     full: t("diveSites.form.fieldGuide.full", { max: MAX_SITE_CREATURES }),
     notFound: t("diveSites.form.fieldGuide.notFound"),
-    nameLabel: t("diveSites.form.fieldGuide.nameLabel"),
-    kindLabel: t("diveSites.form.fieldGuide.kindLabel"),
-    kindPlaceholder: t("diveSites.form.fieldGuide.kindPlaceholder"),
-    descriptionLabel: t("diveSites.form.fieldGuide.descriptionLabel"),
-    tipLabel: t("diveSites.form.fieldGuide.tipLabel"),
-    tipPlaceholder: t("diveSites.form.fieldGuide.tipPlaceholder"),
     remove: t("diveSites.form.fieldGuide.remove"),
     removeAriaLabel: t("diveSites.form.fieldGuide.removeAriaLabel", { name: NAME_TOKEN }),
     moveUp: t("diveSites.form.fieldGuide.moveUp"),
@@ -75,7 +69,13 @@ export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
 }
 
 /**
- * DiveDay's species catalog, flattened for the picker's `<datalist>`.
+ * DiveDay's species catalog, resolved and flattened for the picker's
+ * `<datalist>`.
+ *
+ * The **diver** translator, on a staff form, deliberately: this list is a
+ * preview of what a diver will read, so showing the staffer different words
+ * than the briefing renders would be the bug. Both dive-site pages already
+ * resolve `requestLocale()`, so the staffer sees it in their own language.
  *
  * The whole catalog rides to the browser — 93 short records, well under the
  * weight of one of the photos on this same form — because a `<datalist>` is a
@@ -83,14 +83,13 @@ export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
  * per keystroke would trade that for a round trip and a spinner on a
  * configure-once form.
  */
-export function marineLifeCatalogEntries(): FieldGuideCatalogEntry[] {
-  return MARINE_LIFE_CATALOG.map((species) => ({
-    slug: species.slug,
-    name: species.name,
-    scientificName: species.scientificName,
-    kind: species.kind,
-    description: species.description,
-    preparationTip: species.preparationTip,
-    imageUrl: marineLifeImage(species.slug),
+export function marineLifeCatalogEntries(t: DiverTranslator): FieldGuideCatalogEntry[] {
+  return marineLifeCatalogCards(t).map((card) => ({
+    slug: card.slug,
+    name: card.name,
+    scientificName: card.scientificName,
+    kind: card.kind,
+    description: card.description,
+    imageUrl: card.imageUrl,
   }));
 }

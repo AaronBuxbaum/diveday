@@ -25,6 +25,7 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -633,7 +634,10 @@ export default async function DiverReadinessPage({
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
     dive,
     diveSite,
-    creatures: diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+    creatures: fieldGuideCards(
+      diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
+      t,
+    ),
     moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
   }));
   // Dive 1 first, in the dive plan's own order: where a site names its own

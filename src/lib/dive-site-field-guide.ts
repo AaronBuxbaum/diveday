@@ -1,33 +1,24 @@
 /**
  * The faces a diver might meet at one site — the site's own field guide.
  *
- * These rows (`dive_site_creatures`) existed from the start and had no way in:
- * the seed wrote them and no staff surface could add, edit, or remove one, so a
- * real shop's briefing had a field guide only if DiveDay had happened to write
- * it. This module is the shape the site form now posts, and the same shape a
- * DiveDay template carries into a shop's library on import.
+ * A field guide is a **selection**: which species from DiveDay's catalog this
+ * site shows, and in what order. Nothing here is a word. The shop chooses the
+ * faces; the sentences under them come from `marineLife.*` in the reader's own
+ * language, resolved at render by `src/i18n/marine-life-labels.ts` (ADR
+ * 20260813-marine-life-is-diveday-copy).
  *
- * Everything here is the *shop's* copy once it lands — a name, a category
- * word, a sentence, and a tip, all rendered as typed. The DiveDay catalog
- * (`src/db/marine-life-catalog.ts`) is only where a shop starts: picking a
- * species copies its words onto the site, and the shop edits them from there.
- * That is why `kind` is free text here and a code in `dive-site-landmarks.ts` —
- * "juvenile reef fish" is a category a shop invents, not one DiveDay enumerates.
+ * Until that ADR the rows carried a name, a category word, a sentence and a tip
+ * the shop had typed, copied out of the catalog at pick time. That made the
+ * guide the shop's own words, which was the point — and it also meant a
+ * Spanish-speaking shop that took DiveDay's starting text and saved it, as most
+ * did, published an English field guide inside a Spanish briefing, with no way
+ * to have both languages from one row.
+ *
+ * `MAX_SITE_CREATURES` and the ordering are unchanged; what left is the text.
  */
 
+import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
 import { safeJson } from "./safe-json";
-
-export type DiveSiteCreature = {
-  /** The catalog entry this started from, or empty for a species typed by hand. */
-  slug: string;
-  name: string;
-  kind: string;
-  description: string;
-  /** How to actually see it — the lines the briefing's "slow down" aside collects. */
-  preparationTip: string;
-  /** A bundled catalog image, or a photo the shop uploaded. Empty renders an initial. */
-  imageUrl: string;
-};
 
 /**
  * The most species one site's guide may hold. Eight fills two rows of the
@@ -36,47 +27,42 @@ export type DiveSiteCreature = {
  */
 export const MAX_SITE_CREATURES = 8;
 
-const MAX_NAME = 80;
-const MAX_KIND = 40;
-const MAX_DESCRIPTION = 240;
-const MAX_TIP = 240;
-const MAX_IMAGE_URL = 512;
-
-function text(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
 /**
- * Species from anywhere untrusted — the form's hidden JSON input, a template's
- * briefing blob, a row written by an older build — reduced to what every
- * renderer can assume. Never throws; an entry with no name is dropped, and an
- * empty guide is a first-class answer (a site the shop has nothing to say about
- * yet is the ordinary case, and the briefing reads fine in that state).
+ * A posted field guide from anywhere untrusted — the form's hidden JSON input,
+ * a template's briefing blob, a row written by an older build — reduced to what
+ * every renderer can assume: catalog slugs the app has words for, in order,
+ * without repeats, at most `MAX_SITE_CREATURES` of them.
  *
- * `imageUrl` is kept only when it is a same-origin path. A briefing must never
- * make a live request to a host a staffer chose (CR-020) — the site gallery
- * solved that by uploading rather than pasting, and this is the same rule for
- * the same reason.
+ * Never throws, and an empty guide is a first-class answer — a site the shop
+ * has nothing to say about yet is the ordinary case, and the briefing reads
+ * fine in that state.
+ *
+ * **A slug the catalog does not carry is dropped, not stored.** That is the
+ * whole safety property of the selection model: past this function every stored
+ * row is one the bundles are known to have three strings for, in every locale,
+ * so nothing downstream can render a slug at a diver. It also closes what used
+ * to be an injection surface — this input carried four free-text fields that
+ * landed on a public page.
  */
-export function parseDiveSiteCreatures(raw: unknown): DiveSiteCreature[] {
+export function parseFieldGuideSelection(raw: unknown): MarineLifeSlug[] {
   const list = typeof raw === "string" ? safeJson(raw) : raw;
   if (!Array.isArray(list)) return [];
-  const creatures: DiveSiteCreature[] = [];
+  const slugs: MarineLifeSlug[] = [];
   for (const entry of list) {
-    if (creatures.length >= MAX_SITE_CREATURES) break;
-    if (typeof entry !== "object" || entry === null) continue;
-    const record = entry as Record<string, unknown>;
-    const name = text(record.name, MAX_NAME);
-    if (!name) continue;
-    const imageUrl = text(record.imageUrl, MAX_IMAGE_URL);
-    creatures.push({
-      slug: text(record.slug, MAX_NAME),
-      name,
-      kind: text(record.kind, MAX_KIND),
-      description: text(record.description, MAX_DESCRIPTION),
-      preparationTip: text(record.preparationTip, MAX_TIP),
-      imageUrl: imageUrl.startsWith("/") ? imageUrl : "",
-    });
+    if (slugs.length >= MAX_SITE_CREATURES) break;
+    // Tolerates both shapes the form and the templates have posted: a bare
+    // slug string, and the `{ slug, name, … }` object the pre-selection editor
+    // sent. The words on the old shape are ignored, which is the migration.
+    const value =
+      typeof entry === "string"
+        ? entry
+        : typeof entry === "object" && entry !== null
+          ? (entry as Record<string, unknown>).slug
+          : undefined;
+    if (typeof value !== "string") continue;
+    const slug = value.trim();
+    if (!isMarineLifeSlug(slug) || slugs.includes(slug)) continue;
+    slugs.push(slug);
   }
-  return creatures;
+  return slugs;
 }

@@ -19,6 +19,7 @@ import {
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -85,6 +86,10 @@ export default async function EditDiveSitePage({
   if (!site) notFound();
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
+  // The species picker previews what a *diver* will read off this site's
+  // briefing, so its words come from the diver bundle -- in the staffer's own
+  // language, resolved from the same locale.
+  const diverT = diverTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
   // Both params are attacker-supplied. The ternaries these replace also had a
   // second problem: their `else` branch meant *any* `?notice=` value at all —
@@ -310,19 +315,12 @@ export default async function EditDiveSitePage({
             // raw: a row written before landmarks carried notes holds plain
             // strings, and the guide lives in its own table.
             landmarks: parseDiveSiteLandmarks(site.landmarks),
-            creatures: creatures.map((creature) => ({
-              slug: creature.catalogSlug ?? "",
-              name: creature.name,
-              kind: creature.kind,
-              description: creature.description ?? "",
-              preparationTip: creature.preparationTip ?? "",
-              imageUrl: creature.imageUrl ?? "",
-            })),
+            creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
           }}
           routeCopy={routeEditorCopy(t)}
           landmarkCopy={landmarkEditorCopy(t)}
           fieldGuideCopy={fieldGuideEditorCopy(t)}
-          marineLifeCatalog={marineLifeCatalogEntries()}
+          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
           certificationDescription={t("diveSites.edit.certificationDescription")}
           requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
         />

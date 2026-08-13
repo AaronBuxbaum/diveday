@@ -1,9 +1,10 @@
 import type { getBookingForTrip } from "@/db/bookings";
-import type { listDiveSiteCreatures, listPublishedDiveSiteMoments } from "@/db/dive-sites";
+import type { listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { getShopBySlug } from "@/db/shops";
 import type { getTripWithBooked, listTripDives, listTripScheduleDays } from "@/db/trips";
+import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey } from "@/i18n/messages";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
 
@@ -20,7 +21,13 @@ export type RentalFit = DiverRentalFit | null;
 export type AutomatedForecast = Awaited<ReturnType<typeof fetchAutomatedMarineForecast>>;
 
 export type DiveBriefing = TripDive & {
-  creatures: Awaited<ReturnType<typeof listDiveSiteCreatures>>;
+  /**
+   * The site's field guide, already resolved into the reader's language. Rows
+   * store a catalog slug; the words are DiveDay's and are looked up per render
+   * (ADR 20260813-marine-life-is-diveday-copy), so the page resolves them once
+   * where the locale is known rather than handing raw rows down.
+   */
+  creatures: (MarineLifeCard & { id: string })[];
   moments: Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>;
 };
 

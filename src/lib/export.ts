@@ -94,7 +94,8 @@ export const EXPORT_FILE_NOTES = {
     "Crew tips a diver started from their post-trip recap page, with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's. Only status 'paid' is real revenue; pending and expired rows are unfinished attempts.",
   "dive_sites.csv":
     "The shop's dive-site library, archived sites included. Image links stay readable while the DiveDay account is active.",
-  "dive_site_creatures.csv": "The field-guide creatures attached to each dive site.",
+  "dive_site_creatures.csv":
+    "Which species each dive site's field guide shows, in order. catalog_slug is the record; the name, category, description and tip are DiveDay's own words, rendered here in your shop's default language.",
   "dive_site_moments.csv":
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":

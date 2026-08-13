@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { createDiveSite } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
@@ -58,7 +59,12 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const { shopSlug } = await params;
   const back = `/shop/${shopSlug}/dive-sites`;
   const shop = await getShopById(await getDb(), session.user.shopId);
-  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
+  // The species picker previews what a *diver* will read off this site's
+  // briefing, so its words come from the diver bundle -- in the staffer's own
+  // language, resolved from the same locale.
+  const diverT = diverTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
 
   async function createAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
@@ -155,7 +161,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           routeCopy={routeEditorCopy(t)}
           landmarkCopy={landmarkEditorCopy(t)}
           fieldGuideCopy={fieldGuideEditorCopy(t)}
-          marineLifeCatalog={marineLifeCatalogEntries()}
+          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
           certificationDescription={t("diveSites.new.certificationDescription")}
         />
         <SubmitButton

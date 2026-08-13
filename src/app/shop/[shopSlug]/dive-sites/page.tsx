@@ -22,8 +22,10 @@ import {
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
-import { MARINE_LIFE_BY_SLUG, marineLifeImage } from "@/db/marine-life-catalog";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { getShopById } from "@/db/shops";
+import { marineLifeCard } from "@/i18n/marine-life-labels";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -68,7 +70,11 @@ export default async function DiveSitesPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
+  // A template's field guide is diver copy, so the catalog preview reads it
+  // through the diver bundle -- in the staffer's own language, same locale.
+  const diverT = diverTranslator(locale);
 
   // The published site catalog re-sorts nothing of the library's own evidence
   // — it is DiveDay's own dataset — but it was reachable from exactly two
@@ -76,7 +82,7 @@ export default async function DiveSitesPage({
   // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
   // one route, a `?view=` switch, and a 308 from the URL it used to own.
   if (view === "catalog") {
-    return <CatalogView shopSlug={shopSlug} t={t} page={page} slug={template} />;
+    return <CatalogView shopSlug={shopSlug} t={t} diverT={diverT} page={page} slug={template} />;
   }
 
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
@@ -341,11 +347,13 @@ export default async function DiveSitesPage({
 async function CatalogView({
   shopSlug,
   t,
+  diverT,
   page,
   slug,
 }: {
   shopSlug: string;
   t: StaffTranslator;
+  diverT: DiverTranslator;
   page?: string;
   /** A template to open in full before deciding — `?view=catalog&template=<slug>`. */
   slug?: string;
@@ -380,6 +388,7 @@ async function CatalogView({
         backHref={catalogHref}
         importAction={importAction}
         t={t}
+        diverT={diverT}
       />
     );
   }
@@ -462,18 +471,22 @@ function TemplatePreview({
   backHref,
   importAction,
   t,
+  diverT,
 }: {
   template: GlobalDiveSiteTemplateRow;
   backHref: string;
   // i18n-exempt: type annotation, not copy.
   importAction: (formData: FormData) => void | Promise<void>;
   t: StaffTranslator;
+  /** The field guide is diver copy; the preview shows it as a diver will read it. */
+  diverT: DiverTranslator;
 }) {
   const briefing = template.version.briefing;
-  const species = (briefing.creatureSlugs ?? []).flatMap((slug) => {
-    const entry = MARINE_LIFE_BY_SLUG.get(slug);
-    return entry ? [entry] : [];
-  });
+  // Resolved for the reader, exactly as the imported site's own briefing will
+  // render it -- the preview's whole job is showing what you are about to take.
+  const species = (briefing.creatureSlugs ?? [])
+    .filter(isMarineLifeSlug)
+    .map((slug) => marineLifeCard(slug, diverT));
   const facts: Array<{ label: string; value: string }> = [
     briefing.locationName
       ? { label: t("diveSites.catalog.preview_location"), value: briefing.locationName }
@@ -608,7 +621,7 @@ function TemplatePreview({
             {species.map((entry) => (
               <li key={entry.slug}>
                 <StoredPhoto
-                  src={marineLifeImage(entry.slug)}
+                  src={entry.imageUrl}
                   alt={entry.name}
                   className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
                   sizes="(min-width: 640px) 25vw, 50vw"

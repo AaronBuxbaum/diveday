@@ -13,12 +13,11 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { DiveSiteCreature } from "@/lib/dive-site-field-guide";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { MARINE_LIFE_BY_SLUG, marineLifeImage } from "./marine-life-catalog";
+import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage } from "./paging";
 import {
   type DiveSiteFitTone,
@@ -58,12 +57,13 @@ export type DiveSiteInput = {
   fieldGuideTipsHeading?: string;
   landmarks?: DiveSiteLandmark[] | string[];
   /**
-   * The site's field guide, replaced wholesale on every save — it is a list the
-   * staffer edits as one thing, so a diff would only be a slower way to reach
-   * the same rows. Undefined leaves the existing guide alone, which is what a
-   * caller that does not manage creatures (the CSV import, a copy) means.
+   * The species this site's field guide shows, in order — replaced wholesale on
+   * every save, since it is a list the staffer edits as one thing and a diff
+   * would only be a slower way to reach the same rows. Undefined leaves the
+   * existing guide alone, which is what a caller that does not manage creatures
+   * (the CSV import, a copy) means.
    */
-  creatures?: DiveSiteCreature[];
+  creatures?: readonly MarineLifeSlug[];
   /** The site's inherent cert gate; composed into every trip that visits it. */
   minimumCertificationLevel?: CertificationLevel | null;
   requiredSpecialties?: DiveSpecialty[];
@@ -327,14 +327,9 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
   // the briefing back to retype.
   const sourceCreatures = await listDiveSiteCreatures(db, shopId, siteId);
   return createDiveSite(db, {
-    creatures: sourceCreatures.map((creature) => ({
-      slug: creature.catalogSlug ?? "",
-      name: creature.name,
-      kind: creature.kind,
-      description: creature.description ?? "",
-      preparationTip: creature.preparationTip ?? "",
-      imageUrl: creature.imageUrl ?? "",
-    })),
+    creatures: sourceCreatures
+      .map((creature) => creature.catalogSlug ?? "")
+      .filter(isMarineLifeSlug),
     shopId,
     name,
     description: source.description ?? undefined,
@@ -381,7 +376,7 @@ export async function listDiveSiteCreatures(db: AppDb, shopId: string, siteId: s
 }
 
 /**
- * Replace one site's whole field guide with what the staffer just posted.
+ * Replace one site's whole field guide with the species the staffer just chose.
  *
  * Delete-then-insert rather than a per-row diff: the editor hands back the list
  * as one value (order included), so matching rows up would be a slower route to
@@ -389,27 +384,26 @@ export async function listDiveSiteCreatures(db: AppDb, shopId: string, siteId: s
  * booking, no readiness, no audit trail hangs off one — so replacing them loses
  * nothing, which is exactly why they are safe to treat this way and the site
  * row itself is not.
+ *
+ * A row is a slug and a position. The words are DiveDay's and are resolved per
+ * reader at render (ADR 20260813-marine-life-is-diveday-copy); the legacy text
+ * columns are left null and are read by nothing.
  */
 export async function replaceDiveSiteCreatures(
   db: AppDb,
   shopId: string,
   siteId: string,
-  creatures: DiveSiteCreature[],
+  species: readonly MarineLifeSlug[],
 ): Promise<void> {
   await db
     .delete(diveSiteCreatures)
     .where(and(eq(diveSiteCreatures.shopId, shopId), eq(diveSiteCreatures.diveSiteId, siteId)));
-  if (creatures.length === 0) return;
+  if (species.length === 0) return;
   await db.insert(diveSiteCreatures).values(
-    creatures.map((creature, index) => ({
+    species.map((slug, index) => ({
       shopId,
       diveSiteId: siteId,
-      catalogSlug: creature.slug || null,
-      name: creature.name,
-      kind: creature.kind,
-      imageUrl: creature.imageUrl || null,
-      description: creature.description || null,
-      preparationTip: creature.preparationTip || null,
+      catalogSlug: slug,
       position: index,
     })),
   );
@@ -668,24 +662,10 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     })
     .returning();
   if (!site) return null;
-  const creatures = (creatureSlugs ?? []).flatMap((slug) => {
-    const species = MARINE_LIFE_BY_SLUG.get(slug);
-    // A slug the catalog no longer carries is dropped rather than imported as a
-    // blank card: an older published version can outlive a species entry, and a
-    // shop should get one species fewer, not one nameless tile.
-    return species
-      ? [
-          {
-            slug: species.slug,
-            name: species.name,
-            kind: species.kind,
-            description: species.description,
-            preparationTip: species.preparationTip,
-            imageUrl: marineLifeImage(species.slug),
-          },
-        ]
-      : [];
-  });
+  // A slug the catalog no longer carries is dropped rather than imported as a
+  // blank card: an older published version can outlive a species entry, and a
+  // shop should get one species fewer, not one nameless tile.
+  const creatures = (creatureSlugs ?? []).filter(isMarineLifeSlug);
   if (creatures.length > 0) await replaceDiveSiteCreatures(db, shopId, site.id, creatures);
   return site;
 }

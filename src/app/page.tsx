@@ -286,7 +286,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 {moment.link ? (
                   <Link
                     href={moment.link.href}
-                    className={buttonClass({ variant: "link", className: "mt-2 px-0" })}
+                    className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
                   >
                     {moment.link.label}
                   </Link>
@@ -380,7 +380,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             here were one door pretending to be two. */}
         <Link
           href="/switching"
-          className={buttonClass({ variant: "link", className: "mt-10 px-0 text-left" })}
+          className={buttonClass({ variant: "link", flush: true, className: "mt-10 text-left" })}
         >
           {t("marketing.home.guidesLink", { competitors })}
         </Link>
