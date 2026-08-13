@@ -168,6 +168,32 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
       expect.objectContaining({ status: "error" }),
     );
   });
+
+  // The line used to carry `{}`, so a production failure said only that one
+  // happened (issue #517). What it may never carry is the error's message: a
+  // database error quotes the row it choked on.
+  it("says what kind of failure it was, without quoting the error", async () => {
+    const failure = Object.assign(new Error("relation divers does not exist"), {
+      name: "DrizzleQueryError",
+      code: "42P01",
+    });
+    vi.mocked(refreshCanonicalDemoSchedule).mockRejectedValue(failure);
+    await GET(cronRequest(`Bearer ${secret}`));
+    const line = failureLine();
+    expect(line).toEqual(
+      expect.objectContaining({ errorName: "DrizzleQueryError", sqlState: "42P01" }),
+    );
+    expect(JSON.stringify(line)).not.toContain("relation divers does not exist");
+  });
+
+  it("still names the failure when it is not a database error", async () => {
+    vi.mocked(refreshCanonicalDemoSchedule).mockRejectedValue(new Error("no database"));
+    await GET(cronRequest(`Bearer ${secret}`));
+    const line = failureLine();
+    expect(line).toEqual(expect.objectContaining({ errorName: "Error" }));
+    // Omitted rather than written as null: nothing supplied a SQLSTATE.
+    expect(line).not.toHaveProperty("sqlState");
+  });
 });
 
 describe("the deployed schedule", () => {

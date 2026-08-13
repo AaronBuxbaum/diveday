@@ -23,20 +23,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ENV_ENTRIES, envEntry, isManual, isStackProduced } from "../config/env-registry.mjs";
+import { parseDotenv } from "./dotenv.mjs";
 import { readEnvExample, renderEnvExample } from "./render-env-example.mjs";
 
 // Resolved against the working directory, not this file: the deploy runs from
 // the repo root, and a test runs from a temporary one.
 const MANUAL_PATH = join(process.cwd(), ".env.manual");
-const ENV_LINE = /^([A-Z][A-Z0-9_]*)=(.*)$/;
 
-const parse = (text) =>
-  Object.fromEntries(
-    text.split(/\r?\n/).flatMap((line) => {
-      const match = line.match(ENV_LINE);
-      return match ? [[match[1], match[2]]] : [];
-    }),
-  );
+const parse = parseDotenv;
 
 const failures = [];
 

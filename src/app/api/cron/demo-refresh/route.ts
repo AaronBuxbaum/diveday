@@ -96,7 +96,17 @@ export async function GET(request: Request) {
     // this pass -- an aging board, not a half-wiped shop -- and tomorrow's tick
     // re-attempts it.
     Sentry.captureException(error, { tags: { cron_pass: "demo_refresh" } });
-    log("cron_demo_refresh.pass_failed", "error", {});
+    // The payload used to be `{}`, which said a pass failed and nothing about
+    // why -- the line that sent someone to Sentry to learn even the shape of
+    // the failure (issue #517). Both fields are closed vocabularies rather
+    // than prose: an error class name and Postgres's own SQLSTATE. Neither can
+    // carry a row value, so this stays inside the no-PII-in-logs rule that
+    // keeps the message itself out.
+    const sqlState = (error as { code?: unknown } | null)?.code;
+    log("cron_demo_refresh.pass_failed", "error", {
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      sqlState: typeof sqlState === "string" ? sqlState : undefined,
+    });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "refresh_unavailable" }, { status: 503 });
   } finally {

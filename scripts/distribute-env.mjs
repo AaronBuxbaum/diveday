@@ -34,6 +34,7 @@ import {
   isOverridable,
   isStackProduced,
 } from "../config/env-registry.mjs";
+import { formatEnvValue, parseDotenv } from "./dotenv.mjs";
 
 const [target, outputPath] = process.argv.slice(2);
 
@@ -47,15 +48,8 @@ if (!target || !outputPath || !["local", "vercel", "github"].includes(target)) {
 // Resolved against the working directory, not this file: the deploy runs from
 // the repo root, and a test runs from a temporary one.
 const MANUAL_PATH = join(process.cwd(), ".env.manual");
-const ENV_LINE = /^([A-Z][A-Z0-9_]*)=(.*)$/;
 
-const parse = (text) =>
-  Object.fromEntries(
-    text.split(/\r?\n/).flatMap((line) => {
-      const match = line.match(ENV_LINE);
-      return match ? [[match[1], match[2]]] : [];
-    }),
-  );
+const parse = parseDotenv;
 
 const stackValues = parse(readFileSync(0, "utf8"));
 const seed = stackValues.APP_SECRET_SEED;
@@ -117,6 +111,6 @@ const lines = ENV_KEYS.filter((key) => goesTo(key, target))
   // would overwrite a variable set by hand in a console with nothing.
   .map((key) => [key, values[key] ?? envEntry(key)?.value ?? ""])
   .filter(([, value]) => target === "local" || value !== "")
-  .map(([key, value]) => `${key}=${value}`);
+  .map(([key, value]) => `${key}=${formatEnvValue(value)}`);
 
 writeFileSync(outputPath, [...header, "", ...lines, ""].join("\n"));

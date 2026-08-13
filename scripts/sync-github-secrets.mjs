@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { dotenvMap } from "./dotenv.mjs";
 
 const [inputPath] = process.argv.slice(2);
 if (!inputPath) {
@@ -10,17 +11,10 @@ if (!inputPath) {
   process.exit(2);
 }
 
-// `(.*)`, not `(.+)`: a deliberately blank secret must still be diffed and
-// pushed, not silently dropped from both the checkpoint and the sync.
-const envLine = /^([A-Z][A-Z0-9_]*)=(.*)$/;
-function parseDotenv(content) {
-  return new Map(
-    content.split(/\r?\n/).flatMap((line) => {
-      const match = line.match(envLine);
-      return match ? [[match[1], match[2]]] : [];
-    }),
-  );
-}
+// A deliberately blank secret must still be diffed and pushed, not silently
+// dropped from both the checkpoint and the sync -- `dotenvMap` keeps empty
+// values for that reason.
+const parseDotenv = dotenvMap;
 
 const document = readFileSync(inputPath, "utf8");
 const entries = parseDotenv(document);
