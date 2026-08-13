@@ -434,6 +434,13 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               page about money — answered the other party's half of it and left
               ours to the nav. A link, not the figure: the price has exactly one
               source (`earlyAccessPrice`, H-12) and one page that argues it. */}
+          {/* `-ml-4`, not `px-0`: the link variant keeps its `md` size's `px-4`
+              so the row stays a real touch target, and a `px-0` in `className`
+              cannot take it away — Tailwind emits `.px-0` *before* `.px-4`, so
+              the padding wins whatever order the classes are written in
+              (measured in the built stylesheet; the closing band's link sat
+              17px right of its own heading this way). Pulling the box left by
+              exactly that padding is what `JumpNav` does with `-ml-3`. */}
           <Link
             href="/pricing"
             className={buttonClass({ variant: "link", className: "mt-8 -ml-4 text-left" })}
@@ -448,12 +455,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           right, hairline rules between groups. No cards, no check marks, and
           no disclosure: a section headed "the whole list, plainly" that showed
           a heading, two lines, and a "The full list" link in 350px of empty
-          band was the emptiest thing on the page, and the list it hid is what
-          a buyer comparing feature pages actually came for. Rendering it flat
-          also puts it in find-in-page, in the accessibility tree, and out of
-          reach of the localized-body swap that used to snap the disclosure
-          shut mid-click (FU-20260812, which still stands for the pages that
-          keep interactive state). */}
+          band was the emptiest thing on the page. Rendering it flat also puts
+          it in find-in-page, in the accessibility tree, and out of reach of
+          the localized-body swap that used to snap the disclosure shut
+          mid-click (FU-20260812, which still stands for the pages that keep
+          interactive state). */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
@@ -535,13 +541,8 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
             <Link
               href="/switching/spreadsheet"
-              // `-ml-4`, not `px-0`: the link variant keeps its `md` size's
-              // `px-4` so the row stays a real touch target, and a `px-0` in
-              // `className` cannot take it away — Tailwind emits `.px-0`
-              // *before* `.px-4`, so the padding wins whatever order the
-              // classes are written in (measured in the built stylesheet; the
-              // link sat 17px right of its own heading). Pulling the box left
-              // by exactly that padding is what `JumpNav` does with `-ml-3`.
+              // `-ml-4` rather than `px-0`, for the reason spelled out on the
+              // money band's link above.
               className={buttonClass({ variant: "link", className: "mt-2 -ml-4 text-left" })}
             >
               {t("marketing.product.spreadsheetLink")}
