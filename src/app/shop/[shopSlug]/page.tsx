@@ -268,8 +268,13 @@ async function TodayBody({
   const firstName = session.user.name?.split(" ")[0] ?? "there";
   // The page's one idea is the work (ADR 20260720-today-work-queue), so
   // instructional content sizes itself against whether any exists: a queue
-  // row or a boat on today's board means orientation shrinks to a line.
-  const hasWorkToShow = actions.length > 0 || departures.length > 0;
+  // row, a boat on today's board, or — under the instructor lens — a session
+  // block means orientation shrinks to a line rather than pushing that work
+  // below the fold.
+  const hasWorkToShow =
+    actions.length > 0 ||
+    departures.length > 0 ||
+    (lens === "sessions" && crewedSessions.length > 0);
 
   // The by-departure view's own grouping pass, run only when it is the view on
   // screen — the default urgency view must not pay for a query it never
@@ -441,43 +446,43 @@ async function TodayBody({
           the board, it compresses to one quiet line — the pointer and the
           dismissal survive, the tinted box that pushed the queue off a phone
           screen does not. */}
-      {showOrientation && orientationRole ? (
-        hasWorkToShow ? (
-          <RoleOrientationLine
-            tourHref={orientationTourHref(
+      {showOrientation && orientationRole
+        ? (() => {
+            // One href rule and one dismissal for both forms — only the words
+            // and the chrome differ between the card and the line.
+            const tourHref = orientationTourHref(
               shopSlug,
               orientationRole,
               nextDeparture
                 ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest`
                 : undefined,
-            )}
-            dismissAction={dismissOrientationAction}
-            copy={{
-              heading: t("shopHome.orientation.heading"),
-              dismiss: t("shopHome.orientation.dismiss"),
-              tryThis: orientationTourText(t, orientationRole).tryThis,
-            }}
-          />
-        ) : (
-          <RoleOrientationCard
-            tourHref={orientationTourHref(
-              shopSlug,
-              orientationRole,
-              nextDeparture
-                ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest`
-                : undefined,
-            )}
-            dismissAction={dismissOrientationAction}
-            copy={{
-              heading: t("shopHome.orientation.heading"),
-              subtitle: t("shopHome.orientation.subtitle"),
-              tryLabel: t("shopHome.orientation.tryLabel"),
-              dismiss: t("shopHome.orientation.dismiss"),
-              ...orientationTourText(t, orientationRole),
-            }}
-          />
-        )
-      ) : null}
+            );
+            const tourText = orientationTourText(t, orientationRole);
+            return hasWorkToShow ? (
+              <RoleOrientationLine
+                tourHref={tourHref}
+                dismissAction={dismissOrientationAction}
+                copy={{
+                  heading: t("shopHome.orientation.lineHeading"),
+                  dismiss: t("shopHome.orientation.dismiss"),
+                  tryThis: tourText.tryThis,
+                }}
+              />
+            ) : (
+              <RoleOrientationCard
+                tourHref={tourHref}
+                dismissAction={dismissOrientationAction}
+                copy={{
+                  heading: t("shopHome.orientation.heading"),
+                  subtitle: t("shopHome.orientation.subtitle"),
+                  tryLabel: t("shopHome.orientation.tryLabel"),
+                  dismiss: t("shopHome.orientation.dismiss"),
+                  ...tourText,
+                }}
+              />
+            );
+          })()
+        : null}
 
       {lens === "sessions" ? (
         <YourSessions

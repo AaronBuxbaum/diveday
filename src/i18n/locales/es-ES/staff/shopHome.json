@@ -37,6 +37,7 @@
   },
   "orientation": {
     "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
+    "lineHeading": "¿Recién llegado? Prueba esto:",
     "subtitle": "Esto solo se muestra una vez — puedes descartarlo cuando quieras.",
     "tryLabel": "Prueba:",
     "dismiss": "Entendido",

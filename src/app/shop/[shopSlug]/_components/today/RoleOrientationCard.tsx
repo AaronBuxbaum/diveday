@@ -77,8 +77,9 @@ export function RoleOrientationCard({
 /**
  * The busy-day form of the orientation: one muted line — the pointer as a
  * link, the same per-account dismissal — so a new hire still finds their
- * bearings without the queue losing its place at the top of the page. Same
- * copy keys as the card; nothing new to translate.
+ * bearings without the queue losing its place at the top of the page. Its
+ * intro is its own key (`orientation.lineHeading`, singular framing) because
+ * the card's "a few pointers" promises more than the one link this line keeps.
  */
 export function RoleOrientationLine({
   tourHref,

@@ -37,6 +37,7 @@
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
+    "lineHeading": "New here? Try this:",
     "subtitle": "This only shows once — dismiss it any time.",
     "tryLabel": "Try:",
     "dismiss": "Got it",
