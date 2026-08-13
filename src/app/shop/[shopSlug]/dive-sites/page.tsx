@@ -24,11 +24,13 @@ import {
 } from "@/db/dive-sites";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { getShopById } from "@/db/shops";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -484,6 +486,10 @@ function TemplatePreview({
   const briefing = template.version.briefing;
   // Resolved for the reader, exactly as the imported site's own briefing will
   // render it -- the preview's whole job is showing what you are about to take.
+  const templateDifficulty = diveSiteDifficultyLabel(
+    briefing.difficultyLevel ?? parseDiveSiteDifficulty(briefing.difficulty),
+    diverT,
+  );
   const species = (briefing.creatureSlugs ?? [])
     .filter(isMarineLifeSlug)
     .map((slug) => marineLifeCard(slug, diverT));
@@ -494,8 +500,11 @@ function TemplatePreview({
     briefing.depthRange
       ? { label: t("diveSites.catalog.preview_depth"), value: briefing.depthRange }
       : null,
-    briefing.difficulty
-      ? { label: t("diveSites.catalog.preview_difficulty"), value: briefing.difficulty }
+    // Resolved for the reader, like the field guide below it: an older
+    // published version holds free text here, a newer one a code, and both
+    // narrow to the same three readings.
+    templateDifficulty
+      ? { label: t("diveSites.catalog.preview_difficulty"), value: templateDifficulty }
       : null,
     briefing.currentNote
       ? { label: t("diveSites.catalog.preview_conditions"), value: briefing.currentNote }

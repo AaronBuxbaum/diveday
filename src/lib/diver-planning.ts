@@ -1,3 +1,4 @@
+import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import type { RentableItemKind } from "@/lib/rentals";
 
 /**
@@ -262,7 +263,8 @@ export function dockDayTimeline(
 }
 
 export type SitePlanningFacts = {
-  difficulty: string | null;
+  /** A `dive_site_difficulty` code, or null when the shop has not said. */
+  difficultyLevel: DiveSiteDifficulty | null;
   depthRange: string | null;
   currentNote: string | null;
   /**
@@ -290,7 +292,15 @@ export type SiteFitTone = "demanding" | "welcoming" | "unknown";
  */
 export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
   if (facts.fitTone) return { tone: facts.fitTone };
-  const evidence = [facts.difficulty, facts.depthRange, facts.currentNote]
+  // A difficulty the shop actually chose is evidence, not a guess, so it is
+  // read before the keyword sniff rather than thrown into it. It used to be
+  // free text and went into the same regex soup as the depth range and the
+  // current note; now that it is one of three codes, "the shop said advanced"
+  // and "the shop's current note happens to contain the word deep" are no
+  // longer the same quality of signal and are no longer treated alike.
+  if (facts.difficultyLevel === "advanced") return { tone: "demanding" };
+  if (facts.difficultyLevel === "beginner") return { tone: "welcoming" };
+  const evidence = [facts.depthRange, facts.currentNote]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
   const text = evidence.join(" ").toLowerCase();

@@ -1765,7 +1765,7 @@ export async function loadShopExportBundleInput(
             "name",
             "location_name",
             "description",
-            "difficulty",
+            "difficulty_level",
             "depth_range",
             "max_depth_meters",
             "expected_bottom_time_minutes",
@@ -1797,7 +1797,11 @@ export async function loadShopExportBundleInput(
             row.name,
             row.locationName,
             row.description,
-            row.difficulty,
+            // The code, not the legacy free text beside it: `difficulty_level`
+            // is what the app reads and what the shop chose (ADR
+            // 20260813-dive-site-difficulty-is-a-code). The column keeps its
+            // three stable values, so a destination system can map them.
+            row.difficultyLevel,
             row.depthRange,
             row.maxDepthMeters,
             row.expectedBottomTimeMinutes,

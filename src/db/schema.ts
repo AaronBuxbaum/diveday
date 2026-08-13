@@ -734,6 +734,23 @@ export const courseInquiries = pgTable(
 export const diveSiteFitTone = pgEnum("dive_site_fit_tone", ["welcoming", "demanding", "unknown"]);
 
 /**
+ * How demanding a site is, as a code rather than the shop's own adjective.
+ *
+ * `dive_sites.difficulty` was free text, and it read as the one untranslated
+ * word on an otherwise translated briefing: a Spanish page rendered
+ * "EXPERIENCIA / Beginner" because the demo shop typed English into it. Every
+ * value any shop or template had ever stored was already one of these three,
+ * so nothing expressive is lost — and `fit_tone` right beside it was a code
+ * with a translated label all along, which made the page inconsistent about the
+ * same question.
+ */
+export const diveSiteDifficulty = pgEnum("dive_site_difficulty", [
+  "beginner",
+  "intermediate",
+  "advanced",
+]);
+
+/**
  * A reusable, shop-owned briefing for one dive site. Trip conditions are
  * intentionally kept on the dated trip: a site library entry is evergreen,
  * while water temperature and visibility are not.
@@ -758,7 +775,16 @@ export const diveSites = pgTable(
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
+    /**
+     * Legacy: the shop's own adjective for how demanding this site is, written
+     * by releases up to 2026-08-13 and read by nothing since — `difficulty_level`
+     * replaced it with a code the app can render in any language. Kept for one
+     * release because the migration lands while the previous deployment is
+     * still serving and still selects it (ADR 20260806-destructive-migration-guard).
+     */
     difficulty: text("difficulty"),
+    /** How demanding the site is; the briefing prints a translated label for it. */
+    difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
      * Free-text prose for the briefing ("6–12 m", "shallow ledge to 18"). Kept
      * alongside `max_depth_meters` rather than replaced by it: it carries shape
@@ -924,7 +950,14 @@ export type GlobalDiveSiteBriefing = {
   imageUrls?: string[];
   marineLife?: string;
   marineLifeDescription?: string;
+  /**
+   * Legacy free text, on versions published before 2026-08-13. Published
+   * snapshots are immutable, so the field stays readable forever; the import
+   * narrows it through `parseDiveSiteDifficulty` like any other stored value.
+   */
   difficulty?: string;
+  /** How demanding the site is, as a `dive_site_difficulty` code. */
+  difficultyLevel?: (typeof diveSiteDifficulty.enumValues)[number];
   depthRange?: string;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;
@@ -1007,6 +1040,50 @@ export const diveSiteCreatures = pgTable(
     position: integer("position").notNull().default(0),
   },
   (table) => [index("dive_site_creatures_site_idx").on(table.diveSiteId)],
+);
+
+/**
+ * A shop asking DiveDay for a species the catalog does not carry.
+ *
+ * The field guide is a selection from `MARINE_LIFE_CATALOG` and nothing else
+ * (ADR 20260813-marine-life-is-diveday-copy), which is what lets every card
+ * render in the reader's own language — and which means a shop diving outside
+ * the tropical western Atlantic meets a picker that refuses its reef. This
+ * table is the honest other half of that refusal: the picker says "tell us what
+ * we are missing" and this is where it lands.
+ *
+ * **Nothing renders from here.** It is not content, it is a request, and no
+ * diver-facing or staff-facing surface reads it — DiveDay queries the table
+ * directly and the answer arrives as a release that adds the species. That is
+ * the whole contract, and it is why the row is this thin.
+ *
+ * Append-only and un-deduplicated on purpose: two shops asking for the same
+ * animal is the signal, not a conflict, and the count is how a region earns its
+ * place in the catalog ahead of a guess.
+ */
+export const marineLifeRequests = pgTable(
+  "marine_life_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** Whoever was at the form; the person to ask what they meant. */
+    requestedByPersonId: uuid("requested_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    /**
+     * What the staffer typed into the picker, verbatim and trimmed. Free text
+     * because that is the point — a common name, a Latin binomial, or a
+     * description of a fish they cannot name are all useful, and any structure
+     * imposed here would be a guess about which.
+     */
+    query: text("query").notNull(),
+    /** Which site they were writing when they hit the wall, for context. */
+    diveSiteId: uuid("dive_site_id").references(() => diveSites.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("marine_life_requests_created_idx").on(table.createdAt)],
 );
 
 /** Staff-moderated, opt-in moments from prior divers. */

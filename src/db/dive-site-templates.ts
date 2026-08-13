@@ -57,7 +57,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · angelfish · southern stingrays · nurse sharks",
       marineLifeDescription:
         "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels between the spurs.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "6–12 m (20–40 ft)",
       maxDepthMeters: 12,
       currentNote: "Usually gentle, but it sits on the reef line and can run — the crew calls it.",
@@ -106,7 +106,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Nurse sharks · green morays · parrotfish · barracuda",
       marineLifeDescription:
         "The overhangs hide sleeping nurse sharks and squirrelfish. Check the ceilings, not just the sand.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "5–14 m (15–45 ft)",
       maxDepthMeters: 14,
       currentNote: "Usually mild; a swim-through is no place to be surprised by surge.",
@@ -156,7 +156,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Sergeant majors · blue tangs · French angelfish · brain coral",
       marineLifeDescription:
         "Sergeant majors guard purple egg patches on the statue's base all summer, and the coral heads around it are as good as anything deeper.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "5–8 m (15–25 ft)",
       maxDepthMeters: 8,
       currentNote: "Usually gentle; it is shallow enough that surface chop is felt on the bottom.",
@@ -200,7 +200,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Glassy sweepers · sergeant majors · moray eels · yellowtail snapper",
       marineLifeDescription:
         "The hull is a fish apartment block. Look into every gap in the plates and something is home.",
-      difficulty: "intermediate",
+      difficultyLevel: "intermediate",
       depthRange: "8–15 m (25–50 ft)",
       maxDepthMeters: 15,
       currentNote: "Mild, but it sits in open water off the reef line — the crew calls the drop.",
@@ -244,7 +244,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · jacks · soft coral",
       marineLifeDescription:
         "Expect big silhouettes, moving schools, and changing light along the exterior decks. The superstructure is thick with coral and sponge now.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "18–40 m (60–130 ft)",
       maxDepthMeters: 40,
       currentNote:
@@ -296,7 +296,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · amberjack · schooling grunts",
       marineLifeDescription:
         "A resident goliath grouper often holds near the wheelhouse. Look out into the blue for jacks working the current off the bow.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "18–37 m (60–120 ft)",
       maxDepthMeters: 37,
       currentNote:
@@ -348,7 +348,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Elkhorn coral · sergeant majors · barracuda · queen conch",
       marineLifeDescription:
         "One of the better surviving elkhorn stands in the Upper Keys sits along the shallow crest.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–10 m (10–35 ft)",
       maxDepthMeters: 10,
       currentNote:
@@ -392,7 +392,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Elkhorn coral · staghorn coral · parrotfish · nurse sharks",
       marineLifeDescription:
         "Long-running coral restoration plots sit on the reef here; the staghorn thickets are the reason the boat comes this far.",
-      difficulty: "intermediate",
+      difficultyLevel: "intermediate",
       depthRange: "8–21 m (25–70 ft)",
       maxDepthMeters: 21,
       currentNote:
@@ -437,7 +437,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Blue tangs · stoplight parrotfish · French angelfish · sergeant majors",
       marineLifeDescription:
         "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "5–12 m (15–40 ft)",
       maxDepthMeters: 12,
       currentNote: "Usually gentle; the crew confirms the final plan.",
@@ -482,7 +482,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Tarpon · barracuda · schooling grunts · nurse sharks",
       marineLifeDescription:
         "Enormous schools sit in the cuts between the spurs, and tarpon patrol the deeper edge in summer.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–12 m (10–40 ft)",
       maxDepthMeters: 12,
       currentNote: "Runs with the tide through the cuts — an easy drift when it does.",
@@ -526,7 +526,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · jacks · glassy sweepers",
       marineLifeDescription:
         "The broken ends are the best of it — open, lit, and thick with schooling fish holding out of the current.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "20–34 m (65–110 ft)",
       maxDepthMeters: 34,
       currentNote: "Open water, and often a real current — a line dive when it is running.",
@@ -572,7 +572,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Brain coral · star coral · parrotfish · yellowtail snapper",
       marineLifeDescription:
         "Big mounding coral heads with unusually good live cover; the fish life is dense because the structure is.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "2–6 m (6–20 ft)",
       maxDepthMeters: 6,
       currentNote: "Inshore and sheltered — the reliable call when the outer reef is unworkable.",
@@ -613,7 +613,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · angelfish · tarpon · nurse sharks",
       marineLifeDescription:
         "The arches hold fish out of the light all day. Look through them rather than over them.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–9 m (10–30 ft)",
       maxDepthMeters: 9,
       currentNote: "Usually mild; a sanctuary preservation area, so mooring buoys only.",
@@ -656,7 +656,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · amberjack · black coral",
       marineLifeDescription:
         "Resident goliath grouper hold in the superstructure; the deeper steel is furred with hydroids and black coral.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "23–37 m (75–120 ft)",
       maxDepthMeters: 37,
       currentNote:
@@ -703,7 +703,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Pillar coral · sea fans · butterflyfish · spiny lobster",
       marineLifeDescription:
         "The pillar-coral patch is the one to ask for — furry spires standing off the bottom, feeding in daylight.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–9 m (10–30 ft)",
       maxDepthMeters: 9,
       currentNote: "Sheltered inside the reef line and usually calm.",
@@ -744,7 +744,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · goatfish · nurse sharks · barracuda",
       marineLifeDescription:
         "The grooves funnel fish. The deeper seaward end of each spur is where the big schools sit.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–11 m (10–35 ft)",
       maxDepthMeters: 11,
       currentNote: "Sanctuary preservation area — mooring buoys only, and usually a mild current.",
@@ -788,7 +788,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · jewfish · barracuda · glassy sweepers",
       marineLifeDescription:
         "Several very large goliath grouper live aboard. They are used to divers and entirely unbothered.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "20–33 m (65–110 ft)",
       maxDepthMeters: 33,
       currentNote: "Open water; current decides whether it is a line dive or a free descent.",
@@ -836,7 +836,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · permit · barracuda · amberjack",
       marineLifeDescription:
         "Permit meet you on the way down. The superstructure carries dense schooling fish, and the dishes are usually surrounded.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "12–43 m (40–140 ft)",
       maxDepthMeters: 43,
       currentNote:
@@ -888,7 +888,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · yellowtail snapper · sea fans · barracuda",
       marineLifeDescription:
         "Dense soft coral on the seaward face, and a permanent cloud of yellowtail wherever a boat has been.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–14 m (10–45 ft)",
       maxDepthMeters: 14,
       currentNote: "Pick the lee side of the light and the day is usually easy.",
@@ -926,7 +926,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · permit · tarpon · nurse sharks",
       marineLifeDescription:
         "The ledges hold big fish through the day, and in spring the aggregations here are extraordinary.",
-      difficulty: "intermediate",
+      difficultyLevel: "intermediate",
       depthRange: "6–20 m (20–65 ft)",
       maxDepthMeters: 20,
       currentNote:
@@ -968,7 +968,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Frogfish · seahorses · octopus · batfish · nudibranchs",
       marineLifeDescription:
         "Sand, rubble, pilings and snorkel trail. The find of the dive is usually two centimetres long and pretending to be a leaf.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "1–6 m (4–20 ft)",
       maxDepthMeters: 6,
       currentNote:
@@ -1014,7 +1014,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Green turtles · goliath grouper · angelfish · spotted eagle rays",
       marineLifeDescription:
         "The ledges hold turtles and grouper; eagle rays and big pelagics come through the blue side.",
-      difficulty: "intermediate",
+      difficultyLevel: "intermediate",
       depthRange: "12–20 m (40–65 ft)",
       maxDepthMeters: 20,
       currentNote:
@@ -1054,7 +1054,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · lemon sharks · bull sharks · amberjack",
       marineLifeDescription:
         "Late summer is the aggregation. The rest of the year it is a big-animal drift: sharks, jacks, and turtles on the ledges.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "21–29 m (70–95 ft)",
       maxDepthMeters: 29,
       currentNote: "Strong Gulf Stream drift, always. Negative entries and a fast group-up.",
@@ -1095,7 +1095,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Barracuda · goliath grouper · amberjack · sea turtles",
       marineLifeDescription:
         "Young enough that the growth is still coming in, but the fish arrived immediately.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "18–37 m (60–120 ft)",
       maxDepthMeters: 37,
       currentNote: "Gulf Stream current is common; usually dived with a line and a live boat.",
@@ -1141,7 +1141,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Sergeant majors · parrotfish · barracuda · spiny lobster",
       marineLifeDescription:
         "A century of growth over iron plate. The wreck is now mostly reef with a ship's outline still in it.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "5–9 m (15–30 ft)",
       maxDepthMeters: 9,
       currentNote: "Shallow and close in; surge matters more than current here.",
@@ -1185,7 +1185,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Angelfish · barracuda · sponges · sea fans",
       marineLifeDescription:
         "Purpose-built structure on open sand, which means everything that lives here chose to come.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "12 m (40 ft)",
       maxDepthMeters: 14,
       currentNote: "Open water off Miami; a mild drift is common.",
@@ -1231,7 +1231,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Amberjack · barracuda · red snapper · whale sharks (rarely)",
       marineLifeDescription:
         "Pelagic. The tower holds bait balls and the amberjack that work them; the open Gulf brings everything else.",
-      difficulty: "advanced",
+      difficultyLevel: "advanced",
       depthRange: "24–44 m (80–145 ft) for recreational depths",
       maxDepthMeters: 44,
       currentNote:
@@ -1278,7 +1278,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Sheepshead · flounder · octopus · sea urchins",
       marineLifeDescription:
         "Gulf life rather than reef life — the wreck is an island of structure on an otherwise empty sand plain.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "8 m (25 ft)",
       maxDepthMeters: 9,
       currentNote: "Shallow and usually calm; Gulf visibility is the variable, not the current.",
@@ -1319,7 +1319,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Freshwater — no marine life",
       marineLifeDescription:
         "Nothing swims here to speak of. The dive is the light, the rock, and the fossil beds in the walls.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "5–16 m (15–54 ft)",
       maxDepthMeters: 16,
       currentNote: "No current. Confined and calm; the only variable is how many divers are in it.",
@@ -1357,7 +1357,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Freshwater — turtles and a resident eel",
       marineLifeDescription:
         "Softshell turtles, bream, and Virgil the resident eel, who has been here longer than most of the instructors.",
-      difficulty: "intermediate",
+      difficultyLevel: "intermediate",
       depthRange: "9–30 m (30–100 ft)",
       maxDepthMeters: 30,
       currentNote: "No current at all. Depth and the overhead are what the plan is about.",
@@ -1395,7 +1395,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Freshwater — gar, bream, turtles",
       marineLifeDescription:
         "Longnose gar hang in the halocline where the clear spring meets the dark river water. Worth the wait.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "4–16 m (12–54 ft)",
       maxDepthMeters: 16,
       currentNote:
@@ -1433,7 +1433,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Freshwater — bass, bream, turtles",
       marineLifeDescription:
         "Largemouth bass hang at the edge of the clear water where it meets the swamp.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "3–15 m (10–50 ft)",
       maxDepthMeters: 15,
       currentNote:
@@ -1466,7 +1466,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Manatees · mullet · blue crabs",
       marineLifeDescription:
         "Hundreds of manatees come in when the Gulf drops below 20 °C. Passive observation only, by federal rule.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "1–5 m (3–16 ft)",
       maxDepthMeters: 5,
       currentNote:
@@ -1500,7 +1500,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       marineLife: "Freshwater — turtles, gar, bass, otters",
       marineLifeDescription:
         "Softshell turtles work the grass beds, and the sand boils where the spring vents push up through the bottom.",
-      difficulty: "beginner",
+      difficultyLevel: "beginner",
       depthRange: "2–7 m (6–23 ft)",
       maxDepthMeters: 7,
       currentNote:

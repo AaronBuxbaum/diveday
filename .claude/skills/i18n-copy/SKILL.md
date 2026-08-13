@@ -31,10 +31,16 @@ no allowance to add some and extract later.
 
 Build it clean — a new file has no baseline entry, so *any* hard-coded string fails the check.
 
-Writing Spanish? Read [`src/i18n/locales/es-ES/README.md`](../../../src/i18n/locales/es-ES/README.md)
-first — terminology and register are already decided ("centro" for the shop entity, the
-retail-vs-entity split, LatAm register), so a new string should match rather than restart the
-argument.
+**You write the Spanish, in the same change as the English.** There is no translation queue and no
+`TODO: translate` — `check:locale` fails on a key that exists in one locale and not the other, so a
+string ships in both or not at all. Read
+[`src/i18n/locales/es-ES/README.md`](../../../src/i18n/locales/es-ES/README.md) first: terminology
+and register are already decided ("centro" for the shop entity, the retail-vs-entity split, LatAm
+register, Caribbean names for marine life), so a new string should match rather than restart the
+argument, and anything you settle that the file does not cover gets added to it in the same change.
+
+The exception is copy with legal or medical weight — the waiver body and the medical questionnaire —
+which stays English pending H-01/H-03 and is not a translator's call.
 
 Writing an `error.tsx`? It is a file convention with a fixed `{error, reset}` signature, so no
 Server Component can hand it a `copy` prop. Its words come from the segment's own `layout.tsx`

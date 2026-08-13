@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { MarineLifeSlug } from "@/db/marine-life-catalog";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
+import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-difficulty";
 import { parseFieldGuideSelection } from "./dive-site-field-guide";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
@@ -146,6 +147,8 @@ export type DiveSiteFormParse =
       maxDepthMeters: number | null;
       /** The typed override in minutes, or null when the shop's own figure stands. */
       expectedBottomTimeMinutes: number | null;
+      /** The chosen difficulty code, or null — see `./dive-site-difficulty.ts`. */
+      difficultyLevel: DiveSiteDifficulty | null;
       route: DiveSiteFormRoute;
       landmarks: DiveSiteLandmark[];
       creatures: MarineLifeSlug[];
@@ -188,6 +191,7 @@ export function parseDiveSiteForm(
     maxDepthMeters,
     expectedBottomTimeMinutes:
       parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
+    difficultyLevel: parseDiveSiteDifficulty(parsed.data.difficulty),
     landmarks: parseDiveSiteLandmarks(parsed.data.landmarks),
     creatures: parseFieldGuideSelection(parsed.data.creatures),
     route: {

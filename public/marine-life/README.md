@@ -12,10 +12,16 @@ bound: these render as ~150–350 CSS px tiles, and the originals run to several
 which a diver on a phone pays for on every briefing they open.
 
 - `arrow-crab.jpg` — [Cangrejo araña (Stenorhynchus seticornis), franja marina Teno-Rasca, Tenerife, España, 2022-01-05, DD 94.jpg](https://commons.wikimedia.org/wiki/File:Cangrejo_ara%C3%B1a_(Stenorhynchus_seticornis),_franja_marina_Teno-Rasca,_Tenerife,_Espa%C3%B1a,_2022-01-05,_DD_94.jpg) · CC BY-SA 4.0 · Diego Delso
+- `atlantic-spadefish.jpg` — [Atlantic Spadefish PLW edit.jpg](https://commons.wikimedia.org/wiki/File:Atlantic_Spadefish_PLW_edit.jpg) · CC BY-SA 2.0 · Matthew Hoelscher (original photograph), Kaldari (crop), Papa Lima Whiskey (white balance adjustments)
 - `azure-vase-sponge.jpg` — [Callyspongia plicifera - azure vase sponge - Bay of Pigs - Cuba.jpg](https://commons.wikimedia.org/wiki/File:Callyspongia_plicifera_-_azure_vase_sponge_-_Bay_of_Pigs_-_Cuba.jpg) · CC BY 4.0 · Tisquesusa
+- `balloonfish.jpg` — [Pez erizo de espinas largas (Diodon holocanthus), islas Ad Dimaniyat, Omán, 2024-08-13, DD 45.jpg](https://commons.wikimedia.org/wiki/File:Pez_erizo_de_espinas_largas_(Diodon_holocanthus),_islas_Ad_Dimaniyat,_Om%C3%A1n,_2024-08-13,_DD_45.jpg) · CC BY-SA 4.0 · Diego Delso
 - `banded-butterflyfish.jpg` — [Chaetodon striatus Brasil.jpg](https://commons.wikimedia.org/wiki/File:Chaetodon_striatus_Brasil.jpg) · CC BY 2.5 · Bernard E. Picton
 - `banded-coral-shrimp.jpg` — [Stenopus hispidus (MNHN-IU-2013-2654) (cropped).jpeg](https://commons.wikimedia.org/wiki/File:Stenopus_hispidus_(MNHN-IU-2013-2654)_(cropped).jpeg) · CC BY 4.0 · Corbari L.
+- `bandtail-puffer.jpg` — [Bandtail puffer.jpg](https://commons.wikimedia.org/wiki/File:Bandtail_puffer.jpg) · CC BY-SA 3.0 · Rex shock Richard A. Ingebrigtsen
 - `bar-jack.jpg` — [Bar jack Caranx ruber (2412820133).jpg](https://commons.wikimedia.org/wiki/File:Bar_jack_Caranx_ruber_(2412820133).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
+- `barred-hamlet.jpg` — [Hypoplectrus puella.jpg](https://commons.wikimedia.org/wiki/File:Hypoplectrus_puella.jpg) · CC BY 2.0 · laszlo-photo
+- `black-coral.jpg` — [Antipathes dichotoma1.jpg](https://commons.wikimedia.org/wiki/File:Antipathes_dichotoma1.jpg) · CC BY-SA 3.0 · Anders Poulsen, Deep Blue (http://www.colours.dk/)
+- `black-durgon.jpg` — [Melichthys niger on Kona.jpg](https://commons.wikimedia.org/wiki/File:Melichthys_niger_on_Kona.jpg) · CC BY-SA 3.0 · Brocken Inaglory Original uploader was Brocken Inaglory
 - `black-grouper.jpg` — [Mycteroperca bonaci.jpg](https://commons.wikimedia.org/wiki/File:Mycteroperca_bonaci.jpg) · CC BY 3.0 · Brian.gratwicke
 - `blackbar-soldierfish.jpg` — [Myripristis jacobus 8zz.jpg](https://commons.wikimedia.org/wiki/File:Myripristis_jacobus_8zz.jpg) · CC BY-SA 4.0 · Photo by David J. Stang
 - `blue-chromis.jpg` — [Chromis cyanea.jpg](https://commons.wikimedia.org/wiki/File:Chromis_cyanea.jpg) · CC BY-SA 2.0 · Originally Unforth from Flickr
@@ -23,29 +29,43 @@ which a diver on a phone pays for on every briefing they open.
 - `bluehead-wrasse.jpg` — [Thalassoma bifasciatum 404161277.jpg](https://commons.wikimedia.org/wiki/File:Thalassoma_bifasciatum_404161277.jpg) · CC BY 4.0 · Pauline Walsh Jacobson
 - `bluestriped-grunt.jpg` — [Haemulon sciurus.jpg](https://commons.wikimedia.org/wiki/File:Haemulon_sciurus.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `bottlenose-dolphin.jpg` — [Tursiops truncatus 01.jpg](https://commons.wikimedia.org/wiki/File:Tursiops_truncatus_01.jpg) · Public domain · NASA
+- `boulder-star-coral.jpg` — [Orbicella annularis - calices.jpg](https://commons.wikimedia.org/wiki/File:Orbicella_annularis_-_calices.jpg) · Public domain
+- `branching-vase-sponge.jpg` — [Callyspongia vaginalis (Branching Vase Sponge - pink variation).jpg](https://commons.wikimedia.org/wiki/File:Callyspongia_vaginalis_(Branching_Vase_Sponge_-_pink_variation).jpg) · CC BY-SA 3.0 · Nhobgood (talk) Nick Hobgood
+- `brown-chromis.jpg` — [Brown chromis Chromis multilineata (4686631428).jpg](https://commons.wikimedia.org/wiki/File:Brown_chromis_Chromis_multilineata_(4686631428).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
 - `caribbean-reef-octopus.jpg` — [Night Moves (48885233693).jpg](https://commons.wikimedia.org/wiki/File:Night_Moves_(48885233693).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `caribbean-reef-shark.jpg` — [Carcharhinus perezi at Mayan Temple Slides at Atlantis.jpg](https://commons.wikimedia.org/wiki/File:Carcharhinus_perezi_at_Mayan_Temple_Slides_at_Atlantis.jpg) · CC BY-SA 3.0 · Fred Hsu (Wikipedia:User:Fredhsu on en.wikipedia)
 - `caribbean-reef-squid.jpg` — [Caribbean reef squid.jpg](https://commons.wikimedia.org/wiki/File:Caribbean_reef_squid.jpg) · Public domain
+- `chain-moray.jpg` — [Chain moray eel.jpg](https://commons.wikimedia.org/wiki/File:Chain_moray_eel.jpg) · CC BY-SA 4.0 · Atsme (Betty Wills)
 - `channel-clinging-crab.jpg` — [Mithrax spinosissimus (Channel Clinging Crab - female).jpg](https://commons.wikimedia.org/wiki/File:Mithrax_spinosissimus_(Channel_Clinging_Crab_-_female).jpg) · CC BY-SA 3.0 · Nhobgood (talk) Nick Hobgood
 - `christmas-tree-worm.jpg` — [Christmas tree worm (Spirobranchus giganteus).jpg](https://commons.wikimedia.org/wiki/File:Christmas_tree_worm_(Spirobranchus_giganteus).jpg) · Public domain · James Guttuso.
 - `cobia.jpg` — [Rachycentron canadum.jpg](https://commons.wikimedia.org/wiki/File:Rachycentron_canadum.jpg) · Public domain · Jorge Alarcon or Dr. Daniel Benetti
 - `common-sea-fan.jpg` — [Seafanpurp.jpg](https://commons.wikimedia.org/wiki/File:Seafanpurp.jpg) · CC BY-SA 4.0 · Betty Wills
+- `coney.jpg` — [A Coney in a Vase Sponge.jpg](https://commons.wikimedia.org/wiki/File:A_Coney_in_a_Vase_Sponge.jpg) · CC BY-SA 2.5 · The original uploader was Aquaimages at English Wikipedia.
+- `corkscrew-anemone.jpg` — [Bartholomea annulata, México.jpg](https://commons.wikimedia.org/wiki/File:Bartholomea_annulata,_M%C3%A9xico.jpg) · CC BY 3.0 · Ricardo González-Muñoz, Nuno Simões, José Luis Tello-Musi, Estefanía Rodríguez
 - `creole-wrasse.jpg` — [Reef1614 - Flickr - NOAA Photo Library.jpg](https://commons.wikimedia.org/wiki/File:Reef1614_-_Flickr_-_NOAA_Photo_Library.jpg) · Public domain · Dr. Dwayne Meadows, NOAA/NMFS/OPR.
+- `cubera-snapper.jpg` — [Gfp-cubera-snapper.jpg](https://commons.wikimedia.org/wiki/File:Gfp-cubera-snapper.jpg) · Public Domain · Yinan Chen
 - `cushion-sea-star.jpg` — [Oreaster reticulatus 000.jpg](https://commons.wikimedia.org/wiki/File:Oreaster_reticulatus_000.jpg) · CC BY-SA 3.0 · Veronidae
+- `dog-snapper.jpg` — [Lutjanus jocu SI.jpg](https://commons.wikimedia.org/wiki/File:Lutjanus_jocu_SI.jpg) · Public domain · D Ross Robertson
+- `donkey-dung-sea-cucumber.jpg` — [Holothuria mexicana - donkey dung sea cucumber - Bay of Pigs - Cuba.jpg](https://commons.wikimedia.org/wiki/File:Holothuria_mexicana_-_donkey_dung_sea_cucumber_-_Bay_of_Pigs_-_Cuba.jpg) · CC BY 4.0 · Tisquesusa
 - `elkhorn-coral.jpg` — [Elkhorn coral.jpg](https://commons.wikimedia.org/wiki/File:Elkhorn_coral.jpg) · Public domain
 - `feather-duster-worm.jpg` — [Sabellastarte magnifica (Magnificent feather duster worm).jpg](https://commons.wikimedia.org/wiki/File:Sabellastarte_magnifica_(Magnificent_feather_duster_worm).jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
+- `finger-coral.jpg` — [Porites porites French Bay.jpg](https://commons.wikimedia.org/wiki/File:Porites_porites_French_Bay.jpg) · Public domain · Jstuby at en.wikipedia
 - `fire-coral.jpg` — [Millepora alcicornis 338801632.jpg](https://commons.wikimedia.org/wiki/File:Millepora_alcicornis_338801632.jpg) · CC BY 4.0 · Pauline Walsh Jacobson
 - `flamingo-tongue.jpg` — [Cyphoma gibbosum (living) 2.jpg](https://commons.wikimedia.org/wiki/File:Cyphoma_gibbosum_(living)_2.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `foureye-butterflyfish.jpg` — [Foureye butterflyfish Chaetodon capistratus (4686924532).jpg](https://commons.wikimedia.org/wiki/File:Foureye_butterflyfish_Chaetodon_capistratus_(4686924532).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
 - `french-angelfish.jpg` — [Pomacanthus paru.jpg](https://commons.wikimedia.org/wiki/File:Pomacanthus_paru.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `french-grunt.jpg` — [Haemulon flavolineatum French grunt.jpg](https://commons.wikimedia.org/wiki/File:Haemulon_flavolineatum_French_grunt.jpg) · CC BY 2.0 · Brian Gratwicke
+- `garden-eel.jpg` — [Heteroconger halis (brown garden eels) (San Salvador Island, Bahamas) 1 (16183740245).jpg](https://commons.wikimedia.org/wiki/File:Heteroconger_halis_(brown_garden_eels)_(San_Salvador_Island,_Bahamas)_1_(16183740245).jpg) · CC BY 2.0 · James St. John
 - `giant-anemone.jpg` — [Condylactis gigantea (Giant Anemone) red base.jpg](https://commons.wikimedia.org/wiki/File:Condylactis_gigantea_(Giant_Anemone)_red_base.jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
 - `giant-barrel-sponge.jpg` — [Shooting Fish in a Barrel (48885969722).jpg](https://commons.wikimedia.org/wiki/File:Shooting_Fish_in_a_Barrel_(48885969722).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
+- `giant-basket-star.jpg` — [Astrophyton muricatum FLMNH.jpg](https://commons.wikimedia.org/wiki/File:Astrophyton_muricatum_FLMNH.jpg) · CC BY-SA 4.0 · François Michonneau
+- `glasseye-snapper.jpg` — [Priacanthus cruentatus.jpg](https://commons.wikimedia.org/wiki/File:Priacanthus_cruentatus.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `glassy-sweeper.jpg` — [Glassy sweepers.jpg](https://commons.wikimedia.org/wiki/File:Glassy_sweepers.jpg) · Public domain · NOAA
 - `goldentail-moray.jpg` — [Gymnothorax miliaris (goldentail moray eel) (San Salvador Island, Bahamas) 1 (15983831850).jpg](https://commons.wikimedia.org/wiki/File:Gymnothorax_miliaris_(goldentail_moray_eel)_(San_Salvador_Island,_Bahamas)_1_(15983831850).jpg) · CC BY 2.0 · James St. John
 - `goliath-grouper.jpg` — [Goliathgrouper1.jpg](https://commons.wikimedia.org/wiki/File:Goliathgrouper1.jpg) · Public domain · Joe Contillo, NOAA fishery biologist
 - `gray-angelfish.jpg` — [Pomacanthus arcuatus 109580400.jpg](https://commons.wikimedia.org/wiki/File:Pomacanthus_arcuatus_109580400.jpg) · CC0 · Zygy
 - `gray-snapper.jpg` — [Grey snapper - Lutjanus griseus.jpg](https://commons.wikimedia.org/wiki/File:Grey_snapper_-_Lutjanus_griseus.jpg) · CC BY 2.0 · Clinton &amp; Charles Robertson from Del Rio, Texas &amp; San Marcos, TX, USA
+- `graysby.jpg` — [Cephalopholis cruentata (33623928198).jpg](https://commons.wikimedia.org/wiki/File:Cephalopholis_cruentata_(33623928198).jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `great-barracuda.jpg` — [Sphyraena barracuda by NPS.jpg](https://commons.wikimedia.org/wiki/File:Sphyraena_barracuda_by_NPS.jpg) · Public domain · NPS photo - Larry Basch
 - `great-star-coral.jpg` — [Montastraea cavernosa.jpg](https://commons.wikimedia.org/wiki/File:Montastraea_cavernosa.jpg) · Public domain
 - `green-moray.jpg` — [GreenMorayEel.JPG](https://commons.wikimedia.org/wiki/File:GreenMorayEel.JPG) · CC BY-SA 3.0 · Blueag9
@@ -55,52 +75,87 @@ which a diver on a phone pays for on every briefing they open.
 - `hogfish.jpg` — [Lachnolaimus maximus juvenile.jpg](https://commons.wikimedia.org/wiki/File:Lachnolaimus_maximus_juvenile.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `honeycomb-cowfish.jpg` — [Lactophrys polygonia.jpg](https://commons.wikimedia.org/wiki/File:Lactophrys_polygonia.jpg) · Public domain · Jan Derk
 - `horse-eye-jack.jpg` — [Caranx latus.PNG](https://commons.wikimedia.org/wiki/File:Caranx_latus.PNG) · CC BY 3.0 · Kare Kare
+- `indigo-hamlet.jpg` — [Indigo Hamlet.JPG](https://commons.wikimedia.org/wiki/File:Indigo_Hamlet.JPG) · CC BY-SA 3.0 · Tomh009
 - `lemon-shark.jpg` — [Lemonshark.jpg](https://commons.wikimedia.org/wiki/File:Lemonshark.jpg) · CC BY-SA 3.0 · Albert kok
+- `lettuce-coral.jpg` — [Lettuce coral Agaricia agaricites (4661346409).jpg](https://commons.wikimedia.org/wiki/File:Lettuce_coral_Agaricia_agaricites_(4661346409).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
+- `lettuce-sea-slug.jpg` — [Elysia crispata panama.jpg](https://commons.wikimedia.org/wiki/File:Elysia_crispata_panama.jpg) · CC BY 3.0 · Sarah Miller
 - `lionfish.jpg` — [Pterois volitans (Lionfish - Caribbean invasive).jpg](https://commons.wikimedia.org/wiki/File:Pterois_volitans_(Lionfish_-_Caribbean_invasive).jpg) · CC BY-SA 3.0 · Nhobgood (talk) Nick Hobgood
 - `loggerhead-turtle.jpg` — [Loggerhead turtle reflection.jpg](https://commons.wikimedia.org/wiki/File:Loggerhead_turtle_reflection.jpg) · Public domain · Bachrach44
 - `long-spined-urchin.jpg` — [Diadema antillarum in Bahamas.jpg](https://commons.wikimedia.org/wiki/File:Diadema_antillarum_in_Bahamas.jpg) · CC BY-SA 2.0 · Greg Grimes
+- `longlure-frogfish.jpg` — [Longlure frogfish (Antennarius multiocellatus) twitching lure.jpg](https://commons.wikimedia.org/wiki/File:Longlure_frogfish_(Antennarius_multiocellatus)_twitching_lure.jpg) · CC BY-SA 4.0 · Betty Wills
+- `longsnout-butterflyfish.jpg` — [Prognathodes aculeatus 179115082.jpg](https://commons.wikimedia.org/wiki/File:Prognathodes_aculeatus_179115082.jpg) · CC BY 4.0 · Dan Schofield
+- `longsnout-seahorse.jpg` — [Hippocampus reidi brasil.jpeg](https://commons.wikimedia.org/wiki/File:Hippocampus_reidi_brasil.jpeg) · CC BY-SA 3.0 · Schreibsal
+- `mahogany-snapper.jpg` — [Mahogany snapper Lutjanus mahogoni (3458475349).jpg](https://commons.wikimedia.org/wiki/File:Mahogany_snapper_Lutjanus_mahogoni_(3458475349).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
 - `manatee.jpg` — [Manatee photo.jpg](https://commons.wikimedia.org/wiki/File:Manatee_photo.jpg) · Public domain · NASA
+- `maze-coral.jpg` — [Meandrina meandrites (Maze Coral).jpg](https://commons.wikimedia.org/wiki/File:Meandrina_meandrites_(Maze_Coral).jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
+- `midnight-parrotfish.jpg` — [Midnight parrotfish.jpg](https://commons.wikimedia.org/wiki/File:Midnight_parrotfish.jpg) · Public domain
 - `moon-jelly.jpg` — [Aurelia aurita (aka).jpg](https://commons.wikimedia.org/wiki/File:Aurelia_aurita_(aka).jpg) · CC BY-SA 2.5 · André Karwath aka Aka
+- `mountainous-star-coral.jpg` — [Orbicella faveolata (Montastraea faveolata).jpg](https://commons.wikimedia.org/wiki/File:Orbicella_faveolata_(Montastraea_faveolata).jpg) · Public domain · NOAA - Joyce and Frank Burek
+- `mustard-hill-coral.jpg` — [Porites astreoides 1.jpg](https://commons.wikimedia.org/wiki/File:Porites_astreoides_1.jpg) · Public domain · Andrew Bruckner, NOAA Fisheries)
+- `mutton-snapper.jpg` — [Lutjanus analis.jpg](https://commons.wikimedia.org/wiki/File:Lutjanus_analis.jpg) · Public domain · NOAA Photo Library
 - `nassau-grouper.jpg` — [Nassaubaars.jpg](https://commons.wikimedia.org/wiki/File:Nassaubaars.jpg) · CC BY-SA 3.0 · Albert Kok at Dutch Wikipedia (Original text: albert kok)
 - `nurse-shark.jpg` — [Nurse shark.jpg](https://commons.wikimedia.org/wiki/File:Nurse_shark.jpg) · Public domain
+- `ocean-triggerfish.jpg` — [Canthidermis sufflamen (ocean triggerfish) (San Salvador Island, Bahamas) 1 (15965263309).jpg](https://commons.wikimedia.org/wiki/File:Canthidermis_sufflamen_(ocean_triggerfish)_(San_Salvador_Island,_Bahamas)_1_(15965263309).jpg) · CC BY 2.0 · James St. John
+- `orange-elephant-ear-sponge.jpg` — [Agelas clathrodes 256774245.jpg](https://commons.wikimedia.org/wiki/File:Agelas_clathrodes_256774245.jpg) · CC BY 4.0 · Jay Brasher
 - `peacock-flounder.jpg` — [Bothus lunatus.jpg](https://commons.wikimedia.org/wiki/File:Bothus_lunatus.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
 - `pederson-cleaner-shrimp.jpg` — [Ancylomenes pedersoni 402186205.jpg](https://commons.wikimedia.org/wiki/File:Ancylomenes_pedersoni_402186205.jpg) · CC BY 4.0 · Pauline Walsh Jacobson
 - `permit-fish.jpg` — [Trachinotus falcatus.jpg](https://commons.wikimedia.org/wiki/File:Trachinotus_falcatus.jpg) · CC BY 3.0 · Brian.gratwicke
 - `pillar-coral.jpg` — [Dendrogyra cylindrus, Culebra.jpg](https://commons.wikimedia.org/wiki/File:Dendrogyra_cylindrus,_Culebra.jpg) · CC BY 2.0 · Thomas Shahan
 - `porcupinefish.jpg` — [Spot-fin-porcupinefish-Aquarium-of-the-Pacific.png](https://commons.wikimedia.org/wiki/File:Spot-fin-porcupinefish-Aquarium-of-the-Pacific.png) · CC BY-SA 4.0 · Coughdrop12
 - `porkfish.jpg` — [Anisotremus virginicus photo.jpg](https://commons.wikimedia.org/wiki/File:Anisotremus_virginicus_photo.jpg) · CC BY-SA 3.0 · cralize
+- `princess-parrotfish.jpg` — [Scarus taeniopterus.jpg](https://commons.wikimedia.org/wiki/File:Scarus_taeniopterus.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `queen-angelfish.jpg` — [Holacanthus cilliaris.jpg](https://commons.wikimedia.org/wiki/File:Holacanthus_cilliaris.jpg) · Public domain · Haplochromis at German Wikipedia
 - `queen-conch.jpg` — [Lobatus gigas 2.jpg](https://commons.wikimedia.org/wiki/File:Lobatus_gigas_2.jpg) · Public domain · NOAA
 - `queen-parrotfish.jpg` — [Queen parrotfish Scarus vetula (4658271432).jpg](https://commons.wikimedia.org/wiki/File:Queen_parrotfish_Scarus_vetula_(4658271432).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
 - `queen-triggerfish.jpg` — [Balistes vetula - 01.jpg](https://commons.wikimedia.org/wiki/File:Balistes_vetula_-_01.jpg) · CC BY-SA 2.5
+- `rainbow-parrotfish.jpg` — [Rainbow parrotfish.jpg](https://commons.wikimedia.org/wiki/File:Rainbow_parrotfish.jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
 - `red-grouper.jpg` — [Epinephelus morio.jpg](https://commons.wikimedia.org/wiki/File:Epinephelus_morio.jpg) · Public domain
 - `red-rope-sponge.jpg` — [Haliclona rubens.jpg](https://commons.wikimedia.org/wiki/File:Haliclona_rubens.jpg) · CC BY 2.0 · James St. John
+- `redband-parrotfish.jpg` — [Sparisoma aurofrenatum.jpg](https://commons.wikimedia.org/wiki/File:Sparisoma_aurofrenatum.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
+- `redlip-blenny.jpg` — [Ophioblennius macclurei (Redlip Blenny).jpg](https://commons.wikimedia.org/wiki/File:Ophioblennius_macclurei_(Redlip_Blenny).jpg) · CC BY-SA 3.0 · Nhobgood Nick Hobgood
+- `reef-butterflyfish.jpg` — [Chaetodon sedentarius Brasil.jpg](https://commons.wikimedia.org/wiki/File:Chaetodon_sedentarius_Brasil.jpg) · CC BY 2.5 · Bernard E. Picton
 - `remora.jpg` — [Echeneis naucrates.jpg](https://commons.wikimedia.org/wiki/File:Echeneis_naucrates.jpg) · CC BY 2.0 · Richard ling
 - `rock-beauty.jpg` — [Holacanthus tricolor 1.jpg](https://commons.wikimedia.org/wiki/File:Holacanthus_tricolor_1.jpg) · CC BY 2.0 · Laszlo Ilyes (laszlo-photo) from Cleveland, Ohio, USA
+- `rock-hind.jpg` — [Epinephelus adscensionis1.jpg](https://commons.wikimedia.org/wiki/File:Epinephelus_adscensionis1.jpg) · Public domain · SEFSC Pascagoula Laboratory; Collection of Brandi Noble, NOAA/NMFS/SEFSC
+- `royal-gramma.jpg` — [Gramma loreto, Adult (Royal Gramma).jpg](https://commons.wikimedia.org/wiki/File:Gramma_loreto,_Adult_(Royal_Gramma).jpg) · No restrictions · Smithsonian Institution from United States
 - `sand-diver.jpg` — [Synodus intermedius.jpg](https://commons.wikimedia.org/wiki/File:Synodus_intermedius.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `schoolmaster-snapper.jpg` — [Lutjanus.JPG](https://commons.wikimedia.org/wiki/File:Lutjanus.JPG) · CC BY-SA 3.0 · albert kok
 - `scrawled-filefish.jpg` — [Pez lija pintado (Aluterus scriptus), mar Rojo, Egipto, 2023-04-19, DD 47.jpg](https://commons.wikimedia.org/wiki/File:Pez_lija_pintado_(Aluterus_scriptus),_mar_Rojo,_Egipto,_2023-04-19,_DD_47.jpg) · CC BY-SA 4.0 · Diego Delso
 - `sea-plume.jpg` — [Pseudopterogorgia sp.jpg](https://commons.wikimedia.org/wiki/File:Pseudopterogorgia_sp.jpg) · CC BY 2.0 · James St. John
 - `sergeant-major.jpg` — [Abudefduf saxatilis.jpg](https://commons.wikimedia.org/wiki/File:Abudefduf_saxatilis.jpg) · CC BY-SA 3.0 · cralize
+- `sharknose-goby.jpg` — [Elacatinus evelynae.jpg](https://commons.wikimedia.org/wiki/File:Elacatinus_evelynae.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
+- `sharpnose-puffer.jpg` — [Canthigaster rostrata SI.jpg](https://commons.wikimedia.org/wiki/File:Canthigaster_rostrata_SI.jpg) · No restrictions · Belize Larval-Fish Group, Smithsonian Institution
+- `sharptail-eel.jpg` — [Myrichthys breviceps.jpg](https://commons.wikimedia.org/wiki/File:Myrichthys_breviceps.jpg) · CC BY-SA 2.5 · The original uploader was Aquaimages at English Wikipedia.
+- `slipper-lobster.jpg` — [Slipper lobster.jpg](https://commons.wikimedia.org/wiki/File:Slipper_lobster.jpg) · CC BY-SA 4.0 · Betty Wills
 - `smooth-trunkfish.jpg` — [Lactophrys triqueter 1.jpg](https://commons.wikimedia.org/wiki/File:Lactophrys_triqueter_1.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
 - `southern-stingray.jpg` — [Dasyatis americana.jpg](https://commons.wikimedia.org/wiki/File:Dasyatis_americana.jpg) · Public domain · Becky A. Dayhuff, Environmental Educator
 - `spanish-hogfish.jpg` — [Bodianus rufus juvenile.jpg](https://commons.wikimedia.org/wiki/File:Bodianus_rufus_juvenile.jpg) · No restrictions · Belize Larval-Fish Group, Smithsonian Institution
 - `spiny-lobster.jpg` — [Panulirus argus.jpg](https://commons.wikimedia.org/wiki/File:Panulirus_argus.jpg) · CC BY-SA 3.0 · Original uploader was Douglas Whitaker at en.wikipedia
+- `splendid-toadfish.jpg` — [Sanopus splendidus.jpg](https://commons.wikimedia.org/wiki/File:Sanopus_splendidus.jpg) · Public domain · Randall McNeely
 - `spotfin-butterflyfish.jpg` — [Spotfin butterflyfish.jpg](https://commons.wikimedia.org/wiki/File:Spotfin_butterflyfish.jpg) · CC BY-SA 1.0 · Cholmes75 at English Wikipedia
+- `spotted-cleaner-shrimp.jpg` — [Spotted cleaner shrimp (Periclimenes yucatanicus) - Harry's Hole Reef, Soto, Curaçao Netherland Antilles.jpg](https://commons.wikimedia.org/wiki/File:Spotted_cleaner_shrimp_(Periclimenes_yucatanicus)_-_Harry%27s_Hole_Reef,_Soto,_Cura%C3%A7ao_Netherland_Antilles.jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `spotted-drum.jpg` — [Equetus punctatus juvenile.jpg](https://commons.wikimedia.org/wiki/File:Equetus_punctatus_juvenile.jpg) · CC BY 2.0 · LASZLO ILYES (laszlo-photo) from Cleveland, Ohio, USA
 - `spotted-eagle-ray.jpg` — [Spotted Eagle Ray (Aetobatus narinari)2.jpg](https://commons.wikimedia.org/wiki/File:Spotted_Eagle_Ray_(Aetobatus_narinari)2.jpg) · CC BY 2.0 · john norton
 - `spotted-moray.jpg` — [Murène (Gymnothorax moringa).jpg](https://commons.wikimedia.org/wiki/File:Mur%C3%A8ne_(Gymnothorax_moringa).jpg) · CC BY 3.0 · Stéphanie De Nadaï
 - `spotted-scorpionfish.jpg` — [Scorpaena plumieri 8zz.jpg](https://commons.wikimedia.org/wiki/File:Scorpaena_plumieri_8zz.jpg) · CC BY-SA 4.0 · Photo by David J. Stang
+- `spotted-trunkfish.jpg` — [Lactophrys bicaudalis.jpg](https://commons.wikimedia.org/wiki/File:Lactophrys_bicaudalis.jpg) · CC BY 2.0 · LASZLO ILYES from Cleveland, Ohio, USA
 - `squirrelfish.jpg` — [Squirrelfish Holocentrus ascensionis.jpg](https://commons.wikimedia.org/wiki/File:Squirrelfish_Holocentrus_ascensionis.jpg) · CC BY 2.0 · Brian Gratwicke
 - `staghorn-coral.jpg` — [Healthy Staghorn.jpg](https://commons.wikimedia.org/wiki/File:Healthy_Staghorn.jpg) · CC BY 2.5 · Joeschmitty at English Wikipedia
 - `stoplight-parrotfish.jpg` — [Sparisoma viride 1.jpg](https://commons.wikimedia.org/wiki/File:Sparisoma_viride_1.jpg) · Public domain · Florida Keys National Marine Sanctuary Staff
+- `stovepipe-sponge.jpg` — [Aplysina archeri (Stove-pipe Sponge-pink variation).jpg](https://commons.wikimedia.org/wiki/File:Aplysina_archeri_(Stove-pipe_Sponge-pink_variation).jpg) · CC BY-SA 3.0 · Nhobgood (talk) Nick Hobgood
 - `symmetrical-brain-coral.jpg` — [Diploria strigosa y Colpophyllia natans.jpg](https://commons.wikimedia.org/wiki/File:Diploria_strigosa_y_Colpophyllia_natans.jpg) · Public domain · NOAA - Frank and Joyce Burek
 - `tarpon.jpg` — [Atlantic tarpon.jpg](https://commons.wikimedia.org/wiki/File:Atlantic_tarpon.jpg) · Public domain
+- `threespot-damselfish.jpg` — [Threespot Damselfish (Stegastes planifrons) Juvenile.jpg](https://commons.wikimedia.org/wiki/File:Threespot_Damselfish_(Stegastes_planifrons)_Juvenile.jpg) · CC BY 2.0 · Andy Blackledge
+- `tiger-grouper.jpg` — [Tiger grouper.JPG](https://commons.wikimedia.org/wiki/File:Tiger_grouper.JPG) · CC BY-SA 3.0 · Albert kok
 - `trumpetfish.jpg` — [Aulostomus maculatus b.jpg](https://commons.wikimedia.org/wiki/File:Aulostomus_maculatus_b.jpg) · CC BY-SA 3.0 · Colling-architektur
 - `turtle-grass.jpg` — [Seagrass Grahams Harbour.jpg](https://commons.wikimedia.org/wiki/File:Seagrass_Grahams_Harbour.jpg) · Public domain · Jstuby at English Wikipedia
 - `upside-down-jellyfish.jpg` — [Cassiopea xamachana (xndr).JPG](https://commons.wikimedia.org/wiki/File:Cassiopea_xamachana_(xndr).JPG) · CC BY-SA 3.0 · No machine-readable author provided. Svdmolen assumed (based on copyright claims).
+- `whale-shark.jpg` — [Snorkeling whale shark 1.JPG](https://commons.wikimedia.org/wiki/File:Snorkeling_whale_shark_1.JPG) · CC BY-SA 4.0 · Jaontiveros
 - `white-grunt.jpg` — [White Grunt (5658507044).jpg](https://commons.wikimedia.org/wiki/File:White_Grunt_(5658507044).jpg) · CC BY 2.0 · Andy Blackledge
 - `yellow-stingray.jpg` — [Urobatis jamaicensis 7zz.jpg](https://commons.wikimedia.org/wiki/File:Urobatis_jamaicensis_7zz.jpg) · CC BY-SA 4.0 · Photo by David J. Stang
 - `yellow-tube-sponge.jpg` — [Aplysina fistularis 261077713.jpg](https://commons.wikimedia.org/wiki/File:Aplysina_fistularis_261077713.jpg) · CC BY 4.0 · Darren Obbard
+- `yellowfin-grouper.jpg` — [Mycteroperca venenosa Puerto Morelos.jpg](https://commons.wikimedia.org/wiki/File:Mycteroperca_venenosa_Puerto_Morelos.jpg) · CC BY-SA 2.0 · Kimon Berlin
 - `yellowhead-jawfish.jpg` — [Opistognathus aurifrons aquarium de la porte dorée Paris.JPG](https://commons.wikimedia.org/wiki/File:Opistognathus_aurifrons_aquarium_de_la_porte_dor%C3%A9e_Paris.JPG) · CC BY-SA 4.0 · Thesupermat
+- `yellowhead-wrasse.jpg` — [Yellowhead wrasse Halichoeres garnoti (4676202122).jpg](https://commons.wikimedia.org/wiki/File:Yellowhead_wrasse_Halichoeres_garnoti_(4676202122).jpg) · CC BY 2.0 · Paul Asman and Jill Lenoble
+- `yellowtail-damselfish.jpg` — [Microspathodon chrysurus.jpg](https://commons.wikimedia.org/wiki/File:Microspathodon_chrysurus.jpg) · CC BY 2.0 · Chika Watanabe
 - `yellowtail-snapper.jpg` — [Yellowtail snapper seen from Underwater Tunnel Atlantis.jpg](https://commons.wikimedia.org/wiki/File:Yellowtail_snapper_seen_from_Underwater_Tunnel_Atlantis.jpg) · CC BY-SA 3.0 · Fred Hsu (Wikipedia:User:Fredhsu on en.wikipedia)

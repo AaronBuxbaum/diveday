@@ -798,6 +798,11 @@
       "underwaterMonument": "Underwater monument",
       "reefFormation": "Reef formation",
       "pointOfInterest": "Point of interest"
+    },
+    "difficulty": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
     }
   },
   "marineLife": {
@@ -822,10 +827,70 @@
       "seagrass": "Seagrass"
     },
     "species": {
+      "arrow-crab": {
+        "name": "Yellowline arrow crab",
+        "description": "A spider of a crab, all legs and a needle nose, walking the reef at night.",
+        "tip": "Sweep a light slowly across a sponge face; the legs catch the beam first."
+      },
+      "atlantic-spadefish": {
+        "name": "Atlantic spadefish",
+        "description": "Tall silver discs banded in black, drifting over a wreck in a slow crowd.",
+        "tip": "They circle rather than flee. Stay low and the whole school will come around again."
+      },
+      "azure-vase-sponge": {
+        "name": "Azure vase sponge",
+        "description": "A fluted violet-pink cup that almost glows against the reef face.",
+        "tip": "Get low and shoot up into the cup — the colour only reads with light in it."
+      },
+      "balloonfish": {
+        "name": "Balloonfish",
+        "description": "A spiny puffer with long spines and copper eyes, resting under a ledge by day.",
+        "tip": "Never provoke one into inflating — it is a stress response, not a trick."
+      },
       "banded-butterflyfish": {
         "name": "Banded butterflyfish",
         "description": "A white disc crossed by four dark bands, almost always in a pair.",
         "tip": "Watch one pair for a minute — they work a patch of reef together and circle back."
+      },
+      "banded-coral-shrimp": {
+        "name": "Banded coral shrimp",
+        "description": "Red-and-white candy stripes with white antennae twice its own length.",
+        "tip": "The waving antennae are the advertisement — look for those, not the body."
+      },
+      "bandtail-puffer": {
+        "name": "Bandtail puffer",
+        "description": "A small mottled puffer with a row of dark blotches along the belly, low on the sand.",
+        "tip": "Sits still on the bottom and lets you pass. Sweep the sand at the reef edge for it."
+      },
+      "bar-jack": {
+        "name": "Bar jack",
+        "description": "A silver jack with one electric-blue stripe down the back, often shadowing a ray.",
+        "tip": "When you find a stingray feeding, look just above it — a jack is usually riding along."
+      },
+      "barred-hamlet": {
+        "name": "Barred hamlet",
+        "description": "A small tan bass with a dark saddle amidships, hanging just off the coral.",
+        "tip": "Hamlets hold a spot and watch you — approach one slowly instead of sweeping the reef."
+      },
+      "black-coral": {
+        "name": "Black coral",
+        "description": "Feathery grey-green bushes on deep walls; the black is the skeleton inside.",
+        "tip": "Slow-growing and protected nearly everywhere. Keep fins and gauges well off the wall."
+      },
+      "black-durgon": {
+        "name": "Black durgon",
+        "description": "Black at a glance, and blue-green with bright seams once light reaches it.",
+        "tip": "Put a light on one. The colour it looks at ten metres is not the colour it is."
+      },
+      "black-grouper": {
+        "name": "Black grouper",
+        "description": "A big, dark, rectangular grouper that holds station off the reef edge.",
+        "tip": "Keep your distance and it stays; swim straight at it and the dive is over."
+      },
+      "blackbar-soldierfish": {
+        "name": "Blackbar soldierfish",
+        "description": "Red, big-eyed and nocturnal, hanging upside-down inside caves by day.",
+        "tip": "Bring a light into an overhang and look at the ceiling, not the floor."
       },
       "blue-chromis": {
         "name": "Blue chromis",
@@ -847,10 +912,125 @@
         "description": "Yellow flanks ruled with electric blue lines, in loose crowds under ledges.",
         "tip": "Look into the shade under overhangs — a whole school can sit out the day there."
       },
+      "bottlenose-dolphin": {
+        "name": "Bottlenose dolphin",
+        "description": "Usually a surface encounter from the boat, occasionally a pass underwater.",
+        "tip": "Never chase. Stay where you are, and they decide whether it's a meeting."
+      },
+      "boulder-star-coral": {
+        "name": "Boulder star coral",
+        "description": "Stacked columns with rounded tops, one of the reef's main frame-builders.",
+        "tip": "Much of the reef you are swimming over is this. It took centuries to reach that size."
+      },
+      "branching-vase-sponge": {
+        "name": "Branching vase sponge",
+        "description": "Clusters of purple-grey tubes with rough walls, leaning away from the current.",
+        "tip": "Look into the tubes — brittle stars and small gobies live down inside them."
+      },
+      "brown-chromis": {
+        "name": "Brown chromis",
+        "description": "Olive-brown slivers feeding in open water, often mixed in with the blue ones.",
+        "tip": "Where you find blue chromis, look again — the brown ones feed in the same cloud."
+      },
+      "caribbean-reef-octopus": {
+        "name": "Caribbean reef octopus",
+        "description": "Blue-green and shape-shifting, out hunting across the reef after dark.",
+        "tip": "A night dive doubles your odds. Keep the light off its eyes and it stays out."
+      },
+      "caribbean-reef-shark": {
+        "name": "Caribbean reef shark",
+        "description": "A classic grey requiem shark that patrols the reef edge in open water.",
+        "tip": "Stay off the bottom, keep the group together, and watch it rather than follow it."
+      },
+      "caribbean-reef-squid": {
+        "name": "Caribbean reef squid",
+        "description": "A small squadron holding formation in mid-water, colours running across them.",
+        "tip": "Approach slowly and they hold. They are talking to each other in those colours."
+      },
+      "chain-moray": {
+        "name": "Chain moray",
+        "description": "Dark brown printed with a yellow chain-link pattern, and short for a moray.",
+        "tip": "Hunts crabs in the shallows by day, sometimes half out of the water. Look shallow."
+      },
+      "channel-clinging-crab": {
+        "name": "Channel clinging crab",
+        "description": "A dinner-plate crab wedged into a crevice, out only when the lights go down.",
+        "tip": "Check the deep cracks in a wall — you see the claws before the animal."
+      },
+      "christmas-tree-worm": {
+        "name": "Christmas tree worm",
+        "description": "Pairs of tiny coloured spirals growing straight out of hard coral.",
+        "tip": "Wave a hand near one and every worm on the head vanishes at once. Then wait."
+      },
+      "cobia": {
+        "name": "Cobia",
+        "description": "A dark torpedo often mistaken for a shark, cruising past wrecks in open water.",
+        "tip": "Look into the blue away from the structure, not only along it."
+      },
+      "common-sea-fan": {
+        "name": "Common sea fan",
+        "description": "A purple lattice standing across the current like a window frame.",
+        "tip": "They grow square to the prevailing current — a useful natural compass."
+      },
+      "coney": {
+        "name": "Coney",
+        "description": "A hand-length grouper that comes in red, brown or bright yellow, all one species.",
+        "tip": "Tucked into sponges and ledges. The yellow phase is the one people photograph."
+      },
+      "corkscrew-anemone": {
+        "name": "Corkscrew anemone",
+        "description": "Long tentacles ringed with pale spirals, always with something living in them.",
+        "tip": "Check inside every one. Cleaner shrimp and juvenile fish shelter there in the day."
+      },
       "creole-wrasse": {
         "name": "Creole wrasse",
         "description": "Violet fish streaming along the reef edge in long, fast trains.",
         "tip": "Hold position at the drop-off and let the train come past you."
+      },
+      "cubera-snapper": {
+        "name": "Cubera snapper",
+        "description": "The biggest Caribbean snapper — heavy-jawed, grey, and usually alone on a wreck.",
+        "tip": "Solitary and wary. If one lets you close, stop where you are rather than pressing on."
+      },
+      "cushion-sea-star": {
+        "name": "Cushion sea star",
+        "description": "A fat orange star the size of a dinner plate, out on open sand and seagrass.",
+        "tip": "Leave it in the water. Lifting one for a photo is what kills them."
+      },
+      "dog-snapper": {
+        "name": "Dog snapper",
+        "description": "Bronze, with a pale triangle under the eye and two canines it is named for.",
+        "tip": "Holds station at the mouth of a swim-through. Look before you enter, not after."
+      },
+      "donkey-dung-sea-cucumber": {
+        "name": "Donkey dung sea cucumber",
+        "description": "A heavy brown cucumber lying on open sand, processing it a mouthful at a time.",
+        "tip": "Leave it be. Handling one makes it shed its insides, which it may not survive."
+      },
+      "elkhorn-coral": {
+        "name": "Elkhorn coral",
+        "description": "Broad antler branches in the shallows, the classic Caribbean reef silhouette.",
+        "tip": "This is the shallowest part of most dives — watch your fins above it."
+      },
+      "feather-duster-worm": {
+        "name": "Magnificent feather duster",
+        "description": "A soft banded fan on a tube, retracting the instant a shadow crosses it.",
+        "tip": "Approach from downstream and stay out of its light; it feels you coming."
+      },
+      "finger-coral": {
+        "name": "Finger coral",
+        "description": "Stubby blunt fingers in low thickets, tan to pale purple, in shallow water.",
+        "tip": "A nursery: look between the fingers for the smallest fish on the reef."
+      },
+      "fire-coral": {
+        "name": "Branching fire coral",
+        "description": "Mustard-tan blades with pale tips, growing over anything that stops moving.",
+        "tip": "Not a coral and it does sting. Learn the mustard colour and keep clear."
+      },
+      "flamingo-tongue": {
+        "name": "Flamingo tongue",
+        "description": "A thumbnail snail wrapped in orange leopard print, grazing on sea fans.",
+        "tip": "Search the sea fans, not the coral. The pattern is living tissue, not the shell."
       },
       "foureye-butterflyfish": {
         "name": "Foureye butterflyfish",
@@ -867,425 +1047,525 @@
         "description": "Yellow-striped fish stacked in the hundreds around coral heads.",
         "tip": "Move slowly into the school and it will part and reform around you."
       },
-      "gray-angelfish": {
-        "name": "Gray angelfish",
-        "description": "The French angelfish's larger, plainer cousin, with a pale square-cut tail.",
-        "tip": "Tell it from a French angelfish by the tail — square and light, not round and dark."
-      },
-      "honeycomb-cowfish": {
-        "name": "Honeycomb cowfish",
-        "description": "A boxy fish tiled in hexagons, with two small horns over the eyes.",
-        "tip": "Look low over the sand between coral heads; it hovers rather than swims."
-      },
-      "porkfish": {
-        "name": "Porkfish",
-        "description": "Two black head bars and a yellow body — the tidiest fish on the reef.",
-        "tip": "Check the up-current side of a coral head, where they hold station together."
-      },
-      "queen-angelfish": {
-        "name": "Queen angelfish",
-        "description": "Blue and gold with a ringed crown on the forehead and long trailing fins.",
-        "tip": "Quiet breathing helps: it keeps a coral head between you and it if you rush."
-      },
-      "queen-parrotfish": {
-        "name": "Queen parrotfish",
-        "description": "Blue-green with bright bands running from the beak, grazing along the coral.",
-        "tip": "Follow the crunching sound; you will hear it working before you see it."
-      },
-      "rock-beauty": {
-        "name": "Rock beauty",
-        "description": "Yellow at both ends with a black saddle in the middle, never far from a hole.",
-        "tip": "Watch one gap in the reef rather than sweeping — it comes back out to the same spot."
-      },
-      "sergeant-major": {
-        "name": "Sergeant major",
-        "description": "Small, striped and everywhere, guarding purple egg patches on hard surfaces.",
-        "tip": "A guarding male will bump your mask — back off rather than push in."
-      },
-      "spotfin-butterflyfish": {
-        "name": "Spotfin butterflyfish",
-        "description": "White with a yellow trailing edge and a dark bar through the eye.",
-        "tip": "Look along the reef's sandy edge at dusk, when pairs come out to feed."
-      },
-      "spotted-drum": {
-        "name": "Spotted drum",
-        "description": "Black-and-white, with an absurdly long first fin the juveniles wave like a ribbon.",
-        "tip": "Check the shaded floor of a swim-through; it circles the same small patch all day."
-      },
-      "stoplight-parrotfish": {
-        "name": "Stoplight parrotfish",
-        "description": "A heavy beaked grazer — green and gold as an adult, mottled red as a youngster.",
-        "tip": "Move slowly near coral heads and let the colour find you."
-      },
-      "trumpetfish": {
-        "name": "Trumpetfish",
-        "description": "A long tube of a fish that hangs head-down among sea rods, pretending to be one.",
-        "tip": "Scan vertical shapes in a soft-coral stand — it is hiding in plain sight."
-      },
-      "white-grunt": {
-        "name": "White grunt",
-        "description": "Pale blue and yellow head lines, with a flash of orange inside the mouth.",
-        "tip": "They really do grunt — you can hear a school through the water on a quiet dive."
-      },
-      "yellowhead-jawfish": {
-        "name": "Yellowhead jawfish",
-        "description": "A pale fish hovering upright over its burrow, dropping in tail-first when startled.",
-        "tip": "Settle on the sand at a distance and wait — it comes back up within a minute."
-      },
-      "bar-jack": {
-        "name": "Bar jack",
-        "description": "A silver jack with one electric-blue stripe down the back, often shadowing a ray.",
-        "tip": "When you find a stingray feeding, look just above it — a jack is usually riding along."
-      },
-      "black-grouper": {
-        "name": "Black grouper",
-        "description": "A big, dark, rectangular grouper that holds station off the reef edge.",
-        "tip": "Keep your distance and it stays; swim straight at it and the dive is over."
-      },
-      "cobia": {
-        "name": "Cobia",
-        "description": "A dark torpedo often mistaken for a shark, cruising past wrecks in open water.",
-        "tip": "Look into the blue away from the structure, not only along it."
-      },
-      "goliath-grouper": {
-        "name": "Goliath grouper",
-        "description": "Enormous and unbothered — usually parked under a ledge or in a wreck's shadow.",
-        "tip": "Give it room and never block its way out from under an overhang."
-      },
-      "gray-snapper": {
-        "name": "Gray snapper",
-        "description": "Wary grey-red snapper that hang in the lee of wrecks and mangrove roots.",
-        "tip": "They watch you first — approach at an angle rather than head-on and they hold."
-      },
-      "great-barracuda": {
-        "name": "Great barracuda",
-        "description": "A long silver bar with an underslung jaw, hanging motionless in the current.",
-        "tip": "It is curious, not interested in you — leave shiny gear tucked away and carry on."
-      },
-      "horse-eye-jack": {
-        "name": "Horse-eye jack",
-        "description": "Big-eyed silver jacks that roll past in tight, fast schools.",
-        "tip": "Watch the blue over the wreck for a wall of them rather than scanning the deck."
-      },
-      "hogfish": {
-        "name": "Hogfish",
-        "description": "A long-snouted wrasse that roots through sand and rubble for shellfish.",
-        "tip": "Follow the puffs of sand — it makes the mess before you spot the fish."
-      },
-      "nassau-grouper": {
-        "name": "Nassau grouper",
-        "description": "Banded brown and cream with a dark saddle at the tail, and famously curious.",
-        "tip": "Protected and slow to recover — look, photograph, and leave it where it is."
-      },
-      "permit-fish": {
-        "name": "Permit",
-        "description": "A tall, mirror-flat silver disc that appears over wrecks and vanishes as fast.",
-        "tip": "Keep the camera ready on the descent — permit meet you on the way down, not at depth."
-      },
-      "red-grouper": {
-        "name": "Red grouper",
-        "description": "Rust-coloured, square-jawed, and dug into its own excavated hollow in the bottom.",
-        "tip": "Look for a scooped pit in the sand or rubble — the fish is usually sitting in it."
-      },
-      "remora": {
-        "name": "Remora",
-        "description": "A striped rider that detaches from its host and circles whatever comes past.",
-        "tip": "If one takes an interest in you, just keep swimming — it loses interest."
-      },
-      "schoolmaster-snapper": {
-        "name": "Schoolmaster snapper",
-        "description": "Yellow-finned snapper that hover in the shade of coral heads and wreck plates.",
-        "tip": "Look into the structure rather than over it; they hold just inside the shadow line."
-      },
-      "tarpon": {
-        "name": "Tarpon",
-        "description": "A slab of living chrome, up to two metres, hanging in a wreck's lee.",
-        "tip": "Cut your light on a night dive and let them work the edge of everyone else's."
-      },
-      "yellowtail-snapper": {
-        "name": "Yellowtail snapper",
-        "description": "Silver schools ruled by one bright yellow stripe running out into the tail.",
-        "tip": "Look into the blue beyond the reef instead of only looking down."
-      },
-      "caribbean-reef-shark": {
-        "name": "Caribbean reef shark",
-        "description": "A classic grey requiem shark that patrols the reef edge in open water.",
-        "tip": "Stay off the bottom, keep the group together, and watch it rather than follow it."
-      },
-      "lemon-shark": {
-        "name": "Lemon shark",
-        "description": "Yellow-brown, blunt-nosed, with two dorsal fins nearly the same size.",
-        "tip": "Common over sand flats and in shallow channels — look away from the coral."
-      },
-      "nurse-shark": {
-        "name": "Nurse shark",
-        "description": "A broad, mellow bottom-rester with rounded fins and two barbels at the snout.",
-        "tip": "Check quiet ledges without crowding or blocking an animal's way out."
-      },
-      "southern-stingray": {
-        "name": "Southern stingray",
-        "description": "A grey diamond gliding over the sand, or buried with only its eyes showing.",
-        "tip": "Give rays space and watch from the side, not from above."
-      },
-      "spotted-eagle-ray": {
-        "name": "Spotted eagle ray",
-        "description": "Black wings freckled with white, flying past in open water with a whip of a tail.",
-        "tip": "Look out into the blue at the start of the dive — they pass through, they don't stay."
-      },
-      "yellow-stingray": {
-        "name": "Yellow stingray",
-        "description": "A small, round, mottled ray that lies still in the sand between coral heads.",
-        "tip": "Shuffle rather than kick down onto sand — this is the one most divers land on."
-      },
-      "goldentail-moray": {
-        "name": "Goldentail moray",
-        "description": "Dark brown flecked with gold, small enough to live in a fist-sized hole.",
-        "tip": "Scan holes at chest height on the reef face, not just at the base."
-      },
-      "green-moray": {
-        "name": "Green moray",
-        "description": "A heavy olive eel that fills a crevice and breathes with its mouth open.",
-        "tip": "The open mouth is breathing, not a threat — keep hands away and it stays calm."
-      },
-      "spotted-moray": {
-        "name": "Spotted moray",
-        "description": "White peppered with dark spots, usually one head poking from the rubble.",
-        "tip": "Look into rubble and wreck gaps rather than the open reef face."
-      },
-      "peacock-flounder": {
-        "name": "Peacock flounder",
-        "description": "A flat sand-coloured disc with blue rings, both eyes on one side.",
-        "tip": "It only becomes visible when it moves — sweep the sand, don't stare at it."
-      },
-      "sand-diver": {
-        "name": "Sand diver",
-        "description": "A propped-up lizardfish that sits on the sand until something small swims by.",
-        "tip": "Look for a stick shape with eyes at the edge of a sand channel."
-      },
-      "spotted-scorpionfish": {
-        "name": "Spotted scorpionfish",
-        "description": "Invisible until it moves — a lump of reef with venomous spines along its back.",
-        "tip": "This is why you never put a hand down to steady yourself. Look before you touch."
-      },
-      "lionfish": {
-        "name": "Lionfish",
-        "description": "Striped fans of venomous spines — beautiful, and not from this ocean.",
-        "tip": "Invasive here. Admire it, keep well clear of the spines, and report it to the crew."
-      },
-      "blackbar-soldierfish": {
-        "name": "Blackbar soldierfish",
-        "description": "Red, big-eyed and nocturnal, hanging upside-down inside caves by day.",
-        "tip": "Bring a light into an overhang and look at the ceiling, not the floor."
-      },
-      "glassy-sweeper": {
-        "name": "Glassy sweeper",
-        "description": "Copper-coloured clouds that fill the shaded spaces inside a wreck or ledge.",
-        "tip": "Stay outside the structure and let the school reform around you."
-      },
-      "porcupinefish": {
-        "name": "Porcupinefish",
-        "description": "A big-eyed spiny balloon that wedges itself under a ledge to sleep.",
-        "tip": "Never provoke one into inflating — it is a stress response, not a trick."
-      },
-      "queen-triggerfish": {
-        "name": "Queen triggerfish",
-        "description": "Blue-lined and gaudy, swimming with a rippling pair of fins rather than its tail.",
-        "tip": "Nesting fish defend a cone of water above the nest — go around, not over."
-      },
-      "scrawled-filefish": {
-        "name": "Scrawled filefish",
-        "description": "Olive with blue scribbles, drifting nose-down like a leaf in the current.",
-        "tip": "It hides by going vertical — check anything that looks like a piece of debris."
-      },
-      "smooth-trunkfish": {
-        "name": "Smooth trunkfish",
-        "description": "A hovering box with pursed lips that blows sand away to find its food.",
-        "tip": "Watch it puff at the sand — the whole feeding trick happens in a few seconds."
-      },
-      "spanish-hogfish": {
-        "name": "Spanish hogfish",
-        "description": "Purple over gold; the young ones run cleaning stations for bigger fish.",
-        "tip": "Find a juvenile at work and you have found the reef's cleaning station."
-      },
-      "squirrelfish": {
-        "name": "Squirrelfish",
-        "description": "Red and silver with huge night-adapted eyes, tucked into a hole by day.",
-        "tip": "Red goes grey at depth without a light — hold a torch on it to see the colour."
-      },
-      "bottlenose-dolphin": {
-        "name": "Bottlenose dolphin",
-        "description": "Usually a surface encounter from the boat, occasionally a pass underwater.",
-        "tip": "Never chase. Stay where you are, and they decide whether it's a meeting."
-      },
-      "green-sea-turtle": {
-        "name": "Green sea turtle",
-        "description": "A smooth-shelled grazer, usually head-down in seagrass or asleep under a ledge.",
-        "tip": "Stay off its path to the surface — it has to breathe, and it will not go around you."
-      },
-      "hawksbill-turtle": {
-        "name": "Hawksbill turtle",
-        "description": "A narrow beak and a serrated shell edge, picking sponges off the reef face.",
-        "tip": "The beak is the tell: pointed and hooked, where a green turtle's is blunt."
-      },
-      "loggerhead-turtle": {
-        "name": "Loggerhead turtle",
-        "description": "A heavy reddish head built for crushing conch and lobster.",
-        "tip": "Give a feeding loggerhead a wide berth — that jaw is doing serious work."
-      },
-      "manatee": {
-        "name": "West Indian manatee",
-        "description": "A grey, slow, whiskered grazer of warm springs and inshore channels.",
-        "tip": "Protected: passive observation only. Hands off, no pursuit, no blocking its route."
-      },
-      "arrow-crab": {
-        "name": "Yellowline arrow crab",
-        "description": "A spider of a crab, all legs and a needle nose, walking the reef at night.",
-        "tip": "Sweep a light slowly across a sponge face; the legs catch the beam first."
-      },
-      "banded-coral-shrimp": {
-        "name": "Banded coral shrimp",
-        "description": "Red-and-white candy stripes with white antennae twice its own length.",
-        "tip": "The waving antennae are the advertisement — look for those, not the body."
-      },
-      "caribbean-reef-octopus": {
-        "name": "Caribbean reef octopus",
-        "description": "Blue-green and shape-shifting, out hunting across the reef after dark.",
-        "tip": "A night dive doubles your odds. Keep the light off its eyes and it stays out."
-      },
-      "caribbean-reef-squid": {
-        "name": "Caribbean reef squid",
-        "description": "A small squadron holding formation in mid-water, colours running across them.",
-        "tip": "Approach slowly and they hold. They are talking to each other in those colours."
-      },
-      "channel-clinging-crab": {
-        "name": "Channel clinging crab",
-        "description": "A dinner-plate crab wedged into a crevice, out only when the lights go down.",
-        "tip": "Check the deep cracks in a wall — you see the claws before the animal."
-      },
-      "christmas-tree-worm": {
-        "name": "Christmas tree worm",
-        "description": "Pairs of tiny coloured spirals growing straight out of hard coral.",
-        "tip": "Wave a hand near one and every worm on the head vanishes at once. Then wait."
-      },
-      "cushion-sea-star": {
-        "name": "Cushion sea star",
-        "description": "A fat orange star the size of a dinner plate, out on open sand and seagrass.",
-        "tip": "Leave it in the water. Lifting one for a photo is what kills them."
-      },
-      "feather-duster-worm": {
-        "name": "Magnificent feather duster",
-        "description": "A soft banded fan on a tube, retracting the instant a shadow crosses it.",
-        "tip": "Approach from downstream and stay out of its light; it feels you coming."
-      },
-      "flamingo-tongue": {
-        "name": "Flamingo tongue",
-        "description": "A thumbnail snail wrapped in orange leopard print, grazing on sea fans.",
-        "tip": "Search the sea fans, not the coral. The pattern is living tissue, not the shell."
+      "garden-eel": {
+        "name": "Garden eel",
+        "description": "A field of pencil-thin eels standing out of the sand, swaying into the current.",
+        "tip": "They vanish as you approach. Settle at a distance, wait, and the whole field grows back."
       },
       "giant-anemone": {
         "name": "Giant Caribbean anemone",
         "description": "A bouquet of purple- or pink-tipped tentacles, often with a shrimp living in it.",
         "tip": "Look inside before you move on — the cleaner shrimp are the real find."
       },
-      "long-spined-urchin": {
-        "name": "Long-spined sea urchin",
-        "description": "A black pincushion with spines as long as your hand; the reef's best grazer.",
-        "tip": "Mind your knees and fins in a swim-through. The spines break off in you."
-      },
-      "moon-jelly": {
-        "name": "Moon jelly",
-        "description": "A translucent saucer with four horseshoe rings, pulsing through open water.",
-        "tip": "Mild sting at worst, but a hood and gloves make a swarm a pleasure instead of a chore."
-      },
-      "pederson-cleaner-shrimp": {
-        "name": "Pederson cleaner shrimp",
-        "description": "A glass shrimp with violet spots, waving from inside an anemone.",
-        "tip": "Hold a bare hand still near the anemone and it may well come and clean it."
-      },
-      "queen-conch": {
-        "name": "Queen conch",
-        "description": "A heavy flared shell on seagrass sand, dragging itself along on one foot.",
-        "tip": "Protected in Florida. Look for the two stalked eyes, and put nothing in your pocket."
-      },
-      "spiny-lobster": {
-        "name": "Caribbean spiny lobster",
-        "description": "No claws, but two long whips of antennae sticking out from under a ledge.",
-        "tip": "The antennae give it away long before the body does. Check every dark gap."
-      },
-      "upside-down-jellyfish": {
-        "name": "Upside-down jellyfish",
-        "description": "A jellyfish lying bell-down on the bottom, farming sunlight with its tentacles up.",
-        "tip": "Common in shallow, sheltered bays — don't kneel on one; they do sting."
-      },
-      "azure-vase-sponge": {
-        "name": "Azure vase sponge",
-        "description": "A fluted violet-pink cup that almost glows against the reef face.",
-        "tip": "Get low and shoot up into the cup — the colour only reads with light in it."
-      },
-      "common-sea-fan": {
-        "name": "Common sea fan",
-        "description": "A purple lattice standing across the current like a window frame.",
-        "tip": "They grow square to the prevailing current — a useful natural compass."
-      },
-      "elkhorn-coral": {
-        "name": "Elkhorn coral",
-        "description": "Broad antler branches in the shallows, the classic Caribbean reef silhouette.",
-        "tip": "This is the shallowest part of most dives — watch your fins above it."
-      },
-      "fire-coral": {
-        "name": "Branching fire coral",
-        "description": "Mustard-tan blades with pale tips, growing over anything that stops moving.",
-        "tip": "Not a coral and it does sting. Learn the mustard colour and keep clear."
-      },
       "giant-barrel-sponge": {
         "name": "Giant barrel sponge",
         "description": "A rust-coloured barrel wide enough to climb into, and centuries old.",
         "tip": "Never rest a hand on the rim. Some of these were here before Florida was a state."
+      },
+      "giant-basket-star": {
+        "name": "Giant basket star",
+        "description": "A tangle of branching arms that opens into a feeding net after dark.",
+        "tip": "By day it is a knot on a sea rod. Come back at night to see it open."
+      },
+      "glasseye-snapper": {
+        "name": "Glasseye snapper",
+        "description": "Red and silver with an enormous eye, hanging head-down in a shaded hollow.",
+        "tip": "A night feeder resting by day. Any dark recess at eye level is worth a second look."
+      },
+      "glassy-sweeper": {
+        "name": "Glassy sweeper",
+        "description": "Copper-coloured clouds that fill the shaded spaces inside a wreck or ledge.",
+        "tip": "Stay outside the structure and let the school reform around you."
+      },
+      "goldentail-moray": {
+        "name": "Goldentail moray",
+        "description": "Dark brown flecked with gold, small enough to live in a fist-sized hole.",
+        "tip": "Scan holes at chest height on the reef face, not just at the base."
+      },
+      "goliath-grouper": {
+        "name": "Goliath grouper",
+        "description": "Enormous and unbothered — usually parked under a ledge or in a wreck's shadow.",
+        "tip": "Give it room and never block its way out from under an overhang."
+      },
+      "gray-angelfish": {
+        "name": "Gray angelfish",
+        "description": "The French angelfish's larger, plainer cousin, with a pale square-cut tail.",
+        "tip": "Tell it from a French angelfish by the tail — square and light, not round and dark."
+      },
+      "gray-snapper": {
+        "name": "Gray snapper",
+        "description": "Wary grey-red snapper that hang in the lee of wrecks and mangrove roots.",
+        "tip": "They watch you first — approach at an angle rather than head-on and they hold."
+      },
+      "graysby": {
+        "name": "Graysby",
+        "description": "A small pale grouper freckled all over, with four dots along the top of the back.",
+        "tip": "Count the four dots on the dorsal ridge — that is the tell against every other small grouper."
+      },
+      "great-barracuda": {
+        "name": "Great barracuda",
+        "description": "A long silver bar with an underslung jaw, hanging motionless in the current.",
+        "tip": "It is curious, not interested in you — leave shiny gear tucked away and carry on."
       },
       "great-star-coral": {
         "name": "Great star coral",
         "description": "Boulders studded with fat, evenly spaced cups that open and feed at night.",
         "tip": "Come back with a light after dark — the whole boulder is in bloom."
       },
+      "green-moray": {
+        "name": "Green moray",
+        "description": "A heavy olive eel that fills a crevice and breathes with its mouth open.",
+        "tip": "The open mouth is breathing, not a threat — keep hands away and it stays calm."
+      },
+      "green-sea-turtle": {
+        "name": "Green sea turtle",
+        "description": "A smooth-shelled grazer, usually head-down in seagrass or asleep under a ledge.",
+        "tip": "Stay off its path to the surface — it has to breathe, and it will not go around you."
+      },
       "grooved-brain-coral": {
         "name": "Grooved brain coral",
         "description": "A rounded head patterned with maze-like ridges and deep valleys.",
         "tip": "Notice the pattern while keeping fins and hands safely clear."
+      },
+      "hawksbill-turtle": {
+        "name": "Hawksbill turtle",
+        "description": "A narrow beak and a serrated shell edge, picking sponges off the reef face.",
+        "tip": "The beak is the tell: pointed and hooked, where a green turtle's is blunt."
+      },
+      "hogfish": {
+        "name": "Hogfish",
+        "description": "A long-snouted wrasse that roots through sand and rubble for shellfish.",
+        "tip": "Follow the puffs of sand — it makes the mess before you spot the fish."
+      },
+      "honeycomb-cowfish": {
+        "name": "Honeycomb cowfish",
+        "description": "A boxy fish tiled in hexagons, with two small horns over the eyes.",
+        "tip": "Look low over the sand between coral heads; it hovers rather than swims."
+      },
+      "horse-eye-jack": {
+        "name": "Horse-eye jack",
+        "description": "Big-eyed silver jacks that roll past in tight, fast schools.",
+        "tip": "Watch the blue over the wreck for a wall of them rather than scanning the deck."
+      },
+      "indigo-hamlet": {
+        "name": "Indigo hamlet",
+        "description": "Deep blue banded with white, and one of the harder Caribbean fish to find.",
+        "tip": "Worth the whole dive if you get one. Try the deeper coral heads, not the shallows."
+      },
+      "lemon-shark": {
+        "name": "Lemon shark",
+        "description": "Yellow-brown, blunt-nosed, with two dorsal fins nearly the same size.",
+        "tip": "Common over sand flats and in shallow channels — look away from the coral."
+      },
+      "lettuce-coral": {
+        "name": "Lettuce coral",
+        "description": "Thin ruffled plates growing in overlapping layers down the shaded side of a slope.",
+        "tip": "Grows where the light is poor, so look under and behind rather than on top."
+      },
+      "lettuce-sea-slug": {
+        "name": "Lettuce sea slug",
+        "description": "Ruffled green frills on a slug the size of a coin, grazing on rock and rubble.",
+        "tip": "It keeps the algae's chloroplasts alive inside itself and feeds on sunlight. Look in the shallows."
+      },
+      "lionfish": {
+        "name": "Lionfish",
+        "description": "Striped fans of venomous spines — beautiful, and not from this ocean.",
+        "tip": "Invasive here. Admire it, keep well clear of the spines, and report it to the crew."
+      },
+      "loggerhead-turtle": {
+        "name": "Loggerhead turtle",
+        "description": "A heavy reddish head built for crushing conch and lobster.",
+        "tip": "Give a feeding loggerhead a wide berth — that jaw is doing serious work."
+      },
+      "long-spined-urchin": {
+        "name": "Long-spined sea urchin",
+        "description": "A black pincushion with spines as long as your hand; the reef's best grazer.",
+        "tip": "Mind your knees and fins in a swim-through. The spines break off in you."
+      },
+      "longlure-frogfish": {
+        "name": "Longlure frogfish",
+        "description": "A lumpy sponge that turns out to have a mouth, fishing with a lure on its head.",
+        "tip": "Guides find these and divers do not. If your guide stops at bare sponge, look harder."
+      },
+      "longsnout-butterflyfish": {
+        "name": "Longsnout butterflyfish",
+        "description": "Small, yellow-backed and long-faced, working the shaded parts of a wall.",
+        "tip": "A wall fish rather than a reef-flat one — look under overhangs on the way back up."
+      },
+      "longsnout-seahorse": {
+        "name": "Longsnout seahorse",
+        "description": "A seahorse the length of a finger, anchored by its tail to a sponge or a rope.",
+        "tip": "Never move one for a photograph, and keep the light off it — bright light stresses them."
+      },
+      "mahogany-snapper": {
+        "name": "Mahogany snapper",
+        "description": "Silver with red-edged fins and a big eye, in loose crowds over the coral by day.",
+        "tip": "Drifts rather than schools tightly. Move through the group slowly and it barely reacts."
+      },
+      "manatee": {
+        "name": "West Indian manatee",
+        "description": "A grey, slow, whiskered grazer of warm springs and inshore channels.",
+        "tip": "Protected: passive observation only. Hands off, no pursuit, no blocking its route."
+      },
+      "maze-coral": {
+        "name": "Maze coral",
+        "description": "Wide, deep valleys running in long curves — a brain coral drawn with a bigger pen.",
+        "tip": "Tell it from a brain coral by the valleys: fewer, wider, and running further before they turn."
+      },
+      "midnight-parrotfish": {
+        "name": "Midnight parrotfish",
+        "description": "Deep blue-black all over, with a brighter blue beak; big and easy to miss.",
+        "tip": "It reads as a dark shape against dark coral. Look for the beak, not the body."
+      },
+      "moon-jelly": {
+        "name": "Moon jelly",
+        "description": "A translucent saucer with four horseshoe rings, pulsing through open water.",
+        "tip": "Mild sting at worst, but a hood and gloves make a swarm a pleasure instead of a chore."
+      },
+      "mountainous-star-coral": {
+        "name": "Mountainous star coral",
+        "description": "Great mounded sheets with a fine even texture, the biggest heads on many reefs.",
+        "tip": "Pale patches are bleaching, not a pattern. Worth reporting to the crew if you see a lot."
+      },
+      "mustard-hill-coral": {
+        "name": "Mustard hill coral",
+        "description": "Low mustard-yellow domes with a bumpy surface, common in the shallows.",
+        "tip": "One of the few corals doing well right now — you will see it on almost every dive."
+      },
+      "mutton-snapper": {
+        "name": "Mutton snapper",
+        "description": "Olive above and rose below, with a small black spot high on the flank.",
+        "tip": "Hunts over sand at the reef edge — look away from the coral rather than into it."
+      },
+      "nassau-grouper": {
+        "name": "Nassau grouper",
+        "description": "Banded brown and cream with a dark saddle at the tail, and famously curious.",
+        "tip": "Protected and slow to recover — look, photograph, and leave it where it is."
+      },
+      "nurse-shark": {
+        "name": "Nurse shark",
+        "description": "A broad, mellow bottom-rester with rounded fins and two barbels at the snout.",
+        "tip": "Check quiet ledges without crowding or blocking an animal's way out."
+      },
+      "ocean-triggerfish": {
+        "name": "Ocean triggerfish",
+        "description": "A tall grey diamond with a dark blotch at the pectoral, out in the blue off a wall.",
+        "tip": "Look off the wall rather than along it — this one hangs in open water, not on the reef."
+      },
+      "orange-elephant-ear-sponge": {
+        "name": "Orange elephant ear sponge",
+        "description": "Broad orange sheets folded out from a wall, the brightest thing at depth.",
+        "tip": "Hawksbill turtles eat these — a chewed edge means one has been through recently."
+      },
+      "peacock-flounder": {
+        "name": "Peacock flounder",
+        "description": "A flat sand-coloured disc with blue rings, both eyes on one side.",
+        "tip": "It only becomes visible when it moves — sweep the sand, don't stare at it."
+      },
+      "pederson-cleaner-shrimp": {
+        "name": "Pederson cleaner shrimp",
+        "description": "A glass shrimp with violet spots, waving from inside an anemone.",
+        "tip": "Hold a bare hand still near the anemone and it may well come and clean it."
+      },
+      "permit-fish": {
+        "name": "Permit",
+        "description": "A tall, mirror-flat silver disc that appears over wrecks and vanishes as fast.",
+        "tip": "Keep the camera ready on the descent — permit meet you on the way down, not at depth."
       },
       "pillar-coral": {
         "name": "Pillar coral",
         "description": "Furry-looking spires standing upright off the bottom; rare and getting rarer.",
         "tip": "The fuzz is polyps out feeding by day — one of the few corals that does."
       },
+      "porcupinefish": {
+        "name": "Porcupinefish",
+        "description": "A big-eyed spiny balloon that wedges itself under a ledge to sleep.",
+        "tip": "Never provoke one into inflating — it is a stress response, not a trick."
+      },
+      "porkfish": {
+        "name": "Porkfish",
+        "description": "Two black head bars and a yellow body — the tidiest fish on the reef.",
+        "tip": "Check the up-current side of a coral head, where they hold station together."
+      },
+      "princess-parrotfish": {
+        "name": "Princess parrotfish",
+        "description": "Blue-green with two bright stripes along the face, grazing in small groups.",
+        "tip": "The stripes run through the eye — that is what separates it from a striped parrotfish."
+      },
+      "queen-angelfish": {
+        "name": "Queen angelfish",
+        "description": "Blue and gold with a ringed crown on the forehead and long trailing fins.",
+        "tip": "Quiet breathing helps: it keeps a coral head between you and it if you rush."
+      },
+      "queen-conch": {
+        "name": "Queen conch",
+        "description": "A heavy flared shell on seagrass sand, dragging itself along on one foot.",
+        "tip": "Protected in Florida. Look for the two stalked eyes, and put nothing in your pocket."
+      },
+      "queen-parrotfish": {
+        "name": "Queen parrotfish",
+        "description": "Blue-green with bright bands running from the beak, grazing along the coral.",
+        "tip": "Follow the crunching sound; you will hear it working before you see it."
+      },
+      "queen-triggerfish": {
+        "name": "Queen triggerfish",
+        "description": "Blue-lined and gaudy, swimming with a rippling pair of fins rather than its tail.",
+        "tip": "Nesting fish defend a cone of water above the nest — go around, not over."
+      },
+      "rainbow-parrotfish": {
+        "name": "Rainbow parrotfish",
+        "description": "The biggest parrotfish in the Atlantic — bronze-green, and over a metre grown.",
+        "tip": "It grows up in the mangroves, so a reef beside one is where you have the best chance."
+      },
+      "red-grouper": {
+        "name": "Red grouper",
+        "description": "Rust-coloured, square-jawed, and dug into its own excavated hollow in the bottom.",
+        "tip": "Look for a scooped pit in the sand or rubble — the fish is usually sitting in it."
+      },
       "red-rope-sponge": {
         "name": "Erect rope sponge",
         "description": "Deep red cords standing off the reef, stiff and slightly branched.",
         "tip": "The red survives deeper than most colours — a useful marker on a wall."
+      },
+      "redband-parrotfish": {
+        "name": "Redband parrotfish",
+        "description": "Small and mottled, with a pale patch behind the head and a red-edged tail.",
+        "tip": "The commonest parrotfish on most Caribbean reefs, and the one nobody stops to look at."
+      },
+      "redlip-blenny": {
+        "name": "Redlip blenny",
+        "description": "A dark, blunt-headed little fish propped on its fins in a hole in the coral.",
+        "tip": "Shallow and territorial — check the same knob of coral twice and it will be back out."
+      },
+      "reef-butterflyfish": {
+        "name": "Reef butterflyfish",
+        "description": "Pale with a dark wash across the back half, always somewhere near its partner.",
+        "tip": "Deeper than the other butterflyfish here — expect it below twenty metres, in pairs."
+      },
+      "remora": {
+        "name": "Remora",
+        "description": "A striped rider that detaches from its host and circles whatever comes past.",
+        "tip": "If one takes an interest in you, just keep swimming — it loses interest."
+      },
+      "rock-beauty": {
+        "name": "Rock beauty",
+        "description": "Yellow at both ends with a black saddle in the middle, never far from a hole.",
+        "tip": "Watch one gap in the reef rather than sweeping — it comes back out to the same spot."
+      },
+      "rock-hind": {
+        "name": "Rock hind",
+        "description": "A stocky grouper covered in red-brown spots, wedged into rubble or a wreck plate.",
+        "tip": "Prefers broken ground to clean coral. Search the rubble field, not the reef top."
+      },
+      "royal-gramma": {
+        "name": "Royal gramma",
+        "description": "Purple in front, gold behind, thumb-sized, and often swimming upside down.",
+        "tip": "Look into the roof of a small cave or under a ledge — it orients its belly to the rock."
+      },
+      "sand-diver": {
+        "name": "Sand diver",
+        "description": "A propped-up lizardfish that sits on the sand until something small swims by.",
+        "tip": "Look for a stick shape with eyes at the edge of a sand channel."
+      },
+      "schoolmaster-snapper": {
+        "name": "Schoolmaster snapper",
+        "description": "Yellow-finned snapper that hover in the shade of coral heads and wreck plates.",
+        "tip": "Look into the structure rather than over it; they hold just inside the shadow line."
+      },
+      "scrawled-filefish": {
+        "name": "Scrawled filefish",
+        "description": "Olive with blue scribbles, drifting nose-down like a leaf in the current.",
+        "tip": "It hides by going vertical — check anything that looks like a piece of debris."
       },
       "sea-plume": {
         "name": "Sea plume",
         "description": "Feathery gorgonians that sway the whole reef in time with the swell.",
         "tip": "Watch them to read the surge before you commit to a swim-through."
       },
+      "sergeant-major": {
+        "name": "Sergeant major",
+        "description": "Small, striped and everywhere, guarding purple egg patches on hard surfaces.",
+        "tip": "A guarding male will bump your mask — back off rather than push in."
+      },
+      "sharknose-goby": {
+        "name": "Sharknose goby",
+        "description": "A tiny neon-striped goby that runs a cleaning station on top of a coral head.",
+        "tip": "Find one and wait. Whatever queues up for its service is the rest of the reef arriving."
+      },
+      "sharpnose-puffer": {
+        "name": "Sharpnose puffer",
+        "description": "A thumb-sized puffer with blue-lined eyes, hovering nose-down over the coral.",
+        "tip": "Everywhere once you know it, and the easiest small fish on the reef to get close to."
+      },
+      "sharptail-eel": {
+        "name": "Sharptail eel",
+        "description": "A pale spotted eel out in the open over sand and seagrass, nosing under rubble.",
+        "tip": "Unlike a moray it travels in daylight. A moving eel in the open is almost always this."
+      },
+      "slipper-lobster": {
+        "name": "Slipper lobster",
+        "description": "A flattened, plate-like lobster with shovels for antennae, pressed into a crevice.",
+        "tip": "It reads as a piece of the reef until it moves. Check the roof of a cave, not the floor."
+      },
+      "smooth-trunkfish": {
+        "name": "Smooth trunkfish",
+        "description": "A hovering box with pursed lips that blows sand away to find its food.",
+        "tip": "Watch it puff at the sand — the whole feeding trick happens in a few seconds."
+      },
+      "southern-stingray": {
+        "name": "Southern stingray",
+        "description": "A grey diamond gliding over the sand, or buried with only its eyes showing.",
+        "tip": "Give rays space and watch from the side, not from above."
+      },
+      "spanish-hogfish": {
+        "name": "Spanish hogfish",
+        "description": "Purple over gold; the young ones run cleaning stations for bigger fish.",
+        "tip": "Find a juvenile at work and you have found the reef's cleaning station."
+      },
+      "spiny-lobster": {
+        "name": "Caribbean spiny lobster",
+        "description": "No claws, but two long whips of antennae sticking out from under a ledge.",
+        "tip": "The antennae give it away long before the body does. Check every dark gap."
+      },
+      "splendid-toadfish": {
+        "name": "Splendid toadfish",
+        "description": "Flat-headed, white-striped, yellow-finned — and found nowhere on earth but Cozumel.",
+        "tip": "It sits far back under ledges. Light the gap without crowding it and it will hold."
+      },
+      "spotfin-butterflyfish": {
+        "name": "Spotfin butterflyfish",
+        "description": "White with a yellow trailing edge and a dark bar through the eye.",
+        "tip": "Look along the reef's sandy edge at dusk, when pairs come out to feed."
+      },
+      "spotted-cleaner-shrimp": {
+        "name": "Spotted cleaner shrimp",
+        "description": "A glass shrimp saddled with white and purple, living inside a stinging anemone.",
+        "tip": "It advertises by waving. Watch one work a fish and you have seen the reef's whole economy."
+      },
+      "spotted-drum": {
+        "name": "Spotted drum",
+        "description": "Black-and-white, with an absurdly long first fin the juveniles wave like a ribbon.",
+        "tip": "Check the shaded floor of a swim-through; it circles the same small patch all day."
+      },
+      "spotted-eagle-ray": {
+        "name": "Spotted eagle ray",
+        "description": "Black wings freckled with white, flying past in open water with a whip of a tail.",
+        "tip": "Look out into the blue at the start of the dive — they pass through, they don't stay."
+      },
+      "spotted-moray": {
+        "name": "Spotted moray",
+        "description": "White peppered with dark spots, usually one head poking from the rubble.",
+        "tip": "Look into rubble and wreck gaps rather than the open reef face."
+      },
+      "spotted-scorpionfish": {
+        "name": "Spotted scorpionfish",
+        "description": "Invisible until it moves — a lump of reef with venomous spines along its back.",
+        "tip": "This is why you never put a hand down to steady yourself. Look before you touch."
+      },
+      "spotted-trunkfish": {
+        "name": "Spotted trunkfish",
+        "description": "A white box covered in black dots, sculling along on two small fins.",
+        "tip": "Its shell means it cannot bend, so it turns its whole body — a slow, comic swimmer."
+      },
+      "squirrelfish": {
+        "name": "Squirrelfish",
+        "description": "Red and silver with huge night-adapted eyes, tucked into a hole by day.",
+        "tip": "Red goes grey at depth without a light — hold a torch on it to see the colour."
+      },
       "staghorn-coral": {
         "name": "Staghorn coral",
         "description": "Dense thickets of finger-thick branches, and a nursery for everything small.",
         "tip": "Fragile and slow-growing. Keep your fins high; a kick takes years back."
+      },
+      "stoplight-parrotfish": {
+        "name": "Stoplight parrotfish",
+        "description": "A heavy beaked grazer — green and gold as an adult, mottled red as a youngster.",
+        "tip": "Move slowly near coral heads and let the colour find you."
+      },
+      "stovepipe-sponge": {
+        "name": "Stovepipe sponge",
+        "description": "Long pale tubes standing well off the wall, tall enough to swim alongside.",
+        "tip": "A wall species. On a drift these are the landmark you use to judge how fast you are going."
       },
       "symmetrical-brain-coral": {
         "name": "Symmetrical brain coral",
         "description": "Tighter, more even ridges than its grooved cousin, in flatter domes.",
         "tip": "The valleys hold tiny life — put a light in one instead of swimming past."
       },
+      "tarpon": {
+        "name": "Tarpon",
+        "description": "A slab of living chrome, up to two metres, hanging in a wreck's lee.",
+        "tip": "Cut your light on a night dive and let them work the edge of everyone else's."
+      },
+      "threespot-damselfish": {
+        "name": "Threespot damselfish",
+        "description": "A small brown farmer with a black spot at the tail, guarding its patch of algae.",
+        "tip": "It will charge a diver ten times its size. That is a display, and it always stops."
+      },
+      "tiger-grouper": {
+        "name": "Tiger grouper",
+        "description": "Slanted tiger bars over a long body, very often parked at a cleaning station.",
+        "tip": "Find the cleaning station and you find the grouper, mouth open and holding still."
+      },
+      "trumpetfish": {
+        "name": "Trumpetfish",
+        "description": "A long tube of a fish that hangs head-down among sea rods, pretending to be one.",
+        "tip": "Scan vertical shapes in a soft-coral stand — it is hiding in plain sight."
+      },
       "turtle-grass": {
         "name": "Turtle grass",
         "description": "Ribbon meadows on the sand flats where the reef's next generation grows up.",
         "tip": "Hover, don't stand. Every fin-print in a seagrass bed lasts for months."
       },
+      "upside-down-jellyfish": {
+        "name": "Upside-down jellyfish",
+        "description": "A jellyfish lying bell-down on the bottom, farming sunlight with its tentacles up.",
+        "tip": "Common in shallow, sheltered bays — don't kneel on one; they do sting."
+      },
+      "whale-shark": {
+        "name": "Whale shark",
+        "description": "A checkerboard the size of a bus, filter-feeding at the surface in season.",
+        "tip": "Never touch or block its path, and stay clear of the tail. Local rules set the distance."
+      },
+      "white-grunt": {
+        "name": "White grunt",
+        "description": "Pale blue and yellow head lines, with a flash of orange inside the mouth.",
+        "tip": "They really do grunt — you can hear a school through the water on a quiet dive."
+      },
+      "yellow-stingray": {
+        "name": "Yellow stingray",
+        "description": "A small, round, mottled ray that lies still in the sand between coral heads.",
+        "tip": "Shuffle rather than kick down onto sand — this is the one most divers land on."
+      },
       "yellow-tube-sponge": {
         "name": "Yellow tube sponge",
         "description": "Clusters of yellow chimneys standing off the wall, each one an open pipe.",
         "tip": "A reliable colour marker in poor visibility — you can see the yellow from far off."
+      },
+      "yellowfin-grouper": {
+        "name": "Yellowfin grouper",
+        "description": "Blotched red or grey with a yellow rim to the pectoral fins, out on the wall.",
+        "tip": "The yellow fin edge is the only reliable mark — its body colour changes as you watch."
+      },
+      "yellowhead-jawfish": {
+        "name": "Yellowhead jawfish",
+        "description": "A pale fish hovering upright over its burrow, dropping in tail-first when startled.",
+        "tip": "Settle on the sand at a distance and wait — it comes back up within a minute."
+      },
+      "yellowhead-wrasse": {
+        "name": "Yellowhead wrasse",
+        "description": "Yellow-headed adults and lemon-yellow youngsters, never still for a moment.",
+        "tip": "Too fast to chase. Pick a coral head, hold, and let it work its way back around to you."
+      },
+      "yellowtail-damselfish": {
+        "name": "Yellowtail damselfish",
+        "description": "Dark body, bright yellow tail; the young ones are speckled with electric blue.",
+        "tip": "The juveniles are the show — look for blue sparks over fire coral in the shallows."
+      },
+      "yellowtail-snapper": {
+        "name": "Yellowtail snapper",
+        "description": "Silver schools ruled by one bright yellow stripe running out into the tail.",
+        "tip": "Look into the blue beyond the reef instead of only looking down."
       }
     }
   },

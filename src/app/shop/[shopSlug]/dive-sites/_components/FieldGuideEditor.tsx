@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
+import { requestMarineLifeSpecies } from "@/app/actions/marine-life-request";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -31,6 +32,8 @@ export type FieldGuideEditorCopy = {
   empty: string;
   full: string;
   notFound: string;
+  requestSpecies: string;
+  requestSent: string;
   remove: string;
   /**
    * These three carry a literal `{name}` for the row they sit on. Templates
@@ -73,14 +76,19 @@ export function FieldGuideEditor({
   initialSlugs,
   catalog,
   copy,
+  siteId,
 }: {
   initialSlugs: string[];
   catalog: FieldGuideCatalogEntry[];
   copy: FieldGuideEditorCopy;
+  /** Which site is being written, for the request's own context. Null on a new one. */
+  siteId?: string | null;
 }) {
   const [chosen, setChosen] = useState<string[]>(initialSlugs);
   const [query, setQuery] = useState("");
   const [missed, setMissed] = useState(false);
+  const [requested, setRequested] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
   const listId = useId();
   const full = chosen.length >= MAX_SITE_CREATURES;
   // Memoized on the catalog rather than rebuilt per render: this component
@@ -143,6 +151,7 @@ export function FieldGuideEditor({
             onChange={(event) => {
               setQuery(event.target.value);
               setMissed(false);
+              setRequested(null);
             }}
             // Enter inside a datalist box would otherwise submit the whole
             // briefing — a species picker is not a save button.
@@ -174,7 +183,34 @@ export function FieldGuideEditor({
           {copy.add}
         </button>
       </div>
-      {missed ? <p className="mt-2 text-sm text-danger">{copy.notFound}</p> : null}
+      {missed ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-danger">{copy.notFound}</p>
+          {/* A plain button, never a nested `<form>`: this editor renders
+              inside the dive-site form, and a form inside a form is invalid
+              HTML that browsers resolve by dropping the inner one. */}
+          <button
+            type="button"
+            disabled={sending}
+            onClick={() => {
+              const asked = query.trim();
+              if (!asked) return;
+              startSending(async () => {
+                await requestMarineLifeSpecies(asked, siteId ?? null);
+                setRequested(asked);
+                setMissed(false);
+                setQuery("");
+              });
+            }}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {copy.requestSpecies}
+          </button>
+        </div>
+      ) : null}
+      {requested ? (
+        <p className="mt-2 text-sm text-muted">{copy.requestSent.replace("{name}", requested)}</p>
+      ) : null}
       {full ? <p className="mt-2 text-sm text-muted">{copy.full}</p> : null}
 
       {chosen.length === 0 ? (

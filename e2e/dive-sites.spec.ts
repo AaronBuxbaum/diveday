@@ -595,10 +595,14 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
   await expect(guide.getByRole("textbox", { name: "Category" })).toHaveCount(0);
 
   // A species DiveDay has no words for is refused rather than added blank —
-  // half a translated guide reads worse than one species fewer.
-  await page.getByLabel("Find a species").fill("Loch Ness monster");
+  // half a translated guide reads worse than one species fewer. The refusal is
+  // a door rather than a dead end: the ask lands in `marine_life_requests`,
+  // which is how DiveDay decides what the catalog grows by next.
+  await page.getByLabel("Find a species").fill("Pygmy seahorse");
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(guide.getByText(/Not in DiveDay's catalog/)).toBeVisible();
+  await page.getByRole("button", { name: "Tell DiveDay about it" }).click();
+  await expect(guide.getByText(/we have noted Pygmy seahorse/)).toBeVisible();
 
   // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
   // the new row is the last one — `.last()` throughout, and the round-trip
@@ -618,7 +622,7 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
   // Round-trips: the chosen species and the landmark come back as the shop
   // left them, and the refused one never landed.
   await expect(guide.getByText("Hogfish")).toBeVisible();
-  await expect(guide.getByText(/Loch Ness/)).toHaveCount(0);
+  await expect(guide.getByText(/Pygmy seahorse/)).toHaveCount(0);
   await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
     "The barrel casks",
   );

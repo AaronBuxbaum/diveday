@@ -17,10 +17,16 @@
  * shop chooses *which* faces its briefing shows and in what order; DiveDay
  * writes them, in both languages, once.
  *
- * **Scope: the tropical western Atlantic** -- Florida, the Keys, the Bahamas
- * and the wider Caribbean, which is where DiveDay's own dive-site templates
- * are. Every entry is a species a recreational diver plausibly meets on one of
- * those dives.
+ * **Scope: the wider Caribbean** -- Florida, the Keys and the Bahamas, plus the
+ * reefs a shop in Cozumel, Bonaire, Roatán, Cayman or the ABCs works. The first
+ * 93 entries were Florida-shaped, which is where DiveDay's own site templates
+ * are; the 2026-08-13 expansion added the species those other markets meet and
+ * Florida rarely does -- the Cozumel-endemic splendid toadfish, the hamlets,
+ * the frogfish and seahorses a Bonaire guide builds a dive around, the
+ * Mesoamerican parrotfish and groupers, and the corals and sponges that make up
+ * a wall anywhere south of the Keys. Every entry is a species a recreational
+ * diver plausibly meets. Outside that water the picker refuses, and the refusal
+ * writes a `marine_life_requests` row rather than a dead end.
  *
  * **Photos** are bundled under `public/marine-life/` rather than hot-linked,
  * for the reason every other image in this app is (CR-020): a briefing page
@@ -80,47 +86,77 @@ export function marineLifeImage(slug: string): string {
  * Every species, in the order the picker offers them: grouped by what a diver
  * would call them, and alphabetical inside each group. Not alphabetical
  * overall -- a staffer writing a reef briefing thinks "what fish, then what
- * else", and 93 names in one A-Z is a list nobody reads to the end of.
+ * else", and 148 names in one A-Z is a list nobody reads to the end of.
  */
 export const MARINE_LIFE_CATALOG = [
   // --- Reef fish ------------------------------------------------------------
   { slug: "banded-butterflyfish", scientificName: "Chaetodon striatus", kind: "reefFish" },
+  { slug: "barred-hamlet", scientificName: "Hypoplectrus puella", kind: "reefFish" },
   { slug: "blue-chromis", scientificName: "Chromis cyanea", kind: "reefFish" },
   { slug: "blue-tang", scientificName: "Acanthurus coeruleus", kind: "reefFish" },
   { slug: "bluehead-wrasse", scientificName: "Thalassoma bifasciatum", kind: "reefFish" },
   { slug: "bluestriped-grunt", scientificName: "Haemulon sciurus", kind: "schoolingFish" },
+  { slug: "brown-chromis", scientificName: "Chromis multilineata", kind: "reefFish" },
   { slug: "creole-wrasse", scientificName: "Clepticus parrae", kind: "schoolingFish" },
   { slug: "foureye-butterflyfish", scientificName: "Chaetodon capistratus", kind: "reefFish" },
   { slug: "french-angelfish", scientificName: "Pomacanthus paru", kind: "reefFish" },
   { slug: "french-grunt", scientificName: "Haemulon flavolineatum", kind: "schoolingFish" },
   { slug: "gray-angelfish", scientificName: "Pomacanthus arcuatus", kind: "reefFish" },
   { slug: "honeycomb-cowfish", scientificName: "Acanthostracion polygonius", kind: "reefFish" },
+  { slug: "indigo-hamlet", scientificName: "Hypoplectrus indigo", kind: "reefFish" },
+  { slug: "longsnout-butterflyfish", scientificName: "Prognathodes aculeatus", kind: "reefFish" },
+  { slug: "midnight-parrotfish", scientificName: "Scarus coelestinus", kind: "reefFish" },
   { slug: "porkfish", scientificName: "Anisotremus virginicus", kind: "schoolingFish" },
+  { slug: "princess-parrotfish", scientificName: "Scarus taeniopterus", kind: "reefFish" },
   { slug: "queen-angelfish", scientificName: "Holacanthus ciliaris", kind: "reefFish" },
   { slug: "queen-parrotfish", scientificName: "Scarus vetula", kind: "reefFish" },
+  { slug: "rainbow-parrotfish", scientificName: "Scarus guacamaia", kind: "reefFish" },
+  { slug: "redband-parrotfish", scientificName: "Sparisoma aurofrenatum", kind: "reefFish" },
+  { slug: "redlip-blenny", scientificName: "Ophioblennius macclurei", kind: "reefFish" },
+  { slug: "reef-butterflyfish", scientificName: "Chaetodon sedentarius", kind: "reefFish" },
   { slug: "rock-beauty", scientificName: "Holacanthus tricolor", kind: "reefFish" },
+  { slug: "royal-gramma", scientificName: "Gramma loreto", kind: "reefFish" },
   { slug: "sergeant-major", scientificName: "Abudefduf saxatilis", kind: "reefFish" },
+  { slug: "sharknose-goby", scientificName: "Elacatinus evelynae", kind: "reefFish" },
+  { slug: "splendid-toadfish", scientificName: "Sanopus splendidus", kind: "reefFish" },
   { slug: "spotfin-butterflyfish", scientificName: "Chaetodon ocellatus", kind: "reefFish" },
   { slug: "spotted-drum", scientificName: "Equetus punctatus", kind: "reefFish" },
   { slug: "stoplight-parrotfish", scientificName: "Sparisoma viride", kind: "reefFish" },
+  { slug: "threespot-damselfish", scientificName: "Stegastes planifrons", kind: "reefFish" },
   { slug: "trumpetfish", scientificName: "Aulostomus maculatus", kind: "reefFish" },
   { slug: "white-grunt", scientificName: "Haemulon plumierii", kind: "schoolingFish" },
   { slug: "yellowhead-jawfish", scientificName: "Opistognathus aurifrons", kind: "reefFish" },
+  { slug: "yellowhead-wrasse", scientificName: "Halichoeres garnoti", kind: "reefFish" },
+  { slug: "yellowtail-damselfish", scientificName: "Microspathodon chrysurus", kind: "reefFish" },
   // --- Bigger fish ----------------------------------------------------------
+  { slug: "atlantic-spadefish", scientificName: "Chaetodipterus faber", kind: "schoolingFish" },
   { slug: "bar-jack", scientificName: "Caranx ruber", kind: "predator" },
+  { slug: "black-durgon", scientificName: "Melichthys niger", kind: "reefFish" },
   { slug: "black-grouper", scientificName: "Mycteroperca bonaci", kind: "predator" },
   { slug: "cobia", scientificName: "Rachycentron canadum", kind: "predator" },
+  { slug: "coney", scientificName: "Cephalopholis fulva", kind: "predator" },
+  { slug: "cubera-snapper", scientificName: "Lutjanus cyanopterus", kind: "predator" },
+  { slug: "dog-snapper", scientificName: "Lutjanus jocu", kind: "predator" },
+  { slug: "glasseye-snapper", scientificName: "Heteropriacanthus cruentatus", kind: "reefFish" },
   { slug: "goliath-grouper", scientificName: "Epinephelus itajara", kind: "predator" },
   { slug: "gray-snapper", scientificName: "Lutjanus griseus", kind: "schoolingFish" },
+  { slug: "graysby", scientificName: "Cephalopholis cruentata", kind: "predator" },
   { slug: "great-barracuda", scientificName: "Sphyraena barracuda", kind: "predator" },
-  { slug: "horse-eye-jack", scientificName: "Caranx latus", kind: "schoolingFish" },
   { slug: "hogfish", scientificName: "Lachnolaimus maximus", kind: "reefFish" },
+  { slug: "horse-eye-jack", scientificName: "Caranx latus", kind: "schoolingFish" },
+  { slug: "mahogany-snapper", scientificName: "Lutjanus mahogoni", kind: "schoolingFish" },
+  { slug: "mutton-snapper", scientificName: "Lutjanus analis", kind: "predator" },
   { slug: "nassau-grouper", scientificName: "Epinephelus striatus", kind: "predator" },
+  { slug: "ocean-triggerfish", scientificName: "Canthidermis sufflamen", kind: "reefFish" },
   { slug: "permit-fish", scientificName: "Trachinotus falcatus", kind: "predator" },
   { slug: "red-grouper", scientificName: "Epinephelus morio", kind: "predator" },
   { slug: "remora", scientificName: "Echeneis naucrates", kind: "reefFish" },
+  { slug: "rock-hind", scientificName: "Epinephelus adscensionis", kind: "predator" },
   { slug: "schoolmaster-snapper", scientificName: "Lutjanus apodus", kind: "schoolingFish" },
   { slug: "tarpon", scientificName: "Megalops atlanticus", kind: "predator" },
+  { slug: "tiger-grouper", scientificName: "Mycteroperca tigris", kind: "predator" },
+  { slug: "whale-shark", scientificName: "Rhincodon typus", kind: "shark" },
+  { slug: "yellowfin-grouper", scientificName: "Mycteroperca venenosa", kind: "predator" },
   { slug: "yellowtail-snapper", scientificName: "Ocyurus chrysurus", kind: "schoolingFish" },
   // --- Sharks and rays ------------------------------------------------------
   { slug: "caribbean-reef-shark", scientificName: "Carcharhinus perezi", kind: "shark" },
@@ -130,21 +166,30 @@ export const MARINE_LIFE_CATALOG = [
   { slug: "spotted-eagle-ray", scientificName: "Aetobatus narinari", kind: "ray" },
   { slug: "yellow-stingray", scientificName: "Urobatis jamaicensis", kind: "ray" },
   // --- Eels and ambush hunters ----------------------------------------------
+  { slug: "chain-moray", scientificName: "Echidna catenata", kind: "eel" },
+  { slug: "garden-eel", scientificName: "Heteroconger longissimus", kind: "eel" },
   { slug: "goldentail-moray", scientificName: "Gymnothorax miliaris", kind: "eel" },
   { slug: "green-moray", scientificName: "Gymnothorax funebris", kind: "eel" },
-  { slug: "spotted-moray", scientificName: "Gymnothorax moringa", kind: "eel" },
+  { slug: "lionfish", scientificName: "Pterois volitans", kind: "invasive" },
+  { slug: "longlure-frogfish", scientificName: "Antennarius multiocellatus", kind: "camouflage" },
   { slug: "peacock-flounder", scientificName: "Bothus lunatus", kind: "camouflage" },
   { slug: "sand-diver", scientificName: "Synodus intermedius", kind: "camouflage" },
+  { slug: "sharptail-eel", scientificName: "Myrichthys breviceps", kind: "eel" },
+  { slug: "spotted-moray", scientificName: "Gymnothorax moringa", kind: "eel" },
   { slug: "spotted-scorpionfish", scientificName: "Scorpaena plumieri", kind: "camouflage" },
-  { slug: "lionfish", scientificName: "Pterois volitans", kind: "invasive" },
   // --- Reef oddities --------------------------------------------------------
+  { slug: "balloonfish", scientificName: "Diodon holocanthus", kind: "reefFish" },
+  { slug: "bandtail-puffer", scientificName: "Sphoeroides spengleri", kind: "reefFish" },
   { slug: "blackbar-soldierfish", scientificName: "Myripristis jacobus", kind: "reefFish" },
   { slug: "glassy-sweeper", scientificName: "Pempheris schomburgkii", kind: "schoolingFish" },
+  { slug: "longsnout-seahorse", scientificName: "Hippocampus reidi", kind: "reefFish" },
   { slug: "porcupinefish", scientificName: "Diodon hystrix", kind: "reefFish" },
   { slug: "queen-triggerfish", scientificName: "Balistes vetula", kind: "reefFish" },
   { slug: "scrawled-filefish", scientificName: "Aluterus scriptus", kind: "reefFish" },
+  { slug: "sharpnose-puffer", scientificName: "Canthigaster rostrata", kind: "reefFish" },
   { slug: "smooth-trunkfish", scientificName: "Lactophrys triqueter", kind: "reefFish" },
   { slug: "spanish-hogfish", scientificName: "Bodianus rufus", kind: "reefFish" },
+  { slug: "spotted-trunkfish", scientificName: "Lactophrys bicaudalis", kind: "reefFish" },
   { slug: "squirrelfish", scientificName: "Holocentrus adscensionis", kind: "reefFish" },
   // --- Turtles and mammals --------------------------------------------------
   { slug: "bottlenose-dolphin", scientificName: "Tursiops truncatus", kind: "marineMammal" },
@@ -163,7 +208,13 @@ export const MARINE_LIFE_CATALOG = [
     scientificName: "Spirobranchus giganteus",
     kind: "reefInvertebrate",
   },
+  { slug: "corkscrew-anemone", scientificName: "Bartholomea annulata", kind: "reefInvertebrate" },
   { slug: "cushion-sea-star", scientificName: "Oreaster reticulatus", kind: "reefInvertebrate" },
+  {
+    slug: "donkey-dung-sea-cucumber",
+    scientificName: "Holothuria mexicana",
+    kind: "reefInvertebrate",
+  },
   {
     slug: "feather-duster-worm",
     scientificName: "Sabellastarte magnifica",
@@ -171,24 +222,42 @@ export const MARINE_LIFE_CATALOG = [
   },
   { slug: "flamingo-tongue", scientificName: "Cyphoma gibbosum", kind: "mollusc" },
   { slug: "giant-anemone", scientificName: "Condylactis gigantea", kind: "reefInvertebrate" },
+  { slug: "giant-basket-star", scientificName: "Astrophyton muricatum", kind: "reefInvertebrate" },
+  { slug: "lettuce-sea-slug", scientificName: "Elysia crispata", kind: "mollusc" },
   { slug: "long-spined-urchin", scientificName: "Diadema antillarum", kind: "reefInvertebrate" },
   { slug: "moon-jelly", scientificName: "Aurelia aurita", kind: "drifter" },
   { slug: "pederson-cleaner-shrimp", scientificName: "Ancylomenes pedersoni", kind: "crustacean" },
   { slug: "queen-conch", scientificName: "Lobatus gigas", kind: "mollusc" },
+  { slug: "slipper-lobster", scientificName: "Parribacus antarcticus", kind: "crustacean" },
   { slug: "spiny-lobster", scientificName: "Panulirus argus", kind: "crustacean" },
+  {
+    slug: "spotted-cleaner-shrimp",
+    scientificName: "Periclimenes yucatanicus",
+    kind: "crustacean",
+  },
   { slug: "upside-down-jellyfish", scientificName: "Cassiopea xamachana", kind: "drifter" },
   // --- Corals, sponges and the reef itself ----------------------------------
   { slug: "azure-vase-sponge", scientificName: "Callyspongia plicifera", kind: "sponge" },
+  { slug: "black-coral", scientificName: "Antipathes caribbeana", kind: "softCoral" },
+  { slug: "boulder-star-coral", scientificName: "Orbicella annularis", kind: "hardCoral" },
+  { slug: "branching-vase-sponge", scientificName: "Callyspongia vaginalis", kind: "sponge" },
   { slug: "common-sea-fan", scientificName: "Gorgonia ventalina", kind: "softCoral" },
   { slug: "elkhorn-coral", scientificName: "Acropora palmata", kind: "hardCoral" },
+  { slug: "finger-coral", scientificName: "Porites porites", kind: "hardCoral" },
   { slug: "fire-coral", scientificName: "Millepora alcicornis", kind: "hardCoral" },
   { slug: "giant-barrel-sponge", scientificName: "Xestospongia muta", kind: "sponge" },
   { slug: "great-star-coral", scientificName: "Montastraea cavernosa", kind: "hardCoral" },
   { slug: "grooved-brain-coral", scientificName: "Diploria labyrinthiformis", kind: "hardCoral" },
+  { slug: "lettuce-coral", scientificName: "Agaricia agaricites", kind: "hardCoral" },
+  { slug: "maze-coral", scientificName: "Meandrina meandrites", kind: "hardCoral" },
+  { slug: "mountainous-star-coral", scientificName: "Orbicella faveolata", kind: "hardCoral" },
+  { slug: "mustard-hill-coral", scientificName: "Porites astreoides", kind: "hardCoral" },
+  { slug: "orange-elephant-ear-sponge", scientificName: "Agelas clathrodes", kind: "sponge" },
   { slug: "pillar-coral", scientificName: "Dendrogyra cylindrus", kind: "hardCoral" },
   { slug: "red-rope-sponge", scientificName: "Amphimedon compressa", kind: "sponge" },
   { slug: "sea-plume", scientificName: "Pseudopterogorgia species", kind: "softCoral" },
   { slug: "staghorn-coral", scientificName: "Acropora cervicornis", kind: "hardCoral" },
+  { slug: "stovepipe-sponge", scientificName: "Aplysina archeri", kind: "sponge" },
   { slug: "symmetrical-brain-coral", scientificName: "Pseudodiploria strigosa", kind: "hardCoral" },
   { slug: "turtle-grass", scientificName: "Thalassia testudinum", kind: "seagrass" },
   { slug: "yellow-tube-sponge", scientificName: "Aplysina fistularis", kind: "sponge" },

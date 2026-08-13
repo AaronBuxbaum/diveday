@@ -1,4 +1,5 @@
 import { DiveBriefingCard } from "@/components/DiveBriefingCard";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiveBriefing, Trip } from "./types";
 
@@ -55,7 +56,7 @@ export function DiveBriefingsSection({
                     <th className="p-2 font-semibold">{diveSite?.name}</th>
                     <td className="p-2 text-muted">{diveSite?.depthRange ?? t("common.varies")}</td>
                     <td className="p-2 text-muted">
-                      {diveSite?.difficulty ?? t("common.crewLed")}
+                      {diveSiteDifficultyLabel(diveSite?.difficultyLevel, t) ?? t("common.crewLed")}
                     </td>
                     <td className="p-2 text-muted">
                       {diveSite?.currentNote ?? t("common.confirmedAtDock")}

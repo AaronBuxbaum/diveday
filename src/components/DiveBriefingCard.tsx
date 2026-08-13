@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { diveSites } from "@/db/schema";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { siteFit } from "@/lib/diver-planning";
@@ -53,6 +54,7 @@ export function DiveBriefingCard({
   // with one site look like a mismatch between the sites and the briefings.
   const subheading = site ? site.locationName : t("trip.siteToBeConfirmed");
   const fit = site ? siteFit(site) : null;
+  const difficulty = diveSiteDifficultyLabel(site?.difficultyLevel, t);
   const landmarks = site ? parseDiveSiteLandmarks(site.landmarks) : [];
   // The long-tail site content folds behind one tap so the page stays a
   // briefing, not a scroll marathon — the essentials above stay in view.
@@ -106,7 +108,7 @@ export function DiveBriefingCard({
         ) : (
           <p className="mt-4 text-muted">{t("trip.siteRouteAtDock")}</p>
         )}
-        {site && (site.difficulty || site.depthRange || site.currentNote || site.fitNote) ? (
+        {site && (difficulty || site.depthRange || site.currentNote || site.fitNote) ? (
           <div className="mt-5 rounded-lg bg-primary/10 p-4">
             <p className="font-semibold text-primary">{fit ? t(fitLabelKey[fit.tone]) : null}</p>
             {/* The shop's own sentence about who this site suits, when it has
@@ -118,15 +120,17 @@ export function DiveBriefingCard({
             <p className="mt-2 text-xs text-muted">{t("trip.sitePlanningGuide")}</p>
           </div>
         ) : null}
-        {site && (site.difficulty || site.depthRange || site.currentNote) ? (
+        {site && (difficulty || site.depthRange || site.currentNote) ? (
           <dl className="mt-6 grid grid-cols-2 gap-4 border-y border-border py-5 sm:grid-cols-3">
             <div>
               <dt className="text-xs font-medium tracking-widest text-muted uppercase">
                 {t("trip.columnExperience")}
               </dt>
-              <dd className="mt-1 font-semibold capitalize">
-                {site.difficulty ?? t("common.crewLed")}
-              </dd>
+              {/* No `capitalize` any more: the word is a translated label now,
+                  and a bundle decides its own casing. Title-casing a Spanish
+                  sentence fragment in CSS is how "Principiante" would have
+                  become something a translator never wrote. */}
+              <dd className="mt-1 font-semibold">{difficulty ?? t("common.crewLed")}</dd>
             </div>
             <div>
               <dt className="text-xs font-medium tracking-widest text-muted uppercase">

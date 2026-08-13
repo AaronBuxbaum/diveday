@@ -13,6 +13,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -43,7 +44,8 @@ export type DiveSiteInput = {
   imageUrls?: string[];
   marineLife?: string;
   marineLifeDescription?: string;
-  difficulty?: string;
+  /** How demanding the site is, as a code (`src/lib/dive-site-difficulty.ts`). */
+  difficultyLevel?: DiveSiteDifficulty | null;
   depthRange?: string;
   /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
   maxDepthMeters?: number | null;
@@ -232,7 +234,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       imageUrls: input.imageUrls ?? [],
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
-      difficulty: input.difficulty || null,
+      difficultyLevel: input.difficultyLevel ?? null,
       depthRange: input.depthRange || null,
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
@@ -274,7 +276,7 @@ export async function updateDiveSite(
       imageUrls: input.imageUrls ?? [],
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
-      difficulty: input.difficulty || null,
+      difficultyLevel: input.difficultyLevel ?? null,
       depthRange: input.depthRange || null,
       // `?? null` rather than `|| null`: 0 is not a real site depth, but the
       // distinction still matters — an omitted field clears the column, which
@@ -341,7 +343,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     imageUrls: source.imageUrls,
     marineLife: source.marineLife ?? undefined,
     marineLifeDescription: source.marineLifeDescription ?? undefined,
-    difficulty: source.difficulty ?? undefined,
+    difficultyLevel: source.difficultyLevel,
     depthRange: source.depthRange ?? undefined,
     maxDepthMeters: source.maxDepthMeters,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
@@ -648,12 +650,17 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
   // `creatureSlugs` names catalog rows rather than repeating their words, so it
   // is not a site column — it is resolved here into the shop's own field-guide
   // rows, which the shop then edits like anything else it typed.
-  const { creatureSlugs, ...columns } = briefing;
+  // `difficulty` is dropped along with `creatureSlugs`: neither is a column on
+  // the shop's row any more. A version published before 2026-08-13 still holds
+  // free text there, so it is narrowed rather than ignored — every value any
+  // template ever carried is one of the three codes.
+  const { creatureSlugs, difficulty, difficultyLevel, ...columns } = briefing;
   const [site] = await db
     .insert(diveSites)
     .values({
       shopId,
       ...columns,
+      difficultyLevel: difficultyLevel ?? parseDiveSiteDifficulty(difficulty),
       name: await availableSiteName(db, shopId, briefing.name),
       sourceTemplateId: row.template.id,
       sourceTemplateVersion: row.version.version,

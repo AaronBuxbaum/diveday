@@ -82,36 +82,58 @@ describe("logAuthError", () => {
     expect(console.error).not.toHaveBeenCalled();
   });
 
-  it("leaves every other Auth.js error at error level, in Auth.js's own format", () => {
+  it("writes every other Auth.js error as a structured error line", () => {
+    // Same level and same stream as before, but JSON — so it is queryable and
+    // counted by the `AppErrors` filter (`$.level = "error"`), which the ANSI
+    // line it replaces never was.
     logAuthError(authError("MissingSecret", "Please define a `secret`"));
 
     expect(console.warn).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalled();
-    const first = vi.mocked(console.error).mock.calls[0]?.[0] as string;
-    expect(first).toContain("[auth][error]");
-    expect(first).toContain("MissingSecret");
-    expect(first).toContain("Please define a `secret`");
+    const line = vi.mocked(console.error).mock.calls[0]?.[0] as string;
+    expect(JSON.parse(line)).toEqual({
+      time: "2026-08-13T12:00:00.000Z",
+      level: "error",
+      event: "auth.error",
+      type: "MissingSecret",
+      message: "Please define a `secret`. Read more at https://errors.authjs.dev#MissingSecret",
+      cause: null,
+    });
   });
 
-  it("keeps the cause and details lines a wrapped Auth.js error carries", () => {
-    // `CallbackRouteError` and friends hide the real failure in `cause.err`.
-    // Losing that would make the downgrade a debugging regression.
+  it("names a wrapped cause by its class and never ships its text", () => {
+    // `CallbackRouteError` and friends wrap whatever our own code threw, and a
+    // driver's message can echo the value that caused it. The class is enough
+    // to triage on; the message is not ours to send anywhere.
     const error = authError("CallbackRouteError", "Read more");
-    error.cause = { err: new Error('relation "people" does not exist'), provider: "credentials" };
+    error.cause = { err: new TypeError('relation "people" does not exist'), provider: "creds" };
 
     logAuthError(error);
 
-    const written = vi.mocked(console.error).mock.calls.flat().join("\n");
+    const line = vi.mocked(console.error).mock.calls[0]?.[0] as string;
+    expect(JSON.parse(line)).toMatchObject({ type: "CallbackRouteError", cause: "TypeError" });
+    expect(line).not.toContain("people");
+  });
+
+  it("still prints the cause and details to the console for a developer", () => {
+    // The structured line is for the log drain; this is what someone reading
+    // Vercel's own view needs, and losing it would make the change a debugging
+    // regression.
+    const error = authError("CallbackRouteError", "Read more");
+    error.cause = { err: new Error('relation "people" does not exist'), provider: "creds" };
+
+    logAuthError(error);
+
+    const written = vi.mocked(console.error).mock.calls.slice(1).flat().join("\n");
     expect(written).toContain("[auth][cause]");
     expect(written).toContain('relation "people" does not exist');
-    expect(written).toContain("credentials");
+    expect(written).toContain("creds");
   });
 
   it("leaves a plain thrown Error at error level too", () => {
     logAuthError(new TypeError("fetch failed"));
 
     expect(console.warn).not.toHaveBeenCalled();
-    const first = vi.mocked(console.error).mock.calls[0]?.[0] as string;
-    expect(first).toContain("TypeError: fetch failed");
+    const line = vi.mocked(console.error).mock.calls[0]?.[0] as string;
+    expect(JSON.parse(line)).toMatchObject({ type: "TypeError", message: "fetch failed" });
   });
 });

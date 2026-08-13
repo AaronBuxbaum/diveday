@@ -56,7 +56,7 @@ describe("dive-site library", () => {
     const site = await createDiveSite(db, {
       shopId: shop.id,
       name: "Molasses North",
-      difficulty: "Intermediate",
+      difficultyLevel: "intermediate" as const,
       depthRange: "30–55 ft",
       currentNote: "Expect a gentle northbound drift.",
       divePlan: "Enter on the mooring and finish at the stern line.",
@@ -67,7 +67,7 @@ describe("dive-site library", () => {
     });
 
     expect(site).toMatchObject({
-      difficulty: "Intermediate",
+      difficultyLevel: "intermediate" as const,
       depthRange: "30–55 ft",
       currentNote: "Expect a gentle northbound drift.",
       divePlan: "Enter on the mooring and finish at the stern line.",
@@ -80,7 +80,7 @@ describe("dive-site library", () => {
     const edited = await updateDiveSite(db, shop.id, site.id, {
       shopId: shop.id,
       name: site.name,
-      difficulty: "Advanced",
+      difficultyLevel: "advanced" as const,
       depthRange: "40–70 ft",
       currentNote: "Check the tide before departure.",
       divePlan: "Follow the reef edge and return along the mooring line.",
@@ -91,7 +91,7 @@ describe("dive-site library", () => {
     });
 
     expect(edited).toMatchObject({
-      difficulty: "Advanced",
+      difficultyLevel: "advanced" as const,
       depthRange: "40–70 ft",
       landmarks: ["New anchor"],
       minimumCertificationLevel: "rescue",
