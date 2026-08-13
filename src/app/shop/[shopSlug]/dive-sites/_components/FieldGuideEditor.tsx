@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -83,7 +83,10 @@ export function FieldGuideEditor({
   const [missed, setMissed] = useState(false);
   const listId = useId();
   const full = chosen.length >= MAX_SITE_CREATURES;
-  const bySlug = new Map(catalog.map((entry) => [entry.slug, entry]));
+  // Memoized on the catalog rather than rebuilt per render: this component
+  // re-renders on every keystroke in the search box, and the catalog is 93
+  // entries that never change during a session.
+  const bySlug = useMemo(() => new Map(catalog.map((entry) => [entry.slug, entry])), [catalog]);
 
   const move = (index: number, delta: number) =>
     setChosen((current) => {

@@ -189,7 +189,12 @@ export async function loadShopExportBundleInput(
           asc(diveSiteCreatures.id),
         );
 
-      const creatureById = new Map(creatureRows.map((row) => [row.id, row]));
+      const cardById = new Map(
+        fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => [
+          card.id,
+          card,
+        ]),
+      );
 
       const momentRows = await tx
         .select()
@@ -1846,19 +1851,26 @@ export async function loadShopExportBundleInput(
           // bundle of ninety-three slugs is not a thing a person can read, and
           // this file is what a shop opens in a spreadsheet. `catalog_slug` is
           // the column to reconcile against; the rest is a rendering.
-          rows: fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => {
-            const row = creatureById.get(card.id);
+          //
+          // Iterated over the *rows* rather than over the resolved cards, so a
+          // row DiveDay has no words for still appears with its id, its site
+          // and its position. The briefing skips such a row; an export must
+          // not. A shop's data-out bundle is the one place where "we dropped
+          // something and said nothing" is the worst possible behaviour --
+          // this file is what a shop reconciles against when it leaves.
+          rows: creatureRows.map((row) => {
+            const card = cardById.get(row.id);
             return [
-              card.id,
-              row?.diveSiteId,
-              siteName.get(row?.diveSiteId ?? ""),
-              row?.position,
-              card.name,
-              card.kind,
-              card.description,
-              card.preparationTip,
-              card.imageUrl,
-              card.slug,
+              row.id,
+              row.diveSiteId,
+              siteName.get(row.diveSiteId),
+              row.position,
+              card?.name,
+              card?.kind,
+              card?.description,
+              card?.preparationTip,
+              card?.imageUrl,
+              row.catalogSlug,
             ];
           }),
           note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],

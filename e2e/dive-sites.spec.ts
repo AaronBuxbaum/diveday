@@ -546,6 +546,11 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
+  // Wait for the briefing itself before enumerating the folds. `.all()` is a
+  // snapshot of what exists at that instant, so calling it straight off the
+  // navigation finds nothing, opens nothing, and leaves the assertions below
+  // looking for cards inside a closed `<details>`.
+  await expect(page.getByRole("heading", { level: 3, name: "Molasses Reef" })).toBeVisible();
   for (const summary of await page.getByText("Qué buscar ahí abajo").all()) {
     await summary.click();
   }
