@@ -87,8 +87,13 @@ export function SegmentedControl({
   scroll?: boolean;
   className?: string;
 }) {
-  const track = `${
-    fill ? "flex" : "inline-flex w-fit max-w-full"
+  // Block-level `flex` in both shapes, never `inline-flex`: an inline-level
+  // box opts out of margin collapsing, so a track with `mt-*` below a header
+  // with `mb-*` would stack the two margins instead of taking the larger —
+  // +28px of phantom space the old hand-rolled navs (all block-level) never
+  // had. Content width comes from `w-fit`, not from being inline.
+  const track = `flex ${
+    fill ? "" : "w-fit max-w-full"
   } snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
   return (
     <nav aria-label={ariaLabel} className={track}>
