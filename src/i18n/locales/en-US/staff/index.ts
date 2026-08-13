@@ -33,6 +33,7 @@ import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
 import incidentExport from "./incidentExport.json";
+import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
 import promos from "./promos.json";
@@ -64,6 +65,7 @@ const staff = {
   schedule,
   trips,
   tripSeries,
+  manifest,
   settings,
   blockers,
   checkIn,

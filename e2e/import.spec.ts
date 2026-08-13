@@ -81,7 +81,13 @@ test.describe("contact import", () => {
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
     await levelCard.getByRole("button", { name: "Confirm card" }).click();
     await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
-    await expect(levelCard.getByText(/^imported(?: ·|$)/i).filter({ visible: true })).toBeVisible();
+    // Provenance survives the confirm — that is the contract, and it now reads
+    // on the card's own small-print line beside the card number rather than as
+    // a pill in the button row (`CardStatusMark`), so this matches the source
+    // as well as the flag instead of anchoring at the start of a lone element.
+    await expect(
+      levelCard.getByText(/imported · Old Blue Reef Divers/i).filter({ visible: true }),
+    ).toBeVisible();
   });
 });
 

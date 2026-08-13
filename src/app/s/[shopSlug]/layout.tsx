@@ -187,15 +187,15 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
   // Each language named in itself (src/i18n/language-labels.ts): the reader
   // reaching for this is the one who cannot read the page around it.
   //
-  // Only the languages *not* in force, unlike the staff menu's version. A
-  // public header is one line a diver reads past on a phone, and a two-state
-  // control there costs the width the nav needs; one button reading "español"
-  // is self-describing (it is written in the language it switches to) and says
-  // the same thing in half the room. The language currently in force is not a
-  // fact a diver needs a control to tell them — they are reading it.
-  const languages: LanguageChoice[] = DIVER_LOCALES.filter((value) => value !== locale).map(
-    (value) => ({ locale: value, label: localeEndonym(value) }),
-  );
+  // **Every** language, the one in force included — the header discloses them
+  // behind a picker now rather than standing them in a row (`LanguagePicker`).
+  // It used to pass only the alternatives, which at two locales is a single
+  // button reading "español": self-describing, but a swap rather than a
+  // choice, and a shape that has no honest rendering at three.
+  const languages: LanguageChoice[] = DIVER_LOCALES.map((value) => ({
+    locale: value,
+    label: localeEndonym(value),
+  }));
 
   return (
     <>
@@ -256,8 +256,13 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
           navAriaLabel={t("shopChrome.navAriaLabel")}
           navItems={navItems}
           locale={locale}
+          localeLabel={localeEndonym(locale)}
           languages={languages}
           setLocale={setLocaleAction}
+          languagePickerCopy={{
+            ariaLabel: t("shopChrome.languageAriaLabel"),
+            heading: t("shopChrome.languageHeading"),
+          }}
         />
       ) : null}
       {/* Below the header on purpose: the shop's own identity is what a diver
