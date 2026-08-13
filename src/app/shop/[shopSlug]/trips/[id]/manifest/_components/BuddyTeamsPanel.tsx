@@ -85,19 +85,17 @@ export function BuddyTeamsPanel({
           <DisclosureCaret className="text-muted group-open/buddypanel:rotate-90" />
           <span className="flex flex-wrap items-baseline gap-x-2">
             <h2 id="buddy-teams-heading" className="text-lg font-semibold">
-              {t("trips.manifest.buddyHeading")}
+              {t("manifest.buddyHeading")}
             </h2>
             <span className="text-sm text-muted">
-              {t("trips.manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
+              {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
               {unteamedDivers.length > 0
-                ? t("trips.manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
+                ? t("manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
                 : ""}
             </span>
           </span>
         </summary>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("trips.manifest.buddyDescription")}
-        </p>
+        <p className="mt-1 max-w-prose text-sm text-muted">{t("manifest.buddyDescription")}</p>
         <FormStatus className="mt-2">{panelError}</FormStatus>
         {/* No empty state when there are no teams. The one this used to render
             — a 200px dashed card reading "No buddy teams yet. Tick two or more
@@ -129,7 +127,7 @@ export function BuddyTeamsPanel({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        {t("trips.manifest.buddyTeamLabel", { number: index + 1 })}
+                        {t("manifest.buddyTeamLabel", { number: index + 1 })}
                       </p>
                       <ul className="mt-1.5 flex flex-wrap items-center gap-2">
                         {team.members.map((member) => {
@@ -139,9 +137,9 @@ export function BuddyTeamsPanel({
                               : `crew:${member.personId}`;
                           const name =
                             member.kind === "crew"
-                              ? t("trips.manifest.buddyCrewName", { name: member.fullName })
+                              ? t("manifest.buddyCrewName", { name: member.fullName })
                               : member.cancelled
-                                ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
+                                ? t("manifest.buddyCancelledName", { name: member.fullName })
                                 : member.fullName;
                           // Only a team of three or more can lose a member and
                           // stay a team; at two the act is a dissolve, which
@@ -175,7 +173,7 @@ export function BuddyTeamsPanel({
                                   >
                                     <span aria-hidden="true">×</span>
                                     <span className="sr-only">
-                                      {t("trips.manifest.buddyRemoveMember", {
+                                      {t("manifest.buddyRemoveMember", {
                                         name: member.fullName,
                                       })}
                                     </span>
@@ -187,7 +185,7 @@ export function BuddyTeamsPanel({
                         })}
                       </ul>
                       <p className="mt-1 text-sm text-muted">
-                        {t("trips.manifest.buddyRecordedBy", { name: team.recordedByName })}
+                        {t("manifest.buddyRecordedBy", { name: team.recordedByName })}
                       </p>
                     </div>
                     {/* Nothing in this panel is worked at the rail — grouping
@@ -202,7 +200,7 @@ export function BuddyTeamsPanel({
                     <form action={dissolveBuddyTeamAction}>
                       <input type="hidden" name="teamId" value={team.teamId} />
                       <button type="submit" className={buttonClass({ variant: "danger-ghost" })}>
-                        {t("trips.manifest.buddyDissolve")}
+                        {t("manifest.buddyDissolve")}
                       </button>
                     </form>
                   </div>
@@ -212,19 +210,19 @@ export function BuddyTeamsPanel({
                       className="mt-3 flex flex-wrap items-end gap-2"
                     >
                       <input type="hidden" name="teamId" value={team.teamId} />
-                      <Field label={t("trips.manifest.buddyAddMemberLabel")}>
+                      <Field label={t("manifest.buddyAddMemberLabel")}>
                         <select name="member" required defaultValue="" className={controlClass}>
                           <option value="" disabled>
-                            {t("trips.manifest.buddySelectPlaceholder")}
+                            {t("manifest.buddySelectPlaceholder")}
                           </option>
-                          <optgroup label={t("trips.manifest.buddyDiverGroupLabel")}>
+                          <optgroup label={t("manifest.buddyDiverGroupLabel")}>
                             {addableDivers.map((option) => (
                               <option key={option.token} value={option.token}>
                                 {option.label}
                               </option>
                             ))}
                           </optgroup>
-                          <optgroup label={t("trips.manifest.buddyCrewGroupLabel")}>
+                          <optgroup label={t("manifest.buddyCrewGroupLabel")}>
                             {addableCrew.map((option) => (
                               <option key={option.token} value={option.token}>
                                 {option.label}
@@ -234,7 +232,7 @@ export function BuddyTeamsPanel({
                         </select>
                       </Field>
                       <button type="submit" className={buttonClass({ variant: "secondary" })}>
-                        {t("trips.manifest.buddyAddMemberSubmit")}
+                        {t("manifest.buddyAddMemberSubmit")}
                       </button>
                     </form>
                   ) : null}
@@ -266,26 +264,24 @@ export function BuddyTeamsPanel({
           >
             <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
               <DisclosureCaret className="text-muted group-open/buddies:rotate-90" />
-              {t("trips.manifest.buddyNewTeamHeading")}
+              {t("manifest.buddyNewTeamHeading")}
             </summary>
             <form action={formBuddyTeamAction} className="mt-2 max-w-4xl">
               <fieldset className="rounded-lg border border-border bg-surface p-4">
-                <p className="max-w-prose text-sm text-muted">
-                  {t("trips.manifest.buddyNewTeamHint")}
-                </p>
+                <p className="max-w-prose text-sm text-muted">{t("manifest.buddyNewTeamHint")}</p>
                 {/* The same checkboxes, in the same form — plus drag-one-onto-another
                 for the two-person case, which is what a phone at the dock wants
                 and what ticking boxes is worst at (2026-08-06 review). Ticking
                 three still builds a team of three. */}
                 <BuddyDragGroups
                   groups={[
-                    { heading: t("trips.manifest.buddyDiverGroupLabel"), options: diverOptions },
-                    { heading: t("trips.manifest.buddyCrewGroupLabel"), options: crewOptions },
+                    { heading: t("manifest.buddyDiverGroupLabel"), options: diverOptions },
+                    { heading: t("manifest.buddyCrewGroupLabel"), options: crewOptions },
                   ].filter((group) => group.options.length > 0)}
                   copy={{
-                    hint: t("trips.manifest.buddyDragHint"),
-                    holding: t("trips.manifest.buddyDragHolding"),
-                    over: t("trips.manifest.buddyDragOver"),
+                    hint: t("manifest.buddyDragHint"),
+                    holding: t("manifest.buddyDragHolding"),
+                    over: t("manifest.buddyDragOver"),
                   }}
                 />
                 {/* The action row is where this form's own answer lands — a
@@ -293,7 +289,7 @@ export function BuddyTeamsPanel({
                 it, not a floating line at the top of the panel. */}
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                   <button type="submit" className={buttonClass()}>
-                    {t("trips.manifest.buddyFormSubmit")}
+                    {t("manifest.buddyFormSubmit")}
                   </button>
                   <FormStatus>{builderError}</FormStatus>
                 </div>
@@ -304,10 +300,10 @@ export function BuddyTeamsPanel({
           // An odd roster is normal, never an error — say so instead of
           // rendering a builder that can only fail.
           <p className="mt-3 text-sm text-muted">
-            {t("trips.manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
+            {t("manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
           </p>
         ) : unteamedDivers.length === 0 && buddyTeamsList.length > 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyEveryoneTeamed")}</p>
+          <p className="mt-3 text-sm text-muted">{t("manifest.buddyEveryoneTeamed")}</p>
         ) : null}
       </details>
     </section>

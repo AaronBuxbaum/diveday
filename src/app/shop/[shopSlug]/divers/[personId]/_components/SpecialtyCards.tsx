@@ -1,6 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
@@ -8,6 +7,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
+import { CardStatusMark } from "./CardStatusMark";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
@@ -118,9 +118,15 @@ export function SpecialtyCards({
             return (
               <li key={card.id} className="px-4 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-medium">
+                      <CardStatusMark
+                        tone={heldCardStatusTone(display)}
+                        label={t(HELD_CARD_STATUS_KEYS[display])}
+                      />
+                      <span>
+                        {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
+                      </span>
                     </p>
                     <p className="mt-1 break-all text-sm text-muted">
                       {card.identifier}
@@ -135,21 +141,19 @@ export function SpecialtyCards({
                               })}
                         </span>
                       ) : null}
+                      {isImportedCard(card) ? (
+                        <span>
+                          {" · "}
+                          {card.importedFromLabel
+                            ? t("divers.certifications.importedWithSource", {
+                                source: card.importedFromLabel,
+                              })
+                            : t("divers.certifications.importedLabel")}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={heldCardStatusTone(display)}>
-                      {t(HELD_CARD_STATUS_KEYS[display])}
-                    </Badge>
-                    {isImportedCard(card) ? (
-                      <Badge tone="neutral">
-                        {card.importedFromLabel
-                          ? t("divers.certifications.importedWithSource", {
-                              source: card.importedFromLabel,
-                            })
-                          : t("divers.certifications.importedLabel")}
-                      </Badge>
-                    ) : null}
                     {card.status === "pending" && !needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
@@ -196,27 +200,33 @@ export function SpecialtyCards({
             return (
               <li key={card.id} className="px-4 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {t("divers.specialty.nitroxAgencyLine", {
-                        agency: t(AGENCY_KEYS[card.agency]),
-                      })}
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-medium">
+                      <CardStatusMark
+                        tone={heldCardStatusTone(display)}
+                        label={t(HELD_CARD_STATUS_KEYS[display])}
+                      />
+                      <span>
+                        {t("divers.specialty.nitroxAgencyLine", {
+                          agency: t(AGENCY_KEYS[card.agency]),
+                        })}
+                      </span>
                     </p>
-                    <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
+                    <p className="mt-1 break-all text-sm text-muted">
+                      {card.identifier}
+                      {isImportedCard(card) ? (
+                        <span>
+                          {" · "}
+                          {card.importedFromLabel
+                            ? t("divers.certifications.importedWithSource", {
+                                source: card.importedFromLabel,
+                              })
+                            : t("divers.certifications.importedLabel")}
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={heldCardStatusTone(display)}>
-                      {t(HELD_CARD_STATUS_KEYS[display])}
-                    </Badge>
-                    {isImportedCard(card) ? (
-                      <Badge tone="neutral">
-                        {card.importedFromLabel
-                          ? t("divers.certifications.importedWithSource", {
-                              source: card.importedFromLabel,
-                            })
-                          : t("divers.certifications.importedLabel")}
-                      </Badge>
-                    ) : null}
                     {card.status === "pending" && !needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
