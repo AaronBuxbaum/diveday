@@ -7,7 +7,7 @@ import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
-import { FeatureGroupsGrid, MarketingMockup } from "@/components/MarketingSections";
+import { MarketingMockup } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
@@ -112,11 +112,10 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
   ].flatMap((row) => (row ? [row] : []));
 
+  // "What is included?" left this list on 2026-08-13: the hero now answers it
+  // in the first screenful, and a FAQ row restating the screen above it is the
+  // duplication the three-densities rule exists to stop.
   const faq = [
-    {
-      question: t("marketing.pricing.faq.whatIncluded.question"),
-      answer: t("marketing.pricing.faq.whatIncluded.answer"),
-    },
     {
       question: t("marketing.pricing.faq.billing.question"),
       answer: t("marketing.pricing.faq.billing.answer"),
@@ -182,131 +181,136 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
         }}
       />
       <main className="flex-1">
+        {/* The price is the hero. A pricing page's arriving question is "what
+            does it cost and what's the catch", so the first composition
+            carries the whole answer: the plan, the pinned headline, the number
+            at display scale, the no-catch sentence, both doors, the
+            processing-fee fine print, and what the number buys — no card
+            border, no shadow; the figure itself is the weight. The old page
+            answered in screenful two, inside a bordered card below a generic
+            headline band. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
+          <div className="mx-auto max-w-3xl px-6 pt-20 pb-14 text-center lg:pt-28">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.pricing.eyebrow")}
+              {t(earlyAccessPrice.nameKey)}
+              <span aria-hidden="true" className="mx-2 text-border-strong">
+                ·
+              </span>
+              {t("marketing.pricing.earlyAccessBadge")}
             </p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+            <h1 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl">
               {t("marketing.pricing.heroTitle")}
             </h1>
+            <p className="mt-8 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1">
+              <span className="text-7xl font-semibold tracking-[-0.06em] sm:text-8xl">
+                {earlyAccessPrice.price}
+              </span>
+              <span className="text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</span>
+            </p>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
               {t("marketing.pricing.heroDescription")}
             </p>
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                href={trialHref("pricing")}
+                className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
+              >
+                {t("marketing.common.startTrial")}
+              </Link>
+              <form action={enterDemoAction} className="w-full sm:w-auto">
+                <FunnelTag source="pricing" />
+                <SubmitButton
+                  pendingLabel={t("marketing.pricing.gettingDemoReady")}
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "cta",
+                    className: "w-full border-border-strong disabled:opacity-70 sm:w-auto sm:px-8",
+                  })}
+                >
+                  {t("marketing.common.tryDemo")}
+                </SubmitButton>
+              </form>
+            </div>
+            <p className="mx-auto mt-6 max-w-xl text-sm leading-6 text-muted">
+              {t("marketing.pricing.feesNote")}
+            </p>
           </div>
-        </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
-          <div className="mx-auto max-w-xl rounded-2xl border-2 border-primary bg-surface p-7 shadow-xl shadow-primary/10 sm:p-9">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                  {t(earlyAccessPrice.nameKey)}
-                </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-                  {t("marketing.pricing.completeAccess")}
-                </h2>
-              </div>
-              <span className="rounded-full border border-border bg-surface-sunken px-3 py-1 text-xs font-semibold text-muted">
-                {t("marketing.pricing.earlyAccessBadge")}
-              </span>
-            </div>
-            <div className="mt-7 flex items-end gap-2">
-              <span className="text-5xl font-semibold tracking-[-0.05em]">
-                {earlyAccessPrice.price}
-              </span>
-              <span className="pb-1 text-sm text-muted">{t(earlyAccessPrice.cadenceKey)}</span>
-            </div>
-            <p className="mt-4 leading-7 text-muted">{t(earlyAccessPrice.descriptionKey)}</p>
-            <ul className="mt-7 space-y-3 text-sm leading-6 text-muted">
+          {/* What the number buys, right under the number — the one plan's own
+              list from `earlyAccessPrice`, not a third render of the feature
+              grid. The grid's summary cards used to reappear here a thousand
+              pixels down at a third density; the inventory lives one click
+              away on /product, and this list plus that link is the whole
+              answer (docs/product/marketing.md, "never inventory the same
+              thing twice"). */}
+          <div className="mx-auto max-w-2xl px-6 pb-16 lg:pb-20">
+            <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
+              {t("marketing.pricing.includedLead")}
+            </h2>
+            <ul className="mt-5 grid gap-x-10 gap-y-3 text-left leading-6 sm:grid-cols-2">
               {earlyAccessPrice.includedKeys.map((item) => (
                 <li key={item} className="flex gap-3">
-                  <span className="font-semibold text-primary">✓</span>
-                  <span>{t(item)}</span>
+                  <span aria-hidden="true" className="font-semibold text-primary">
+                    ✓
+                  </span>
+                  <span className="text-muted">{t(item)}</span>
                 </li>
               ))}
             </ul>
             <Link
-              href={trialHref("pricing")}
-              className={buttonClass({
-                size: "cta",
-                className: "mt-8 w-full",
-              })}
+              href="/product"
+              className={buttonClass({ variant: "link", className: "mt-4 -ml-1 px-1" })}
             >
-              {t("marketing.common.startTrial")}
+              {t("marketing.pricing.seeFullList")}
             </Link>
-            <form action={enterDemoAction} className="mt-3">
-              <FunnelTag source="pricing" />
-              <SubmitButton
-                pendingLabel={t("marketing.pricing.gettingDemoReady")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "cta",
-                  className: "w-full cursor-pointer border-border-strong disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
           </div>
-          <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-muted">
-            {t("marketing.pricing.feesNote")}
-          </p>
         </section>
 
         {/* The flat price is only meaningful next to the model it replaces.
-            Sits directly under the card so the two numbers are read together,
-            and above the included list, which answers a different question. */}
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.pricing.feeAnchor.eyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            Quiet rows, not equal-weight cards: the incumbents' terms are
+            evidence, and our answer is the one line that gets full ink. */}
+        <section className="border-b border-border">
+          <div className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
+            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.pricing.feeAnchor.title")}
             </h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.pricing.feeAnchor.body")}
-            </p>
-            <ul className="mt-8 space-y-4">
+            <p className="mt-5 leading-7 text-muted">{t("marketing.pricing.feeAnchor.body")}</p>
+            <ul className="mt-10 space-y-8">
               {channelFees.map(({ guide, claim }) => (
-                <li
-                  key={guide.slug}
-                  className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
-                >
+                <li key={guide.slug}>
                   <h3 className="font-semibold leading-6">{guide.competitor}</h3>
-                  <p className="mt-2 leading-7 text-muted">{claim}</p>
+                  <p className="mt-1 leading-7 text-muted">{claim}</p>
                   <Link
                     href={`/switching/${guide.slug}`}
-                    className={buttonClass({ variant: "link", className: "mt-2 px-0 text-left" })}
+                    className={buttonClass({ variant: "link", className: "mt-1 px-0 text-left" })}
                   >
                     {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
                   </Link>
                 </li>
               ))}
             </ul>
-            <p className="mt-6 max-w-2xl leading-7 text-muted">
+            <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
               {t("marketing.pricing.feeAnchor.ours")}
             </p>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+            <p className="mt-5 text-sm leading-6 text-muted">
               {t("marketing.pricing.feeAnchor.sourcesNote")}
             </p>
           </div>
         </section>
 
-        {/* The page's other big claim, and until now its only paragraph-shaped
-            one: you can leave with your records any day. It sits here rather
-            than in the FAQ because this is where the objection actually lands —
-            the fee anchor above has just made switching look attractive, and the
-            next thought a shop owner has is about being stuck again. The FAQ row
-            (`faq.dataIfNotWorking`) still answers it in words for someone
-            scanning that far; this answers it with the screen.
+        {/* The page's other big claim: you can leave with your records any
+            day. It sits here rather than in the FAQ because this is where the
+            objection actually lands — the fee anchor above has just made
+            switching look attractive, and the next thought a shop owner has is
+            about being stuck again. The FAQ row (`faq.dataIfNotWorking`) still
+            answers it in words for someone scanning that far; this answers it
+            with the screen.
 
             The mockup is a claim, so it mirrors the real Settings → Data export
             element for element — including the "Not included, on purpose:" line
             that says credentials never leave (docs/product/marketing.md). */}
-        <section className="border-t border-border">
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-20">
+        <section className="border-b border-border">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
             <div>
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                 {t("marketing.pricing.dataExit.eyebrow")}
@@ -330,52 +334,30 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
           </div>
         </section>
 
-        <section className="border-y border-border bg-surface">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.pricing.includedEyebrow")}
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                {t("marketing.pricing.includedTitle")}
-              </h2>
-            </div>
-            {/* Summary treatment, not the full checklists: the product page
-                already carries the complete inventory, and a landing → product
-                → pricing walk was reading the same ~30 lines twice more
-                (design review). Pricing answers "what does it cost"; the list
-                lives one click away. */}
-            <div className="mt-10">
-              <FeatureGroupsGrid locale={locale} columns={2} featuresPerGroup={1} />
-            </div>
-            <Link href="/product" className={buttonClass({ variant: "link", className: "mt-6" })}>
-              {t("marketing.pricing.seeFullList")}
-            </Link>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-4xl px-6 py-20 lg:py-24">
-          <p className="text-center text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.pricing.faqEyebrow")}
-          </p>
-          <h2 className="mt-3 text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+        {/* The objection layer, designed quiet: two columns of plain Q&A,
+            hierarchy by weight and space rather than a stack of bordered
+            cards. Answers stay in the document (not behind a disclosure) —
+            they are also the FAQPage structured data above, and a buyer
+            scanning for one word shouldn't have to open ten boxes. */}
+        <section className="mx-auto max-w-5xl px-6 py-16 lg:py-24">
+          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
             {t("marketing.pricing.faqTitle")}
           </h2>
-          <div className="mt-10 divide-y divide-border rounded-2xl border border-border bg-surface">
+          <div className="mt-10 grid gap-x-14 gap-y-10 md:grid-cols-2">
             {faq.map((item) => (
-              <article key={item.question} className="p-6">
-                <h3 className="text-lg font-semibold">{item.question}</h3>
+              <article key={item.question}>
+                <h3 className="font-semibold leading-6">{item.question}</h3>
                 <p className="mt-2 leading-7 text-muted">{item.answer}</p>
               </article>
             ))}
           </div>
-          <div className="mt-10 flex flex-col items-center gap-4 text-center">
+          <div className="mt-14 flex flex-col items-start gap-4 border-t border-border pt-10 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xl text-lg leading-8 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({ className: "cursor-pointer" })}
+              className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
             >
               {t("marketing.pricing.emailCta", { email: SUPPORT_EMAIL })}
             </a>
