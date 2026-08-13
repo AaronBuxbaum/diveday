@@ -24,11 +24,12 @@ export function YourSessions({
   if (sessions.length === 0) return null;
   const t = staffTranslator(locale);
   return (
-    <section aria-labelledby="your-sessions-heading" className="mb-10">
+    <section aria-labelledby="your-sessions-heading" className="mb-8">
+      {/* No standing subtitle: the rows themselves say what the section is —
+          a class, a date, and where each student stands. */}
       <h2 id="your-sessions-heading" className="text-lg font-semibold">
         {t("shared.today.yourSessions.heading")}
       </h2>
-      <p className="mt-1 text-sm text-muted">{t("shared.today.yourSessions.subtitle")}</p>
       <ul className="mt-4 flex flex-col gap-3">
         {sessions.map((session) => (
           <li

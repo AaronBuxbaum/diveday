@@ -7,12 +7,13 @@
     "hidden": "Oculto",
     "orHigher": "{level} o superior",
     "openToUncertified": "Abierto a buceadores sin certificar",
-    "edit": "Editar",
     "hide": "Ocultar",
     "show": "Mostrar",
     "hideShowSrLabel": "{action} {title}",
-    "previewSrLabel": "Vista previa de {title}",
     "scheduleSrLabel": "Programar una sesión de {title}",
+    "schedule": "Programar",
+    "editSrLabel": "Editar {title}",
+    "viewPublicPage": "Ver la página pública",
     "pagination": {
       "total": "{count, plural, one {# curso} other {# cursos}}"
     }

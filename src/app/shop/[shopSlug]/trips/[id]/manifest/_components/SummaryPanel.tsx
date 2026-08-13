@@ -101,18 +101,18 @@ export function SummaryPanel({
   // words.
   const counts: Array<{ label: string; value: number }> = isDeparture
     ? [
-        { label: t("trips.manifest.summaryBoarded"), value: summary.boarded },
-        { label: t("trips.manifest.summaryNotBoarded"), value: summary.notBoarded },
-        { label: t("trips.manifest.summaryAwaiting"), value: summary.awaiting },
+        { label: t("manifest.summaryBoarded"), value: summary.boarded },
+        { label: t("manifest.summaryNotBoarded"), value: summary.notBoarded },
+        { label: t("manifest.summaryAwaiting"), value: summary.awaiting },
       ]
     : [
-        { label: t("trips.manifest.summaryBoarded"), value: summary.boarded },
-        { label: t("trips.manifest.summaryNotBackAboard"), value: summary.notBackAboard },
+        { label: t("manifest.summaryBoarded"), value: summary.boarded },
+        { label: t("manifest.summaryNotBackAboard"), value: summary.notBackAboard },
         // A calm, settled word for the people who never left the dock — they
         // are accounted for on land, and naming them alongside the missing
         // keeps the row honest instead of silently dropping them.
-        { label: t("trips.manifest.summaryAshore"), value: ashore },
-        { label: t("trips.manifest.summaryAwaiting"), value: summary.awaiting },
+        { label: t("manifest.summaryAshore"), value: ashore },
+        { label: t("manifest.summaryAwaiting"), value: summary.awaiting },
       ];
   // A stated "a crew member did not come back" must be on screen even when the
   // *top* reason is a clerical diver gap. `rollCallCompleteness` ranks
@@ -133,21 +133,21 @@ export function SummaryPanel({
     : completeness.reason === "crew_not_back_aboard"
       ? null
       : completeness.reason === "divers_awaiting"
-        ? t("trips.manifest.stillToCall", { count: summary.awaiting })
+        ? t("manifest.stillToCall", { count: summary.awaiting })
         : completeness.reason === "crew_none_assigned"
-          ? t("trips.manifest.crewNoneAssignedYet")
+          ? t("manifest.crewNoneAssignedYet")
           : completeness.reason === "crew_none_aboard"
-            ? t("trips.manifest.crewNoneAboard")
+            ? t("manifest.crewNoneAboard")
             : completeness.reason === "crew_awaiting"
-              ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
+              ? t("manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
               : completeness.reason === "no_divers"
                 ? // An empty roster keeps the checkpoint open (the completeness
                   // rule refuses it), and the sentence here must not read as an
                   // all-clear over a manifest that counts nobody — the same
                   // never-an-all-clear rule the glossary sets for shops that
                   // skip roll call (dive-domain review 20260810).
-                  t("trips.manifest.noDiversLine")
-                : t("trips.manifest.allAccountedFor");
+                  t("manifest.noDiversLine")
+                : t("manifest.allAccountedFor");
   return (
     <>
       <section
@@ -161,16 +161,16 @@ export function SummaryPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-              {t("trips.manifest.activeCheckpoint")}
+              {t("manifest.activeCheckpoint")}
             </p>
             <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
               {rollCallComplete
-                ? t("trips.manifest.rollCallComplete")
+                ? t("manifest.rollCallComplete")
                 : rollCallCheckpointText(t, checkpoint)}
             </h2>
           </div>
           <p className="text-base font-bold tabular-nums">
-            {t("trips.manifest.recordedOfTotal", {
+            {t("manifest.recordedOfTotal", {
               recorded: summary.totalDivers - summary.awaiting,
               total: summary.totalDivers,
             })}
@@ -179,7 +179,7 @@ export function SummaryPanel({
         <div
           className="mt-3 h-3 overflow-hidden rounded-full bg-surface-sunken"
           role="progressbar"
-          aria-label={t("trips.manifest.progressAriaLabel")}
+          aria-label={t("manifest.progressAriaLabel")}
           aria-valuemin={0}
           aria-valuemax={summary.totalDivers}
           aria-valuenow={summary.totalDivers - summary.awaiting}
@@ -212,12 +212,12 @@ export function SummaryPanel({
             able to push that off the top of the screen. */}
         {diversNotBackAboard ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
-            {t("trips.manifest.notBackAboardOpen", { count: summary.notBackAboard })}
+            {t("manifest.notBackAboardOpen", { count: summary.notBackAboard })}
           </p>
         ) : null}
         {crewNotBackAboard ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
-            {t("trips.manifest.crewNotBackAboard", { count: crewCounts.crewNotBackAboard })}
+            {t("manifest.crewNotBackAboard", { count: crewCounts.crewNotBackAboard })}
           </p>
         ) : null}
         {/* Buddy teams that came back split — someone aboard, someone not
@@ -227,7 +227,7 @@ export function SummaryPanel({
             appear to depend on it. */}
         {separatedTeams > 0 ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
-            {t("trips.manifest.buddySeparatedLine", { count: separatedTeams })}
+            {t("manifest.buddySeparatedLine", { count: separatedTeams })}
           </p>
         ) : null}
       </section>
@@ -258,10 +258,7 @@ export function SummaryPanel({
             the entire roster immediately above the roster itself (principle
             9). The count line above covers the starting state. */}
         {uncalled.length > 0 && uncalled.length < summary.totalDivers ? (
-          <ul
-            className="mt-2 flex flex-wrap gap-2"
-            aria-label={t("trips.manifest.stillToCallListLabel")}
-          >
+          <ul className="mt-2 flex flex-wrap gap-2" aria-label={t("manifest.stillToCallListLabel")}>
             {uncalled.map((diver) => (
               <li key={diver.bookingId}>
                 <a
@@ -289,8 +286,8 @@ export function SummaryPanel({
         {summary.blocked > 0 ? (
           <p className="mt-1 text-base font-semibold text-warning-strong">
             {isDeparture
-              ? t("trips.manifest.blockedDeparture", { count: summary.blocked })
-              : t("trips.manifest.blockedAfterDive", { count: summary.blocked })}
+              ? t("manifest.blockedDeparture", { count: summary.blocked })
+              : t("manifest.blockedAfterDive", { count: summary.blocked })}
           </p>
         ) : null}
       </div>

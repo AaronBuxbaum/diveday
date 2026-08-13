@@ -45,6 +45,7 @@ import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
+import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
@@ -487,6 +488,32 @@ export default async function ManageTripPage({
           caption={pulseCaption}
           captionTone={isFull(trip) ? "success" : undefined}
           facts={pulseFacts}
+        />
+      ) : null}
+
+      {/* Under the pulse, and deliberately not one of its facts. The pulse
+          answers "how does this boat stand" in numbers a staffer reads and
+          moves on from; this answers "something is about to happen to this
+          departure" — it needs the deadline and the way to overrule it, which
+          is two sentences a one-line fact cannot carry. Above the role gate
+          below it, because a departure that will cancel itself tonight is news
+          for whoever is looking at it, not only for whoever can edit it (ADR
+          20260813-minimum-head-count-departures). Renders nothing on a trip
+          with no minimum, or one that has met it — so on the great majority of
+          departures the pulse is still the only thing between the header and
+          Details.
+
+          Gated on `pulseNeeded` for the same reason the pulse is: the band
+          classifies the *policy*, not the departure's lifecycle, so a cancelled
+          trip that never made its numbers would go on announcing that DiveDay
+          is about to cancel it — about a trip that is already off the board. */}
+      {pulseNeeded ? (
+        <MinimumSeatsBand
+          trip={trip}
+          booked={trip.booked}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
         />
       ) : null}
 

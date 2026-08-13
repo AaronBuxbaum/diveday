@@ -218,15 +218,13 @@
       "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
       "everyoneAboard": "Everyone’s aboard.",
       "clearToBoard": "Everyone booked on this trip is clear to board.",
-      "sailingToday": "Sailing today",
-      "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone."
+      "sailingToday": "Sailing today"
     },
     "todayQueue": {
       "emptyHeading": "Nothing is waiting on you",
       "emptyBody": "Every diver booked in the next week has their waiver, cards, and payment in order.",
       "emptyAction": "View the schedule",
       "needsYouHeading": "Needs you",
-      "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.",
       "boatsClear": "Today's boats are all clear 🤙",
       "itemsCount": "{count, plural, one {# item} other {# items}}"
     },
@@ -256,7 +254,6 @@
     },
     "yourSessions": {
       "heading": "Your sessions",
-      "subtitle": "The classes you teach this week, with where each student stands.",
       "studentsCount": "{count, plural, one {# student} other {# students}}",
       "readyCount": "{count} ready",
       "blockedCount": "{count} blocked",

@@ -130,7 +130,7 @@ export function RentalFitForm({
     plannedDives,
   });
   return (
-    <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
+    <section className="mt-5 rounded-xl border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">{t("rental.heading")}</h3>
       <p className="mt-1 text-sm text-muted">{t("rental.introBody")}</p>
 

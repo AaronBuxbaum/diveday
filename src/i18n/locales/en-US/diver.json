@@ -32,6 +32,8 @@
   "shopChrome": {
     "skipToContent": "Skip to main content",
     "navAriaLabel": "Shop pages",
+    "languageAriaLabel": "Change language",
+    "languageHeading": "Language",
     "footerLine": "{shop} · Powered by DiveDay",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in."
   },
@@ -85,7 +87,6 @@
     "minimumAge": "Minimum age: {age}",
     "planAndShare": "Plan and share this trip",
     "addToCalendar": "Add to calendar",
-    "getDirections": "Get directions",
     "shareWithBuddy": "Share with a buddy",
     "linkCopied": "Link copied",
     "linkCopiedAnnouncement": "Trip link copied to clipboard.",
@@ -181,6 +182,7 @@
     "requirementNote": "This charter is for divers with {list}. Bring your card — the crew checks it at the dock.",
     "conditionsHoldHeading": "This trip is on a conditions hold",
     "conditionsHoldBody": "The crew is watching the weather and will make the final call. Existing seats stay held; new bookings are paused for now.",
+    "minimumSeatsNotice": "This one runs with at least {minimum, plural, one {# diver} other {# divers}}. If it hasn't got there by {deadline}, the shop cancels it and emails everyone booked — so you'll know either way, in time to make another plan.",
     "conditionsChangedHeading": "Conditions changed since you booked",
     "conditionsChangedBody": "The crew has published a newer read for this day. Review it below; the final route and go/no-go call still happen at the dock.",
     "bookAndSpotsLeft": "Book · {count} left",
@@ -204,8 +206,6 @@
   "booking": {
     "heading": "Grab a spot",
     "paidSecurely": "{price} per diver — paid securely when you book.",
-    "giftTitle": "Giving this dive as a gift?",
-    "giftBody": "Enter the recipient’s name and email below, then pay from this device. Their confirmation and ready-to-dive steps go straight to them.",
     "preferenceLabel": "What kind of dive would make your day?",
     "preferenceHint": "(optional — shared with the crew, never a promise)",
     "preferencePlaceholder": "Macro photos, a relaxed pace, or staying with friends",
@@ -2037,6 +2037,11 @@
       "body": "{shopName} has placed {tripTitle} on a conditions hold for {date}. Your seat is still held while the crew makes the final weather call.",
       "crewNoteLabel": "Crew note:",
       "seeUpdate": "See the live trip update"
+    },
+    "tripMinimumNotMet": {
+      "subject": "Trip cancelled — {tripTitle}",
+      "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they'd decide — so it's off. Your seat is released, and there's nothing you need to do.",
+      "findAnother": "See what else is running"
     },
     "tripBlowout": {
       "subject": "Trip cancelled — {tripTitle}",

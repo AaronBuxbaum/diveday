@@ -60,6 +60,21 @@ export const E2E_TEST_ROUTE_SECRET =
   process.env.DIVEDAY_E2E_SECRET || "diveday-e2e-test-route-secret";
 
 /**
+ * Bearer secret the scheduled routes under `/api/cron/*` require. Same shape
+ * and same bar as `E2E_TEST_ROUTE_SECRET` above: a fixed, test-only value
+ * pinned into the worker servers' env, not meant to resist anything beyond
+ * "this request came from the e2e harness".
+ *
+ * Pinned so a spec can actually *run* a scheduled pass rather than assert
+ * around it. The minimum-head-count sweep is the first one that needed it —
+ * its whole product claim is that a departure cancels itself at a stated
+ * moment, and a test that never fires the sweep is testing the form, not the
+ * promise. The routes still fail closed without it, which is the property
+ * `minimum-seats.spec.ts` also asserts.
+ */
+export const E2E_CRON_SECRET = process.env.CRON_SECRET || "diveday-e2e-cron-secret";
+
+/**
  * The instant the whole e2e fleet pretends "now" is. The demo seed is
  * clock-anchored and dozens of surfaces render relative time, so against a live
  * clock every visual baseline diffs on nothing but the passage of

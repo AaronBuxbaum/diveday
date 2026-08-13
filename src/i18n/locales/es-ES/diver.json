@@ -32,6 +32,8 @@
   "shopChrome": {
     "skipToContent": "Saltar al contenido principal",
     "navAriaLabel": "Páginas del centro",
+    "languageAriaLabel": "Cambiar de idioma",
+    "languageHeading": "Idioma",
     "footerLine": "{shop} · Con la tecnología de DiveDay",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}."
   },
@@ -85,7 +87,6 @@
     "minimumAge": "Edad mínima: {age}",
     "planAndShare": "Planifica y comparte esta salida",
     "addToCalendar": "Añadir al calendario",
-    "getDirections": "Cómo llegar",
     "shareWithBuddy": "Compartir con tu compañero",
     "linkCopied": "Enlace copiado",
     "linkCopiedAnnouncement": "Enlace de la salida copiado al portapapeles.",
@@ -181,6 +182,7 @@
     "requirementNote": "Esta salida es para buceadores con {list}. Trae tu tarjeta — la tripulación la comprueba en el muelle.",
     "conditionsHoldHeading": "Esta salida está en espera por las condiciones",
     "conditionsHoldBody": "La tripulación está siguiendo el tiempo y dará la decisión final. Las plazas ya reservadas se mantienen; las nuevas reservas están pausadas por ahora.",
+    "minimumSeatsNotice": "Esta salida se realiza con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}. Si no los alcanza antes del {deadline}, el centro la cancela y avisa por correo a quienes tengan reserva, así que lo sabrás en cualquier caso con tiempo para organizarte.",
     "conditionsChangedHeading": "Las condiciones cambiaron desde que reservaste",
     "conditionsChangedBody": "La tripulación ha publicado una lectura más reciente para este día. Revísala abajo; la ruta final y la decisión de salir o no se confirman igualmente en el muelle.",
     "bookAndSpotsLeft": "Reservar · quedan {count}",
@@ -204,8 +206,6 @@
   "booking": {
     "heading": "Reserva tu plaza",
     "paidSecurely": "{price} por buceador — pago seguro al reservar.",
-    "giftTitle": "¿Regalas esta inmersión?",
-    "giftBody": "Escribe abajo el nombre y el correo de quien la recibe y paga desde este dispositivo. Su confirmación y sus pasos previos le llegarán directamente.",
     "preferenceLabel": "¿Qué haría de esta inmersión tu día?",
     "preferenceHint": "(opcional — lo comparte con la tripulación, nunca es una promesa)",
     "preferencePlaceholder": "Fotografía macro, un ritmo tranquilo o quedarte con tus amigos",
@@ -2037,6 +2037,11 @@
       "body": "{shopName} ha puesto {tripTitle} en espera por condiciones para el {date}. Tu plaza sigue reservada mientras el equipo toma la decisión final sobre el tiempo.",
       "crewNoteLabel": "Nota del equipo:",
       "seeUpdate": "Consulta la actualización en directo de la salida"
+    },
+    "tripMinimumNotMet": {
+      "subject": "Salida cancelada — {tripTitle}",
+      "body": "{shopName} realiza {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijeron que lo decidirían, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
+      "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",

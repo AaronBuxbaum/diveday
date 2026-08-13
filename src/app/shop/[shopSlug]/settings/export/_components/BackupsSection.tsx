@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { ShopBackupDelivery } from "@/db/schema";
 import type { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -268,59 +269,70 @@ export function BackupsSection({
                 ambiguous (`e2e/backup-export.spec.ts` failed on a strict-mode
                 violation), and it doubled the DOM of a paged list for no gain.
                 A layout switch belongs in CSS. */}
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                {/* Below `sm` the rows are self-describing stacks rather than a
-                    grid, so a lone "When" heading over them would be noise. */}
-                <thead className="hidden sm:table-header-group">
-                  <tr className="border-b border-border text-left text-xs text-muted uppercase">
-                    <th className="py-2 pr-4 font-medium">{t("backup.history.when")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("backup.history.kind")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("backup.history.outcome")}</th>
-                    <th className="py-2 pr-4 font-medium">{t("backup.history.size")}</th>
-                    <th className="py-2 font-medium">{t("backup.history.details")}</th>
-                  </tr>
-                </thead>
-                <tbody className="block divide-y divide-border sm:table-row-group">
-                  {deliveries.rows.map((delivery) => (
-                    <tr
-                      key={delivery.id}
-                      className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2.5 sm:table-row sm:gap-0 sm:py-0"
+            {/* `flush` inside this card — no card-on-card shadow or second
+                bg-surface; a thin border stays as the boundary of the grid,
+                the same nested-table treatment as the import preview. */}
+            <Table flush shellClassName="mt-4 rounded-xl border border-border">
+              {/* Below `sm` the rows are self-describing stacks rather than a
+                  grid, so a lone "When" heading over them would be noise. */}
+              <THead className="hidden sm:table-header-group">
+                <Th>{t("backup.history.when")}</Th>
+                <Th>{t("backup.history.kind")}</Th>
+                <Th>{t("backup.history.outcome")}</Th>
+                <Th numeric>{t("backup.history.size")}</Th>
+                <Th>{t("backup.history.details")}</Th>
+              </THead>
+              {/* One DOM, two layouts: below `sm` the tbody reflows to stacked
+                  lines (the row owns the padding, `pad={false}` on every cell)
+                  so the Details sentence — where a *failed* delivery says why —
+                  is on screen without a guessed sideways scroll. Rendering the
+                  fold twice instead would duplicate that text in the DOM and
+                  break the strict-mode `getByText` in e2e/backup.spec.ts. */}
+              <TBody className="block sm:table-row-group">
+                {deliveries.rows.map((delivery) => (
+                  <tr
+                    key={delivery.id}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 sm:table-row sm:gap-0 sm:p-0"
+                  >
+                    <Td
+                      pad={false}
+                      className="basis-full font-medium sm:basis-auto sm:px-4 sm:py-3 sm:font-normal sm:whitespace-nowrap"
                     >
-                      <td className="basis-full font-medium sm:basis-auto sm:py-2 sm:pr-4 sm:font-normal sm:whitespace-nowrap">
-                        {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
-                      </td>
-                      <td className="text-muted sm:py-2 sm:pr-4 sm:text-foreground">
-                        {delivery.trigger === "scheduled"
-                          ? t("backup.history.trigger.scheduled")
-                          : t("backup.history.trigger.manual")}
-                      </td>
-                      <td className="sm:py-2 sm:pr-4">
-                        <Badge tone={STATUS_TONE[delivery.status]}>
-                          {statusText(t, delivery.status)}
-                        </Badge>
-                      </td>
-                      <td className="text-muted tabular-nums sm:py-2 sm:pr-4 sm:text-foreground sm:whitespace-nowrap">
-                        {delivery.byteCount === null
-                          ? "—"
-                          : formatByteSize(delivery.byteCount, locale)}
-                      </td>
-                      {/* Its own line below `sm`: this is the cell a shop came
-                          for on a failed row, and it is a sentence, not a chip. */}
-                      <td className="basis-full text-muted sm:basis-auto sm:py-2">
-                        {delivery.status === "failed" ? (
-                          deliveryErrorText(t, delivery.errorCode)
-                        ) : delivery.objectKey ? (
-                          <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      {formatDateTimeTz(delivery.startedAt, locale, timeZone)}
+                    </Td>
+                    <Td pad={false} className="text-muted sm:px-4 sm:py-3 sm:text-foreground">
+                      {delivery.trigger === "scheduled"
+                        ? t("backup.history.trigger.scheduled")
+                        : t("backup.history.trigger.manual")}
+                    </Td>
+                    <Td pad={false} className="sm:px-4 sm:py-3">
+                      <Badge tone={STATUS_TONE[delivery.status]}>
+                        {statusText(t, delivery.status)}
+                      </Badge>
+                    </Td>
+                    <Td
+                      pad={false}
+                      className="text-muted tabular-nums sm:px-4 sm:py-3 sm:text-right sm:whitespace-nowrap sm:text-foreground"
+                    >
+                      {delivery.byteCount === null
+                        ? "—"
+                        : formatByteSize(delivery.byteCount, locale)}
+                    </Td>
+                    {/* Its own line below `sm`: this is the cell a shop came
+                        for on a failed row, and it is a sentence, not a chip. */}
+                    <Td pad={false} muted className="basis-full sm:basis-auto sm:px-4 sm:py-3">
+                      {delivery.status === "failed" ? (
+                        deliveryErrorText(t, delivery.errorCode)
+                      ) : delivery.objectKey ? (
+                        <span className="font-mono text-xs break-all">{delivery.objectKey}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </TBody>
+            </Table>
             {/* `#backups` on every pager link: paging the delivery history is a
                 move *within* this section, and landing back at the top of a long
                 page is how a reader loses the row they were reading. */}
