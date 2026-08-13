@@ -49,7 +49,9 @@ export function QueueViewSwitch({
     // is a harmless reload of the same URL) and `scroll={false}` holds the
     // reader's place, since both views are the same page. This used to be a
     // fourth hand-rolled `rounded-full` variant of the track; it now wears
-    // the one grammar every segmented choice in `/shop/**` wears.
+    // the same grammar as the trip tabs, the waiver tabs, and the manifest's
+    // checkpoint row. (`AgencyTabs` still hand-rolls the old `rounded-full`
+    // shape — see FU-20260813-convert-agency-tabs.)
     <SegmentedControl
       ariaLabel={copy.label}
       items={options.map((option) => ({

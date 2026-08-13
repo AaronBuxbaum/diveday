@@ -285,6 +285,7 @@ export default async function TripManifestPage({
         currentKey={checkpoint}
         size="boat"
         currentIsLink
+        ariaCurrentValue="true"
         scroll={false}
         className="mt-7"
       />

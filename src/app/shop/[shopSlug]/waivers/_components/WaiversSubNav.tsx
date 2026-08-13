@@ -44,7 +44,7 @@ export function WaiversSubNav({
   return (
     <SegmentedControl
       ariaLabel={copy.ariaLabel}
-      items={tabs.map(({ key, label, href }) => ({ key, label, href }))}
+      items={tabs}
       currentKey={current}
       fill
       className={className}
