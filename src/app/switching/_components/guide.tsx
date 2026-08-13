@@ -62,10 +62,20 @@ export function DemoTrialCtas({ locale, source }: { locale: DiverLocale; source:
 }
 
 /**
+ * The four questions a shop owner actually arrives on a switching guide with.
+ * Every guide answers the same four, because all four are properties of the
+ * importer and the switch rather than of any one incumbent — so they are one
+ * shared key set, said once, in the first screenful. The fourth is the
+ * *compressed* form of the return trip; the full claim and its terms stay in
+ * the one shared `bothWays` block under the scope table (see `ScopePhase`),
+ * never re-authored here.
+ */
+const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
+
+/**
  * The guide hero: back link, eyebrow, headline, lede, the buyer's first door
- * out — and the four answers a switcher actually arrives with (what moves,
- * how long, what saves unseen, the way back), stated in the first screenful
- * instead of four to eight sections down.
+ * out — and {@link GUIDE_FACTS}, stated in the first screenful instead of
+ * four to eight sections down.
  */
 export function GuideHero({
   locale,
@@ -81,15 +91,6 @@ export function GuideHero({
   lede: string;
 }) {
   const t = diverTranslator(locale);
-  const facts = [
-    { label: t("switching.common.facts.moves.label"), value: t("switching.common.facts.moves.value") },
-    { label: t("switching.common.facts.time.label"), value: t("switching.common.facts.time.value") },
-    {
-      label: t("switching.common.facts.preview.label"),
-      value: t("switching.common.facts.preview.value"),
-    },
-    { label: t("switching.common.facts.back.label"), value: t("switching.common.facts.back.value") },
-  ];
   return (
     <section className="border-b border-border">
       <div className="mx-auto max-w-4xl px-6 py-16 lg:py-24">
@@ -114,12 +115,14 @@ export function GuideHero({
         <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
 
         <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4">
-          {facts.map((fact) => (
-            <div key={fact.label}>
+          {GUIDE_FACTS.map((fact) => (
+            <div key={fact}>
               <dt className="text-xs font-semibold tracking-wider text-muted uppercase">
-                {fact.label}
+                {t(`switching.common.facts.${fact}.label`)}
               </dt>
-              <dd className="mt-1 text-sm font-medium leading-6">{fact.value}</dd>
+              <dd className="mt-1 text-sm font-medium leading-6">
+                {t(`switching.common.facts.${fact}.value`)}
+              </dd>
             </div>
           ))}
         </dl>

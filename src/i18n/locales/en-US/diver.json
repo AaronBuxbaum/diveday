@@ -1003,76 +1003,84 @@
   },
   "switching": {
     "common": {
+      "backToGuides": "← All switching guides",
+      "gettingDemoReady": "Getting the demo ready…",
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
+      "facts": {
+        "moves": {
+          "label": "What moves",
+          "value": "Divers, their cards and sizes, signed waivers, visit history."
+        },
+        "time": {
+          "label": "How long",
+          "value": "An afternoon. Export, preview, import — one sitting."
+        },
+        "preview": {
+          "label": "Before it saves",
+          "value": "Nothing lands until you read the preview and say go."
+        },
+        "back": {
+          "label": "The way out",
+          "value": "What arrives can leave the same way."
+        }
+      },
+      "moveTitle": "How the move works",
+      "moveIntro": "Every step is one you run yourself, in your own time.",
+      "scopeTableTitle": "What comes across — and what doesn't",
+      "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
+      "comesAcross": "Comes across",
+      "staysBehind": "Stays behind",
       "bothWaysTitle": "The same table, read the other way.",
       "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim}",
+      "bringFileTitle": "Bring the file into DiveDay",
+      "bringFileIntro": "The rest is in DiveDay, and it takes minutes.",
+      "openSettingsTitle": "Open Settings → Import contacts",
+      "openSettingsBody": "The owner or manager uploads the CSV in your DiveDay shop.",
+      "checkPreviewTitle": "Check the preview",
+      "checkPreviewBody": "DiveDay maps your columns and shows how each one landed, what it's leaving behind, and any row it can't bring across. A diver with a matching email is updated, not duplicated. Nothing saves until you confirm.",
+      "importReadyTitle": "Import — your roster is ready",
+      "importReadyBody": "Roster, sizes, and cards land immediately. Cards arrive verified and flagged imported, with a one-tap confirm for staff; only a specialty-gated dive waits on it.",
+      "openImportCta": "Open Import in your shop",
       "midCtaTitle": "Rather see it than read about it?",
-      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
-    },
-    "concierge": {
-      "eyebrow": "A person, not a wizard",
-      "title": "We'll switch you on — and off — ourselves.",
-      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, we'll help you carry it all back out just as personally.",
-      "emailCta": "Email us at {email}"
+      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your file lands into."
     },
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Coming in takes a file. Going out takes one button. These guides show both: how to get your divers out of whatever you run now, and exactly what lands when they arrive.",
+      "description": "Coming in takes a file. Going out takes one button. Find what you run now — each guide shows both.",
       "spreadsheetTitle": "Coming from a spreadsheet",
-      "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
-      "readGuide": "Read the guide →",
+      "spreadsheetDescription": "Bring the sheet you already keep, and add the jobs a list can't do — like checking every card before the boat leaves.",
+      "switchingFrom": "Switching from {competitor}",
       "previewEyebrow": "Before anything saves",
       "previewTitle": "You see the whole file before a single row lands.",
-      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: which of your columns it matched, which it didn't recognize and will ignore, how many divers and cards it counted, and every row it intends to skip. Nothing is written until you look at that and say go.",
+      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: the columns it matched, the ones it will ignore, the divers and cards it counted, and every row it intends to skip.",
       "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
-      "switchingFrom": "Switching from {competitor}",
-      "dontSeeSystem": "Don't see your system?",
-      "dontSeeSystemBody": "Most exports come in as-is — a spreadsheet with recognizable name, card, and size columns is all it takes. Start a trial and bring a CSV, or send it to us and we'll map it with you.",
-      "gettingDemoReady": "Getting the demo ready…"
+      "dontSeeSystem": "Something else, or nothing at all?",
+      "dontSeeSystemBody": "Most exports come in as-is — recognizable name, card, and size columns are all it takes."
     },
     "competitor": {
-      "backToGuides": "← All switching guides",
       "keepOrLeaveEyebrow": "Keep it, or leave it",
-      "step1": "Step 1",
-      "step2": "Step 2",
-      "step3": "Step 3",
-      "scopeTableTitle": "What comes across — and what doesn't",
-      "scopeTableDescription": "This is the same scope table DiveDay shows before it imports a single row — the specifics are below.",
-      "comesAcross": "Comes across",
-      "staysBehind": "Stays behind",
-      "bringFileTitle": "Bring the file into DiveDay",
-      "bringFileIntro": "With your export saved, the rest is in DiveDay and takes minutes.",
-      "openSettingsTitle": "Open Settings → Import contacts",
-      "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV you exported.",
-      "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, and what it's leaving behind. Rows with an email match an existing diver, so a re-import updates instead of duplicating. Nothing imports until you confirm.",
-      "importReadyTitle": "Import — your roster is ready",
-      "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
-      "openImportCta": "Open Import in your shop",
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can't.",
       "readyToMove": "Ready to make the move off {competitor}?",
-      "walkDemoFirst": "Walk the live demo as the owner, the captain, or a diver first — then start a trial shop, bring your export, and see your roster land in DiveDay with the same cert checks, waivers, and roll call already in place.",
-      "gettingDemoReady": "Getting the demo ready…",
+      "walkDemoFirst": "Walk the demo first, then bring your export — the cert checks, waivers, and roll call are already in place.",
       "otherGuides": "Other switching guides →",
       "sources": "Sources"
     },
     "spreadsheet": {
-      "backToGuides": "← All switching guides",
       "eyebrow": "Coming from a spreadsheet",
       "title": "The spreadsheet got you this far.",
-      "heroLede": "It won't flag an unverified card, chase an unsigned waiver, or let a diver book their own seat on a Sunday night. DiveDay reads the sheet you already keep — divers, cards, sizes — and takes the rest off your hands. No system to rip out; you already have the file.",
-      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but it can't do the work that keeps a dive day calm and safe — the part you're doing by hand right now.",
+      "heroLede": "It won't flag an unverified card, chase an unsigned waiver, or let a diver book a seat on a Sunday night. DiveDay reads the sheet you already keep and takes the rest off your hands.",
+      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but not the work that keeps a dive day calm — the part you're doing by hand right now.",
       "wedgeIntro2": "That's the trade DiveDay makes worth it. Not a prettier list — the jobs a list can't hold:",
       "wedge": {
         "cardsChecked": {
           "title": "Every card checked before the boat leaves",
-          "body": "DiveDay re-reads each diver's certification against what the trip and the site require, and the ones who can't board yet surface on their own — no scanning a column and hoping."
+          "body": "DiveDay re-reads each diver's certification against what the trip and the site require, and the ones who can't board yet surface on their own."
         },
         "blockersOnePlace": {
           "title": "The day's blockers in one place",
-          "body": "One screen shows who still can't board and why — a missing waiver, a card to verify — so nothing is remembered at the dock instead of the desk."
+          "body": "One screen shows who still can't board and why — a missing waiver, a card to verify — so nothing is remembered at the dock."
         },
         "diversBookThemselves": {
           "title": "Divers book and sign themselves",
@@ -1083,18 +1091,17 @@
           "body": "The captain checks divers off dive by dive on a phone — working from a copy saved to it before the boat leaves, so roll call keeps going when the signal doesn't, then checks itself against the live manifest when service returns."
         }
       },
-      "step1": "Step 1",
       "columnsTitle": "Does your sheet have these columns?",
-      "columnsIntro": "One row per diver, and columns for what you know about them. Your headings don't have to match anything — DiveDay recognizes the common names, previews the file, and flags what it doesn't. Or start from a clean sheet already in the right shape.",
+      "columnsIntro": "One row per diver, saved as CSV. Your headings don't have to match anything — DiveDay recognizes the common names and flags what it doesn't.",
       "downloadTemplate": "Download the starter template (CSV)",
       "columns": {
         "name": {
           "column": "Name",
-          "detail": "First and last in two columns, or one full-name column — either works. This is the only thing a row truly needs."
+          "detail": "First and last in two columns, or one full-name column. The only thing a row truly needs."
         },
         "email": {
           "column": "Email",
-          "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates them instead of making a duplicate. A row without one still comes in as a new diver."
+          "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates instead of duplicating. A row without one still comes in."
         },
         "phone": {
           "column": "Phone",
@@ -1106,50 +1113,42 @@
         },
         "diveInsurance": {
           "column": "Dive insurance",
-          "detail": "However you keep it — a DAN number, a provider name — comes across as written. It's never a gate; it's what the crew wants on hand in an incident."
+          "detail": "A DAN number, a provider name — comes across as written. Never a gate; it's what the crew wants on hand in an incident."
         },
         "certification": {
           "column": "Certification",
-          "detail": "Agency, level, and card number. The card number is what lets a card come across at all — see the scope table below for how it's verified."
+          "detail": "Agency, level, and card number. The card number is what lets a card come across at all."
         },
         "refresherDue": {
           "column": "Refresher due",
-          "detail": "If you track a refresher date, it comes across however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a card that's due — that's the point. An unreadable date goes to staff review instead of verified."
+          "detail": "Written however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a card that's due — that's the point. An unreadable one goes to staff review."
         },
         "specialty": {
           "column": "Specialty",
-          "detail": "Deep, wreck, night, or drysuit — one cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number. See the scope table below for how it's verified."
+          "detail": "Deep, wreck, night, or drysuit. One cell can name several (“Deep, Wreck”) and each becomes its own card under the diver's agency number."
         },
         "nitrox": {
           "column": "Nitrox",
-          "detail": "A yes/no column, plus the nitrox card number if you keep one — that's what brings it across. See the scope table below for how a nitrox fill is gated."
+          "detail": "A yes/no column, plus the nitrox card number if you keep one — that's what brings it across."
         },
         "rentalSizes": {
           "column": "Rental sizes",
-          "detail": "BCD, wetsuit, boot, and fin — whatever sizes you already track become a fit profile."
+          "detail": "BCD, wetsuit, boot, and fin — whatever sizes you track become a fit profile."
         },
         "pastVisits": {
           "column": "Past visits",
-          "detail": "Keep a booking log? A date, trip name, and price per row becomes that diver's history here, so a regular arrives as a regular. Repeat their email on each row to match the right person. See the scope table below for what it means."
+          "detail": "A date, trip name, and price per row becomes that diver's history here, so a regular arrives as a regular. Repeat their email on each row to match the right person."
         }
       },
-      "step2": "Step 2",
-      "scopeTableTitle": "What comes across — and what doesn't",
-      "scopeTableDescription": "This is the same scope table DiveDay shows before it imports a single row — the specifics are below.",
-      "step3": "Step 3",
-      "bringFileTitle": "Bring the file into DiveDay",
-      "bringFileIntro": "Save your sheet as CSV, and the rest is in DiveDay and takes minutes.",
-      "openSettingsTitle": "Open Settings → Import contacts",
-      "openSettingsBody": "In your DiveDay shop, the owner or manager opens the import page and uploads the CSV.",
-      "checkPreviewTitle": "Check the preview",
-      "checkPreviewBody": "DiveDay maps your columns and previews the file before anything saves — how each column landed, what it's leaving behind, and any row it can't bring across (no name, or a repeated email). Nothing imports until you confirm.",
-      "importReadyTitle": "Import — your roster is ready",
-      "importReadyBody": "Roster, rental sizes, and cards are ready immediately — cards land verified and flagged imported, with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirm.",
-      "openImportCta": "Open Import in your shop",
       "closingTitle": "See it before you switch a thing.",
-      "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, nothing to import, just the working shop. Start a trial when it clicks.",
-      "gettingDemoReady": "Getting the demo ready…",
+      "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, just the working shop.",
       "otherSystems": "Switching from other software →"
+    },
+    "concierge": {
+      "eyebrow": "A person, not a wizard",
+      "title": "We'll switch you on — and off — ourselves.",
+      "description": "Send us what you've got — a clean export or a decade of messy tabs — and we'll map the columns and bring your divers in with you, free. If DiveDay's ever the wrong fit, we'll help you carry it all back out just as personally.",
+      "emailCta": "Email us at {email}"
     }
   },
   "nav": {

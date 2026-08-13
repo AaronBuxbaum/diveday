@@ -2,22 +2,18 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
-import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
-import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { DemoTrialCtas } from "./_components/guide";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -80,58 +76,93 @@ async function LocalizedSwitchHubBody() {
   return <SwitchHubBody locale={locale} />;
 }
 
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
+/**
+ * Cached per negotiated locale (DIVER_LOCALES — two entries) — no
+ * session-scoped content.
+ *
+ * The hub has exactly one job: **help a shop owner recognize themselves.** So
+ * the page is a list of names, not a gallery. It used to be six bordered
+ * cards in a two-column grid, each ending in its own "Read the guide →" — the
+ * same fact printed six times at equal weight (principles.md #9), in a shape
+ * that reads as a brochure rather than an index. It is now one hairline-ruled
+ * list whose rows are the links themselves (#10, actions ride on their
+ * objects), which also lets the list end in the row a reader who found nothing
+ * needs: "something else, or nothing at all", with the demo and trial right
+ * there. That row absorbed the whole closing CTA band, so the page is four
+ * sections instead of five and the escape hatch sits where the search failed
+ * rather than two screens below it.
+ */
 async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
+  const guides = [
+    {
+      href: "/switching/spreadsheet",
+      title: t("switching.hub.spreadsheetTitle"),
+      summary: t("switching.hub.spreadsheetDescription"),
+    },
+    ...MIGRATION_GUIDES.map((guide) => ({
+      href: `/switching/${guide.slug}`,
+      title: t("switching.hub.switchingFrom", { competitor: guide.competitor }),
+      summary: t(guide.cardSummary),
+    })),
+  ];
   return (
     <main className="flex-1">
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("switching.hub.eyebrow")}
-          </p>
-          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-            {t("switching.hub.title")}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
-            {t("switching.hub.description")}
-          </p>
-        </div>
+      <section className="mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14">
+        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+          {t("switching.hub.eyebrow")}
+        </p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
+          {t("switching.hub.title")}
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
+          {t("switching.hub.description")}
+        </p>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
-        <div className="grid gap-5 md:grid-cols-2">
-          <Link
-            href="/switching/spreadsheet"
-            className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
-          >
-            <h2 className="text-xl font-semibold tracking-tight">
-              {t("switching.hub.spreadsheetTitle")}
-            </h2>
-            <p className="mt-3 flex-1 leading-7 text-muted">
-              {t("switching.hub.spreadsheetDescription")}
-            </p>
-            <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
-              {t("switching.hub.readGuide")}
-            </span>
-          </Link>
-          {MIGRATION_GUIDES.map((guide) => (
-            <Link
-              key={guide.slug}
-              href={`/switching/${guide.slug}`}
-              className="group flex flex-col rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-border-strong sm:p-7"
-            >
-              <h2 className="text-xl font-semibold tracking-tight">
-                {t("switching.hub.switchingFrom", { competitor: guide.competitor })}
-              </h2>
-              <p className="mt-3 flex-1 leading-7 text-muted">{t(guide.cardSummary)}</p>
-              <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
-                {t("switching.hub.readGuide")}
-              </span>
-            </Link>
+      {/* The index. Whole-row links: the name is what a reader scans for, the
+          summary is why they'd stop, and the arrow is the only chrome. */}
+      <section className="mx-auto max-w-4xl px-6 pb-16 lg:pb-24">
+        <ul className="border-t border-border">
+          {guides.map((guide) => (
+            <li key={guide.href}>
+              <Link
+                href={guide.href}
+                className="group flex items-start gap-6 border-b border-border py-6 transition-colors duration-200 hover:bg-surface"
+              >
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-semibold tracking-tight group-hover:text-primary">
+                    {guide.title}
+                  </h2>
+                  <p className="mt-1.5 leading-7 text-muted">{guide.summary}</p>
+                </div>
+                <span
+                  aria-hidden
+                  className="mt-1 shrink-0 text-lg text-muted transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
+                >
+                  →
+                </span>
+              </Link>
+            </li>
           ))}
+        </ul>
+
+        {/* The last row of the same list, for the reader who found nothing in
+            it — the closing CTA band, moved to where the question is asked. */}
+        <div className="flex flex-col gap-6 border-b border-border py-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              {t("switching.hub.dontSeeSystem")}
+            </h2>
+            <p className="mt-1.5 max-w-xl leading-7 text-muted">
+              {t("switching.hub.dontSeeSystemBody")}
+            </p>
+          </div>
+          <div className="lg:shrink-0">
+            <DemoTrialCtas locale={locale} source="switching-hub" />
+          </div>
         </div>
       </section>
 
@@ -163,41 +194,6 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
       <SwitchingConcierge locale={locale} />
-
-      <section className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("switching.hub.dontSeeSystem")}
-            </h2>
-            <p className="mt-2 max-w-xl text-muted">{t("switching.hub.dontSeeSystemBody")}</p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <form action={enterDemoAction} className="contents">
-              <FunnelTag source="switching-hub" />
-              <SubmitButton
-                pendingLabel={t("switching.hub.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref("switching-hub")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }
