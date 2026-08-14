@@ -95,6 +95,7 @@ export type StaffDestinationId =
   | "diveSites"
   | "courses"
   | "reviews"
+  | "requests"
   | "orders"
   | "waivers"
   | "reports"
@@ -217,6 +218,12 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // row), the same pattern as stuck payments — a queue's badge belongs on the
   // page that ranks work, not on a nav row.
   { id: "reviews", suffix: "/reviews", navGroup: "daily", inPalette: true },
+  // Divers asking for a day that is not on the board. Part of the shop's
+  // running cadence rather than its setup — a shop reads this the way it reads
+  // reviews, on its own rhythm, and answers it by putting a departure up. It is
+  // deliberately *not* a sixth primary tab: the dock holds five and the sixth
+  // slot is More (ADR 20260813-more-is-the-shops-other-door).
+  { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true },
   // Money the shop reads daily — a primary tab. The monthly report keeps its
   // door on this page's header; the report's own row is in "Run the shop".
   {

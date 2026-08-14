@@ -1018,6 +1018,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // in place on every one of them: it points at a row that is itself already
   // erased, so it discloses nothing, and keeping it makes a replayed erasure
   // reach the same leads a second time.
+  //
+  // `interest` and the two date columns are deliberately *not* blanked. They
+  // hold what the request was about and which days it asked for — no identity,
+  // nothing that reaches back to a person once the name, address, phone, timing
+  // prose and message above them are gone — and `interest` is what keeps a
+  // course-less row legal at all (`course_inquiries_subject_present`): blanking
+  // it would turn an erasure into a constraint violation.
   const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
 
   // 1. `person_id`, when the lead carries one. A public lead is still written

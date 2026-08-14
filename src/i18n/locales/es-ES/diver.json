@@ -1596,6 +1596,14 @@
     "sending": "Enviando…",
     "sentHeading": "Consulta enviada",
     "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
+    "requestDateHeading": "¿No hay ninguna fecha que te sirva?",
+    "requestDateBody": "Cuéntanos qué te gustaría bucear y cuándo. No se reserva ni se aparta nada — veremos quién más pide esos días y te respondemos.",
+    "whatToDive": "¿Qué te gustaría bucear?",
+    "whatToDivePlaceholder": "Dos inmersiones en los pecios",
+    "preferredDate": "Fecha que prefieres",
+    "alternateDate": "O esta fecha",
+    "datesHint": "Es una petición, no una reserva — te diremos qué podemos organizar.",
+    "dateFlexible": "Cualquiera de esas fechas, o unos días antes o después, me sirve",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -1606,7 +1614,8 @@
       "invalid": "Revisa el campo señalado e inténtalo de nuevo.",
       "unavailable": "Este curso no está disponible en este momento.",
       "experienceRequired": "Cuéntanos por dónde vas antes de enviar.",
-      "contactRequired": "Déjanos un correo o un teléfono para poder responderte."
+      "contactRequired": "Déjanos un correo o un teléfono para poder responderte.",
+      "interestRequired": "Cuéntanos qué te gustaría bucear antes de enviar."
     }
   },
   "account": {

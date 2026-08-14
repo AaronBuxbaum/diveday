@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { courseInquiries, people } from "./schema";
-import { at } from "./seed-clock";
+import { at, dateAt } from "./seed-clock";
 
 /**
  * Three course leads off the public course pages — the shape a shop's inquiry
@@ -65,6 +65,11 @@ export async function seedCourseInquiries(
             phone: null,
             experienceLevel: "certified" as const,
             timing: "Next month, if you run one",
+            // A course request with a date on it: the requests list groups it
+            // beside the dive requests asking for the same day.
+            preferredDate: dateAt(12),
+            alternateDate: null,
+            dateFlexible: true,
             divers: 1,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message: "Loved the Benwood boat. Ready for the deep dives whenever you have space.",
@@ -85,6 +90,9 @@ export async function seedCourseInquiries(
             phone: "+1-305-555-0410",
             experienceLevel: "never" as const,
             timing: "Some weekend in the next couple of months",
+            preferredDate: dateAt(26),
+            alternateDate: dateAt(33),
+            dateFlexible: false,
             divers: 2,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message:

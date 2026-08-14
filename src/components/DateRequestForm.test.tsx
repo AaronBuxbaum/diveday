@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DateRequestCopy, InquiryFormState } from "@/lib/course-inquiry";
 import { renderDiver } from "@/test/intl";
-import type { CourseInquiryFormState } from "../actions";
-import { CourseInquiry, type CourseInquiryCopy } from "./CourseInquiry";
+import { DateRequestForm } from "./DateRequestForm";
 
-const copy: CourseInquiryCopy = {
-  getInTouch: "Get in touch",
-  noDateBody: "No date that works?",
+const copy: DateRequestCopy = {
+  heading: "Get in touch",
+  intro: "No date that works?",
+  whatToDive: "What would you like to dive?",
+  whatToDivePlaceholder: "Two dives on the wrecks",
+  preferredDate: "Date you’d like",
+  alternateDate: "Or this date",
+  datesHint: "A request, not a booking.",
+  dateFlexible: "Either of those, or a few days either side, works for me",
   yourName: "Your name",
   namePlaceholder: "Priya Sharma",
   yourEmail: "Your email",
@@ -35,14 +41,13 @@ const copy: CourseInquiryCopy = {
 };
 
 function renderInquiry(
-  submitInquiry: (
-    prevState: CourseInquiryFormState,
-    formData: FormData,
-  ) => Promise<CourseInquiryFormState>,
+  submitInquiry: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>,
+  { askInterest = false }: { askInterest?: boolean } = {},
 ) {
   return renderDiver(
-    <CourseInquiry
-      submitInquiry={submitInquiry}
+    <DateRequestForm
+      submitRequest={submitInquiry}
+      askInterest={askInterest}
       contactEmail="hello@example.com"
       contactPhone="+1 305 555 0134"
       copy={copy}
@@ -64,10 +69,9 @@ function pickExperience(value = "never") {
 /** A stub that always reports the inquiry as recorded. */
 function succeeds() {
   return vi.fn(
-    async (
-      _prev: CourseInquiryFormState,
-      _formData: FormData,
-    ): Promise<CourseInquiryFormState> => ({ success: true }),
+    async (_prev: InquiryFormState, _formData: FormData): Promise<InquiryFormState> => ({
+      success: true,
+    }),
   );
 }
 
@@ -76,7 +80,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("CourseInquiry — experience is required (task 8)", () => {
+describe("DateRequestForm — experience is required (task 8)", () => {
   it("blocks the send and shows an inline error when no experience is picked", () => {
     const submitInquiry = vi.fn();
     renderInquiry(submitInquiry);
@@ -116,13 +120,10 @@ describe("CourseInquiry — experience is required (task 8)", () => {
   });
 });
 
-describe("CourseInquiry — server-recorded submission", () => {
+describe("DateRequestForm — server-recorded submission", () => {
   it("records the inquiry and shows the confirmation on success (happy path)", async () => {
     const submitInquiry = vi.fn(
-      async (
-        _prev: CourseInquiryFormState,
-        _formData: FormData,
-      ): Promise<CourseInquiryFormState> => ({
+      async (_prev: InquiryFormState, _formData: FormData): Promise<InquiryFormState> => ({
         success: true,
       }),
     );
@@ -141,7 +142,7 @@ describe("CourseInquiry — server-recorded submission", () => {
 
   it("shows the server's error and keeps the form on screen (failure path)", async () => {
     const submitInquiry = vi.fn(
-      async (): Promise<CourseInquiryFormState> => ({
+      async (): Promise<InquiryFormState> => ({
         error: "Too many attempts. Please wait a few minutes and try again.",
       }),
     );
@@ -170,7 +171,7 @@ describe("CourseInquiry — server-recorded submission", () => {
   });
 });
 
-describe("CourseInquiry — a lead the shop can answer", () => {
+describe("DateRequestForm — a lead the shop can answer", () => {
   // A question with no email and no phone is a lead nobody can reply to, so
   // the composer refuses to send it at all.
   it("refuses the server send when neither an email nor a phone is given", () => {
@@ -218,7 +219,7 @@ describe("CourseInquiry — a lead the shop can answer", () => {
   });
 });
 
-describe("CourseInquiry — how many divers", () => {
+describe("DateRequestForm — how many divers", () => {
   // One diver is the commonest answer by a distance; nobody should have to
   // fill in a field to say the obvious.
   it("starts at one diver", async () => {
@@ -249,7 +250,7 @@ describe("CourseInquiry — how many divers", () => {
   });
 });
 
-describe("CourseInquiry — one way out of the form", () => {
+describe("DateRequestForm — one way out of the form", () => {
   // Send is the whole choice. "Open in your email app" and "Copy message"
   // stood beside it as equal secondary buttons and both handed the diver a
   // draft to send themselves — no row recorded, no shop notified, and a
@@ -281,5 +282,80 @@ describe("CourseInquiry — one way out of the form", () => {
     expect(formData.get("timing")).toBe("any weekend this autumn");
     expect(formData.get("divers")).toBe("1");
     expect(formData.get("experience")).toBe("never");
+  });
+});
+
+describe("DateRequestForm — asking for a date", () => {
+  // The dates are what make a request groupable at all ("four people could
+  // make the 12th"); the free-text box beside them is what holds everything a
+  // date cannot say, so both travel.
+  it("carries a preferred date, an alternate, and the flexible flag", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
+
+    fillEmail();
+    fireEvent.change(screen.getByLabelText(/Date you’d like/), {
+      target: { value: "2026-09-12" },
+    });
+    fireEvent.change(screen.getByLabelText(/Or this date/), { target: { value: "2026-09-19" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /a few days either side/ }));
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    const formData = submitInquiry.mock.calls[0]?.[1];
+    expect(formData.get("preferredDate")).toBe("2026-09-12");
+    expect(formData.get("alternateDate")).toBe("2026-09-19");
+    expect(formData.get("dateFlexible")).toBe("on");
+  });
+
+  it("sends no date fields at all when the diver named none", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
+
+    fillEmail();
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    const formData = submitInquiry.mock.calls[0]?.[1];
+    expect(formData.get("preferredDate")).toBeNull();
+    expect(formData.get("alternateDate")).toBeNull();
+    expect(formData.get("dateFlexible")).toBeNull();
+  });
+});
+
+describe("DateRequestForm — what the request is about", () => {
+  // On a course page the URL says what it is about, so the form never asks.
+  it("does not ask what to dive when a course is already named", () => {
+    renderInquiry(vi.fn());
+    expect(screen.queryByLabelText(/What would you like to dive/)).not.toBeInTheDocument();
+  });
+
+  it("refuses to send from the schedule page with nothing said about what to dive", () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry, { askInterest: true });
+
+    fillEmail();
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    expect(screen.getByText("Tell us what you’d like to dive before sending.")).toBeInTheDocument();
+    expect(submitInquiry).not.toHaveBeenCalled();
+  });
+
+  it("carries what the diver wants to dive once they say", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry, { askInterest: true });
+
+    fireEvent.change(screen.getByLabelText(/What would you like to dive/), {
+      target: { value: "Two dives on the wrecks" },
+    });
+    fillEmail();
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("interest")).toBe("Two dives on the wrecks");
   });
 });

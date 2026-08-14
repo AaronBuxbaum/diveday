@@ -141,6 +141,7 @@ describe("what each consumer derives", () => {
       "diveSites",
       "waivers",
       "reviews",
+      "requests",
       "reports",
     ]);
     expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual([
@@ -262,6 +263,7 @@ describe("currentStaffNavDestinationId", () => {
   it("lights a destination for its own subtree", () => {
     expect(current(`${root}/close-out`)).toBe("closeOut");
     expect(current(`${root}/reviews`)).toBe("reviews");
+    expect(current(`${root}/requests`)).toBe("requests");
     expect(current(`${root}/reports`)).toBe("reports");
     expect(current(`${root}/staffing`)).toBe("staffing");
   });

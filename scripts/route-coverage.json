@@ -73,6 +73,7 @@
       "booking.spec.ts",
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
+      "date-requests.spec.ts",
       "dive-sites.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
@@ -99,7 +100,7 @@
     "visual": ["public-courses"]
   },
   "/s/[shopSlug]/courses/[slug]": {
-    "e2e": ["a11y.spec.ts", "courses.spec.ts", "gear-fit-and-age.spec.ts"],
+    "e2e": ["a11y.spec.ts", "courses.spec.ts", "date-requests.spec.ts", "gear-fit-and-age.spec.ts"],
     "visual": ["course-page"]
   },
   "/s/[shopSlug]/trips/[id]": {
@@ -244,6 +245,10 @@
   "/shop/[shopSlug]/reports": {
     "e2e": ["currency.spec.ts", "reports.spec.ts"],
     "visual": ["reports"]
+  },
+  "/shop/[shopSlug]/requests": {
+    "e2e": ["date-requests.spec.ts"],
+    "visual": ["staff-date-requests"]
   },
   "/shop/[shopSlug]/reviews": {
     "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],

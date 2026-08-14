@@ -4,7 +4,11 @@ import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { recordCourseInquiry } from "./course-inquiries";
+import {
+  DATE_REQUESTS_PAGE_SIZE,
+  listDateRequestsForStaff,
+  recordCourseInquiry,
+} from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { createDiver } from "./divers";
 import { courseInquiries, people, shops } from "./schema";
@@ -209,5 +213,204 @@ describe("recordCourseInquiry", () => {
       });
       expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
     });
+  });
+});
+
+/**
+ * The half of the table that names no course: a diver asking for an ordinary
+ * dive from the shop's schedule page. One table, one erasure path, one export
+ * column set — and one rule keeping "no course" from meaning "about nothing".
+ */
+describe("recordCourseInquiry — a dive request, with dates", () => {
+  it("records a request that names an interest instead of a course", async () => {
+    const { db, shop } = await inquiryContext();
+    const record = await recordCourseInquiry(db, {
+      shopId: shop.id,
+      courseId: null,
+      interest: "  A two-tank on the wrecks  ",
+      email: "tomas@example.com",
+      experienceLevel: "certified",
+      preferredDate: "2026-09-12",
+      alternateDate: "2026-09-19",
+      dateFlexible: true,
+    });
+
+    const [row] = await db
+      .select()
+      .from(courseInquiries)
+      .where(and(eq(courseInquiries.shopId, shop.id), eq(courseInquiries.id, record.id)));
+    expect(row).toMatchObject({
+      courseId: null,
+      interest: "A two-tank on the wrecks",
+      preferredDate: "2026-09-12",
+      alternateDate: "2026-09-19",
+      dateFlexible: true,
+    });
+  });
+
+  it("defaults the dates to nothing at all rather than to today", async () => {
+    const { db, shop, course } = await inquiryContext();
+    const record = await recordCourseInquiry(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      experienceLevel: "never",
+    });
+    const row = await latestInquiryForCourse(db, shop.id, course.id);
+    expect(row.id).toBe(record.id);
+    expect(row.preferredDate).toBeNull();
+    expect(row.alternateDate).toBeNull();
+    expect(row.dateFlexible).toBe(false);
+  });
+
+  it("refuses a request that is about nothing — no course and no interest", async () => {
+    const { db, shop } = await inquiryContext();
+    await expect(
+      recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: null,
+        experienceLevel: "never",
+        email: "nobody@example.com",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses a whitespace-only interest, which is the same as none", async () => {
+    const { db, shop } = await inquiryContext();
+    await expect(
+      recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: null,
+        interest: "   ",
+        experienceLevel: "never",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses an about-nothing row written straight at the table (the check constraint)", async () => {
+    const { db, shop } = await inquiryContext();
+    await expect(
+      db.insert(courseInquiries).values({
+        shopId: shop.id,
+        courseId: null,
+        interest: null,
+        experienceLevel: "never",
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("listDateRequestsForStaff", () => {
+  /** A request written straight at the table, so a test can place its dates. */
+  async function addRequest(
+    db: AppDb,
+    shopId: string,
+    fields: {
+      interest: string;
+      preferredDate?: string | null;
+      alternateDate?: string | null;
+      dateFlexible?: boolean;
+    },
+  ) {
+    const [row] = await db
+      .insert(courseInquiries)
+      .values({
+        shopId,
+        courseId: null,
+        interest: fields.interest,
+        experienceLevel: "certified",
+        preferredDate: fields.preferredDate ?? null,
+        alternateDate: fields.alternateDate ?? null,
+        dateFlexible: fields.dateFlexible ?? false,
+      })
+      .returning({ id: courseInquiries.id });
+    return row;
+  }
+
+  /** A shop with nothing seeded into this table, so ordering is only ours. */
+  async function emptyRequestShop() {
+    const { db, shop } = await inquiryContext();
+    await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shop.id));
+    return { db, shop };
+  }
+
+  it("reads the soonest date first and leaves the dateless ones at the end", async () => {
+    const { db, shop } = await emptyRequestShop();
+    await addRequest(db, shop.id, { interest: "later", preferredDate: "2026-10-01" });
+    await addRequest(db, shop.id, { interest: "no date" });
+    await addRequest(db, shop.id, { interest: "sooner", preferredDate: "2026-09-12" });
+    // Its alternate is the earliest date it can be served on, so it sorts by
+    // that rather than by the later day it named first.
+    await addRequest(db, shop.id, {
+      interest: "early alternate",
+      preferredDate: "2026-10-05",
+      alternateDate: "2026-09-05",
+    });
+
+    const page = await listDateRequestsForStaff(db, shop.id);
+    expect(page.rows.map((row) => row.interest)).toEqual([
+      "early alternate",
+      "sooner",
+      "later",
+      "no date",
+    ]);
+    expect(page.total).toBe(4);
+    expect(page.page).toBe(1);
+  });
+
+  it("carries the course title for a request that names one, and null for one that doesn't", async () => {
+    const { db, shop } = await emptyRequestShop();
+    const course = await getCourseBySlug(db, shop.id, "open-water-diver");
+    if (!course) throw new Error("demo Open Water Diver course missing");
+    await recordCourseInquiry(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      experienceLevel: "never",
+      preferredDate: "2026-09-12",
+    });
+    await addRequest(db, shop.id, { interest: "a night dive", preferredDate: "2026-09-13" });
+
+    const page = await listDateRequestsForStaff(db, shop.id);
+    expect(page.rows.map((row) => [row.courseTitle, row.interest])).toEqual([
+      [course.title, null],
+      [null, "a night dive"],
+    ]);
+  });
+
+  it("never reads another shop's requests", async () => {
+    const { db, shop } = await emptyRequestShop();
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-date-requests", timezone: "UTC" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    await addRequest(db, rival.id, { interest: "theirs", preferredDate: "2026-09-12" });
+    await addRequest(db, shop.id, { interest: "ours", preferredDate: "2026-09-12" });
+
+    const page = await listDateRequestsForStaff(db, shop.id);
+    expect(page.rows.map((row) => row.interest)).toEqual(["ours"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("pages, and its count is the whole shop rather than the page", async () => {
+    const { db, shop } = await emptyRequestShop();
+    for (let i = 0; i < DATE_REQUESTS_PAGE_SIZE + 3; i += 1) {
+      await addRequest(db, shop.id, {
+        interest: `request ${i}`,
+        preferredDate: `2026-09-${String(i + 1).padStart(2, "0")}`,
+      });
+    }
+
+    const first = await listDateRequestsForStaff(db, shop.id);
+    expect(first.rows).toHaveLength(DATE_REQUESTS_PAGE_SIZE);
+    expect(first.total).toBe(DATE_REQUESTS_PAGE_SIZE + 3);
+    expect(first.pageCount).toBe(2);
+
+    const second = await listDateRequestsForStaff(db, shop.id, { page: 2 });
+    expect(second.rows).toHaveLength(3);
+    // A bookmarked page past the end lands on the last real one, never on an
+    // empty table under a heading that cannot be true.
+    const past = await listDateRequestsForStaff(db, shop.id, { page: 9 });
+    expect(past.page).toBe(2);
+    expect(past.rows).toHaveLength(3);
   });
 });

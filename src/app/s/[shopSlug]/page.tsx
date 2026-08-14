@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { submitInquiryAction } from "@/app/actions/inquiry";
+import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
@@ -17,6 +19,7 @@ import {
   upcomingScheduleRange,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
@@ -709,12 +712,35 @@ export default async function SchedulePage({
           />
         </Suspense>
       ) : null}
-      {/* The only Client Component on this page that reads copy, so the
-          provider wraps it alone rather than the whole tree — the diver bundle
-          then crosses to the browser once, on the one surface that needs it. */}
+      {/* The two Client Components on this page that read copy, under one
+          provider — the diver bundle then crosses to the browser once, for the
+          namespaces those two need and no more.
+
+          The date request is the answer to the question this page raises and
+          could not previously answer: the schedule shows the dates that exist
+          and stops, so a diver who wants a two-tank on the Saturday nobody
+          scheduled had nowhere to go. It is deliberately *not* the wait list
+          above it — that one says "tell me when a seat frees on a departure
+          that exists", and this one says "please create a departure". Full page
+          only, like every other non-booking surface here: the embed stays a
+          compact booking widget (docs ADR 20260726-schedule-embed). */}
       {!isEmbed ? (
-        <DiverIntlProvider locale={locale} timeZone={tz} namespaces={["lastMinute", "common"]}>
+        <DiverIntlProvider
+          locale={locale}
+          timeZone={tz}
+          namespaces={["lastMinute", "inquiry", "common"]}
+        >
           <LastMinuteListForm shopSlug={shopSlug} />
+          {shop.contactEmail ? (
+            <DateRequestForm
+              submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
+              askInterest
+              sectionId="request-a-date"
+              contactEmail={shop.contactEmail}
+              contactPhone={shop.contactPhone}
+              copy={dateRequestCopy(t, "dive")}
+            />
+          ) : null}
         </DiverIntlProvider>
       ) : null}
       {/* Human-discovery footer, embed mode only — a single small line, not a

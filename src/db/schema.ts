@@ -681,13 +681,22 @@ export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
 ]);
 
 /**
- * A lead from the public course page's "get in touch" composer
- * (courses/[slug]/_components/CourseInquiry.tsx). Deliberately small: name,
- * email, and phone are each optional (a diver may leave only one way to reach
- * them, or none besides the message itself — the `mailto:` composer stays the
- * fallback for that case), and there is no status/response tracking here —
- * follow-up happens off-platform, in the shop's own inbox, once the
- * notification email lands.
+ * A diver asking a shop to run something on a date that is not on the board.
+ *
+ * Written from two places now, and the table is deliberately one:
+ * `/s/<shop>/courses/<slug>`, where the request names a course, and `/s/<shop>`
+ * itself, where it names nothing and says what it is about in `interest`
+ * instead ("a two-tank on the wrecks"). From a shop's point of view the rows
+ * are the same thing — a person, a way to reach them, what they can already do,
+ * and what they want — and one table means one erasure path (src/db/
+ * anonymize.ts), one export column set (src/db/export.ts), and one staff list
+ * (/shop/<shop>/requests). Splitting them would duplicate all three to express
+ * a difference that is a single nullable foreign key.
+ *
+ * Deliberately small still: name, email, and phone are each optional (a diver
+ * may leave only one way to reach them), and there is no status/response
+ * tracking — follow-up happens in the shop's own inbox and on the requests
+ * list, not as a workflow here.
  */
 export const courseInquiries = pgTable(
   "course_inquiries",
@@ -696,9 +705,40 @@ export const courseInquiries = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    courseId: uuid("course_id")
-      .notNull()
-      .references(() => courses.id),
+    /**
+     * The course this is about, or null when the request is for an ordinary
+     * dive rather than a course — the schedule page's form has no course to
+     * name, and says what it wants in `interest` instead. The check constraint
+     * below is what keeps "null" from meaning "about nothing".
+     */
+    courseId: uuid("course_id").references(() => courses.id),
+    /**
+     * What an ordinary dive request is about, in the diver's own words — "a
+     * two-tank on the wrecks", "a night dive". Only a *course* request can
+     * leave this null, because the course is what it is about.
+     */
+    interest: text("interest"),
+    /**
+     * The date the diver would like, and the one they could also make.
+     *
+     * A `preferred_date` column existed once and was dropped on 2026-08-12:
+     * "the date picker beside 'When suits you' implied a precision the answer
+     * never had — a diver's date is a request the shop replies to, never a
+     * hold". That was true of a lone picker whose output nobody at the shop
+     * could read on screen. A date stops being false precision once something
+     * groups by it: "four people could make the 12th" is a departure waiting to
+     * be scheduled, which is what /shop/<shop>/requests renders. The dates came
+     * back *with* that surface, and `alternate_date` is what keeps the first one
+     * honest — a diver with one workable date and one fallback is stating a
+     * range, not booking a slot.
+     *
+     * Calendar dates, with no instant in them: stored as `date`, rendered with
+     * an explicit UTC zone (src/lib/calendar-date.ts).
+     */
+    preferredDate: date("preferred_date", { mode: "string" }),
+    alternateDate: date("alternate_date", { mode: "string" }),
+    /** "Any of these, or near them" — see `groupDateRequests` in src/lib/date-requests.ts. */
+    dateFlexible: boolean("date_flexible").notNull().default(false),
     /**
      * The shop's diver this lead belongs to, when that was knowable *at capture
      * time* — resolved by `recordCourseInquiry` from an exact, case-insensitive
@@ -722,7 +762,12 @@ export const courseInquiries = pgTable(
     phone: text("phone"),
     /** The one field the form requires — see courseInquiryExperience above. */
     experienceLevel: courseInquiryExperience("experience_level").notNull(),
-    /** Free prose — "the week of 12 August", "any weekend in the autumn". */
+    /**
+     * Free prose — "the week of 12 August", "any weekend in the autumn". Kept
+     * exactly as it was when the date columns arrived: the dates do not replace
+     * it, and this is still the one field that can hold what a diver means when
+     * no date can say it.
+     */
     timing: text("timing"),
     /** How many people, including the writer; null when left blank. */
     divers: integer("divers"),
@@ -734,6 +779,15 @@ export const courseInquiries = pgTable(
     index("course_inquiries_shop_created_idx").on(table.shopId, table.createdAt),
     // "Who's asking about this course" for a course-scoped view.
     index("course_inquiries_course_idx").on(table.courseId),
+    // The requests list reads by requested date, dateless rows last.
+    index("course_inquiries_shop_preferred_date_idx").on(table.shopId, table.preferredDate),
+    // A request must be about *something*. The server action refuses this in
+    // words before an insert is attempted (src/app/actions/inquiry.ts); this is
+    // the backstop that keeps a row nobody can act on out of the table.
+    check(
+      "course_inquiries_subject_present",
+      sql`${table.courseId} is not null or length(btrim(coalesce(${table.interest}, ''))) > 0`,
+    ),
   ],
 );
 

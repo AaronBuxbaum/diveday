@@ -77,6 +77,7 @@ import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCourseInquiries } from "./seed-course-inquiries";
+import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
@@ -533,6 +534,10 @@ export async function seedDemoSchedule(
   // Leads off the public course pages. After the catalog and the divers, so the
   // one lead that links to an existing diver has somebody to link to.
   await seedCourseInquiries(db, shopId, { courseIdByTitle });
+  // The same table's other half: divers asking for a *dive* on a date the
+  // board has nothing on — the rows the requests list groups by day
+  // (src/lib/date-requests.ts).
+  await seedDateRequests(db, shopId);
   await seedFrontDesk(db, shopId, customers, tripRows, bookingRows, opts.history !== false);
   // The trailing quarter of already-sailed trips that gives owner reporting
   // something to report. Off for the lean unit-test template and for trial
