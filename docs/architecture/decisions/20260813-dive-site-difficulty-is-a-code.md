@@ -70,8 +70,8 @@ what shops and templates had actually written, and "all levels" is what a null a
 - One additive migration: a new enum, a new nullable column, and a `WHERE`-bounded backfill that
   matches the three exact values. `dive_sites.difficulty` stays for one release, because the
   previous deployment still selects it while the migration lands (ADR
-  20260806-destructive-migration-guard). `FU-20260813-drop-field-guide-text-columns` carries the
-  drop alongside the field guide's.
+  20260806-destructive-migration-guard). The drop shipped the following release alongside the field
+  guide's, in `drizzle/20260814033653_drop-field-guide-text-columns`.
 - `DiveSitesPeek` takes a `DiverTranslator` — it rendered a stored string and now renders a label.
 - `staff/diveSites.json` loses `difficultyPlaceholder` (a placeholder for a box that is now a
   picker) and gains `difficultyUnset` plus three level names, in both locales.
