@@ -208,6 +208,54 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DEPLOY_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDeployRoleArn stack output."
           exit 1
+      # The same shape as the step above, for the four credentials the
+      # post-deploy wizard needs rather than the role this job assumes.
+      #
+      # GitHub resolves an absent secret to the empty string with no warning of
+      # any kind, so three quite different situations are indistinguishable from
+      # inside a run: the credential was never created, it was stored at the
+      # wrong scope (repository instead of this environment), or it exists under
+      # a name that does not match the one the `env:` block below reads. Each
+      # one surfaces minutes later, inside `gh` or `vercel`, phrased as an
+      # authentication problem that names neither the variable nor the setup
+      # step. A real `command: deploy` run (31564090783) was spent failing to
+      # establish which of the three it was — and by then `cdk deploy` had
+      # already updated the stack.
+      #
+      # So this runs before the AWS credentials step, not just before
+      # `pnpm infra:deploy`: an unfinished setup refuses the run outright
+      # instead of leaving it half-done. Naming the variable, not only the
+      # manual action, is what makes a name mismatch legible as one. Checking
+      # all four before exiting means one run tells the operator everything
+      # that is missing.
+      #
+      # Nothing here skips a credential-less wizard step and continues: ADR
+      # 20260811-ci-deploy-full-wizard rejects that partial-success shape, and
+      # this changes only the error a human reads, never whether the wizard
+      # fails.
+      - name: Confirm the post-deploy wizard's credentials are set
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -uo pipefail
+          missing=0
+          require() {
+            if [ -z "$2" ]; then
+              echo "::error::$1 resolved to the empty string. Either the infra-deploy environment secret named $1 does not exist yet (complete manual action \"$3\" in docs/engineering/manual-actions.md, which stores it under exactly that name), or it exists under a different name or at a different scope than the secrets.$1 this workflow reads."
+              missing=1
+            fi
+          }
+          require GH_TOKEN "$GH_TOKEN" ci-github-admin-token
+          require VERCEL_TOKEN "$VERCEL_TOKEN" ci-vercel-deploy-token
+          require VERCEL_ORG_ID "$VERCEL_ORG_ID" ci-vercel-deploy-token
+          require VERCEL_PROJECT_ID "$VERCEL_PROJECT_ID" ci-vercel-deploy-token
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Refusing to deploy: the post-deploy wizard would shell out to gh/vercel with an empty credential. Nothing has been deployed by this run."
+            exit 1
+          fi
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
@@ -239,7 +287,8 @@ jobs:
       # credentials and would be fine as variables; they are secrets here only
       # so that all four live in one place. The cost is that they are redacted
       # from logs, so a wrong one reads as an empty string in a failure message
-      # rather than as itself.
+      # rather than as itself — which is why the step above checks all four for
+      # emptiness by name before this job touches AWS at all.
       - run: pnpm infra:deploy DiveDay --require-approval never --ci-unattended
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
