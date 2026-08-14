@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { OrderLineItemKind } from "@/db/schema";
+import type { DepthUnit } from "./depth-units";
 import { cachedFormatter } from "./intl-cache";
 
 /**
@@ -93,6 +94,177 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
     });
   }
   return days;
+}
+
+/**
+ * A published depth limit as the agencies print it: a **pair**, never a
+ * conversion. Identical in intent (and in its five values) to `DepthCeiling`
+ * in src/lib/depth-ceiling.ts — 18 m and 60 ft are both the standard, and
+ * neither is derived from the other. `courseDepths.test.ts` asserts the two
+ * tables still agree, so a page and a roster warning can never quote different
+ * limits.
+ */
+export type CourseDepth = { meters: number; feet: number };
+
+/**
+ * The only depths course prose may name through a placeholder.
+ *
+ * Closed on purpose. A placeholder is not a converter: `depthInUnit(18, "feet")`
+ * is 59, a number that appears in no dive manual anywhere (the same bug
+ * `DepthCeiling` was created to kill). So `{depth18}` is a *lookup* into the
+ * agency table, and a depth the table does not carry is refused at save rather
+ * than silently converted into something wrong.
+ */
+export const COURSE_DEPTHS: readonly CourseDepth[] = [
+  { meters: 12, feet: 40 },
+  { meters: 18, feet: 60 },
+  { meters: 21, feet: 70 },
+  { meters: 30, feet: 100 },
+  { meters: 40, feet: 130 },
+];
+
+const COURSE_DEPTH_BY_METERS = new Map(COURSE_DEPTHS.map((depth) => [depth.meters, depth]));
+
+/**
+ * The placeholder grammar, exactly. Two forms and no options:
+ *
+ * - `{depth18}`  → "18 meters" / "60 feet" — a number and its unit word.
+ * - `{depth18n}` → "18" / "60" — the bare number, for a range or a list
+ *   ("to {depth30n}–{depth40}") where one unit word at the end is the only
+ *   readable shape.
+ *
+ * Deliberately **not** run through `intl-messageformat`. Course prose is a
+ * shop's own free text: an apostrophe, a `#`, or a stray brace typed into a
+ * paragraph is an ICU syntax error, and the translators are built with
+ * `onError: () => {}` (src/i18n/messages.ts), so a real MessageFormat pass over
+ * shop prose would swallow the error and hand the page a degraded or empty
+ * string — a whole paragraph vanishing with nothing in the log. This scanner
+ * is total instead: it rewrites what it recognises and leaves every other
+ * character, brace or not, exactly as the shop typed it.
+ */
+const DEPTH_PLACEHOLDER = /\{depth(\d{1,3})(n?)\}/g;
+
+/**
+ * Anything brace-wrapped that was *aiming* at a depth placeholder. Wider than
+ * {@link DEPTH_PLACEHOLDER} on purpose — this is what save-time validation
+ * refuses, so `{depth 18}`, `{Depth18}` and `{depth18 m}` are caught as typos
+ * instead of shipping to divers as literal braces.
+ */
+const DEPTH_PLACEHOLDER_ATTEMPT = /\{[^{}]*\}/g;
+const LOOKS_LIKE_DEPTH = /^\s*depth/i;
+/** A `{` that never closes, and a `}` whose `{` was deleted — both directions of a half-edit. */
+const UNCLOSED_ATTEMPT = /\{\s*depth\s*\d{0,3}\s*[a-z]{0,3}/i;
+const UNOPENED_ATTEMPT = /depth\s*\d{1,3}\s*n?\s*\}/i;
+
+export type CourseDepthPlaceholderIssue = {
+  /** The offending text as typed, for a log line — never for interpolation into copy. */
+  token: string;
+  /** `malformed`: not the grammar. `unknown`: well-formed, but not a standard depth. */
+  reason: "malformed" | "unknown";
+};
+
+/**
+ * Every broken depth placeholder in one string a shop just typed.
+ *
+ * **Removing a placeholder is not an issue.** A shop that deletes `{depth18}`
+ * and writes "sixty feet" has written prose, which is exactly what this content
+ * is for; the sentence simply stops following `shops.depth_unit`, and that is
+ * their call. Only a *broken attempt* is refused — the half-edit that would
+ * otherwise render `{depth 18}` to a diver.
+ */
+export function courseDepthPlaceholderIssues(text: string): CourseDepthPlaceholderIssue[] {
+  const issues: CourseDepthPlaceholderIssue[] = [];
+  for (const match of text.matchAll(DEPTH_PLACEHOLDER_ATTEMPT)) {
+    const inner = match[0].slice(1, -1);
+    if (!LOOKS_LIKE_DEPTH.test(inner)) continue; // not aimed at us; leave it alone
+    const strict = /^depth(\d{1,3})(n?)$/.exec(inner);
+    if (!strict) {
+      issues.push({ token: match[0], reason: "malformed" });
+      continue;
+    }
+    if (!COURSE_DEPTH_BY_METERS.has(Number(strict[1]))) {
+      issues.push({ token: match[0], reason: "unknown" });
+    }
+  }
+  // Balanced groups are accounted for above; what is left is a lost brace.
+  const remainder = text.replace(DEPTH_PLACEHOLDER_ATTEMPT, " ");
+  const lostBrace = UNCLOSED_ATTEMPT.exec(remainder) ?? UNOPENED_ATTEMPT.exec(remainder);
+  if (lostBrace) issues.push({ token: lostBrace[0].trim(), reason: "malformed" });
+  return issues;
+}
+
+/** How the caller turns one standard depth into words. Kept out of src/lib: the unit word is copy. */
+export type CourseDepthFormat = {
+  unit: DepthUnit;
+  /** The already-localized "18 meters" / "60 feet" for a value in `unit`. */
+  withUnit: (value: number) => string;
+};
+
+/**
+ * Course prose with its depth placeholders resolved into the shop's own unit.
+ *
+ * Total by construction — it cannot throw and cannot lose text. A placeholder
+ * the grammar does not recognise is left **verbatim**, so the worst a broken
+ * one can do is render `{depth 18}` on the page: visible, ugly, and reported by
+ * the same run of `courseDepthPlaceholderIssues` that refused the save it came
+ * from. That is the deliberate trade against the alternative — a format pass
+ * that throws mid-render, or an ICU pass whose error is swallowed and takes the
+ * paragraph with it.
+ */
+export function resolveCourseDepths(text: string, format: CourseDepthFormat): string {
+  return text.replace(DEPTH_PLACEHOLDER, (whole, meters: string, bare: string) => {
+    const depth = COURSE_DEPTH_BY_METERS.get(Number(meters));
+    if (!depth) return whole;
+    const value = format.unit === "feet" ? depth.feet : depth.meters;
+    return bare ? String(value) : format.withUnit(value);
+  });
+}
+
+function resolveOptional(text: string | null, format: CourseDepthFormat): string | null {
+  return text === null ? null : resolveCourseDepths(text, format);
+}
+
+/**
+ * The prose half of a course, with every depth placeholder resolved. Applied
+ * once at the top of a rendering page rather than field by field in the
+ * components — a field added to {@link CourseContent} that this forgets is a
+ * compile error, not a sentence that quietly stops following the shop's unit.
+ *
+ * The staff editor deliberately does **not** call this: it edits the source,
+ * and a resolved page is not the thing being written.
+ */
+export function resolveCourseContentDepths<
+  T extends CourseContent & { description?: string | null },
+>(content: T, format: CourseDepthFormat): T {
+  // Generic so a caller can hand in the whole `courses` row and get the row
+  // back — the alternative leaves `course.summary` (unresolved) and
+  // `content.summary` (resolved) side by side at every call site, which is a
+  // trap. The cast is the price of spreading over a generic; every property
+  // written below is checked against `CourseContent` by the signature.
+  return {
+    ...content,
+    // The staff-picker blurb, which JSON-LD falls back to when there is no
+    // summary (src/lib/structured-data.ts) — so it can reach a diver too.
+    ...(content.description === undefined
+      ? {}
+      : { description: resolveOptional(content.description, format) }),
+    summary: resolveOptional(content.summary, format),
+    overview: resolveOptional(content.overview, format),
+    durationText: resolveOptional(content.durationText, format),
+    groupSizeText: resolveOptional(content.groupSizeText, format),
+    prerequisiteNote: resolveOptional(content.prerequisiteNote, format),
+    includes: content.includes.map((item) => resolveCourseDepths(item, format)),
+    excludes: content.excludes.map((item) => resolveCourseDepths(item, format)),
+    scheduleDays: content.scheduleDays.map((day) => ({
+      ...day,
+      title: resolveCourseDepths(day.title, format),
+      items: day.items.map((item) => resolveCourseDepths(item, format)),
+    })),
+    faqs: content.faqs.map((faq) => ({
+      question: resolveCourseDepths(faq.question, format),
+      answer: resolveCourseDepths(faq.answer, format),
+    })),
+  } as T;
 }
 
 export type CourseFaq = { question: string; answer: string };

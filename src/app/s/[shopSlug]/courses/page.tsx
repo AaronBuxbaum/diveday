@@ -10,7 +10,8 @@ import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
-import { courseTotalCents } from "@/lib/courses";
+import { courseDepthFormat } from "@/i18n/unit-labels";
+import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
@@ -73,9 +74,15 @@ export default async function PublicCoursesPage({
   // a shop that teaches nothing. Null only when the shop publishes no courses
   // at all; there is no unfiltered view (see `AgencyTabs`).
   const selectedAgency = agency && agencies.includes(agency) ? agency : (agencies[0] ?? null);
-  const courseList = await listActiveCourses(db, shop.id, {
-    ...(selectedAgency ? { agency: selectedAgency } : {}),
-  });
+  // `{depth18}` markers in the shop's own prose resolve into the shop's unit
+  // before anything on this page reads a field — the same one-shot pass the
+  // course page itself makes (src/lib/courses.ts).
+  const depthFormat = courseDepthFormat(t, shop.depthUnit);
+  const courseList = (
+    await listActiveCourses(db, shop.id, {
+      ...(selectedAgency ? { agency: selectedAgency } : {}),
+    })
+  ).map((course) => resolveCourseContentDepths(course, depthFormat));
   const currency = toShopCurrency(shop.currency);
   // The shop's first agency keeps the bare URL canonical, so the page a diver
   // lands on and the page a search engine indexes are the same one.

@@ -7,7 +7,13 @@ import { getDb } from "@/db/client";
 import { getCourseBySlug, updateCourse, updateCourseContent } from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
-import { parseFaqs, parseLines, sanitizeScheduleDays, splitCourseImageUrls } from "@/lib/courses";
+import {
+  courseDepthPlaceholderIssues,
+  parseFaqs,
+  parseLines,
+  sanitizeScheduleDays,
+  splitCourseImageUrls,
+} from "@/lib/courses";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -137,6 +143,32 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     scheduleDays = null;
   }
   if (scheduleDays === null) redirect(`${base}?error=invalid&field=scheduleDaysJson`);
+
+  // Depth markers, checked before anything is written.
+  //
+  // This is the one place shop-editable prose is also a small message format,
+  // and the failure it guards is silent by construction: a half-edited
+  // `{depth 18}` parses as ordinary text everywhere downstream and simply
+  // renders its own braces to a diver. Deleting a marker outright is *not* an
+  // error — that is a shop choosing to write the depth in its own words, which
+  // is what this content is for. Only a broken attempt is refused, and the
+  // whole save is refused rather than partially applied, so what staff see on
+  // the form is still exactly what is stored.
+  const depthChecked: Array<[field: string, text: string]> = [
+    ["summary", value.summary],
+    ["overview", value.overview],
+    ["durationText", value.durationText],
+    ["groupSizeText", value.groupSizeText],
+    ["prerequisiteNote", value.prerequisiteNote],
+    ["includes", value.includes],
+    ["excludes", value.excludes],
+    ["faqs", value.faqs],
+    ...scheduleDays.flatMap<[string, string]>((day) =>
+      [day.title, ...day.items].map((text) => ["scheduleDaysJson", text] as [string, string]),
+    ),
+  ];
+  const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
+  if (broken) redirect(`${base}?error=depth-placeholder&field=${broken[0]}`);
 
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,

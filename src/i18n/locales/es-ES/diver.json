@@ -342,6 +342,10 @@
       "raid": "RAID (Dive RAID International)",
       "gue": "GUE (Global Underwater Explorers)"
     },
+    "depthUnits": {
+      "meters": "{value} metros",
+      "feet": "{value} pies"
+    },
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { resolveCourseDepths } from "@/lib/courses";
 import { SEA_STATES } from "@/lib/marine-forecast";
 import { diverTranslator } from "./messages";
-import { depthText, seaStateText, temperatureText } from "./unit-labels";
+import { staffTranslator } from "./staff-messages";
+import { courseDepthFormat, depthText, seaStateText, temperatureText } from "./unit-labels";
 
 const en = diverTranslator("en-US");
 const es = diverTranslator("es-ES");
@@ -54,6 +56,41 @@ describe("seaStateText", () => {
         expect(detail).not.toContain("trip.");
         expect(label.length).toBeGreaterThan(0);
         expect(detail.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe("courseDepthFormat", () => {
+  it("spells the unit out, in the reader's own language", () => {
+    const marker = "No deeper than {depth12}.";
+    expect(resolveCourseDepths(marker, courseDepthFormat(en, "meters"))).toBe(
+      "No deeper than 12 meters.",
+    );
+    expect(resolveCourseDepths(marker, courseDepthFormat(en, "feet"))).toBe(
+      "No deeper than 40 feet.",
+    );
+    expect(resolveCourseDepths(marker, courseDepthFormat(es, "meters"))).toBe(
+      "No deeper than 12 metros.",
+    );
+    expect(resolveCourseDepths(marker, courseDepthFormat(es, "feet"))).toBe(
+      "No deeper than 40 pies.",
+    );
+  });
+
+  it("shows a shop the marker syntax literally, not an empty ICU argument", () => {
+    // The one copy in the app that *quotes* the marker grammar. It goes through
+    // MessageFormat like every other staff string, so `{depth18}` has to be
+    // apostrophe-quoted in the bundle or it reads as an argument nobody passes
+    // and renders as nothing — a syntax hint teaching the wrong syntax.
+    for (const t of [staffTranslator("en-US"), staffTranslator("es-ES")]) {
+      for (const key of [
+        "courses.edit.depthMarkersHint",
+        "courses.edit.errorDepthPlaceholder",
+      ] as const) {
+        const message = t(key);
+        expect(message).toContain("{depth18}");
+        expect(message).toContain("{depth40}");
       }
     }
   });
