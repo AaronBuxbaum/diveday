@@ -8,15 +8,21 @@ import type { ReactNode } from "react";
  *
  * The idiom (uppercase tracked eyebrow → 3xl title → meta) was hand-duplicated
  * byte-for-byte across those four pages before this component existed; this is
- * the single copy. `/waivers` wears it today — adopting it on the other three
- * is FU-20260813-token-page-header-adoption, deferred only because parallel
- * branches were redesigning those pages at the same time.
+ * the single copy, and all four wear it.
  *
- * Slots, not styling knobs: `eyebrow` takes one line or two (readiness and
- * seat-claim stack a purpose line over the shop's name), `title` is the `<h1>`,
- * and `children` are the meta lines — the component deliberately does not style
- * what the page puts there, because the pages' meta genuinely differs (a trip
- * line at `font-medium`, a muted description, a share row).
+ * The eyebrow is `text-muted`, deliberately: `text-primary` is reserved for
+ * things a finger can press, and a shop-name eyebrow is context, not an action.
+ * The four pages disagreed about this for a while (the component shipped
+ * primary, `/ready` hand-rolled muted); muted is the settled answer, so please
+ * do not "fix" it back — and there is no `tone` prop, because one family of
+ * pages gets one grammar.
+ *
+ * Slots, not styling knobs: `eyebrow` takes one line or two (seat-claim stacks
+ * a purpose line over the shop's name; `/ready` deliberately passes the shop's
+ * name alone), `title` is the `<h1>`, and `children` are the meta lines — the
+ * component deliberately does not style what the page puts there, because the
+ * pages' meta genuinely differs (a trip line at `font-medium`, a muted
+ * description, a share row).
  */
 export function TokenPageHeader({
   eyebrow,
@@ -37,7 +43,7 @@ export function TokenPageHeader({
         // by text would collide if a caller ever passed two identical lines
         // (a shop named the same as a page's purpose line).
         // biome-ignore lint/suspicious/noArrayIndexKey: static list, text can repeat
-        <p key={index} className="text-sm font-medium tracking-widest text-primary uppercase">
+        <p key={index} className="text-sm font-medium tracking-widest text-muted uppercase">
           {line}
         </p>
       ))}
