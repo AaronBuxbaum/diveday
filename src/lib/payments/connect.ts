@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { configuredValue } from "@/lib/configured";
 
 /**
  * The Stripe Connect seam: let a shop authorize its own Standard Stripe
@@ -39,6 +40,18 @@ export interface StripeConnectProvider {
 
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
+
+/**
+ * DiveDay's Connect application, from the platform's own Stripe Connect OAuth
+ * settings. Not a secret and not per-deployment -- it names the application a
+ * shop is connecting *to* -- so it is compiled in rather than deployed as
+ * configuration (see `src/lib/configured.ts`). `STRIPE_CONNECT_CLIENT_ID`
+ * still overrides it, which is what a fork with its own Connect application
+ * sets; the paired secret key stays an environment secret, so a fork that sets
+ * only one of the two still gets `disabledConnectProvider` rather than a
+ * mismatched pair.
+ */
+export const CONNECT_CLIENT_ID = "ca_UvlITl41g1jCgVxyi3vqYguVm8l2dliH";
 
 /** The one OAuth callback registered with Stripe for every self-service shop. */
 export const STRIPE_CONNECT_CALLBACK_PATH = "/api/stripe/connect/callback";
@@ -174,7 +187,7 @@ export function connectProviderFromEnvironment(
 ): StripeConnectProvider {
   const config = connectConfigSchema.safeParse({
     secretKey: env.STRIPE_SECRET_KEY,
-    clientId: env.STRIPE_CONNECT_CLIENT_ID,
+    clientId: configuredValue(env.STRIPE_CONNECT_CLIENT_ID, CONNECT_CLIENT_ID),
   });
   return config.success ? stripeConnectProvider(config.data, fetchImpl) : disabledConnectProvider;
 }

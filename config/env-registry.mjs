@@ -37,9 +37,24 @@
  *   through HKDF. Stack-produced by another name.
  * - `manual` -- no system can mint it. A human pastes it from a third-party
  *   console or 1Password. These, and only these, are what `.env.manual` holds.
- * - `constant` -- a non-secret identifier of this deployment, checked in. Kept
- *   here rather than in `.env.manual` because nobody should ever be asked to
- *   type it.
+ *
+ * There used to be a fourth, `constant`: a non-secret identifier of DiveDay's
+ * own, checked in here and carried through Secrets Manager to Vercel on every
+ * deploy. Five keys held it -- the public origin, the SES sender, the Stripe
+ * Connect client id, the Sentry DSN, and reg-suit's GitHub client id -- and
+ * what they had in common is that this repository already knew every one of
+ * them. The deployment was being told a value it could have read.
+ *
+ * That round trip was not free. The sender's address contains a space, so it
+ * had to be written quoted, and the quotes arrived at SES as part of the
+ * address: every production email failed for an unknown stretch while dev, CI,
+ * and the tests stayed green (issue #517). So those values moved into the code
+ * that reads them, behind `src/lib/configured.ts`, and their variables survive
+ * only as overrides for a fork or a self-hosted instance.
+ *
+ * This registry is now exactly what its name says -- values that genuinely
+ * come from somewhere else -- and a value this repository knows does not
+ * belong in it. That is the rule, not an accident of the five being gone.
  */
 
 /**
@@ -121,17 +136,6 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent: "no mail is sent",
       },
-      {
-        key: "SES_FROM_EMAIL",
-        from: "constant",
-        // The address itself, unquoted. Whatever quoting a generated file
-        // needs is added when that file is written (scripts/dotenv.mjs), never
-        // baked in here: a value carrying its own quotes reads back with them
-        // still attached, which is how SES came to be handed a display name
-        // with no address after it and refused every production send (#517).
-        value: "DiveDay <noreply@ses.dive.day>",
-        targets: LOCAL_AND_VERCEL,
-      },
     ],
   },
   {
@@ -167,31 +171,14 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Canonical public origin used to build private waiver/readiness/recap links and",
-      "the Stripe Connect OAuth callback. Must be a bare HTTPS origin -- scheme",
-      "https://, no username/password, no path, query, or fragment. http://localhost",
-      "or http://127.0.0.1 is accepted outside production only. The server fails to",
-      "start if this is set to a malformed value.",
-    ],
-    keys: [
-      {
-        key: "APP_HOST",
-        from: "constant",
-        value: "https://dive.day",
-        targets: LOCAL_AND_VERCEL,
-        absent: "affected features degrade to not-configured and links render relative",
-      },
-    ],
-  },
-  {
-    doc: [
       "Stripe Connect: shops bring their own Standard Stripe account (ADR",
       "20260719-stripe-connect-orders). STRIPE_SECRET_KEY is the *platform* account's",
       "secret key -- once a shop completes OAuth this key acts on its behalf via a",
       "Stripe-Account header, so no per-shop credential is stored.",
-      "STRIPE_CONNECT_CLIENT_ID comes from the platform's Connect OAuth settings;",
-      "register the APP_HOST /api/stripe/connect/callback URL there as the single redirect",
-      "URL for every shop. STRIPE_WEBHOOK_SECRET signs /api/webhooks/stripe,",
+      "The Connect client id that pairs with this key is compiled in",
+      "(CONNECT_CLIENT_ID in src/lib/payments/connect.ts) rather than deployed;",
+      "register the /api/stripe/connect/callback URL on DiveDay's own origin there as",
+      "the single redirect URL for every shop. STRIPE_WEBHOOK_SECRET signs /api/webhooks/stripe,",
       'configured against that URL with "listen to events on Connected accounts"',
       "enabled. Keep the two secrets in 1Password. They never enter the AWS",
       "credentials secret -- they reach Vercel from .env.manual.",
@@ -202,12 +189,6 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: LOCAL_AND_VERCEL,
         absent: "the connect button and order creation report not_configured",
-      },
-      {
-        key: "STRIPE_CONNECT_CLIENT_ID",
-        from: "constant",
-        value: "ca_UvlITl41g1jCgVxyi3vqYguVm8l2dliH",
-        targets: LOCAL_AND_VERCEL,
       },
       {
         key: "STRIPE_WEBHOOK_SECRET",
@@ -348,23 +329,6 @@ export const ENV_GROUPS = [
         from: "derived",
         targets: LOCAL_AND_VERCEL,
         absent: "the WhatsApp settings page says so and refuses to store anything",
-      },
-    ],
-  },
-  {
-    doc: [
-      "Error monitoring (ADR 20260727-sentry-error-monitoring-q7fk2p,",
-      "docs/engineering/monitoring-runbook.md). A Sentry DSN is not a secret -- it is",
-      "meant to ship in client bundles -- so this one value covers server and browser.",
-    ],
-    keys: [
-      {
-        key: "NEXT_PUBLIC_SENTRY_DSN",
-        from: "constant",
-        value:
-          "https://65d405fac65b4705122fac6512beae95@o4511809221427200.ingest.us.sentry.io/4511809222672384",
-        targets: LOCAL_AND_VERCEL,
-        absent: "every Sentry call is a no-op and nothing is reported",
       },
     ],
   },
@@ -577,12 +541,6 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_GITHUB,
         absent: "as REG_SUIT_S3_BUCKET_NAME",
       },
-      {
-        key: "REG_SUIT_GITHUB_CLIENT_ID",
-        from: "constant",
-        value: "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA=",
-        targets: LOCAL_AND_GITHUB,
-      },
     ],
   },
   {
@@ -633,23 +591,21 @@ export const isStackProduced = (key) => {
   return from === "stack" || from === "derived";
 };
 
-/** The checked-in value for a `constant` key, or "" for everything else. */
-export const constantValue = (key) => byKey.get(key)?.value ?? "";
-
 /** Whether a target file carries this key at all. */
 export const goesTo = (key, target) => Boolean(byKey.get(key)?.targets.includes(target));
 
 /**
  * Whether `.env.manual` may speak for this key.
  *
- * Everything a human is the source of, plus the checked-in constants. A
- * constant is a *default*, not a minted value -- pointing `APP_HOST` at
- * `http://localhost:3000` for local Stripe Connect testing is a legitimate
- * thing to want, and the code already accepts it outside production. What may
- * never be overridden is a credential the stack mints, which is a different
- * question and has its own answer above.
+ * Exactly what a human is the source of. What may never be overridden is a
+ * credential the stack mints, which is a different question and has its own
+ * answer above.
+ *
+ * This is `isManual` today, and kept as its own name because it answers a
+ * different question: `isManual` is "who fills this in", this is "may
+ * `.env.manual` hold it at all". They agreed for one reason -- the only
+ * non-manual overridable rows were the checked-in constants, and those are
+ * gone (see the provenance note at the top). Collapsing the two would bake
+ * that coincidence into the shape of the file.
  */
-export const isOverridable = (key) => {
-  const from = byKey.get(key)?.from;
-  return from === "manual" || from === "constant";
-};
+export const isOverridable = (key) => isManual(key);

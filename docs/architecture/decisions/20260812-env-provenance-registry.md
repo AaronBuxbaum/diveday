@@ -7,9 +7,9 @@
 
 ## Context
 
-DiveDay's configuration has three producers — the CDK stack (which mints IAM credentials and names
-ARNs and ids), third-party consoles (Stripe, Neon, Meta, the read-only usage tokens), and a small
-set of checked-in constants — and four destinations: the generated `.env.local` a dev run reads,
+DiveDay's configuration has two producers — the CDK stack (which mints IAM credentials and names
+ARNs and ids) and third-party consoles (Stripe, Neon, Meta, the read-only usage tokens) — and four
+destinations: the generated `.env.local` a dev run reads,
 Vercel Production, GitHub Actions, and named AWS CLI profiles.
 
 Until now none of that was written down in one place. The facts were spread across four files that
@@ -39,9 +39,12 @@ was sitting right there in the environment (#458, #460).
 **One registry, `config/env-registry.mjs`, states for every key who produces it, which destinations
 carry it, and what being absent costs.** Everything else derives from it, and nothing merges.
 
-- **Provenance is one of four values.** `stack` (the CDK mints or names it), `derived` (computed from
-  `APP_SECRET_SEED` by HKDF), `manual` (no system can mint it — a human pastes it), `constant` (a
-  non-secret identifier of this deployment, checked in).
+- **Provenance is one of three values.** `stack` (the CDK mints or names it), `derived` (computed
+  from `APP_SECRET_SEED` by HKDF), `manual` (no system can mint it — a human pastes it).
+
+  It was four until 2026-08-13. `constant` held DiveDay's own checked-in identifiers, and the
+  amendment below removed it: a value this repository already knows is not configuration, and
+  carrying it to the deployment anyway is a round trip that can corrupt it.
 - **`.env.manual` is the only file a human edits.** It holds exactly the `manual` keys. Blank is a
   supported state for all of them, and `pnpm check:env` prints what is unset and what each one
   switches off — the reasons that used to be skip cases in that script are now `absent:` rows.
@@ -76,12 +79,43 @@ carry it, and what being absent costs.** Everything else derives from it, and no
   `scripts/*.mjs` tooling runs under bare `node`, `infra/` is a separate CDK app with its own
   tsconfig, and `src/` is the Next application. Inference from the exported literal gives types
   without a second declaration to keep in sync.
-- Not done here: the four `constant` values (`APP_HOST`, `SES_FROM_EMAIL`, `STRIPE_CONNECT_CLIENT_ID`,
-  `NEXT_PUBLIC_SENTRY_DSN`) still travel as environment variables rather than as compiled defaults
-  with an env override, which is the `ALERT_EMAIL` pattern in `src/lib/platform-mail.ts` and where
-  they belong. `REG_SUIT_GITHUB_CLIENT_ID` is CI configuration that the application never reads and
-  should not be in this surface at all. Both are follow-on work, tracked in
-  `docs/product/follow-ups/`.
+- Done as an amendment, 2026-08-13 (see below): the `constant` values moved out of this surface.
+
+## Amendment, 2026-08-13 — the `constant` provenance is removed
+
+The original decision left five checked-in constants travelling as environment variables and noted
+that they belonged as compiled defaults instead. Issue #517 turned that from tidiness into a
+production failure.
+
+`SES_FROM_EMAIL` is `DiveDay <noreply@ses.dive.day>`, which contains a space and therefore had to be
+written quoted in every generated file. The scripts that read those files each carried their own
+copy of a three-line dotenv parser and none of them stripped quotes, so the sender reached Vercel
+with `"` characters inside the value. SES read a display name with no address after it and refused
+**every** outbound email, for an unknown stretch, while local dev, CI, and the entire test suite
+stayed green — Next.js reads `.env.local` through a real dotenv parser, which unquotes.
+
+The parser is fixed (`scripts/dotenv.mjs`, one implementation, both directions). But the deeper
+point is that the value should never have made the journey. So:
+
+- `APP_HOST`, `SES_FROM_EMAIL`, `STRIPE_CONNECT_CLIENT_ID` and `NEXT_PUBLIC_SENTRY_DSN` are now
+  module constants beside the code that reads them, resolved through `src/lib/configured.ts`.
+  Their variables survive only as overrides for a fork, a staging deploy, or a self-hosted instance.
+- `REG_SUIT_GITHUB_CLIENT_ID` is inlined in `regconfig.json`. The application never read it.
+- The `constant` provenance is gone rather than left empty, along with `constantValue()`. Machinery
+  with no members cannot be tested, and untested branches in the deploy pipeline are what this ADR
+  exists to prevent.
+
+**Override semantics are deliberate and are not `||`.** Absent means the compiled default; set and
+non-empty means that value; set and **empty** means explicitly off. The last case is load-bearing:
+`pnpm e2e:build` runs `DATABASE_URL= NEXT_PUBLIC_SENTRY_DSN= next build` to switch those off, and a
+`||` fallback would hand back the real Sentry DSN and start reporting from the test suite.
+
+One behaviour changed as a result: a deployment that never set `APP_HOST` used to render
+bearer-token links relative, and now resolves DiveDay's own origin. `checkPublicHost` still validates
+the result, so a malformed override still fails the boot rather than mis-linking.
+
+The rule this leaves is simpler than the four-way split it replaces: **the registry is for values
+that genuinely come from somewhere else.** A value this repository knows does not belong in it.
 
 ## Alternatives considered
 

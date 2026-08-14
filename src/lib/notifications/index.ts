@@ -1,3 +1,4 @@
+import { configuredValue } from "@/lib/configured";
 import type { Notification } from "./kinds";
 import { notificationSchema } from "./kinds";
 import {
@@ -7,7 +8,7 @@ import {
   type NotificationProvider,
 } from "./provider";
 import type { SesProviderOptions } from "./ses";
-import { formatSender, sesConfigSchema, sesNotificationProvider } from "./ses";
+import { DEFAULT_SENDER, formatSender, sesConfigSchema, sesNotificationProvider } from "./ses";
 
 /**
  * Outbound notifications — the public surface.
@@ -55,9 +56,10 @@ export function notificationProviderFromEnvironment(
   env: NotificationEnvironment = process.env,
   sesProviderOptions: SesProviderOptions = {},
 ): NotificationProvider {
+  const sender = configuredValue(env.SES_FROM_EMAIL, DEFAULT_SENDER);
   const sesConfig = sesConfigSchema.safeParse({
     region: env.SES_AWS_REGION,
-    from: env.SES_FROM_EMAIL ? formatSender(env.SES_FROM_EMAIL) : undefined,
+    from: sender ? formatSender(sender) : undefined,
     accessKeyId: env.SES_AWS_ACCESS_KEY_ID,
     secretAccessKey: env.SES_AWS_SECRET_ACCESS_KEY,
   });
@@ -66,7 +68,13 @@ export function notificationProviderFromEnvironment(
     : disabledNotificationProvider;
 }
 
-export { checkPublicHost, type PublicHostCheck, publicAppUrl } from "./app-url";
+export {
+  APP_ORIGIN,
+  appHost,
+  checkPublicHost,
+  type PublicHostCheck,
+  publicAppUrl,
+} from "./app-url";
 export {
   type Notification,
   notificationIdempotencyKey,

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
 
@@ -102,6 +102,14 @@ async function useDb(): Promise<void> {
 }
 
 beforeEach(() => {
+  // Off, explicitly (src/lib/configured.ts). DiveDay's origin is compiled in
+  // now, so without this every case here would also issue a real
+  // email-verification token and send the welcome pair — a second write and
+  // two more sends per sign-up, on top of the ~250MB database each one already
+  // stands up, for a file that is about the event and the alert and nothing
+  // else. The owner-facing mail has its own coverage; this keeps these cases
+  // the size they were written to be.
+  vi.stubEnv("APP_HOST", "");
   hoisted.afterTasks.length = 0;
   vi.mocked(getDb).mockReset();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
@@ -115,6 +123,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("onboardAction instrumentation", () => {
   it("fires trial_started once and alerts the founder once, on one sign-up", async () => {
     // Both observers asserted against the same sign-up rather than one each: a
@@ -126,8 +138,14 @@ describe("onboardAction instrumentation", () => {
     expect(trackEvent).toHaveBeenCalledTimes(1);
     expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "pricing" });
 
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    const [, notification] = vi.mocked(sendNotification).mock.calls[0];
+    // Filtered by kind rather than counting every send: what "once" means here
+    // is one founder alert per sign-up, and that stays true whether or not the
+    // owner-facing mail above it went out.
+    const alerts = vi
+      .mocked(sendNotification)
+      .mock.calls.filter(([, notification]) => notification.kind === "new_account_alert");
+    expect(alerts).toHaveLength(1);
+    const [, notification] = alerts[0];
     expect(notification).toMatchObject({
       kind: "new_account_alert",
       to: ALERT_EMAIL,

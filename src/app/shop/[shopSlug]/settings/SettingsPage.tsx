@@ -37,6 +37,7 @@ import {
   canViewShopReports,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { configuredValue } from "@/lib/configured";
 import {
   DOCK_DAY_FIELDS,
   DOCK_DAY_LIMITS,
@@ -45,6 +46,8 @@ import {
 } from "@/lib/diver-planning";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicAppUrl } from "@/lib/notifications";
+import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
@@ -400,8 +403,15 @@ export default async function SettingsPage({
     session.user.shopId,
     session.user.personId,
   );
+  // Asks the same resolvers the Connect flow itself asks, never the raw
+  // variables: two of these three are compiled in now (src/lib/configured.ts),
+  // so reading `process.env` directly would report "not configured" on a
+  // deployment where the flow works perfectly. Only the secret key is a real
+  // environment secret with nothing to fall back to.
   const connectConfigured = Boolean(
-    process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID && process.env.APP_HOST,
+    process.env.STRIPE_SECRET_KEY &&
+      configuredValue(process.env.STRIPE_CONNECT_CLIENT_ID, CONNECT_CLIENT_ID) &&
+      publicAppUrl(),
   );
   const canImport = canImportShopData(session.user.roles);
   // Hiding the link is convenience; the page itself re-checks against live roles.

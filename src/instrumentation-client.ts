@@ -1,10 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { redactBreadcrumb, redactEvent } from "@/app/observability";
+import { SENTRY_DSN } from "@/lib/sentry-dsn";
 
 // Initialize client-side error reporting before React starts (docs/architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md).
-if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+if (SENTRY_DSN) {
   Sentry.init({
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    dsn: SENTRY_DSN,
     environment: process.env.NODE_ENV,
     // Tracing is off and Session Replay is never configured here, so both are
     // unused; `enableLogs` (Sentry Logs, distinct from SDK debug logging) was
