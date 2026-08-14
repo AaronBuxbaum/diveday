@@ -193,6 +193,52 @@ through `className` cannot reliably beat a size's `text-sm`. Pick the size that 
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.
 
+## Segmented choices: `SegmentedControl`
+
+A small set of sibling **destinations** — the trip page's tabs, the waiver surface's two tabs, the
+manifest's checkpoint row, the Today queue's urgency/departures switch — renders as one grammar: a
+sunken track with a raised pill on the current choice. Four surfaces hand-rolled that shape and had
+already drifted apart (a fourth `rounded-full` variant, three subtly different class strings), so
+it is now one component, `src/components/ui/SegmentedControl.tsx`. **Segmented track-and-pill class
+strings are never written at a call site** — the same rule as `buttonClass()`: if a segmented
+control looks wrong, fix the component.
+
+```tsx
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+
+<SegmentedControl
+  ariaLabel={copy.ariaLabel}
+  items={[
+    { key: "template", label: copy.template, href: root },
+    { key: "signatures", label: copy.signatures, href: `${root}/signatures` },
+  ]}
+  currentKey={current}
+  fill
+/>
+```
+
+- **Every option is a real URL.** The wrapper is a `<nav>` of `<Link>`s, so an option opens in a new
+  tab, bookmarks, and works before JavaScript. A choice that only exists in client state is not a
+  segmented control — it is a form control, and belongs in a `Field`.
+- **`fill`** makes the options equal-width across the container (a tab bar under a page header);
+  leave it off for a content-width track that sits beside other things in a row.
+- **`size="boat"`** raises the target floor to 56px with 16px labels, for surfaces worked at the
+  rail with wet hands and glare (the manifest's checkpoint row). Everything else takes the default
+  44px.
+- **The current item is inert by default** — a `<span>` with `aria-current="page"`, because a tab
+  bar's "you are here" is not a destination. A control whose options are views of the *same* page
+  (`?view=`, `?checkpoint=`) passes `currentIsLink` (a re-tap is a harmless reload),
+  `ariaCurrentValue="true"`, and `scroll={false}` so switching views holds the reader's place.
+- Labels arrive resolved: staff copy is server-side only, so each call site translates its own
+  options and passes words.
+
+**Not for same-page anchors.** A row that jumps to sections of the page you are already on is
+`src/components/JumpNav.tsx` — link-buttons under a hairline rule — and it stays visually distinct
+on purpose. A segmented track marks one option current; a jump row can never mark anything current,
+because every entry is on this screen. Two controls that look identical and mean different things
+is the exact drift both components exist to end, so never dress a jump row as a track, or a tab bar
+as a row of links.
+
 ## Action rows: one primary, not many
 
 Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action **per

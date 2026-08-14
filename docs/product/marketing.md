@@ -404,6 +404,19 @@ converts poorly at this midpoint, the change is a visual *beside* the four cards
 them. (The mid-page demo door that used to sit under the cards retired in the same redesign — the
 merged close is one band away, and three banded CTAs in a row read as pressure, not confidence.)
 
+**`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label
+with a hairline rule running out to the edge of its column — lives in `src/app/page.tsx` rather than
+beside `MarketingMockup` and `FeatureGroupsGrid` in `src/components/MarketingSections.tsx`, and that
+is a decision rather than an oversight. It was reviewed on 2026-08-14, after the product-page and
+switching-guide redesigns that made the shared file untouchable had both merged: the homepage is
+still its only caller, and no other marketing page has grown the idiom — the three remaining
+`h-px flex-1` rules in the tree are the public schedule, its loading skeleton, and the schedule
+builder, none of them marketing. Promoting a one-caller atom is how a shared module fills up with
+things nobody else wanted. Move it the day a second marketing page wants the same kicker, keeping
+its `as?: "p" | "h3"` prop — the portability diptych's columns need the `h3` (the marker is their
+only label, so it carries them in the document outline) and the daily-moment rows need the `p`
+(they already have an `h3` below).
+
 These mockups render identically in every checkout and in both light and dark modes, and they use
 only semantic tokens, so keeping them truthful is a matter of editing the component copy when the
 product it depicts changes. There is no browser-capture step: `public/marketing/*.png` is not used.
