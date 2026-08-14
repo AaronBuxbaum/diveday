@@ -171,6 +171,9 @@ export default async function TripManifestPage({
   // summary panel's jump chips. Derived once, beside the counts they explain,
   // so the number and the names can never disagree.
   const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
+  // The crew half of the same question. Crew reached the panel only as a count
+  // before this — see `uncalledCrew` on `SummaryPanel`.
+  const uncalledCrew = manifest.crew.filter((member) => !member.rollCall);
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -309,6 +312,10 @@ export default async function TripManifestPage({
           bookingId: diver.bookingId,
           fullName: diver.fullName,
           blocked: diver.readiness.status === "blocked",
+        }))}
+        uncalledCrew={uncalledCrew.map((member) => ({
+          id: member.id,
+          fullName: member.fullName,
         }))}
         t={t}
       />

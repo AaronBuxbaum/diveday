@@ -57,7 +57,9 @@ reused for a new door — new traffic in the retired tag's bucket makes neither 
 ```text
 Read docs/product/marketing.md (the "Product visuals" section, especially the paragraph beginning
 "The homepage's four-card breadth band is deliberately still four assertions") and src/app/page.tsx
-(the breadth band renders FeatureGroupsGrid at columns={4} featuresPerGroup={1}). Then pull the
+(the breadth band renders FeatureGroupsGrid, whose four cards each show one summary paragraph --
+its featuresPerGroup/columns props were removed on 2026-08-14 when the checklist density lost its
+last caller). Then pull the
 demo_entered / trial_started counts for the `home-hero` and `home-closing` funnel sources — the
 runbook is docs/engineering/capability-telemetry-runbook.md and the tags are registered in
 src/lib/funnel.ts.

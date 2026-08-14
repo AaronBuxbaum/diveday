@@ -41,63 +41,48 @@ export const sharedLinkCard = {
 export interface FeatureGroupKeys {
   eyebrow: DiverMessageKey;
   title: DiverMessageKey;
-  features: readonly DiverMessageKey[];
+  /**
+   * One paragraph for the group's card — a summary written as a summary.
+   *
+   * This used to be `features: readonly DiverMessageKey[]`, a checklist of
+   * seven or eight claims per group, and `FeatureGroupsGrid` chose between a
+   * checklist and a paragraph by how many of them a caller asked for. When
+   * `/product`'s middle density was removed on 2026-08-13 both remaining
+   * callers settled on `featuresPerGroup={1}`, which meant only `item1` of
+   * each group could reach a page — 26 keys, translated in two locales,
+   * rendering nowhere, and a checklist branch that nothing could execute.
+   *
+   * The card paragraph is now its own string rather than the first line of a
+   * list read out of context: three of the four `item1`s were written as list
+   * openers, so as summaries they were thinner than a sentence written for
+   * the job. The full inventory a buyer wants is `productCapabilityIndex`,
+   * rendered flat on `/product` — one density per page, and the way to add a
+   * list to a page is to check the other density first
+   * (docs/product/marketing.md).
+   */
+  summary: DiverMessageKey;
 }
 
 export const productFeatureGroups: readonly FeatureGroupKeys[] = [
   {
     eyebrow: "marketing.features.welcome.eyebrow",
     title: "marketing.features.welcome.title",
-    features: [
-      "marketing.features.welcome.item1",
-      "marketing.features.welcome.item2",
-      "marketing.features.welcome.item3",
-      "marketing.features.welcome.item4",
-      "marketing.features.welcome.item5",
-      "marketing.features.welcome.item6",
-      "marketing.features.welcome.item7",
-      "marketing.features.welcome.item8",
-    ],
+    summary: "marketing.features.welcome.summary",
   },
   {
     eyebrow: "marketing.features.ready.eyebrow",
     title: "marketing.features.ready.title",
-    features: [
-      "marketing.features.ready.item1",
-      "marketing.features.ready.item2",
-      "marketing.features.ready.item3",
-      "marketing.features.ready.item4",
-      "marketing.features.ready.item5",
-      "marketing.features.ready.item6",
-      "marketing.features.ready.item7",
-    ],
+    summary: "marketing.features.ready.summary",
   },
   {
     eyebrow: "marketing.features.diveDay.eyebrow",
     title: "marketing.features.diveDay.title",
-    features: [
-      "marketing.features.diveDay.item1",
-      "marketing.features.diveDay.item2",
-      "marketing.features.diveDay.item3",
-      "marketing.features.diveDay.item4",
-      "marketing.features.diveDay.item5",
-      "marketing.features.diveDay.item6",
-      "marketing.features.diveDay.item7",
-    ],
+    summary: "marketing.features.diveDay.summary",
   },
   {
     eyebrow: "marketing.features.motion.eyebrow",
     title: "marketing.features.motion.title",
-    features: [
-      "marketing.features.motion.item1",
-      "marketing.features.motion.item2",
-      "marketing.features.motion.item3",
-      "marketing.features.motion.item4",
-      "marketing.features.motion.item5",
-      "marketing.features.motion.item6",
-      "marketing.features.motion.item7",
-      "marketing.features.motion.item8",
-    ],
+    summary: "marketing.features.motion.summary",
   },
 ] as const;
 

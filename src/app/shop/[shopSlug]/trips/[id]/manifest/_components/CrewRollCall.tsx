@@ -21,6 +21,7 @@ import {
   RollCallControls,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallScrollMargin,
 } from "./RollCallControls";
 
 /**
@@ -150,7 +151,15 @@ export function CrewRollCall({
               return (
                 <li
                   key={member.id}
-                  className={`border-l-4 px-4 py-4 ${
+                  // A jump target, exactly as every diver row is: the summary
+                  // panel's chips now name uncalled *crew* too, and this row
+                  // sits below the whole diver roster — so on a phone the chip
+                  // is often several screens from the person it names. The
+                  // margin that keeps the landing clear of the sticky panel is
+                  // shared with the diver rows rather than restated here
+                  // (`rollCallScrollMargin`).
+                  id={`crew-row-${member.id}`}
+                  className={`border-l-4 px-4 py-4 ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >

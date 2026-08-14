@@ -30,6 +30,7 @@ import {
   RollCallControls,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallScrollMargin,
 } from "./RollCallControls";
 
 /**
@@ -298,15 +299,12 @@ export function DiverRollCall({
           const recordedTone = rollCallRecordedTone(rowState);
           const untouchedTone =
             ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
-          // Every row is a jump target now — the summary panel's chips link to
-          // any uncalled diver — so every row carries the scroll margin that
-          // keeps its name clear of the sticky checkpoint panel. Sized to the
-          // panel at its tallest for the checkpoint kind: after a dive it can
-          // carry up to three pinned danger lines, and a jump that buries the
-          // name under the panel invites a tap on the *next* visible row's
-          // button for the wrong diver (dive-domain review 20260810).
-          const scrollMargin = isDeparture ? "scroll-mt-64 " : "scroll-mt-80 ";
-          const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${scrollMargin}${
+          // Every row is a jump target — the summary panel's chips link to any
+          // uncalled person — so every row carries the scroll margin that keeps
+          // its name clear of the sticky checkpoint panel. Shared with the crew
+          // rows, which are jump targets for the same chips: see
+          // `rollCallScrollMargin` for what the two sizes are measured against.
+          const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${rollCallScrollMargin(isDeparture)} ${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
           // The pill is dropped only when something else on the row is
