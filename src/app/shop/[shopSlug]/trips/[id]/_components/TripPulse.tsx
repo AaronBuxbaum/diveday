@@ -4,7 +4,10 @@ import { BoardingBar } from "@/components/BoardingBar";
 export type TripPulseFact = {
   /** The whole sentence — "1 diver can’t board yet" — never a bare count. */
   text: string;
-  /** Where the fix lives: the filtered roster, the prep list, the crew panel. */
+  /**
+   * Where the fix lives: the filtered roster, the prep list, the crew panel,
+   * the trip-filtered Orders index. Never the page this strip is already on.
+   */
   href: string;
   /** Marks the facts that hold the boat up; the words already say so too. */
   tone?: "danger";
@@ -19,7 +22,9 @@ export type TripPulseFact = {
  * (booked on Guests, blocked on the Manifest, gear gaps on Prep). This strip
  * puts the answer first: the same bar-and-caption grammar as Today's
  * departure board — boarded, then clear to board, then blocked, with open
- * seats as the unfilled track — then only the facts that need someone, each
+ * seats as the unfilled track — then only the facts that need someone, in
+ * the order a staffer asks for them (who can't board, who can't be packed
+ * for, who still owes money), each
  * one a link to the surface that fixes it (principle 10: show the answer,
  * and put the action on the object). A fact at zero renders nothing at all
  * (principle 9: "none" is not a status).
