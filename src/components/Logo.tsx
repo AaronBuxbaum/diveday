@@ -1,5 +1,33 @@
 import Link from "next/link";
 
+/** The side of `LogoMark`'s square viewBox — the unit `LOGO_MARK_CIRCLES` is in. */
+export const LOGO_MARK_VIEWBOX = 24;
+
+/**
+ * The mark's geometry — the one place the bubble-trail is drawn.
+ *
+ * Kept as data rather than as three `<circle>` elements because the mark has a
+ * second renderer: the link-preview cards go through satori, which has no
+ * `<svg>`, so `src/app/_og/card.tsx` derives absolutely-positioned boxes from
+ * this same list. It used to be hand-copied there — four times — and a rescale
+ * from a 40px box to a 48px one landed on one card and left three with the old
+ * coordinates, each individually plausible (FU-20260812). Coordinates only:
+ * `tone` is a code the renderer colors, because the two renderers have no
+ * palette in common (CSS custom properties on one side, hex literals on the
+ * other, since a bitmap has no stylesheet).
+ */
+export const LOGO_MARK_CIRCLES = [
+  { cx: 7, cy: 17, r: 5, tone: "current", opacity: 1 },
+  { cx: 15.5, cy: 9, r: 3.4, tone: "current", opacity: 0.75 },
+  { cx: 19.5, cy: 4.5, r: 2, tone: "accent", opacity: 1 },
+] as const satisfies readonly {
+  cx: number;
+  cy: number;
+  r: number;
+  tone: "current" | "accent";
+  opacity: number;
+}[];
+
 /**
  * The bubble-trail mark: three ascending bubbles reading calm, controlled
  * ascent. The top bubble is always the rationed coral accent (ADR-0004); the
@@ -8,10 +36,21 @@ import Link from "next/link";
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <circle cx="7" cy="17" r="5" fill="currentColor" />
-      <circle cx="15.5" cy="9" r="3.4" fill="currentColor" opacity="0.75" />
-      <circle cx="19.5" cy="4.5" r="2" fill="var(--accent)" />
+    <svg
+      viewBox={`0 0 ${LOGO_MARK_VIEWBOX} ${LOGO_MARK_VIEWBOX}`}
+      className={className}
+      aria-hidden="true"
+    >
+      {LOGO_MARK_CIRCLES.map((circle) => (
+        <circle
+          key={`${circle.cx},${circle.cy}`}
+          cx={circle.cx}
+          cy={circle.cy}
+          r={circle.r}
+          fill={circle.tone === "accent" ? "var(--accent)" : "currentColor"}
+          opacity={circle.opacity === 1 ? undefined : circle.opacity}
+        />
+      ))}
     </svg>
   );
 }
