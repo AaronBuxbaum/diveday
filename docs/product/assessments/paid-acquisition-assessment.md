@@ -314,8 +314,15 @@ Both are independently worth fixing, and both are cheap:
    `src/app/`, and no footer link. Google Ads and Meta both effectively require one for a site
    collecting personal data, and `/onboard` creates an account from an email address. Beyond the
    disapproval risk: the first paid click in company history would land a shop owner on a site that
-   will store his divers' medical flags and publishes no data-handling statement. See
-   [FU-20260812-no-privacy-or-terms-page](../follow-ups/FU-20260812-no-privacy-or-terms-page.md).
+   will store his divers' medical flags and publishes no data-handling statement.
+
+   **Half-closed 2026-08-14.** `/privacy` and `/terms` now exist, describing current behaviour only
+   and naming no legal entity (H-18 is open). But this blocker is **not** cleared for advertising
+   purposes: the owner's call was to publish the pages without linking them from the footer or
+   `/onboard` until H-02's retention question closes and counsel has read them, and an ad reviewer
+   looking for a privacy link on the landing page still will not find one. Treat the pages as
+   written-and-waiting, not as a shipped prerequisite; the remaining step is a decision, not
+   drafting.
 2. **The Phase 0 blockers in [rollout.md](../rollout.md#phase-0--get-legally-and-operationally-real-now--early-sept).**
    This is the strongest argument in the assessment and it is worth stating as a failure path rather
    than a caution. A shop that clicks an ad today: reaches the demo (which is excellent), starts a

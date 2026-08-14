@@ -1435,6 +1435,28 @@ for (const scheme of ["light", "dark"] as const) {
       // Its own test rather than another stop on a public tour: a trust page
       // whose baseline is skipped because a long test ran out of budget is the
       // one baseline you'd most want.
+      /**
+       * The two legal pages, published 2026-08-14
+       * (FU-20260812-no-privacy-or-terms-page). Their own captures rather than
+       * a stop on a public tour, for the same reason `/about` has one: these
+       * are long unbroken columns of prose, which is the shape that breaks
+       * quietest — a measure that runs too wide, a dark-mode contrast that
+       * fails on muted body text, a definition list whose term and body run
+       * together. Nothing about them is interactive, so a screenshot is
+       * genuinely the whole test.
+       */
+      test(`the privacy page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/privacy");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "privacy", scheme);
+      });
+
+      test(`the terms page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/terms");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "terms", scheme);
+      });
+
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/about");
         await capture(page, "about", scheme);

@@ -2745,6 +2745,128 @@
       "closingBody": "{price} {cadence}. Sin contrato anual, y tus registros se van contigo cuando quieras.",
       "stillQuestion": "¿Te queda una pregunta? Una persona real lee cada una.",
       "emailCta": "Escribe a {email}"
+    },
+    "privacy": {
+      "eyebrow": "Cómo trata los datos DiveDay",
+      "title": "Qué guardamos, dónde vive y cómo sale",
+      "updated": "Describe DiveDay tal y como funciona hoy.",
+      "intro": "DiveDay es software para centros de buceo. La mayor parte de los datos personales que contiene no son nuestros ni solo del centro: son de los buceadores del centro, guardados por indicación suya. Esta página dice qué guardamos, quién más puede tocarlo y cómo vuelve a salir. Describe el comportamiento actual, no intenciones, y donde algo aún se está decidiendo lo dice en vez de suponer.",
+      "roles": {
+        "heading": "Dos relaciones distintas",
+        "shopTerm": "Con un centro de buceo",
+        "shopBody": "somos el software con el que lleva su negocio. Su personal tiene cuentas con nosotros y guardamos lo que introducen.",
+        "diverTerm": "Con los buceadores del centro",
+        "diverBody": "guardamos datos por indicación del centro. Una exención, las respuestas médicas y la evidencia de certificación son registros del centro, en su propio espacio. No los vendemos, no entrenamos nada con ellos y nunca los movemos entre centros. Un buceador que quiera ver o borrar su registro debe pedírselo a su centro, que puede hacer ambas cosas desde DiveDay."
+      },
+      "collect": {
+        "heading": "Qué se guarda en realidad",
+        "staffTerm": "Cuentas del centro",
+        "staffBody": "un nombre, un correo electrónico, una contraseña cifrada y el centro y el rol a los que pertenece la cuenta.",
+        "diversTerm": "Registros de buceadores",
+        "diversBody": "nombre, datos de contacto, un contacto de emergencia, nivel de certificación y la evidencia de tarjeta que el centro verifica, tallas de alquiler y las reservas que tienen.",
+        "waiversTerm": "Exenciones y respuestas médicas",
+        "waiversBody": "la exención firmada y el cuestionario de salud que el centro pide antes de bucear. Es lo más sensible del sistema y se trata como tal: se muestra solo al personal del propio centro y al buceador que tiene el enlace, y nunca aparece en una línea de registro ni en un evento de analítica.",
+        "paymentsTerm": "Pagos",
+        "paymentsBody": "DiveDay nunca ve un número de tarjeta. Las tarjetas se introducen directamente en Stripe, en la cuenta conectada del propio centro. Guardamos el importe, el estado y los identificadores de Stripe, para que un centro pueda cuadrar un reembolso sin que tengamos nada que valga la pena robar.",
+        "trailsTerm": "Historiales operativos",
+        "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro."
+      },
+      "where": {
+        "heading": "Dónde se procesa",
+        "body": "En Estados Unidos. La base de datos es Neon (US East), la aplicación corre en Vercel, y el correo, la mensajería y la monitorización corren en AWS us-east-1. Hoy no hay ninguna otra región en juego, y si eso cambia esta página cambia con ello."
+      },
+      "processors": {
+        "heading": "Quién más lo toca",
+        "intro": "Cada uno de estos es un servicio sobre el que funciona DiveDay, y cada uno ve solo la parte que necesita:",
+        "stripeTerm": "Stripe",
+        "stripeBody": "pagos, en la cuenta conectada del propio centro. Los datos de tarjeta van directamente a Stripe y nunca pasan por nosotros.",
+        "awsTerm": "AWS",
+        "awsBody": "envío de correo y SMS, almacenamiento de fotos y copias de seguridad, y registros y métricas de rendimiento.",
+        "metaTerm": "Meta",
+        "metaBody": "mensajes de WhatsApp, y solo para un centro que haya conectado su propio remitente de WhatsApp. Un centro que no lo haya conectado no envía nada a Meta.",
+        "vercelTerm": "Vercel",
+        "vercelBody": "alojamiento y analítica a nivel de página. La analítica registra qué páginas se ven, no quién las vio, y a los enlaces que funcionan como credencial se les quita el token antes de que el evento salga del servidor.",
+        "neonTerm": "Neon",
+        "neonBody": "la base de datos en sí."
+      },
+      "links": {
+        "heading": "Enlaces que funcionan como llaves",
+        "body": "Parte de lo que DiveDay envía es un enlace que no necesita contraseña: la exención que firma un buceador, su página de preparación, el recuerdo después de una inmersión. Tener el enlace es el permiso, y eso es lo que lo hace utilizable para alguien que está en el muelle con una mano libre. Esos enlaces se tratan como credenciales en todo momento: el token se elimina antes de registrar una visita, antes de informar de un error y antes de que ninguna línea llegue a un registro. Caducan, y un centro puede invalidar uno."
+      },
+      "keep": {
+        "heading": "Cuánto tiempo se guarda",
+        "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. Los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
+        "activity": "Historial de actividad del personal: 3 años.",
+        "delivery": "Resultados de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error, nunca el contenido de los mensajes.",
+        "payments": "Historial de pagos: 7 años, acorde con el horizonte habitual de los registros financieros.",
+        "webhooks": "Registros de eventos del procesador de pagos: 400 días. No contienen ningún dato de buceadores.",
+        "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",
+        "push": "Registros de notificaciones por dispositivo: 30 días.",
+        "reviewTerm": "Aún por decidir",
+        "reviewBody": "cuánto tiempo debe conservarse una exención firmada y sus respuestas médicas después de que un buceador deje de bucear con un centro. Hoy se conservan hasta que el centro las elimina, porque una exención es evidencia que un centro puede necesitar años después, y acortar ese plazo sin asesoramiento sería el tipo de suposición equivocada. Está en revisión con los mismos asesores que revisan el texto de la exención, y esta página dirá la respuesta cuando la haya."
+      },
+      "out": {
+        "heading": "Sacar los datos, y borrarlos",
+        "exportTerm": "Exportación",
+        "exportBody": "un centro puede descargar todo lo que tiene en DiveDay en un solo ZIP, desde sus propios ajustes, cualquier día, sin pedírnoslo y sin tarifa. Es el mismo paquete con el que se hacen nuestras propias copias de seguridad.",
+        "erasureTerm": "Borrado",
+        "erasureBody": "un centro puede borrar el registro de un buceador. Cuando ese registro llegó a un procesador de pagos, el borrado se sigue hasta que el procesador también lo confirma, en vez de darlo por hecho en nuestro propio borde, y el centro puede ver los que siguen pendientes."
+      },
+      "contact": {
+        "heading": "Preguntarnos algo",
+        "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos."
+      },
+      "open": {
+        "heading": "Lo que esta página todavía no dice",
+        "body": "DiveDay está en acceso anticipado y parte de esto está genuinamente sin cerrar: el plazo de conservación de exenciones y respuestas médicas, y los términos formales de tratamiento de datos que firma un centro. En vez de publicar una política que parezca completa sin serlo, aquí se nombran como abiertas. Nada de lo anterior es aspiracional: describe lo que hace el código hoy."
+      }
+    },
+    "terms": {
+      "eyebrow": "Condiciones de uso",
+      "title": "Qué nos debemos",
+      "updated": "Describe DiveDay tal y como funciona hoy.",
+      "intro": "Condiciones claras para un producto en acceso anticipado: cómo se debe usar DiveDay, qué prometemos y qué no, y qué pasa cuando un centro quiere irse.",
+      "what": {
+        "heading": "Qué es DiveDay",
+        "body": "Software que un centro de buceo usa para llevar reservas, exenciones, comprobación de certificaciones, preparación de salidas y listados de barco. Es una herramienta que opera el centro, no un servicio que opera el centro. Cada juicio que importa en un muelle — si un buceador está en condiciones de bucear, si una certificación es auténtica, si un barco debe salir — se queda con el personal del propio centro. DiveDay muestra lo que le han dicho y se niega a ocultar una laguna; no decide."
+      },
+      "account": {
+        "heading": "La parte del centro",
+        "accurateTerm": "Mantén los registros exactos",
+        "accurateBody": "un listado vale lo que vale lo que se escribió en él, y el barco lleva lo que el centro introdujo.",
+        "legalTerm": "La exención es el instrumento del propio centro",
+        "legalBody": "DiveDay guarda y presenta la exención y el cuestionario médico. No aporta su redacción ni responde de su suficiencia en ninguna jurisdicción.",
+        "accessTerm": "Las cuentas pertenecen a personas",
+        "accessBody": "no a un inicio de sesión compartido. El centro es responsable de a quién invita y de darle de baja cuando se va."
+      },
+      "payments": {
+        "heading": "El dinero",
+        "body": "Los buceadores pagan al centro, no a nosotros. Los pagos con tarjeta pasan por la cuenta de Stripe del propio centro, así que el dinero del centro nunca está con DiveDay e irse no significa sacarnos fondos. A esos pagos se les aplican las comisiones y condiciones de Stripe. Lo que cobra DiveDay por sí mismo está en la página de precios."
+      },
+      "data": {
+        "heading": "De quién son los datos",
+        "body": "Los registros del centro son del centro. Los guardamos para hacer funcionar el producto y para nada más: no para venderlos, no para entrenar nada, no para compartirlos entre centros. Un centro puede descargarlo todo en un solo ZIP desde sus ajustes cualquier día, sin pedirlo y sin tarifa. Cómo se tratan mientras los guardamos está en la página de privacidad."
+      },
+      "availability": {
+        "heading": "Lo que no prometemos",
+        "body": "Esto es acceso anticipado. No ofrecemos una garantía de disponibilidad, e imprimir una antes de tener un historial que la respalde sería deshonesto. Lo que sí nos comprometemos es a que un centro nunca quede atrapado: la exportación funciona todos los días, y el listado de barco sin conexión mantiene el pase de lista funcionando en un teléfono sin señal, que es justo el momento en que una caída más importaría."
+      },
+      "acceptable": {
+        "heading": "Usarlo para lo que es",
+        "body": "No uses DiveDay para guardar datos que el centro no tiene derecho a tener, para enviar mensajes que el destinatario no aceptó recibir, ni para intentar llegar al espacio de otro centro. Los datos de cada centro están aislados, y sondear esa frontera termina una cuenta."
+      },
+      "ending": {
+        "heading": "Terminarlo",
+        "body": "Un centro puede parar cuando quiera. Exporta primero: el botón está en los ajustes y no requiere hablar con nosotros. Podemos terminar una cuenta por el mal uso anterior, o si un centro deja de pagar, y en cualquier caso la exportación sigue disponible el tiempo suficiente para llevarse los registros."
+      },
+      "changes": {
+        "heading": "Cambios en estas condiciones",
+        "body": "Cambiarán a medida que cambie el producto y se cierren las preguntas abiertas de la página de privacidad. Los cambios importantes se comunican a los centros directamente, en vez de volver a fechar esta página en silencio."
+      },
+      "contact": {
+        "heading": "Preguntarnos algo",
+        "body": "Escribe a <email>{address}</email>."
+      }
     }
   },
   "errorBoundary": {

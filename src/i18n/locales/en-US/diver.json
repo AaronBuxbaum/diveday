@@ -2745,6 +2745,128 @@
       "closingBody": "{price} {cadence}. No annual contract, and your records leave with you whenever you go.",
       "stillQuestion": "Still have a question? A real person reads every one.",
       "emailCta": "Email {email}"
+    },
+    "privacy": {
+      "eyebrow": "How DiveDay handles data",
+      "title": "What we hold, where it lives, and how it leaves",
+      "updated": "Describes DiveDay as it works today.",
+      "intro": "DiveDay is dive-shop software. Most of the personal data in it belongs neither to us nor to the shop alone — it is the shop's divers' data, held on the shop's instruction. This page says what we hold, who else can touch it, and how it comes back out. It describes current behaviour rather than intentions, and where something is still being decided it says so instead of guessing.",
+      "roles": {
+        "heading": "Two different relationships",
+        "shopTerm": "With a dive shop",
+        "shopBody": "we are the software they run their business on. Their staff hold accounts with us, and we hold what they put in.",
+        "diverTerm": "With a shop's divers",
+        "diverBody": "we hold data on the shop's instruction. A waiver, medical answers and certification evidence are the shop's records, in the shop's own tenant. We do not sell them, do not train anything on them, and never move them between shops. A diver wanting to see or delete their record should ask their shop, which can do both from inside DiveDay."
+      },
+      "collect": {
+        "heading": "What is actually stored",
+        "staffTerm": "Shop accounts",
+        "staffBody": "a name, an email address, a hashed password, and the shop and role the account belongs to.",
+        "diversTerm": "Diver records",
+        "diversBody": "name, contact details, an emergency contact, certification level and the card evidence a shop verifies against, rental sizes, and the bookings they hold.",
+        "waiversTerm": "Waivers and medical answers",
+        "waiversBody": "the signed release and the health questionnaire a shop asks before a dive. This is the most sensitive thing in the system and is treated that way: it renders only to the shop's own staff and to the diver holding the link, and it never appears in a log line or an analytics event.",
+        "paymentsTerm": "Payments",
+        "paymentsBody": "DiveDay never sees a card number. Cards are entered directly with Stripe on the shop's own connected account. We keep the amount, the state and Stripe's identifiers, so a shop can reconcile a refund without us holding anything worth stealing.",
+        "trailsTerm": "Operational trails",
+        "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop's own tenant."
+      },
+      "where": {
+        "heading": "Where it is processed",
+        "body": "In the United States. The database is Neon (US East), the application runs on Vercel, and the mail, messaging and monitoring pieces run in AWS us-east-1. There is no other region in play today, and if that changes this page changes with it."
+      },
+      "processors": {
+        "heading": "Who else touches it",
+        "intro": "Each of these is a service DiveDay runs on, and each sees only the slice it needs:",
+        "stripeTerm": "Stripe",
+        "stripeBody": "payments, on the shop's own connected account. Card details go to Stripe directly and never through us.",
+        "awsTerm": "AWS",
+        "awsBody": "sending email and SMS, storing photos and backups, and holding logs and performance metrics.",
+        "metaTerm": "Meta",
+        "metaBody": "WhatsApp messages, and only for a shop that has connected its own WhatsApp sender. A shop that has not connected one sends Meta nothing.",
+        "vercelTerm": "Vercel",
+        "vercelBody": "hosting, plus page-level analytics. Analytics records which pages are viewed, not who viewed them, and links that act as credentials are stripped of their token before the event leaves the server.",
+        "neonTerm": "Neon",
+        "neonBody": "the database itself."
+      },
+      "links": {
+        "heading": "Links that work as keys",
+        "body": "Some of what DiveDay sends is a link that needs no password: the waiver a diver signs, their trip-prep page, the recap after a dive. Holding the link is the permission, which is what makes it usable by someone on a dock with one hand free. Those links are treated as credentials throughout — the token is removed before a page view is recorded, before an error is reported, and before any line reaches a log. They expire, and a shop can invalidate one."
+      },
+      "keep": {
+        "heading": "How long it is kept",
+        "intro": "The shop's own records are kept while the shop is using DiveDay, and go when the shop deletes them or ends its account. The append-only trails have fixed windows, and these are the real numbers the system prunes on:",
+        "activity": "Staff activity history: 3 years.",
+        "delivery": "Message delivery outcomes: 400 days. These hold provider identifiers and error codes, never message bodies.",
+        "payments": "Payment history: 7 years, matching the ordinary horizon for financial records.",
+        "webhooks": "Payment-processor event records: 400 days. These hold no diver data at all.",
+        "tokens": "Expired sign-in and reset tokens: 90 days past their own expiry. A live one is never pruned.",
+        "push": "Device notification registrations: 30 days.",
+        "reviewTerm": "Still being decided",
+        "reviewBody": "how long a signed waiver and its medical answers should be kept after a diver stops diving with a shop. Today they stay until the shop removes them, because a release is evidence a shop may need years later, and shortening that without advice would be the wrong kind of guess. It is under review with the same counsel reviewing the waiver text, and this page will say the answer when there is one."
+      },
+      "out": {
+        "heading": "Getting data out, and getting it deleted",
+        "exportTerm": "Export",
+        "exportBody": "a shop can download everything it has in DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of.",
+        "erasureTerm": "Erasure",
+        "erasureBody": "a shop can erase a diver's record. Where that record reached a payment processor, the erasure is tracked until the processor confirms it too, rather than being declared done at our own edge — and a shop can see any still owed."
+      },
+      "contact": {
+        "heading": "Asking us something",
+        "body": "Write to <email>{address}</email>. If you are a diver rather than a shop, your shop holds your record and can answer faster; if they cannot, we will help them."
+      },
+      "open": {
+        "heading": "What this page does not yet say",
+        "body": "DiveDay is in early access and some of this is genuinely unsettled: the retention period for waivers and medical answers, and the formal data-processing terms a shop signs. Rather than publish a policy that reads complete and is not, those are named here as open. Nothing above is aspirational — it describes what the code does today."
+      }
+    },
+    "terms": {
+      "eyebrow": "Terms of use",
+      "title": "What we owe each other",
+      "updated": "Describes DiveDay as it works today.",
+      "intro": "Plain terms for an early-access product: how DiveDay is meant to be used, what we do and do not promise, and what happens when a shop wants to leave.",
+      "what": {
+        "heading": "What DiveDay is",
+        "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgement that matters on a dock — whether a diver is fit to dive, whether a certification is genuine, whether a boat should sail — stays with the shop's own staff. DiveDay shows what it has been told and refuses to hide a gap; it does not decide."
+      },
+      "account": {
+        "heading": "The shop's side",
+        "accurateTerm": "Keep the records accurate",
+        "accurateBody": "a manifest is only as good as what was typed into it, and the boat carries what the shop entered.",
+        "legalTerm": "The waiver is the shop's own instrument",
+        "legalBody": "DiveDay stores and presents the release and the medical questionnaire. It does not supply their wording, and it does not vouch for their sufficiency in any jurisdiction.",
+        "accessTerm": "Accounts belong to people",
+        "accessBody": "not to a shared login. A shop is responsible for who it invites and for removing them when they leave."
+      },
+      "payments": {
+        "heading": "Money",
+        "body": "Divers pay the shop, not us. Card payments run through the shop's own Stripe account, so the shop's money never sits with DiveDay and leaving does not mean extracting funds from us. Stripe's own fees and terms apply to those payments. What DiveDay charges for itself is on the pricing page."
+      },
+      "data": {
+        "heading": "Whose data it is",
+        "body": "The shop's records are the shop's. We hold them to run the product and for no other purpose — not to sell, not to train anything, not to share between shops. A shop can download the whole lot as one ZIP from its settings on any day, without asking and without a fee. How it is handled while we hold it is on the privacy page."
+      },
+      "availability": {
+        "heading": "What we do not promise",
+        "body": "This is early access. We do not offer an uptime guarantee, and printing one before there is a track record to back it would be dishonest. What we do commit to is that a shop is never trapped: the export works every day, and the offline boat manifest keeps a roll call running on a phone with no signal, which is the one moment an outage would matter most."
+      },
+      "acceptable": {
+        "heading": "Using it for what it is for",
+        "body": "Do not use DiveDay to store data a shop has no right to hold, to send messages the recipient did not agree to receive, or to attempt to reach another shop's tenant. Every shop's data is isolated, and probing that boundary ends an account."
+      },
+      "ending": {
+        "heading": "Ending it",
+        "body": "A shop can stop whenever it wants. Export first — the button is in settings and needs no conversation with us. We may end an account for the misuse above, or if a shop stops paying, and in either case the export stays available long enough to take the records."
+      },
+      "changes": {
+        "heading": "Changes to these terms",
+        "body": "These will change as the product does, and as the open questions on the privacy page close. Material changes get told to shops directly rather than quietly re-dated here."
+      },
+      "contact": {
+        "heading": "Asking us something",
+        "body": "Write to <email>{address}</email>."
+      }
     }
   },
   "errorBoundary": {
