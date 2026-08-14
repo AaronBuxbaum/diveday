@@ -139,7 +139,7 @@ jobs:
         run: |
           echo "::error::AWS_CDK_DIFF_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDiffRoleArn stack output."
           exit 1
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           aws-region: us-east-1
@@ -256,7 +256,7 @@ jobs:
             echo "::error::Refusing to deploy: the post-deploy wizard would shell out to gh/vercel with an empty credential. Nothing has been deployed by this run."
             exit 1
           fi
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
