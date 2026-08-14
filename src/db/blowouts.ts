@@ -13,7 +13,7 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
@@ -197,37 +197,40 @@ export async function callTripBlowout(
 
 /** One diver's cert evidence at this shop — the same rows the booking gate reads. */
 async function certificationEvidence(db: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await Promise.all([
-    db
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
+  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(db, [
+    () =>
+      db
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.personId, personId),
+            isNull(certifications.deletedAt),
+          ),
         ),
-      ),
-    db
-      .select()
-      .from(specialtyCertifications)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, shopId),
-          eq(specialtyCertifications.personId, personId),
-          isNull(specialtyCertifications.deletedAt),
+    () =>
+      db
+        .select()
+        .from(specialtyCertifications)
+        .where(
+          and(
+            eq(specialtyCertifications.shopId, shopId),
+            eq(specialtyCertifications.personId, personId),
+            isNull(specialtyCertifications.deletedAt),
+          ),
         ),
-      ),
-    db
-      .select()
-      .from(nitroxCertifications)
-      .where(
-        and(
-          eq(nitroxCertifications.shopId, shopId),
-          eq(nitroxCertifications.personId, personId),
-          isNull(nitroxCertifications.deletedAt),
+    () =>
+      db
+        .select()
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, shopId),
+            eq(nitroxCertifications.personId, personId),
+            isNull(nitroxCertifications.deletedAt),
+          ),
         ),
-      ),
   ]);
   return {
     certifications: certificationRows,
@@ -260,11 +263,12 @@ async function blowoutCandidates(
       ),
     )
     .groupBy(trips.id);
-  return Promise.all(
-    rows.map(async (row) => {
-      const [requirement, siteRequirement] = await Promise.all([
-        getTripRequirements(db, shopId, row.trip.id),
-        getTripSiteRequirement(db, shopId, row.trip.id),
+  return queryAll(
+    db,
+    rows.map((row) => async () => {
+      const [requirement, siteRequirement] = await queryAll(db, [
+        () => getTripRequirements(db, shopId, row.trip.id),
+        () => getTripSiteRequirement(db, shopId, row.trip.id),
       ]);
       return {
         id: row.trip.id,

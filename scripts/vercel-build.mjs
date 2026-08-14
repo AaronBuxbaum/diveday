@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-function run(command, args) {
-  const result = spawnSync(command, args, { stdio: "inherit" });
+function run(command, args, timeoutMs) {
+  const result = runBounded(command, args, { stdio: "inherit", timeoutMs });
 
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -20,8 +20,11 @@ if (process.env.VERCEL_ENV === "production") {
   // same guard on every branch, so reaching this line red means a merge slipped
   // past CI, not that a session was surprised here.
   // ADR 20260806-destructive-migration-guard.
-  run("node", ["scripts/check-migrations.mjs"]);
-  run("pnpm", ["db:migrate"]);
+  run("node", ["scripts/check-migrations.mjs"], SUBPROCESS_TIMEOUTS.nodeScript);
+  // Five minutes, and the tightest bound in this file on purpose: a migration
+  // blocked on a lock held by the previous release is the one wedge here that
+  // would otherwise spend the platform's whole build budget before saying so.
+  run("pnpm", ["db:migrate"], SUBPROCESS_TIMEOUTS.migrate);
 }
 
-run("pnpm", ["build"]);
+run("pnpm", ["build"], SUBPROCESS_TIMEOUTS.build);

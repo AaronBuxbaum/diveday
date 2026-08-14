@@ -29,6 +29,7 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:clock": "node scripts/check-clock.mjs",
+    "check:db-concurrency": "node scripts/check-db-concurrency.mjs",
     "check:intl-cache": "node scripts/check-intl-cache.mjs",
     "check:adrs": "node scripts/check-adrs.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",

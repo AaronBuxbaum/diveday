@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { dotenvMap } from "./dotenv.mjs";
+import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 // Never a bare `process.env.CI`: it is a generic convention many local dev
 // tools set, not proof this is really the unattended CI deploy job. `--ci-unattended`
@@ -83,7 +83,7 @@ try {
 
 function readCheckpoint() {
   try {
-    const value = execFileSync(
+    const value = readBounded(
       "aws",
       [
         "ssm",
@@ -95,7 +95,12 @@ function readCheckpoint() {
         "--output",
         "text",
       ],
-      { encoding: "utf8", env: adminEnvironment, stdio: ["ignore", "pipe", "pipe"] },
+      {
+        encoding: "utf8",
+        env: adminEnvironment,
+        stdio: ["ignore", "pipe", "pipe"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
+      },
     );
     return parseDotenv(value);
   } catch (error) {
@@ -107,7 +112,15 @@ function readCheckpoint() {
     // logged: the command ran with a profile whose environment is a spread of
     // process.env, so its output must never be echoed back out wholesale --
     // rerunning the same `aws` command directly shows the real error.
-    if (!/ParameterNotFound/.test(stderr)) {
+    if (isTimeout(error)) {
+      // The one reason worth naming rather than folding into the line below:
+      // "the call never came back" sends someone looking at the network, not
+      // at the parameter's name or their permissions. `error.message` is
+      // readBounded's own text -- the argv and the bound, nothing from `env`.
+      console.warn(
+        `${error.message} Pushing every ${environment} value instead of only what changed.`,
+      );
+    } else if (!/ParameterNotFound/.test(stderr)) {
       console.warn(
         `Could not read the ${environment} Vercel sync checkpoint from ${parameterName}; pushing every value instead of only what changed. Run \`aws ssm get-parameter --name ${parameterName}\` yourself to see why.`,
       );
@@ -128,10 +141,14 @@ if (changed.length === 0) {
 for (const [key, value] of changed) {
   // Do not put a secret in argv or terminal output. The Vercel CLI reads each
   // value from stdin; --force makes rerunning a rotation deterministic.
-  const result = spawnSync(
+  const result = runBounded(
     "pnpm",
     ["exec", "vercel", "env", "add", key, environment, "--force", "--sensitive"],
-    { input: value, stdio: ["pipe", "inherit", "inherit"] },
+    {
+      input: value,
+      stdio: ["pipe", "inherit", "inherit"],
+      timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
+    },
   );
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
@@ -156,7 +173,7 @@ const checkpointDocument = [...entries]
 const checkpointDirectory = mkdtempSync(join(tmpdir(), "diveday-vercel-checkpoint-"));
 const checkpointFile = join(checkpointDirectory, "checkpoint.env");
 writeFileSync(checkpointFile, checkpointDocument);
-const put = spawnSync(
+const put = runBounded(
   "aws",
   [
     "ssm",
@@ -169,7 +186,11 @@ const put = spawnSync(
     "--value",
     `file://${checkpointFile}`,
   ],
-  { env: adminEnvironment, stdio: ["ignore", "inherit", "inherit"] },
+  {
+    env: adminEnvironment,
+    stdio: ["ignore", "inherit", "inherit"],
+    timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
+  },
 );
 rmSync(checkpointDirectory, { recursive: true, force: true });
 if (put.status !== 0) process.exit(put.status ?? 1);

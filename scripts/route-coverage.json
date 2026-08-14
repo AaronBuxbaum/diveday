@@ -229,7 +229,7 @@
   },
   "/shop/[shopSlug]/orders": {
     "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],
-    "visual": ["orders"]
+    "visual": ["orders", "orders-unconfirmed-and-owed"]
   },
   "/shop/[shopSlug]/orders/[id]": {
     "e2e": ["orders-demo.spec.ts"],
@@ -253,7 +253,7 @@
   },
   "/shop/[shopSlug]/reviews": {
     "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
-    "visual": ["staff-reviews"]
+    "visual": ["staff-reviews", "staff-reviews-rating-withheld"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {
     "e2e": ["a11y.spec.ts", "blowout.spec.ts"],
@@ -302,7 +302,12 @@
       "settings-findability.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
-    "visual": ["settings-address", "settings-payments", "settings-trial"]
+    "visual": [
+      "settings-address",
+      "settings-data-unfinished",
+      "settings-payments",
+      "settings-trial"
+    ]
   },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],

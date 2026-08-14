@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { ensureAwsLogin } from "./aws-login.mjs";
+import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const region = process.env.AWS_DEFAULT_REGION?.trim() || "us-east-1";
 const awsEnvironment = { ...process.env };
@@ -41,9 +41,10 @@ try {
 }
 
 const identity = JSON.parse(
-  execFileSync("aws", ["sts", "get-caller-identity", "--output", "json"], {
+  readBounded("aws", ["sts", "get-caller-identity", "--output", "json"], {
     encoding: "utf8",
     env: awsEnvironment,
+    timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
   }),
 );
 const account = identity.Account?.trim();
@@ -83,7 +84,7 @@ if (confirmedAccount === undefined) {
 // The visual-regression bucket is intentionally public. This changes only the
 // account's S3 Block Public Access guardrail; it does not make any bucket or
 // object public by itself. An Organizations-level policy can still prohibit it.
-execFileSync(
+readBounded(
   "aws",
   [
     "s3control",
@@ -98,13 +99,17 @@ execFileSync(
       RestrictPublicBuckets: false,
     }),
   ],
-  { stdio: "inherit", env: awsEnvironment },
+  { stdio: "inherit", env: awsEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
 );
 
 const cdk = join(process.cwd(), "node_modules", ".bin", "cdk");
 const command = existsSync(cdk) ? cdk : "cdk";
-const result = spawnSync(command, ["bootstrap", `aws://${account}/${region}`, ...cdkArguments], {
+const result = runBounded(command, ["bootstrap", `aws://${account}/${region}`, ...cdkArguments], {
   env: awsEnvironment,
   stdio: "inherit",
+  // A CloudFormation operation: generous on purpose. Cutting a real bootstrap
+  // off part-way leaves the account's toolkit stack mid-update with nobody
+  // watching, which is worse than noticing a wedge three quarters of an hour late.
+  timeoutMs: SUBPROCESS_TIMEOUTS.cdkDeploy,
 });
 process.exit(result.status ?? 1);

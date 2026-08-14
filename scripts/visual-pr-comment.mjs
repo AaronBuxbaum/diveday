@@ -21,10 +21,10 @@
 //      reports when install or compare is what broke.
 //   3. It never lies by omission. A truncated list says what it dropped, and a
 //      run that compared nothing says so in those words.
-import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import process from "node:process";
 
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
   COMMENT_MARKER,
   DEFAULT_BUCKET,
@@ -56,7 +56,10 @@ function parseArgs(argv) {
 function resolveCommit(explicit) {
   if (explicit) return explicit;
   try {
-    return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    return readBounded("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.git,
+    }).trim();
   } catch {
     return process.env.GITHUB_SHA || "";
   }

@@ -6,10 +6,10 @@
 // (an agent's WebFetch, a naive `curl`) sees nothing. `out.json` and the PNGs
 // are flat static files on the same public bucket; this script is the
 // documented way to reach them. See ADR 20260729-reg-suit-visual-regression.
-import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
   countsLine,
   DEFAULT_BUCKET,
@@ -39,7 +39,10 @@ function parseArgs(argv) {
 }
 
 function currentCommit() {
-  return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  return readBounded("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
+  }).trim();
 }
 
 async function main() {

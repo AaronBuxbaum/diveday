@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
+import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 describe("post-deploy wizard", () => {
   it("honors CDK context values", () => {
@@ -278,18 +279,52 @@ describe("post-deploy wizard", () => {
           "--output",
           "json",
         ],
-        options: { encoding: "utf8", env: { AWS_DEFAULT_REGION: "us-east-2" } },
+        options: {
+          encoding: "utf8",
+          env: { AWS_DEFAULT_REGION: "us-east-2" },
+          timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
+        },
       },
       {
         command: process.execPath,
         arguments_: [expect.stringContaining("sync-github-cdk-ci-vars.mjs")],
         options: {
           stdio: ["pipe", "inherit", "inherit"],
+          timeoutMs: SUBPROCESS_TIMEOUTS.wizardStep,
           input:
             "AWS_CDK_DIFF_ROLE_ARN=arn:aws:iam::111:role/diff\nAWS_CDK_DEPLOY_ROLE_ARN=arn:aws:iam::111:role/deploy",
         },
       },
     ]);
+  });
+
+  it("bounds every step it runs -- a yes answered by a wedge is the worst shape this script can take", async () => {
+    // This wizard runs *after* a successful deploy, so a step that never comes
+    // back leaves infrastructure changed and the hand-off half-applied, with
+    // nothing on screen naming the step that is stuck. That is the failure a
+    // cloud runner hit on `pnpm check:repo` on 2026-08-14; the answer here is
+    // that no step may be unbounded, not that a particular ceiling is right.
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => "yes",
+      cdkArguments: [],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_, options) => {
+        commands.push({ command, arguments_, options });
+        return command === "aws" ? "[]" : "";
+      },
+      log: () => {},
+    });
+
+    expect(commands.length).toBeGreaterThan(0);
+    const bounds = new Set(Object.values(SUBPROCESS_TIMEOUTS));
+    for (const { command, arguments_, options } of commands) {
+      expect(
+        bounds.has(options?.timeoutMs),
+        `${command} ${arguments_.join(" ")} runs with no bound from SUBPROCESS_TIMEOUTS`,
+      ).toBe(true);
+    }
   });
 
   it("creates the infra-deploy GitHub Environment when asked", async () => {
@@ -311,7 +346,7 @@ describe("post-deploy wizard", () => {
       {
         command: process.execPath,
         arguments_: [expect.stringContaining("sync-github-cdk-ci-environment.mjs")],
-        options: { stdio: "inherit" },
+        options: { stdio: "inherit", timeoutMs: SUBPROCESS_TIMEOUTS.wizardStep },
       },
     ]);
   });

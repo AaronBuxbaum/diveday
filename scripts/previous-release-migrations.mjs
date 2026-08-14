@@ -52,12 +52,12 @@
 // Prints one JSON object on stdout; exits 1 with `{ ok: false, reason }` when
 // no base commit can be resolved.
 
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -85,13 +85,20 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
  * repositories.
  */
 function defaultRun(args) {
-  const result = spawnSync("git", args, {
+  // Bounded: this script runs inside `pnpm check:repo`'s destructive-migration
+  // guard and inside the production build, so a `git` wedged on an index lock
+  // must become a failure rather than a build that never finishes.
+  const result = runBounded("git", args, {
     cwd: ROOT,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });
   if (result.error || result.status !== 0) {
-    return { ok: false, out: (result.stderr ?? String(result.error ?? "")).trim() };
+    // `stderr` first, but a timeout kill leaves it empty and puts the diagnosis
+    // on `error` -- so an empty one falls through rather than reporting nothing.
+    const detail = result.stderr?.trim() || String(result.error ?? "");
+    return { ok: false, out: detail.trim() };
   }
   return { ok: true, out: result.stdout };
 }

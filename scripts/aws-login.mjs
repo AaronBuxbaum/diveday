@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 function profileArguments(environment) {
   return environment.AWS_PROFILE?.trim() ? ["--profile", environment.AWS_PROFILE.trim()] : [];
@@ -12,8 +12,8 @@ function profileArguments(environment) {
 export function ensureAwsLogin({
   environment,
   interactive,
-  execute = execFileSync,
-  spawn = spawnSync,
+  execute = readBounded,
+  spawn = runBounded,
   log = console.log,
 }) {
   const verify = () =>
@@ -21,12 +21,18 @@ export function ensureAwsLogin({
       encoding: "utf8",
       env: environment,
       stdio: "pipe",
+      timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
     });
 
   try {
     verify();
     return false;
-  } catch {
+  } catch (error) {
+    // A wedged STS call is not an expired session, and must not be answered by
+    // opening a browser or by telling an operator to sign in -- both send them
+    // looking in the wrong place. Rethrow the timeout, which already names the
+    // command that hung.
+    if (isTimeout(error)) throw error;
     if (!interactive) {
       // Deliberately static, per CodeQL (clear-text logging): `environment` is
       // not always a stripped-of-secrets object by the time it reaches this
@@ -45,14 +51,21 @@ export function ensureAwsLogin({
   const login = spawn("aws", ["login", ...profileArguments(environment), "--region", region], {
     env: environment,
     stdio: "inherit",
+    // Minutes, not seconds: this opens a browser and waits for a human to click
+    // through an SSO screen. It is also the likeliest call in the repo to wedge
+    // forever -- `interactive` is derived from the absence of CI, so an agent
+    // session on a cloud runner reaches it with no browser to open.
+    timeoutMs: SUBPROCESS_TIMEOUTS.awsLogin,
   });
+  if (isTimeout(login)) throw login.error;
   if (login.status !== 0) {
     throw new Error(`aws login exited with ${login.status ?? "an unknown status"}.`);
   }
 
   try {
     verify();
-  } catch {
+  } catch (error) {
+    if (isTimeout(error)) throw error;
     throw new Error("aws login completed, but the selected profile still cannot call STS.");
   }
   return true;
@@ -67,7 +80,11 @@ export function ensureAwsLogin({
 export function ensureAwsDeploymentLogin({ environment, interactive, ...options }) {
   try {
     return ensureAwsLogin({ environment, interactive: false, ...options });
-  } catch {
+  } catch (error) {
+    // A timeout says the STS endpoint is unreachable, not that this profile is
+    // the wrong one -- falling back would spend the same bound a second time
+    // and report the fallback profile as the problem.
+    if (isTimeout(error)) throw error;
     if (environment.AWS_PROFILE === "diveday-deployer") {
       environment.AWS_PROFILE = "diveday-admin";
       delete environment.AWS_ACCESS_KEY_ID;
