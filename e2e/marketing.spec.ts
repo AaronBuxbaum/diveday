@@ -760,6 +760,24 @@ test.describe("with Accept-Language: es", () => {
       english: "One flat price for the whole shop.",
       spanish: "Un precio fijo para todo el centro.",
     },
+    // The three that still carried the fallback-is-the-body shape on
+    // 2026-08-14 (FU-20260814-remaining-fallback-is-the-body-marketing-pages).
+    // `/switching` renders its skeleton from an in-page `<Suspense>` rather
+    // than a `loading.tsx`, because that file would also be the boundary for
+    // `/switching/[competitor]`; the guarantee this test checks is the same
+    // either way.
+    "/switching": {
+      english: "The door swings both ways.",
+      spanish: "La puerta se abre en ambos sentidos.",
+    },
+    "/switching/spreadsheet": {
+      english: "The spreadsheet got you this far.",
+      spanish: "La hoja de cálculo te trajo hasta aquí.",
+    },
+    "/about": {
+      english: "Your season doesn't hang on us.",
+      spanish: "Tu temporada no depende de nosotros.",
+    },
   } as const;
 
   test("a marketing page never paints a body in a language its reader did not ask for", async ({

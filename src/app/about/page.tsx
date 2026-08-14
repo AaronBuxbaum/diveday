@@ -11,7 +11,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -45,25 +45,39 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
+/**
+ * The body renders **once**, in the reader's own language.
+ *
+ * Until 2026-08-14 the `<Suspense>` below took `<AboutBody
+ * locale={DEFAULT_DIVER_LOCALE} />` — this whole page, a second time, in
+ * English — as the fallback for the negotiated-locale one. It bought the
+ * instant paint and cost the visitor everything they had done to that subtree
+ * first: React carries no DOM state across a replaced subtree, so an `es-ES`
+ * reader who reached the support-email or pricing doors mid-page lost the
+ * interaction, and for an en-US reader the two renders were the same words, so
+ * no screenshot and no English-pinned assertion could see it
+ * (FU-20260812-marketing-suspense-swap-discards-interaction; the rule is ADR
+ * 20260804-instant-navigation's 2026-08-14 amendment — a fallback holds shape,
+ * never interaction).
+ *
+ * The paint is still instant, and it is this segment's `loading.tsx` that makes
+ * it so; nothing in that skeleton is interactive, so there is nothing to lose
+ * when the real body lands. The nav keeps its own boundary because it reads the
+ * *session* as well as the locale; the body must not wait on that.
+ */
+export default async function AboutPage() {
+  const locale = await requestLocale();
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<AboutBody locale={DEFAULT_DIVER_LOCALE} />}>
-        <LocalizedAboutBody />
-      </Suspense>
+      <AboutBody locale={locale} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
     </div>
   );
-}
-
-async function LocalizedAboutBody() {
-  const locale = await requestLocale();
-  return <AboutBody locale={locale} />;
 }
 
 /** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */

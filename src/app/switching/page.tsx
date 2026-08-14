@@ -61,7 +61,20 @@ export default function SwitchHubPage() {
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<SwitchHubBody locale={DEFAULT_DIVER_LOCALE} />}>
+      {/* The body renders **once**, in the reader's own language, behind a
+          skeleton — never twice, with an English copy of itself standing in for
+          the localized one. That older arrangement bought the instant paint by
+          passing the whole body as its own fallback, and the swap that followed
+          tore the subtree down and rebuilt it, discarding whatever the visitor
+          had already done to it. For an en-US reader both renders are the same
+          words, so it was invisible in every screenshot and every
+          English-pinned assertion; for an `es-ES` reader it threw away a tap on
+          one of the guide rows below, which are this page's whole content
+          (FU-20260812-marketing-suspense-swap-discards-interaction, ADR
+          20260804-instant-navigation's 2026-08-14 amendment — a fallback holds
+          shape, never interaction). A skeleton has nothing to tap, so there is
+          nothing to lose; keep it that way. */}
+      <Suspense fallback={<SwitchHubBodySkeleton />}>
         <LocalizedSwitchHubBody />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
@@ -74,6 +87,53 @@ export default function SwitchHubPage() {
 async function LocalizedSwitchHubBody() {
   const locale = await requestLocale();
   return <SwitchHubBody locale={locale} />;
+}
+
+/**
+ * What the static shell paints while {@link LocalizedSwitchHubBody} resolves.
+ *
+ * It lives inside the page rather than in a `src/app/switching/loading.tsx`,
+ * which is the arrangement ADR 20260804-instant-navigation otherwise asks for:
+ * `loading.tsx` is the boundary for a segment **and everything under it**, and
+ * `/switching` has children — `/switching/[competitor]`, whose hero-and-rail
+ * body looks nothing like this index of links. `/switching/spreadsheet` carries
+ * its own, so a file here would only ever mis-shape the competitor guides. Same
+ * reasoning as `src/app/page.tsx`, for the same structural reason.
+ *
+ * Shaped like the hero and the index rows beneath it — one row per guide, off
+ * the same registry the list itself is built from, so the two cannot drift —
+ * and nothing in it is a link, a button, or a form. That is the fix, not an
+ * economy.
+ */
+function SwitchHubBodySkeleton() {
+  return (
+    <main className="flex-1 animate-pulse">
+      <section className="mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14">
+        <div className="h-4 w-44 rounded bg-surface-sunken" />
+        <div className="mt-5 h-11 w-full max-w-xl rounded bg-surface-sunken sm:h-12" />
+        <div className="mt-3 h-11 w-2/3 max-w-md rounded bg-surface-sunken sm:h-12" />
+        <div className="mt-6 h-5 w-full max-w-2xl rounded bg-surface-sunken" />
+        <div className="mt-2 h-5 w-3/4 max-w-xl rounded bg-surface-sunken" />
+      </section>
+
+      {/* The index: the spreadsheet row, then one per incumbent guide. */}
+      <section className="mx-auto max-w-4xl px-6 pb-16 lg:pb-24">
+        <ul className="border-t border-border">
+          {["spreadsheet", ...MIGRATION_GUIDES.map((guide) => guide.slug)].map((slug) => (
+            <li key={slug} className="border-b border-border py-6">
+              <div className="h-6 w-full max-w-xs rounded bg-surface-sunken" />
+              <div className="mt-3 h-5 w-full max-w-lg rounded bg-surface-sunken" />
+            </li>
+          ))}
+        </ul>
+        {/* The "something else, or nothing at all" row that closes the list. */}
+        <div className="border-b border-border py-8">
+          <div className="h-6 w-full max-w-xs rounded bg-surface-sunken" />
+          <div className="mt-3 h-5 w-full max-w-lg rounded bg-surface-sunken" />
+        </div>
+      </section>
+    </main>
+  );
 }
 
 /**
