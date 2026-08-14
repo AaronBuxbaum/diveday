@@ -1,5 +1,7 @@
 // Gate freshness — how long each human-owned gate in docs/product/human-decisions.md has sat
-// without recorded movement, reconciled against rollout.md's "next 30 days" list.
+// without recorded movement, reconciled against rollout.md's "next 30 days" list, plus how
+// long each entry in the agent follow-up register (docs/product/follow-ups/) has waited for
+// a human's triage.
 //
 // This is a REPORT, not a gate. It always exits 0 and is deliberately not part of
 // `pnpm check:repo`: every row it reports on is a human conversation, a regulator's
@@ -20,16 +22,26 @@
 //      last changed at or before it. Those ages print as "≥ N days", never as a number
 //      the evidence can't carry.
 //
+// The follow-up register needs neither kind of evidence: an entry's id *is* its date
+// (`FU-YYYYMMDD-slug`, and `pnpm check:follow-ups` already refuses a file whose **Raised:**
+// disagrees with it), so its age is exact and survives a shallow clone that `git blame`
+// cannot see past. Aging it is reported here for the same reason the gates are, and with
+// the same restraint: `pnpm check:follow-ups` deliberately does not fail on an old entry,
+// because an inbox waiting on a human's judgment is not a build failure, and nothing in
+// that folder is an agent's to close.
+//
 // Time: `pnpm check:clock` guards src/lib, src/db, and src/features — not scripts/ — so
 // the bare `new Date()` in `main()` below is in bounds. Every function that reasons about
 // time still takes `now` as a parameter, because that is what makes the parsing testable
 // (`scripts/gate-freshness.test.mjs`) without a frozen wall clock.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { DIRECTORY as FOLLOW_UPS } from "./check-follow-ups.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REGISTER = "docs/product/human-decisions.md";
@@ -119,6 +131,44 @@ export function parseThirtyDayList(markdown) {
     }
   }
   return { writtenOn: /Written (\d{4}-\d{2}-\d{2})/.exec(markdown)?.[1] ?? null, items };
+}
+
+/** One `- **Label:** value` line from a follow-up entry, or null. */
+function entryField(contents, label) {
+  return contents.match(new RegExp(`^- \\*\\*${label}:\\*\\*\\s*(.+)$`, "m"))?.[1].trim() ?? null;
+}
+
+/**
+ * One follow-up entry, read from its filename and body. The date comes from the
+ * `FU-YYYYMMDD-` id rather than the **Raised:** line or `git blame`: the id is the one
+ * piece of evidence that is exact, always present, and unaffected by a shallow clone —
+ * and `pnpm check:follow-ups` already refuses an entry whose **Raised:** date disagrees
+ * with it, so there is nothing the two could say differently.
+ *
+ * Returns null for a filename that is not an entry (README.md, TEMPLATE.md, a stray file).
+ */
+export function parseFollowUpEntry(filename, contents) {
+  const match = /^FU-(\d{4})(\d{2})(\d{2})-[^.]+\.md$/.exec(filename);
+  if (!match) return null;
+  return {
+    id: filename.replace(/\.md$/, ""),
+    raisedOn: `${match[1]}-${match[2]}-${match[3]}`,
+    status: entryField(contents, "Status") ?? "—",
+    kind: entryField(contents, "Kind") ?? "—",
+    effort: entryField(contents, "Effort") ?? "—",
+  };
+}
+
+/**
+ * Every entry in `files` (a list of `{ filename, contents }`), aged against `now` and
+ * sorted oldest first, ties broken by id so the report is stable run to run.
+ */
+export function ageFollowUps(files, now) {
+  return files
+    .map(({ filename, contents }) => parseFollowUpEntry(filename, contents))
+    .filter((entry) => entry !== null)
+    .map((entry) => ({ ...entry, days: daysSince(entry.raisedOn, now) }))
+    .sort((a, b) => b.days - a.days || a.id.localeCompare(b.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +316,44 @@ function printRows(heading, rows) {
   }
 }
 
+function printFollowUps(entries) {
+  console.log(`\nFollow-up register (${FOLLOW_UPS}) — ${entries.length} awaiting triage`);
+  if (entries.length === 0) {
+    console.log("  Empty — nothing filed is waiting on a human.");
+    return;
+  }
+  // The id is the entry's whole address — the slug is how a reader finds the file — so the
+  // column grows to the longest one rather than truncating it the way a status cell can be.
+  const idWidth = Math.max(4, ...entries.map((entry) => entry.id.length)) + 2;
+  console.log(
+    `  ${pad("id", idWidth)}${pad("status", 8)}${pad("kind", 13)}${pad("effort", 7)}${padStart("age", 5)}`,
+  );
+  for (const entry of entries) {
+    console.log(
+      `  ${pad(entry.id, idWidth)}${pad(entry.status, 8)}${pad(entry.kind, 13)}` +
+        `${pad(entry.effort, 7)}${padStart(`${entry.days}d`, 5)}`,
+    );
+  }
+}
+
+/** `{ filename, contents }` for every file in the follow-up folder; [] when it is absent. */
+function readFollowUpFiles() {
+  const directory = path.join(ROOT, FOLLOW_UPS);
+  let names;
+  try {
+    names = readdirSync(directory);
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => name.endsWith(".md"))
+    .sort()
+    .map((filename) => ({
+      filename,
+      contents: readFileSync(path.join(directory, filename), "utf8"),
+    }));
+}
+
 async function main() {
   const now = new Date();
   const register = readFileSync(path.join(ROOT, REGISTER), "utf8");
@@ -322,6 +410,8 @@ async function main() {
       console.log(`       names ${item.unknownIds.join(" ")}, absent from the register`);
     }
   }
+
+  printFollowUps(ageFollowUps(readFollowUpFiles(), now));
 
   const stalled = reconciled.filter((item) => item.unstarted);
   const unmeasurable = reconciled.filter((item) => item.unmeasurable);
