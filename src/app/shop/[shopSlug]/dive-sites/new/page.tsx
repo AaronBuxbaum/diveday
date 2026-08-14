@@ -6,7 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { createDiveSite } from "@/db/dive-sites";
+import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -104,7 +104,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       expectedBottomTime: _expectedBottomTime,
       ...siteFields
     } = parsed.fields;
-    const site = await createDiveSite(await getDb(), {
+    const site = await createDiveSiteForForm(await getDb(), {
       shopId: activeSession.user.shopId,
       ...siteFields,
       forecastLatitude:
@@ -136,6 +136,10 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       routeNote: parsed.route.note,
       routeZoom: parsed.route.zoom,
     });
+    // The name is the one rule the parse above could not check — it takes the
+    // whole shop's library to know, and an archived site still holds its name —
+    // so the database refuses it and the briefing comes back to the form.
+    if (site === SITE_NAME_TAKEN) return refuse("nameTaken");
     revalidateAndRedirect(back, `${back}/${site.id}`);
   }
 

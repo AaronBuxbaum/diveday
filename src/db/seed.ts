@@ -819,6 +819,12 @@ export async function resetDemoSchedule(
   // does: adding the shop's relief instructor (DOM-M7) left her outside the
   // set, so the first reset purged her and the very next `seedDemoSchedule`
   // threw looking her back up.
+  // Before the purge reads the roster, not after: the purge keeps a person by
+  // finding them holding a staff **role**, so a cast member who has lost one
+  // would be swept out here and re-inserted below under a new id — churning the
+  // very rows this is meant to hold steady.
+  await restoreMissingStableStaff(db, shopId);
+
   const STABLE_STAFF_NAMES = new Set<string>(staffDefs.map((s) => s.fullName));
   const staffRows = await db
     .select({ personId: personRoles.personId, fullName: people.fullName })
@@ -947,6 +953,108 @@ export async function resetDemoSchedule(
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
+}
+
+/**
+ * Put back any member of the stable cast this shop is missing, so the re-seed
+ * below can find them.
+ *
+ * The stable half is seeded **once**, when the shop is created, and never
+ * again — which is fine for a shop minted by the code running now, and wrong
+ * for the canonical demo, which was created months ago and has been carried
+ * forward by migrations ever since. Every time `staffDefs` gains a member, that
+ * long-lived shop is a person short of the cast the current code expects, and
+ * `seedDemoSchedule` throws looking them up ("seed: relief instructor missing
+ * from stable staff") — which is what took `/api/cron/demo-refresh` down to a
+ * nightly 503 after DOM-M7 added Talia Okonkwo. The reset had already rolled
+ * back by then, so the demo simply aged, and the only visible symptom was the
+ * cron's own alarm.
+ *
+ * Matched by name, the same key `seedDemoSchedule` and the purge above use. The
+ * address convention differs between the canonical demo (`<local>@demo.invalid`)
+ * and a minted one (`<local>@<slug>.demo.invalid`), so it is read off a
+ * colleague who is still here rather than rebuilt from the shop's slug — one
+ * fewer copy of a rule to drift, and `people_shop_email_unique` is unforgiving
+ * about getting it wrong.
+ *
+ * Roles are reconciled for the whole cast, not just the people this inserts: the
+ * lookups that throw join through `person_roles`, so a member who is present but
+ * has lost a role is the same outage with a different cause.
+ *
+ * No sign-in account is minted. `dev-credentials.ts` decides which staff are
+ * demo personas to log in as, and someone who is crew on the boat rather than a
+ * persona has never had one.
+ */
+async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promise<void> {
+  const castNames = new Set<string>(staffDefs.map((s) => s.fullName));
+  const present = (
+    await db
+      .select({ id: people.id, fullName: people.fullName, email: people.email })
+      .from(people)
+      .where(eq(people.shopId, shopId))
+  ).filter((person) => castNames.has(person.fullName));
+  const byName = new Map(present.map((person) => [person.fullName, person]));
+
+  const missing = staffDefs.filter((s) => !byName.has(s.fullName));
+  if (missing.length > 0) {
+    // A seeded *colleague's* address answers "which shop's convention is this",
+    // which is why `present` is narrowed to the cast first: a walk-up booked
+    // through the demo carries whatever address they typed, and building a
+    // staff email on that domain would collide or mislead. A shop with none of
+    // the cast left is not one this can repair — it is not a demo shop that
+    // drifted, and inventing a domain for it would be a guess.
+    const domain = present.map((person) => person.email?.split("@")[1]).find(Boolean);
+    if (!domain) return;
+    const restored = await db
+      .insert(people)
+      .values(
+        missing.map((s) => ({
+          shopId,
+          fullName: s.fullName,
+          email: `${s.local}@${domain}`,
+          emergencyContactName: s.emergencyContact?.[0] ?? null,
+          emergencyContactPhone: s.emergencyContact?.[1] ?? null,
+        })),
+      )
+      .returning({ id: people.id, fullName: people.fullName });
+    for (const person of restored) byName.set(person.fullName, { ...person, email: null });
+    // The same shift the stable seed gives every one of them. Without it the
+    // repair leaves a person on the roster and off the rostering surface, which
+    // is a different wrong answer from the one it just fixed — and the reset
+    // never re-seeds shifts for staff who already have one, so this is the only
+    // moment they can get theirs.
+    const shiftStart = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
+    await db.insert(staffShifts).values(
+      restored.map((person) => ({
+        shopId,
+        personId: person.id,
+        startsAt: shiftStart,
+        endsAt: new Date(shiftStart.getTime() + 12 * 60 * 60 * 1000),
+        note: "Demo schedule",
+        createdByPersonId: person.id,
+      })),
+    );
+  }
+
+  const staffIds = staffDefs
+    .map((s) => byName.get(s.fullName)?.id)
+    .filter((id) => id !== undefined);
+  const heldRoles = new Set(
+    (
+      await db
+        .select({ personId: personRoles.personId, role: personRoles.role })
+        .from(personRoles)
+        .where(inArray(personRoles.personId, staffIds))
+    ).map((row) => `${row.personId}:${row.role}`),
+  );
+  const owedRoles = staffDefs.flatMap((s) => {
+    const person = byName.get(s.fullName);
+    if (!person) return [];
+    return s.roles
+      .filter((role) => !heldRoles.has(`${person.id}:${role}`))
+      .map((role) => ({ personId: person.id, role }));
+  });
+  if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
 
 /**

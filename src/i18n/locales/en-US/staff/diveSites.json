@@ -180,7 +180,8 @@
     "errorCoordinates": "Add both GPS coordinates, or leave both blank — a location needs a latitude and a longitude. Everything else you typed is still here.",
     "errorDepth": "That maximum depth is deeper than any dive site — check the figure, then save again.",
     "errorImages": "One of those photos couldn't be stored — a site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
-    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet — save the briefing without photos for now, or ask your shop's owner or manager to configure it."
+    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet — save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
+    "errorNameTaken": "Another dive site here already goes by that name, and an archived one still holds its name too. Give this briefing a name of its own and save again — everything else you typed is still here."
   },
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",

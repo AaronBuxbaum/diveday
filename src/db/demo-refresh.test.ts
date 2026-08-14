@@ -10,7 +10,17 @@ import {
   refreshCanonicalDemoSchedule,
 } from "./demo-refresh";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { shops, tripSeries, trips, userAccounts } from "./schema";
+import {
+  people,
+  personRoles,
+  shops,
+  staffShifts,
+  tripAssignments,
+  tripSeries,
+  trips,
+  userAccounts,
+} from "./schema";
+import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
 
@@ -128,6 +138,69 @@ describe("refreshCanonicalDemoSchedule", () => {
       .from(userAccounts)
       .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
     expect(accounts).toHaveLength(1);
+  });
+
+  /**
+   * The stable half of the demo is seeded **once**, when the shop is created.
+   * The canonical demo in production was created months ago and has been
+   * carried forward by migrations ever since, so every time `staffDefs` gains a
+   * member that shop is a person short of the cast the current code expects —
+   * and `seedDemoSchedule` looks the instructors up by name and threw
+   * ("seed: relief instructor missing from stable staff"). The reset rolled
+   * back with it, so the only symptom was this pass answering 503 every night
+   * while the board quietly aged (production, 2026-08-14, after DOM-M7 added
+   * the shop's second instructor).
+   */
+  it("restores a cast member the shop was seeded before, instead of failing the pass", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const relief = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, RELIEF_INSTRUCTOR_NAME)));
+    expect(relief).toHaveLength(1);
+    // A shop as it looks when it was seeded by a version of this code that had
+    // never heard of her.
+    await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
+    await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
+    await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
+    await db.delete(people).where(eq(people.id, relief[0].id));
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+
+    await expect(refreshCanonicalDemoSchedule(db)).resolves.toMatchObject({ refreshed: true });
+
+    // Back on the roster with her role, which is what the seed looks her up by.
+    const restored = await db
+      .select({ id: people.id, role: personRoles.role })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, RELIEF_INSTRUCTOR_NAME)));
+    expect(restored).toEqual([{ id: expect.any(String), role: "instructor" }]);
+    // …and on the rostering surface, like every other member of the cast — a
+    // person restored without their shift is a different wrong answer.
+    const shifts = await db
+      .select({ note: staffShifts.note })
+      .from(staffShifts)
+      .where(eq(staffShifts.personId, restored[0].id));
+    expect(shifts).toEqual([{ note: "Demo schedule" }]);
+  });
+
+  /** A role lost on its own is the same outage: the lookups join through `person_roles`. */
+  it("restores a cast member's missing role", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const [lead] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, LEAD_INSTRUCTOR_NAME)));
+    await db.delete(personRoles).where(eq(personRoles.personId, lead.id));
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+
+    await expect(refreshCanonicalDemoSchedule(db)).resolves.toMatchObject({ refreshed: true });
+
+    const roles = await db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(eq(personRoles.personId, lead.id));
+    expect(roles).toEqual([{ role: "instructor" }]);
   });
 
   it("leaves a board with weeks of departures on it alone", async () => {

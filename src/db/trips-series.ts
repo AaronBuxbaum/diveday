@@ -17,7 +17,7 @@ import {
   type WeekdaySet,
 } from "@/lib/recurrence";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
-import type { AppDb, AppTransaction } from "./client";
+import { type AppDb, type AppTransaction, queryAll } from "./client";
 import {
   bookings,
   rollCallEvents,
@@ -203,22 +203,26 @@ async function materializeWindow(
   );
   if (!ok) return null;
 
-  const [taken, skipped] = await Promise.all([
-    tx
-      .select({ date: trips.seriesOccurrenceDate })
-      .from(trips)
-      .where(and(eq(trips.seriesId, series.id), eq(trips.shopId, series.shopId))),
-    tx
-      .select({ date: tripSeriesSkips.occurrenceDate })
-      .from(tripSeriesSkips)
-      // Shop-scoped as well as series-scoped. A series id is globally unique,
-      // so this is belt and braces today — but the house rule is that the query
-      // carries the shop condition rather than trusting that every writer got
-      // the pairing right, and a skip that silently applied across tenants
-      // would take a departure off a board nobody could explain.
-      .where(
-        and(eq(tripSeriesSkips.seriesId, series.id), eq(tripSeriesSkips.shopId, series.shopId)),
-      ),
+  // `queryAll`, not `Promise.all`: the nightly roll materializes inside a
+  // transaction, which is one pinned client. See `queryAll` in `src/db/client.ts`.
+  const [taken, skipped] = await queryAll(tx, [
+    () =>
+      tx
+        .select({ date: trips.seriesOccurrenceDate })
+        .from(trips)
+        .where(and(eq(trips.seriesId, series.id), eq(trips.shopId, series.shopId))),
+    () =>
+      tx
+        .select({ date: tripSeriesSkips.occurrenceDate })
+        .from(tripSeriesSkips)
+        // Shop-scoped as well as series-scoped. A series id is globally unique,
+        // so this is belt and braces today — but the house rule is that the query
+        // carries the shop condition rather than trusting that every writer got
+        // the pairing right, and a skip that silently applied across tenants
+        // would take a departure off a board nobody could explain.
+        .where(
+          and(eq(tripSeriesSkips.seriesId, series.id), eq(tripSeriesSkips.shopId, series.shopId)),
+        ),
   ]);
   const spokenFor = new Set<string>();
   for (const row of taken) if (row.date) spokenFor.add(row.date);
