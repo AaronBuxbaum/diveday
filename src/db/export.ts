@@ -2103,6 +2103,7 @@ export async function loadShopExportBundleInput(
             "id",
             "course_id",
             "course_title",
+            "interest",
             "person_id",
             "person_name",
             "name",
@@ -2110,6 +2111,9 @@ export async function loadShopExportBundleInput(
             "phone",
             "experience_level",
             "timing",
+            "preferred_date",
+            "alternate_date",
+            "date_flexible",
             "divers",
             "message",
             "created_at",
@@ -2117,7 +2121,10 @@ export async function loadShopExportBundleInput(
           rows: inquiryRows.map((row) => [
             row.id,
             row.courseId,
-            courseTitle.get(row.courseId),
+            // Null for a request that names no course — it says what it is
+            // about in `interest` instead, the column beside this one.
+            row.courseId ? courseTitle.get(row.courseId) : null,
+            row.interest,
             row.personId,
             // Resolved at capture time by exact email match against a live
             // diver, never back-filled — so a null here is a lead nobody could
@@ -2128,6 +2135,9 @@ export async function loadShopExportBundleInput(
             row.phone,
             row.experienceLevel,
             row.timing,
+            row.preferredDate,
+            row.alternateDate,
+            row.dateFlexible,
             row.divers,
             row.message,
             row.createdAt,

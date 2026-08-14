@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { submitInquiryAction } from "@/app/actions/inquiry";
+import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
 import { JumpNav } from "@/components/JumpNav";
 import { getDb } from "@/db/client";
@@ -10,6 +12,7 @@ import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { dateRequestCopy } from "@/i18n/date-request-copy";
 import { diverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
@@ -22,7 +25,6 @@ import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
-import { CourseInquiry } from "./_components/CourseInquiry";
 import {
   CourseAdmission,
   CourseFaqs,
@@ -33,7 +35,6 @@ import {
   CourseSchedule,
   CourseSessions,
 } from "./_components/CourseSections";
-import { submitCourseInquiryAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -220,40 +221,13 @@ export default async function CoursePage({
         // The composer's own refusals ("tell us where you are up to") are
         // chosen on the client as a diver types, so it needs its own
         // translator there — DiverIntlProvider is what makes
-        // useTranslations() inside CourseInquiry work rather than throw.
+        // useTranslations() inside DateRequestForm work rather than throw.
         <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
-          <CourseInquiry
-            submitInquiry={submitCourseInquiryAction.bind(null, shopSlug, slug)}
+          <DateRequestForm
+            submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
-            copy={{
-              getInTouch: t("inquiry.getInTouch"),
-              noDateBody: t("inquiry.noDateBody"),
-              yourName: t("inquiry.yourName"),
-              namePlaceholder: t("inquiry.namePlaceholder"),
-              yourEmail: t("inquiry.yourEmail"),
-              emailPlaceholder: t("inquiry.emailPlaceholder"),
-              yourPhone: t("inquiry.yourPhone"),
-              phonePlaceholder: t("inquiry.phonePlaceholder"),
-              howManyDivers: t("inquiry.howManyDivers"),
-              optional: t("common.optional"),
-              required: t("inquiry.required"),
-              orPhone: t("inquiry.orPhone"),
-              orEmail: t("inquiry.orEmail"),
-              whenSuits: t("inquiry.whenSuits"),
-              whenSuitsHint: t("inquiry.whenSuitsHint"),
-              whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
-              whereYouAreUpTo: t("inquiry.whereYouAreUpTo"),
-              chooseOne: t("inquiry.chooseOne"),
-              anythingElse: t("inquiry.anythingElse"),
-              messagePlaceholder: t("inquiry.messagePlaceholder"),
-              orWriteTo: t("inquiry.orWriteTo"),
-              callLabel: t("inquiry.callLabel"),
-              send: t("inquiry.send"),
-              sending: t("inquiry.sending"),
-              sentHeading: t("inquiry.sentHeading"),
-              sentBody: t("inquiry.sentBody"),
-            }}
+            copy={dateRequestCopy(t, "course")}
           />
         </DiverIntlProvider>
       ) : null}

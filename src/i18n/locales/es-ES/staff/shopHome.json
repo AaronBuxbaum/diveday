@@ -28,6 +28,7 @@
     "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
     "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
     "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes.",
+    "requestsNotAuthorized": "Las peticiones de fecha incluyen datos de contacto de personas que aún no han reservado, así que están limitadas a propietarios y gerentes.",
     "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
     "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
     "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",

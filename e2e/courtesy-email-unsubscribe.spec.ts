@@ -22,8 +22,12 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   request,
 }) => {
   await page.goto("/s/blue-mantis");
-  await page.getByLabel("Name").fill("Priya Nair");
-  await page.getByLabel("Email").fill("priya.courtesy.e2e@example.com");
+  // Scoped to the wait-list card: the schedule page carries a second form
+  // now ("Nothing on a date that works?"), which legitimately asks for a
+  // name and an email too, and getByLabel matches by substring.
+  const waitList = page.locator("#last-minute-list");
+  await waitList.getByLabel("Name").fill("Priya Nair");
+  await waitList.getByLabel("Email").fill("priya.courtesy.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 

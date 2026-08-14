@@ -1,0 +1,383 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { useState, useTransition } from "react";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import {
+  COURSE_INQUIRY_EXPERIENCE,
+  COURSE_INQUIRY_EXPERIENCE_KEYS,
+  type CourseInquiryExperience,
+  type DateRequestCopy,
+  type InquiryFormState,
+  telHref,
+} from "@/lib/course-inquiry";
+
+/**
+ * "Get in touch and we will set one" used to be the end of the road: a diver
+ * with no workable date was handed a sentence and left to write the email
+ * themselves. This asks the questions a shop always ends up asking for and
+ * turns them into a lead the desk can act on without a round trip.
+ *
+ * It stands on **two** surfaces now, which is why it lives here rather than in
+ * the course folder it grew up in: a course page, where the request is about
+ * the course whose URL it was sent from, and the schedule page, where a diver
+ * who wants a two-tank on a Saturday nobody scheduled had no path at all. The
+ * only difference between the two is `askInterest` — with no course in the URL,
+ * the form has to ask what the request is *about*, because a row that names
+ * neither is a request nobody can act on (the check constraint on
+ * `course_inquiries` says the same thing in SQL).
+ *
+ * The dates are real `<input type="date">` fields, and the free-text "when
+ * suits you" box stays beside them: "any weekend in the autumn" is still a true
+ * answer, and a date field cannot hold it. A preferred date with an alternate
+ * beside it is a diver stating a range rather than booking a slot — nothing is
+ * held, and the staff list at /shop/<shop>/requests is what makes the dates
+ * worth collecting at all (it groups by them: "four people could make the
+ * 12th" is a departure waiting to be scheduled).
+ *
+ * Submitting records the request server-side (a `course_inquiries` row, via
+ * `submitRequest`) and best-effort notifies the shop's own inbox, so a diver on
+ * a phone with no mail client configured no longer loses the lead entirely
+ * (docs/product/archive/ux-personas-20260730-findings.md task 7).
+ *
+ * That is the only way to send it. The `mailto:` composer and the copy-the-
+ * message button that stood beside it have gone: both handed the diver a draft
+ * to send themselves, which is a worse outcome than the row this writes. The
+ * shop's own address and phone number stay under the button as live links for
+ * anyone who would rather write it themselves.
+ *
+ * `submitRequest` is bound to its shop (and course, when there is one) by the
+ * page, so this component never carries the shop or course identity itself —
+ * and so a test can hand it a stub without reaching through a server action's
+ * module boundary. Called directly through `useTransition` rather than wired as
+ * a `<form action>`: the composer builds its own `FormData` so the
+ * required-field guards below can run first.
+ */
+export function DateRequestForm({
+  submitRequest,
+  askInterest = false,
+  sectionId = "get-in-touch",
+  contactEmail,
+  contactPhone,
+  copy,
+}: {
+  submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
+  /** True on the schedule page, where there is no course to be about. */
+  askInterest?: boolean;
+  sectionId?: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  copy: DateRequestCopy;
+}) {
+  const t = useTranslations();
+  const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<InquiryFormState>({});
+  const [interest, setInterest] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [alternateDate, setAlternateDate] = useState("");
+  const [dateFlexible, setDateFlexible] = useState(false);
+  const [timing, setTiming] = useState("");
+  // One diver is the answer far more often than any other, so it is the one
+  // the box already holds — a diver bringing friends types over it, and nobody
+  // has to fill in a field to say the obvious.
+  const [diversInput, setDiversInput] = useState("1");
+  const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
+  const [message, setMessage] = useState("");
+  const [experienceMissing, setExperienceMissing] = useState(false);
+  const [contactMissing, setContactMissing] = useState(false);
+  const [interestMissing, setInterestMissing] = useState(false);
+
+  const headingId = `${sectionId}-heading`;
+
+  /**
+   * What a submission requires before it is worth sending.
+   *
+   * Three things, and only three: what it is about (on the schedule page,
+   * where nothing else says), where the diver is up to, because it is the
+   * field the shop reads before anything else they typed, and *some* way to
+   * answer them. Email or phone — either one, never both — because a diver
+   * standing on a dock may only have one of the two, but a lead with neither is
+   * a question nobody can reply to.
+   *
+   * All are evaluated before returning, so a submission missing several shows
+   * every refusal at once rather than one, then the next.
+   */
+  function requireAnswerable(): boolean {
+    const hasInterest = !askInterest || Boolean(interest.trim());
+    const hasExperience = Boolean(experience);
+    const hasContact = Boolean(email.trim() || phone.trim());
+    setInterestMissing(!hasInterest);
+    setExperienceMissing(!hasExperience);
+    setContactMissing(!hasContact);
+    return hasInterest && hasExperience && hasContact;
+  }
+
+  function sendRequest() {
+    if (!requireAnswerable()) return;
+    const formData = new FormData();
+    if (askInterest && interest) formData.set("interest", interest);
+    if (name) formData.set("name", name);
+    if (email) formData.set("email", email);
+    if (phone) formData.set("phone", phone);
+    if (preferredDate) formData.set("preferredDate", preferredDate);
+    if (alternateDate) formData.set("alternateDate", alternateDate);
+    if (dateFlexible) formData.set("dateFlexible", "on");
+    if (timing) formData.set("timing", timing);
+    if (diversInput) formData.set("divers", diversInput);
+    formData.set("experience", experience);
+    if (message) formData.set("message", message);
+    startTransition(async () => {
+      setState(await submitRequest({}, formData));
+    });
+  }
+
+  /** The shop's own address and number — the way out of the form, twice over. */
+  const contactLine = (
+    <p className="mt-4 text-sm text-muted">
+      {copy.orWriteTo}{" "}
+      <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
+        {contactEmail}
+      </a>
+      {contactPhone ? (
+        <>
+          {" "}
+          · {copy.callLabel}{" "}
+          <a href={telHref(contactPhone)} className="font-medium text-primary hover:underline">
+            {contactPhone}
+          </a>
+        </>
+      ) : null}
+      .
+    </p>
+  );
+
+  if (state.success) {
+    return (
+      <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
+        <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
+          {copy.heading}
+        </h2>
+        <div className="rise-in mt-6 rounded-2xl border border-border bg-surface-sunken p-6">
+          <p className="font-semibold">{copy.sentHeading}</p>
+          <p className="mt-2 text-sm text-muted">{copy.sentBody}</p>
+          {contactLine}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
+      <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
+        {copy.heading}
+      </h2>
+      <p className="mt-3 max-w-2xl text-muted">{copy.intro}</p>
+      {state.error ? (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {state.error}
+        </p>
+      ) : null}
+
+      <div className="mt-6 max-w-3xl">
+        <FieldGrid columns={2} className="content-start gap-y-5">
+          {/* First, because on this surface it is the question: with no course
+              in the URL, everything else is about *something* the shop cannot
+              guess. */}
+          {askInterest ? (
+            <Field
+              label={copy.whatToDive}
+              hint={copy.required}
+              className="sm:col-span-2"
+              error={interestMissing ? t("inquiry.errors.interestRequired") : null}
+            >
+              <input
+                name="interest"
+                maxLength={200}
+                value={interest}
+                onChange={(event) => {
+                  setInterest(event.target.value);
+                  setInterestMissing(false);
+                }}
+                placeholder={copy.whatToDivePlaceholder}
+                className={controlClass}
+              />
+            </Field>
+          ) : null}
+          <Field label={copy.yourName} hint={copy.optional}>
+            <input
+              name="name"
+              autoComplete="name"
+              maxLength={120}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={copy.namePlaceholder}
+              className={controlClass}
+            />
+          </Field>
+          {/* Email and phone read as "(or phone)" / "(or email)" rather than
+              "(optional)": neither is required on its own, but the pair is —
+              the refusal below says so in words when both are left blank. */}
+          <Field
+            label={copy.yourEmail}
+            hint={copy.orPhone}
+            error={contactMissing ? t("inquiry.errors.contactRequired") : null}
+          >
+            <input
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              maxLength={200}
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setContactMissing(false);
+              }}
+              placeholder={copy.emailPlaceholder}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={copy.yourPhone} hint={copy.orEmail}>
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              maxLength={30}
+              aria-invalid={contactMissing}
+              value={phone}
+              onChange={(event) => {
+                setPhone(event.target.value);
+                setContactMissing(false);
+              }}
+              placeholder={copy.phonePlaceholder}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={copy.howManyDivers} hint={copy.optional}>
+            <input
+              name="divers"
+              type="number"
+              min={1}
+              max={12}
+              value={diversInput}
+              onChange={(event) => setDiversInput(event.target.value)}
+              className={controlClass}
+            />
+          </Field>
+          {/* Two dates rather than one, and both optional. One date on its own
+              reads like a slot being claimed; a first choice with a fallback
+              beside it reads like what it is — a range the shop can answer. */}
+          <Field label={copy.preferredDate} hint={copy.optional} description={copy.datesHint}>
+            <input
+              name="preferredDate"
+              type="date"
+              value={preferredDate}
+              onChange={(event) => setPreferredDate(event.target.value)}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={copy.alternateDate} hint={copy.optional}>
+            <input
+              name="alternateDate"
+              type="date"
+              value={alternateDate}
+              onChange={(event) => setAlternateDate(event.target.value)}
+              className={controlClass}
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                name="dateFlexible"
+                type="checkbox"
+                checked={dateFlexible}
+                onChange={(event) => setDateFlexible(event.target.checked)}
+                className="size-4 rounded border-border-strong"
+              />
+              {copy.dateFlexible}
+            </label>
+          </div>
+          <Field
+            label={copy.whenSuits}
+            hint={copy.optional}
+            description={copy.whenSuitsHint}
+            className="sm:col-span-2"
+          >
+            <input
+              name="timing"
+              maxLength={200}
+              value={timing}
+              onChange={(event) => setTiming(event.target.value)}
+              placeholder={copy.whenSuitsPlaceholder}
+              className={controlClass}
+            />
+          </Field>
+          <Field
+            label={copy.whereYouAreUpTo}
+            hint={copy.required}
+            className="sm:col-span-2"
+            error={experienceMissing ? t("inquiry.errors.experienceRequired") : null}
+          >
+            <select
+              name="experience"
+              required
+              aria-required="true"
+              value={experience}
+              onChange={(event) => {
+                setExperience(event.target.value as CourseInquiryExperience | "");
+                setExperienceMissing(false);
+              }}
+              className={controlClass}
+            >
+              <option value="">{copy.chooseOne}</option>
+              {COURSE_INQUIRY_EXPERIENCE.map((option) => (
+                <option key={option} value={option}>
+                  {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={copy.anythingElse} hint={copy.optional} className="sm:col-span-2">
+            <textarea
+              name="message"
+              rows={4}
+              maxLength={1500}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder={copy.messagePlaceholder}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+
+        {/* One button, and then the shop's own details.
+            "Open in your email app" and "Copy message" used to stand beside
+            Send as equal secondary buttons, and both were escape hatches from
+            a form that no longer needs one: Send records the request and
+            notifies the shop, which is strictly more than a mailto can do — it
+            composes a draft the diver still has to send themselves, from an app
+            half of them have never configured on the phone they are holding,
+            and DiveDay never learns whether it left. Three buttons also made
+            the real one a third of the choice. A diver who would rather write it
+            themselves still can: the line underneath is the shop's own address
+            and phone number, both live links. */}
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={pending}
+            aria-busy={pending}
+            onClick={sendRequest}
+            className={buttonClass()}
+          >
+            {pending ? copy.sending : copy.send}
+          </button>
+        </div>
+        {contactLine}
+      </div>
+    </section>
+  );
+}

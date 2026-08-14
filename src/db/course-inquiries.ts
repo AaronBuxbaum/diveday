@@ -1,23 +1,34 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { AppDb, DbExecutor } from "./client";
-import { courseInquiries, people } from "./schema";
+import { type OffsetPage, offsetPage } from "./paging";
+import { courseInquiries, courses, people } from "./schema";
 
 /**
- * The lead recorded from the public course page's "get in touch" composer
- * (docs/product/archive/ux-personas-20260730-findings.md task 7). `courseId` and
- * `shopId` are always derived server-side from the URL's shop/course slugs —
- * never accepted from the caller — the same discipline `submitTripReview`
- * uses for `bookingId`.
+ * The lead recorded from a diver asking for a date — from the public course
+ * page's "get in touch" composer (docs/product/archive/
+ * ux-personas-20260730-findings.md task 7), or from the schedule page, where
+ * there is no course and the request says what it is about in `interest`.
+ *
+ * `courseId` and `shopId` are always derived server-side from the URL's
+ * shop/course slugs — never accepted from the caller — the same discipline
+ * `submitTripReview` uses for `bookingId`.
  */
 export type RecordCourseInquiryInput = {
   shopId: string;
-  courseId: string;
+  /** Null for an ordinary dive request, which names `interest` instead. */
+  courseId?: string | null;
+  /** What a dive request is about; required when there is no course. */
+  interest?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
   experienceLevel: CourseInquiryExperience;
   timing?: string | null;
+  preferredDate?: CalendarDate | null;
+  alternateDate?: CalendarDate | null;
+  dateFlexible?: boolean;
   divers?: number | null;
   message?: string | null;
 };
@@ -85,22 +96,119 @@ export async function recordCourseInquiry(
   input: RecordCourseInquiryInput,
 ): Promise<CourseInquiryRecord> {
   const email = normalizeOptional(input.email)?.toLowerCase() ?? null;
+  const courseId = input.courseId ?? null;
+  const interest = normalizeOptional(input.interest);
+  // A request must be about something. The check constraint says the same, and
+  // the server action refuses it in the diver's own words before reaching here;
+  // this is the layer that must not depend on either having run.
+  if (!courseId && !interest) {
+    throw new Error("recordCourseInquiry: a request names either a course or an interest");
+  }
   const personId = email ? await livePersonIdForEmail(db, input.shopId, email) : null;
   const [inserted] = await db
     .insert(courseInquiries)
     .values({
       shopId: input.shopId,
-      courseId: input.courseId,
+      courseId,
+      interest,
       personId,
       name: normalizeOptional(input.name),
       email,
       phone: normalizeOptional(input.phone),
       experienceLevel: input.experienceLevel,
       timing: normalizeOptional(input.timing),
+      preferredDate: input.preferredDate ?? null,
+      alternateDate: input.alternateDate ?? null,
+      dateFlexible: input.dateFlexible ?? false,
       divers: input.divers ?? null,
       message: normalizeOptional(input.message),
     })
     .returning({ id: courseInquiries.id, createdAt: courseInquiries.createdAt });
   if (!inserted) throw new Error("recordCourseInquiry: insert returned no row");
   return inserted;
+}
+
+/**
+ * One row of the shop's requests list (/shop/<shop>/requests).
+ *
+ * Codes and facts only — the grouping is `groupDateRequests` in
+ * src/lib/date-requests.ts and the words are the staff bundle's.
+ */
+export type DateRequestRow = {
+  id: string;
+  courseId: string | null;
+  courseTitle: string | null;
+  /** Set exactly when there is no course. */
+  interest: string | null;
+  personId: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  experienceLevel: CourseInquiryExperience;
+  timing: string | null;
+  preferredDate: CalendarDate | null;
+  alternateDate: CalendarDate | null;
+  dateFlexible: boolean;
+  divers: number | null;
+  message: string | null;
+  createdAt: Date;
+};
+
+/** How many requests one page of the staff list holds. */
+export const DATE_REQUESTS_PAGE_SIZE = 20;
+
+/**
+ * One page of this shop's date requests, ordered by the date they are asking
+ * for — soonest first, and the ones that named no date at all last, which is
+ * the order the page groups them in.
+ *
+ * Ordered by the *earliest* date a request names rather than by
+ * `preferred_date` alone: a request whose alternate falls before its first
+ * choice still belongs beside the day it can first be served. Paging is offset
+ * paging like every other staff list (ADR 20260803-one-pagination-model), and
+ * the count shares this query's scope exactly — the whole shop, unfiltered.
+ */
+export async function listDateRequestsForStaff(
+  db: DbExecutor,
+  shopId: string,
+  options: { page?: number } = {},
+): Promise<OffsetPage<DateRequestRow>> {
+  const firstDate = sql`least(${courseInquiries.preferredDate}, ${courseInquiries.alternateDate})`;
+  return offsetPage<DateRequestRow>({
+    page: options.page,
+    pageSize: DATE_REQUESTS_PAGE_SIZE,
+    countRows: async () => {
+      const [row] = await db
+        .select({ n: count() })
+        .from(courseInquiries)
+        .where(eq(courseInquiries.shopId, shopId));
+      return row?.n ?? 0;
+    },
+    fetchRows: (offset, limit) =>
+      db
+        .select({
+          id: courseInquiries.id,
+          courseId: courseInquiries.courseId,
+          courseTitle: courses.title,
+          interest: courseInquiries.interest,
+          personId: courseInquiries.personId,
+          name: courseInquiries.name,
+          email: courseInquiries.email,
+          phone: courseInquiries.phone,
+          experienceLevel: courseInquiries.experienceLevel,
+          timing: courseInquiries.timing,
+          preferredDate: courseInquiries.preferredDate,
+          alternateDate: courseInquiries.alternateDate,
+          dateFlexible: courseInquiries.dateFlexible,
+          divers: courseInquiries.divers,
+          message: courseInquiries.message,
+          createdAt: courseInquiries.createdAt,
+        })
+        .from(courseInquiries)
+        .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
+        .where(eq(courseInquiries.shopId, shopId))
+        .orderBy(sql`${firstDate} asc nulls last`, desc(courseInquiries.createdAt))
+        .limit(limit)
+        .offset(offset),
+  });
 }

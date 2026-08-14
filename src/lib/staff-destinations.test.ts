@@ -76,7 +76,11 @@ describe("permission gating", () => {
     const gated = STAFF_DESTINATIONS.filter((destination) => destination.gate !== undefined).map(
       (destination) => destination.id,
     );
-    expect(gated).toEqual(["waivers", "reports", "team", "promoCodes", "settings"]);
+    // Requests carries the `reports` gate rather than none: it is a pile of
+    // contact details for people who have not booked, and deciding which
+    // unscheduled day is worth a boat is the same commercial work Reports and
+    // Promo codes sit behind.
+    expect(gated).toEqual(["waivers", "requests", "reports", "team", "promoCodes", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -141,6 +145,7 @@ describe("what each consumer derives", () => {
       "diveSites",
       "waivers",
       "reviews",
+      "requests",
       "reports",
     ]);
     expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual([
@@ -262,6 +267,7 @@ describe("currentStaffNavDestinationId", () => {
   it("lights a destination for its own subtree", () => {
     expect(current(`${root}/close-out`)).toBe("closeOut");
     expect(current(`${root}/reviews`)).toBe("reviews");
+    expect(current(`${root}/requests`)).toBe("requests");
     expect(current(`${root}/reports`)).toBe("reports");
     expect(current(`${root}/staffing`)).toBe("staffing");
   });

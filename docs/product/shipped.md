@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A diver can ask for a date, and the shop has somewhere to read it (delivered 2026-08-14)
+
+Asking a shop to run something on a day that is not on the board is an ordinary request, and DiveDay
+answered it in one place and badly: course pages carried a composer whose only timing field was free
+prose, the schedule page had nothing at all, and no surface under `/shop` ever rendered what either
+collected. Now one composer stands on both public pages — with real date fields, an alternate beside
+the first choice, and a "few days either side" flag — and writes the same `course_inquiries` row,
+whose `course_id` is nullable and whose new `interest` column says what an ordinary dive request is
+about (a check constraint refuses a row that names neither). `/shop/<shop>/requests` groups them by
+day: a diver appears under every date they could make, each group says how many of those asked for it
+first, and each group's own link opens the schedule builder already on that date. The dates are a
+deliberate re-add of a column dropped on 2026-08-12 — a date nobody groups by is false precision, a
+date something groups by is a departure waiting to be scheduled — and the free-text "when suits you"
+box stays, because "any weekend this autumn" is still the truest answer a diver has.
+[20260814-a-date-request-is-a-course-inquiry](../architecture/decisions/20260814-a-date-request-is-a-course-inquiry.md).
+
 ## Review moderation states its case, and a curated record loses its star rating (delivered 2026-08-13)
 
 A shop could hide any review with one unrecorded tap, and the average over what survived went out as

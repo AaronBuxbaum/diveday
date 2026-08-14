@@ -129,13 +129,22 @@ test.describe("H-14 role permissions", () => {
      * fails here.
      */
     test("a refused surface lands somewhere that says why", async ({ page }) => {
-      test.setTimeout(30_000);
+      // Four sequential refusal round trips now, not three; the suite default
+      // is sized for a single flow.
+      test.setTimeout(40_000);
 
       // Revenue is owner/manager work — Today explains, rather than dumping
       // the captain on a page that looks like they simply mis-clicked.
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByText(/Reports read the shop's revenue/i)).toBeVisible();
+
+      // Date requests carry contact details for people who have not booked, and
+      // choosing which unscheduled day gets a boat is desk work — the same
+      // owner/manager gate revenue takes, with the row absent from the nav.
+      await page.goto(`/shop/${SHOP}/requests`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
+      await expect(page.getByText(/Date requests carry contact details/i)).toBeVisible();
 
       // Team and Import are Settings sub-pages, and they used to land their
       // refusal on Settings — the nearest parent that could explain it. Now

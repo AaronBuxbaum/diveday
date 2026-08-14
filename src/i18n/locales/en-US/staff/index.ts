@@ -38,6 +38,7 @@ import orderLine from "./orderLine.json";
 import orders from "./orders.json";
 import promos from "./promos.json";
 import reports from "./reports.json";
+import requests from "./requests.json";
 import reviews from "./reviews.json";
 import schedule from "./schedule.json";
 import seatDiver from "./seatDiver.json";
@@ -61,6 +62,7 @@ const staff = {
   orderLine,
   promos,
   reports,
+  requests,
   reviews,
   schedule,
   trips,

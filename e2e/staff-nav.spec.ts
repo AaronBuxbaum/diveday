@@ -42,6 +42,7 @@ test.describe("owner", () => {
       "Dive sites",
       "Waivers",
       "Reviews",
+      "Requests",
       "Reports",
     ]);
     await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
@@ -135,7 +136,10 @@ test.describe("captain", () => {
     await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
       "Calendar subscription",
     ]);
-    for (const gated of ["Waivers", "Reports", "Team", "Promo codes", "Settings"]) {
+    // Requests is gated with Reports and Promo codes: it holds contact details
+    // for people who have not booked, and choosing which unscheduled day gets a
+    // boat is desk work, not the captain's.
+    for (const gated of ["Waivers", "Requests", "Reports", "Team", "Promo codes", "Settings"]) {
       await expect(menu.getByRole("link", { name: gated })).toHaveCount(0);
     }
   });

@@ -42,6 +42,61 @@ export const COURSE_INQUIRY_EXPERIENCE_KEYS: Record<CourseInquiryExperience, Div
   lapsed: "inquiry.experience.lapsed",
 };
 
+/**
+ * What the composer's server action answers with — an error sentence already
+ * resolved into the reader's language, or a recorded request.
+ *
+ * It lives here rather than beside the action because two surfaces submit the
+ * same form now (a course page and the schedule page) and the shared component
+ * that renders it (src/components/DateRequestForm.tsx) may not import from
+ * `src/app` — the dependency direction is one way (pnpm check:architecture).
+ */
+export type InquiryFormState = { error?: string; success?: boolean };
+
+/**
+ * Every word `DateRequestForm` renders, as a shape rather than as words.
+ *
+ * It lives here rather than beside the component for the same reason
+ * `InquiryFormState` does: the copy is resolved on the server
+ * (src/i18n/date-request-copy.ts) and handed to a Client Component as props,
+ * and `src/i18n` may not import shared UI (pnpm check:architecture). A shape in
+ * the domain layer is what lets both sides name the same thirty fields.
+ */
+export interface DateRequestCopy {
+  heading: string;
+  intro: string;
+  whatToDive: string;
+  whatToDivePlaceholder: string;
+  yourName: string;
+  namePlaceholder: string;
+  yourEmail: string;
+  emailPlaceholder: string;
+  yourPhone: string;
+  phonePlaceholder: string;
+  howManyDivers: string;
+  optional: string;
+  required: string;
+  orPhone: string;
+  orEmail: string;
+  preferredDate: string;
+  alternateDate: string;
+  datesHint: string;
+  dateFlexible: string;
+  whenSuits: string;
+  whenSuitsHint: string;
+  whenSuitsPlaceholder: string;
+  whereYouAreUpTo: string;
+  chooseOne: string;
+  anythingElse: string;
+  messagePlaceholder: string;
+  orWriteTo: string;
+  callLabel: string;
+  send: string;
+  sending: string;
+  sentHeading: string;
+  sentBody: string;
+}
+
 export type CourseInquiry = {
   courseTitle: string;
   shopName: string;

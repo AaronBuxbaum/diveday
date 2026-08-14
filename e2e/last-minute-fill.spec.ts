@@ -20,8 +20,12 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // not a chain of them.
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
-  await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill("nora.e2e@example.com");
+  // Scoped to the wait-list card: the schedule page carries a second form
+  // now ("Nothing on a date that works?"), which legitimately asks for a
+  // name and an email too, and getByLabel matches by substring.
+  const waitList = page.locator("#last-minute-list");
+  await waitList.getByLabel("Name").fill("Nora Quinn");
+  await waitList.getByLabel("Email").fill("nora.e2e@example.com");
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
@@ -68,8 +72,12 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   test.setTimeout(45_000);
   await request.post("/api/test/seed-stripe-account");
   await page.goto("/s/blue-mantis");
-  await page.getByLabel("Name").fill("Priya Shah");
-  await page.getByLabel("Email").fill("priya.e2e@example.com");
+  // Scoped to the wait-list card: the schedule page carries a second form
+  // now ("Nothing on a date that works?"), which legitimately asks for a
+  // name and an email too, and getByLabel matches by substring.
+  const waitList = page.locator("#last-minute-list");
+  await waitList.getByLabel("Name").fill("Priya Shah");
+  await waitList.getByLabel("Email").fill("priya.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
@@ -106,8 +114,12 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   request,
 }) => {
   await page.goto("/s/blue-mantis");
-  await page.getByLabel("Name").fill("Uma Torres");
-  await page.getByLabel("Email").fill("uma.e2e@example.com");
+  // Scoped to the wait-list card: the schedule page carries a second form
+  // now ("Nothing on a date that works?"), which legitimately asks for a
+  // name and an email too, and getByLabel matches by substring.
+  const waitList = page.locator("#last-minute-list");
+  await waitList.getByLabel("Name").fill("Uma Torres");
+  await waitList.getByLabel("Email").fill("uma.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 

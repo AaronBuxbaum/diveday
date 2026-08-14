@@ -10,14 +10,22 @@ import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
-import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
+import { isValidCalendarDate } from "@/lib/calendar-date";
+import { COURSE_INQUIRY_EXPERIENCE, type InquiryFormState } from "@/lib/course-inquiry";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
+/** A `<input type="date">` value, refused unless it is a date that exists. */
+const calendarDate = z.string().refine(isValidCalendarDate);
+
 const inquirySchema = z.object({
+  interest: z.string().trim().max(200).optional(),
   name: z.string().trim().max(120).optional(),
   email: z.email().max(200).optional(),
   phone: z.string().trim().max(30).optional(),
+  preferredDate: calendarDate.optional(),
+  alternateDate: calendarDate.optional(),
+  dateFlexible: z.boolean(),
   timing: z.string().trim().max(200).optional(),
   divers: z.coerce.number().int().min(1).max(12).optional(),
   experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
@@ -35,28 +43,31 @@ function hasReplyPath(input: { email?: string; phone?: string }): boolean {
   return Boolean(input.email?.trim() || input.phone?.trim());
 }
 
-export type CourseInquiryFormState = { error?: string; success?: boolean };
+export type { InquiryFormState };
 
 /**
- * Records the public course page's "get in touch" composer server-side and
- * best-effort notifies the shop's own contact inbox — the diver's `mailto:`
- * composer (course-inquiry.ts) stays available beside this as a fallback that
- * needs no server round trip at all (docs/product/archive/
- * ux-personas-20260730-findings.md task 7).
+ * Records a diver's request for a date, from either surface that asks for one:
+ * a course page (`courseSlug` bound from its URL) or the shop's schedule page
+ * (`courseSlug` null, and the request says what it is about in `interest`).
  *
- * `shopSlug`/`courseSlug` are bound server-side from the page's own URL
+ * Shared rather than duplicated because the two differ in exactly one field,
+ * and because the either-or below — a request names a course *or* an interest
+ * — has to hold identically on both, or the check constraint on
+ * `course_inquiries` becomes the thing a diver meets instead of a sentence.
+ *
+ * `shopSlug`/`courseSlug` are bound server-side from the calling page's own URL
  * params, never taken from the submitted form — the same discipline
  * `joinLastMinuteListAction` uses for `shopSlug`.
  */
-export async function submitCourseInquiryAction(
+export async function submitInquiryAction(
   shopSlug: string,
-  courseSlug: string,
-  _prev: CourseInquiryFormState,
+  courseSlug: string | null,
+  _prev: InquiryFormState,
   formData: FormData,
-): Promise<CourseInquiryFormState> {
+): Promise<InquiryFormState> {
   // Resolved here, not passed back as a code: this state reaches
-  // CourseInquiry.tsx straight off `useActionState`, with no Server
-  // Component render in between to translate it first.
+  // DateRequestForm.tsx straight off the transition, with no Server Component
+  // render in between to translate it first.
   const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
   if (
@@ -66,9 +77,13 @@ export async function submitCourseInquiryAction(
   }
 
   const parsed = inquirySchema.safeParse({
+    interest: formData.get("interest") || undefined,
     name: formData.get("name") || undefined,
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
+    preferredDate: formData.get("preferredDate") || undefined,
+    alternateDate: formData.get("alternateDate") || undefined,
+    dateFlexible: Boolean(formData.get("dateFlexible")),
     timing: formData.get("timing") || undefined,
     divers: formData.get("divers") || undefined,
     experience: formData.get("experience") || undefined,
@@ -80,28 +95,50 @@ export async function submitCourseInquiryAction(
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { error: t("inquiry.errors.unavailable") };
-  const course = await getCourseBySlug(db, shop.id, courseSlug);
-  // A hidden course isn't offered anymore, from a diver's point of view —
-  // the inquiry form itself only renders on the visible page, so reaching
-  // here for one means the slug was guessed or the shop hid it mid-submit.
-  if (!course?.isActive) return { error: t("inquiry.errors.unavailable") };
 
-  const { name, email, phone, timing, divers, experience, message } = parsed.data;
+  const course = courseSlug ? await getCourseBySlug(db, shop.id, courseSlug) : null;
+  // A hidden course isn't offered anymore, from a diver's point of view —
+  // the form itself only renders on the visible page, so reaching here for one
+  // means the slug was guessed or the shop hid it mid-submit.
+  if (courseSlug && !course?.isActive) return { error: t("inquiry.errors.unavailable") };
+
+  const {
+    interest,
+    name,
+    email,
+    phone,
+    preferredDate,
+    alternateDate,
+    dateFlexible,
+    timing,
+    divers,
+    experience,
+    message,
+  } = parsed.data;
+  // The either-or, in the diver's own words rather than as a constraint
+  // violation: a request with no course in the URL and nothing typed into
+  // "what would you like to dive?" is about nothing.
+  if (!course && !interest) return { error: t("inquiry.errors.interestRequired") };
+
   const record = await recordCourseInquiry(db, {
     shopId: shop.id,
-    courseId: course.id,
+    courseId: course?.id ?? null,
+    interest: course ? null : interest,
     name,
     email,
     phone,
     experienceLevel: experience,
     timing,
+    preferredDate,
+    alternateDate,
+    dateFlexible,
     divers,
     message,
   });
 
-  // Best-effort: a stalled or failed Resend call must never risk timing out
-  // the response the diver is waiting on for their submitted-inquiry state
-  // (same deferral onboardAction uses for its own founder/welcome sends).
+  // Best-effort: a stalled or failed send must never risk timing out the
+  // response the diver is waiting on for their submitted state (the same
+  // deferral onboardAction uses for its own founder/welcome sends).
   const contactEmail = shop.contactEmail;
   if (contactEmail) {
     after(async () => {
@@ -112,7 +149,8 @@ export async function submitCourseInquiryAction(
         to: contactEmail,
         locale: toDiverLocale(shop.defaultLocale),
         shopName: shop.name,
-        courseTitle: course.title,
+        // With no course, what the diver typed is what the mail is about.
+        courseTitle: course?.title ?? (interest as string),
         inquirerName: name,
         inquirerEmail: email,
         inquirerPhone: phone,

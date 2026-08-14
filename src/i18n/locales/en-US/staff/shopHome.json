@@ -28,6 +28,7 @@
     "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
     "exportNotAuthorized": "Data export is limited to owners and managers.",
     "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers.",
+    "requestsNotAuthorized": "Date requests carry contact details for people who have not booked yet, so they are limited to owners and managers.",
     "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
     "teamNotAuthorized": "Team management is limited to owners and managers.",
     "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",

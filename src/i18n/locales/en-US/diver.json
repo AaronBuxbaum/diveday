@@ -1600,6 +1600,14 @@
     "sending": "Sending…",
     "sentHeading": "Inquiry sent",
     "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
+    "requestDateHeading": "Nothing on a date that works?",
+    "requestDateBody": "Tell us what you’d like to dive and when. Nothing is booked or held — we’ll see who else is asking for the same days and come back to you.",
+    "whatToDive": "What would you like to dive?",
+    "whatToDivePlaceholder": "Two dives on the wrecks",
+    "preferredDate": "Date you’d like",
+    "alternateDate": "Or this date",
+    "datesHint": "A request, not a booking — we’ll tell you what we can run.",
+    "dateFlexible": "Either of those, or a few days either side, works for me",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -1610,7 +1618,8 @@
       "invalid": "Check the highlighted field and try again.",
       "unavailable": "This course isn't available right now.",
       "experienceRequired": "Let us know where you are up to before sending.",
-      "contactRequired": "Leave an email or a phone number so we can reply."
+      "contactRequired": "Leave an email or a phone number so we can reply.",
+      "interestRequired": "Tell us what you’d like to dive before sending."
     }
   },
   "account": {

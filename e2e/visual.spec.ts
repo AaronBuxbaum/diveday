@@ -2541,6 +2541,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-reviews", scheme);
       });
 
+      // Divers asking for a day the board has nothing on, grouped by that day:
+      // the seeded requests put two people on one date (one of them by their
+      // alternate, one of them flexible into it), which is the whole reason the
+      // count line and the lighter fallback rows exist. Waiting on the pager
+      // rather than only the heading — the groups render above it, so a capture
+      // taken before it lands can photograph a half-built list.
+      test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/requests");
+        await page.getByRole("heading", { level: 1, name: "Dates divers asked for" }).waitFor();
+        await page.getByRole("link", { name: "Put a departure on this day" }).first().waitFor();
+        await capture(page, "staff-date-requests", scheme);
+      });
+
       // Shop-wide discount codes: the create form plus the seeded codes with
       // their windows and redemption counts
       // (docs ADR 20260729-shop-promo-codes).

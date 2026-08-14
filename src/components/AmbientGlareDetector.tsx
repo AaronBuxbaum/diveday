@@ -166,15 +166,24 @@ const CONTRAST_MODES = ["auto", "standard", "full"] as const;
  * the answer, in the same segmented grammar as `QueueViewSwitch`.
  */
 export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) {
-  const [mode, setMode] = useState<ContrastMode>("auto");
   // The stored choice lives in this browser, so the server cannot know it. The
-  // control renders in its Auto position until the effect has read storage,
-  // rather than rendering a placeholder of a different shape that would shift
-  // the header the moment it hydrates.
-  const [mounted, setMounted] = useState(false);
+  // control renders in its Auto position — the default it is actually in until
+  // told otherwise — and the effect below moves it only when this device has
+  // stored something else.
+  //
+  // It used to gate the selected state on a `mounted` flag as well, which meant
+  // the rendered markup showed *no* option selected until React hydrated: a
+  // three-way segmented control with nothing chosen, on a page a crew opens on
+  // a boat with a slow connection. It also made the control's painted state a
+  // race — the visual suite caught it as one variant of four in which the Auto
+  // pill was unfilled while the other three had it filled, which is the same
+  // bug photographed rather than a different one. `mode` is "auto" on the
+  // server and on the client's first render, so nothing here can mismatch on
+  // hydration; only the stored value moves it, and that is a state change React
+  // is happy to make after mount.
+  const [mode, setMode] = useState<ContrastMode>("auto");
 
   useEffect(() => {
-    setMounted(true);
     if (typeof window !== "undefined") {
       try {
         const savedMode = localStorage.getItem(CONTRAST_MODE_STORAGE_KEY);
@@ -212,7 +221,7 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
       </legend>
       <div className="mt-1.5 inline-flex rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
-          const active = mounted && value === mode;
+          const active = value === mode;
           return (
             <label
               key={value}
