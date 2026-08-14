@@ -489,7 +489,10 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/courses/wreck-diver/edit");
     await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
     await page.getByRole("button", { name: "Save course page" }).click();
-    await expect(page.getByRole("alert")).toContainText("depth markers is broken");
+    // Filtered, not bare: Next's own route announcer is a `role="alert"` too.
+    await expect(page.getByRole("alert").filter({ hasText: "depth markers" })).toContainText(
+      "is broken, so nothing saved",
+    );
 
     // Refused means refused: the previously saved sentence is still what a
     // diver reads.
