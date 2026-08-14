@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b398d026-75d9-4adf-a7d9-f3a5d127687c",
+  "id": "8c0a1e08-380c-4b4b-be40-f48a9c818774",
   "prevIds": [
-    "7d523ea0-7db4-4a6e-8fb3-b6d38e3b4cb7"
+    "71cd0b97-95d6-4a65-9c55-b3f132a4df44"
   ],
   "ddl": [
     {
@@ -3303,71 +3303,6 @@
       "table": "dive_site_creatures"
     },
     {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_creatures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_creatures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "image_url",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_creatures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_creatures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "preparation_tip",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_creatures"
-    },
-    {
       "type": "integer",
       "typeSchema": null,
       "notNull": true,
@@ -3649,19 +3584,6 @@
       "generated": null,
       "identity": null,
       "name": "marine_life_description",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_sites"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "difficulty",
       "entityType": "columns",
       "schema": "public",
       "table": "dive_sites"
