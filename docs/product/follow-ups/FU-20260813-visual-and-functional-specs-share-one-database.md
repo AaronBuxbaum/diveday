@@ -1,113 +1,161 @@
-# FU-20260813-visual-and-functional-specs-share-one-database — Make the e2e suite survive being run as one suite, or say plainly that it cannot be
+# FU-20260813-visual-and-functional-specs-share-one-database — e2e specs mutate one shared shop, and it is red on CI right now
 
 - **Status:** Open
 - **Raised:** 2026-08-13 — PR #501, branch `claude/dive-booking-ui-refinements-t5eoy6`. Found by
   running the whole Playwright suite in one process before pushing, which is not what CI does and
   not what any `package.json` script does.
+  **Rewritten 2026-08-14** on PR #535: this entry's central claim — that CI never sees the problem —
+  is **false**, and the fix it recommended would not have caught what CI is actually failing on.
 - **Kind:** risk
 - **Effort:** M
-- **Touches:** `e2e/visual.spec.ts`, `e2e/marketing.spec.ts`, `e2e/servers.ts`,
-  `playwright.config.ts`, `.github/workflows/ci.yml`, `src/db/seed-backup.ts`,
-  `package.json`
+- **Touches:** `e2e/role-lens.spec.ts`, `e2e/blowout.spec.ts`, `e2e/visual.spec.ts`, `e2e/marketing.spec.ts`, `e2e/servers.ts`, `playwright.config.ts`,
+  `.github/workflows/ci.yml`, `src/db/seed-backup.ts`, `package.json`
 
 ## What I noticed
 
-`pnpm e2e:run --workers=2` with no spec filter — every functional spec and every visual capture in
-one process against one database — fails three tests that all pass on their own:
+Every e2e spec in a Playwright job runs against **one database holding one seeded shop**, and
+several of them mutate shop-wide state. Nothing declares which specs may do that, and nothing
+isolates the ones that do.
 
-- `e2e/visual.spec.ts:2324` "the data-export page renders true to the design", both light and dark.
-  It waits for `getByRole("cell", { name: "Failed" })` and gets a **strict-mode violation: two
-  matching cells**. The seed ships blue-mantis with six weekly deliveries and exactly one failed
-  week (the capture's own docblock says so), so a second "Failed" row is somebody else's write
-  landing in the delivery ledger while the capture is reading it.
-- `e2e/marketing.spec.ts:330` "migration guides walk a shop from an incumbent export into the
-  importer" — a bare 15s timeout with no locator named in the failure.
+This was originally filed as a *local-only* problem — a combined `visual + functional` run failing
+three tests that pass alone. That half still reproduces:
 
-CI never sees this. `.github/workflows/ci.yml` runs `e2e/visual.spec.ts --shard=N/4` in four
-"Visual capture" jobs and the functional specs in four separate "Playwright shard" jobs, so a
-capture and a functional spec never share a database concurrently. All eight shards were green on
-the commit where the local combined run failed.
+- `e2e/visual.spec.ts:2324` "the data-export page renders true to the design" waits for
+  `getByRole("cell", { name: "Failed" })` and hits a **strict-mode violation: two matching cells**.
+  The seed ships exactly one failed delivery week (the capture's own docblock says so), so the
+  second row is another spec's write landing in the delivery ledger mid-capture.
+- `e2e/marketing.spec.ts:330` — a bare 15s timeout naming no locator.
 
-So this is not a broken product and not a broken test. It is a **suite-level assumption nobody
-wrote down**: that visual captures get a database no functional spec is concurrently mutating.
-The assumption holds today only because of how the CI workflow happens to be sharded.
+**But the "CI never sees this" claim was wrong**, and that is the point of this rewrite. On
+2026-08-14, `Playwright shard 3/4` failed on PR #535 with `e2e/role-lens.spec.ts:11` — "a captain's
+Today leads with the boat they crew" — which passes on its own. Reproduced locally with CI's exact
+invocation (all 69 non-visual specs, `--shard=3/4`): 91 passed, and it failed. Re-running the CI job
+reproduced it, so it is not an intermittent flake. It is not caused by that PR either — its
+`git diff origin/main -- e2e/` is empty, so shard composition is byte-identical to main's and the
+spec is untouched by the diff.
+
+### What the bisect ruled out
+
+Worth recording, because each of these was the obvious guess and each is wrong:
+
+- **Not `blowout.spec.ts`.** It cancels "Two-Tank Reef — Molasses & French", the exact departure the
+  seed assigns the captain to, which made it the prime suspect. Running `blowout` + `role-lens`
+  together passes — at one worker and at two. `blowout` is also in a different shard.
+- **Not concurrency.** The full shard fails **identically at `--workers=1`**. So it is ordering or
+  accumulated state, not two specs racing. That also rules out every fix aimed at parallelism.
+- **Not `minimum-seats.spec.ts`**, the other departure-cancelling spec in this shard: `minimum-seats`
+  + `role-lens` passes.
+
+So it is some *other* spec earlier in shard 3's 18 files leaving state the captain's Today depends
+on, and the bisect has not yet reached it. The shard's files, in run order, are: marketing,
+minimum-seats, next-departure, nitrox, onboard, orders-demo, promo-codes, readiness, recap, refunds,
+rentals, reports, returning-diver, reviews, role-lens, role-permissions, roster-views,
+schedule-builder. Everything before `role-lens` is a candidate; the ones that mutate crew or
+today's board are the place to start.
+
+So the real shape is broader than "captures need a quiet database". It is: **any spec that mutates
+shop-wide state can invalidate a later spec's premise, and which specs land together is decided by
+Playwright's sharding rather than by anyone's intent.** The visual-vs-functional split is one
+instance of that, not the whole of it.
 
 ## Why it isn't already done
 
-Out of scope for the PR that found it, and a real design question rather than a bug with an obvious
-patch.
+The original entry deferred it as non-urgent because CI was green and the project's own documented
+commands did not reproduce it. That reasoning no longer applies: CI is red, and it will stay red on
+every PR until this is addressed, which trains exactly the "shrug at a red suite" habit the entry
+was worried about.
 
-It also is not urgent in the way a red CI check is: nothing a shop uses is affected, and the
-project's own documented commands (`pnpm e2e <spec>`, `pnpm e2e:run <spec>`) do not reproduce it.
-The reason it is worth writing down anyway is that the failure mode is *confusing rather than
-loud*: a future session that runs the full suite locally to be thorough — exactly the diligent
-thing to do — gets three red tests that do not reproduce in isolation, and has to spend the time I
-spent working out whether they are real. Worse, it trains the habit of shrugging at a red suite.
+What still holds is that this is a design question rather than a bug with an obvious patch — and the
+2026-08-14 evidence has ruled out the answer that was previously approved, so it needs re-deciding
+rather than implementing.
 
-What I would not do: add `test.describe.configure({ mode: "serial" })` or drop the visual spec's
-worker count. That trades wall-clock on the CI path (which is fine today) to fix a path CI does not
-run, and it hides the shared-state coupling instead of naming it.
+## The options, re-costed
+
+**Option 1 — refuse the combined run.** *(Previously recommended and approved; now known
+insufficient.)* `playwright.config.ts` fails fast if a run includes both `visual.spec.ts` and a
+functional spec, naming the two supported commands. This addresses only the local-only half. It
+would **not** have caught the shard-3 failure, because that is two functional specs colliding inside
+a supported command. Still worth doing as a one-line kindness to the next contributor, but it must
+not be mistaken for the fix.
+
+**Option 2 — make mutating specs isolated.** The specs that change shop-wide state (`blowout`,
+`minimum-seats`, anything cancelling or bulk-editing a departure) get their own seeded shop rather
+than sharing blue-mantis. `e2e/tenant-isolation.spec.ts` already mints a whole shop through the real
+onboarding flow, so the pattern exists and costs one sign-up per spec. This attacks the actual
+cause: nothing then depends on which specs share a shard. Most durable, most work.
+
+**Option 3 — declare and enforce the invariant.** A spec that mutates shop-wide state says so
+(a fixture, an annotation), and a check refuses a spec that mutates without declaring. Cheaper than
+2 and it makes the coupling visible, but it does not *remove* the coupling — it only stops it being
+a surprise, and someone still has to decide what the declaration causes (serial execution? a
+separate shard? a dedicated shop?).
+
+**Option 4 — pin shard composition.** Assign specs to shards explicitly so known-colliding pairs
+never land together. Cheapest and worst: it encodes today's accident as tomorrow's contract, and the
+next spec added reshuffles it silently.
+
+Recommendation: **2 for the specs that actually cancel departures**, since that is where the
+evidence points and it is a bounded list, plus **1** because it costs a line. Not 4.
+
+Explicitly not proposed: `test.describe.configure({ mode: "serial" })` or dropping the visual spec's
+worker count. Both trade CI wall-clock to hide the shared-state coupling rather than name it, and
+the suite runs `retries: 0` precisely so this class fails loudly.
 
 ## Proposed change
 
-Pick one of these two, deliberately. They are both defensible; what is not defensible is leaving
-the assumption implicit.
-
-1. **Say the suite is sharded by design, and make the combined run refuse.** Cheapest and most
-   honest. `playwright.config.ts` gains a guard: if the run includes both `visual.spec.ts` and any
-   functional spec, fail immediately with a message naming the two commands to use instead. A
-   contributor gets a sentence rather than a mystery. Add the same sentence to the
-   **e2e-and-visual** skill and the `pnpm e2e` row in AGENTS.md's command table.
-2. **Make the captures independent of shared mutable rows.** More work, more durable. The
-   data-export capture's dependency is the sharpest example: it asserts on a *count-sensitive*
-   locator over a ledger any other spec can append to. Give the backup-export delivery history its
-   own seeded shop (or scope the capture to a shop no functional spec touches), so the row it
-   photographs cannot be perturbed. Then audit the other captures for the same shape — a capture
-   that waits on a locator whose cardinality depends on rows another spec can write.
-
-Whichever is chosen, `e2e/marketing.spec.ts:330` needs diagnosing on its own first: it timed out
-with no locator named, so it may be a different problem wearing the same clothes (a slow
-`/switching/*` render under two workers rather than shared-row contention). Do not assume one
-cause for all three.
+1. Finish the bisect. The ruled-out list above is the head start; walk the shard's files before
+   `role-lens` and find which one leaves the captain unbadged. Shard 3's second failure,
+   `onboard.spec.ts:65`, turned out **not** to belong to this entry at all — it fails completely
+   alone, and is tracked as FU-20260814-timezone-pick-is-overwritten-on-onboarding. Do not expect
+   fixing this one to make the shard green on its own.
+2. Implement the chosen option.
+3. Whatever is chosen, write it down where the next author meets it: the **e2e-and-visual** skill and
+   the `pnpm e2e` row in AGENTS.md's command table. The failure mode here is confusing rather than
+   loud, and the cost of rediscovering it is an afternoon each time.
 
 ## Prompt
 
 ```text
-The DiveDay Playwright suite passes shard-by-shard on CI but fails three tests when the whole
-suite is run in one process against one database. Decide whether that combined run should be
-supported or refused, and implement the answer.
+DiveDay's Playwright suite is red on CI: `Playwright shard 3/4` fails e2e/role-lens.spec.ts:11,
+"a captain's Today leads with the boat they crew", which passes on its own. Fix the shared-state
+problem behind it.
 
-Reproduce first:
+Reproduce first, exactly as CI does:
   pnpm e2e:build
-  pnpm e2e:run --reporter=line --workers=2
-Expect ~557 passed and 3 failed: e2e/visual.spec.ts:2324 (data-export capture, light and dark)
-and e2e/marketing.spec.ts:330. Each passes when run alone.
+  shopt -s globstar nullglob
+  spec_files=(); for spec in e2e/**/*.spec.ts; do [ "$spec" != "e2e/visual.spec.ts" ] && spec_files+=("$spec"); done
+  pnpm e2e:run "${spec_files[@]}" --shard=3/4 --reporter=line
+Expect role-lens:11 to fail. The same shard also fails onboard.spec.ts:65, which is a DIFFERENT and
+unrelated bug (it fails alone) tracked separately as
+FU-20260814-timezone-pick-is-overwritten-on-onboarding -- do not chase it here, and do not expect
+this fix alone to turn the shard green.
 
 Read first:
-  - docs/product/follow-ups/FU-20260813-visual-and-functional-specs-share-one-database.md
-    (this file; its "Proposed change" section gives two options and argues against a third)
-  - .github/workflows/ci.yml — note that visual captures and functional specs run in SEPARATE
-    jobs, which is the only reason CI is green
-  - the data-export capture in e2e/visual.spec.ts and its docblock, which states the seed ships
-    exactly one failed delivery week
-  - src/db/seed-backup.ts
+  - docs/product/follow-ups/FU-20260813-visual-and-functional-specs-share-one-database.md (this
+    file — its "options, re-costed" section, and note that option 1 was approved BEFORE the
+    shard-3 evidence and is now known not to fix it)
+  - e2e/blowout.spec.ts — it cancels "Two-Tank Reef — Molasses & French"
+  - e2e/role-lens.spec.ts — the captain's badge, which the seed hangs on that same departure
+  - e2e/tenant-isolation.spec.ts — it mints a whole second shop through the real onboarding flow,
+    which is the isolation pattern to copy
+  - .github/workflows/ci.yml — how the shards are built
   - the e2e-and-visual and debug skills
 
-The constraint that makes this non-obvious: the failing assertion is a strict-mode violation from
-TWO "Failed" cells where the seed provides one. That is shared mutable state (the backup-export
-delivery ledger), not a timing flake — so widening a timeout or serialising the suite would hide
-it rather than fix it. Do not reach for test.describe.configure({ mode: "serial" }).
+The bisect so far, so you do not repeat it: NOT blowout.spec.ts (that pair passes, and it is in
+another shard), NOT concurrency (the shard fails identically at --workers=1, so this is ordering or
+accumulated state), NOT minimum-seats.spec.ts (that pair passes). Some other spec before role-lens
+in the shard is responsible.
 
-Diagnose e2e/marketing.spec.ts:330 separately before assuming it shares a cause; it timed out
-without naming a locator.
+The constraint that makes this non-obvious: every spec in a job shares ONE database holding ONE
+seeded shop, and which specs land in a shard together is decided by Playwright's sharding, not by
+intent. So a fix that makes today's shard pass by moving specs around encodes an accident as a
+contract and breaks again on the next spec added. Fix the coupling, not the arrangement.
 
-Done means: running the full suite in one process either passes, or fails immediately with a
-message naming the supported commands — and whichever you chose is written down in AGENTS.md's
-command table and the e2e-and-visual skill, so the next person does not rediscover it.
+Do NOT reach for test.describe.configure({ mode: "serial" }), extra retries, or a lower worker
+count. The suite runs retries: 0 so this class fails loudly; all three hide it instead.
 
-Run: pnpm check, then the full combined run above, then a single sharded run
-(pnpm e2e:run e2e/visual.spec.ts --reporter=line) to confirm you did not break the CI path.
-
-Delete docs/product/follow-ups/FU-20260813-visual-and-functional-specs-share-one-database.md as
-part of the change.
+Done means: the CI shard command above passes; the invariant is written down in AGENTS.md's command
+table and the e2e-and-visual skill; and `pnpm check` is green. Delete
+docs/product/follow-ups/FU-20260813-visual-and-functional-specs-share-one-database.md as part of the
+change.
 ```
