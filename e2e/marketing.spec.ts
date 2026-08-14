@@ -849,3 +849,76 @@ test.describe("with Accept-Language: es", () => {
     ).toBeInViewport();
   });
 });
+
+test("the legal pages are published, honest about what is unsettled, and not yet advertised", async ({
+  page,
+}) => {
+  // Published 2026-08-14 (FU-20260812-no-privacy-or-terms-page). DiveDay stores
+  // signed waivers, medical answers and certification evidence belonging to
+  // shops' divers, and had no page saying what happens to any of it.
+  await page.goto("/privacy");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "What we hold, where it lives, and how it leaves",
+  );
+
+  // The sub-processor list reads as exhaustive, so it has to be. A 2026-08-14
+  // security review found three live ones missing from the first draft --
+  // Sentry (mounted from instrumentation.ts, invisible to the
+  // observability-client.tsx derivation the copy was written from), Google
+  // (the embedded map on a *diver's* trip-prep page), and the browser push
+  // vendors. Naming each here means adding a fourth third party to the app
+  // without adding it to this page fails a test rather than shipping a
+  // published falsehood.
+  for (const processor of ["Stripe", "AWS", "Meta", "Vercel", "Neon", "Sentry", "Google"]) {
+    await expect(page.getByRole("term").filter({ hasText: processor }).first()).toBeVisible();
+  }
+
+  // The retention windows are RETENTION_DAYS as prose. If that constant moves,
+  // this copy is part of that change. "Attempts", not "outcomes": the 400-day
+  // window prunes notification_delivery_attempts, and the first draft attached
+  // that number to notification_deliveries, which has no timer at all.
+  await expect(page.getByText("Staff activity history: 3 years.")).toBeVisible();
+  await expect(
+    page.getByText("Message delivery attempts: 400 days", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText("Payment event history: 7 years", { exact: false })).toBeVisible();
+
+  // The honest-no that keeps this page from pre-empting an open human decision:
+  // H-02 has not settled how long a waiver and its medical answers are kept, so
+  // the page says the question is open rather than inventing a number.
+  //
+  // Anchored to the <dt> rather than to the text. `getByText` matches a
+  // case-insensitive *substring*, and the page's opening paragraph ends "where
+  // something is still being decided it says so instead of guessing" -- so the
+  // plain text locator matched two elements and failed strict mode. Asserting
+  // the term is also the better assertion: what matters is that the retention
+  // question is a labelled entry in the list, not that the phrase appears
+  // somewhere on a long page.
+  await expect(page.getByRole("term").filter({ hasText: "Still being decided" })).toBeVisible();
+
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("What we owe each other");
+  // Conceded loudly rather than quietly omitted: there is no uptime guarantee,
+  // and saying so is worth more than an SLA with no track record behind it.
+  await expect(page.getByRole("heading", { name: "What we do not promise" })).toBeVisible();
+
+  // H-12: one source for the price, which is /pricing. A terms page quoting a
+  // stale figure is worse than one that quotes none.
+  await expect(page.getByText("$99")).toHaveCount(0);
+
+  // H-18 is open, so neither page names a legal entity. A generic template
+  // would have — which is exactly why one wasn't used.
+  for (const route of ["/privacy", "/terms"]) {
+    await page.goto(route);
+    await expect(page.getByText(/\b(Inc\.|LLC|Ltd\.?|GmbH|S\.L\.)\b/)).toHaveCount(0);
+  }
+
+  // The owner's explicit call (2026-08-14): the pages exist and are reachable,
+  // but nothing advertises them until the open rows close and counsel has read
+  // them. This asserts the *absence* on purpose — adding a footer link is a
+  // decision, not a tidy-up, and a drive-by "you forgot the link" fails here.
+  await page.goto("/");
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByRole("link", { name: /privacy/i })).toHaveCount(0);
+  await expect(footer.getByRole("link", { name: /terms/i })).toHaveCount(0);
+});
