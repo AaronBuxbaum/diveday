@@ -1,10 +1,23 @@
 # FU-20260814-ses-from-email-stale-override — Remove the retired `SES_FROM_EMAIL` from Vercel Production, which is refusing every email
 
-- **Status:** Open
+- **Status:** Open — the variable is gone; the redeploy, the proof, and the guard are not
 - **Raised:** 2026-08-14 — production log triage alongside the dive-site 23505 and the check-in `pg` warning
 - **Kind:** risk
 - **Effort:** S
 - **Touches:** `config/env-registry.mjs`, `src/lib/notifications/ses.ts`, `src/lib/configured.ts`, `scripts/check-env.mjs`
+
+## Progress
+
+- **2026-08-14 — the owner removed `SES_FROM_EMAIL` from Vercel Production.** That is the cause
+  addressed. Two things it does *not* do on its own: a Vercel environment change binds at deployment
+  creation, so the deployment serving traffic right now still carries the old value until something
+  redeploys; and nothing has yet confirmed that `notification.ses_send_failed` has actually stopped.
+- **The `RESEND_*` variables are deliberately being left in place** (owner's call, same date). They
+  are inert — SES has been the sole provider since ADR 20260803-ses-sole-email-provider and no code
+  reads them — so this is a tidiness item, not a risk. Noted here so the next reader does not
+  re-raise it as a finding.
+- **Not started:** the part that stops this recurring — nothing in the repo can see a retired key
+  still set on a deployment.
 
 ## What I noticed
 
@@ -54,20 +67,17 @@ Two reasons, both outside what a repository change can reach:
 
 ## Proposed change
 
-**First, and on its own** — stop the outage:
+**First, and on its own** — finish stopping the outage. The `vercel env rm` is done; what remains is
+to **redeploy** (an env change binds at deployment creation and does not reach the deployment already
+serving), then prove it: a send to the SES mailbox simulator, and `notification.ses_send_failed`
+absent from the logs afterwards. Until that proof exists, treat production email as still broken. Do
+**not** "fix" it by setting the variable to `noreply@ses.dive.day` — that re-creates exactly the round
+trip #517 removed.
 
-```
-vercel env rm SES_FROM_EMAIL production --project diveday --scope aaron-buxbaums-projects
-```
-
-then redeploy (an env change does not reach the running deployment). Confirm with a send to the SES
-mailbox simulator and check `notification.ses_send_failed` stops appearing. Do **not** "fix" it by
-setting it to `noreply@ses.dive.day` — that re-creates exactly the round trip #517 removed.
-
-While in there: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_EMAIL_DOMAIN` and
-`RESEND_WEBHOOK_SECRET` are also still set in Production and are also absent from the registry —
-SES has been the sole email provider since ADR 20260803-ses-sole-email-provider. They are inert
-rather than harmful, but they are the same class of leftover and worth clearing in the same pass.
+`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_EMAIL_DOMAIN` and `RESEND_WEBHOOK_SECRET` are also
+still set in Production and also absent from the registry, but the owner has chosen to leave them
+(see Progress). Nothing reads them, so they cost nothing but noise; clear them whenever the retired-key
+report below makes them easy to spot.
 
 **Then** — make the class visible. The gap is that a retired key is invisible to every check. The
 shape I would take: give `config/env-registry.mjs` an explicit `retired` list (key + why + the
@@ -98,15 +108,16 @@ correct that the registry does not list it, and correct that the app still reads
 exactly why nothing detects a copy left behind in a deployment. Do not re-add it to the registry,
 and do not set it to the right address; the value belongs in the code.
 
-Done is:
-1. `SES_FROM_EMAIL` removed from Vercel Production and the app redeployed, with a test send proving
-   `notification.ses_send_failed` has stopped. (Ask the owner before touching production config.)
+The owner already removed SES_FROM_EMAIL from Vercel Production on 2026-08-14, and has chosen to
+leave the RESEND_* leftovers alone for now. So done is:
+1. Production redeployed (an env change binds at deployment creation, so the removal has not reached
+   the running deployment), with a test send proving `notification.ses_send_failed` has stopped.
+   Until that proof exists, production email is still broken.
 2. The repo can report this class: a `retired` list in config/env-registry.mjs carrying why and
    when, surfaced by scripts/check-env.mjs for local files, plus a command that reads
    `vercel env ls` and reports retired or unregistered keys still set on a deployment. A report,
-   never a gate — it needs credentials.
-3. The stale RESEND_* variables in Production are cleared too (SES is the sole provider, ADR
-   20260803-ses-sole-email-provider).
+   never a gate — it needs credentials. This is the part that stops a fourth variable doing the
+   same thing in six months.
 
 Run `pnpm check` and `pnpm test scripts` (or the focused env-script tests). Delete
 docs/product/follow-ups/FU-20260814-ses-from-email-stale-override.md as part of the change.
