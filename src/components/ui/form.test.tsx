@@ -135,3 +135,50 @@ describe("FormStatus", () => {
     expect(form?.contains(screen.getByRole("alert"))).toBe(true);
   });
 });
+
+/**
+ * `Field` derives the visible `*` from the control's own `required`, so a form
+ * gets the marker for free and nobody has to remember it. `markRequired={false}`
+ * is the one deliberate way out, for a form where every field is required and
+ * the marker therefore distinguishes nothing.
+ */
+describe("Field's required marker", () => {
+  it("marks a required control, since that is what tells it from an optional one", () => {
+    render(
+      <Field label="Subhead">
+        <input name="subhead" required />
+      </Field>,
+    );
+    expect(screen.getByText("*")).toBeInTheDocument();
+  });
+
+  it("leaves an optional control unmarked", () => {
+    render(
+      <Field label="Subhead">
+        <input name="subhead" />
+      </Field>,
+    );
+    expect(screen.queryByText("*")).not.toBeInTheDocument();
+  });
+
+  it("can be opted out of, for a form whose every field is required", () => {
+    // The buddy panel's "Add to this team": one field, one submit button, and
+    // two or three open teams put two or three red marks into a panel whose
+    // only meaningful warning colour is the dissolve control.
+    render(
+      <Field label="Add to this team" markRequired={false}>
+        <select name="member" required />
+      </Field>,
+    );
+    expect(screen.queryByText("*")).not.toBeInTheDocument();
+  });
+
+  it("opting out never relaxes the control itself — the server refusal is real", () => {
+    render(
+      <Field label="Add to this team" markRequired={false}>
+        <select name="member" required data-testid="member" />
+      </Field>,
+    );
+    expect(screen.getByTestId("member")).toBeRequired();
+  });
+});
