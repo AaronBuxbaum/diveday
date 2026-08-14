@@ -16,6 +16,13 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Every check below is a static/lint-style pass over the repo, not a network call or a
+// build — none has ever legitimately needed more than a few seconds. Bounding each one
+// means a single stuck check (a git subprocess wedged on a lock, a runaway glob) turns
+// into a loud, specific failure within this many seconds instead of hanging the whole
+// `pnpm check` — and everything that shells out to it — forever with no diagnosis.
+const CHECK_TIMEOUT_MS = 90_000;
+
 // label -> script path (relative to this file's directory)
 const checks = [
   ["env", "check-env.mjs"],
@@ -43,9 +50,14 @@ const checks = [
 function runCheck(label, scriptFile) {
   return new Promise((resolve) => {
     const scriptPath = path.join(__dirname, scriptFile);
+    // `detached: true` makes the child its own process-group leader, so a timeout can
+    // kill the whole tree (e.g. a `git`/`spawnSync` grandchild a check shells out to) via
+    // the negative-pid form below — killing just the immediate child would otherwise
+    // leave a wedged grandchild running as an orphan, un-diagnosed and un-detected.
     const child = spawn(process.execPath, [scriptPath], {
       cwd: path.join(__dirname, ".."),
       stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
     });
 
     const stdoutChunks = [];
@@ -53,13 +65,26 @@ function runCheck(label, scriptFile) {
     child.stdout.on("data", (chunk) => stdoutChunks.push(chunk));
     child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
 
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch {
+        child.kill("SIGKILL");
+      }
+    }, CHECK_TIMEOUT_MS);
+
     child.on("close", (code) => {
+      clearTimeout(timer);
       resolve({
         label,
         scriptFile,
-        code,
+        code: timedOut ? 1 : code,
         stdout: Buffer.concat(stdoutChunks).toString("utf8").trim(),
-        stderr: Buffer.concat(stderrChunks).toString("utf8").trim(),
+        stderr: timedOut
+          ? `check:${label} timed out after ${CHECK_TIMEOUT_MS / 1000}s and was killed (this check should never take this long — a subprocess it shells out to is likely wedged)\n${Buffer.concat(stderrChunks).toString("utf8").trim()}`.trim()
+          : Buffer.concat(stderrChunks).toString("utf8").trim(),
       });
     });
   });
