@@ -107,6 +107,31 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
 export type CourseDepth = { meters: number; feet: number };
 
 /**
+ * How long each prose field on the course page may be, in characters.
+ *
+ * Here rather than inline in the editor's zod schema because DiveDay's own
+ * published course templates have to fit through that same form: they are
+ * *seed* content a shop then owns and edits, so a limit the templates violate
+ * fires only on words the shop never wrote. That is exactly what happened —
+ * `prerequisiteNote` capped at 400 while seven templates shipped longer notes
+ * (Wreck Diver's is 510), so opening one of those courses and changing anything
+ * at all was refused, with the cursor thrown into an untouched box.
+ * `src/db/course-templates.test.ts` asserts every template fits, so the two
+ * cannot drift apart again.
+ */
+export const COURSE_CONTENT_LIMITS = {
+  summary: 200,
+  overview: 6_000,
+  durationText: 120,
+  groupSizeText: 120,
+  prerequisiteNote: 600,
+  includes: 2_000,
+  excludes: 2_000,
+  scheduleDaysJson: 20_000,
+  faqs: 12_000,
+} as const;
+
+/**
  * The only depths course prose may name through a placeholder.
  *
  * Closed on purpose. A placeholder is not a converter: `depthInUnit(18, "feet")`

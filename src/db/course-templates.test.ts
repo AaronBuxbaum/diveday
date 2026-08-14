@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COURSE_CONTENT_LIMITS,
   type CourseDepthFormat,
   courseDepthPlaceholderIssues,
   resolveCourseContentDepths,
@@ -63,6 +64,33 @@ describe("COURSE_TEMPLATES depth markers", () => {
     for (const template of COURSE_TEMPLATES) {
       const resolved = JSON.stringify(resolveCourseContentDepths(template.content, feet));
       expect(resolved, template.slug).not.toContain("{depth");
+    }
+  });
+  it("fits through the editor a shop edits it in", () => {
+    // A published template is seed content: a shop copies it and then edits it
+    // in the course-page form. So every template has to fit that form's own
+    // limits, or a shop opening the course and changing one word is refused —
+    // with the cursor thrown into a box it never touched. Seven templates were
+    // over the prerequisite-note ceiling before this test existed (Wreck
+    // Diver's note is 510 characters against a limit of 400), which made the
+    // whole course uneditable.
+    const textOf: Record<string, (c: (typeof COURSE_TEMPLATES)[number]["content"]) => string> = {
+      summary: (c) => c.summary ?? "",
+      overview: (c) => c.overview ?? "",
+      durationText: (c) => c.durationText ?? "",
+      groupSizeText: (c) => c.groupSizeText ?? "",
+      prerequisiteNote: (c) => c.prerequisiteNote ?? "",
+      includes: (c) => (c.includes ?? []).join("\n"),
+      excludes: (c) => (c.excludes ?? []).join("\n"),
+    };
+    for (const template of COURSE_TEMPLATES) {
+      for (const [field, read] of Object.entries(textOf)) {
+        const limit = COURSE_CONTENT_LIMITS[field as keyof typeof COURSE_CONTENT_LIMITS];
+        expect(
+          read(template.content).trim().length,
+          `${template.slug}.${field}`,
+        ).toBeLessThanOrEqual(limit);
+      }
     }
   });
 });

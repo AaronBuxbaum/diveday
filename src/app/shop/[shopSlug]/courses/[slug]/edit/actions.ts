@@ -8,6 +8,7 @@ import { getCourseBySlug, updateCourse, updateCourseContent } from "@/db/courses
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import {
+  COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
   parseFaqs,
   parseLines,
@@ -42,15 +43,19 @@ const centsFromAmount = (value: number | "", currency: string) =>
  */
 const contentSchemaFor = (currency: string) =>
   z.object({
-    summary: z.string().trim().max(200),
-    overview: z.string().trim().max(6_000),
-    durationText: z.string().trim().max(120),
-    groupSizeText: z.string().trim().max(120),
-    prerequisiteNote: z.string().trim().max(400),
-    includes: z.string().max(2_000),
-    excludes: z.string().max(2_000),
-    scheduleDaysJson: z.string().max(20_000),
-    faqs: z.string().max(12_000),
+    // Lengths come from COURSE_CONTENT_LIMITS, which the published templates
+    // are tested against — a ceiling the seeded content violates is one that
+    // only ever fires on words the shop never wrote (ADR 20260814-course-depth-markers's
+    // sibling lesson: Wreck Diver's 510-character note could not be saved at all).
+    summary: z.string().trim().max(COURSE_CONTENT_LIMITS.summary),
+    overview: z.string().trim().max(COURSE_CONTENT_LIMITS.overview),
+    durationText: z.string().trim().max(COURSE_CONTENT_LIMITS.durationText),
+    groupSizeText: z.string().trim().max(COURSE_CONTENT_LIMITS.groupSizeText),
+    prerequisiteNote: z.string().trim().max(COURSE_CONTENT_LIMITS.prerequisiteNote),
+    includes: z.string().max(COURSE_CONTENT_LIMITS.includes),
+    excludes: z.string().max(COURSE_CONTENT_LIMITS.excludes),
+    scheduleDaysJson: z.string().max(COURSE_CONTENT_LIMITS.scheduleDaysJson),
+    faqs: z.string().max(COURSE_CONTENT_LIMITS.faqs),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
   });
