@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AmbientContrastControl,
   type AmbientContrastCopy,
   AmbientGlareDetector,
+  CONTRAST_MODE_STORAGE_KEY,
   GLARE_LUX_THRESHOLD,
 } from "./AmbientGlareDetector";
 
@@ -69,6 +71,30 @@ afterEach(() => {
 });
 
 describe("AmbientGlareDetector & AmbientContrastControl", () => {
+  /**
+   * The markup the server sends already has Auto selected — the control's real
+   * state until this device says otherwise.
+   *
+   * It used to gate the selected state behind a `mounted` flag, so the rendered
+   * HTML showed a three-way segmented control with *nothing* chosen until React
+   * hydrated. On screen that is a crew member looking at an unanswered control;
+   * in the visual suite it was a race, caught once as a single dark-390 capture
+   * whose Auto pill was unfilled while the other three variants had it filled.
+   */
+  it("paints Auto as the chosen mode in server-rendered markup, before any effect runs", () => {
+    const html = renderToStaticMarkup(<AmbientContrastControl copy={contrastCopy} />);
+    // The one checked radio, and it is the first of the three.
+    expect(html.match(/checked/g) ?? []).toHaveLength(1);
+    expect(html.indexOf("checked")).toBeLessThan(html.indexOf("Land mode"));
+  });
+
+  it("keeps a stored choice once the effect has read it", async () => {
+    localStorage.setItem(CONTRAST_MODE_STORAGE_KEY, "full");
+    render(<AmbientContrastControl copy={contrastCopy} />);
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Boat mode" })).toBeChecked());
+    expect(screen.getByRole("radio", { name: "Auto" })).not.toBeChecked();
+  });
+
   it("does not add glare-mode class by default", () => {
     render(<AmbientGlareDetector />);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);

@@ -76,7 +76,11 @@ describe("permission gating", () => {
     const gated = STAFF_DESTINATIONS.filter((destination) => destination.gate !== undefined).map(
       (destination) => destination.id,
     );
-    expect(gated).toEqual(["waivers", "reports", "team", "promoCodes", "settings"]);
+    // Requests carries the `reports` gate rather than none: it is a pile of
+    // contact details for people who have not booked, and deciding which
+    // unscheduled day is worth a boat is the same commercial work Reports and
+    // Promo codes sit behind.
+    expect(gated).toEqual(["waivers", "requests", "reports", "team", "promoCodes", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);

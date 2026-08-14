@@ -247,7 +247,7 @@
     "visual": ["reports"]
   },
   "/shop/[shopSlug]/requests": {
-    "e2e": ["date-requests.spec.ts"],
+    "e2e": ["date-requests.spec.ts", "role-permissions.spec.ts", "staff-nav.spec.ts"],
     "visual": ["staff-date-requests"]
   },
   "/shop/[shopSlug]/reviews": {

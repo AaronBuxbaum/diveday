@@ -223,7 +223,19 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // reviews, on its own rhythm, and answers it by putting a departure up. It is
   // deliberately *not* a sixth primary tab: the dock holds five and the sixth
   // slot is More (ADR 20260813-more-is-the-shops-other-door).
-  { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true },
+  //
+  // Gated with Reports and Promo codes rather than left open like Reviews
+  // beside it. Two reasons, and they point the same way. The rows are a pile of
+  // *prospects* — names, email addresses and phone numbers of people who have
+  // not booked anything, and who reached a public form rather than the shop's
+  // roster — so this is the one "Run the shop" surface that hands contact
+  // details for strangers to whoever opens it. And what a shop *does* with it
+  // is commercial: decide which unscheduled day is worth a boat. That is the
+  // work Reports and Promo codes already sit behind, not the work a captain
+  // does. A captain runs the water; demand that has not become a departure yet
+  // is the desk's. Absent for them, never shown and refused (ADR
+  // 20260724-role-gated-surfaces-hide-not-explain).
+  { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true, gate: "reports" },
   // Money the shop reads daily — a primary tab. The monthly report keeps its
   // door on this page's header; the report's own row is in "Run the shop".
   {
