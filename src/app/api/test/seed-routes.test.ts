@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the four `seed-*` test routes, one table for all of them
+ * The auth gate on the five `seed-*` test routes, one table for all of them
  * (`reset` has its own colocated route.test.ts, which also covers its success
  * path). Every case here is a *refusal*: the shared guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
@@ -26,6 +26,7 @@ const seedAccountToken = await import("./seed-account-token/route");
 const seedStripeAccount = await import("./seed-stripe-account/route");
 const seedLastMinute = await import("./seed-last-minute-unsubscribe-token/route");
 const seedCourtesyEmail = await import("./seed-courtesy-email-unsubscribe-token/route");
+const seedTroubleStates = await import("./seed-trouble-states/route");
 
 const secret = "e2e-test-secret";
 
@@ -64,6 +65,18 @@ const routes: SeedRoute[] = [
     POST: seedStripeAccount.POST,
     // No request body to validate — the first thing this one does past the
     // guard is open the database, so that call is the signal it got through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-trouble-states",
+    POST: seedTroubleStates.POST,
+    // Same shape as seed-stripe-account: no body, so reaching the database is
+    // what proves the guard let it through. This one writes a stuck payment
+    // intent, an owed refund and two erasure obligations, so a route that
+    // answered on a misconfigured deployment would be writing that into a real
+    // shop's tables.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

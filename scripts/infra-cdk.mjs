@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { ensureAwsDeploymentLogin } from "./aws-login.mjs";
 import { selectDeployProfile } from "./aws-profile.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const [operation, ...arguments_] = process.argv.slice(2);
 if (!operation || !["synth", "diff"].includes(operation)) {
@@ -34,8 +34,11 @@ if (operation !== "synth") {
 }
 
 const localCdk = join(process.cwd(), "node_modules", ".bin", "cdk");
-const result = spawnSync(existsSync(localCdk) ? localCdk : "cdk", [operation, ...arguments_], {
+// Neither operation talks to CloudFormation: `synth` renders the template and
+// `diff` reads one stack description, so the bound is the compile, not a deploy.
+const result = runBounded(existsSync(localCdk) ? localCdk : "cdk", [operation, ...arguments_], {
   env: environment,
   stdio: "inherit",
+  timeoutMs: SUBPROCESS_TIMEOUTS.cdkSynth,
 });
 process.exit(result.status ?? 1);

@@ -35,13 +35,13 @@
 // time still takes `now` as a parameter, because that is what makes the parsing testable
 // (`scripts/gate-freshness.test.mjs`) without a frozen wall clock.
 
-import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { DIRECTORY as FOLLOW_UPS } from "./check-follow-ups.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REGISTER = "docs/product/human-decisions.md";
@@ -243,10 +243,14 @@ export function reconcileThirtyDays(items, rowsById) {
 // ---------------------------------------------------------------------------
 
 function git(args) {
-  const result = spawnSync("git", args, {
+  // `null` already means "this git call could not answer", and a timeout is one
+  // more way of not answering -- runBounded has printed which call wedged, so
+  // the report degrades to `≥ N` bounds instead of hanging the command.
+  const result = runBounded("git", args, {
     cwd: ROOT,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
+    timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });
   return result.status === 0 ? result.stdout : null;
 }

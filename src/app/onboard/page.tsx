@@ -329,8 +329,15 @@ export default async function OnboardPage({
                     control child, so a sibling in that slot would silently
                     cost this picker both. Preselects the device's own zone
                     when the shop hasn't chosen one — a bounce back to this
-                    form carries `?timezone=`, and that answer always wins. */}
-              <DetectTimezone selectId="shop-timezone" detect={!timezone} />
+                    form carries `?timezone=`, and that answer always wins.
+                    `untouchedValue` is the same expression the `<select>`
+                    above uses for its `defaultValue`, so a shop that reaches
+                    the picker before this page hydrates keeps its pick. */}
+              <DetectTimezone
+                selectId="shop-timezone"
+                detect={!timezone}
+                untouchedValue={timezone || DEFAULT_TIMEZONE}
+              />
             </FieldGrid>
           </section>
 

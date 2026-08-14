@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { stdin, stdout } from "node:process";
@@ -8,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { ensureAwsDeploymentLogin, ensureAwsLogin } from "./aws-login.mjs";
 import { selectDeployProfile } from "./aws-profile.mjs";
 import { runPostDeployWizard } from "./post-deploy-wizard.mjs";
+import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const repoRoot = process.cwd();
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -54,9 +54,13 @@ try {
   );
   process.exit(1);
 }
-const deploy = spawnSync(command, ["deploy", ...cdkArguments], {
+const deploy = runBounded(command, ["deploy", ...cdkArguments], {
   env: deployEnvironment,
   stdio: "inherit",
+  // Generous on purpose -- see SUBPROCESS_TIMEOUTS.cdkDeploy. Killing the CLI
+  // does not roll CloudFormation back, it only takes away the operator's view
+  // of a stack that is still changing.
+  timeoutMs: SUBPROCESS_TIMEOUTS.cdkDeploy,
 });
 
 if (deploy.status !== 0) process.exit(deploy.status ?? 1);
@@ -110,7 +114,7 @@ try {
 
 let document;
 try {
-  document = execFileSync(
+  document = readBounded(
     "aws",
     [
       "secretsmanager",
@@ -122,7 +126,7 @@ try {
       "--output",
       "text",
     ],
-    { encoding: "utf8", env: syncEnvironment },
+    { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
   );
 } catch {
   // Deliberately static, per CodeQL: no part of this message reads syncProfile
@@ -137,20 +141,20 @@ try {
 }
 
 function distribute(target, outputPath, source) {
-  execFileSync(
-    process.execPath,
-    [join(scriptDirectory, "distribute-env.mjs"), target, outputPath],
-    {
-      input: source,
-      stdio: ["pipe", "inherit", "inherit"],
-    },
-  );
+  readBounded(process.execPath, [join(scriptDirectory, "distribute-env.mjs"), target, outputPath], {
+    input: source,
+    stdio: ["pipe", "inherit", "inherit"],
+    timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
+  });
 }
 
 // Make sure the one hand-edited file exists before anything reads it, and carry
 // a pre-split `.env.local`'s manual values into it so nobody re-pastes a Stripe
 // key. Safe to run every time: it never overwrites a value.
-execFileSync(process.execPath, [join(scriptDirectory, "env-manual.mjs")], { stdio: "inherit" });
+readBounded(process.execPath, [join(scriptDirectory, "env-manual.mjs")], {
+  stdio: "inherit",
+  timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
+});
 
 // Each target is rendered from the same two sources — this document and
 // `.env.manual` — never from another target. `.env.vercel` used to be rendered

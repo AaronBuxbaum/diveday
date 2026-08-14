@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { dotenvMap } from "./dotenv.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const [inputPath] = process.argv.slice(2);
 if (!inputPath) {
@@ -41,7 +41,10 @@ const stagingDirectory = mkdtempSync(join(tmpdir(), "diveday-github-secrets-"));
 const stagingFile = join(stagingDirectory, "changed.env");
 writeFileSync(stagingFile, changed.map(([key, value]) => `${key}=${value}`).join("\n"));
 
-const result = spawnSync("gh", ["secret", "set", "--env-file", stagingFile], { stdio: "inherit" });
+const result = runBounded("gh", ["secret", "set", "--env-file", stagingFile], {
+  stdio: "inherit",
+  timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+});
 rmSync(stagingDirectory, { recursive: true, force: true });
 
 if (result.status !== 0) process.exit(result.status ?? 1);

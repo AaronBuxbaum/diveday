@@ -15,13 +15,14 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Ninety-eight key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 392 screenshots per run (see
+ * Visual regression coverage. A hundred and eleven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 444 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, 71 while the
- * grep said 72, and 83 while the grep said 93), so trust the grep and correct
+ * grep said 72, 83 while the grep said 93, and 98 while the grep said 108), so
+ * trust the grep and correct
  * the prose. The trailing comma in that pattern is load-bearing: without it the
  * grep also matches this very sentence and reads one high, which is how the
  * "correct the prose" instruction above ended up chasing a number that was
@@ -31,7 +32,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * and departure-log pages as they render for the printer. Print is its own
  * concern, not a light/dark one — the `@media print` token override collapses
  * both schemes to one black-and-white palette — so each is captured once, at a
- * US-Letter width, via `capturePrint()`. That brings the run to 383
+ * US-Letter width, via `capturePrint()`. That brings the run to 447
  * screenshots.
  *
  * ## One surface, one `test()`
@@ -2375,6 +2376,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "orders", scheme);
       });
 
+      /**
+       * The same page on the shop's worst day: a Stripe call nobody confirmed,
+       * and divers still owed money for a departure the shop cancelled.
+       *
+       * Both panels render *only* when something has gone wrong, which is
+       * exactly why they had never been photographed — and they are the shape
+       * most likely to break, being warning-toned blocks of dense prose with
+       * inline links. /api/test/seed-trouble-states puts the demo shop into
+       * that state; it is a test-only route rather than seed data because a
+       * demo permanently shouting that payments are broken is a worse demo
+       * (src/db/seed-front-desk.ts says so at the row it seeds `succeeded`).
+       * Safe to mutate: each worker owns its own database and resets it before
+       * every test (e2e/servers.ts).
+       */
+      test(`the orders list renders its unfinished money (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await page.goto("/shop/blue-mantis/orders");
+        await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
+        await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
+        await capture(page, "orders-unconfirmed-and-owed", scheme);
+      });
+
       // One order in full: the total, and the per-line-item amounts that a
       // literal `$` and a hardcoded `/ 100` used to compose by hand.
       test(`an order's detail renders true to the design (${scheme})`, async ({ page }) => {
@@ -2419,6 +2445,25 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+      });
+
+      /**
+       * Settings' "Data & integrations" group when the shop owes work it has
+       * not finished: photos removed from the app but still in storage, and an
+       * erased diver's records still sitting at Stripe. Danger-toned, and the
+       * only place either obligation is ever stated — an unfinished erasure is
+       * a legal duty, not a notification. Empty on nearly every real day, and
+       * therefore never photographed until this capture.
+       */
+      test(`settings shows the deletions that didn't finish (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("region", { name: "Photos that didn't finish deleting" }).waitFor();
+        await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
+        await capture(page, "settings-data-unfinished", scheme);
       });
 
       // The embed settings page (docs ADR 20260726-schedule-embed). The fleet
@@ -2539,6 +2584,26 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
         await page.getByRole("button", { name: "Publish selected" }).waitFor();
         await capture(page, "staff-reviews", scheme);
+      });
+
+      /**
+       * The same queue for a shop that has hidden its way past the line where
+       * DiveDay stops publishing its rating to search engines — the warning
+       * that explains the "Hidden" stat beside it, and the only screen that
+       * tells a shop its average has stopped being vouched for
+       * (ADR 20260813-review-moderation-has-a-floor). Unreachable from the
+       * seed: blue-mantis publishes everything, so the fixture route hides
+       * however many it takes to cross the threshold.
+       */
+      test(`the reviews page says when a rating is being withheld (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await page.goto("/shop/blue-mantis/reviews");
+        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByText(/DiveDay has stopped publishing it/).waitFor();
+        await capture(page, "staff-reviews-rating-withheld", scheme);
       });
 
       // Divers asking for a day the board has nothing on, grouped by that day:

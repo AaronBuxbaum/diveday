@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -30,7 +30,7 @@ function recordName(name, zone) {
  */
 export async function runPostDeployWizard({
   ask,
-  execute = execFileSync,
+  execute = readBounded,
   syncEnvironment,
   cdkArguments,
   credentialsDocument,
@@ -42,8 +42,12 @@ export async function runPostDeployWizard({
   // here). Never true when called from the interactive branch.
   ciUnattended = false,
 }) {
-  const run = (command, arguments_, options = {}) =>
-    execute(command, arguments_, { stdio: "inherit", ...options });
+  // Every step below is bounded. A wizard question answered "yes" that then
+  // never comes back is the worst shape this script can take: it runs *after* a
+  // successful deploy, so a wedge there leaves infrastructure changed and the
+  // hand-off half-applied, with nothing on screen saying which step is stuck.
+  const run = (command, arguments_, timeoutMs, options = {}) =>
+    execute(command, arguments_, { stdio: "inherit", timeoutMs, ...options });
 
   if (
     yes(
@@ -52,10 +56,15 @@ export async function runPostDeployWizard({
       ),
     )
   ) {
-    run(process.execPath, [join(scriptDirectory, "sync-aws-profiles.mjs")], {
-      input: credentialsDocument,
-      stdio: ["pipe", "inherit", "inherit"],
-    });
+    run(
+      process.execPath,
+      [join(scriptDirectory, "sync-aws-profiles.mjs")],
+      SUBPROCESS_TIMEOUTS.nodeScript,
+      {
+        input: credentialsDocument,
+        stdio: ["pipe", "inherit", "inherit"],
+      },
+    );
   }
 
   if (
@@ -65,12 +74,16 @@ export async function runPostDeployWizard({
       ),
     )
   ) {
-    run(process.execPath, [
-      join(scriptDirectory, "import-vercel-env.mjs"),
-      ".env.vercel",
-      "production",
-      ...(ciUnattended ? ["--ci-unattended"] : []),
-    ]);
+    run(
+      process.execPath,
+      [
+        join(scriptDirectory, "import-vercel-env.mjs"),
+        ".env.vercel",
+        "production",
+        ...(ciUnattended ? ["--ci-unattended"] : []),
+      ],
+      SUBPROCESS_TIMEOUTS.wizardStep,
+    );
   }
 
   if (yes(await ask("Deploy the linked Vercel project to Production? [y/N] "))) {
@@ -82,11 +95,21 @@ export async function runPostDeployWizard({
     // branch it was already answered yes by the caller. A workstation run keeps
     // the CLI's own prompt: it is the only thing standing between a mistyped
     // `y` here and a Production deploy.
-    run("pnpm", ["exec", "vercel", "--prod", ...(ciUnattended ? ["--yes"] : [])]);
+    // The build bound rather than the CLI one: this call waits on a full
+    // Vercel production build, not a single API request.
+    run(
+      "pnpm",
+      ["exec", "vercel", "--prod", ...(ciUnattended ? ["--yes"] : [])],
+      SUBPROCESS_TIMEOUTS.build,
+    );
   }
 
   if (yes(await ask("Update GitHub Actions secrets for visual regression? [y/N] "))) {
-    run(process.execPath, [join(scriptDirectory, "sync-github-secrets.mjs"), ".env.github"]);
+    run(
+      process.execPath,
+      [join(scriptDirectory, "sync-github-secrets.mjs"), ".env.github"],
+      SUBPROCESS_TIMEOUTS.wizardStep,
+    );
   }
 
   if (
@@ -107,7 +130,7 @@ export async function runPostDeployWizard({
           "--output",
           "json",
         ],
-        { encoding: "utf8", env: syncEnvironment },
+        { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
       ),
     );
     const outputValue = (key) => outputs.find((output) => output.OutputKey === key)?.OutputValue;
@@ -115,10 +138,12 @@ export async function runPostDeployWizard({
       `AWS_CDK_DIFF_ROLE_ARN=${outputValue("GitHubActionsCdkDiffRoleArn") ?? ""}`,
       `AWS_CDK_DEPLOY_ROLE_ARN=${outputValue("GitHubActionsCdkDeployRoleArn") ?? ""}`,
     ].join("\n");
-    run(process.execPath, [join(scriptDirectory, "sync-github-cdk-ci-vars.mjs")], {
-      input: roleArns,
-      stdio: ["pipe", "inherit", "inherit"],
-    });
+    run(
+      process.execPath,
+      [join(scriptDirectory, "sync-github-cdk-ci-vars.mjs")],
+      SUBPROCESS_TIMEOUTS.wizardStep,
+      { input: roleArns, stdio: ["pipe", "inherit", "inherit"] },
+    );
   }
 
   // Workstation only, and not merely because the CI token cannot do it
@@ -143,7 +168,11 @@ export async function runPostDeployWizard({
       ),
     )
   ) {
-    run(process.execPath, [join(scriptDirectory, "sync-github-cdk-ci-environment.mjs")]);
+    run(
+      process.execPath,
+      [join(scriptDirectory, "sync-github-cdk-ci-environment.mjs")],
+      SUBPROCESS_TIMEOUTS.wizardStep,
+    );
   }
 
   if (!yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) return;
@@ -164,7 +193,7 @@ export async function runPostDeployWizard({
         "--output",
         "json",
       ],
-      { encoding: "utf8", env: syncEnvironment },
+      { encoding: "utf8", env: syncEnvironment, timeoutMs: SUBPROCESS_TIMEOUTS.awsApi },
     ),
   );
 
@@ -179,6 +208,7 @@ export async function runPostDeployWizard({
   try {
     existingRecords = execute("pnpm", ["exec", "vercel", "dns", "ls", dnsZone, "--limit", "100"], {
       encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
     });
   } catch (error) {
     log(
@@ -214,7 +244,11 @@ export async function runPostDeployWizard({
       log(`Skipping ${type} ${name} -- already present in Vercel DNS.`);
       return;
     }
-    run("pnpm", ["exec", "vercel", "dns", "add", dnsZone, name, type, value, ...extraArguments]);
+    run(
+      "pnpm",
+      ["exec", "vercel", "dns", "add", dnsZone, name, type, value, ...extraArguments],
+      SUBPROCESS_TIMEOUTS.vercelCli,
+    );
     added += 1;
   }
 

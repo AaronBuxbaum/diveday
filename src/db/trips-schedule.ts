@@ -1,6 +1,6 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -71,13 +71,21 @@ export type MoveTripOutcome =
  * cleanly (review 20260803, D3).
  */
 async function countRollCallEvidence(tx: DbExecutor, tripId: string): Promise<number> {
-  const [[divers], [crew], [attestations]] = await Promise.all([
-    tx.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.tripId, tripId)),
-    tx.select({ n: count() }).from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, tripId)),
-    tx
-      .select({ n: count() })
-      .from(rollCallCrewAttestations)
-      .where(eq(rollCallCrewAttestations.tripId, tripId)),
+  // `queryAll`, not `Promise.all`: every caller of this is a transaction --
+  // one checked-out pg client, which queues a fan-out and warns that pg@9 will
+  // refuse it (issue #517, the file's other reader below).
+  const [[divers], [crew], [attestations]] = await queryAll(tx, [
+    () => tx.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.tripId, tripId)),
+    () =>
+      tx
+        .select({ n: count() })
+        .from(rollCallCrewEvents)
+        .where(eq(rollCallCrewEvents.tripId, tripId)),
+    () =>
+      tx
+        .select({ n: count() })
+        .from(rollCallCrewAttestations)
+        .where(eq(rollCallCrewAttestations.tripId, tripId)),
   ]);
   return (divers?.n ?? 0) + (crew?.n ?? 0) + (attestations?.n ?? 0);
 }

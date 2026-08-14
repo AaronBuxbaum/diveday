@@ -22,12 +22,16 @@
 // production changes behind the environment approval at all -- and left
 // alone on every later run, so a human's own branch-policy change here
 // survives a re-run of this script.
-import { execFileSync } from "node:child_process";
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ENVIRONMENT_NAME = "infra-deploy";
 
 function gh(arguments_, options = {}) {
-  return execFileSync("gh", arguments_, { encoding: "utf8", ...options }).trim();
+  return readBounded("gh", arguments_, {
+    encoding: "utf8",
+    timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+    ...options,
+  }).trim();
 }
 
 function ghJson(arguments_, options = {}) {

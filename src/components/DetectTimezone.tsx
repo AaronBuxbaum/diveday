@@ -19,17 +19,39 @@ import { useEffect } from "react";
  * `aria-describedby` by cloning a real `<input>`/`<select>`/`<textarea>`, and
  * a component in that slot would silently lose all three.
  *
- * `detect` is false whenever a value has already been chosen — a sign-up form
- * bounced back with `?timezone=`, or a shop's stored zone in Settings — so
- * this can never overwrite an answer someone gave. It runs once: a shop that
- * picks a different zone and then triggers a re-render keeps their pick.
+ * Two separate things stop it overwriting an answer someone gave.
+ *
+ * `detect` is false whenever a value was already chosen *before the page
+ * rendered* — a sign-up form bounced back with `?timezone=`, or a shop's stored
+ * zone in Settings.
+ *
+ * `untouchedValue` covers the answer given after the page rendered but before
+ * this ran. A native `<select>` is interactive from the moment it paints, which
+ * is well before React hydrates and this effect fires, so an owner who reaches
+ * the picker quickly — the whole point of a form that paints instantly — used
+ * to have their pick replaced by the device's zone a beat later, with nothing
+ * on screen explaining it. Callers pass the same expression the `<select>` uses
+ * for its `defaultValue`; a box still showing it is a box nobody has answered.
+ *
+ * It also runs once, so a shop that picks a zone and then triggers a re-render
+ * keeps their pick.
  */
-export function DetectTimezone({ selectId, detect }: { selectId: string; detect: boolean }) {
+export function DetectTimezone({
+  selectId,
+  detect,
+  untouchedValue,
+}: {
+  selectId: string;
+  detect: boolean;
+  /** What the server rendered — see the note above. */
+  untouchedValue: string;
+}) {
   useEffect(() => {
     if (!detect) return;
     const select = document.getElementById(selectId);
     if (!(select instanceof HTMLSelectElement)) return;
     if (select.dataset.zoneDetected === "true") return;
+    if (select.value !== untouchedValue) return;
     select.dataset.zoneDetected = "true";
     let zone: string | undefined;
     try {
@@ -42,7 +64,7 @@ export function DetectTimezone({ selectId, detect }: { selectId: string; detect:
     if (!zone) return;
     const offered = Array.from(select.options).some((option) => option.value === zone);
     if (offered) select.value = zone;
-  }, [selectId, detect]);
+  }, [selectId, detect, untouchedValue]);
 
   return null;
 }

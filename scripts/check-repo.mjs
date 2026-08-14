@@ -29,6 +29,7 @@ const checks = [
   ["architecture", "check-architecture.mjs"],
   ["tokens", "check-tokens.mjs"],
   ["clock", "check-clock.mjs"],
+  ["db-concurrency", "check-db-concurrency.mjs"],
   ["intl-cache", "check-intl-cache.mjs"],
   ["adrs", "check-adrs.mjs"],
   ["docs", "check-doc-links.mjs"],

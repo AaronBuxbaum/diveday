@@ -5,9 +5,9 @@
 // infra-stack.ts §18). Repository *variables*, not secrets: a role ARN is not
 // sensitive, and a secret's value is redacted from logs, which would make a
 // failed sts:AssumeRoleWithWebIdentity impossible to read from the workflow.
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dotenvEntries } from "./dotenv.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const document = readFileSync(0, "utf8");
 const entries = dotenvEntries(document);
@@ -26,7 +26,10 @@ for (const [key, value] of entries) {
     failed = true;
     continue;
   }
-  const result = spawnSync("gh", ["variable", "set", key, "--body", value], { stdio: "inherit" });
+  const result = runBounded("gh", ["variable", "set", key, "--body", value], {
+    stdio: "inherit",
+    timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+  });
   if (result.status !== 0) failed = true;
 }
 
