@@ -1,4 +1,5 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
+import { installCapabilityUrlRedaction } from "./analytics-request-context";
 import type { DemoRoleId } from "./demo-roles";
 import type { FunnelSource } from "./funnel";
 import type { RollCallCheckpoint } from "./manifests";
@@ -186,6 +187,16 @@ export async function trackEvent(
   // Best-effort has to mean latency too, not just errors. Passing an explicit
   // tracker still exercises the seam in unit tests (mirrors marine-forecast.ts).
   if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && tracker === vercelTrack) return;
+
+  // Before anything reaches Vercel, not once at module load: the runtime
+  // installs its request-context global itself, and there is no ordering
+  // guarantee that it has done so by the time this module is first imported.
+  // The wrap is idempotent and O(1), so paying it per event is cheaper than
+  // reasoning about that ordering — and missing the install is the silent
+  // failure the whole thing exists to prevent. See
+  // `analytics-request-context.ts` for why the page URL cannot be redacted at
+  // this call site instead.
+  if (tracker === vercelTrack) installCapabilityUrlRedaction();
 
   const { name, ...properties } = event;
   try {
