@@ -62,6 +62,39 @@ where a mistake means a duplicated or out-of-order record of who came back from 
 
 That is why this entry is now **L**, not M.
 
+## Invariants — break any of these and the change is worse than not doing it
+
+These are collected here rather than left scattered through the steps, because each one is a rule
+whose *reason* lives somewhere else in the codebase, and a reader who meets it as an aside in step 4
+will reasonably think it is a preference. None of them are.
+
+**I1 — Do not bump `OFFLINE_MANIFEST_RECORD_VERSION`.** A bump is a purge: a record that fails to
+decrypt is overwritten with `events: []`, which throws away every roll call a crew member queued
+offline and has not synced. That constant's own docblock already refuses a bump twice for exactly
+this reason. An added optional field is additive and needs none.
+
+**I2 — The new crew `id` is optional, and old snapshots must fail *closed*.** A copy saved before
+this change has crew rows with no id; those crew members stay unrecordable on that copy and the
+checkpoint stays open, exactly as it does today. The dangerous direction is offline reading *closed*
+while online says otherwise — a checkpoint that looks finished while somebody is still in the water.
+Every fail-closed path in this feature exists for that one sentence.
+
+**I3 — Do not restructure `OfflineRollCallEvent` into a discriminated union.** Events already sitting
+in a captain's IndexedDB carry `bookingId` and nothing else, and those are the events that must
+survive: an unsynced result is a person somebody counted with no signal. A union keyed on a new
+`subject` discriminant makes every one of them fail its own type the moment the app updates. Widen
+additively instead.
+
+**I4 — Mirror `recordRollCall`'s offline branch; do not invent a variant.** The two recorders should
+be diffable side by side so a reviewer can see they agree on dedup, staleness bounds and
+newest-wins. A crew-specific interpretation of any of the three is a bug waiting for the one week
+somebody re-reads only one of them.
+
+**I5 — Do not touch the sync route's auth gate.** Read its comment first. It is deliberately ahead
+of the content-type and schema checks so an unauthorized caller's body is never parsed, and it
+refuses the *request* rather than each event so a refused batch stays `pending` on the device
+instead of being marked settled and losing its hold against the next purge.
+
 ## Proposed change
 
 In this order, because each step is useless without the one before it.
@@ -80,18 +113,11 @@ In this order, because each step is useless without the one before it.
    gate above it does not change and must not be touched — read its comment first, it is load-bearing.
 4. **Widen the client contract.** This part was written and validated on 2026-08-14, then reverted
    rather than landed inert; rebuild it:
-   - `OfflineManifestSnapshot.crew[]` gains an **optional** `id`. Optional is load-bearing: a
-     snapshot saved before this change has no crew ids, and those crew members must stay
-     unrecordable on that copy so the checkpoint stays open. **Do not bump
-     `OFFLINE_MANIFEST_RECORD_VERSION`** — a bump is a purge, and a purge throws away roll calls
-     queued on a device with no signal. An added optional field is additive, which is precisely the
-     reasoning already written on that constant for `crew[].rollCall`.
-   - `OfflineRollCallEvent.bookingId` becomes optional and `crewPersonId` is added beside it —
-     **not** a discriminated union on a new `subject` field. Events already sitting in a captain's
-     IndexedDB carry `bookingId` and nothing else, and a union would make every queued event fail
-     its own type the moment the app updated. Add one reader (`offlineRollCallSubject`) that returns
-     null when neither or both are set, and refuse that case in `appendOfflineRollCall` rather than
-     writing an event nobody can attribute.
+   - `OfflineManifestSnapshot.crew[]` gains an **optional** `id` (invariants **I1** and **I2**).
+   - `OfflineRollCallEvent.bookingId` becomes optional and `crewPersonId` is added beside it
+     (invariant **I3**). Add one reader, `offlineRollCallSubject`, that returns null when neither or
+     both are set, and refuse that case in `appendOfflineRollCall` rather than writing an event
+     nobody can attribute.
    - Add `canRecordOfflineCrewStatus` and `latestOfflineCrewRollCall` as siblings of the diver
      functions, not branches inside them. Crew differ in two ways: **no readiness gate at
      departure** (crew have none to read), and **a crew member with no id is refused** (an old
@@ -137,12 +163,11 @@ The blocker, so you find it early rather than late: roll_call_crew_events has NO
 mirroring recordRollCall's `source === "offline"` branch into recordCrewRollCall. Mirror it so the
 two are diffable side by side; do not invent a variant.
 
-Two things that must NOT change, and both have their reasoning written where you will find it:
-  - Do not bump OFFLINE_MANIFEST_RECORD_VERSION. A bump is a purge and a purge discards roll calls
-    queued on a device with no signal. The new crew `id` is optional precisely so old snapshots
-    survive and fail CLOSED (crew unrecordable there, checkpoint stays open).
-  - Do not restructure OfflineRollCallEvent into a discriminated union. Events already in a
-    captain's IndexedDB carry `bookingId` alone and must keep syncing. Widen additively.
+Read the "Invariants" section of that file before writing anything, and treat all five as
+non-negotiable. They are collected in one place precisely so none is met as an aside: no
+RECORD_VERSION bump, old snapshots fail closed, no discriminated union on the event, mirror
+recordRollCall's offline branch rather than inventing a variant, and do not touch the sync route's
+auth gate.
 
 The failure direction that matters: offline reading "closed" while online says otherwise. Every
 fail-closed path is deliberate. Test it.
