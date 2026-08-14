@@ -25,9 +25,15 @@ describe("seaStateText", () => {
     expect(light.label).toBe("Light chop");
     expect(light.detail).toMatch(/small waves/i);
 
+    // The roughest band describes the water and stops there. It used to say
+    // this was "the kind of sea that often keeps boats at the dock" — a claim
+    // about what a shop will *do*, which reads as "your trip is in doubt" to a
+    // liveaboard's divers on a boat that sails happily in it. The forecast
+    // never decides; the crew do, at the dock.
     const bad = seaStateText(en, "very_rough");
     expect(bad.label).toBe("Very rough");
-    expect(bad.detail).toMatch(/dock/i);
+    expect(bad.detail).toMatch(/steep seas/i);
+    expect(bad.detail).not.toMatch(/cancel|at the dock|delay/i);
   });
 
   // The band is a code, not a word, so the reader's own language decides —
