@@ -55,6 +55,8 @@ publishing the rating as a machine-readable claim once too much of the record ha
   line, a shop is plausibly removing the spam and the review about the wrong boat. Above it, the
   average describes a set somebody chose. The share counts *judged* reviews, not surviving ones, or
   a shop could dilute its own suppression by publishing more.
+- **The share does not apply until ten reviews have been ruled on**
+  (`MIN_JUDGED_REVIEWS_FOR_SUPPRESSION`, added 2026-08-14 — see the amendment below).
 - **A queued review is not a suppressed one.** A review carrying words that nobody has read yet has
   never been hidden, and it must not count against the shop. Only a recorded `hidden` act does —
   which is the second reason the trail exists, and the load-bearing one.
@@ -97,6 +99,38 @@ with DiveDay rather than with the reviewer, and rightly.
   `(shop_id, occurred_at)` and the review pages already run several queries; if it ever shows up in a
   trace, the fix is to fold it into the same statement, not to cache the answer.
 - A shop that crosses the line loses its search-result stars until it republishes enough of its
-  record. Nothing tells it that yet — the Reviews page shows the rating and the counts, but not the
-  threshold or which side of it the shop is on. Filed as
-  `FU-20260813-suppression-threshold-is-invisible-to-the-shop`.
+  record. As of the 2026-08-14 amendment below, it is told so on its own Reviews page.
+
+## Amendment, 2026-08-14 — the share waits for ten judged reviews, and the shop is told
+
+Two gaps in the decision above, closed together because the first one decides how the second is
+worded.
+
+**The ratio had no floor under it.** A shop with three reviews that took down one piece of spam sat
+at 33% and lost its search-result stars over a single honest act. A shop with two hundred reviews was
+barely constrained by the same fraction. That is backwards: the small shop is the one with no
+capacity to game anything, and a record curated into a 5.0 — the case this rule exists for — cannot
+be built out of nine reviews.
+
+`MIN_JUDGED_REVIEWS_FOR_SUPPRESSION = 10` now gates the share. Below ten judged reviews
+`ratingIsRepresentative` returns true on the share alone; the tenth closes the window. What it does
+*not* forgive is an absent average — a shop with nothing published still emits no `aggregateRating`,
+which is `aggregateRatingOf`'s own `count < 1` guard and the reason the predicate's first line is
+`count === 0`, not `judged === 0`.
+
+The cost is stated plainly: for a shop's first nine judged reviews, suppression is unconstrained.
+That is the window this amendment deliberately opens, and it is bounded by the fact that a rating
+over fewer than ten reviews is not one a reader is relying on. The alternative considered was an
+absolute allowance (the first two hides never count, at any size), rejected because it makes the rule
+two numbers to explain instead of one, and because it never fully closes.
+
+**And a shop over the line could not find out.** The rating was withheld silently: the Reviews page
+showed a cheerful "4.9" that DiveDay had stopped publishing. Now the page carries the hidden count as
+a fourth stat, and a shop over the line gets a warning banner saying the rating still shows on its
+own page, is no longer going to search engines, and how many reviews republishing would take to bring
+it back (`reviewsToRepublishForRating`). Two predicates rather than one, because
+`ratingIsRepresentative` is false for a shop with no reviews as well as for a curated one, and only
+the second has anything to act on: `ratingIsWithheld` is the question the surface actually asks.
+
+The words address the situation and never the shop's character. The common case is a small shop that
+removed real spam, and the fix is entirely in its hands.

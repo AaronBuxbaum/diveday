@@ -324,25 +324,23 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
 }
 
 /**
- * Why a review was refused, so a caller can say something specific.
- * `card_sighting_required` is the imported-card case below.
+ * Why a review was refused, so a caller can say something specific. One case
+ * today; the discriminated result stays because a refusal must never be
+ * mistaken for a miss.
  */
-export type ReviewRefusal = "not_found" | "card_sighting_required";
+export type ReviewRefusal = "not_found";
 
 /**
- * Confirming an **imported** specialty card is the tap that opens a specialty
- * gate — depth past 18 m for Deep — on the strength of a spreadsheet cell that
- * DiveDay itself never checked. So it is the one review that requires the staffer
- * to state what they are asserting (`cardSighted`), the same shape as the paper
- * waiver's medical attestation (`recordInPersonWaiver`): a bare button that opens
- * a safety gate while asserting nothing is where this posture's value leaks away
- * (`dive-domain-expert` review, H-24).
+ * Confirming a specialty card — the tap that opens a specialty gate, depth past
+ * 18 m for Deep.
  *
- * A card captured by this shop (`importedAt` null) is unaffected — "Mark
- * certified" already means a staffer looked the number up with the agency, and
- * adding a second checkbox to it would be friction with no claim behind it.
- * The attestation is recorded in `reviewNote` so the audit trail says what was
- * asserted and not merely that a click happened.
+ * An **imported** card's confirm used to additionally require the staffer to
+ * tick a card-sighting attestation, which was recorded in `reviewNote`. That
+ * asymmetry is gone (H-24, revised 2026-08-14): every imported card now
+ * confirms on the same bare tap, including the *level* card that opens the same
+ * depth on every gated boat in the shop. The gate is still per-card and still
+ * needs a human act; what it no longer asks for is a second statement of why.
+ * See ADR 20260814-one-tap-imported-card-confirm.
  */
 export async function reviewSpecialtyCertification(
   db: AppDb,
@@ -351,15 +349,15 @@ export async function reviewSpecialtyCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
-    /** The staffer asserts they have seen the card, or checked it with the agency. */
-    cardSighted?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
   | { ok: false; reason: ReviewRefusal }
 > {
+  // Read first so a missing or archived card is a `not_found` refusal rather
+  // than an update that silently matched no rows.
   const [existing] = await db
-    .select({ importedAt: specialtyCertifications.importedAt })
+    .select({ id: specialtyCertifications.id })
     .from(specialtyCertifications)
     .where(
       and(
@@ -370,18 +368,12 @@ export async function reviewSpecialtyCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  if (existing.importedAt && !input.cardSighted) {
-    return { ok: false, reason: "card_sighting_required" };
-  }
 
   const [certification] = await db
     .update(specialtyCertifications)
     .set({
       status: input.status,
-      reviewNote: reviewNoteFor(
-        input.reviewNote,
-        Boolean(existing.importedAt && input.cardSighted),
-      ),
+      reviewNote: reviewNoteFor(input.reviewNote),
       reviewedAt: nowDate(),
     })
     .where(
@@ -398,14 +390,19 @@ export async function reviewSpecialtyCertification(
   return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
 }
 
-/** What the staffer asserted, kept on the row rather than only in their memory. */
-export const CARD_SIGHTING_NOTE =
-  "Staff confirmed an imported card: seen in person, or the number checked with the issuing agency.";
-
-export function reviewNoteFor(note: string | undefined, attested: boolean): string | null {
-  const own = note?.trim();
-  if (!attested) return own || null;
-  return own ? `${CARD_SIGHTING_NOTE} ${own}` : CARD_SIGHTING_NOTE;
+/**
+ * A staffer's own words about a card review, or nothing. Shared by the two
+ * review paths so "typed only spaces" and "typed nothing" land the same way —
+ * an empty note is absence, never an empty string on the row.
+ *
+ * Cards reviewed before 2026-08-14 may carry a `CARD_SIGHTING_NOTE` sentence
+ * written by the attestation this replaced. Those rows are left exactly as they
+ * are: the note records what a staffer asserted at the time, and rewriting
+ * history to match a later policy would be the one thing an audit trail must
+ * never do (ADR 20260814-one-tap-imported-card-confirm).
+ */
+export function reviewNoteFor(note: string | undefined): string | null {
+  return note?.trim() || null;
 }
 
 /** Soft-archive a specialty card. Shop-scoped, mirroring `archiveCertification`. */

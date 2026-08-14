@@ -83,6 +83,7 @@ export type TodayActionKind =
   | "emergency_contact"
   | "stuck_payment_operation"
   | "failed_photo_deletion"
+  | "owed_refund"
   | "reviews_pending";
 
 /**
@@ -138,8 +139,12 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // sink below every per-diver row when severity is what breaks a tie.
   stuck_payment_operation: 20,
   failed_photo_deletion: 21,
+  // Somebody is owed their money back for a departure the shop called off.
+  // Ranked above the other two platform-health rows: a diver is waiting on
+  // this one, and has already been told the shop would be in touch.
+  owed_refund: 22,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 22,
+  reviews_pending: 23,
 };
 
 /**
@@ -174,6 +179,7 @@ export const ACTION_KIND_META = {
   emergency_contact: { tone: "neutral" },
   stuck_payment_operation: { tone: "warning" },
   failed_photo_deletion: { tone: "warning" },
+  owed_refund: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 

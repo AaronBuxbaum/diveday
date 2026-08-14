@@ -195,16 +195,10 @@ test.describe("contact import — specialty cards", () => {
     await expect(page.getByText("PADI · Deep")).toBeVisible();
     await expect(page.getByText("PADI · Rescue Diver")).toBeVisible();
     await expect(page.getByText("certified · confirm to clear")).toBeVisible();
-    // The confirm is no longer a bare tap: it states what the staffer asserts,
-    // because this is what opens the deep dive (H-24).
+    // One tap, the same control the level card beside it wears
+    // (ADR 20260814-one-tap-imported-card-confirm). The gate is still per-card:
+    // nothing about this diver's Deep card counts until a staffer confirms it.
     const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
-    await deepCard.getByText("Confirm card").filter({ visible: true }).first().click();
-    await expect(
-      deepCard
-        .getByText(/I've seen this diver's card, or checked the number/)
-        .filter({ visible: true }),
-    ).toBeVisible();
-    await deepCard.getByRole("checkbox", { name: /I've seen this diver's card/ }).check();
     await deepCard.getByRole("button", { name: "Confirm card" }).click();
 
     await page.goto("/shop/blue-mantis/schedule/board");

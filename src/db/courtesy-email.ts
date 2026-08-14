@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
@@ -24,6 +24,41 @@ export async function issuePersonCourtesyEmailUnsubscribeToken(
     tokenHash: hashBearerToken(token),
   });
   return token;
+}
+
+/**
+ * The person a courtesy email is really going to, found by address rather than
+ * by id — for the one send that is keyed to something other than a person.
+ *
+ * Abandoned-checkout recovery writes to `booking_checkouts.customer_email`, the
+ * address the submitter typed at checkout. A party checkout covers several
+ * bookings with no lead marker (see the column's own comment in `schema.ts`), so
+ * "the purchaser" cannot be re-derived from the join — the address is the only
+ * handle there is, and consent has to be resolved through it.
+ *
+ * Case-insensitive, mirroring the `lower(email)` unique index, and blind to
+ * removed records: a deleted person is not somebody to email either way.
+ * Returns `null` when the address belongs to nobody in this shop, which is the
+ * caller's signal that it has no opt-out to honour and no token to mint —
+ * never a signal that the check passed
+ * (ADR 20260814-checkout-recovery-is-commercial).
+ */
+export async function findCourtesyEmailRecipientByAddress(
+  db: DbExecutor,
+  input: { shopId: string; email: string },
+): Promise<{ personId: string; optedOut: boolean } | null> {
+  const [row] = await db
+    .select({ id: people.id, optOutAt: people.courtesyEmailOptOutAt })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        sql`lower(${people.email}) = lower(${input.email})`,
+        isNull(people.deletedAt),
+      ),
+    )
+    .limit(1);
+  return row ? { personId: row.id, optedOut: row.optOutAt !== null } : null;
 }
 
 export type CourtesyEmailUnsubscribeContext = {

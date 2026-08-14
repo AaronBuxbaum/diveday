@@ -42,10 +42,12 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
 }
 
 /**
- * Confirming an **imported** nitrox card is what lets a fill give enriched air
- * (`authorizesNitroxFill` below), so — like the imported specialty confirm — it
- * requires the staffer to state that they have actually seen the card or checked
- * it with the agency (H-24). A card this shop captured itself is unaffected.
+ * Confirming a nitrox card is what lets a fill give enriched air
+ * (`authorizesNitroxFill` below).
+ *
+ * Like the specialty confirm beside it, an imported card no longer carries a
+ * separate card-sighting attestation: every imported card confirms on one tap
+ * (H-24, revised 2026-08-14 — ADR 20260814-one-tap-imported-card-confirm).
  */
 export async function reviewNitroxCertification(
   db: AppDb,
@@ -54,14 +56,13 @@ export async function reviewNitroxCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
-    cardSighted?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
   | { ok: false; reason: ReviewRefusal }
 > {
   const [existing] = await db
-    .select({ importedAt: nitroxCertifications.importedAt })
+    .select({ id: nitroxCertifications.id })
     .from(nitroxCertifications)
     .where(
       and(
@@ -72,18 +73,12 @@ export async function reviewNitroxCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  if (existing.importedAt && !input.cardSighted) {
-    return { ok: false, reason: "card_sighting_required" };
-  }
 
   const [certification] = await db
     .update(nitroxCertifications)
     .set({
       status: input.status,
-      reviewNote: reviewNoteFor(
-        input.reviewNote,
-        Boolean(existing.importedAt && input.cardSighted),
-      ),
+      reviewNote: reviewNoteFor(input.reviewNote),
       reviewedAt: nowDate(),
     })
     .where(

@@ -12,6 +12,7 @@ import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { startPaymentOperation } from "./payment-operations";
+import { setBookingPayment } from "./payments";
 import { saveRentalFit } from "./rental-fit";
 import {
   bookings as bookingsTable,
@@ -28,7 +29,13 @@ import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripStatus,
+  upcomingTripsWithCounts,
+} from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
@@ -740,6 +747,72 @@ describe("role lens raw material", () => {
       // The retry button for a stuck deletion lives in Settings' "Data &
       // integrations" group now, so the row lands on that group's anchor.
       expect(row?.href).toBe(`/shop/${shop.slug}/settings#data-integrations`);
+    });
+
+    it("mirrors money owed for a cancelled departure, once it has sat for a day", async () => {
+      // The panel on the Orders index owns this queue; Today mirrors it, the
+      // same arrangement the two rows above use
+      // (ADR 20260813-shop-cancellation-refunds-itself).
+      const { db, shop } = await seededShopContext();
+      const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+      const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+      if (!reef) throw new Error("demo reef trip missing");
+      const [seat] = await getTripRoster(db, shop.id, reef.id);
+      await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId: seat.booking.id,
+        status: "paid",
+        currency: "usd",
+        amountCents: 18_000,
+      });
+      await setTripStatus(db, shop.id, reef.id, "cancelled");
+      const t = staffTranslator("en-US");
+      const id = `owed-refund:${seat.booking.id}`;
+
+      // Money that only just changed hands is on the panel but not yet in the
+      // queue — Today waits a day so a seat settled minutes before the sweep
+      // does not arrive in the same breath it was taken.
+      const sameDay = await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shop.timezone,
+        undefined,
+        undefined,
+        t,
+        "en-US",
+        true,
+      );
+      expect(sameDay.actions.find((a) => a.id === id)).toBeUndefined();
+
+      // A day later it is in the queue.
+      const tomorrow = new Date(nowMs() + 25 * 60 * 60 * 1000);
+      const withFlag = await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shop.timezone,
+        tomorrow,
+        undefined,
+        t,
+        "en-US",
+        true,
+      );
+      const row = withFlag.actions.find((a) => a.id === id);
+      expect(row).toBeDefined();
+      expect(row?.kind).toBe("owed_refund");
+      expect(row?.urgency).toBe("now");
+      expect(row?.dueAt).toBeNull();
+      // The diver is the subject — this is the one platform-health row with a
+      // person waiting on the other end of it.
+      expect(row?.subject).toBe(seat.person.fullName);
+      // The Guests tab is both where the seat is and where staff mark it
+      // refunded once the cash is back in a hand.
+      expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/guests`);
+
+      // And it is opt-in like every other ops alert.
+      const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone, tomorrow);
+      expect(withoutFlag.actions.find((a) => a.id === id)).toBeUndefined();
     });
 
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {

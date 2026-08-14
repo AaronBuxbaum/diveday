@@ -2,10 +2,18 @@ import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { toDiverLocale } from "@/i18n/settings";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import type { NotificationDelivery, NotificationProvider } from "@/lib/notifications";
+import {
+  type NotificationDelivery,
+  type NotificationProvider,
+  publicAppUrl,
+} from "@/lib/notifications";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "./checkouts";
 import type { AppDb } from "./client";
+import {
+  findCourtesyEmailRecipientByAddress,
+  issuePersonCourtesyEmailUnsubscribeToken,
+} from "./courtesy-email";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import {
   bookingCheckoutBookings,
@@ -36,6 +44,16 @@ export type CheckoutRecoveryRunSummary = {
   settled: number;
   /** Stripe couldn't be reached to reconcile this run; retried next run. */
   unreconciled: number;
+  /** The recipient has opted out of courtesy email — a nudge is not owed to them. */
+  optedOut: number;
+  /**
+   * The checkout's address belongs to nobody in this shop, so there is no
+   * opt-out to honour and no unsubscribe token to mint. Left pending rather
+   * than resolved: a person row can appear later (the diver books again, staff
+   * add them), and a Stripe session that never becomes sendable ages out of
+   * the scan on its own expiry.
+   */
+  unaddressable: number;
   /** Send attempted but failed or no provider configured. */
   failed: number;
 };
@@ -100,6 +118,7 @@ export async function sendDueCheckoutRecoveries(
   options: SendDueCheckoutRecoveriesOptions = {},
 ): Promise<CheckoutRecoveryRunSummary> {
   const now = options.now ?? nowDate();
+  const origin = publicAppUrl();
   const emailProvider = notificationProviderForDb(options.emailProvider);
   const checkoutProvider = options.checkoutProvider ?? checkoutProviderFromEnvironment();
   const staleBefore = new Date(now.getTime() - RECOVERY_DELAY_HOURS * HOUR_MS);
@@ -139,6 +158,8 @@ export async function sendDueCheckoutRecoveries(
     departed: 0,
     settled: 0,
     unreconciled: 0,
+    optedOut: 0,
+    unaddressable: 0,
     failed: 0,
   };
   if (candidates.length === 0) return summary;
@@ -300,28 +321,65 @@ export async function sendDueCheckoutRecoveries(
       continue;
     }
 
-    let delivery: NotificationDelivery;
-    if (checkout.customerEmail) {
-      delivery = await sendNotification(
-        db,
-        {
-          kind: "checkout_recovery",
-          checkoutId: checkout.id,
-          shopId: shop.id,
-          to: checkout.customerEmail,
-          locale: toDiverLocale(shop.defaultLocale),
-          shopName: shop.name,
-          tripTitle: trip.title,
-          startsAt: trip.startsAt,
-          endsAt: trip.endsAt,
-          timezone: shop.timezone,
-          checkoutUrl: checkout.checkoutUrl,
-        },
-        emailProvider,
-      );
-    } else {
-      delivery = { status: "not_configured" };
+    // Consent, resolved as late as possible — a diver who unsubscribed while
+    // this batch was talking to Stripe must not still receive the mail.
+    //
+    // This send is classified commercial (ADR 20260814-checkout-recovery-is-commercial,
+    // H-09): its recipient has no confirmed booking behind them and may have
+    // abandoned the checkout precisely because they changed their mind about
+    // the shop. So it honours the same courtesy-email opt-out its two siblings
+    // do, and it carries a working unsubscribe link — and where it cannot do
+    // both, it does not go at all.
+    if (!checkout.customerEmail) {
+      summary.failed += 1;
+      continue;
     }
+    if (!origin) {
+      // An unsubscribe link needs a public origin to point at. Without one the
+      // mail would have no way out of it, which is the whole thing this
+      // classification forbids — so it waits for a configured deployment
+      // rather than going without. Checked before the lookup: nothing below
+      // can send, so there is no reason to read the address first.
+      summary.failed += 1;
+      continue;
+    }
+    const recipient = await findCourtesyEmailRecipientByAddress(db, {
+      shopId: shop.id,
+      email: checkout.customerEmail,
+    });
+    if (!recipient) {
+      // No person row behind the address: nothing to opt out, and no token to
+      // mint against. Never treated as "the opt-out check passed".
+      summary.unaddressable += 1;
+      continue;
+    }
+    if (recipient.optedOut) {
+      summary.optedOut += 1;
+      continue;
+    }
+    const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
+      shopId: shop.id,
+      personId: recipient.personId,
+    });
+
+    const delivery: NotificationDelivery = await sendNotification(
+      db,
+      {
+        kind: "checkout_recovery",
+        checkoutId: checkout.id,
+        shopId: shop.id,
+        to: checkout.customerEmail,
+        locale: toDiverLocale(shop.defaultLocale),
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+        checkoutUrl: checkout.checkoutUrl,
+        unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+      },
+      emailProvider,
+    );
 
     if (delivery.status === "sent") {
       await db

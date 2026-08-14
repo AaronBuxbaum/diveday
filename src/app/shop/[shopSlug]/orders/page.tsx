@@ -16,6 +16,7 @@ import { getDb } from "@/db/client";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
+import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -156,8 +157,19 @@ export default async function OrdersIndexPage({
     session.user.shopId,
     session.user.personId,
   );
+  // Money the shop owes divers for departures it cancelled and could not refund
+  // by card — a counter payment, a disconnected Stripe account, a refund Stripe
+  // refused. The sweep that creates most of these runs hourly from a cron with
+  // no human near it, and it tells every affected diver the shop will be in
+  // touch; until this panel there was nothing on any screen that said so
+  // (ADR 20260813-shop-cancellation-refunds-itself's own consequence).
+  //
+  // Same gate and same query-only-if-visible as the stuck operations above.
   const stuckPaymentOperations = canReconcilePayments
     ? await listStuckPaymentOperations(db, shop.id)
+    : [];
+  const owedRefunds = canReconcilePayments
+    ? await listOwedShopCancellationRefunds(db, shop.id)
     : [];
 
   const statusFilter = orderStatus.enumValues.includes(
@@ -295,6 +307,46 @@ export default async function OrdersIndexPage({
                       {t("orders.index.paymentOps.openTrip")}
                     </Link>
                   ) : null}
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {/* Renders nothing when nothing is owed — a queue, not a heading that
+          sits on the page announcing its own emptiness. Warning rather than
+          danger: nothing is broken, somebody is just owed money. */}
+      {owedRefunds.length > 0 ? (
+        <section aria-label={t("orders.index.owedRefunds.sectionLabel")} className="mb-6">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {t("orders.index.owedRefunds.heading", { count: owedRefunds.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("orders.index.owedRefunds.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {owedRefunds.map((owed) => (
+                <li key={owed.bookingId} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium">{owed.diverName}</span>
+                  <span>· {owed.tripTitle}</span>
+                  <span className="text-muted">
+                    ·{" "}
+                    {/* A counter mark often records no amount. Saying so beats
+                        printing a confident 0.00 the shop would have to
+                        distrust. */}
+                    {owed.amountCents === null
+                      ? t("orders.index.owedRefunds.unrecordedAmount")
+                      : formatMoneyCents(owed.amountCents, owed.currency, locale)}
+                    {owed.depositOnly ? ` · ${t("orders.index.owedRefunds.depositOnly")}` : ""}
+                    {" · "}
+                    {formatShortDate(owed.tripStartsAt, locale, shop.timezone)}
+                  </span>
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${owed.tripId}/guests`}
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    {t("orders.index.owedRefunds.openTrip")}
+                  </Link>
                 </li>
               ))}
             </ul>

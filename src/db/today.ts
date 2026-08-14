@@ -20,6 +20,7 @@ import {
   openTripActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
+  owedRefundDetailText,
   reviewsPendingDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
@@ -31,7 +32,7 @@ import {
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
-import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
@@ -55,6 +56,7 @@ import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
+import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
 import { countReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
@@ -1348,9 +1350,12 @@ export async function getTodayWork(
   // Orders, deletions to Settings' Data group — and each row's `href` points at
   // wherever its panel now is.
   if (includeOpsAlerts) {
-    const [stuckOperations, pendingDeletions] = await Promise.all([
+    const [stuckOperations, pendingDeletions, owedRefunds] = await Promise.all([
       listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
       listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
+      listOwedShopCancellationRefunds(db, shopId, {
+        olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
+      }),
     ]);
 
     for (const op of stuckOperations) {
@@ -1389,6 +1394,37 @@ export async function getTodayWork(
         // deletion lives there now, at the group anchor this href lands on.
         actionLabel: openDataSettingsActionText(t),
         href: `/shop/${shopSlug}/settings#data-integrations`,
+        dueAt: null,
+      });
+    }
+
+    // Money the shop owes a diver for a departure it cancelled and could not
+    // put back on the card. Mirrored here, not owned here: the panel on the
+    // Orders index is where these live and where staff act on them, the same
+    // arrangement the two queues above use.
+    //
+    // This is the one platform-health row with a person waiting on the other
+    // end of it — every one of these divers has already had an email saying the
+    // shop will be in touch.
+    for (const owed of owedRefunds) {
+      actions.push({
+        id: `owed-refund:${owed.bookingId}`,
+        kind: "owed_refund",
+        urgency: "now",
+        subject: owed.diverName,
+        context: owed.tripTitle,
+        detail: owedRefundDetailText(t, {
+          amount:
+            owed.amountCents === null
+              ? null
+              : formatMoneyCents(owed.amountCents, owed.currency, locale),
+          tripTitle: owed.tripTitle,
+          when: formatShortDate(owed.tripStartsAt, locale, timeZone),
+        }),
+        // The departure's Guests tab, which is both where the seat is and where
+        // the payment gets marked refunded once the cash is back in a hand.
+        actionLabel: openGuestsActionText(t),
+        href: `/shop/${shopSlug}/trips/${owed.tripId}/guests`,
         dueAt: null,
       });
     }

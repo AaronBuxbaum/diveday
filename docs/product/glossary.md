@@ -60,14 +60,15 @@ new domain concept, define it here in the same PR.
   yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
   read as the same thing at a busy desk.
-- **Card sighting** — the attestation a staffer makes when confirming an **imported** specialty or
-  nitrox card: *“I've seen this diver's card, or checked the number with the issuing agency.”* Those
-  two confirms are the only thing standing between a spreadsheet cell and the dive (or the fill) the
-  card authorizes, so each requires the claim explicitly and records it in the card's `review_note` —
-  a bare button that opens a safety gate while asserting nothing is where the imported-card posture
-  leaks (H-24, [20260725-imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)).
-  A card this shop captured itself is unaffected: **Mark certified** already means a staffer looked the
-  number up with the agency. There is deliberately no bulk confirm.
+- **Card sighting** — *retired 2026-08-14.* The attestation a staffer used to tick when confirming an
+  **imported** specialty or nitrox card: *“I've seen this diver's card, or checked the number with the
+  issuing agency.”* Dropped when the owner levelled the two confirms against the imported *level*
+  card, which opens the same depth on a bare tap and never asked
+  (H-24 revised, [20260814-one-tap-imported-card-confirm](../architecture/decisions/20260814-one-tap-imported-card-confirm.md)).
+  Every imported card now confirms on one tap. What did **not** change is that the confirm exists at
+  all: an imported card clears nothing until a staffer makes that tap, per card, and there is still
+  deliberately no bulk confirm. Cards reviewed before that date keep the sentence the attestation
+  wrote into their `review_note`.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
   record, not a dive record**: an export holds cancellations and no-shows, so the source's own status

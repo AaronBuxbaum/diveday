@@ -1,6 +1,9 @@
 # 20260725-imported-card-sighting — Make the gate-opening confirm assert a card sighting, and never bend a technical rating onto the recreational ladder
 
-- **Status:** Accepted
+- **Status:** Superseded in part — the card-sighting attestation was dropped on 2026-08-14 by
+  [20260814-one-tap-imported-card-confirm](20260814-one-tap-imported-card-confirm.md) (H-24 revised).
+  Everything below about **technical ratings** (`TECHNICAL_CERT`, `DISCIPLINE_QUALIFIER`, and the
+  rule that a technical or overhead rating imports as nothing) is unchanged and still binding.
 - **Date:** 2026-07-25
 - **Extends:** [20260725-import-specialty-cards](20260725-import-specialty-cards.md) (its two named
   follow-ups) and [20260724-import-verified-cards](20260724-import-verified-cards.md)'s one-tap

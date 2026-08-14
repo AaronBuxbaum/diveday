@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
@@ -525,5 +526,80 @@ describe("review moderation is recorded", () => {
 
     await setReviewPublished(db, shop.id, held.id, true, { recordedByPersonId: ownerId });
     expect((await getShopReviewAggregate(db, shop.id)).suppressedCount).toBe(0);
+  });
+
+  /**
+   * The whole chain the staff Reviews page renders from, driven through the
+   * real writer rather than a hand-built aggregate: hiding reviews writes the
+   * trail, the trail feeds `suppressedCount`, and that decides whether DiveDay
+   * is still publishing the shop's rating
+   * (ADR 20260813-review-moderation-has-a-floor, amended 2026-08-14).
+   */
+  it("crosses the suppression line as a shop hides its record, and comes back when told to", async () => {
+    const { db, shop, ownerId } = await reviewContext();
+    // Ten reviews means ten seats, which is more than any one seeded departure
+    // has left — so they spread across the board the way a real shop's record
+    // does. Seats are taken from whatever is genuinely free rather than a
+    // hard-coded trip, so a change to the seed's booked counts cannot silently
+    // turn this into a `trip_full` failure.
+    const bookingIds: string[] = [];
+    for (const trip of await upcomingTripsWithCounts(db, shop.id, new Date(0))) {
+      const free = Math.min(trip.capacity - trip.booked, 10 - bookingIds.length);
+      if (free <= 0) continue;
+      const party = await createBookingParty(
+        db,
+        Array.from({ length: free }, (_, i) => ({
+          actor: "staff" as const,
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: `Record Diver ${bookingIds.length + i}`,
+          email: `record-diver-${bookingIds.length + i}@example.com`,
+        })),
+      );
+      if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+      bookingIds.push(...party.bookings.map((b) => b.bookingId));
+      if (bookingIds.length === 10) break;
+    }
+    expect(bookingIds).toHaveLength(10);
+
+    // Every review carries words, so each one waits for staff and every
+    // publish is a recorded act — the state a real moderating shop is in.
+    for (const bookingId of bookingIds) {
+      await submitTripReview(db, { bookingId, rating: 4, comment: "A day on the reef." });
+    }
+    const held = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    expect(held).toHaveLength(10);
+    for (const review of held) {
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    }
+
+    const publishedEverything = await getShopReviewAggregate(db, shop.id);
+    expect(publishedEverything.suppressedCount).toBe(0);
+    expect(ratingIsWithheld(publishedEverything)).toBe(false);
+
+    // Two hidden of ten judged is exactly one in five, which passes.
+    for (const review of held.slice(0, 2)) {
+      await setReviewPublished(db, shop.id, review.id, false, {
+        recordedByPersonId: ownerId,
+        reason: "spam",
+      });
+    }
+    expect(ratingIsWithheld(await getShopReviewAggregate(db, shop.id))).toBe(false);
+
+    // A third takes the shop over it. The denominator does not move — a hidden
+    // review is still one the shop ruled on.
+    await setReviewPublished(db, shop.id, held[2].id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+    const curated = await getShopReviewAggregate(db, shop.id);
+    expect(curated).toMatchObject({ count: 7, suppressedCount: 3 });
+    expect(ratingIsWithheld(curated)).toBe(true);
+    // And the page can tell the shop what it would take to undo — one review,
+    // which is the number the warning banner interpolates.
+    expect(reviewsToRepublishForRating(curated)).toBe(1);
+
+    await setReviewPublished(db, shop.id, held[2].id, true, { recordedByPersonId: ownerId });
+    expect(ratingIsWithheld(await getShopReviewAggregate(db, shop.id))).toBe(false);
   });
 });

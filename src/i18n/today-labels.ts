@@ -43,6 +43,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   emergency_contact: "shared.today.actionKind.emergencyContact",
   stuck_payment_operation: "shared.today.actionKind.stuckPaymentOperation",
   failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
+  owed_refund: "shared.today.actionKind.owedRefund",
   reviews_pending: "shared.today.actionKind.reviewsPending",
 };
 
@@ -399,6 +400,26 @@ export function failedPhotoDeletionDetailText(
     kind: mediaDeletionKindText(t, mediaKind),
     when,
   });
+}
+
+/**
+ * A refund the shop owes for a departure it cancelled — the diver's name is the
+ * row's subject, so this line carries the amount and the departure it was for.
+ */
+export function owedRefundDetailText(
+  t: StaffTranslator,
+  input: { amount: string | null; tripTitle: string; when: string },
+): string {
+  return input.amount === null
+    ? t("shared.today.opsAlert.owedRefundDetailNoAmount", {
+        tripTitle: input.tripTitle,
+        when: input.when,
+      })
+    : t("shared.today.opsAlert.owedRefundDetail", {
+        amount: input.amount,
+        tripTitle: input.tripTitle,
+        when: input.when,
+      });
 }
 
 /**
