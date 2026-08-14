@@ -2178,3 +2178,101 @@ describe("diver erasure", () => {
     });
   });
 });
+
+/**
+ * The roster's Cards column became a *level* column (FU-20260813): staff ask
+ * "what level is this diver?" at booking time, and the card count answered a
+ * question they rarely ask. The level is safety-adjacent display, so the rule
+ * for which card speaks is pinned here, failure paths first.
+ */
+describe("listDiverSummaries certification level", () => {
+  async function diverWithCards(
+    db: AppDb,
+    shopId: string,
+    fullName: string,
+    cards: {
+      level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
+      status?: "pending" | "verified";
+      expiresAt?: string | null;
+    }[],
+  ) {
+    const diver = await createDiver(db, { shopId, fullName });
+    if (!diver) throw new Error("diver insert failed");
+    for (const [index, card] of cards.entries()) {
+      await db.insert(certifications).values({
+        shopId,
+        personId: diver.id,
+        agency: "padi",
+        level: card.level,
+        identifier: `${fullName}-${index}`,
+        status: card.status ?? "verified",
+        expiresAt: card.expiresAt ?? null,
+      });
+    }
+    return diver;
+  }
+
+  /** The one row this query returns for a diver, found by name. */
+  async function summaryFor(db: AppDb, shopId: string, fullName: string) {
+    const { divers } = await listDiverSummaries(db, shopId, { query: fullName });
+    const row = divers.find((diver) => diver.person.fullName === fullName);
+    if (!row) throw new Error(`no summary for ${fullName}`);
+    return row;
+  }
+
+  it("names the highest verified, unexpired card — and nothing when there is none", async () => {
+    const { db, shop } = await seededShopContext();
+
+    await diverWithCards(db, shop.id, "Level Nobody", []);
+    expect((await summaryFor(db, shop.id, "Level Nobody")).certificationLevel).toBeNull();
+
+    await diverWithCards(db, shop.id, "Level Ladder", [
+      { level: "open_water" },
+      { level: "rescue" },
+      { level: "advanced_open_water" },
+    ]);
+    expect((await summaryFor(db, shop.id, "Level Ladder")).certificationLevel).toBe("rescue");
+  });
+
+  it("refuses to speak for an expired card, however high it sits on the ladder", async () => {
+    const { db, shop } = await seededShopContext();
+
+    // Only expired cards: a lapsed Divemaster is not a Divemaster today, and
+    // the roster says nothing rather than overstating what is on file.
+    await diverWithCards(db, shop.id, "Level Lapsed", [
+      { level: "divemaster", expiresAt: "2020-01-01" },
+    ]);
+    expect((await summaryFor(db, shop.id, "Level Lapsed")).certificationLevel).toBeNull();
+
+    // The case the product decision turns on: an expired higher card never
+    // outranks a valid lower one.
+    await diverWithCards(db, shop.id, "Level Mixed", [
+      { level: "rescue", expiresAt: "2020-01-01" },
+      { level: "open_water" },
+    ]);
+    expect((await summaryFor(db, shop.id, "Level Mixed")).certificationLevel).toBe("open_water");
+  });
+
+  it("says nothing for a card still awaiting review, and keeps its pending badge", async () => {
+    const { db, shop } = await seededShopContext();
+
+    await diverWithCards(db, shop.id, "Level Pending", [
+      { level: "instructor", status: "pending" },
+    ]);
+    expect(await summaryFor(db, shop.id, "Level Pending")).toMatchObject({
+      certificationLevel: null,
+      pendingCertificationCount: 1,
+    });
+
+    // A pending card sitting above a verified one does not lift the level
+    // either — the verified card is still what the diver actually holds.
+    await diverWithCards(db, shop.id, "Level Aspiring", [
+      { level: "open_water" },
+      { level: "divemaster", status: "pending" },
+    ]);
+    expect(await summaryFor(db, shop.id, "Level Aspiring")).toMatchObject({
+      certificationLevel: "open_water",
+      pendingCertificationCount: 1,
+    });
+  });
+});
