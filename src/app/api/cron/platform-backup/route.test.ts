@@ -6,7 +6,12 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/features/backup-export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/backup-export")>();
-  return { ...actual, listShopsForPlatformBackup: vi.fn(), runPlatformBackup: vi.fn() };
+  return {
+    ...actual,
+    listShopsForPlatformBackup: vi.fn(),
+    runPlatformBackup: vi.fn(),
+    storePlatformBackupCensus: vi.fn(),
+  };
 });
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
@@ -15,7 +20,9 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { listShopsForPlatformBackup, runPlatformBackup } = await import("@/features/backup-export");
+const { listShopsForPlatformBackup, runPlatformBackup, storePlatformBackupCensus } = await import(
+  "@/features/backup-export"
+);
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
@@ -54,6 +61,12 @@ beforeEach(() => {
   vi.mocked(Sentry.captureCheckIn).mockClear().mockReturnValue("check-in-id");
   vi.mocked(Sentry.captureException).mockClear();
   vi.mocked(Sentry.captureMessage).mockClear();
+  vi.mocked(storePlatformBackupCensus)
+    .mockReset()
+    .mockResolvedValue({
+      ok: true,
+      objectKey: "exports/2026-08-14/_run.shops-0.stored-0.failed-0.skipped-0",
+    } as never);
   vi.mocked(listShopsForPlatformBackup)
     .mockReset()
     .mockResolvedValue([] as never);
@@ -273,5 +286,101 @@ describe("GET /api/cron/platform-backup — the weekly pass", () => {
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "ok" }),
     );
+  });
+});
+
+/**
+ * The census object is what lets the AWS-side watchdog tell a complete pass
+ * from a truncated one (FU-20260812-backup-watchdog-cannot-see-a-short-run).
+ * Before it, a pass that outgrew its 300-second slot and backed up the oldest N
+ * shops every week was indistinguishable, from the bucket, from one that backed
+ * up all of them — and because the shop ordering is stable by design, the same
+ * newest-joined shops lost every single week.
+ */
+describe("GET /api/cron/platform-backup — the run census", () => {
+  beforeEach(() => {
+    // The pass writes its log line through `console.log`; silence it here and
+    // restore after, exactly as the other pass-level blocks do.
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(listShopsForPlatformBackup).mockResolvedValue([
+      shop("blue-mantis"),
+      shop("coral-cay"),
+    ] as never);
+  });
+
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+    vi.mocked(console.warn).mockRestore();
+  });
+
+  it("files the census with what the pass actually did", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(storePlatformBackupCensus).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
+      census: { shops: 2, stored: 2, failed: 0, skipped: 0 },
+    });
+  });
+
+  it("counts a failed shop as not stored, so coverage is not overstated", async () => {
+    vi.mocked(runPlatformBackup)
+      .mockResolvedValueOnce({ status: "stored", objectKey: "k", byteCount: 1 } as never)
+      .mockResolvedValueOnce({ status: "failed", errorCode: "bundle_failed" } as never);
+
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
+      census: { shops: 2, stored: 1, failed: 1, skipped: 0 },
+    });
+  });
+
+  it("writes it once, after the loop, not once per shop", async () => {
+    // A per-shop census would be a progress bar nobody reads, and each write
+    // would overwrite the last with a number that was true for one moment.
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(storePlatformBackupCensus).toHaveBeenCalledTimes(1);
+  });
+
+  it("never turns a refused census into a failed backup", async () => {
+    // Every bundle is already stored by this point. Answering 500 here would
+    // report a good backup as broken — the exact opposite of the object's
+    // purpose — and would train whoever reads the cron log to ignore a real
+    // failure.
+    vi.mocked(storePlatformBackupCensus).mockResolvedValue({
+      ok: false,
+      errorCode: "upload_rejected",
+    } as never);
+
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(vi.mocked(Sentry.captureCheckIn).mock.calls.at(-1)?.[0]).toMatchObject({ status: "ok" });
+  });
+
+  it("says so in the log when the census is refused, with a code and no bucket detail", async () => {
+    vi.mocked(storePlatformBackupCensus).mockResolvedValue({
+      ok: false,
+      errorCode: "upload_rejected",
+    } as never);
+
+    await GET(cronRequest(`Bearer ${secret}`));
+    // A "warn" level goes to console.warn, not console.log — the pass's own
+    // "info" pass_complete line is the one `logLines()` reads.
+    const line = vi
+      .mocked(console.warn)
+      .mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>)
+      .find((entry) => entry.event === "cron_platform_backup.census_failed");
+    expect(line).toMatchObject({ code: "upload_rejected" });
+    // The code, and never the bucket, key or credential (LogContext's rule).
+    expect(JSON.stringify(line)).not.toContain("diveday-backups");
+  });
+
+  it("still files a census for an empty estate, so an empty run reads as covered", async () => {
+    // Zero shops is a clean pass, not a broken one. Without a census the
+    // watchdog would call it `census_missing` and page someone weekly.
+    vi.mocked(listShopsForPlatformBackup).mockResolvedValue([] as never);
+
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
+      census: { shops: 0, stored: 0, failed: 0, skipped: 0 },
+    });
   });
 });

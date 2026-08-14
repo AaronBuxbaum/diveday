@@ -4,7 +4,12 @@ import { shops } from "@/db/schema";
 import type { FeedLabels } from "@/features/calendar-sync";
 import { nowDate } from "@/lib/clock";
 import { buildBackupBundle } from "./bundle";
-import { backupRunDate, platformBackupObjectKey } from "./period";
+import {
+  backupRunDate,
+  type PlatformBackupCensus,
+  platformBackupCensusKey,
+  platformBackupObjectKey,
+} from "./period";
 import { type BackupUploadErrorCode, putS3Object } from "./s3-client";
 
 /**
@@ -163,4 +168,67 @@ export async function runPlatformBackup(
   if (!uploaded.ok) return { status: "failed", errorCode: uploaded.errorCode };
 
   return { status: "stored", objectKey, byteCount: zip.byteLength };
+}
+
+/**
+ * File the run's census beside its bundles, so the watchdog can tell a complete
+ * pass from a truncated one.
+ *
+ * Written *after* the loop and never inside it: the whole point of the object is
+ * that it states what the finished run set out to do, and a census written
+ * per-shop would be a progress bar nobody reads. A pass that dies mid-run
+ * therefore leaves no census at all, which is itself the signal -- see the
+ * watchdog's `census_missing` alarm.
+ *
+ * The counts live in the object *key* rather than its body, for reasons worth
+ * reading before changing the shape: `platformBackupCensusKey` in `period.ts`.
+ * The body is a courtesy for an operator with a console open, and nothing
+ * automated parses it.
+ *
+ * Its failure is deliberately not the pass's failure. Every bundle is already
+ * safely stored by the time this runs, and turning "the census PUT was refused"
+ * into a 500 would report a *successful* backup as broken -- the opposite of
+ * this object's purpose. The caller logs the outcome instead, and a missing
+ * census raises its own alarm from AWS a day later, which is the principal
+ * that can actually see the bucket.
+ */
+export async function storePlatformBackupCensus(input: {
+  config: PlatformBackupConfig;
+  census: PlatformBackupCensus;
+  now: Date;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; objectKey: string } | { ok: false; errorCode: BackupUploadErrorCode }> {
+  const objectKey = platformBackupCensusKey(backupRunDate(input.now), input.census);
+  const uploaded = await putS3Object({
+    endpoint: `https://s3.${input.config.region}.amazonaws.com`,
+    addressing: "virtual-hosted",
+    region: input.config.region,
+    bucket: input.config.bucket,
+    key: objectKey,
+    // Destructured rather than spread, so "counts only, never shop names" is
+    // structural instead of aspirational. A spread would publish whatever a
+    // future caller happened to hang on the census object -- and the route
+    // computes a `failedShops` slug list thirteen lines away.
+    body: new TextEncoder().encode(
+      `${JSON.stringify(
+        {
+          shops: input.census.shops,
+          stored: input.census.stored,
+          failed: input.census.failed,
+          skipped: input.census.skipped,
+          completedAt: input.now.toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+    ),
+    contentType: "application/json",
+    credentials: {
+      accessKeyId: input.config.accessKeyId,
+      secretAccessKey: input.config.secretAccessKey,
+    },
+    now: input.now,
+    fetchImpl: input.fetchImpl,
+  });
+  return uploaded.ok ? { ok: true, objectKey } : { ok: false, errorCode: uploaded.errorCode };
 }

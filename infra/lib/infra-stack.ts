@@ -2359,9 +2359,20 @@ exports.handler = async () => {
     Prefix: "exports/",
     Delimiter: "/",
   }));
+  // Future-dated prefixes are dropped rather than trusted. The newest run is
+  // whatever sorts last, so ONE object under exports/2099-01-01/ would pin this
+  // check to a run that has not happened: its age is negative, so the staleness
+  // arm cannot fire, and it would report ok every Tuesday while the real pass
+  // was dead. Reachable by a clock skew or a fat-fingered copy into the bucket,
+  // not only by malice -- and the failure mode is total silence, which is the
+  // one thing this function exists to prevent.
   const dates = (runs.CommonPrefixes ?? [])
     .map((entry) => (entry.Prefix ?? "").slice("exports/".length).replace(/\\/$/, ""))
-    .filter((name) => /^\\d{4}-\\d{2}-\\d{2}$/.test(name))
+    .filter(
+      (name) =>
+        /^\\d{4}-\\d{2}-\\d{2}$/.test(name) &&
+        Date.parse(name + "T00:00:00Z") <= Date.now() + DAY_MS,
+    )
     .sort();
 
   if (dates.length === 0) {
@@ -2385,6 +2396,51 @@ exports.handler = async () => {
   }));
   const bundles = (objects.Contents ?? []).filter((entry) => (entry.Key ?? "").endsWith(".zip"));
 
+  // The run's census, read straight out of the listing above rather than
+  // fetched. The pass files one object per run whose KEY carries the numbers --
+  // exports/<date>/_run.shops-40.stored-25.failed-0.skipped-15 -- precisely so
+  // this function never needs s3:GetObject. That matters: the uploader
+  // credential is safe to keep in Vercel because no principal reachable from
+  // the app can read a bundle back, and this weekly unattended function is
+  // exactly the principal an attacker would want holding GetObject. The format
+  // is pinned to src/features/backup-export/period.ts by
+  // infra/lib/backup-freshness.test.ts -- change one and that test fails until
+  // the other agrees.
+  //
+  // Picked by LastModified rather than by listing order, and this is not a
+  // detail. The census key CARRIES the counts, so unlike every other key in
+  // this feature it is not deterministic: a same-day re-run with different
+  // numbers (a platform retry, a redeploy replaying the tick, an operator
+  // invoking by hand -- all expected, see period.ts) writes a SECOND census
+  // instead of overwriting the first. Taking the listing's first match would
+  // then pick lexicographically, and digits do not sort numerically:
+  // "stored-100" sorts before "stored-90". Which run's claim gets checked
+  // would be decided by a leading digit.
+  const censusEntries = (objects.Contents ?? []).filter((entry) =>
+    /_run\\.shops-\\d+\\.stored-\\d+\\.failed-\\d+\\.skipped-\\d+$/.test(entry.Key ?? ""),
+  );
+  //
+  // new Date(...) rather than Date.parse(...): the SDK hands LastModified back as
+  // a Date object, and Date.parse takes a string -- it would round-trip through
+  // toString() and quietly drop the milliseconds, which are exactly what
+  // separates two censuses written seconds apart by a retry.
+  const censusKey = censusEntries
+    .slice()
+    .sort((a, b) => Number(new Date(a.LastModified ?? 0)) - Number(new Date(b.LastModified ?? 0)))
+    .map((entry) => entry.Key ?? "")
+    .pop();
+  const censusMatch = censusKey
+    ? /_run\\.shops-(\\d+)\\.stored-(\\d+)\\.failed-(\\d+)\\.skipped-(\\d+)$/.exec(censusKey)
+    : null;
+  const census = censusMatch
+    ? {
+        shops: Number(censusMatch[1]),
+        stored: Number(censusMatch[2]),
+        failed: Number(censusMatch[3]),
+        skipped: Number(censusMatch[4]),
+      }
+    : null;
+
   if (ageDays > maxAgeDays) {
     await alarm(
       "DiveDay backup: no export in " + ageDays + " days",
@@ -2405,14 +2461,105 @@ exports.handler = async () => {
     return { status: "empty", latest, ageDays, ...dump };
   }
 
+  // A listing caps at 1000 keys and this code never paginates. That is fine
+  // today and fails LOUD rather than silent when it stops being fine -- the
+  // bundle count would cap at 1000 and trip the shortfall arm below -- but the
+  // whole premise of this check is an estate outgrowing a fixed budget, so the
+  // truncation says so in its own words rather than arriving as a confusing
+  // shortfall alarm one order of magnitude from here.
+  if (objects.IsTruncated) {
+    await alarm(
+      "DiveDay backup: the run prefix no longer fits one listing",
+      "The run " + latest + " in " + bucket + " holds more than 1000 objects, so this check " +
+      "is reading a truncated page and cannot count the run. Give the freshness check a " +
+      "paginating loop. See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return { status: "truncated", latest, ageDays, bundles: bundles.length, ...dump };
+  }
+
+  // Two censuses under one prefix is itself news: the pass writes exactly one
+  // per run, so a second means a re-run landed with different counts, and the
+  // one being checked below is only the most recent of them.
+  if (censusEntries.length > 1) {
+    await alarm(
+      "DiveDay backup: the newest run has more than one census",
+      "The run " + latest + " in " + bucket + " holds " + censusEntries.length + " _run.shops-... " +
+      "objects, so the pass ran more than once that day with different results. The most recent " +
+      "one is being checked. See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+  }
+
+  // A prefix with bundles in it is no longer enough. The two checks below are the
+  // blind spot this watchdog had until 2026-08-14: a pass that outgrows its
+  // 300-second slot backs up the oldest N shops in a STABLE order and skips the
+  // rest, so the same newest-joined shops lose every single week while the bucket
+  // looks healthy the whole time (ADR 20260812-platform-backup-runner; the entry
+  // that raised it was FU-20260812-backup-watchdog-cannot-see-a-short-run).
+  if (!census) {
+    await alarm(
+      "DiveDay backup: the newest run left no census",
+      "The run " + latest + " in " + bucket + " has bundles but no _run.shops-... object. " +
+      "The pass writes that after its loop, so a missing one means the run died mid-pass " +
+      "(a Vercel timeout, a thrown bootstrap) and an unknown number of shops were never " +
+      "reached. Treat the bundle count under that prefix as a floor, not a total. See " +
+      "docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return { status: "census_missing", latest, ageDays, bundles: bundles.length, ...dump };
+  }
+
+  // Deliberately alarms on ANY skip rather than on a threshold. A skip is not a
+  // slow week to ride out: the shop ordering is stable by design, so the shops
+  // missed this week are the same ones that will be missed next week and every
+  // week after, until the estate stops fitting the slot at all. The fix is
+  // operational (page the pass across invocations), so a human has to see it.
+  // Deliberately reads stored against shops rather than only checking
+  // skipped. A run where 15 of 40 bundles FAIL reports skipped-0 and stores
+  // 25, and 25 bundles really are under the prefix -- so a skipped-only
+  // condition says "ok" forever while 15 shops have no backup, which is this
+  // watchdog's own failure class arriving through the other door. The app side
+  // does raise a Sentry message per failed shop, but the stated reason this
+  // function exists at all is that every Vercel-side signal shares fate with
+  // the pass, so the AWS-side check must not be the one that looks away.
+  if (census.stored < census.shops || bundles.length < census.stored) {
+    await alarm(
+      "DiveDay backup: the newest run did not cover every shop",
+      "The run " + latest + " in " + bucket + " reports " + census.shops + " shop(s), " +
+      census.stored + " stored, " + census.failed + " failed, " + census.skipped + " skipped, " +
+      "and " + bundles.length + " .zip bundle(s) are actually under the prefix. " +
+      (census.skipped > 0
+        ? "Shops are being SKIPPED: the pass is running out of its 300-second slot before it " +
+          "reaches them. The shop order is stable, so the same shops lose every week and will " +
+          "keep losing until the pass is paged across several invocations. "
+        : "") +
+      (census.failed > 0
+        ? "Shops FAILED: their bundle could not be built or uploaded. Check the Sentry issues " +
+          "tagged backup_shop for which ones and why. "
+        : "") +
+      (bundles.length < census.stored
+        ? "Fewer bundles are present than the pass believes it stored, so PUTs are being " +
+          "accepted and not landing. "
+        : "") +
+      "See docs/engineering/backup-and-restore-runbook.md section 2."
+    );
+    return {
+      status: "incomplete",
+      latest,
+      ageDays,
+      bundles: bundles.length,
+      census,
+      ...dump,
+    };
+  }
+
   console.log(JSON.stringify({
     event: "backup_freshness.ok",
     latest,
     ageDays,
     bundles: bundles.length,
+    census,
     ...dump,
   }));
-  return { status: "ok", latest, ageDays, bundles: bundles.length, ...dump };
+  return { status: "ok", latest, ageDays, bundles: bundles.length, census, ...dump };
 };
 `),
     });
