@@ -79,6 +79,13 @@ export type SeaState = (typeof SEA_STATES)[number];
  * against their own water and saying where the boundaries actually fall. Until
  * then, treat the numbers as a considered guess that has held up, not as fact.
  *
+ * That reading is now a scheduled conversation rather than an open question in
+ * the follow-up register: section C2 of the pilot first-call script
+ * (`docs/product/pilot-kit/first-call-script.md`) carries the table and the
+ * three questions to ask, for the calls H-31/H-32 are about. Answers land back
+ * here, in the two period constants below, and in the boundary rows of
+ * `marine-forecast.test.ts`.
+ *
  * None of this is or may become a boarding gate. The reading informs a diver
  * planning their day; readiness and trip admission never read it, and the crew
  * make the go/no-go call at the dock.

@@ -15,6 +15,7 @@ import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -88,6 +89,10 @@ export default async function WalkInDiverPage({
   await connection(); // live seat counts — render per request, never a build-time shell
   const session = await requireStaffSession();
   const { shopSlug, tripId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const { diverq, notice, gate } = await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.

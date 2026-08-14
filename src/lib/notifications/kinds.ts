@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
@@ -19,6 +20,14 @@ import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
  */
 
 const emailAddressSchema = z.email().max(200);
+
+/**
+ * A date with no instant in it — "2026-08-06". Refused unless it is a date that
+ * actually exists, so a renderer downstream never has to decide what to print
+ * for "2026-02-31". Formatted through UTC at the point of display
+ * (`formatCalendarDate`), never through a shop's zone, which would shift the day.
+ */
+const calendarDateSchema = z.string().refine(isValidCalendarDate);
 
 /**
  * The language this message is written in: the recipient's own recorded locale
@@ -473,6 +482,12 @@ const courseInquirySchema = z.object({
   inquirerPhone: z.string().trim().min(1).max(30).optional(),
   experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
   timing: z.string().trim().min(1).max(200).optional(),
+  // The dates the diver actually named, which is the fact that decides whether
+  // a boat goes up — carried here as calendar dates rather than folded into
+  // `timing`'s free text, so the mail can render them in the shop's own locale.
+  preferredDate: calendarDateSchema.optional(),
+  alternateDate: calendarDateSchema.optional(),
+  dateFlexible: z.boolean().optional(),
   divers: z.number().int().min(1).max(12).optional(),
   message: z.string().trim().min(1).max(1500).optional(),
 });

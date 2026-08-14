@@ -40,17 +40,28 @@ describe("seeded order states", () => {
     expect(partPaid.length).toBeGreaterThan(0);
   });
 
-  it("keeps every non-paid order off a booking, so no seat's payment gate moves", async () => {
+  it("keeps every settling order off a booking, so no seat's payment gate moves", async () => {
     // The invariant the whole module rests on: `applyOrderUpdate` cascades a
     // paid or refunded *booking-linked* order onto that booking's payment
     // record, so a seeded refunded order hung off a seat would contradict the
     // `booking_payments` row the bookings scenario wrote for it — and could
     // change who may board the wreck charter, whose readiness other specs
     // assert exactly.
+    //
+    // Narrowed 2026-08-14 from "every non-paid order" to the statuses that
+    // actually cascade. The old assertion was wider than the reason above it
+    // and banned a shape the mechanism does not care about: `applyOrderUpdate`
+    // reaches `recordBookingPayment` only under `status === "paid"` or
+    // `status === "refunded"` (read it — the two branches are explicit), so an
+    // `open` invoice settles nothing and moves no gate. That is what let
+    // `seed-open-invoice.ts` put one unpaid seat on today's reef boat, which
+    // the trip pulse's money fact needs in order to render at all; its own test
+    // asserts from the other side that no seat on that departure is held by
+    // payment.
     const { db, shop } = await seededShopContext({ history: true });
     const rows = await db.select().from(orders).where(eq(orders.shopId, shop.id));
     for (const order of rows) {
-      if (order.status === "paid") continue;
+      if (order.status !== "refunded") continue;
       expect(order.bookingId, `order ${order.id} in status ${order.status} is booking-linked`).toBe(
         null,
       );

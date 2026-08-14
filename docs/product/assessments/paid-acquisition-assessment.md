@@ -275,8 +275,17 @@ qualitatively informative at n=1, and a single conversion is not.
   the question "how did you find me?" has two answers: lie, or say "I scraped your public waiver
   pages." From the vendor whose pitch is *trustworthy custodian of your divers' medical data*, the
   second is a story that gets told at DEMA and never stops being told.
-- **Any site-wide ad pixel installed the normal way.** See
-  [FU-20260812-ad-pixels-would-bypass-capability-redaction](../follow-ups/FU-20260812-ad-pixels-would-bypass-capability-redaction.md).
+- **Any site-wide ad pixel installed the normal way.** `gtag.js` and the Meta pixel send
+  `page_location` on every pageview, and this site has pages where the URL *is* the credential
+  (`/waivers/[token]`, `/ready/[token]`, `/recap/[token]`, `/calendar/[token]`) — so a tag installed
+  the way its own setup wizard describes ships live capability URLs attached to signed waivers and
+  medical answers. If conversion tracking is ever wanted, import it offline from the server-side
+  `demo_entered` / `trial_started` events in `src/lib/analytics.ts`; a browser tag mounts only through
+  `Observability`, with tokened routes excluded outright rather than redacted. **Remarketing from any
+  tokened route is refused outright** — an audience built from `/waivers/[token]` visitors is an
+  advertising audience of people who signed a medical form, and no redaction fixes that. The rule and
+  its reasoning are in
+  [capability-telemetry-runbook.md](../../engineering/capability-telemetry-runbook.md#advertising-and-analytics-tags-the-one-rule).
 - **Competitor-brand bidding.** Legal — Google does not restrict trademarks as keywords. But an
   upheld complaint restricts **the entire second-level domain going forward**, and `dive.day` is the
   company's only domain and only SEO asset. The upside is ~2 clicks/month on `diveshop360`, whose

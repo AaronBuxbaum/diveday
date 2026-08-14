@@ -91,6 +91,50 @@ do those now first."
 - If you left your current system tomorrow, what would you lose?
 - Who would have to agree to a change — you, a partner, a manager, an accountant?
 
+### C2. If they run the boat themselves: the sea-state bands
+
+Only for someone who actually reads the water and calls a day off — a captain or a working
+instructor, not an office manager. Skip it otherwise; a guess from the wrong person is worse than no
+answer, because it would be recorded as one.
+
+DiveDay's diver-facing conditions card prints a plain-language reading ("Light chop") rather than the
+marine model's raw numbers. The six bands below are **DiveDay's own working estimates, read by no
+captain** — the code says so in as many words. Nothing gates on them: the card is a planning outlook
+and the crew make the call at the dock. It is a credibility question, not a safety one, which is why
+it shipped and why it can wait for a call like this.
+
+Read them the table as heights, not as jargon, and remember when you do that significant wave height
+is the mean of the **highest third** of waves — individual sets run roughly 1.5–2× the number being
+banded. A threshold that sounds right against "the waves I can see" is wrong against this statistic.
+
+| Significant wave height | What DiveDay calls it |
+| --- | --- |
+| under 0.2 m (8 in) | glassy |
+| 0.2–0.5 m (8 in – 1.5 ft) | calm |
+| 0.5–0.9 m (1.5–3 ft) | light chop |
+| 0.9–1.5 m (3–5 ft) | choppy |
+| 1.5–2.5 m (5–8 ft) | rough |
+| 2.5 m (8 ft) and up | very rough |
+
+Then three questions, in this order:
+
+1. Do those six boundaries fall in the right places for a recreational reef or wreck day on your
+   water?
+2. DiveDay shifts the reading one band rougher when the wave period is 5 seconds or less, and one
+   band calmer at 9 seconds or more. Are those the right pivots — and is **one band** the right size
+   of correction, or is it more than that in one direction?
+3. Read them the sentence under `rough` and under `very_rough`. Do those read true, or do they
+   describe somebody else's ocean?
+
+Write the answers down verbatim. If they move the numbers it is a small edit — three named constants
+in `src/lib/marine-forecast.ts` plus the boundary rows in its test, with any copy change landing in
+both locales together. If they confirm them, the win is being able to delete the "unreviewed" hedging
+from those comments and say the bands have a captain behind them.
+
+**Not on the table:** making the bands configurable per shop. Six thresholds per shop is a settings
+page nobody will fill in. If they want their own numbers, that is a finding about the whole approach,
+not a feature request — write it down as such.
+
 ### D. The disconfirming questions — ask these even when the call is going well
 
 These are the ones that should make you walk away, and they are the reason the call exists.

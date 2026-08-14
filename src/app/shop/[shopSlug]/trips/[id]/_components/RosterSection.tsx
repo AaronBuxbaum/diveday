@@ -161,6 +161,15 @@ export function RosterSection({
    * Whether the page above still renders its `#add-diver` section (it doesn't
    * on a cancelled departure). The empty roster's one action anchors there, so
    * without this the box would offer a door that isn't on the page.
+   *
+   * Asked and answered 2026-08-14: the *non-empty* roster deliberately gets no
+   * matching header link down to `#add-diver`. The 2026-08-11 recomposition put
+   * the roster first (the page's answer, "who is attending") and left the add
+   * form below it, which is slower for a walk-in morning — but `/check-in`
+   * already exists for exactly that moment, and this header row already carries
+   * the filter chips and the bulk waiver-send control. A third control here
+   * would be a duplicate door bought at the cost of principle 8. The empty
+   * state keeps its anchor because there is no list to scroll past.
    */
   canAddDivers: boolean;
   readinessByBooking: ReadinessByBooking;

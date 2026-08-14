@@ -209,12 +209,13 @@ test.describe("trip pulse", () => {
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
-    // The exact URL the Overview's "N orders are awaiting payment ›" builds.
-    // Driven by `goto` rather than a click because no *seeded* departure
-    // carries an open invoice, so the fact itself renders on none of the
-    // demo's boats — what this pins is that the URL it builds means what it
-    // says. (The seed gap is in the follow-up register.)
-    await page.goto(`/shop/blue-mantis/orders?tripId=${tripId}&status=open&range=all`);
+    // Clicked on the Overview rather than reconstructed, now that the seed puts
+    // one open invoice on this departure (src/db/seed-open-invoice.ts). The
+    // difference matters: reconstructing the URL only ever proved the URL, and
+    // would have kept passing if the fact stopped rendering at all.
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.getByRole("link", { name: /awaiting payment/ }).click();
+    await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.
     await expect(

@@ -2,6 +2,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
+import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
@@ -1011,6 +1012,15 @@ type CourseInquiryEmailInput = {
   inquirerPhone?: string;
   experience: CourseInquiryExperience;
   timing?: string;
+  /**
+   * The dates the diver named, if they named any. Unlike every other blank
+   * above these render *nothing* rather than "Not said" — `timing`'s free text
+   * already answers "when", so a "Dates asked for: Not said" line would be a
+   * second empty answer to a question that was not asked twice.
+   */
+  preferredDate?: CalendarDate;
+  alternateDate?: CalendarDate;
+  dateFlexible?: boolean;
   divers?: number;
   message?: string;
 };
@@ -1047,7 +1057,24 @@ export function courseInquiryEmail(input: CourseInquiryEmailInput): Notification
   const timingLine = t("notifications.courseInquiry.timing", { timing });
   const diversLine = t("notifications.courseInquiry.divers", { divers });
   const experienceLine = t("notifications.courseInquiry.experience", { experience });
-  const facts = [timingLine, diversLine, experienceLine];
+  // Above the free-text "when suits": the structured answer leads, the diver's
+  // own words qualify it. A disjunction list ("Aug 6 or Aug 13") rather than a
+  // hand-joined string, so the separator is the locale's and not English's.
+  const named = [input.preferredDate, input.alternateDate].filter((d) => d != null);
+  const datesLine =
+    named.length > 0
+      ? t(
+          input.dateFlexible
+            ? "notifications.courseInquiry.datesFlexible"
+            : "notifications.courseInquiry.dates",
+          {
+            dates: cachedListFormat(input.locale, { style: "long", type: "disjunction" }).format(
+              named.map((date) => formatCalendarDate(date, input.locale)),
+            ),
+          },
+        )
+      : null;
+  const facts = [datesLine, timingLine, diversLine, experienceLine].filter((line) => line != null);
 
   return {
     subject: t("notifications.courseInquiry.subject", { courseTitle: input.courseTitle }),

@@ -55,6 +55,7 @@ import { combineCertRequirements } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
 import {
   BookSpotSection,
@@ -91,6 +92,10 @@ export async function generateMetadata({
   params: Promise<{ shopSlug: string; id: string }>;
 }): Promise<Metadata> {
   const { shopSlug, id } = await params;
+  // Metadata runs its own read, so it needs its own guard — and it must not
+  // throw either: a junk id here would 500 the page before the body's
+  // notFound() could render it.
+  if (!uuidParam(id)) return { title: "Trip — DiveDay" };
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { title: "Trip — DiveDay" };
@@ -126,6 +131,10 @@ export default async function TripDetailPage({
 }) {
   await connection();
   const { shopSlug, id: tripId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const {
     booking: bookingToken,
     waitlist: waitlistId,

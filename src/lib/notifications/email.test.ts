@@ -568,6 +568,43 @@ describe("courseInquiryEmail", () => {
     // No stray separator where the retired "date asked for" line used to sit.
     expect(email.html).not.toContain("<br><br>");
   });
+
+  it("names the dates the diver asked for, ahead of their own words about timing", () => {
+    const email = courseInquiryEmail({
+      ...inquiry,
+      preferredDate: "2026-08-06",
+      alternateDate: "2026-08-13",
+    });
+    expect(email.text).toContain("Dates asked for: Aug 6, 2026 or Aug 13, 2026");
+    // The structured answer leads; the free text qualifies it.
+    expect(email.text.indexOf("Dates asked for:")).toBeLessThan(email.text.indexOf("When:"));
+  });
+
+  it("says so when the diver can move a few days", () => {
+    const email = courseInquiryEmail({
+      ...inquiry,
+      preferredDate: "2026-08-06",
+      dateFlexible: true,
+    });
+    expect(email.text).toContain("Dates asked for: Aug 6, 2026 — can move a few days");
+    // One date named, so no disjunction to build.
+    expect(email.text).not.toContain(" or ");
+  });
+
+  it("renders no date line at all when the diver named none", () => {
+    const email = courseInquiryEmail(inquiry);
+    expect(email.text).not.toContain("Dates asked for");
+    // Never "Not said" here: the free-text "When:" line already answered.
+    expect(email.text).toContain("When: the week of 12 August");
+  });
+
+  it("reads a calendar date through UTC, so the server's zone cannot shift the day", () => {
+    // 2026-08-06 is a date, not an instant. A renderer that went through a
+    // negative-offset zone would print Aug 5 for every shop west of Greenwich.
+    const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-06" });
+    expect(email.text).toContain("Aug 6, 2026");
+    expect(email.text).not.toContain("Aug 5, 2026");
+  });
 });
 
 describe("wrapEmailHtml", () => {

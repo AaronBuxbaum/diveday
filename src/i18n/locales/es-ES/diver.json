@@ -2908,6 +2908,8 @@
       "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
       "contact": "Correo: {email} · Teléfono: {phone}",
       "timing": "Cuándo: {timing}",
+      "dates": "Fechas solicitadas: {dates}",
+      "datesFlexible": "Fechas solicitadas: {dates}: puede moverse unos días",
       "divers": "Cuántos buceadores: {divers}",
       "experience": "Experiencia hasta ahora: {experience}"
     },

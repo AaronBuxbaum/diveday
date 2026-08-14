@@ -18,6 +18,7 @@ import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -176,6 +177,10 @@ export default async function OrderDetailPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(id)) notFound();
   const { notice } = await searchParams;
   const db = await getDb();
   const order = await getOrder(db, session.user.shopId, id);

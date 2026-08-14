@@ -18,6 +18,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
@@ -71,6 +72,10 @@ export default async function DiverDetailPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(personId)) notFound();
   const { notice, undo, cardType, gate, form, edit } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
