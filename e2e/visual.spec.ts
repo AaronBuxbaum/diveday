@@ -1607,6 +1607,43 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
         await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
         await capture(page, "today-first-bookable", scheme);
+
+        // The orientation's *other* form, on the same shop rather than a
+        // second sign-up. `RoleOrientationCard` above is what a Today with
+        // nothing on it renders; the moment the page has work to show
+        // (`hasWorkToShow`, src/app/shop/[shopSlug]/page.tsx) the same pointer
+        // compresses to `RoleOrientationLine` so the queue keeps the top of
+        // the page. Reaching that state needs a real shop whose owner has not
+        // dismissed orientation *and* a queue row — the demo shop suppresses
+        // orientation entirely and `today-empty` deliberately has no bookings,
+        // so no other capture in this suite can render the line.
+        //
+        // One hand-entered diver is enough: seating owes a waiver on join
+        // (src/db/seat-diver.ts), the departure is inside the operational
+        // horizon, so Today gains a waiver row.
+        await page.goto(`/shop/${unique}/bookings/new`);
+        await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
+        // "New diver" rather than the trip heading: step one and step two both
+        // say "Which departure?", so that one resolves against the picker's own
+        // DOM and would let the hand-entry form still be streaming.
+        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        // Name only — this door takes the no-email diver, which also keeps the
+        // seat from queuing a notification whose delivery state would vary.
+        await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Marisol Vega");
+        await page.getByRole("button", { name: "Add to trip" }).click();
+        await page.waitForURL(/\/trips\/[^/]+\/guests/);
+
+        await page.goto(`/shop/${unique}`);
+        // The line's own tour link, which is what the line exists to keep.
+        await page
+          .getByRole("link", { name: "Open Board to see this week's departures." })
+          .waitFor();
+        // ...and proof it is the line and not the card: the two forms share
+        // that link, so waiting on it alone would pass on either.
+        await expect(
+          page.getByRole("heading", { name: "New here? A few pointers for your role." }),
+        ).toHaveCount(0);
+        await capture(page, "today-orientation-line", scheme);
       });
     });
 

@@ -462,6 +462,43 @@ test.describe("staff", () => {
       page.getByText("This session is at its instructor-to-student ratio limit"),
     ).toBeVisible();
   });
+
+  test("a depth marker follows the shop's unit, and a broken one is refused rather than published", async ({
+    page,
+  }) => {
+    // Course prose is the shop's own free text, so a depth in it could never
+    // follow `shops.depth_unit` — a Key Largo shop read "No deeper than 12
+    // meters" on its own page. `{depth18}` resolves at render instead
+    // (ADR 20260814-course-depth-markers).
+    await page.goto("/shop/blue-mantis/courses/wreck-diver/edit");
+    await page.getByLabel("Subhead").fill("Plan every dive to {depth18}");
+    await page.getByRole("button", { name: "Save course page" }).click();
+    await expect(page.getByRole("status")).toContainText("Course page saved");
+
+    // Resolved on the way out, in whichever unit this shop is set to — never
+    // the raw marker, which is the failure a diver would actually see.
+    await page.goto("/s/blue-mantis/courses/wreck-diver");
+    const subhead = page.getByText(/Plan every dive to/);
+    await expect(subhead).toBeVisible();
+    await expect(subhead).toContainText(/Plan every dive to (18 meters|60 feet)/);
+    await expect(page.getByText("{depth")).toHaveCount(0);
+
+    // A half-edited marker is refused at save, with the offending box focused
+    // — the whole point of validating here is that nothing reaches a diver
+    // with its own braces showing.
+    await page.goto("/shop/blue-mantis/courses/wreck-diver/edit");
+    await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
+    await page.getByRole("button", { name: "Save course page" }).click();
+    // Filtered, not bare: Next's own route announcer is a `role="alert"` too.
+    await expect(page.getByRole("alert").filter({ hasText: "depth markers" })).toContainText(
+      "is broken, so nothing saved",
+    );
+
+    // Refused means refused: the previously saved sentence is still what a
+    // diver reads.
+    await page.goto("/s/blue-mantis/courses/wreck-diver");
+    await expect(page.getByText(/Plan every dive to/)).toContainText(/(18 meters|60 feet)/);
+  });
 });
 
 test("a diver with no workable date reaches the shop, and is offered one way to do it", async ({

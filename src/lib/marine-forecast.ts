@@ -66,12 +66,22 @@ export type SeaState = (typeof SEA_STATES)[number];
  * same order as `SEA_STATES` minus its first entry — anything below the first
  * threshold is `glassy`.
  *
- * These are a readability mapping, not a standard. The Douglas and WMO sea-state
- * scales exist, but they are coarse where a dive day is decided (their "smooth"
- * band spans 0.1–0.5 m and their "slight" spans 0.5–1.25 m, which is the whole
- * range between a pleasant morning and a boat full of sick divers) and they run
- * to states no recreational trip sails in. These split that middle finely and
- * collapse the top.
+ * These are DiveDay's own working estimates for a recreational reef/wreck day,
+ * not a standard and not a captain's numbers. Nobody who runs a boat has read
+ * them. They are reasoned rather than sourced: the Douglas and WMO sea-state
+ * scales exist, but they are coarse exactly where a dive day is decided (their
+ * "smooth" band spans 0.1–0.5 m and their "slight" spans 0.5–1.25 m, which is
+ * the whole range between a pleasant morning and a boat full of sick divers)
+ * and they run to states no recreational trip sails in — so these split that
+ * middle finely and collapse the top.
+ *
+ * What would move them is a working dive professional reading the six bands
+ * against their own water and saying where the boundaries actually fall. Until
+ * then, treat the numbers as a considered guess that has held up, not as fact.
+ *
+ * None of this is or may become a boarding gate. The reading informs a diver
+ * planning their day; readiness and trip admission never read it, and the crew
+ * make the go/no-go call at the dock.
  */
 const SEA_STATE_THRESHOLDS_M: readonly number[] = [0.2, 0.5, 0.9, 1.5, 2.5];
 
@@ -84,6 +94,12 @@ const SEA_STATE_THRESHOLDS_M: readonly number[] = [0.2, 0.5, 0.9, 1.5, 2.5];
  * and a surface swim hard. A long period is swell that has travelled, arriving
  * as a slow rise and fall the boat rides over. Same height, one band apart in
  * how it reads.
+ *
+ * The two pivots and the size of the correction are estimates on the same
+ * footing as the height bands above: the *direction* is uncontroversial, the
+ * magnitude — a whole band, at 5 s and 9 s — is DiveDay's guess, unreviewed by
+ * anyone who reads real water for a living. A dive professional's read is what
+ * would change them. Like the bands, this only informs; it gates nothing.
  */
 const SHORT_PERIOD_SECONDS = 5;
 const LONG_PERIOD_SECONDS = 9;

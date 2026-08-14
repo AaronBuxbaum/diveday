@@ -155,7 +155,9 @@
       "stepReturn": "Back at the dock",
       "minutesBefore": "{count} min before",
       "minutesAfter": "{count} min after",
-      "atDeparture": "On time"
+      "atDeparture": "On time",
+      "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn't describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn't describe a dive at any of them:}}",
+      "siteOverride": "{name} · {count} min"
     },
     "units": {
       "heading": "Units",

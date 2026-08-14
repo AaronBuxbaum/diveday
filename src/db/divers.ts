@@ -14,7 +14,9 @@ import {
   notInArray,
   or,
 } from "drizzle-orm";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { diverDepthLimit } from "@/lib/depth-ceiling";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
@@ -414,15 +416,13 @@ export async function listDiverSummaries(
   const like = query ? `%${query}%` : null;
 
   const filter = options.filter ?? "all";
+  const timeZone = options.timeZone ?? "UTC";
+  const now = options.now ?? nowDate();
   const scope = and(
     eq(people.shopId, shopId),
     eq(personRoles.role, "diver"),
     removalScope(filter),
-    diverFilterCondition(db, filter, {
-      shopId,
-      timeZone: options.timeZone ?? "UTC",
-      now: options.now ?? nowDate(),
-    }),
+    diverFilterCondition(db, filter, { shopId, timeZone, now }),
     like
       ? or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like))
       : undefined,
@@ -460,6 +460,9 @@ export async function listDiverSummaries(
       db,
       shopId,
       page.rows.map(({ person }) => person),
+      // Card expiry is read against the *shop's* own calendar date (CR-009), so
+      // the roster and the diver record agree about what is still valid.
+      calendarDateInTimezone(now, timeZone),
     ),
     total: page.total,
     page: page.page,
@@ -472,6 +475,7 @@ async function summarizeDivers(
   db: AppDb,
   shopId: string,
   peopleRows: (typeof people.$inferSelect)[],
+  todayLocal: CalendarDate,
 ) {
   if (peopleRows.length === 0) return [];
   const ids = peopleRows.map((person) => person.id);
@@ -533,6 +537,22 @@ async function summarizeDivers(
         emergencyContactName: null,
         emergencyContactPhone: null,
       },
+      /**
+       * The one card that speaks for this diver on the roster: the **highest
+       * level among their verified, unexpired** certifications, or null when
+       * they hold none. An expired higher card never outranks a valid lower
+       * one — a lapsed Rescue card does not make someone a Rescue diver today —
+       * and a `pending` card says nothing until a staffer verifies it.
+       *
+       * Read straight off `diverDepthLimit` (`src/lib/depth-ceiling.ts`) rather
+       * than re-derived here, so the roster's idea of "the diver's level" is
+       * the same one the depth advisory already applies. Specialties and date
+       * of birth are deliberately not passed: those change the *ceiling*, never
+       * which level card the diver holds. A **code**, never a word — the label
+       * comes from the shared `CERTIFICATION_LEVEL_KEYS` map in
+       * `src/i18n/readiness-labels.ts`, the same source the diver record uses.
+       */
+      certificationLevel: diverDepthLimit(cards, [], todayLocal).level,
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,

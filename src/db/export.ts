@@ -517,7 +517,11 @@ export async function loadShopExportBundleInput(
       const photoUrls = [
         ...recapPhotoRows.map((row) => row.imageUrl),
         ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
-        ...creatureRows.map((row) => row.imageUrl),
+        // No field-guide photos: a creature row is a catalog slug, and the
+        // picture on its card is DiveDay's own asset under `public/marine-life`
+        // (ADR 20260813-marine-life-is-diveday-copy) rather than anything this
+        // shop uploaded. `dive_site_creatures.csv` still prints the path, which
+        // resolves against DiveDay and needs nothing bundled.
         ...momentRows.map((row) => row.imageUrl),
         ...courseRows.flatMap((row) => [
           row.heroImageUrl,

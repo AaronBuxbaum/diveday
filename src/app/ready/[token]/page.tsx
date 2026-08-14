@@ -9,6 +9,7 @@ import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
@@ -690,25 +691,20 @@ export default async function DiverReadinessPage({
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
         <FlashParams params={["saved", "error", "pay"]} />
         {/* One eyebrow, not two: this header used to stack "Your trip
-            readiness" and the shop's name as identical uppercase-primary
-            lines — a visible bug-shaped redundancy. The shop's name is the
-            context worth keeping (and it is said in full, with address and
-            map, in the shop card at the foot of the page); the page's own
-            identity is carried by the checklist heading below. */}
-        <header>
-          <p className="text-sm font-medium tracking-widest text-muted uppercase">
-            {detail.shop.name}
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-            {detail.trip.title}
-          </h1>
+            readiness" and the shop's name as two identical uppercase lines — a
+            visible bug-shaped redundancy. The shop's name is the context worth
+            keeping (and it is said in full, with address and map, in the shop
+            card at the foot of the page); the page's own identity is carried by
+            the checklist heading below. So: the shop name alone, never the
+            component's two-line array form. */}
+        <TokenPageHeader eyebrow={detail.shop.name} title={detail.trip.title}>
           <p className="mt-1 text-base text-muted">
             {when} · {timeRange} · {relativeWhen}
           </p>
           {/* The one number that matters on the morning of the trip — a shade
               stronger than the meta line above it, never shouting. */}
           <p className="mt-1 text-base font-medium">{dockCallLine}</p>
-        </header>
+        </TokenPageHeader>
 
         {notice ? (
           <div className="mt-6">

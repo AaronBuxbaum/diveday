@@ -7,7 +7,14 @@ import { getDb } from "@/db/client";
 import { getCourseBySlug, updateCourse, updateCourseContent } from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
-import { parseFaqs, parseLines, sanitizeScheduleDays, splitCourseImageUrls } from "@/lib/courses";
+import {
+  COURSE_CONTENT_LIMITS,
+  courseDepthPlaceholderIssues,
+  parseFaqs,
+  parseLines,
+  sanitizeScheduleDays,
+  splitCourseImageUrls,
+} from "@/lib/courses";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -36,15 +43,19 @@ const centsFromAmount = (value: number | "", currency: string) =>
  */
 const contentSchemaFor = (currency: string) =>
   z.object({
-    summary: z.string().trim().max(200),
-    overview: z.string().trim().max(6_000),
-    durationText: z.string().trim().max(120),
-    groupSizeText: z.string().trim().max(120),
-    prerequisiteNote: z.string().trim().max(400),
-    includes: z.string().max(2_000),
-    excludes: z.string().max(2_000),
-    scheduleDaysJson: z.string().max(20_000),
-    faqs: z.string().max(12_000),
+    // Lengths come from COURSE_CONTENT_LIMITS, which the published templates
+    // are tested against — a ceiling the seeded content violates is one that
+    // only ever fires on words the shop never wrote (ADR 20260814-course-depth-markers's
+    // sibling lesson: Wreck Diver's 510-character note could not be saved at all).
+    summary: z.string().trim().max(COURSE_CONTENT_LIMITS.summary),
+    overview: z.string().trim().max(COURSE_CONTENT_LIMITS.overview),
+    durationText: z.string().trim().max(COURSE_CONTENT_LIMITS.durationText),
+    groupSizeText: z.string().trim().max(COURSE_CONTENT_LIMITS.groupSizeText),
+    prerequisiteNote: z.string().trim().max(COURSE_CONTENT_LIMITS.prerequisiteNote),
+    includes: z.string().max(COURSE_CONTENT_LIMITS.includes),
+    excludes: z.string().max(COURSE_CONTENT_LIMITS.excludes),
+    scheduleDaysJson: z.string().max(COURSE_CONTENT_LIMITS.scheduleDaysJson),
+    faqs: z.string().max(COURSE_CONTENT_LIMITS.faqs),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
   });
@@ -137,6 +148,32 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     scheduleDays = null;
   }
   if (scheduleDays === null) redirect(`${base}?error=invalid&field=scheduleDaysJson`);
+
+  // Depth markers, checked before anything is written.
+  //
+  // This is the one place shop-editable prose is also a small message format,
+  // and the failure it guards is silent by construction: a half-edited
+  // `{depth 18}` parses as ordinary text everywhere downstream and simply
+  // renders its own braces to a diver. Deleting a marker outright is *not* an
+  // error — that is a shop choosing to write the depth in its own words, which
+  // is what this content is for. Only a broken attempt is refused, and the
+  // whole save is refused rather than partially applied, so what staff see on
+  // the form is still exactly what is stored.
+  const depthChecked: Array<[field: string, text: string]> = [
+    ["summary", value.summary],
+    ["overview", value.overview],
+    ["durationText", value.durationText],
+    ["groupSizeText", value.groupSizeText],
+    ["prerequisiteNote", value.prerequisiteNote],
+    ["includes", value.includes],
+    ["excludes", value.excludes],
+    ["faqs", value.faqs],
+    ...scheduleDays.flatMap<[string, string]>((day) =>
+      [day.title, ...day.items].map((text) => ["scheduleDaysJson", text] as [string, string]),
+    ),
+  ];
+  const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
+  if (broken) redirect(`${base}?error=depth-placeholder&field=${broken[0]}`);
 
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,

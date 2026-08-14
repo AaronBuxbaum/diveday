@@ -19,3 +19,27 @@ const UUID_PATTERN = new RegExp(`^${UUID_SOURCE}$`, "i");
 export function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
+
+/**
+ * A URL-supplied id (a `searchParams` value, a dynamic path segment) narrowed
+ * to something a `uuid` column can actually be compared against — or
+ * `undefined`, which every caller already handles as "no filter".
+ *
+ * This exists because the alternative is a 500. Postgres does not coerce a
+ * malformed literal in `"orders"."person_id" = $1`; it raises `invalid input
+ * syntax for type uuid`, so a truncated link in a chat message or a
+ * hand-edited URL takes down a staff page that every other malformed
+ * filter (`?status=`, `?from=`, `?to=`) treats as simply not a filter.
+ *
+ * Deliberately here at the URL boundary rather than inside `src/db`: a query
+ * helper that silently dropped a filter it could not parse would hide a real
+ * bug from a caller holding a genuine id. Only the layer that knows the string
+ * came from a user gets to shrug at it.
+ *
+ * A *required* id — a path segment the page cannot render without — pairs this
+ * with the page's own `notFound()`: an unparseable id names no row, which is a
+ * 404, not a 500.
+ */
+export function uuidParam(value: string | null | undefined): string | undefined {
+  return value && isUuid(value) ? value : undefined;
+}

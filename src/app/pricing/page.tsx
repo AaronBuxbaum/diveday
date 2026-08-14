@@ -12,17 +12,18 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 
-// `instant = true`: navigating here paints immediately. Every request-scoped
-// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
-// one placed inside the page — so the frame lands without waiting on the
-// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+// `instant = true`: navigating here paints immediately. The request-scoped
+// read this page makes (`requestLocale()`) sits behind this segment's
+// `loading.tsx` — the boundary of record for a page — so the frame lands
+// without waiting on the request. `next build` audits the claim. See ADR
+// 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -50,25 +51,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
+/**
+ * The body renders **once**, in the reader's own language — see `ProductPage`
+ * for the whole story. In short: the fallback used to be a second, English
+ * render of this entire page, and swapping it out for the negotiated-locale
+ * one tore down and rebuilt the subtree, discarding whatever the visitor had
+ * already done to it (FU-20260812-marketing-suspense-swap-discards-interaction).
+ * The instant paint now comes from this segment's `loading.tsx`, which has
+ * nothing interactive in it to lose.
+ */
+export default async function PricingPage() {
+  const locale = await requestLocale();
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<PricingBody locale={DEFAULT_DIVER_LOCALE} />}>
-        <LocalizedPricingBody />
-      </Suspense>
+      <PricingBody locale={locale} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
     </div>
   );
-}
-
-async function LocalizedPricingBody() {
-  const locale = await requestLocale();
-  return <PricingBody locale={locale} />;
 }
 
 /** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */

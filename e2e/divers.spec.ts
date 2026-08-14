@@ -255,7 +255,16 @@ test.describe("on a phone", () => {
 
     const card = page.getByRole("link", { name: /Priya Sharma/ });
     await expect(card).toBeVisible();
-    await expect(card.getByText(/card/)).toBeVisible();
+    // The card stacks the same two facts the table's columns carry, so the
+    // second one has to be on it: the diver's certification level, or the
+    // words that stand in when no unexpired card is on file. Matched as a set
+    // rather than pinned to one level — this test is about the phone layout
+    // carrying the column, not about which card this seeded diver holds.
+    await expect(
+      card.getByText(
+        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current card/,
+      ),
+    ).toBeVisible();
     await expect(page.getByRole("table")).toBeHidden();
 
     await card.click();

@@ -99,6 +99,17 @@ server, which removes the entire browser-key problem rather than managing it.
   entirely healthy (real places, right order, no error) and then writes five empty strings into the
   shop's address, because a pick replaces every column. Shipped without it, which is how the lookup
   was reported as broken while every request succeeded (2026-08-09).
+- **A credential rotation does not reach a deployment that is already running.** Vercel resolves
+  environment variables into a deployment at build time, so §12 minting a fresh `PLACES_AWS_*` pair
+  leaves the running build signing with the pair it was built with — indefinitely, while the
+  dashboard shows the new value the whole time. The symptom is `UnrecognizedClientException` (a
+  403 the endpoint answers, so the region is fine and the key id is simply not one the account
+  holds) on every keystroke, timestamped shortly *after* a stack deploy. That ordering is the
+  signature: suspect the deployment before the credential. A redeploy is the whole fix, and it was
+  in this case — the lookup was dead on the deployed site from 2026-08-09 and confirmed working
+  again on 2026-08-14. Worth knowing because the failure is invisible from the box: the search
+  field renders whenever all three `PLACES_AWS_*` values are merely *present*, so a superseded pair
+  looks exactly like a working one until the first request.
 
 ## Alternatives considered
 

@@ -15,6 +15,7 @@ import {
   canPersonManageShopSettings,
 } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import { getShopById } from "@/db/shops";
@@ -422,10 +423,19 @@ export default async function SettingsPage({
   // is the same owner/manager role set the reports gate was, so the same people
   // see the same work. Both render nothing when empty — a shop that owes
   // nothing sees no panel, not an empty table.
-  const [pendingMediaDeletions, owedProcessorErasures] = await Promise.all([
-    listPendingMediaDeletions(db, session.user.shopId),
-    listOwedProcessorErasures(db, session.user.shopId),
-  ]);
+  // Read alongside them because it answers a question the dock-day preview
+  // below otherwise gets wrong: a site carrying its own
+  // `expectedBottomTimeMinutes` overrides the shop-wide figure for any dive
+  // that visits it, and the preview is drawn from the shop-wide figure alone.
+  // Empty for a shop that has overridden nothing, and then the preview says
+  // nothing extra.
+  const [pendingMediaDeletions, owedProcessorErasures, siteBottomTimeOverrides] = await Promise.all(
+    [
+      listPendingMediaDeletions(db, session.user.shopId),
+      listOwedProcessorErasures(db, session.user.shopId),
+      listSiteBottomTimeOverrides(db, session.user.shopId),
+    ],
+  );
   // Owner-only, and tighter than the gate this panel is *read* behind: a retry
   // fires a destructive call at the shop's Stripe account and a discharge signs
   // an attestation that a diver's data is gone from the processor. The actions
@@ -889,6 +899,40 @@ export default async function SettingsPage({
                 </div>
               ))}
             </dl>
+            {/* The preview above describes every departure except the ones it
+                doesn't. A site with its own `expected_bottom_time_minutes`
+                overrides "Time in the water per dive" for any dive that visits
+                it, and until this line the number could be read nowhere but the
+                box that wrote it — a shop that overrode five of its eight sites
+                read a preview silently wrong for five of them
+                (FU-20260812-site-bottom-time-is-write-only). Each site is a
+                link, because the answer to "why does that one differ?" is the
+                site's own page. A shop that has overridden nothing sees
+                nothing. */}
+            {siteBottomTimeOverrides.length > 0 ? (
+              <div className="mt-3">
+                <p className="text-sm text-muted">
+                  {t("settings.main.dockCall.siteOverrides", {
+                    count: siteBottomTimeOverrides.length,
+                  })}
+                </p>
+                <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  {siteBottomTimeOverrides.map((site) => (
+                    <li key={site.id}>
+                      <a
+                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {t("settings.main.dockCall.siteOverride", {
+                          name: site.name,
+                          count: site.minutes,
+                        })}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </SettingsRow>
 
           {/* One row for the three units a shop reads its own numbers in.

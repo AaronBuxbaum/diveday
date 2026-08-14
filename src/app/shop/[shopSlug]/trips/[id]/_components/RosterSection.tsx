@@ -8,6 +8,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { listBookingNotes } from "@/db/operations";
@@ -239,14 +240,6 @@ export function RosterSection({
         : roster;
   const filterChipHref = (filter: RosterFilter) =>
     `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
-  const filterChipClass = (active: boolean) =>
-    // min-h-11: these chips are this tab's primary navigation, tapped
-    // one-handed on a moving boat — the 44px dock-test floor applies.
-    `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
-      active
-        ? "border-primary bg-primary/10 text-primary"
-        : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
-    }`;
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -278,22 +271,24 @@ export function RosterSection({
             the rows that want one. */}
       </div>
       {roster.length > 0 ? (
-        <nav aria-label={t("trips.roster.filterAriaLabel")} className="mt-4 flex flex-wrap gap-2">
-          {(["all", "needs_waiver", "blocked"] as const).map((filter) => (
-            <Link
-              key={filter}
-              href={filterChipHref(filter)}
-              scroll={false}
-              className={filterChipClass(rosterFilter === filter)}
-            >
-              {filter === "all"
+        // The one vocabulary for narrowing a staff list — the pill styling
+        // (including the min-h-11 dock-test floor these chips are tapped
+        // against one-handed on a moving boat) lives in FilterChips.
+        <FilterChips
+          label={t("trips.roster.filterAriaLabel")}
+          className="mt-4"
+          chips={(["all", "needs_waiver", "blocked"] as const).map((filter) => ({
+            key: filter,
+            href: filterChipHref(filter),
+            active: rosterFilter === filter,
+            label:
+              filter === "all"
                 ? t("trips.roster.filterAll", { count: filterCounts.all })
                 : filter === "needs_waiver"
                   ? t("trips.roster.filterNeedsWaiver", { count: filterCounts.needs_waiver })
-                  : t("trips.roster.filterBlocked", { count: filterCounts.blocked })}
-            </Link>
-          ))}
-        </nav>
+                  : t("trips.roster.filterBlocked", { count: filterCounts.blocked }),
+          }))}
+        />
       ) : null}
       {roster.length === 0 ? (
         // The shared empty state, not a bare paragraph: the wait list two

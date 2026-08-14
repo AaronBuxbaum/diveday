@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 /**
  * Which agency's half of the catalog is showing — worn by the staff roster
@@ -13,10 +13,14 @@ import Link from "next/link";
  * into a control: one line at the top, and the row it decorated gets its width
  * back for the course title.
  *
- * Server-rendered from `?agency=`, like the shop home's queue switch: each tab
- * is a real link to a real URL, so it bookmarks, opens in a new tab, and needs
- * no JavaScript — and, like that switch, `scroll={false}`
- * keeps a tab change from throwing a staffer back to the top of the roster.
+ * Server-rendered from `?agency=` onto the shared `SegmentedControl`, the same
+ * track-and-pill the trip tabs, waiver tabs, checkpoint row, and the shop
+ * home's queue switch wear: each tab is a real link to a real URL, so it
+ * bookmarks, opens in a new tab, and needs no JavaScript — and, like that
+ * switch, `scroll={false}` keeps a tab change from throwing a staffer back to
+ * the top of the roster. Both halves of the catalog are views of the *same*
+ * page rather than sibling routes, so the current tab stays a clickable link
+ * (`currentIsLink`) marked `aria-current="true"` rather than `"page"`.
  * The page owns the query shape via `hrefFor` — the tab strip never builds a URL
  * itself, which is what keeps `?page=` from surviving a tab change and
  * stranding a staffer on page 3 of a one-page list.
@@ -58,29 +62,21 @@ export function AgencyTabs({
   //
   // An agency code is shop data (a proper noun), never copy: upper-cased here
   // rather than translated.
-  const tabs = agencies.map((agency) => ({ agency, label: agency.toUpperCase() }));
+  const tabs = agencies.map((agency) => ({
+    key: agency,
+    label: agency.toUpperCase(),
+    href: hrefFor(agency),
+  }));
 
   return (
-    <nav
-      aria-label={copy.label}
-      className="mt-6 inline-flex shrink-0 rounded-full border border-border bg-surface-sunken p-1"
-    >
-      {tabs.map((tab) => {
-        const active = tab.agency === current;
-        return (
-          <Link
-            key={tab.agency}
-            href={hrefFor(tab.agency)}
-            scroll={false}
-            aria-current={active ? "true" : undefined}
-            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
-              active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedControl
+      ariaLabel={copy.label}
+      items={tabs}
+      currentKey={current}
+      currentIsLink
+      ariaCurrentValue="true"
+      scroll={false}
+      className="mt-6"
+    />
   );
 }

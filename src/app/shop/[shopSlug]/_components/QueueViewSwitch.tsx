@@ -50,8 +50,7 @@ export function QueueViewSwitch({
     // reader's place, since both views are the same page. This used to be a
     // fourth hand-rolled `rounded-full` variant of the track; it now wears
     // the same grammar as the trip tabs, the waiver tabs, and the manifest's
-    // checkpoint row. (`AgencyTabs` still hand-rolls the old `rounded-full`
-    // shape — see FU-20260813-convert-agency-tabs.)
+    // checkpoint row — as does the courses pages' `AgencyTabs`.
     <SegmentedControl
       ariaLabel={copy.label}
       items={options.map((option) => ({

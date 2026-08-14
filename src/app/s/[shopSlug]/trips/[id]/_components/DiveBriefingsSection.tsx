@@ -1,4 +1,5 @@
 import { DiveBriefingCard } from "@/components/DiveBriefingCard";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiveBriefing, Trip } from "./types";
@@ -39,38 +40,43 @@ export function DiveBriefingsSection({
           <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
             {t("trip.compareSites")}
           </summary>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-lg text-left text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="p-2">{t("trip.columnSite")}</th>
-                  <th className="p-2">{t("trip.columnDepth")}</th>
-                  <th className="p-2">{t("trip.columnExperience")}</th>
-                  <th className="p-2">{t("trip.columnWaterMovement")}</th>
-                  <th className="p-2">{t("trip.columnLikelyLife")}</th>
+          {/* The shared table vocabulary, not a public dialect of its own: a
+              diver reading this is reading a table, and one header voice
+              across the product reads considered rather than clerical. It is
+              `flush` because the `<details>` above is already the card, and
+              its own scroll shell replaces the wrapper this block used to
+              hand-roll. `36rem` rather than the old `min-w-lg`: the
+              vocabulary's cell padding is roomier than the `p-2` here before,
+              so five prose columns need a slightly higher floor before the
+              shell starts scrolling. */}
+          <Table flush minWidth="36rem" shellClassName="mt-3">
+            <THead>
+              <Th>{t("trip.columnSite")}</Th>
+              <Th>{t("trip.columnDepth")}</Th>
+              <Th>{t("trip.columnExperience")}</Th>
+              <Th>{t("trip.columnWaterMovement")}</Th>
+              <Th>{t("trip.columnLikelyLife")}</Th>
+            </THead>
+            <TBody>
+              {sited.map(({ dive, diveSite }) => (
+                <tr key={dive.id}>
+                  {/* The site names its row; every cell after it is a fact
+                      about that site, so it stays a `th`. */}
+                  <Th scope="row">{diveSite?.name}</Th>
+                  <Td muted>{diveSite?.depthRange ?? t("common.varies")}</Td>
+                  <Td muted>
+                    {diveSiteDifficultyLabel(diveSite?.difficultyLevel, t) ?? t("common.crewLed")}
+                  </Td>
+                  <Td muted>{diveSite?.currentNote ?? t("common.confirmedAtDock")}</Td>
+                  <Td muted>
+                    {diveSite?.marineLife ??
+                      diveSite?.marineLifeDescription ??
+                      t("common.askTheCrew")}
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {sited.map(({ dive, diveSite }) => (
-                  <tr key={dive.id} className="border-b border-border/60">
-                    <th className="p-2 font-semibold">{diveSite?.name}</th>
-                    <td className="p-2 text-muted">{diveSite?.depthRange ?? t("common.varies")}</td>
-                    <td className="p-2 text-muted">
-                      {diveSiteDifficultyLabel(diveSite?.difficultyLevel, t) ?? t("common.crewLed")}
-                    </td>
-                    <td className="p-2 text-muted">
-                      {diveSite?.currentNote ?? t("common.confirmedAtDock")}
-                    </td>
-                    <td className="p-2 text-muted">
-                      {diveSite?.marineLife ??
-                        diveSite?.marineLifeDescription ??
-                        t("common.askTheCrew")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </TBody>
+          </Table>
           <p className="mt-3 text-xs text-muted">{t("trip.compareNote")}</p>
         </details>
       ) : null}

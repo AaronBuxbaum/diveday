@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoMark } from "@/components/Logo";
+import { Wordmark } from "@/components/Logo";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -16,13 +16,7 @@ export function MarketingFooterView({
   return (
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-2">
-          <LogoMark className="size-4 shrink-0 text-primary" />
-          <span>
-            {/* i18n-exempt: brand name */}
-            <span className="font-semibold text-foreground">DiveDay.</span> {t("nav.tagline")}
-          </span>
-        </p>
+        <Wordmark variant="inline"> {t("nav.tagline")}</Wordmark>
         <div className="flex flex-wrap gap-4">
           <Link href="/product" className="hover:text-foreground hover:underline">
             {t("nav.product")}

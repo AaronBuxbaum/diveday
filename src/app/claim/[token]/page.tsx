@@ -4,6 +4,7 @@ import { EntryDone } from "@/components/account/EntryShell";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -114,20 +115,14 @@ export default async function SeatClaimPage({
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
       <FlashParams params={["error"]} />
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          {t("seatClaim.eyebrow")}
-        </p>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          {data.shopName}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
-          {t("seatClaim.heading", { trip: data.tripTitle })}
-        </h1>
+      <TokenPageHeader
+        eyebrow={[t("seatClaim.eyebrow"), data.shopName]}
+        title={t("seatClaim.heading", { trip: data.tripTitle })}
+      >
         <p className="mt-1 text-base text-muted">
           {t("seatClaim.when", { date: when, time: timeRange })}
         </p>
-      </header>
+      </TokenPageHeader>
 
       {notice ? (
         <div className="mt-6">

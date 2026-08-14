@@ -309,12 +309,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "source_template_id", // provenance into DiveDay's catalog, not the shop's
     "source_template_version",
-    // Legacy free text, superseded by `difficulty_level` in the same release
-    // and read by nothing (ADR 20260813-dive-site-difficulty-is-a-code). The
-    // column survives one release for the expand/contract and is dropped by
-    // FU-20260813-drop-field-guide-text-columns; exporting a dead column would
-    // put a second, staler answer to one question in the bundle.
-    "difficulty",
   ],
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],

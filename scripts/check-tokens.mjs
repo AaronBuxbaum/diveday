@@ -27,6 +27,10 @@ import { pathToFileURL } from "node:url";
  *     these render to bitmaps (Satori) or JSON served outside any stylesheet,
  *     so CSS custom properties literally cannot reach them. Hex there is not
  *     a missed token, it is the only mechanism that exists.
+ *   - the shared code those metadata files render *through*, listed one exact
+ *     path at a time in `exemptPaths` below. Same bitmap, same reason; the
+ *     only difference is that a shared module carries no convention name to
+ *     key on.
  *   - fragment hrefs and other `#word` strings — the hex pattern requires a
  *     valid color length and rejects a match that continues into an
  *     identifier (`#add-diver` never matches), and comments are stripped
@@ -57,6 +61,22 @@ const metadataFileNames = new Set([
   "apple-icon.tsx",
   "manifest.ts",
 ]);
+
+/**
+ * Exempt for the same reason and by the same rule as the names above —
+ * rendered outside the stylesheet — but named one path at a time rather than
+ * by filename, because these carry no Next convention to key on.
+ *
+ * `src/app/_og/card.tsx` is the chrome (ground, wordmark, tagline footer) the
+ * four `opengraph-image.tsx` cards share. It was copied into all four until
+ * FU-20260812, which is how the mark managed to be wrong on every card at once
+ * and then drift again inside its own fix. Extracting it is only possible if
+ * the extracted file keeps the exemption the four originals have: it is the
+ * *same satori bitmap*, where CSS custom properties cannot reach. Deliberately
+ * an exact path and not a glob — `src/app/_og/**` would let an ordinary module
+ * opt out by moving house.
+ */
+const exemptPaths = new Set(["src/app/_og/card.tsx"]);
 
 /**
  * A hex color: 3/4/6/8 hex digits, not continuing into an identifier — so
@@ -173,7 +193,8 @@ async function walk(root, relativeDirectory) {
     else if (
       (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
       !entry.name.endsWith(".d.ts") &&
-      !(metadataFileNames.has(entry.name) && relativePath.startsWith(`src${path.sep}app`))
+      !(metadataFileNames.has(entry.name) && relativePath.startsWith(`src${path.sep}app`)) &&
+      !exemptPaths.has(relativePath.replaceAll(path.sep, "/"))
     ) {
       files.push(relativePath);
     }

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { CARD_STYLE, OG_COLORS, OG_TAGLINE, OG_WORDMARK, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
@@ -28,85 +29,14 @@ export const size = { width: 1200, height: 630 };
 
 export const contentType = "image/png";
 
-const CARD_STYLE = {
-  width: "100%",
-  height: "100%",
-  display: "flex",
-  flexDirection: "column" as const,
-  justifyContent: "space-between",
-  padding: 72,
-  backgroundColor: "#071720",
-  backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
-  color: "#e9f3f4",
-  fontSize: 32,
-};
-
-const WORDMARK = (
-  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-    {/*
-     * The bubble-trail mark from `src/components/Logo.tsx` — three ascending
-     * bubbles, the top one the rationed coral accent. Restated as positioned
-     * circles because satori has no `<svg>`, with `LogoMark`'s 24x24 viewBox
-     * geometry doubled to a 48px box — the same mark-to-wordmark proportion
-     * the site header uses (`size-6` beside `text-base`). Keep the two in step. It used to be one plain
-     * circle here, which read as a bullet rather than as the logo.
-     */}
-    <div style={{ display: "flex", position: "relative", width: 48, height: 48 }}>
-      <div
-        style={{
-          position: "absolute",
-          left: 4,
-          top: 24,
-          width: 20,
-          height: 20,
-          borderRadius: 9999,
-          backgroundColor: "#22d3ee",
-          display: "flex",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 24,
-          top: 11,
-          width: 14,
-          height: 14,
-          borderRadius: 9999,
-          backgroundColor: "#22d3ee",
-          opacity: 0.75,
-          display: "flex",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 35,
-          top: 5,
-          width: 8,
-          height: 8,
-          borderRadius: 9999,
-          backgroundColor: "#ff8a7e",
-          display: "flex",
-        }}
-      />
-    </div>
-    <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>
-      DiveDay
-      <span style={{ color: "#ff8a7e" }}>.</span>
-    </div>
-  </div>
-);
-
 function genericCard() {
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      {WORDMARK}
+      {OG_WORDMARK}
       <div style={{ display: "flex", fontSize: 56, fontWeight: 600, letterSpacing: "-0.03em" }}>
         A dive trip
       </div>
-      <div style={{ display: "flex", fontSize: 28, color: "#22d3ee" }}>
-        A calmer way to run a dive day
-      </div>
+      {ogFooter()}
     </div>,
     size,
   );
@@ -142,9 +72,9 @@ export default async function TripOpenGraphImage({
 
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      {WORDMARK}
+      {OG_WORDMARK}
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", fontSize: 30, color: "#9fc0c7" }}>{shop.name}</div>
+        <div style={{ display: "flex", fontSize: 30, color: OG_COLORS.muted }}>{shop.name}</div>
         <div
           style={{
             display: "flex",
@@ -157,16 +87,16 @@ export default async function TripOpenGraphImage({
         >
           {trip.title}
         </div>
-        <div style={{ display: "flex", fontSize: 32, color: "#9fc0c7", gap: 16 }}>
+        <div style={{ display: "flex", fontSize: 32, color: OG_COLORS.muted, gap: 16 }}>
           <div style={{ display: "flex" }}>{when}</div>
           {priceLine ? <div style={{ display: "flex" }}>· {priceLine}</div> : null}
         </div>
       </div>
-      <div style={{ display: "flex", fontSize: 28, color: "#22d3ee" }}>
-        {remaining > 0
-          ? `${remaining} ${remaining === 1 ? "spot" : "spots"} left · A calmer way to run a dive day`
-          : "A calmer way to run a dive day"}
-      </div>
+      {ogFooter(
+        remaining > 0
+          ? `${remaining} ${remaining === 1 ? "spot" : "spots"} left · ${OG_TAGLINE}`
+          : OG_TAGLINE,
+      )}
     </div>,
     size,
   );

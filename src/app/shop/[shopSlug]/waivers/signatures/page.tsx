@@ -12,6 +12,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -151,7 +152,12 @@ export default async function WaiverSignaturesPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page, record } = await searchParams;
+  const { page, record: recordParam } = await searchParams;
+  // `waiver_records.id` is a `uuid` column, so a truncated or hand-edited
+  // `?record=` does not resolve to nothing — it throws `invalid input syntax
+  // for type uuid` and 500s this page. A malformed id is simply no highlight:
+  // the log itself still renders, which is the page the staffer came for.
+  const record = uuidParam(recordParam);
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);

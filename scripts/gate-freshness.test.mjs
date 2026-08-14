@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ageFollowUps,
   classifyStatus,
   daysSince,
   gateIdsIn,
   latestDateIn,
   movementFor,
+  parseFollowUpEntry,
   parseGateRows,
   parseThirtyDayList,
   reconcileThirtyDays,
@@ -200,6 +202,85 @@ describe("movementFor", () => {
 
   it("says so plainly when there is no evidence at all", () => {
     expect(movementFor(undated, null, NOW)).toMatchObject({ on: null, days: null });
+  });
+});
+
+describe("parseFollowUpEntry", () => {
+  const entry = `# FU-20260701-widen-the-pager — Widen the pager on the orders index
+
+- **Status:** Open
+- **Raised:** 2026-07-01 — noticed while reading nearby code
+- **Kind:** improvement
+- **Effort:** M
+- **Touches:** \`src/components/Pager.tsx\`
+`;
+
+  it("takes the age date from the id, which is exact and survives a shallow clone", () => {
+    expect(parseFollowUpEntry("FU-20260701-widen-the-pager.md", entry)).toMatchObject({
+      id: "FU-20260701-widen-the-pager",
+      raisedOn: "2026-07-01",
+      status: "Open",
+      kind: "improvement",
+      effort: "M",
+    });
+  });
+
+  it("ignores the folder's non-entry files rather than aging them", () => {
+    expect(parseFollowUpEntry("README.md", "# Follow-ups")).toBeNull();
+    expect(parseFollowUpEntry("TEMPLATE.md", "# FU-YYYYMMDD-short-slug")).toBeNull();
+  });
+
+  it("falls back to a placeholder rather than throwing on a half-written entry", () => {
+    expect(parseFollowUpEntry("FU-20260701-stub.md", "# FU-20260701-stub — a stub")).toMatchObject({
+      status: "—",
+      kind: "—",
+      effort: "—",
+    });
+  });
+});
+
+describe("ageFollowUps", () => {
+  const file = (filename, kind) => ({
+    filename,
+    contents: `- **Status:** Open\n- **Kind:** ${kind}\n- **Effort:** S\n`,
+  });
+
+  it("ages every entry from its filename date, oldest first", () => {
+    const aged = ageFollowUps(
+      [
+        file("FU-20260724-newer.md", "question"),
+        file("FU-20260608-oldest.md", "risk"),
+        file("FU-20260702-middle.md", "cleanup"),
+      ],
+      NOW,
+    );
+    expect(aged.map((entry) => [entry.id, entry.days])).toEqual([
+      ["FU-20260608-oldest", 55],
+      ["FU-20260702-middle", 31],
+      ["FU-20260724-newer", 9],
+    ]);
+    expect(aged[0].kind).toBe("risk");
+  });
+
+  it("breaks ties on id so the report is stable run to run", () => {
+    const aged = ageFollowUps(
+      [file("FU-20260702-second.md", "risk"), file("FU-20260702-first.md", "risk")],
+      NOW,
+    );
+    expect(aged.map((entry) => entry.id)).toEqual(["FU-20260702-first", "FU-20260702-second"]);
+  });
+
+  it("returns nothing for an empty register — README and TEMPLATE are not entries", () => {
+    expect(ageFollowUps([], NOW)).toEqual([]);
+    expect(
+      ageFollowUps(
+        [
+          { filename: "README.md", contents: "# Follow-ups" },
+          { filename: "TEMPLATE.md", contents: "- **Kind:** improvement" },
+        ],
+        NOW,
+      ),
+    ).toEqual([]);
   });
 });
 

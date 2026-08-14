@@ -117,6 +117,31 @@ reading two names for one thing — which is the exact confusion the English fix
 and *ficha* below no longer names a dive-site record — it was doing the job the English word
 "briefing" wrongly did.
 
+## The waiver is **la exención**
+
+One document, one word — settled 2026-08-14, after a sweep found the marketing bundle promising to
+carry a shop's *descargos* across into a product whose every screen says *exención*. Every
+diver-facing namespace (`waiver`, `ready`, `booking`, `demo`, `account`, `notifications`,
+`seatClaim`, `capability`, `fallback`) already said **exención**, so the marketing and switching-guide
+copy moved to match the product rather than the reverse. **"Descargo" is not a synonym in this
+bundle** — it appears nowhere and should not come back.
+
+| English | Spanish |
+| --- | --- |
+| the waiver | la exención |
+| signed waivers | exenciones firmadas |
+| a waiver on file | una exención archivada |
+| native waivers | exenciones nativas |
+| waiver / medical documents | documentos de exención / médicos |
+| medical waivers | exenciones médicas |
+
+The noun is **feminine**, which is the whole reason this is worth writing down: every article,
+demonstrative and adjective reaching back to it moves with it — `la`/`una`/`esta`, and
+`firmada`, `aceptada`, `importada`, `nativa`, `versionada`, `marcada`, `fechada`.
+
+This covers what the app *calls* the document. The waiver **body** and the medical questionnaire
+are still English pending human sign-off — see "Deliberately left alone" below.
+
 ## The field guide: `marineLife.*` is content, not chrome
 
 `diver.json`'s `marineLife` namespace is 148 species × three strings plus 18 category words, and it

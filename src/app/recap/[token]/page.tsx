@@ -7,6 +7,7 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { RecapMap } from "@/components/RecapMap";
 import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -304,9 +305,7 @@ export default async function DiveRecapPage({
 
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <header>
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">{trip.title}</h1>
+      <TokenPageHeader eyebrow={shop.name} title={trip.title}>
         <p className="mt-1 text-base text-muted">{when}</p>
         {/* Same share-then-clipboard-fallback affordance TripActions gives a
             trip page — `recap-links.ts` already calls this link shareable,
@@ -321,7 +320,7 @@ export default async function DiveRecapPage({
             failedLabel={t("recap.linkCopyFailed")}
           />
         </div>
-      </header>
+      </TokenPageHeader>
 
       {/* ——— Act I: relive. Memory before the ask — the coral moment, the
           crew's words, the route, the water. Everything here is unboxed:

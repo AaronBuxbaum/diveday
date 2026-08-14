@@ -87,6 +87,38 @@ export async function listDiveSites(db: AppDb, shopId: string) {
 }
 
 /**
+ * The sites that answer "how long is a dive here?" for themselves, name and
+ * minutes, alphabetically.
+ *
+ * `expected_bottom_time_minutes` overrides `shops.bottom_time_minutes` wherever
+ * the dock-day rhythm is laid over a departure, and until this reader existed
+ * the number could not be seen from anywhere except the one box that wrote it —
+ * least of all from Settings, whose preview of the shop's own rhythm is exactly
+ * the thing an override contradicts.
+ *
+ * A shop that has overridden nothing gets an empty list, and the surface renders
+ * nothing extra.
+ */
+export async function listSiteBottomTimeOverrides(db: AppDb, shopId: string) {
+  const rows = await db
+    .select({
+      id: diveSites.id,
+      name: diveSites.name,
+      minutes: diveSites.expectedBottomTimeMinutes,
+    })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        isNull(diveSites.deletedAt),
+        isNotNull(diveSites.expectedBottomTimeMinutes),
+      ),
+    )
+    .orderBy(asc(diveSites.name));
+  return rows.flatMap((row) => (row.minutes == null ? [] : [{ ...row, minutes: row.minutes }]));
+}
+
+/**
  * Where this shop dives, as one coordinate — the anchor the settings address
  * search ranks its suggestions around.
  *

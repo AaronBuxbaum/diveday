@@ -107,8 +107,8 @@ constant needs no migration and no query.
 - One migration, and a deliberately incomplete one: `dive_site_creatures.name` and `.kind` drop
   their `NOT NULL`, and the five text columns stay. Dropping them in this release would break the
   previous one, which is still serving while the migration applies and still selects them
-  (ADR 20260806-destructive-migration-guard). The contract half is
-  `FU-20260813-drop-field-guide-text-columns`.
+  (ADR 20260806-destructive-migration-guard). The contract half shipped the following release, in
+  `drizzle/20260814033653_drop-field-guide-text-columns`.
 - **Existing rows a shop typed itself are lost from the guide.** A row with no `catalog_slug` — a
   species DiveDay never carried, added through the old "Add a blank one" button — has no words in
   any bundle, and every reader skips it. Rows imported or picked from the catalog, which is all of

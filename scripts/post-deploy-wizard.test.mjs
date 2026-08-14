@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
 
@@ -340,5 +342,65 @@ describe("post-deploy wizard", () => {
     );
     expect(dnsAdds).toHaveLength(3);
     expect(messages.some((message) => message.includes("Could not list existing"))).toBe(true);
+  });
+});
+
+// The wizard's CI credentials arrive as job env from `.github/workflows/infra.yml`,
+// and GitHub resolves an absent secret to "" with no warning, so an empty one used
+// to reach `gh`/`vercel` and fail there as an unattributed authentication error --
+// after `cdk deploy` had already updated the stack (run 31564090783, 2026-08-12).
+// The deploy job now refuses first. These assertions are about that refusal staying
+// in step with the credentials it covers: a fifth credential added to the wizard's
+// env, or the pre-flight sliding below the AWS credentials step, is exactly the
+// drift that made the original incident unreadable.
+describe("the deploy job's credential pre-flight", () => {
+  const workflow = readFileSync(
+    fileURLToPath(new URL("../.github/workflows/infra.yml", import.meta.url)),
+    "utf8",
+  );
+  const deployJob = workflow.slice(workflow.indexOf("\n  deploy:\n"));
+  const preFlight = deployJob.slice(
+    deployJob.indexOf("- name: Confirm the post-deploy wizard's credentials are set"),
+  );
+
+  it("checks every credential the wizard's deploy step is handed", () => {
+    const wizardEnvironment = deployJob
+      .slice(deployJob.indexOf("- run: pnpm infra:deploy"))
+      .matchAll(/^ +(\w+): \$\{\{ secrets\.(\w+) \}\}$/gm);
+    const handed = [...wizardEnvironment].map(([, variable, secret]) => {
+      // The names are identical on both sides of the colon on purpose -- that
+      // is what stops the workflow's lookup and the stored secret drifting.
+      expect(secret).toBe(variable);
+      return variable;
+    });
+
+    expect(handed).toEqual(["GH_TOKEN", "VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"]);
+    const checked = [...preFlight.matchAll(/^ +require (\w+) "\$\1"/gm)].map(([, name]) => name);
+    expect(checked).toEqual(handed);
+  });
+
+  it("names both the empty variable and the manual action that supplies it", () => {
+    // Naming the variable is what tells a name mismatch apart from a setup step
+    // nobody has done; naming the manual action is what makes the second one
+    // actionable without reading this workflow.
+    expect(preFlight).toContain("$1 resolved to the empty string");
+    expect(preFlight).toContain("secrets.$1 this workflow reads");
+    expect(preFlight).toContain("ci-github-admin-token");
+    expect(preFlight).toContain("ci-vercel-deploy-token");
+    expect(preFlight).toContain("docs/engineering/manual-actions.md");
+  });
+
+  it("refuses before the job touches AWS at all", () => {
+    // Above `configure-aws-credentials`, not merely above `pnpm infra:deploy`:
+    // an unfinished setup should leave nothing half-deployed. It also exits
+    // non-zero rather than skipping a step, which ADR 20260811-ci-deploy-full-wizard
+    // rejects.
+    const preFlightAt = deployJob.indexOf(
+      "- name: Confirm the post-deploy wizard's credentials are set",
+    );
+    const awsCredentialsAt = deployJob.indexOf("aws-actions/configure-aws-credentials");
+    expect(preFlightAt).toBeGreaterThan(-1);
+    expect(preFlightAt).toBeLessThan(awsCredentialsAt);
+    expect(preFlight).toContain("exit 1");
   });
 });

@@ -95,6 +95,30 @@ describe("Table", () => {
     expect(cell).toHaveClass("tabular-nums");
   });
 
+  it("names a row's leading cell as that row's header, without the header row's voice", () => {
+    // A public briefing row is one dive site and every cell after the first is
+    // a fact about it, so the site's name has to be announced with each figure
+    // — which is `scope="row"`, not a styled-bold `<td>`. The uppercase voice
+    // lives on THead's row, so a row header must not inherit it.
+    render(
+      <Table>
+        <THead>
+          <Th>Site</Th>
+          <Th>Depth</Th>
+        </THead>
+        <TBody>
+          <tr>
+            <Th scope="row">Molasses Reef</Th>
+            <Td>12-18 m</Td>
+          </tr>
+        </TBody>
+      </Table>,
+    );
+    const rowHeader = screen.getByRole("rowheader", { name: "Molasses Reef" });
+    expect(rowHeader).toHaveAttribute("scope", "row");
+    expect(screen.getByRole("columnheader", { name: "Site" })).toHaveAttribute("scope", "col");
+  });
+
   it("hides folded columns below the named breakpoint", () => {
     render(
       <Table>
