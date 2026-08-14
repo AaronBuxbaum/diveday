@@ -6,6 +6,7 @@ import {
   listShopsForPlatformBackup,
   platformBackupConfigFromEnvironment,
   runPlatformBackup,
+  storePlatformBackupCensus,
 } from "@/features/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -147,6 +148,22 @@ export async function GET(request: Request) {
         continue;
       }
       outcomes.push({ shop: shop.slug, status: result.status });
+    }
+
+    // The run's census, filed beside its bundles so the AWS-side watchdog can
+    // tell a complete pass from a truncated one. Until this existed, a pass that
+    // ran out of slot and backed up the oldest N shops every week looked
+    // identical from the bucket to one that backed up all of them
+    // (FU-20260812-backup-watchdog-cannot-see-a-short-run).
+    //
+    // Never allowed to fail the pass: every bundle above is already stored, and
+    // reporting a good backup as broken because its receipt was refused is the
+    // opposite of what this object is for. A refused census is a log line here
+    // and a `census_missing` alarm from AWS a day later.
+    const census = { shops: shops.length, stored, failed, skipped };
+    const censusStored = await storePlatformBackupCensus({ config, census, now });
+    if (!censusStored.ok) {
+      log("cron_platform_backup.census_failed", "warn", { runDate, code: censusStored.errorCode });
     }
 
     // One line per run -- ids and codes only (LogContext's rule).

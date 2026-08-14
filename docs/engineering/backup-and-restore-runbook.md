@@ -181,9 +181,52 @@ the route knows only that each PUT was accepted. That question is answered by th
 ### The watchdog: is the backup actually landing?
 
 `diveday-backup-freshness-check`, a Lambda on an EventBridge Scheduler rule (**Tuesdays 06:00 UTC**,
-`infra/lib/infra-stack.ts` §19). One `ListObjectsV2` over `exports/`, and an email to the
-observability topic when the newest run is **missing**, **older than 8 days**, or **has no bundles
-under it**.
+`infra/lib/infra-stack.ts` §19). It emails the observability topic when the newest run is:
+
+| Reading | `status` | What it means |
+| --- | --- | --- |
+| No `exports/<date>/` prefix at all | `never_run` | The pass has never succeeded, or is writing somewhere else |
+| Newest prefix over 8 days old | `stale` | At least one weekly run was missed |
+| Prefix exists, no `.zip` under it | `empty` | The pass started and stored nothing |
+| No `_run.shops-…` census object | `census_missing` | The pass died mid-run, so an unknown number of shops were never reached. Treat the bundle count as a floor, not a total |
+| Census reports `skipped > 0`, or fewer `.zip`s than it claims it stored | `incomplete` | **Shops are silently losing their backup** — see below |
+
+The last two arrived on 2026-08-14. Before them the check could see that *a* run landed but not how
+big it should have been, which hid the failure that gets worse as the product succeeds: the pass
+stops starting new shops once 240 seconds of its 300-second slot are gone, and the shop order is
+stable **by design** (so a truncated pass is repeatable rather than random). Once the estate
+outgrows the slot, that means the same newest-joined shops are skipped every single week, forever,
+while the prefix exists, holds bundles, and is one day old. Nobody would have found out until a
+restore.
+
+`incomplete` is therefore not a "busy week" to ride out. It is the signal that the pass needs to be
+paged across several invocations rather than fitted into one — a cursor in the census is the shape
+the follow-up suggested. It alarms on **any** skip rather than a threshold for that reason.
+
+### How the census reaches the watchdog
+
+The pass files one object per run whose **key** carries the numbers:
+
+```
+exports/2026-08-14/_run.shops-40.stored-25.failed-0.skipped-15
+```
+
+The counts are in the key rather than in a JSON body on purpose. The watchdog holds `s3:ListBucket`
+and **nothing else** — no `GetObject`, asserted by its own test in `infra/lib/backup-freshness.test.ts`
+— because the reason the uploader credential is safe to keep in Vercel is that no principal
+reachable from the app can read a bundle back, and a weekly unattended Lambda with `GetObject` on
+those bundles is exactly the principal an attacker would want. A listing returns keys, so a key that
+carries the census is read for free, with no new IAM and no second call.
+
+The object *does* have a JSON body (`{shops, stored, failed, skipped, completedAt}`) for an operator
+who is already in the console and can open it. Nothing automated reads it — the key is the contract,
+the body is the courtesy. The format lives in `platformBackupCensusKey`
+(`src/features/backup-export/period.ts`) and is pinned to the Lambda's regex by a test that recovers
+that regex from the synthesized template, so the two cannot drift apart silently.
+
+A refused census never fails the pass: every bundle is already stored by then, and answering 500
+would report a good backup as broken. It is a `cron_platform_backup.census_failed` log line, and a
+`census_missing` alarm from AWS a day later.
 
 It lives in AWS rather than in the app for two reasons that are each sufficient on their own: the
 application literally cannot see the bucket (the uploader has no `ListBucket`, which is what stops a
@@ -198,7 +241,8 @@ AWS_PROFILE=diveday-admin aws lambda invoke \
   --function-name diveday-backup-freshness-check /dev/stdout
 ```
 
-It answers `{"status":"ok"|"stale"|"empty"|"never_run", ...}` and only emails on the last three.
+It answers `{"status":"ok"|"stale"|"empty"|"never_run"|"census_missing"|"incomplete", ...}` and
+only emails on the last five.
 
 > `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
 > `BLOB_READ_WRITE_TOKEN`, and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.

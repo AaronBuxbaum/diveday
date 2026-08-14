@@ -126,11 +126,21 @@ That is the same memory-bound shape the shop-owned pass already has, and the sof
 the pass rather than the bundle — a single shop whose bundle does not fit in a Vercel function's
 memory would fail as a coded outcome, and would be the signal that this needs streaming.
 
-The known blind spot this creates: the watchdog checks that the newest run has *some* bundles, not
-that it has *all* of them, so an estate that outgrows the 300-second slot would be truncated at the
-same point every week and still read as healthy. Filed as
-[FU-20260812-backup-watchdog-cannot-see-a-short-run](../../product/follow-ups/FU-20260812-backup-watchdog-cannot-see-a-short-run.md),
-and it is the first thing to fix if shop count grows.
+The known blind spot this created: the watchdog checked that the newest run had *some* bundles, not
+that it had *all* of them, so an estate that outgrows the 300-second slot would be truncated at the
+same point every week and still read as healthy.
+
+**Closed 2026-08-14.** The pass now files one census object per run whose key carries the counts —
+`exports/<date>/_run.shops-40.stored-25.failed-0.skipped-15` — and the watchdog reads it out of the
+listing it already performs, alarming on any skip, on fewer bundles than the pass claims it stored,
+and on a census that is missing entirely. The counts ride in the *key* rather than a JSON body so
+that no `s3:GetObject` is needed: this decision's write-only posture is the reason the uploader
+credential is safe to keep in Vercel, and a weekly unattended Lambda able to read a bundle would
+undo it. See §2 of [the backup runbook](../../engineering/backup-and-restore-runbook.md).
+
+What is still true, and is now what the alarm is *for*: one Vercel invocation is the wrong shape for
+an unbounded estate. The census makes the truncation visible; paging the pass across invocations
+(a cursor in the census) is the fix when it fires.
 
 Nobody has restored from one of these yet. The quarterly restore test in the runbook is still
 `never` in its log, and this change does not alter that: a backup nobody has restored is a

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { backupObjectKey, backupPeriodKey, backupRunDate, platformBackupObjectKey } from "./period";
+import {
+  backupObjectKey,
+  backupPeriodKey,
+  backupRunDate,
+  parsePlatformBackupCensusKey,
+  platformBackupCensusKey,
+  platformBackupObjectKey,
+} from "./period";
 
 describe("backupPeriodKey", () => {
   it("names an ordinary mid-year week", () => {
@@ -100,5 +107,100 @@ describe("platformBackupObjectKey", () => {
     expect(platformBackupObjectKey("2026-08-12", "blue-mantis")).toBe(
       platformBackupObjectKey("2026-08-12", "blue-mantis"),
     );
+  });
+});
+
+/**
+ * The census key is a *contract with a principal that cannot open objects*.
+ *
+ * The freshness watchdog (infra S19) holds `s3:ListBucket` and deliberately
+ * nothing else — `infra/lib/backup-freshness.test.ts` has a test whose whole
+ * job is to keep it that way — so the only thing it can learn about a run is
+ * what the key names say. These tests pin the shape the watchdog's inline
+ * Lambda parses; `infra/lib/backup-freshness.test.ts` asserts that Lambda's
+ * regex against this same format, so the two cannot drift apart silently.
+ */
+describe("platformBackupCensusKey", () => {
+  it("files the census beside the run's bundles, with the counts in the name", () => {
+    expect(
+      platformBackupCensusKey("2026-08-14", { shops: 40, stored: 25, failed: 0, skipped: 15 }),
+    ).toBe("exports/2026-08-14/_run.shops-40.stored-25.failed-0.skipped-15");
+  });
+
+  it("shares the run prefix with the bundles, so one listing sees both", () => {
+    const runDate = "2026-08-14";
+    const census = platformBackupCensusKey(runDate, {
+      shops: 1,
+      stored: 1,
+      failed: 0,
+      skipped: 0,
+    });
+    const bundle = platformBackupObjectKey(runDate, "blue-mantis");
+    expect(census.slice(0, census.lastIndexOf("/"))).toBe(bundle.slice(0, bundle.lastIndexOf("/")));
+  });
+
+  it("sorts above a letter-initial slug, which is what a console listing mostly holds", () => {
+    // Legibility only — the watchdog finds the census by pattern, never by
+    // position. Worth pinning the true claim rather than the tempting one: `_`
+    // is 0x5F, so it beats every letter and loses to every digit. A shop called
+    // "3 Amigos Diving" files above the census, and that is fine.
+    const runDate = "2026-08-14";
+    const census = platformBackupCensusKey(runDate, { shops: 2, stored: 2, failed: 0, skipped: 0 });
+    for (const slug of ["aqua", "blue-mantis", "zebra-divers"]) {
+      expect([census, platformBackupObjectKey(runDate, slug)].sort()[0]).toBe(census);
+    }
+    expect([census, platformBackupObjectKey(runDate, "0-first")].sort()[0]).not.toBe(census);
+  });
+
+  it("is never mistaken for a bundle", () => {
+    const key = platformBackupCensusKey("2026-08-14", {
+      shops: 3,
+      stored: 3,
+      failed: 0,
+      skipped: 0,
+    });
+    // The watchdog counts `.zip` keys as bundles; a census that ended in one
+    // would inflate the very number it exists to check.
+    expect(key.endsWith(".zip")).toBe(false);
+  });
+});
+
+describe("parsePlatformBackupCensusKey", () => {
+  it("round-trips every count", () => {
+    const census = { shops: 40, stored: 25, failed: 2, skipped: 13 };
+    expect(parsePlatformBackupCensusKey(platformBackupCensusKey("2026-08-14", census))).toEqual(
+      census,
+    );
+  });
+
+  it("reads a complete run as covering everything", () => {
+    const census = { shops: 7, stored: 7, failed: 0, skipped: 0 };
+    const parsed = parsePlatformBackupCensusKey(platformBackupCensusKey("2026-08-14", census));
+    expect(parsed?.skipped).toBe(0);
+    expect(parsed?.stored).toBe(parsed?.shops);
+  });
+
+  it("handles counts of more than one digit, which is the case that matters", () => {
+    // The whole failure this guards against only appears once the estate is
+    // large enough not to fit the slot, so a single-digit-only regex would pass
+    // every test and fail in exactly the situation it was written for.
+    const census = { shops: 128, stored: 96, failed: 0, skipped: 32 };
+    expect(parsePlatformBackupCensusKey(platformBackupCensusKey("2026-08-14", census))).toEqual(
+      census,
+    );
+  });
+
+  it("answers null for a bundle, a prefix, and an empty string", () => {
+    expect(parsePlatformBackupCensusKey(platformBackupObjectKey("2026-08-14", "blue-mantis"))).toBe(
+      null,
+    );
+    expect(parsePlatformBackupCensusKey("exports/2026-08-14/")).toBe(null);
+    expect(parsePlatformBackupCensusKey("")).toBe(null);
+  });
+
+  it("answers null for a truncated census rather than guessing a zero", () => {
+    // A partial key must not read as "0 skipped" — that is the exact reading
+    // that would turn this alarm off in the situation it exists for.
+    expect(parsePlatformBackupCensusKey("exports/2026-08-14/_run.shops-40.stored-25")).toBe(null);
   });
 });
