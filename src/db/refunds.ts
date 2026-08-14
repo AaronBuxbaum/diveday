@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
@@ -292,15 +292,24 @@ export function shopCancellationPaymentStory(
  * How long a captured payment must have been sitting before an owed refund is
  * loud enough for Today. A day.
  *
- * The clock this measures is `booking_payments.updated_at`, which for one of
- * these rows is when the money was *captured* — a refund that could not be
- * issued deliberately leaves the payment row untouched, so there is no "we
- * tried and failed at T" stamp to read, and inventing a column to hold one
- * would be the stored flag this queue is built to avoid. So the rule this
- * states is the honest one: money the shop has held for more than a day that
- * now belongs to somebody else. In practice a swept Saturday crosses it almost
- * at once, which is the intent — the diver has already been told the shop will
- * be in touch.
+ * The clock this measures is `trips.cancelled_at` — when the shop called the
+ * departure off, which is when the money became owed. That is the rule the name
+ * has always implied, and until 2026-08-14 it was not the rule the code ran:
+ * the bound compared against `booking_payments.updated_at`, which for these rows
+ * is when the diver *paid*. The two come apart in both directions. A Saturday
+ * charter everyone paid for weeks ago was instantly past the bound, so the delay
+ * did not exist; a walk-in who paid cash on Friday morning for a Friday-evening
+ * dive that blew out that afternoon stayed hidden until Saturday, even though it
+ * is the freshest and most-likely-to-be-asked-about money on the list.
+ *
+ * `cancelled_at` is a fact about the departure, not a state about the money —
+ * there is still no "we tried to refund and failed at T" flag, and there must
+ * not be one: this queue is derivable on purpose so that a staffer handing back
+ * cash by hand leaves nothing to reconcile with Stripe.
+ *
+ * A trip cancelled before that column existed has a null, and a null is treated
+ * as **stale**: it has been owed for a while by definition, and failing toward
+ * showing the money is the right direction to fail.
  */
 export const OWED_REFUND_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -362,7 +371,11 @@ export async function listOwedShopCancellationRefunds(
       amountCents: bookingPayments.amountCents,
       currency: bookingPayments.currency,
       paymentStatus: bookingPayments.status,
-      since: bookingPayments.updatedAt,
+      // When the money became owed, which is when the shop called the trip off
+      // -- not when the diver paid. `cancelledAt` is null only for departures
+      // cancelled before that column existed, and those fall back to the
+      // payment stamp so the panel still has a date to show.
+      since: sql<Date>`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`,
     })
     .from(bookingPayments)
     .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
@@ -375,10 +388,21 @@ export async function listOwedShopCancellationRefunds(
         eq(trips.status, "cancelled"),
         // The forfeit carve-out — see the doc comment above.
         ne(bookings.status, "cancelled"),
-        ...(options.olderThan ? [lt(bookingPayments.updatedAt, options.olderThan)] : []),
+        // Bounded on the cancellation, with a NULL treated as **stale**: a trip
+        // cancelled before this column existed has been owed for a while by
+        // definition, and failing toward showing the money is the right
+        // direction to fail.
+        ...(options.olderThan
+          ? [
+              or(
+                isNull(trips.cancelledAt),
+                lt(trips.cancelledAt, options.olderThan),
+              ) as SQL<unknown>,
+            ]
+          : []),
       ),
     )
-    .orderBy(desc(bookingPayments.updatedAt))
+    .orderBy(desc(sql`coalesce(${trips.cancelledAt}, ${bookingPayments.updatedAt})`))
     .limit(options.limit ?? OWED_REFUND_LIMIT);
 
   return rows.map(({ paymentStatus, ...row }) => ({

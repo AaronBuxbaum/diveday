@@ -175,7 +175,11 @@ export async function cancelDeparturesBelowMinimum(
   for (const departure of due.slice(0, limit)) {
     const [row] = await db
       .update(trips)
-      .set({ status: "cancelled" })
+      // Stamped inline rather than routed through `setTripStatus`: the guard in
+      // the `where` below (still scheduled, still short of its minimum) is what
+      // makes this sweep safe to run concurrently, and a two-step read-then-set
+      // through that seam would lose it. The stamp itself is the same act.
+      .set({ status: "cancelled", cancelledAt: now })
       .where(
         and(
           eq(trips.id, departure.tripId),
