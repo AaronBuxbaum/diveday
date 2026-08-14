@@ -1,4 +1,4 @@
-# FU-20260813-visual-and-functional-specs-share-one-database — e2e specs mutate one shared shop, and it is red on CI right now
+# FU-20260813-visual-and-functional-specs-share-one-database — e2e specs mutate one shared shop
 
 - **Status:** Open
 - **Raised:** 2026-08-13 — PR #501, branch `claude/dive-booking-ui-refinements-t5eoy6`. Found by
@@ -60,10 +60,16 @@ instance of that, not the whole of it.
 
 ## Why it isn't already done
 
-The original entry deferred it as non-urgent because CI was green and the project's own documented
-commands did not reproduce it. That reasoning no longer applies: CI is red, and it will stay red on
-every PR until this is addressed, which trains exactly the "shrug at a red suite" habit the entry
-was worried about.
+**Update, later the same day: shard 3/4 went green again** — 93/93 on CI and locally — after the
+unrelated `t()` -> `t.raw()` sweep (a026d7b, which touched
+`shared.today.departureBoard.*`, the copy the captain's badge renders through). Whether that is
+cause or coincidence is **not established**, and the bisect below was never finished, so the
+coupling this entry is about has not been removed — only the one symptom that made it visible.
+
+That matters for how urgent this is, not for whether it is real: the local combined
+`visual + functional` run still fails, the specs still share one shop, and the next spec added can
+resurrect the same class of failure with no warning. Treat it as a live design gap that is
+currently not costing anything, rather than as a fixed bug.
 
 What still holds is that this is a design question rather than a bug with an obvious patch — and the
 2026-08-14 evidence has ruled out the answer that was previously approved, so it needs re-deciding

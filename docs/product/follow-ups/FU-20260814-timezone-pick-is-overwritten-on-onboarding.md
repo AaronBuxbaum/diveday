@@ -1,6 +1,8 @@
 # FU-20260814-timezone-pick-is-overwritten-on-onboarding — A shop that picks its own timezone during sign-up does not keep it
 
-- **Status:** Open
+- **Status:** Parked
+- **Parked:** un-parked if the failure reproduces again. It stopped reproducing the same day it was
+  filed and the mechanism was never established — read the correction below before starting.
 - **Raised:** 2026-08-14 — bisecting the red `Playwright shard 3/4` on PR #535. Split out of
   FU-20260813-visual-and-functional-specs-share-one-database once it turned out **not** to be a
   shared-state problem at all.
@@ -8,6 +10,29 @@
 - **Effort:** S
 - **Touches:** `src/components/DetectTimezone.tsx`, `src/app/onboard/page.tsx`,
   `e2e/onboard.spec.ts`
+
+## Correction, 2026-08-14 (same day)
+
+**This no longer reproduces, and the claim that made it look like a product bug was wrong.**
+
+The entry below says the spec "fails on its own". That was an artifact of how it was run:
+`pnpm e2e:run` reuses a build **and the database left by the previous run**, so a spec invoked by
+itself is not necessarily running against a clean shop. The isolation the diagnosis rested on was
+not isolation.
+
+After the `t()` -> `t.raw()` sweep (a026d7b) and its escape fix (1c170e0), this spec passes alone
+(4/4) and shard 3/4 passes in full (93/93), on CI and locally. Neither commit touches onboarding,
+the timezone picker, or `DetectTimezone` — so the mechanism that made it fail is **not established**,
+and "the sweep fixed it" is a guess, not a finding.
+
+What is actually known: the failure was real and was observed four times (twice on CI, twice
+locally), the select was holding `America/New_York` after being asked for `Asia/Jayapura`, and
+`data-zone-detected="true"` was already set at that point. What is not known is what made it stop.
+
+So this stays open as a **watch item**, not a task. Do not start the investigation below unless it
+reproduces again. If it does, reproduce it with a genuinely fresh database (`pnpm db:reset` or a
+clean `pnpm e2e`, not `e2e:run`) before believing any conclusion about isolation — that is the
+mistake this correction exists to stop the next reader repeating.
 
 ## What I noticed
 
@@ -79,14 +104,17 @@ back on its own; a longer wait just observes it for longer.
 ## Prompt
 
 ```text
-A shop that picks its own timezone during sign-up does not keep it. Fix the cause.
+A shop that picks its own timezone during sign-up did not keep it. Find out whether it still does.
 
-Reproduce (fails alone, no sharding needed):
-  pnpm e2e:build
-  pnpm e2e:run e2e/onboard.spec.ts --reporter=line --workers=1
-Expect "a shop outside the curated dive regions can pick its own timezone" to fail: the select is
-asked for Asia/Jayapura and is still holding America/New_York eight seconds later, with
-data-zone-detected="true" already on the element.
+FIRST, and this is the whole first step: confirm it still fails. As of 2026-08-14 it does NOT --
+the spec passes alone and shard 3/4 passes 93/93. Run it against a genuinely fresh database
+(`pnpm db:reset`, then `pnpm e2e e2e/onboard.spec.ts`, NOT `e2e:run`, which reuses the previous
+run's database and is what made the original diagnosis wrong). If it passes, delete this file and
+stop -- do not go looking for a cause for a failure that is not happening.
+
+Only if it reproduces: the observed failure was that the select is asked for Asia/Jayapura and is
+still holding America/New_York eight seconds later, with data-zone-detected="true" already on the
+element.
 
 Read first:
   - docs/product/follow-ups/FU-20260814-timezone-pick-is-overwritten-on-onboarding.md (this file --
