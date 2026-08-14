@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LogoMark } from "@/components/Logo";
+import { Wordmark } from "@/components/Logo";
 
 /**
  * The one door into DiveDay.
@@ -58,7 +58,7 @@ export function EntryShell({
   return (
     <main className={entryMainClass(width)}>
       <header className="text-center">
-        {wordmark ? <EntryWordmark className="mb-8 justify-center" /> : null}
+        {wordmark ? <Wordmark className="mb-8 justify-center" /> : null}
         {eyebrow ? (
           <p className="mb-2 text-xs font-semibold tracking-widest text-primary uppercase">
             {eyebrow}
@@ -133,18 +133,5 @@ export function EntryDone({
       <p className="mt-3 max-w-prose text-muted">{text}</p>
       {action ? <div className="mt-6 text-sm">{action}</div> : null}
     </main>
-  );
-}
-
-/** The DiveDay mark + wordmark, as `MarketingNavView` draws it — one brand, one drawing. */
-export function EntryWordmark({ className = "" }: { className?: string }) {
-  return (
-    <p className={`flex items-center gap-2 text-base font-semibold tracking-tight ${className}`}>
-      <LogoMark className="size-6 text-primary" />
-      {/* i18n-exempt: brand name */}
-      <span>
-        DiveDay<span className="text-primary">.</span>
-      </span>
-    </p>
   );
 }

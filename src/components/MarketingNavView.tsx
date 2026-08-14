@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoMark } from "@/components/Logo";
+import { Wordmark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -52,16 +52,7 @@ export function MarketingNavView({
         aria-label={t("nav.mainNavigation")}
         className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 sm:flex-nowrap"
       >
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground"
-        >
-          <LogoMark className="size-6 text-primary" />
-          {/* i18n-exempt: brand name */}
-          <span>
-            DiveDay<span className="text-primary">.</span>
-          </span>
-        </Link>
+        <Wordmark href="/" className="text-foreground" />
         <div className="order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
