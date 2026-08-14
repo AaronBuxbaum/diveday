@@ -306,7 +306,7 @@ export default async function DiversPage({
           removedNote: t("divers.list.removedNote"),
           restore: t("divers.list.restore"),
           restoring: t("divers.list.restoring"),
-          restoreDiverLabel: t("divers.list.restoreDiverLabel"),
+          restoreDiverLabel: t.raw("divers.list.restoreDiverLabel"),
           peopleHeading: t("divers.list.peopleHeading"),
           // The badge's digit is announced with the noun the count belongs to,
           // and with whether it is a match count or the whole roster.
@@ -327,8 +327,8 @@ export default async function DiversPage({
           noContactDetails: t("divers.list.noContactDetails"),
           certificationLevels,
           noCertificationLevel: t("divers.list.noCertificationLevel"),
-          pendingReviewText: t("divers.list.pendingReviewText"),
-          toConfirmText: t("divers.list.toConfirmText"),
+          pendingReviewText: t.raw("divers.list.pendingReviewText"),
+          toConfirmText: t.raw("divers.list.toConfirmText"),
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderLevel: t("divers.list.tableHeaderLevel"),
         }}

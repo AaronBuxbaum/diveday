@@ -73,7 +73,7 @@ export default async function EditCoursePage({
     }),
     // A half-edited depth marker. Refused at save rather than left to render
     // its own braces to a diver — see saveCourseContentAction.
-    "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
+    "depth-placeholder": t.raw("courses.edit.errorDepthPlaceholder"),
   };
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
@@ -138,7 +138,7 @@ export default async function EditCoursePage({
           typed into any prose box on this page, and it is the one piece of
           syntax this editor asks a shop to learn. */}
       <p className="mt-6 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-        {t("courses.edit.depthMarkersHint")}
+        {t.raw("courses.edit.depthMarkersHint")}
       </p>
 
       <UnsavedChangesGuard>
@@ -445,21 +445,21 @@ export default async function EditCoursePage({
               <DayByDayEditor
                 initialDays={course.scheduleDays}
                 copy={{
-                  dayLabel: t("courses.dayByDay.dayLabel"),
+                  dayLabel: t.raw("courses.dayByDay.dayLabel"),
                   removeDay: t("courses.dayByDay.removeDay"),
-                  dayTitleLabel: t("courses.dayByDay.dayTitleLabel"),
+                  dayTitleLabel: t.raw("courses.dayByDay.dayTitleLabel"),
                   dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
-                  startTimeLabel: t("courses.dayByDay.startTimeLabel"),
-                  endTimeLabel: t("courses.dayByDay.endTimeLabel"),
-                  timeNoteLabel: t("courses.dayByDay.timeNoteLabel"),
+                  startTimeLabel: t.raw("courses.dayByDay.startTimeLabel"),
+                  endTimeLabel: t.raw("courses.dayByDay.endTimeLabel"),
+                  timeNoteLabel: t.raw("courses.dayByDay.timeNoteLabel"),
                   timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
                   timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
                   timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
-                  whatHappens: t("courses.dayByDay.whatHappens"),
+                  whatHappens: t.raw("courses.dayByDay.whatHappens"),
                   whatHappensHint: t("courses.edit.oneItemPerLine"),
                   itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
-                  itemsOverMax: t("courses.dayByDay.itemsOverMax"),
-                  daysMax: t("courses.dayByDay.daysMax"),
+                  itemsOverMax: t.raw("courses.dayByDay.itemsOverMax"),
+                  daysMax: t.raw("courses.dayByDay.daysMax"),
                   addDay: t("courses.dayByDay.addDay"),
                 }}
               />

@@ -280,8 +280,8 @@ export function BuddyTeamsPanel({
                   ].filter((group) => group.options.length > 0)}
                   copy={{
                     hint: t("manifest.buddyDragHint"),
-                    holding: t("manifest.buddyDragHolding"),
-                    over: t("manifest.buddyDragOver"),
+                    holding: t.raw("manifest.buddyDragHolding"),
+                    over: t.raw("manifest.buddyDragOver"),
                   }}
                 />
                 {/* The action row is where this form's own answer lands — a

@@ -604,9 +604,9 @@ export default async function ManageTripPage({
           notAssignedYet: t("trips.crew.notAssignedYet"),
           assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
           assignOption: t("shared.today.departureBoard.assignCrewOption"),
-          unassignAria: t("shared.today.departureBoard.unassignAria"),
+          unassignAria: t.raw("shared.today.departureBoard.unassignAria"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
-          roleAria: t("trips.crew.roleAria"),
+          roleAria: t.raw("trips.crew.roleAria"),
           roleUnspecified: t("trips.crew.roleUnspecified"),
           roleOptions: {
             instructor: t("trips.crew.roleInstructor"),
