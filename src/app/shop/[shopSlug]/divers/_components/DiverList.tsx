@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill, pluralForm } from "@/i18n/fill";
 
@@ -432,94 +433,97 @@ export function DiverList({
               </li>
             ))}
           </ul>
-          <div className="relative mt-4 hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm sm:block">
-            {/* No `min-w-*` floor: this is a two-column table, and the 720px
-                floor it used to carry forced a sideways scroll on exactly the
-                narrow-desktop widths the phone cards no longer cover. The
-                wrapper's `overflow-x-auto` stays as the safety net. */}
-            <table className="w-full border-collapse text-left">
-              <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderPerson}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderCards}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {divers.map((diver) => (
-                  <tr
-                    key={diver.person.id}
-                    className="group relative transition-colors duration-200 hover:bg-surface-sunken"
-                  >
-                    <td className="relative px-4 py-3">
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                        className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+          {/* Desktop: the shared table vocabulary (`@/components/ui/table`) —
+              one shell, one header voice, one row divider, one density, shared
+              with orders, reports, the departure log and the import preview.
+              No `minWidth` floor: this is a two-column table, and the 720px
+              floor it used to carry forced a sideways scroll on exactly the
+              narrow-desktop widths the phone cards no longer cover. The shell's
+              own `overflow-x-auto` stays as the safety net, and `relative` on
+              it keeps the stretched row link's positioning context inside the
+              card. */}
+          <Table shellClassName="relative mt-4 hidden sm:block">
+            <THead>
+              <Th>{copy.tableHeaderPerson}</Th>
+              <Th>{copy.tableHeaderCards}</Th>
+            </THead>
+            <TBody>
+              {divers.map((diver) => (
+                <tr
+                  key={diver.person.id}
+                  className="group relative transition-colors duration-200 hover:bg-surface-sunken"
+                >
+                  {/* `text-base` because the person's name is the row's own
+                      voice, not table small print — a directly-applied size
+                      beats the shell's inherited `text-sm`. `align-middle`
+                      centres this cell's avatar against the taller of the two,
+                      as it did before the conversion. */}
+                  <Td className="relative align-middle text-base">
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                      className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                    >
+                      <span
+                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                        aria-hidden="true"
                       >
-                        <span
-                          className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(diver.person.fullName)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold group-hover:text-primary">
-                            {diver.person.fullName}
-                            <span
-                              aria-hidden="true"
-                              className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                              →
-                            </span>
-                          </p>
-                          <p className="truncate text-sm font-normal text-muted">
-                            {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
-                          </p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {/* One quiet cell instead of a pill column plus an
-                          Attention column that said "None" on nearly every
-                          row: the count is muted roster fact, and a badge
-                          appears beside it only when this person actually
-                          needs a staffer (design principle 9). */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* The column header already says "Cards" — repeating
-                            the unit on every row is the residue principle 9
-                            clears. The phone cards keep the full phrase; they
-                            have no header to carry it. */}
-                        <span className="whitespace-nowrap text-muted tabular-nums">
-                          {cardCount(diver)}
-                        </span>
-                        {pendingCount(diver) > 0 ? (
-                          <Badge tone="warning">
-                            {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
-                          </Badge>
-                        ) : null}
-                        {confirmCount(diver) > 0 ? (
-                          <Badge tone="neutral">
-                            {fill(copy.toConfirmText, { count: confirmCount(diver) })}
-                          </Badge>
-                        ) : null}
-                        {filter === "removed" && restoreAction ? (
-                          <RestoreRow
-                            action={restoreAction}
-                            personId={diver.person.id}
-                            fullName={diver.person.fullName}
-                            copy={copy}
-                          />
-                        ) : null}
+                        {initials(diver.person.fullName)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold group-hover:text-primary">
+                          {diver.person.fullName}
+                          <span
+                            aria-hidden="true"
+                            className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            →
+                          </span>
+                        </p>
+                        <p className="truncate text-sm font-normal text-muted">
+                          {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </Link>
+                  </Td>
+                  {/* One quiet cell instead of a pill column plus an Attention
+                      column that said "None" on nearly every row: the count is
+                      muted roster fact, and a badge appears beside it only when
+                      this person actually needs a staffer (design principle 9).
+                      Not `numeric` — the cell is a row of things that starts
+                      with a figure, not a column of figures to compare down. */}
+                  <Td className="align-middle">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* The column header already says "Cards" — repeating
+                          the unit on every row is the residue principle 9
+                          clears. The phone cards keep the full phrase; they
+                          have no header to carry it. */}
+                      <span className="whitespace-nowrap text-muted tabular-nums">
+                        {cardCount(diver)}
+                      </span>
+                      {pendingCount(diver) > 0 ? (
+                        <Badge tone="warning">
+                          {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
+                        </Badge>
+                      ) : null}
+                      {confirmCount(diver) > 0 ? (
+                        <Badge tone="neutral">
+                          {fill(copy.toConfirmText, { count: confirmCount(diver) })}
+                        </Badge>
+                      ) : null}
+                      {filter === "removed" && restoreAction ? (
+                        <RestoreRow
+                          action={restoreAction}
+                          personId={diver.person.id}
+                          fullName={diver.person.fullName}
+                          copy={copy}
+                        />
+                      ) : null}
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </TBody>
+          </Table>
         </>
       )}
       {pager}
