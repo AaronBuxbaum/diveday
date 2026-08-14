@@ -265,6 +265,11 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
   await expect(page.getByRole("heading", { name: /You’re on the wait list, Nora/ })).toBeVisible();
+  // A wait list is a set of leads the shop works, not a queue a diver holds a
+  // place in (ADR 20260813-wait-list-is-a-lead-list). The confirmation may not
+  // promise a standing the product does not implement.
+  await expect(page.getByText(/The shop has your details and will get in touch/)).toBeVisible();
+  await expect(page.getByText(/place in line/)).toHaveCount(0);
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -279,6 +284,8 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .click();
   await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
+  // Staff read when each diver asked, not a rank: the list is unnumbered.
+  await expect(page.getByText(/Asked /).last()).toBeVisible();
 });
 
 // H-13: a self-service booking that reuses an existing diver's email under a

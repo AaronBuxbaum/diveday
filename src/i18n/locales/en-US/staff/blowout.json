@@ -3,7 +3,7 @@
   "confirm": {
     "title": "Call a blow-out?",
     "lead": "This cancels {tripTitle} and sends every booked diver one message: what happened, where their money stands, and the upcoming departures they already qualify for, as booking links.",
-    "moneyNote": "No money moves. Refunds stay with you, per booking, exactly as today — paid divers are told you'll be in touch.",
+    "moneyNote": "Card payments go back automatically. Anything taken at the counter — or a card DiveDay can't reach — stays with you to return, and those divers are told a refund is owed.",
     "diversHeading": "{count, plural, one {# diver will be messaged} other {# divers will be messaged}}",
     "noEmail": "No email — flagged for a call",
     "noDivers": "Nobody is booked on this departure. Calling it simply cancels the trip.",

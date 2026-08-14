@@ -186,7 +186,7 @@ describe("shopJsonLd", () => {
   });
 
   it("publishes the real average and count once reviews exist", () => {
-    const graph = shopJsonLd(shop, ORIGIN, { count: 7, average: 4.6 });
+    const graph = shopJsonLd(shop, ORIGIN, { count: 7, average: 4.6, suppressedCount: 0 });
     expect(graph.aggregateRating).toEqual({
       "@type": "AggregateRating",
       ratingValue: 4.6,
@@ -269,7 +269,9 @@ describe("tripPageJsonLd", () => {
   });
 
   it("carries no personal data — only what the page already shows a stranger", () => {
-    const serialized = JSON.stringify(tripPageJsonLd(shop, trip, ORIGIN, { count: 3, average: 5 }));
+    const serialized = JSON.stringify(
+      tripPageJsonLd(shop, trip, ORIGIN, { count: 3, average: 5, suppressedCount: 0 }),
+    );
     for (const forbidden of ["personId", "bookingId", "@example.com>", "diver"]) {
       expect(serialized).not.toContain(forbidden);
     }
@@ -356,5 +358,41 @@ describe("coursePageJsonLd", () => {
     const graph = coursePageJsonLd(shop, { ...course, agency: null, summary: null }, ORIGIN);
     expect(graph.educationalCredentialAwarded).toBe("Open Water Diver");
     expect(graph.description).toBe("The long version.");
+  });
+});
+
+describe("aggregateRating and a curated record", () => {
+  const shop = {
+    name: "Blue Mantis Divers",
+    slug: "blue-mantis",
+    contactEmail: null,
+    contactPhone: null,
+    currency: "usd",
+    addressStreet: null,
+    addressLocality: null,
+    addressRegion: null,
+    addressPostalCode: null,
+    addressCountry: null,
+  };
+
+  it("publishes the rating for a shop that has taken little down", () => {
+    const graph = shopJsonLd(shop, "https://dive.day", {
+      count: 9,
+      average: 4.8,
+      suppressedCount: 1,
+    });
+    expect(graph.aggregateRating).toMatchObject({ ratingValue: 4.8, reviewCount: 9 });
+  });
+
+  it("withholds it once the shop has hidden too much of its own record", () => {
+    // A 5.0 over six reviews, with six more taken down, is not a measurement
+    // DiveDay will hand a search engine on the shop's behalf
+    // (ADR 20260813-review-moderation-has-a-floor).
+    const graph = shopJsonLd(shop, "https://dive.day", {
+      count: 6,
+      average: 5,
+      suppressedCount: 6,
+    });
+    expect(graph.aggregateRating).toBeUndefined();
   });
 });

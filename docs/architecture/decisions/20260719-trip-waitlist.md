@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-19
+- **Amended by:** [20260813-wait-list-is-a-lead-list](20260813-wait-list-is-a-lead-list.md) — the
+  `created_at` order below is how staff *read* the list, never an order they owe anyone. "Must
+  preserve first-come order" in the context is withdrawn.
 
 ## Context
 

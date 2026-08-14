@@ -235,7 +235,7 @@
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
-    "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro ve tu puesto en la lista y te avisará si se libera una.",
+    "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro tiene tus datos y te avisará si se libera una.",
     "sailedHeading": "Esta salida ya ha zarpado",
     "sailedCheckSchedule": "Consulta el calendario",
     "sailedForNext": "para la próxima salida.",
@@ -1677,7 +1677,7 @@
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
       "shopLinkLabel": "Enlace del centro",
-      "shopLinkHint": "La dirección web pública de tu centro — la página que abren los buceadores para reservar.",
+      "shopLinkHint": "La dirección web pública de tu centro — la página que abren los buceadores para reservar. Aparece en los buscadores en cuanto programes una salida; puedes desactivarlo cuando quieras en Ajustes.",
       "shopLinkPlaceholder": "p. ej. green-lagoon",
       "shopLinkTitle": "Letras minúsculas, números y guiones — esto se convierte en la dirección web de tu centro",
       "timezoneLabel": "Zona horaria",
@@ -2817,6 +2817,8 @@
     "tripMinimumNotMet": {
       "subject": "Salida cancelada — {tripTitle}",
       "body": "{shopName} realiza {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijeron que lo decidirían, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
+      "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {
@@ -2825,6 +2827,8 @@
       "moneyNone": "No se te ha cobrado nada por esta salida.",
       "moneyDeposit": "Tu depósito está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
       "moneyPaid": "Tu pago está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
       "alternativesIntro": "¿Quieres volver al agua? Estas salidas próximas ya cumplen con tus certificaciones:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "Ninguna de las próximas salidas coincide con tus certificaciones por ahora, pero se añaden salidas nuevas constantemente.",
@@ -2838,10 +2842,10 @@
     },
     "waitlistInvite": {
       "subject": "Se ha liberado una plaza en {tripTitle}",
-      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y eres el siguiente en la lista de espera.",
+      "body": "Se acaba de liberar una plaza en {tripTitle} con {shopName}, y el centro te la ofrece a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "Las plazas se asignan por orden de llegada, así que no esperes demasiado. ¡Nos vemos en el barco!"
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
     },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% de descuento en {tripTitle} — oferta de última hora",

@@ -1,7 +1,12 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { setReviewPublished, setReviewsPublished } from "@/db/reviews";
+import {
+  REVIEW_MODERATION_REASONS,
+  type ReviewModerationReason,
+  setReviewPublished,
+  setReviewsPublished,
+} from "@/db/reviews";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -10,11 +15,16 @@ import { requireStaffSession } from "@/lib/session";
  * and re-checked inside the query, so a form replayed against another shop's
  * review id changes nothing (`setReviewPublished` is shop-scoped).
  *
- * Hiding needs no confirm dialog: `setReviewPublished` is a pure toggle, so
- * calling this same action again with `publish=true` for the same review is a
+ * **A hide states a reason**, chosen from the short list in
+ * `review_moderation_reason` (ADR 20260813-review-moderation-has-a-floor), and
+ * `other` states it in the shop's own words. The reason is recorded with the
+ * act; it is refused here rather than defaulted, because a default reason is a
+ * sentence DiveDay would be putting in the shop's mouth.
+ *
+ * Hiding still needs no confirm dialog: publishing the same review again is a
  * full undo. A successful hide carries the review id back in the redirect as
- * `undo`, and the page renders a land-then-undo `<UndoToast>` whose Undo
- * button posts straight back to this action (divers/[personId]/actions.ts's
+ * `undo`, and the page renders a land-then-undo `<UndoToast>` whose Undo button
+ * posts straight back to this action (divers/[personId]/actions.ts's
  * `deleteCertificationAction`/`restoreCardAction` precedent, docs/design/principles.md #7).
  */
 export async function setReviewPublishedAction(formData: FormData) {
@@ -24,12 +34,32 @@ export async function setReviewPublishedAction(formData: FormData) {
   const publish = formData.get("publish") === "true";
   if (!reviewId) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
 
-  const changed = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish);
-  if (!changed) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
+  const outcome = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish, {
+    recordedByPersonId: session.user.personId,
+    reason: parseReviewModerationReason(formData.get("reason")),
+    reasonNote: String(formData.get("reasonNote") ?? ""),
+  });
+  if (outcome === "not_found") revalidateAndRedirect(reviews, `${reviews}?notice=error`);
+  if (outcome === "reason_required") {
+    revalidateAndRedirect(reviews, `${reviews}?notice=reason_required#review-${reviewId}`);
+  }
+  if (outcome === "note_required") {
+    revalidateAndRedirect(reviews, `${reviews}?notice=note_required#review-${reviewId}`);
+  }
   revalidateAndRedirect(
     reviews,
     publish ? `${reviews}?notice=published` : `${reviews}?notice=hidden&undo=${reviewId}`,
   );
+}
+
+/** A posted value narrowed to a real reason code, or null — never a coerced one. */
+function parseReviewModerationReason(
+  value: FormDataEntryValue | null,
+): ReviewModerationReason | null {
+  const candidate = typeof value === "string" ? value : "";
+  return REVIEW_MODERATION_REASONS.includes(candidate as ReviewModerationReason)
+    ? (candidate as ReviewModerationReason)
+    : null;
 }
 
 /**
@@ -52,7 +82,12 @@ export async function publishReviewsAction(formData: FormData) {
     .filter(Boolean);
   if (reviewIds.length === 0) revalidateAndRedirect(reviews, `${reviews}?notice=none_selected`);
 
-  const published = await setReviewsPublished(await getDb(), session.user.shopId, reviewIds);
+  const published = await setReviewsPublished(
+    await getDb(),
+    session.user.shopId,
+    reviewIds,
+    session.user.personId,
+  );
   if (published === 0) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
   revalidateAndRedirect(reviews, `${reviews}?notice=published_many&published=${published}`);
 }

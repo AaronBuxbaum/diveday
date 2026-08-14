@@ -11,13 +11,15 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
   getShopReviewAggregate,
   listShopReviewsForStaff,
   MAX_BULK_PUBLISH,
+  REVIEW_MODERATION_REASONS,
+  type ReviewModerationReason,
 } from "@/db/reviews";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
@@ -50,10 +52,25 @@ export const metadata: Metadata = {
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+/**
+ * The reason codes as words. `src/db` returns codes and this picks the
+ * sentences, the same division every other domain code on this page follows
+ * (ADR 20260731-domain-layer-copy-leaks).
+ */
+const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
+  abusive: "reviews.hideReason.abusive",
+  names_a_person: "reviews.hideReason.namesAPerson",
+  wrong_subject: "reviews.hideReason.wrongSubject",
+  spam: "reviews.hideReason.spam",
+  other: "reviews.hideReason.other",
+};
+
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   published: { tone: "success", key: "reviews.notice.published" },
   hidden: { tone: "success", key: "reviews.notice.hidden" },
   none_selected: { tone: "danger", key: "reviews.notice.noneSelected" },
+  reason_required: { tone: "danger", key: "reviews.notice.reasonRequired" },
+  note_required: { tone: "danger", key: "reviews.notice.noteRequired" },
   error: { tone: "danger", key: "reviews.notice.error" },
 };
 
@@ -302,6 +319,9 @@ export default async function ReviewsPage({
               return (
                 <li
                   key={review.id}
+                  // A refused hide comes back with `#review-<id>`, so the row
+                  // that argued is the one the browser lands on.
+                  id={`review-${review.id}`}
                   className={`flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-start ${
                     standout ? "border-accent/40 bg-accent/10" : "border-border bg-surface"
                   }`}
@@ -360,20 +380,75 @@ export default async function ReviewsPage({
                       </p>
                     </div>
                   </div>
-                  <form action={setReviewPublishedAction} className="shrink-0">
-                    <input type="hidden" name="reviewId" value={review.id} />
-                    <input type="hidden" name="publish" value={String(!review.isPublished)} />
-                    <SubmitButton
-                      pendingLabel={t("reviews.saving")}
-                      className={buttonClass(
-                        review.isPublished
-                          ? { variant: "secondary", className: "text-foreground" }
-                          : {},
-                      )}
-                    >
-                      {review.isPublished ? t("reviews.hide") : t("reviews.publish")}
-                    </SubmitButton>
-                  </form>
+                  {review.isPublished ? (
+                    /* Hiding states a case, so it cannot be a bare button any
+                       more (ADR 20260813-review-moderation-has-a-floor). The
+                       picker waits behind a disclosure: the shop that opens
+                       this is already sure, and the reason list is the whole
+                       point — a shop that finds none of them true is telling
+                       itself something. */
+                    <details className="shrink-0 sm:w-64">
+                      <summary
+                        className={`${buttonClass({
+                          variant: "secondary",
+                          className: "text-foreground",
+                        })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+                      >
+                        {t("reviews.hide")}
+                      </summary>
+                      <form action={setReviewPublishedAction} className="mt-3 flex flex-col gap-2">
+                        <input type="hidden" name="reviewId" value={review.id} />
+                        <input type="hidden" name="publish" value="false" />
+                        <label
+                          className="text-xs font-medium text-muted"
+                          htmlFor={`reason-${review.id}`}
+                        >
+                          {t("reviews.hideReasonLabel")}
+                        </label>
+                        <select
+                          id={`reason-${review.id}`}
+                          name="reason"
+                          required
+                          defaultValue=""
+                          className={controlClass}
+                        >
+                          <option value="" disabled>
+                            {t("reviews.hideReasonPlaceholder")}
+                          </option>
+                          {REVIEW_MODERATION_REASONS.map((reason) => (
+                            <option key={reason} value={reason}>
+                              {t(REVIEW_REASON_KEYS[reason])}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          name="reasonNote"
+                          type="text"
+                          maxLength={200}
+                          placeholder={t("reviews.hideNotePlaceholder")}
+                          aria-label={t("reviews.hideNoteLabel")}
+                          className={controlClass}
+                        />
+                        <SubmitButton
+                          pendingLabel={t("reviews.saving")}
+                          className={buttonClass({
+                            variant: "secondary",
+                            className: "text-foreground",
+                          })}
+                        >
+                          {t("reviews.hideConfirm")}
+                        </SubmitButton>
+                      </form>
+                    </details>
+                  ) : (
+                    <form action={setReviewPublishedAction} className="shrink-0">
+                      <input type="hidden" name="reviewId" value={review.id} />
+                      <input type="hidden" name="publish" value="true" />
+                      <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
+                        {t("reviews.publish")}
+                      </SubmitButton>
+                    </form>
+                  )}
                 </li>
               );
             })}

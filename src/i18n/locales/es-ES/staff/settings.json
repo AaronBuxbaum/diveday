@@ -20,6 +20,8 @@
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
       "reviewUrlSaved": "Enlace de reseñas guardado.",
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
+      "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
+      "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
       "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay. Quien gestiona tu alojamiento completa la configuración de Stripe.",
@@ -104,6 +106,16 @@
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas",
+      "submitting": "Guardando…"
+    },
+    "searchListing": {
+      "heading": "Aparecer en buscadores",
+      "valueListed": "Visible",
+      "valueHidden": "Oculto",
+      "description": "Si Google y otros buscadores pueden mostrar tus páginas públicas.",
+      "detail": "Tu calendario y tus páginas de cursos aparecen por defecto — para la mayoría de los centros, ese es justo el motivo de tenerlas. Si desmarcas esto, DiveDay las quita de su sitemap y pide a los buscadores que no las indexen. Lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
+      "label": "Mostrar mis páginas públicas en los buscadores",
+      "submit": "Guardar",
       "submitting": "Guardando…"
     },
     "packing": {

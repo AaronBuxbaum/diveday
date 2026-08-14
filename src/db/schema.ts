@@ -175,6 +175,18 @@ export const shops = pgTable(
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
     isDemo: boolean("is_demo").notNull().default(false),
+    /**
+     * When this shop asked to be left out of search engines. Null — the
+     * default — means its public pages are in the sitemap and indexable, which
+     * is what a shop is on DiveDay for (ADR 20260813-search-listing-is-a-choice).
+     *
+     * A timestamp rather than a boolean, matching every other reversible act
+     * on this schema: the interesting question later is *when* a shop opted
+     * out, and a `false` cannot answer it. Set it and the public schedule and
+     * course pages emit `robots: noindex` and drop out of the sitemap; clear
+     * it and they come back.
+     */
+    searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1448,8 +1460,11 @@ export const activityEvents = pgTable(
 );
 
 /**
- * A diver's place in line for a full trip. It is deliberately separate from
- * bookings: a wait-list entry never consumes capacity or appears on a manifest.
+ * A diver who asked to be told if a full trip frees a seat. It is deliberately
+ * separate from bookings: a wait-list entry never consumes capacity or appears
+ * on a manifest. It is also **not a queue position** — `createdAt` records when
+ * the diver asked, and the shop invites whoever fits the departure
+ * (ADR 20260813-wait-list-is-a-lead-list).
  */
 export const tripWaitlistEntries = pgTable(
   "trip_waitlist_entries",
@@ -1779,6 +1794,15 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
   "order_refunded",
   /** The automated cancellation-window refund reversed a Stripe capture. */
   "cancellation_refund",
+  /**
+   * The *shop* cancelled the departure — a weather blow-out or the
+   * minimum-head-count sweep — and the capture was reversed unconditionally.
+   * Deliberately distinct from `cancellation_refund`: that one is a diver
+   * changing their mind inside a stated window, this one is the shop taking the
+   * trip away, and only the first has a window that could have refused it
+   * (ADR 20260813-shop-cancellation-refunds-itself).
+   */
+  "shop_cancellation_refund",
 ]);
 
 /**
@@ -3831,6 +3855,78 @@ export const tripReviews = pgTable(
     // The staff moderation queue: everything for the shop, newest first.
     index("trip_reviews_shop_created_idx").on(table.shopId, table.createdAt),
     check("trip_reviews_rating_range", sql`${table.rating} between 1 and 5`),
+  ],
+);
+
+/**
+ * Why a shop took a review down. A code, never a sentence — the UI picks the
+ * words (ADR 20260731-domain-layer-copy-leaks) — and a deliberately short list,
+ * because the list *is* the constraint: an unconstrained hide button plus a
+ * machine-readable `aggregateRating` is how a curated set gets published as an
+ * impartial measurement (ADR 20260813-review-moderation-has-a-floor).
+ *
+ * `other` exists so a shop facing a case these four do not describe is never
+ * stuck, and it is the one value that requires `reason_note` to be filled in.
+ */
+export const reviewModerationReason = pgEnum("review_moderation_reason", [
+  /** Abusive or harassing — aimed at a person rather than the diving. */
+  "abusive",
+  /** Names a member of staff or another diver. */
+  "names_a_person",
+  /** About a different trip, a different shop, or plainly not this dive. */
+  "wrong_subject",
+  /** Spam, an advertisement, or a test submission. */
+  "spam",
+  /** Something else, stated in `reason_note`. */
+  "other",
+]);
+
+export const reviewModerationAction = pgEnum("review_moderation_action", ["published", "hidden"]);
+
+/**
+ * Every publish and hide, append-only — the trail
+ * ADR 20260813-review-moderation-has-a-floor added, shaped like
+ * `buddy_team_events` and the roll-call trails beside it.
+ *
+ * It exists for two reasons and the second is the load-bearing one. It records
+ * what a shop asserted when it took a diver's words down; and it is what makes
+ * "how much of this shop's record has been suppressed?" answerable, which
+ * decides whether DiveDay will still vouch for the shop's average in JSON-LD.
+ * A review sitting unpublished because it carries words nobody has read yet is
+ * *not* suppressed, and only a recorded `hidden` act tells the two apart.
+ */
+export const reviewModerationEvents = pgTable(
+  "review_moderation_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => tripReviews.id),
+    action: reviewModerationAction("action").notNull(),
+    /** Null on a publish: releasing a review states no case. */
+    reason: reviewModerationReason("reason"),
+    /** The shop's own words, required when `reason` is `other`. */
+    reasonNote: text("reason_note"),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("review_moderation_events_shop_idx").on(table.shopId, table.occurredAt),
+    index("review_moderation_events_review_idx").on(table.reviewId),
+    // A hide states a case or it does not happen; `other` states it in words.
+    check(
+      "review_moderation_events_hidden_has_reason",
+      sql`${table.action} <> 'hidden' or ${table.reason} is not null`,
+    ),
+    check(
+      "review_moderation_events_other_has_note",
+      sql`${table.reason} <> 'other' or length(trim(coalesce(${table.reasonNote}, ''))) > 0`,
+    ),
   ],
 );
 

@@ -1367,6 +1367,21 @@ describe("sitemap queries (in-memory PGlite)", () => {
       slug: "demo-course",
     });
 
+    // A shop only reaches the sitemap once it has published a departure
+    // (ADR 20260813-search-listing-is-a-choice) — an active course alone puts
+    // the *course* page in, not the schedule.
+    expect((await listShopsForSitemap(db)).map((row) => row.slug)).not.toContain(
+      "live-shop-sitemap",
+    );
+    await createTrip(db, {
+      shopId: liveShop.id,
+      title: "Sitemap Reef",
+      startsAt: new Date("2026-09-01T13:00:00.000Z"),
+      endsAt: new Date("2026-09-01T17:00:00.000Z"),
+      capacity: 6,
+      plannedDives: 2,
+    });
+
     const shopRows = await listShopsForSitemap(db);
     expect(shopRows).toContainEqual({ slug: "live-shop-sitemap" });
     expect(shopRows.map((row) => row.slug)).not.toContain("demo-shop-sitemap");

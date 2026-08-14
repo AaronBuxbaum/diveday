@@ -7,6 +7,53 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Review moderation states its case, and a curated record loses its star rating (delivered 2026-08-13)
+
+A shop could hide any review with one unrecorded tap, and the average over what survived went out as
+schema.org `aggregateRating` — the field a search engine renders as stars beside a result. Nothing
+prevented, recorded, or disclosed a shop hiding everything below five stars and keeping a credible
+5.0. The power to take a review down is untouched, because a shop that cannot remove a review naming
+a diver by name will be angry with DiveDay rather than with the reviewer. What changes is that a hide
+now states a case — a code from a short list, `other` in the shop's own words, refused outright
+without one — and appends to an `review_moderation_events` trail. That trail is also what makes the
+second half possible: once more than one in five of the reviews a shop has *ruled on* are hidden,
+DiveDay stops publishing the rating as a machine-readable claim. A review waiting on a read has never
+been hidden and never counts against the shop. The stars stay on the shop's own page throughout,
+where they sit above the reviews they are drawn from.
+[20260813-review-moderation-has-a-floor](../architecture/decisions/20260813-review-moderation-has-a-floor.md).
+
+## A shop chooses whether it is in search results (delivered 2026-08-13)
+
+Creating a shop published it to Google, with no step in between and no switch anywhere: the sitemap
+query filtered on `is_demo` and nothing else, so a trial shop's half-typed schedule was crawled on
+its first afternoon, and a shop that evaluated DiveDay and walked away had left a page indexed
+against its business name under someone else's domain. Indexing stays **on by default** — a public
+schedule nobody can find is most of the value gone — and gains the three things it was missing. A
+nullable `search_listing_opt_out_at` drops the shop from the sitemap *and* makes its public pages
+emit `robots: noindex`, because leaving the sitemap alone would not un-index anything already found.
+A readiness condition holds a brand-new shop out until it has published at least one departure,
+which fixes most of the "indexed before it is ready" case without asking anybody anything —
+deliberately not *future* departures, so a shop between seasons stays indexed. And the sign-up form
+says so, under the box where the owner picks their public address, with the switch in Settings
+beside the review link.
+[20260813-search-listing-is-a-choice](../architecture/decisions/20260813-search-listing-is-a-choice.md).
+
+## A shop-cancelled departure returns the money by itself (delivered 2026-08-13)
+
+DiveDay automated the refund for the cancellation the *diver* causes and automated nothing for the
+two it causes itself. Both now refund. A weather blow-out reverses each seat's capture inside the
+cascade row it already claims, before composing that diver's message; the hourly minimum-head-count
+sweep refunds every active seat on each departure it cancels — including the walk-ins it has no
+address for, because money comes back whether or not anyone can be told. The stated cancellation
+window is *bypassed* rather than reused: it answers "may this diver cancel free?", and a diver who
+did nothing should not be measured against it. Degradation is unchanged — a counter payment, a
+disconnected account, or a Stripe refusal still leaves the refund to staff — and the diver is now
+told which of the two happened rather than that their money is "safe". The ledger records
+`shop_cancellation_refund` so the two kinds of cancellation stay distinguishable.
+[20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md),
+amending [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md) and
+[20260813-minimum-head-count-departures](../architecture/decisions/20260813-minimum-head-count-departures.md).
+
 ## A reader picks their own language (delivered 2026-08-12)
 
 **The switcher DiveDay deliberately did not have.** Language was negotiated from `Accept-Language`
@@ -1170,8 +1217,9 @@ archived.
   [course-page-media](../architecture/decisions/20260720-course-page-media.md),
   [course-page-simplification](../architecture/decisions/20260720-course-page-simplification.md)).
 - **Booking confirmation email** through the Resend seam; delivery failure never affects the booking.
-- **Durable wait list** — first-come, separate from bookings/manifests; freed-seat invite now sends
-  ([trip-waitlist](../architecture/decisions/20260719-trip-waitlist.md)).
+- **Durable wait list** — a set of leads the shop works, separate from bookings/manifests; freed-seat
+  invite now sends ([trip-waitlist](../architecture/decisions/20260719-trip-waitlist.md),
+  [wait-list-is-a-lead-list](../architecture/decisions/20260813-wait-list-is-a-lead-list.md)).
 - **Recurring trip series** — weekly/every-N-week series materializes independent trip instances on
   the shared spine ([recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md)).
 - **Returning-diver picker + roster bulk waiver send** — adding a diver leads with a search of the

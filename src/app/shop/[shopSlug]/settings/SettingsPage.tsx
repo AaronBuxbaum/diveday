@@ -73,6 +73,7 @@ import {
   saveRentalItemsAction,
   saveRentalPricingAction,
   saveReviewUrlAction,
+  saveSearchListingAction,
   saveTimezoneAction,
   saveUnitsAction,
 } from "./actions";
@@ -110,6 +111,8 @@ function noticeMessages(
     address_invalid: { tone: "danger", text: t("settings.main.notice.addressInvalid") },
     review_url_saved: { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
     review_url_invalid: { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
+    search_listing_on: { tone: "success", text: t("settings.main.notice.searchListingOn") },
+    search_listing_off: { tone: "success", text: t("settings.main.notice.searchListingOff") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
     connect_failed: { tone: "danger", text: t("settings.main.notice.connectFailed") },
     not_configured: { tone: "warning", text: t("settings.main.notice.notConfigured") },
@@ -330,7 +333,7 @@ export function SettingsGroup({
 }
 
 /**
- * The ten forms on this page each carry their own section id through
+ * The eleven forms on this page each carry their own section id through
  * `?saved=<id>` (set by the action that redirects back here), so the row that
  * changed comes back *open*, with the notice rendered inside it — a closed
  * disclosure hiding a refusal would be a form the staffer cannot see failed
@@ -341,6 +344,7 @@ const SECTION_IDS = [
   "contact",
   "address",
   "reviewLink",
+  "searchListing",
   "packing",
   "dockCall",
   "units",
@@ -735,6 +739,46 @@ export default async function SettingsPage({
                   className={buttonClass({ variant: "secondary" })}
                 >
                   {t("settings.main.reviewLink.submit")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </SettingsRow>
+
+          {/* Beside the review link, because both rows are about the shop's
+              public face rather than its operations. A shop is listed by
+              default and the box says so; unticking it drops the shop out of
+              sitemap.xml *and* makes its public pages emit robots: noindex
+              (ADR 20260813-search-listing-is-a-choice). */}
+          <SettingsRow
+            heading={t("settings.main.searchListing.heading")}
+            value={
+              shop.searchListingOptOutAt
+                ? t("settings.main.searchListing.valueHidden")
+                : t("settings.main.searchListing.valueListed")
+            }
+            description={t("settings.main.searchListing.description")}
+            detail={t("settings.main.searchListing.detail")}
+            open={activeSection === "searchListing"}
+            openOnHash="search-listing"
+            anchorId="search-listing"
+          >
+            <SectionNotice banner={banner} section="searchListing" active={activeSection} />
+            <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
+              <label className="flex min-h-11 items-center gap-3 text-sm">
+                <input
+                  name="searchListed"
+                  type="checkbox"
+                  defaultChecked={!shop.searchListingOptOutAt}
+                  className="size-4 accent-primary"
+                />
+                {t("settings.main.searchListing.label")}
+              </label>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("settings.main.searchListing.submitting")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("settings.main.searchListing.submit")}
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>

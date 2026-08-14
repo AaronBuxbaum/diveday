@@ -1,7 +1,7 @@
 import { currencyFractionDigits, minorToMajor } from "./money";
 import { publicCoursePath, publicSchedulePath, publicTripPath } from "./public-routes";
 import type { ReviewAggregate } from "./reviews";
-import { MAX_REVIEW_RATING, MIN_REVIEW_RATING } from "./reviews";
+import { MAX_REVIEW_RATING, MIN_REVIEW_RATING, ratingIsRepresentative } from "./reviews";
 
 /**
  * schema.org JSON-LD for the public booking surface — the schedule, one trip,
@@ -79,13 +79,21 @@ function offerPrice(cents: number, currency: string): string {
 }
 
 /**
- * The shop's own `aggregateRating`, or nothing at all when it has no published
- * reviews. Never emitted with a count of zero: schema.org treats an
- * aggregateRating as a claim, and "rated, by nobody" is not one DiveDay will
- * make on a shop's behalf.
+ * The shop's own `aggregateRating`, or nothing at all — when it has no
+ * published reviews, or when too much of its record has been taken down.
+ *
+ * Never emitted with a count of zero: schema.org treats an aggregateRating as a
+ * claim, and "rated, by nobody" is not one DiveDay will make on a shop's
+ * behalf. And never emitted for a curated set: a shop moderates its own page,
+ * but the moment this tag goes out DiveDay is the party telling a search engine
+ * that a number describes a real record. `ratingIsRepresentative` draws that
+ * line (ADR 20260813-review-moderation-has-a-floor). The shop's own page keeps
+ * showing its stars either way — there they sit above the reviews they are
+ * drawn from.
  */
 function aggregateRatingOf(aggregate: ReviewAggregate | null): JsonLdObject | undefined {
   if (!aggregate || aggregate.average === null || aggregate.count < 1) return undefined;
+  if (!ratingIsRepresentative(aggregate)) return undefined;
   return {
     "@type": "AggregateRating",
     ratingValue: aggregate.average,

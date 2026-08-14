@@ -82,9 +82,12 @@ export async function sendLastMinuteDealBlast(
   );
   if (matches.length === 0) return { ok: false, reason: "no_recipients" };
 
-  // A diver already waiting on this exact trip holds a place in line the deal
-  // can otherwise sell out from under them — they hear about it first, in
-  // their waitlist order, ahead of anyone just generically around that week.
+  // A diver already waiting on this exact trip has told the shop they want
+  // this departure, and the deal can otherwise sell the seat out from under
+  // them — so they hear about it first, longest wait first, ahead of anyone
+  // just generically around that week. That is send order for one automated
+  // mail, not a standing in a queue: the wait list has none
+  // (ADR 20260813-wait-list-is-a-lead-list).
   const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
   const orderedMatches = orderLastMinuteRecipients(
     matches,

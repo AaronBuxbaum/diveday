@@ -1,6 +1,7 @@
 # 20260804-blowout-cascade — One-tap weather blow-out cancellation cascade
 
 - **Status:** Accepted
+- **Amended by:** [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md) — the cascade refunds now.
 - **Date:** 2026-08-04
 
 ## Context
@@ -42,7 +43,12 @@ past the stated deadline, which is exactly when a weather call happens.
   goes out, pointing at the public schedule. Offers are links to the public booking pages
   (`publicTripPath`) — **no new token flow**; the diver books a fresh seat exactly as any visitor
   would.
-- **No money moves.** The message carries a money *story* as a code (`none`/`deposit`/`paid`; the
+- **No money moves.** *(Withdrawn 2026-08-13 — see
+  [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md). The
+  cascade now refunds each claimed row before composing its message, through a second refund arm
+  with the window arithmetic removed. The reasoning below about `refundBookingOnCancellation` being
+  the wrong function is still correct, and is why the new arm exists rather than a reuse of it.)*
+  The message carries a money *story* as a code (`none`/`deposit`/`paid`; the
   template picks the words: "your payment is safe, the shop will be in touch"), and the cascade
   surface shows each diver's payment status to staff. `refundBookingOnCancellation` is deliberately
   **not** invoked: its window/forfeit arithmetic answers "may this *diver* cancel free?", and

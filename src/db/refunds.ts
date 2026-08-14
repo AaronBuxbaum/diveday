@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
@@ -138,4 +138,181 @@ export async function refundBookingOnCancellation(
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
   return { status: "failed" };
+}
+
+/**
+ * What happened to one seat's money when the *shop* cancelled the departure.
+ *
+ * There is no `forfeit` and no `no_policy` here, and that absence is the whole
+ * decision: a cancellation window is a rule about a diver changing their mind,
+ * and it has no bearing on a trip the shop took away
+ * (ADR 20260813-shop-cancellation-refunds-itself).
+ */
+export type ShopCancellationRefundOutcome =
+  | { status: "refunded"; amountCents: number }
+  /**
+   * This seat's capture was already reversed — by an earlier pass of the same
+   * cascade or sweep, or by staff. Distinct from `unpaid` because the diver's
+   * message depends on it: a resumed cascade that read this as "nothing was
+   * captured" would tell someone who paid and was refunded that they were never
+   * charged.
+   */
+  | { status: "already_refunded" }
+  /** Nothing was captured (unpaid or waived). */
+  | { status: "unpaid" }
+  /** Money is owed but no card can be reversed from here — staff must return it. */
+  | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /** Stripe was asked to refund and failed; staff should retry. */
+  | { status: "failed" };
+
+/**
+ * Refund a booking because the shop cancelled its departure — a weather
+ * blow-out or the minimum-head-count sweep.
+ *
+ * The same Stripe path and the same connected-account rule as
+ * `refundBookingOnCancellation`, with the window/forfeit arithmetic removed
+ * rather than reused. The diver did nothing; the full capture goes back.
+ *
+ * **Idempotent through the payment row.** A refunded booking reads back as
+ * `unpaid` here, so a resumed blow-out cascade or a re-run sweep never issues a
+ * second reversal — which matters, because both callers are retry loops.
+ *
+ * Degrades exactly like its sibling: a counter/cash mark or a disconnected
+ * account returns `manual` and lands on the staff queue, because there is no
+ * card to reverse. What must never happen is silence — every caller states the
+ * outcome in the mail the diver gets.
+ *
+ * Tenant-safe: the booking must belong to the shop.
+ */
+export async function refundBookingOnShopCancellation(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+  checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
+): Promise<ShopCancellationRefundOutcome> {
+  // The booking must be this shop's. `getBookingPayment` is tenant-scoped too,
+  // so a foreign caller could move no money regardless — this states the rule
+  // rather than relying on a second function to happen to enforce it, and it
+  // answers `failed` instead of the misleading `unpaid`.
+  const [booking] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!booking) return { status: "failed" };
+
+  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
+  if (payment?.status === "refunded") return { status: "already_refunded" };
+  if (!payment || (payment.status !== "paid" && payment.status !== "deposit_paid")) {
+    return { status: "unpaid" };
+  }
+
+  // A refund is owed unconditionally. Only a Stripe capture can be reversed
+  // from here; a counter/cash mark is owed one too, and staff issue it.
+  if (payment.provider !== "stripe" || !payment.providerRef) {
+    return { status: "manual", reason: "not_stripe" };
+  }
+  const refundCents = payment.amountCents ?? 0;
+  if (refundCents <= 0) {
+    // A Stripe payment with no recorded amount shouldn't happen; don't fire a
+    // zero/blank refund — hand it to staff to reconcile.
+    return { status: "manual", reason: "not_refundable" };
+  }
+
+  const account = await getShopStripeAccount(db, input.shopId);
+  if (!canAcceptPayments(account)) return { status: "manual", reason: "not_connected" };
+  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
+
+  // Durable evidence before calling Stripe, and the source of this refund's
+  // Idempotency-Key (CR-005) — same shape as the diver-cancel arm above.
+  const intent = await startPaymentOperation(db, {
+    shopId: input.shopId,
+    kind: "refund",
+    bookingId: input.bookingId,
+  });
+
+  const result = await checkout.refundCheckoutSession(
+    stripeAccountId,
+    payment.providerRef,
+    idempotencyKeyFor(intent.id),
+    refundCents,
+  );
+  if (result.status === "refunded") {
+    if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
+    await setBookingPayment(db, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      status: "refunded",
+      amountCents: refundCents,
+      currency: payment.currency,
+      provider: "stripe",
+      providerRef: result.refundId ?? payment.providerRef,
+      note: "Auto-refunded: the shop cancelled this departure",
+      operation: "shop_cancellation_refund",
+    });
+    await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
+    return { status: "refunded", amountCents: refundCents };
+  }
+  await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
+  if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
+  if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
+  return { status: "failed" };
+}
+
+/**
+ * The money story a diver is told when the shop cancels, as a code — the
+ * template picks the words (ADR 20260731-domain-layer-copy-leaks).
+ *
+ * `refund_owed` covers every way the reversal did not happen here: a counter
+ * payment, a disconnected account, a Stripe refusal, a failure. The diver reads
+ * the same honest sentence in all four cases — the shop owes them money and
+ * will be in touch — because the difference between them is the shop's problem
+ * to solve, not the diver's to understand.
+ */
+export function shopCancellationPaymentStory(
+  outcome: ShopCancellationRefundOutcome,
+): "none" | "refunded" | "refund_owed" {
+  if (outcome.status === "unpaid") return "none";
+  // `already_refunded` reads the same to the diver as a reversal this pass made
+  // — the money is on its way back either way, and a resumed cascade must not
+  // tell somebody who paid that they were never charged.
+  if (outcome.status === "refunded" || outcome.status === "already_refunded") return "refunded";
+  return "refund_owed";
+}
+
+/**
+ * The money half of a shop-cancelled departure: refund every seat still active
+ * on it, and report what happened to each so the caller's mail can say so.
+ *
+ * Reads the bookings itself rather than taking the notification recipient list,
+ * because those two sets are not the same — a walk-in with no email address, or
+ * a diver whose person row was erased, is unreachable but has just as much money
+ * with the shop. Money comes back whether or not anyone can be told.
+ */
+export async function refundBookingsForShopCancelledTrip(
+  db: AppDb,
+  input: { shopId: string; tripId: string },
+  checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
+): Promise<Map<string, ShopCancellationRefundOutcome>> {
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  const outcomes = new Map<string, ShopCancellationRefundOutcome>();
+  for (const seat of seats) {
+    outcomes.set(
+      seat.id,
+      await refundBookingOnShopCancellation(
+        db,
+        { shopId: input.shopId, bookingId: seat.id },
+        checkout,
+      ),
+    );
+  }
+  return outcomes;
 }

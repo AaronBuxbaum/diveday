@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import type { Waitlist } from "./types";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
@@ -13,6 +14,7 @@ export function WaitlistSection({
   tripWhen,
   inviteAction,
   locale,
+  timezone,
 }: {
   waitlist: Waitlist;
   shopSlug: string;
@@ -22,6 +24,7 @@ export function WaitlistSection({
   tripWhen: string;
   inviteAction: (entryId: string) => Promise<"sent" | "fallback">;
   locale: string;
+  timezone: string;
 }) {
   const t = staffTranslator(locale);
   const bookingPath = publicTripPath(shopSlug, tripId);
@@ -57,17 +60,24 @@ export function WaitlistSection({
           <p className="text-sm text-muted">{t("trips.waitlist.empty")}</p>
         </EmptyState>
       ) : (
-        <ol className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-          {waitlist.map(({ entry, person }, index) => (
+        // A plain list, not a numbered one: a rank badge here read as a
+        // standing the diver was never promised, and it nudged staff to work
+        // the list top-down while the product said nothing of the kind. The
+        // date each diver asked is the honest version of the same cue — it
+        // still shows who has been waiting longest, without ranking them
+        // (ADR 20260813-wait-list-is-a-lead-list).
+        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          {waitlist.map(({ entry, person }) => (
             <li key={entry.id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
-              <div className="flex min-w-0 items-start gap-3">
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 font-medium text-primary tabular-nums">
-                  {index + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-medium">{person.fullName}</p>
-                  <p className="text-muted">{person.email ?? t("trips.waitlist.noEmailOnFile")}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="font-medium">{person.fullName}</p>
+                <p className="text-muted">
+                  {person.email ?? t("trips.waitlist.noEmailOnFile")}
+                  {" · "}
+                  {t("trips.waitlist.joined", {
+                    date: formatShortDate(entry.createdAt, locale, timezone),
+                  })}
+                </p>
               </div>
               <WaitlistInvite
                 entryId={entry.id}
@@ -83,7 +93,7 @@ export function WaitlistSection({
               />
             </li>
           ))}
-        </ol>
+        </ul>
       )}
     </section>
   );

@@ -39,6 +39,7 @@ import {
   processorErasureObligations,
   recapPhotos,
   rentalFitProfiles,
+  reviewModerationEvents,
   rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
@@ -130,6 +131,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // Before the reviews it describes: the trail's review_id FK carries no
+  // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db

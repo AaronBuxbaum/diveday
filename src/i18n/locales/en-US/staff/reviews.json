@@ -9,7 +9,9 @@
     "hiddenToast": "Review hidden.",
     "publishedMany": "{count, plural, one {# review published} other {# reviews published}} to your schedule page.",
     "noneSelected": "Tick the reviews you want to publish first.",
-    "error": "That review couldn't be updated. Try again."
+    "error": "That review couldn't be updated. Try again.",
+    "reasonRequired": "Choose a reason before hiding a review — it's recorded with the change.",
+    "noteRequired": "Say what happened, in a few words, when the reason is “Something else”."
   },
   "overviewLabel": "Rating overview",
   "publicRating": "Public rating",
@@ -43,5 +45,17 @@
   },
   "pagination": {
     "total": "{count, plural, one {# review} other {# reviews}}"
+  },
+  "hideConfirm": "Hide this review",
+  "hideReasonLabel": "Why are you taking it down?",
+  "hideReasonPlaceholder": "Choose a reason…",
+  "hideNoteLabel": "What happened",
+  "hideNotePlaceholder": "Only if you chose “Something else”",
+  "hideReason": {
+    "abusive": "Abusive or harassing",
+    "namesAPerson": "Names a member of staff or another diver",
+    "wrongSubject": "About a different trip or shop",
+    "spam": "Spam or a test",
+    "other": "Something else"
   }
 }

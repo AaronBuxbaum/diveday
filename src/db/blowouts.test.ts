@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
-import { fakeEmail } from "@/test/fakes";
+import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { callTripBlowout, getTripBlowout, hasTripBlowout, resumeTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
 import { notificationSendQueue, people, trips as tripsTable } from "./schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.example";
@@ -59,6 +60,16 @@ async function context(divers: { fullName: string; email?: string }[] = []) {
     .limit(1);
   if (!owner) throw new Error("seeded owner missing");
   return { db, shop, trip, bookingIds, now, ownerId: owner.id };
+}
+
+/** A payable shop, so the cascade has a card path to reverse a capture through. */
+async function connectStripe(ctx: Ctx) {
+  await upsertShopStripeAccount(ctx.db, ctx.shop.id, "acct_blowout");
+  await setShopStripeAccountStatus(ctx.db, "acct_blowout", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
 }
 
 function callInput(ctx: Ctx, provider: ReturnType<typeof fakeEmail>["provider"]) {
@@ -328,7 +339,7 @@ describe("callTripBlowout — what the message says", () => {
     }
   });
 
-  it("tells a paid diver their money story without moving any money", async () => {
+  it("tells a counter-paid diver the shop owes them, and leaves the money where staff can see it", async () => {
     const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
     await setBookingPayment(ctx.db, {
       shopId: ctx.shop.id,
@@ -340,10 +351,66 @@ describe("callTripBlowout — what the message says", () => {
     const email = fakeEmail();
     await callTripBlowout(ctx.db, callInput(ctx, email.provider));
     const [send] = blowoutSends(email.sent);
-    expect(send.paymentStory).toBe("paid");
-    // The payment row is untouched — no refund, no forfeit, no status change.
+    // Cash at the counter: there is no card to reverse, so the diver is told
+    // plainly that a refund is owed rather than that it has happened.
+    expect(send.paymentStory).toBe("refund_owed");
     const record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
     expect(record?.divers[0].paymentStatus).toBe("paid");
+  });
+
+  it("refunds a Stripe-paid seat by itself and says so — the shop cancelled, so no window applies", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    await connectStripe(ctx);
+    await setBookingPayment(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingIds[0],
+      status: "paid",
+      amountCents: 15_000,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: "cs_paid",
+    });
+    const email = fakeEmail();
+    await callTripBlowout(ctx.db, {
+      ...callInput(ctx, email.provider),
+      checkout: fakeCheckout(),
+    });
+    const [send] = blowoutSends(email.sent);
+    expect(send.paymentStory).toBe("refunded");
+    const record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
+    expect(record?.divers[0].paymentStatus).toBe("refunded");
+  });
+
+  it("says nothing about money to a diver who never paid", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    const email = fakeEmail();
+    await callTripBlowout(ctx.db, callInput(ctx, email.provider));
+    expect(blowoutSends(email.sent)[0].paymentStory).toBe("none");
+  });
+
+  it("refunds once across a resume, however many times the cascade is worked", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    await connectStripe(ctx);
+    await setBookingPayment(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingIds[0],
+      status: "paid",
+      amountCents: 15_000,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: "cs_resume",
+    });
+    let refundCalls = 0;
+    const checkout = fakeCheckout({
+      async refundCheckoutSession() {
+        refundCalls += 1;
+        return { status: "refunded", refundId: "re_resume" };
+      },
+    });
+    const email = fakeEmail();
+    await callTripBlowout(ctx.db, { ...callInput(ctx, email.provider), checkout });
+    await resumeTripBlowout(ctx.db, { ...callInput(ctx, email.provider), checkout });
+    expect(refundCalls).toBe(1);
   });
 
   it("the cascade record reports a diver as rebooked once they hold another upcoming seat", async () => {

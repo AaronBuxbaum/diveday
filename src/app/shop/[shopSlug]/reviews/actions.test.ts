@@ -30,6 +30,8 @@ const { publishReviewsAction } = await import("./actions");
 const SHOP_ID = "3f4b1a2c-1111-4222-8333-444444444444";
 const REVIEW_A = "11111111-1111-4111-8111-111111111111";
 const REVIEW_B = "22222222-2222-4222-8222-222222222222";
+/** Whoever released them — every moderation act names its author now. */
+const STAFF_ID = "55555555-5555-4555-8555-555555555555";
 
 /** Where the action sent staff, without the redirect's control-flow throw. */
 async function redirectedTo(formData: FormData): Promise<string> {
@@ -51,7 +53,7 @@ function selection(...reviewIds: string[]): FormData {
 
 beforeEach(() => {
   vi.mocked(requireStaffSession).mockResolvedValue({
-    user: { shopId: SHOP_ID, shopSlug: "blue-mantis" },
+    user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId: STAFF_ID },
   } as unknown as Awaited<ReturnType<typeof requireStaffSession>>);
 });
 
@@ -67,7 +69,7 @@ describe("publishReviewsAction", () => {
       "/shop/blue-mantis/reviews?notice=published_many&published=2",
     );
     // The shop comes from the session, never from the form.
-    expect(setReviewsPublished).toHaveBeenCalledWith({}, SHOP_ID, [REVIEW_A, REVIEW_B]);
+    expect(setReviewsPublished).toHaveBeenCalledWith({}, SHOP_ID, [REVIEW_A, REVIEW_B], STAFF_ID);
   });
 
   it("refuses an empty selection without touching the database", async () => {

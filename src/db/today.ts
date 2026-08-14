@@ -784,9 +784,11 @@ async function missingEmergencyContactByTrip(
 }
 
 /**
- * Wait-list depth *and* the front-of-line entry per trip, so a freed seat can be
- * offered to a real person straight from the queue. The front is the earliest
- * join (the person actually next in line); its name, email, and last-invited
+ * Wait-list depth *and* one suggested entry per trip, so a freed seat can be
+ * offered to a real person without leaving Today. The suggestion is the
+ * longest-waiting diver — a sensible default, not an entitlement: nothing tells
+ * the diver they are in a line, and staff may invite anyone on the list
+ * (ADR 20260813-wait-list-is-a-lead-list). Its name, email, and last-invited
  * stamp ride along so the Today row can one-tap invite and fall back to a
  * prewritten composer exactly like the trip page's wait-list section.
  */
@@ -1261,7 +1263,7 @@ export async function getTodayWork(
         departure,
         aboutDeparture: true,
         detail: waitlistSeatDetailText(t, openSeats, waiting),
-        // One tap invites the next in line straight from the queue; the href
+        // One tap invites the longest-waiting diver without leaving Today; the href
         // stays the row's real destination — a pre-hydration tap, a middle-click
         // or an open-in-new-tab lands on the trip's wait-list section.
         actionLabel: inviteFromWaitlistActionText(t),

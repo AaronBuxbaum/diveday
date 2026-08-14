@@ -235,7 +235,7 @@
     "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
     "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
-    "waitlistConfirmedBody": "A spot is not held yet. The shop can see your place in line and will contact you if one opens up.",
+    "waitlistConfirmedBody": "A spot is not held yet. The shop has your details and will get in touch if a seat opens up.",
     "sailedHeading": "This one’s already sailed",
     "sailedCheckSchedule": "Check the schedule",
     "sailedForNext": "for the next departure.",
@@ -1677,7 +1677,7 @@
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
       "shopLinkLabel": "Shop link",
-      "shopLinkHint": "Your shop's public web address — the page divers open to book.",
+      "shopLinkHint": "Your shop's public web address — the page divers open to book. It's findable in search engines once you schedule a departure; you can turn that off any time in Settings.",
       "shopLinkPlaceholder": "e.g. green-lagoon",
       "shopLinkTitle": "Lowercase letters, numbers, and hyphens — this becomes your shop's web address",
       "timezoneLabel": "Timezone",
@@ -2817,6 +2817,8 @@
     "tripMinimumNotMet": {
       "subject": "Trip cancelled — {tripTitle}",
       "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they'd decide — so it's off. Your seat is released, and there's nothing you need to do.",
+      "moneyRefunded": "You’ve been refunded in full — the money is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
@@ -2825,6 +2827,8 @@
       "moneyNone": "You haven't been charged anything for this trip.",
       "moneyDeposit": "Your deposit is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
       "moneyPaid": "Your payment is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
+      "moneyRefunded": "You’ve been refunded in full — the money is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "alternativesIntro": "Want to get back in the water? Here are upcoming trips you already qualify for:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "None of the upcoming departures match your certifications right now, but new trips are added all the time.",
@@ -2838,10 +2842,10 @@
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",
-      "body": "A seat just opened on {tripTitle} with {shopName}, and you're next on the wait list.",
+      "body": "A seat just opened on {tripTitle} with {shopName}, and the shop is offering it to you.",
       "claim": "Claim it before it's gone",
       "claimLink": "Claim your spot",
-      "footer": "Seats go first-come, so don't wait too long. See you on the boat!"
+      "footer": "The seat isn't held for you, so don't wait too long. See you on the boat!"
     },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% off {tripTitle} — last-minute deal",

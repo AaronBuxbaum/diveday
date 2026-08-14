@@ -1,0 +1,1 @@
+ALTER TYPE "payment_event_operation" ADD VALUE 'shop_cancellation_refund';

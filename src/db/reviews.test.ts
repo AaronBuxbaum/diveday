@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -13,7 +13,7 @@ import {
   setReviewsPublished,
   submitTripReview,
 } from "./reviews";
-import { bookings } from "./schema";
+import { bookings, people, reviewModerationEvents } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
@@ -34,7 +34,21 @@ async function reviewContext(divers = ["Reviewing Diver"]) {
     })),
   );
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
-  return { db, shop, tripId: reef.id, bookingIds: party.bookings.map((b) => b.bookingId) };
+  // Every moderation act names who made it, so these tests need a real staff
+  // person (ADR 20260813-review-moderation-has-a-floor).
+  const [owner] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")))
+    .limit(1);
+  if (!owner) throw new Error("seeded owner missing");
+  return {
+    db,
+    shop,
+    ownerId: owner.id,
+    tripId: reef.id,
+    bookingIds: party.bookings.map((b) => b.bookingId),
+  };
 }
 
 describe("submitTripReview", () => {
@@ -43,7 +57,11 @@ describe("submitTripReview", () => {
     const result = await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     expect(result).toEqual({ ok: true, published: true, updated: false });
 
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 5 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 5,
+      suppressedCount: 0,
+    });
   });
 
   it("holds a review carrying words until staff release it, and keeps it out of the average", async () => {
@@ -57,7 +75,11 @@ describe("submitTripReview", () => {
 
     // Unmoderated words are neither listed nor counted — the number a visitor
     // sees always describes exactly the reviews shown under it.
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 0,
+    });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
   });
@@ -69,7 +91,11 @@ describe("submitTripReview", () => {
     expect(second).toEqual({ ok: true, published: true, updated: true });
 
     // One row, at the revised rating — not two fives or a 5-and-3 average.
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 3 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 3,
+      suppressedCount: 0,
+    });
     expect(await getReviewForBooking(db, bookingIds[0])).toEqual({
       rating: 3,
       comment: null,
@@ -89,7 +115,11 @@ describe("submitTripReview", () => {
     // Otherwise "publish a bare rating, then edit freely" would be a way onto
     // the shop's public page without anyone reading the text.
     expect(await getReviewForBooking(db, bookingIds[0])).toMatchObject({ isPublished: false });
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 0,
+    });
   });
 
   it("refuses a booking that never dived — cancelled or no-show", async () => {
@@ -118,30 +148,39 @@ describe("submitTripReview", () => {
 
 describe("public review reads", () => {
   it("lists released reviews newest first, signed with a first name and last initial", async () => {
-    const { db, shop, bookingIds } = await reviewContext(["Marta Reyes", "Kai Nakamura"]);
+    const { db, shop, ownerId, bookingIds } = await reviewContext(["Marta Reyes", "Kai Nakamura"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "Unreal vis" });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 4, comment: "Great briefing" });
 
     const staffQueue = await listShopReviewsForStaff(db, shop.id);
-    for (const review of staffQueue.reviews) await setReviewPublished(db, shop.id, review.id, true);
+    for (const review of staffQueue.reviews)
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
 
     const published = await listPublishedShopReviews(db, shop.id);
     expect(published.map((r) => r.reviewer).sort()).toEqual(["Kai N.", "Marta R."]);
     // Never the full surname on a public page.
     expect(published.some((r) => r.reviewer.includes("Reyes"))).toBe(false);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 2, average: 4.5 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 2,
+      average: 4.5,
+      suppressedCount: 0,
+    });
   });
 
   it("counts a bare rating in the average but leaves it off the list — an empty card says nothing", async () => {
-    const { db, shop, bookingIds } = await reviewContext(["Silent Diver", "Chatty Diver"]);
+    const { db, shop, ownerId, bookingIds } = await reviewContext(["Silent Diver", "Chatty Diver"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Choppy day" });
     const queued = await listShopReviewsForStaff(db, shop.id);
     const withComment = queued.reviews.find((r) => r.comment !== null);
     if (!withComment) throw new Error("expected a review with a comment");
-    await setReviewPublished(db, shop.id, withComment.id, true);
+    await setReviewPublished(db, shop.id, withComment.id, true, { recordedByPersonId: ownerId });
 
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 2, average: 4 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 2,
+      average: 4,
+      suppressedCount: 0,
+    });
     expect((await listPublishedShopReviews(db, shop.id)).map((r) => r.comment)).toEqual([
       "Choppy day",
     ]);
@@ -151,7 +190,11 @@ describe("public review reads", () => {
     const { db, shop, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
 
-    expect(await getShopReviewAggregate(db, OTHER_SHOP_ID)).toEqual({ count: 0, average: null });
+    expect(await getShopReviewAggregate(db, OTHER_SHOP_ID)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 0,
+    });
     expect(await listPublishedShopReviews(db, OTHER_SHOP_ID)).toEqual([]);
     expect(await listShopReviewsForStaff(db, OTHER_SHOP_ID)).toEqual({
       reviews: [],
@@ -162,7 +205,11 @@ describe("public review reads", () => {
     });
     expect(await countReviewsAwaitingModeration(db, OTHER_SHOP_ID)).toBe(0);
     // …and the real shop still sees it, so the assertions above aren't vacuous.
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 5 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 5,
+      suppressedCount: 0,
+    });
   });
 });
 
@@ -220,25 +267,53 @@ describe("listShopReviewsForStaff pagination", () => {
 
 describe("setReviewPublished", () => {
   it("refuses to moderate another shop's review", async () => {
-    const { db, shop, bookingIds } = await reviewContext();
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Nice day out" });
     const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
 
-    expect(await setReviewPublished(db, OTHER_SHOP_ID, review.id, true)).toBe(false);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
-    expect(await setReviewPublished(db, shop.id, review.id, true)).toBe(true);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 4 });
+    expect(
+      await setReviewPublished(db, OTHER_SHOP_ID, review.id, true, {
+        recordedByPersonId: ownerId,
+      }),
+    ).toBe("not_found");
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 0,
+    });
+    expect(
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId }),
+    ).toBe(true);
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 4,
+      suppressedCount: 0,
+    });
   });
 
   it("takes a review back down, dropping it from the list and the average", async () => {
-    const { db, shop, bookingIds } = await reviewContext();
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 1, comment: "Not for me" });
     const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
-    await setReviewPublished(db, shop.id, review.id, true);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 1 });
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 1,
+      suppressedCount: 0,
+    });
 
-    await setReviewPublished(db, shop.id, review.id, false);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
+    await setReviewPublished(db, shop.id, review.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+    // Hidden by a recorded act, so it counts against the shop's suppression
+    // share even though it is out of the average
+    // (ADR 20260813-review-moderation-has-a-floor).
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 1,
+    });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
   });
@@ -246,7 +321,11 @@ describe("setReviewPublished", () => {
 
 describe("setReviewsPublished", () => {
   it("releases every held review in one call and counts what actually changed", async () => {
-    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two", "Diver Three"]);
+    const { db, shop, ownerId, bookingIds } = await reviewContext([
+      "Diver One",
+      "Diver Two",
+      "Diver Three",
+    ]);
     for (const [index, bookingId] of bookingIds.entries()) {
       await submitTripReview(db, { bookingId, rating: 4, comment: `Words ${index}` });
     }
@@ -258,10 +337,15 @@ describe("setReviewsPublished", () => {
         db,
         shop.id,
         waiting.map((review) => review.id),
+        ownerId,
       ),
     ).toBe(3);
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 3, average: 4 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 3,
+      average: 4,
+      suppressedCount: 0,
+    });
 
     // Repeating the same selection changes nothing — already-published rows are
     // excluded, so a double submit cannot re-date the public list.
@@ -270,24 +354,27 @@ describe("setReviewsPublished", () => {
         db,
         shop.id,
         waiting.map((review) => review.id),
+        ownerId,
       ),
     ).toBe(0);
   });
 
   it("refuses another shop's ids, an empty selection, and anything not uuid-shaped", async () => {
-    const { db, shop, bookingIds } = await reviewContext();
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "Held" });
     const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
 
-    expect(await setReviewsPublished(db, OTHER_SHOP_ID, [review.id])).toBe(0);
-    expect(await setReviewsPublished(db, shop.id, [])).toBe(0);
+    expect(await setReviewsPublished(db, OTHER_SHOP_ID, [review.id], ownerId)).toBe(0);
+    expect(await setReviewsPublished(db, shop.id, [], ownerId)).toBe(0);
     // A hand-crafted form post: a non-uuid is dropped before Postgres sees it,
     // so this is "nothing matched" rather than a 500.
-    expect(await setReviewsPublished(db, shop.id, ["not-a-uuid", "'; drop table x"])).toBe(0);
+    expect(await setReviewsPublished(db, shop.id, ["not-a-uuid", "'; drop table x"], ownerId)).toBe(
+      0,
+    );
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
 
     // …and the shop's own id still works, so none of the above was a false pass.
-    expect(await setReviewsPublished(db, shop.id, [review.id, review.id])).toBe(1);
+    expect(await setReviewsPublished(db, shop.id, [review.id, review.id], ownerId)).toBe(1);
   });
 });
 
@@ -311,10 +398,10 @@ describe("listShopReviewsForStaff onlyWaiting filter", () => {
   });
 
   it("comes back empty once every review with words has been moderated", async () => {
-    const { db, shop, bookingIds } = await reviewContext();
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "All caught up" });
     const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
-    await setReviewPublished(db, shop.id, review.id, true);
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
 
     const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
     expect(waiting).toEqual({
@@ -339,12 +426,104 @@ describe("getShopReviewAggregate since", () => {
     expect(await getShopReviewAggregate(db, shop.id, { since: past })).toEqual({
       count: 2,
       average: 4,
+      suppressedCount: 0,
     });
     expect(await getShopReviewAggregate(db, shop.id, { since: future })).toEqual({
       count: 0,
       average: null,
+      suppressedCount: 0,
     });
     // Omitted `since` keeps behaving as the all-time aggregate.
-    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 2, average: 4 });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 2,
+      average: 4,
+      suppressedCount: 0,
+    });
+  });
+});
+
+/**
+ * A hide is a recorded act with a stated case, and what it records is what
+ * decides whether DiveDay still vouches for the shop's average
+ * (ADR 20260813-review-moderation-has-a-floor).
+ */
+describe("review moderation is recorded", () => {
+  it("refuses to hide a review without a reason, leaving it published", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 1, comment: "Not for me" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+
+    expect(
+      await setReviewPublished(db, shop.id, review.id, false, { recordedByPersonId: ownerId }),
+    ).toBe("reason_required");
+    // Nothing moved: the review is still up and still in the average.
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 1,
+      average: 1,
+      suppressedCount: 0,
+    });
+  });
+
+  it("refuses “other” with no words, because that reason is the words", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "Odd one" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+
+    expect(
+      await setReviewPublished(db, shop.id, review.id, false, {
+        recordedByPersonId: ownerId,
+        reason: "other",
+      }),
+    ).toBe("note_required");
+    expect(
+      await setReviewPublished(db, shop.id, review.id, false, {
+        recordedByPersonId: ownerId,
+        reason: "other",
+        reasonNote: "The diver asked us to take it down.",
+      }),
+    ).toBe(true);
+  });
+
+  it("writes the case to the trail, and writes none when releasing", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 1, comment: "Spam spam" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    await setReviewPublished(db, shop.id, review.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+
+    const trail = await db
+      .select()
+      .from(reviewModerationEvents)
+      .where(eq(reviewModerationEvents.reviewId, review.id));
+    expect(trail.map((row) => [row.action, row.reason])).toEqual([
+      ["published", null],
+      ["hidden", "spam"],
+    ]);
+    expect(trail.every((row) => row.recordedByPersonId === ownerId)).toBe(true);
+  });
+
+  it("counts a hidden review as suppressed, and stops once it is republished", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext(["A Diver", "B Diver"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 1, comment: "Rough day" });
+    const [held] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+
+    // Waiting on a read is not suppression — nobody has ruled on it yet.
+    expect((await getShopReviewAggregate(db, shop.id)).suppressedCount).toBe(0);
+
+    await setReviewPublished(db, shop.id, held.id, true, { recordedByPersonId: ownerId });
+    await setReviewPublished(db, shop.id, held.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "wrong_subject",
+    });
+    expect((await getShopReviewAggregate(db, shop.id)).suppressedCount).toBe(1);
+
+    await setReviewPublished(db, shop.id, held.id, true, { recordedByPersonId: ownerId });
+    expect((await getShopReviewAggregate(db, shop.id)).suppressedCount).toBe(0);
   });
 });

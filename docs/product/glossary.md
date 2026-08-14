@@ -333,8 +333,11 @@ new domain concept, define it here in the same PR.
   their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
   creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
   under the organizer's party exactly as before claiming existed.
-- **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
-  does not consume capacity, and never appears on a manifest; staff follow up if space opens.
+- **Wait list** — a record of divers who asked to hear if a full trip frees a seat. It is not a
+  booking, does not consume capacity, and never appears on a manifest. It is also **not a queue**:
+  joining buys no standing, and staff invite whoever fits the departure. The join date is kept and
+  shown to staff, so the longest wait is visible without being owed anything
+  (ADR 20260813-wait-list-is-a-lead-list).
 - **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
   **wait list**: the wait list is per-trip interest in a charter that's already *full*; the

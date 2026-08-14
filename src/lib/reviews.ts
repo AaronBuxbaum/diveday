@@ -63,9 +63,46 @@ export type ReviewAggregate = {
   count: number;
   /** Mean rating rounded to one decimal, or null when there are no reviews. */
   average: number | null;
+  /**
+   * How many reviews this shop has taken down by a recorded act. Not the same
+   * as "unpublished": a review carrying words nobody has read yet is queued,
+   * not suppressed, and must not count against the shop here.
+   */
+  suppressedCount: number;
 };
 
-export const EMPTY_REVIEW_AGGREGATE: ReviewAggregate = { count: 0, average: null };
+export const EMPTY_REVIEW_AGGREGATE: ReviewAggregate = {
+  count: 0,
+  average: null,
+  suppressedCount: 0,
+};
+
+/**
+ * How much of a shop's record may be hidden before DiveDay stops publishing
+ * its average as a machine-readable claim.
+ *
+ * One in five. Below that a shop is plausibly removing the spam and the review
+ * about the wrong boat; above it, the number describes a set somebody chose
+ * rather than the set that came in, and schema.org `aggregateRating` is read by
+ * search engines as a measurement rather than a testimonial wall.
+ */
+export const MAX_SUPPRESSED_SHARE_FOR_RATING = 0.2;
+
+/**
+ * Whether the published average still describes the shop's real record — the
+ * one question that decides if `aggregateRating` is emitted
+ * (ADR 20260813-review-moderation-has-a-floor).
+ *
+ * The shop's own page keeps showing its stars either way: those sit above the
+ * reviews they are drawn from, where a reader can see what they are looking at.
+ * What is withheld is the claim DiveDay makes on the shop's behalf to a machine
+ * that will render it as a verdict beside a search result.
+ */
+export function ratingIsRepresentative(aggregate: ReviewAggregate): boolean {
+  const judged = aggregate.count + aggregate.suppressedCount;
+  if (judged === 0) return false;
+  return aggregate.suppressedCount / judged <= MAX_SUPPRESSED_SHARE_FOR_RATING;
+}
 
 /**
  * The displayed average, from a count and a sum. Takes the two integers the
@@ -73,9 +110,9 @@ export const EMPTY_REVIEW_AGGREGATE: ReviewAggregate = { count: 0, average: null
  * themselves, so a shop with thousands of reviews never loads them all to show
  * one number — and so the rounding rule lives in exactly one tested place.
  */
-export function reviewAggregate(count: number, sum: number): ReviewAggregate {
-  if (count <= 0) return EMPTY_REVIEW_AGGREGATE;
-  return { count, average: Math.round((sum / count) * 10) / 10 };
+export function reviewAggregate(count: number, sum: number, suppressedCount = 0): ReviewAggregate {
+  if (count <= 0) return { ...EMPTY_REVIEW_AGGREGATE, suppressedCount };
+  return { count, average: Math.round((sum / count) * 10) / 10, suppressedCount };
 }
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "search_listing_opt_out_at" timestamp with time zone;

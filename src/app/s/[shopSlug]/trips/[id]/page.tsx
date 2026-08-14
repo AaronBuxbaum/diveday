@@ -52,7 +52,7 @@ import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
-import { openGraphSite } from "@/lib/site-metadata";
+import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
@@ -105,6 +105,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
+    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }

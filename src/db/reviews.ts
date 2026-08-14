@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, exists, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -11,7 +11,14 @@ import {
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
-import { bookings, people, tripReviews, trips } from "./schema";
+import {
+  bookings,
+  people,
+  reviewModerationEvents,
+  reviewModerationReason,
+  tripReviews,
+  trips,
+} from "./schema";
 
 /**
  * Reviews from divers who provably dived. The write path is a booking's own
@@ -132,7 +139,47 @@ export async function getShopReviewAggregate(
         options.since ? gte(tripReviews.publishedAt, options.since) : undefined,
       ),
     );
-  return row ? reviewAggregate(row.count, row.sum) : EMPTY_REVIEW_AGGREGATE;
+  const suppressedCount = await countSuppressedReviews(db, shopId);
+  return row
+    ? reviewAggregate(row.count, row.sum, suppressedCount)
+    : { ...EMPTY_REVIEW_AGGREGATE, suppressedCount };
+}
+
+/**
+ * How many of this shop's reviews are currently down by its own hand.
+ *
+ * Currently-unpublished **and** carrying a recorded `hidden` act — both halves
+ * matter. A review awaiting release has never been hidden, so it is not
+ * counted; a review that was hidden and later republished is back in the
+ * average, so it is not counted either. What is left is exactly the set a shop
+ * chose to remove, which is what decides whether DiveDay still vouches for its
+ * average (ADR 20260813-review-moderation-has-a-floor).
+ *
+ * Not scoped by `since`: the moderation page's "this month" line is about
+ * volume, and a shop's suppression share is a fact about its whole record.
+ */
+export async function countSuppressedReviews(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tripReviews)
+    .where(
+      and(
+        eq(tripReviews.shopId, shopId),
+        eq(tripReviews.isPublished, false),
+        exists(
+          db
+            .select({ one: reviewModerationEvents.id })
+            .from(reviewModerationEvents)
+            .where(
+              and(
+                eq(reviewModerationEvents.reviewId, tripReviews.id),
+                eq(reviewModerationEvents.action, "hidden"),
+              ),
+            ),
+        ),
+      ),
+    );
+  return row?.count ?? 0;
 }
 
 export type PublicReview = {
@@ -290,28 +337,71 @@ export async function listShopReviewsForStaff(
   };
 }
 
+/** The reason codes a hide may state, for narrowing a posted form value. */
+export const REVIEW_MODERATION_REASONS = reviewModerationReason.enumValues;
+
+export type ReviewModerationReason = (typeof reviewModerationReason.enumValues)[number];
+
+export type SetReviewPublishedResult = true | "not_found" | "reason_required" | "note_required";
+
 /**
- * Publish or hide one review, shop-scoped. Hiding clears `publishedAt` so a
- * later re-publish sorts by when it was actually released rather than by a
- * stale first release — a review taken down and restored belongs at the top of
- * the list it rejoins, not buried where it used to be.
+ * Publish or hide one review, shop-scoped, recording the act either way.
+ *
+ * Hiding clears `publishedAt` so a later re-publish sorts by when it was
+ * actually released rather than by a stale first release — a review taken down
+ * and restored belongs at the top of the list it rejoins, not buried where it
+ * used to be.
+ *
+ * **A hide states a case.** It carries a reason code, and `other` carries the
+ * shop's own words; without them nothing is written at all. That is not
+ * bureaucracy for its own sake — the same act moves the shop's public average,
+ * and the trail is what lets DiveDay tell a curated record from a clean one
+ * (ADR 20260813-review-moderation-has-a-floor). Publishing states nothing:
+ * releasing a diver's words needs no justification.
+ *
+ * The update and its event land in one transaction, so the trail can never
+ * disagree with the row it describes.
  */
 export async function setReviewPublished(
   db: AppDb,
   shopId: string,
   reviewId: string,
   isPublished: boolean,
-): Promise<boolean> {
-  const [updated] = await db
-    .update(tripReviews)
-    .set({
-      isPublished,
-      publishedAt: isPublished ? nowDate() : null,
-      updatedAt: nowDate(),
-    })
-    .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
-    .returning({ id: tripReviews.id });
-  return Boolean(updated);
+  moderation: {
+    recordedByPersonId: string;
+    reason?: ReviewModerationReason | null;
+    reasonNote?: string | null;
+    now?: Date;
+  },
+): Promise<SetReviewPublishedResult> {
+  const note = moderation.reasonNote?.trim() || null;
+  if (!isPublished) {
+    if (!moderation.reason) return "reason_required";
+    if (moderation.reason === "other" && !note) return "note_required";
+  }
+  const now = moderation.now ?? nowDate();
+
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(tripReviews)
+      .set({ isPublished, publishedAt: isPublished ? now : null, updatedAt: now })
+      .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
+      .returning({ id: tripReviews.id });
+    if (!updated) return "not_found";
+
+    await tx.insert(reviewModerationEvents).values({
+      shopId,
+      reviewId,
+      action: isPublished ? "published" : "hidden",
+      // A publish states no case, so it carries no reason even if one arrived
+      // on the form — the column means "why this was taken down".
+      reason: isPublished ? null : (moderation.reason ?? null),
+      reasonNote: isPublished ? null : note,
+      recordedByPersonId: moderation.recordedByPersonId,
+      occurredAt: now,
+    });
+    return true;
+  });
 }
 
 /**
@@ -331,11 +421,18 @@ export const MAX_BULK_PUBLISH = 100;
  * that is already live never re-dates it and never reorders the public list.
  * Returns how many rows actually changed, which is what lets the caller tell
  * "published four" from "that selection matched nothing here".
+ *
+ * Each release appends to the same trail the single toggle writes, in the same
+ * transaction — a review released here may be one a shop took down earlier, and
+ * a trail that recorded the hide but not the restore would read as a shop still
+ * suppressing something it had put back
+ * (ADR 20260813-review-moderation-has-a-floor).
  */
 export async function setReviewsPublished(
   db: AppDb,
   shopId: string,
   reviewIds: readonly string[],
+  recordedByPersonId: string,
 ): Promise<number> {
   // Ids arrive from a submitted form, so anything not shaped like a uuid is
   // dropped here rather than handed to Postgres, where it is a type error and
@@ -343,22 +440,35 @@ export async function setReviewsPublished(
   const ids = [...new Set(reviewIds)].filter((id) => isUuid(id)).slice(0, MAX_BULK_PUBLISH);
   if (ids.length === 0) return 0;
   const now = nowDate();
-  const updated = await db
-    .update(tripReviews)
-    .set({
-      isPublished: true,
-      publishedAt: sql`coalesce(${tripReviews.publishedAt}, ${now})`,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(tripReviews.shopId, shopId),
-        inArray(tripReviews.id, ids),
-        eq(tripReviews.isPublished, false),
-      ),
-    )
-    .returning({ id: tripReviews.id });
-  return updated.length;
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(tripReviews)
+      .set({
+        isPublished: true,
+        publishedAt: sql`coalesce(${tripReviews.publishedAt}, ${now})`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(tripReviews.shopId, shopId),
+          inArray(tripReviews.id, ids),
+          eq(tripReviews.isPublished, false),
+        ),
+      )
+      .returning({ id: tripReviews.id });
+    if (updated.length > 0) {
+      await tx.insert(reviewModerationEvents).values(
+        updated.map((row) => ({
+          shopId,
+          reviewId: row.id,
+          action: "published" as const,
+          recordedByPersonId,
+          occurredAt: now,
+        })),
+      );
+    }
+    return updated.length;
+  });
 }
 
 /** How many reviews are waiting on staff — the badge on the moderation nav entry. */
