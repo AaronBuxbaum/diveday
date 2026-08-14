@@ -1,13 +1,14 @@
+import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { paymentOperationIntents } from "@/db/schema";
+import { bookings, orders, paymentOperationIntents, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
-import { ariaLabelsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 
@@ -53,15 +54,20 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> 
   };
 }
 
+/** The page, rendered for whatever `?…` a test wants to put to it. */
+function renderWith(searchParams: Record<string, string> = {}) {
+  return OrdersIndexPage({
+    params: Promise.resolve({ shopSlug: SHOP_SLUG }),
+    searchParams: Promise.resolve(searchParams),
+  });
+}
+
 async function renderOrders(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
   const { db, session } = await sessionFor(role);
   if (seed) await seed(db, session);
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);
-  return OrdersIndexPage({
-    params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-    searchParams: Promise.resolve({}),
-  });
+  return renderWith();
 }
 
 /**
@@ -118,5 +124,116 @@ describe("the stuck-payment-operations panel", () => {
     // not, which is the one thing that could have gone wrong in moving a
     // gated section onto an ungated page.
     expect(ariaLabelsIn(await renderOrders("divemaster", stickAnOperation))).not.toContain(PANEL);
+  });
+});
+
+/*
+ * `?tripId=` — where the trip pulse's "N orders are awaiting payment ›" lands.
+ * The database layer has always been able to filter by departure; until this,
+ * the page dropped the param on the floor and the fact opened on every open
+ * order the shop had, which is the one thing a pulse fact must never do.
+ */
+describe("the trip filter", () => {
+  const TRIP_TITLE = "Two-Tank Reef — Molasses & French";
+
+  /**
+   * A shop whose seeded reef trip carries one open invoice against a seat.
+   *
+   * The demo seed has open orders (`seed-orders.ts`) and booking-linked orders
+   * (`seed-history.ts`) but no order that is both, so the departure filter has
+   * nothing of its own to find until this writes one. The whole fixture is one
+   * database, shared by every render in a test: trip ids are random per seed,
+   * so a `tripId` read from one `seededTestDb` means nothing in the next.
+   */
+  async function shopWithAnInvoicedSeat() {
+    const { db, session } = await sessionFor("owner");
+    const shopId = session.user.shopId;
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), eq(trips.title, TRIP_TITLE)))
+      .limit(1);
+    if (!trip) throw new Error(`the seed has no trip titled ${TRIP_TITLE}`);
+    const [booking] = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.tripId, trip.id))
+      .limit(1);
+    if (!booking) throw new Error("the seeded reef trip has no bookings");
+    const invoice = (kind: string, bookingId: string | null) => ({
+      shopId,
+      bookingId,
+      personId: booking.personId,
+      createdByPersonId: session.user.personId,
+      status: "open" as const,
+      currency: "usd",
+      totalCents: 12_000,
+      amountPaidCents: 0,
+      description: `${kind} balance`,
+      stripeAccountId: "acct_test",
+      stripeCustomerId: `cus_test_${trip.id}`,
+      stripeInvoiceId: `in_test_${kind}_${trip.id}`,
+      createdAt: nowDate(),
+      updatedAt: nowDate(),
+    });
+    // One against a seat on the reef trip, and one counter sale on no trip at
+    // all — so "narrowed" is a claim with something to narrow away from.
+    await db.insert(orders).values([invoice("seat", booking.id), invoice("counter", null)]);
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(session);
+    return { tripId: trip.id };
+  }
+
+  /** Every `/orders/<id>` row link — one per order the page decided to list. */
+  const listedOrders = (element: unknown) =>
+    hrefsIn(element).filter((href) => /\/orders\/[0-9a-f-]{36}$/.test(href)).length;
+
+  it("narrows the list to that departure's orders", async () => {
+    const { tripId } = await shopWithAnInvoicedSeat();
+
+    // Unfiltered, the counter sale is on screen too — so the filtered render
+    // below is demonstrably dropping rows rather than finding an already-empty
+    // page.
+    expect(listedOrders(await renderWith({ status: "open", range: "all" }))).toBeGreaterThan(1);
+
+    // The shape the trip pulse's "N orders are awaiting payment ›" links to.
+    expect(listedOrders(await renderWith({ tripId, status: "open", range: "all" }))).toBe(1);
+  });
+
+  it("keeps the departure on the page's own links and in the filter form", async () => {
+    const { tripId } = await shopWithAnInvoicedSeat();
+    const element = await renderWith({ tripId, status: "open", range: "all" });
+
+    // The range toggle and the pager rebuild this URL; either one dropping the
+    // departure would silently widen the list back out to the whole shop.
+    const selfLinks = hrefsIn(element).filter((href) => href.includes("/orders?"));
+    expect(selfLinks.length).toBeGreaterThan(0);
+    for (const href of selfLinks) expect(href).toContain(`tripId=${tripId}`);
+
+    // And the filter form rides it as a hidden field, so applying a status does
+    // not throw the staffer back to every departure.
+    expect(hiddenInputNamesIn(element)).toContain("tripId");
+  });
+
+  it("treats a malformed departure id as no filter at all", async () => {
+    await shopWithAnInvoicedSeat();
+    // `trips.id` is a `uuid` column: a stray `?tripId=` reaching the query is
+    // not an empty list but a thrown "invalid input syntax for type uuid". The
+    // same courtesy `?from=`/`?to=` already get — a mistyped param is not a
+    // filter, and never a 500.
+    const element = await renderWith({ tripId: "nope", status: "open", range: "all" });
+    expect(listedOrders(element)).toBeGreaterThan(1);
+    expect(hrefsIn(element).filter((href) => href.includes("tripId="))).toEqual([]);
+  });
+
+  it("still says which departure it filtered for when nothing matches", async () => {
+    const { tripId } = await shopWithAnInvoicedSeat();
+    // No order on this trip was ever voided, so this is the empty screen —
+    // which is exactly where "orders for which boat?" needs answering. The
+    // line renders only when the *lookup* found a title, never off `rows[0]`,
+    // and it carries the way back to the departure itself.
+    const element = await renderWith({ tripId, status: "void" });
+    expect(listedOrders(element)).toBe(0);
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/trips/${tripId}`);
   });
 });

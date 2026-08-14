@@ -103,6 +103,8 @@
       "clear": "Clear filters"
     },
     "filteredByDiver": "Showing orders for {name}.",
+    "filteredByTrip": "Showing orders for {title}.",
+    "openFilteredTrip": "Open the departure",
     "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
     "emptyFiltered": "No orders match these filters.",
     "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first order from here.",

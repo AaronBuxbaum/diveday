@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import { rollCallEvents } from "./schema";
 import {
   createTrip,
+  getShopTripTitle,
   getTripRoster,
   getTripWithBooked,
   listStaff,
@@ -57,6 +58,21 @@ describe("trip records (in-memory PGlite)", () => {
       priceCents: null,
     });
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBeNull();
+  });
+
+  it("names a departure by id, and never one belonging to another shop", async () => {
+    // The Orders index's `?tripId=` line reads this: a filter matching no
+    // orders still has to say which boat it filtered for, so the title comes
+    // from here rather than from a row the filter just removed.
+    const { db, shop } = await seededShopContext();
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    expect(await getShopTripTitle(db, shop.id, reef.id)).toBe(reef.title);
+    // Scoped in the query, so another tenant's id reads as "no such departure"
+    // rather than leaking a title across shops.
+    expect(await getShopTripTitle(db, "00000000-0000-4000-8000-000000000002", reef.id)).toBeNull();
   });
 
   it("refuses to shrink capacity below the trip's active booking count", async () => {

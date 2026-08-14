@@ -20,12 +20,14 @@ import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { getShopTripTitle } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { isUuid } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -120,6 +122,8 @@ export default async function OrdersIndexPage({
     status?: string;
     personId?: string;
     personQuery?: string;
+    /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
+    tripId?: string;
     from?: string;
     to?: string;
     range?: string;
@@ -129,7 +133,8 @@ export default async function OrdersIndexPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { status, personId, personQuery, from, to, range, page, notice } = await searchParams;
+  const { status, personId, personQuery, tripId, from, to, range, page, notice } =
+    await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -178,6 +183,12 @@ export default async function OrdersIndexPage({
     ? (status as (typeof orderStatus.enumValues)[number])
     : undefined;
   const trimmedQuery = personQuery?.trim() || undefined;
+  // Validated the way `?status=` is validated against its enum, and for the
+  // reason `dayBoundary` above gives: a malformed value is simply not a filter.
+  // `trips.id` is a `uuid` column, so a stray `?tripId=nope` reaching the query
+  // is not an empty list — it is a thrown `invalid input syntax for type uuid`
+  // and a 500 on a page a staffer only mistyped their way onto.
+  const tripFilter = tripId && isUuid(tripId) ? tripId : undefined;
 
   const fromBoundary = dayBoundary(from, shop.timezone, 0);
   const toBoundary = dayBoundary(to, shop.timezone, 1);
@@ -202,6 +213,11 @@ export default async function OrdersIndexPage({
       // over a typed name — the two never combine, so the filter box always
       // reflects what it can actually change.
       personQuery: personId ? undefined : trimmedQuery,
+      // Arrives from a link, exactly like `personId` — the trip pulse's "N
+      // orders are awaiting payment ›". `listShopOrders` matches it through the
+      // order's booking and counts with the same joins, so the pager cannot
+      // promise pages this filter renders nothing on.
+      tripId: tripFilter,
       from: fromBoundary ?? defaultFrom,
       to: toBoundary,
     },
@@ -217,6 +233,7 @@ export default async function OrdersIndexPage({
     if (status) query.set("status", status);
     if (personId) query.set("personId", personId);
     if (personQuery) query.set("personQuery", personQuery);
+    if (tripFilter) query.set("tripId", tripFilter);
     if (from) query.set("from", from);
     if (to) query.set("to", to);
     const nextRange = overrides.range === undefined ? (showAll ? "all" : null) : overrides.range;
@@ -232,7 +249,13 @@ export default async function OrdersIndexPage({
   // still has to say whose orders it was looking for, and the row-derived name
   // vanished on exactly the empty screen that needed the explanation most.
   const filteredPersonName = personId ? await getShopPersonName(db, shop.id, personId) : null;
-  const hasFilters = Boolean(statusFilter || personId || trimmedQuery || from || to || showAll);
+  // Same reason, same shape: shop-scoped so another tenant's `?tripId=` names
+  // nothing, and looked up so a departure with no open orders left still says
+  // which departure the empty screen is about.
+  const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
+  const hasFilters = Boolean(
+    statusFilter || personId || trimmedQuery || tripFilter || from || to || showAll,
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -388,6 +411,10 @@ export default async function OrdersIndexPage({
             />
           </Field>
           {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {/* Same rider as `personId`: this filter arrives from the trip
+              pulse's link, and applying a status or a date here must not
+              silently throw the staffer back to every departure. */}
+          {tripFilter ? <input type="hidden" name="tripId" value={tripFilter} /> : null}
           {showAll ? <input type="hidden" name="range" value="all" /> : null}
           <Field label={t("orders.index.filters.fromLabel")}>
             <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
@@ -420,6 +447,23 @@ export default async function OrdersIndexPage({
       {personId && filteredPersonName ? (
         <p className="mt-4 text-sm text-muted">
           {t("orders.index.filteredByDiver", { name: filteredPersonName })}
+        </p>
+      ) : null}
+
+      {/* The departure is not a field in the grid above — it is a filter that
+          arrives from a link — so this line is the only thing on screen that
+          says the list is narrowed to one boat, and the only way back to the
+          boat itself. Dropping the filter is "Clear filters", as it is for
+          every other one. */}
+      {tripFilter && filteredTripTitle ? (
+        <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+          <span>{t("orders.index.filteredByTrip", { title: filteredTripTitle })}</span>
+          <Link
+            href={`/shop/${shopSlug}/trips/${tripFilter}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("orders.index.openFilteredTrip")}
+          </Link>
         </p>
       ) : null}
 

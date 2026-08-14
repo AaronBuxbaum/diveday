@@ -1,5 +1,12 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openRosterDetails } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  openRosterDetails,
+  seededTripId,
+} from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
@@ -186,6 +193,49 @@ test.describe("trip pulse", () => {
     await expect(page.getByRole("link", { name: "Blocked (1)" })).toBeVisible();
     // Role-scoped: the card renders her name twice (heading and record link).
     await expect(page.getByRole("link", { name: "Priya Sharma" })).toBeVisible();
+  });
+
+  test("the money fact's link opens an Orders index narrowed to that one departure", async ({
+    page,
+  }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+
+    // Unfiltered — every open invoice the shop is carrying, which is what the
+    // pulse's link used to land on. The table's presence is the barrier: rows
+    // and the filter line stream in together, and `count()` never auto-waits.
+    await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+    const rows = page.locator("tbody tr");
+    await expect(page.getByRole("table")).toBeVisible();
+    const shopWide = await rows.count();
+    expect(shopWide).toBeGreaterThan(1);
+
+    // The exact URL the Overview's "N orders are awaiting payment ›" builds.
+    // Driven by `goto` rather than a click because no *seeded* departure
+    // carries an open invoice, so the fact itself renders on none of the
+    // demo's boats — what this pins is that the URL it builds means what it
+    // says. (The seed gap is in the follow-up register.)
+    await page.goto(`/shop/blue-mantis/orders?tripId=${tripId}&status=open&range=all`);
+    // Narrowed, and it says so with the departure's own name rather than
+    // leaving a staffer to wonder which boat an empty list is about.
+    await expect(
+      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
+    ).toBeVisible();
+    expect(await rows.count()).toBeLessThan(shopWide);
+    // The way back to the departure, and the way back out of the filter.
+    await expect(page.getByRole("link", { name: "Open the departure" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${tripId}`,
+    );
+    await expect(page.getByRole("link", { name: "Clear filters" }).first()).toBeVisible();
+
+    // Applying another filter keeps the departure: the form carries it, so a
+    // staffer narrowing by date does not silently widen back to every boat.
+    await page.getByLabel("From").fill("2020-01-01");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
+    await expect(
+      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
+    ).toBeVisible();
   });
 });
 
