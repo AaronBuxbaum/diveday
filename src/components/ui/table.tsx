@@ -1,8 +1,15 @@
 /**
- * Canonical data-table vocabulary. Every staff table wears this one design —
+ * Canonical data-table vocabulary. Every table wears this one design —
  * orders, reports, the blow-out cascade, backup deliveries, the departure
  * log, trip prep, the import preview — instead of the six slightly different
  * hand-typed class strings those pages grew independently.
+ *
+ * It is not staff-only, despite growing up on staff pages: the diver-facing
+ * site-comparison table on the public trip page wears it too (2026-08-14, from
+ * FU-20260813-public-briefing-table-vocabulary). One header voice reads as
+ * considered rather than clerical, and a public table is still a table — so a
+ * softer second dialect was deliberately *not* created. A public call site
+ * adjusts through props (`flush`, `minWidth`, `shellClassName`), never a fork.
  *
  * The pieces mirror the HTML they render, so a call site keeps full JSX
  * freedom over its cells (links, badges, a status folded under a name below
@@ -110,6 +117,7 @@ export function THead({
 export function Th({
   numeric = false,
   hideBelow,
+  scope = "col",
   className = "",
   children,
 }: {
@@ -117,12 +125,21 @@ export function Th({
   numeric?: boolean;
   /** Fold this column away below the breakpoint (its content moves under the first cell). */
   hideBelow?: keyof typeof HIDE_BELOW;
+  /**
+   * `row` for the first cell of a body row when that cell *names* the row and
+   * the other cells describe it — the public site-comparison table, where each
+   * row is one dive site and every following cell is a fact about it. A screen
+   * reader then announces the site name with each cell instead of leaving the
+   * figures unattributed. It carries no header-row styling: the uppercase
+   * voice lives on `THead`'s `tr`, so a row header is simply a bold cell.
+   */
+  scope?: "col" | "row";
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <th
-      scope="col"
+      scope={scope}
       className={`px-4 py-3 font-semibold ${numeric ? "text-right" : ""} ${
         hideBelow ? HIDE_BELOW[hideBelow] : ""
       } ${className}`.trim()}
