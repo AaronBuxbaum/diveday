@@ -58,6 +58,7 @@ import {
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
+  reviewModerationEvents,
   tripReviews,
   tripSeries,
   tripSeriesSkips,
@@ -681,6 +682,9 @@ export async function resetDemoSchedule(
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // The moderation trail references the review it describes, so it goes first
+  // (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   // Reviews reference bookings, trips, and people — all three parents below.
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
