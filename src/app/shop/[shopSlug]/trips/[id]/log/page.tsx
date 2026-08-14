@@ -30,6 +30,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
@@ -87,6 +88,10 @@ export default async function IncidentExportPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();

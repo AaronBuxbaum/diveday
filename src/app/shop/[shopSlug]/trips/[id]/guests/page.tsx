@@ -28,6 +28,7 @@ import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
@@ -134,6 +135,10 @@ async function TripGuestsBody({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const { notice, bid, diverq, count, form, gate, rf, noteBookingId, noteBody } =
     await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";

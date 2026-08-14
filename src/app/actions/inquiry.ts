@@ -156,6 +156,9 @@ export async function submitInquiryAction(
         inquirerPhone: phone,
         experience,
         timing,
+        preferredDate,
+        alternateDate,
+        dateFlexible,
         divers,
         message,
       }).catch(() => ({ status: "failed" as const }));

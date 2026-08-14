@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { signInAsOwner } from "./helpers";
 
 /**
  * Cross-shop tenant isolation on `/shop/[shopSlug]/**`.
@@ -158,4 +159,53 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await page.goto(`/shop/${unique}/divers`);
   await expect(page.getByRole("heading", { level: 1, name: "Divers" })).toBeVisible();
   await expect(page.getByText(OTHER_SHOP_DIVER)).toHaveCount(0);
+});
+
+/**
+ * The neighbouring failure to a cross-tenant read: a segment that names no row
+ * at all. `/shop/<slug>/orders/nope` used to reach `eq(orders.id, "nope")`,
+ * which Postgres refuses with `invalid input syntax for type uuid` — a 500,
+ * an alarm page and a Sentry event, where the page's own `notFound()` belongs
+ * two lines later. Twelve routes shared the shape until 2026-08-14.
+ *
+ * `scripts/check-uuid-segments.mjs` keeps every route guarded; this proves the
+ * guard produces the *rendered* refusal rather than merely not throwing.
+ */
+test("a mistyped id in a staff path segment is a 404, never a 500", async ({ page }) => {
+  test.setTimeout(60_000);
+  await signInAsOwner(page);
+
+  for (const path of [
+    "/shop/blue-mantis/orders/nope",
+    "/shop/blue-mantis/trips/nope",
+    "/shop/blue-mantis/trips/nope/manifest",
+    "/shop/blue-mantis/trips/nope/guests",
+    "/shop/blue-mantis/trips/nope/prep",
+    "/shop/blue-mantis/trips/nope/log",
+    "/shop/blue-mantis/divers/nope",
+    "/shop/blue-mantis/dive-sites/nope",
+    "/shop/blue-mantis/bookings/new/nope",
+    "/shop/blue-mantis/check-in/walk-in/nope",
+    "/shop/blue-mantis/schedule/blowout/nope",
+  ]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBeLessThan(500);
+    await expect(
+      page.getByRole("heading", { name: "We couldn’t find that page" }),
+      path,
+    ).toBeVisible();
+  }
+});
+
+/**
+ * The public half, and the reason this mattered enough to sweep: `/s/<slug>/trips/[id]`
+ * needs no session, so before the guard an anonymous visitor could turn a shop's
+ * diver-facing booking page into a 500 by editing the address bar.
+ */
+test("a mistyped trip id on a shop's public page is a 404 for an anonymous visitor", async ({
+  page,
+}) => {
+  const response = await page.goto("/s/blue-mantis/trips/nope");
+  expect(response?.status()).toBeLessThan(500);
+  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
 });

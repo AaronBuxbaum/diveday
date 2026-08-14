@@ -19,6 +19,7 @@ import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { callBlowoutAction, resumeBlowoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -82,6 +83,10 @@ export default async function BlowoutPage({
     searchParams,
     getDb(),
   ]);
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const [locale, trip, blowout] = await Promise.all([

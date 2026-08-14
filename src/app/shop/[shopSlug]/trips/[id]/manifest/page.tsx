@@ -32,6 +32,7 @@ import {
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
+import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -78,6 +79,10 @@ export default async function TripManifestPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);

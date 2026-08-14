@@ -41,6 +41,7 @@ import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { isFull, spotsRemaining } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
@@ -113,6 +114,10 @@ export default async function ManageTripPage({
     searchParams,
     getDb(),
   ]);
+  // An unparseable id names no row. Guarded here rather than in the query
+  // helper: comparing junk against a `uuid` column raises in Postgres, so
+  // without this the page 500s where its own notFound() belongs.
+  if (!uuidParam(tripId)) notFound();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   // Staff read dates in the language their own device asks for, same
