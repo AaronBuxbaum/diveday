@@ -1798,6 +1798,7 @@
       "scopeTableTitle": "What comes across — and what doesn't",
       "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
       "comesAcross": "Comes across",
+      "seePricing": "See what DiveDay costs →",
       "staysBehind": "Stays behind",
       "bothWaysTitle": "The same table, read the other way.",
       "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim}",

@@ -452,6 +452,26 @@ unfurls) are the deliberate exception: they stay English in the page file until 
 decision exists, because a single canonical URL serves one `<head>` to every crawler.
 
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
+
+**A switching guide may carry exactly one forward link to `/pricing`, and it sits under the coexist
+section's leave-path box** (decided 2026-08-14). Two of the guides argue hard on an incumbent's
+per-booking fee — FareHarbor's, Rezdy's — and then gave the reader nowhere to learn what DiveDay
+costs except the nav tab several thousand pixels above them. The link is worded as a destination
+(`switching.common.seePricing`), never as a claim: no figure, no "flat price", no comparison and no
+savings arithmetic, since the price renders only from `src/lib/marketing.ts`. It is deliberately
+*not* in the closing band, which already carries three controls. `/pricing` links back to the guides
+for the fee citation, so this closes that loop rather than opening a second one; a second forward
+link anywhere on these pages is not covered by this and needs its own decision.
+
+**Per-location pricing stays exactly as published** (decided 2026-08-14, closing
+FU-20260813-per-location-price-has-no-location with no change). `/pricing` charges "per location /
+month" for a product whose `shops` row is one location, which reads like a priced dimension the
+product does not have. It stays anyway: the phrase sets a two-storefront operator's expectation at
+two subscriptions *before* anyone signs, which is far easier than raising it later, and the pricing
+FAQ already answers the question honestly ("Each DiveDay shop runs one location today… email us").
+Implying the capability *could* exist is acceptable here precisely because a multi-location shop has
+to reach out directly regardless, which is where the real conversation happens. Do not "tidy" the
+cadence to "per shop" — that is a pricing change wearing a documentation cleanup's clothes.
 Each names one incumbent's own export click-path, renders the import scope table from
 `IMPORT_HONESTY_TABLE` verbatim (never paraphrased), and ends on a demo CTA. Every incumbent claim
 is documented fact from [assessments/competitive-strategy.md](assessments/competitive-strategy.md),

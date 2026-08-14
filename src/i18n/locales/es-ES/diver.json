@@ -1798,6 +1798,7 @@
       "scopeTableTitle": "Qué se traslada — y qué no",
       "scopeTableDescription": "La misma tabla que DiveDay te muestra antes de importar una sola fila.",
       "comesAcross": "Se traslada",
+      "seePricing": "Ver cuánto cuesta DiveDay →",
       "staysBehind": "Se queda atrás",
       "bothWaysTitle": "La misma tabla, leída al revés.",
       "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim}",
