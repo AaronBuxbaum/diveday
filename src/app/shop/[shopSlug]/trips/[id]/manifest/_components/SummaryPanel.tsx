@@ -39,6 +39,7 @@ export function SummaryPanel({
   summary,
   separatedTeams,
   uncalled,
+  uncalledCrew,
   t,
 }: {
   checkpoint: RollCallCheckpoint;
@@ -67,6 +68,19 @@ export function SummaryPanel({
    * chip links to that diver's own row.
    */
   uncalled: ReadonlyArray<{ bookingId: string; fullName: string; blocked: boolean }>;
+  /**
+   * The crew nobody has said anything about at this checkpoint — the same
+   * derivation for the other half of the head count.
+   *
+   * Crew used to reach this panel only as the muted "N crew members still to
+   * call" line: a number that names nobody, on the half of the boat most
+   * reliably in the water (DOM-H1). The chips name them, marked "(crew)" in
+   * the same words the buddy panel uses, and each links to that crew member's
+   * own row — which is otherwise below every diver row on the page, so on a
+   * phone the only surface that says a divemaster is still uncalled was five
+   * screens above the row that says who they are.
+   */
+  uncalledCrew: ReadonlyArray<{ id: string; fullName: string }>;
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -148,6 +162,39 @@ export function SummaryPanel({
                   // skip roll call (dive-domain review 20260810).
                   t("manifest.noDiversLine")
                 : t("manifest.allAccountedFor");
+  // "Who's left?" is a mid-roll-call question: at 0 recorded the chips would
+  // restate the entire roster immediately above the roster itself (principle
+  // 9), so they hold off until the first *diver* result lands. Keyed on the
+  // divers rather than on either half because the diver list is the long one
+  // — the whole point of the rule is not reprinting nine names, and two crew
+  // names were never the restatement it guards against. The count line above
+  // covers the starting state.
+  //
+  // Deliberately *not* also gated on "some crew recorded": once every diver is
+  // settled and only the crew are open, the muted line says "2 crew members
+  // still to call" and this is the one surface that can say which two.
+  const rollCallStarted = summary.awaiting < summary.totalDivers;
+  const stillToCall: Array<{ key: string; href: string; label: string; blocked: boolean }> = [
+    ...uncalled.map((diver) => ({
+      key: `diver-${diver.bookingId}`,
+      href: `#diver-row-${diver.bookingId}`,
+      label: diver.fullName,
+      // A readiness fact, and only at the dock: after a dive roll call is a
+      // physical head count that readiness never gates, so the word would
+      // compete with the one red on the page that means somebody is in the
+      // water. The diver's own row applies the same rule.
+      blocked: diver.blocked && isDeparture,
+    })),
+    ...uncalledCrew.map((member) => ({
+      key: `crew-${member.id}`,
+      href: `#crew-row-${member.id}`,
+      // The buddy panel's marker, reused rather than re-worded: a crew member
+      // reads as "Keiko Tanaka (crew)" in both places on this page.
+      label: t("manifest.buddyCrewName", { name: member.fullName }),
+      // Crew carry no readiness at all, so there is no blocked state to say.
+      blocked: false,
+    })),
+  ];
   return (
     <>
       <section
@@ -253,20 +300,31 @@ export function SummaryPanel({
             disappear with it. Words carry the exceptional state (a blocked
             diver's chip says so), never colour alone.
 
-            Only once the roll call has *started*: "who's left?" is a
-            mid-roll-call question, and at 0 recorded the chips would restate
-            the entire roster immediately above the roster itself (principle
-            9). The count line above covers the starting state. */}
-        {uncalled.length > 0 && uncalled.length < summary.totalDivers ? (
+            **Names only, no initials avatar.** The face grid this replaced
+            carried one, and dropping it was a deliberate call rather than an
+            oversight: there are no photos anywhere in DiveDay, so the circle
+            can only hold the initials of the name already printed beside it —
+            it adds a second rendering of the same fact (principle 9) and buys
+            no recognition on a dock the name did not already buy. Do not
+            re-add it without photos to put in it.
+
+            **Both halves of the head count.** Divers first, then crew, in one
+            list rather than two: at the rail the question is "who have I not
+            said anything about?", and splitting the answer by whether the
+            person holds a booking makes a captain read two lists to answer
+            one question. Crew chips carry the "(crew)" marker — the same
+            words the buddy panel puts on a crew member, so the page says one
+            thing one way. */}
+        {rollCallStarted && stillToCall.length > 0 ? (
           <ul className="mt-2 flex flex-wrap gap-2" aria-label={t("manifest.stillToCallListLabel")}>
-            {uncalled.map((diver) => (
-              <li key={diver.bookingId}>
+            {stillToCall.map((person) => (
+              <li key={person.key}>
                 <a
-                  href={`#diver-row-${diver.bookingId}`}
+                  href={person.href}
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold hover:bg-surface-sunken"
                 >
-                  {diver.fullName}
-                  {diver.blocked && isDeparture ? (
+                  {person.label}
+                  {person.blocked ? (
                     <span className="text-base font-medium text-danger">
                       {readinessStatusText(t, "blocked")}
                     </span>

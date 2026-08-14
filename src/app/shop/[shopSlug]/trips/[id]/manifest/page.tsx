@@ -171,6 +171,9 @@ export default async function TripManifestPage({
   // summary panel's jump chips. Derived once, beside the counts they explain,
   // so the number and the names can never disagree.
   const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
+  // The crew half of the same question. Crew reached the panel only as a count
+  // before this — see `uncalledCrew` on `SummaryPanel`.
+  const uncalledCrew = manifest.crew.filter((member) => !member.rollCall);
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -310,6 +313,10 @@ export default async function TripManifestPage({
           fullName: diver.fullName,
           blocked: diver.readiness.status === "blocked",
         }))}
+        uncalledCrew={uncalledCrew.map((member) => ({
+          id: member.id,
+          fullName: member.fullName,
+        }))}
         t={t}
       />
 
@@ -412,9 +419,11 @@ export default async function TripManifestPage({
               {
                 checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
                 reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
-                reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
+                reconcileRejectedOther: t.raw(
+                  "trips.offlineManifestManager.reconcileRejectedOther",
+                ),
                 reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
-                reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
+                reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
                 reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
                 reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
                 savingMessage: t("trips.offlineManifestManager.savingMessage"),
@@ -436,7 +445,7 @@ export default async function TripManifestPage({
                 freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
                 freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
                 freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
-                savedSummary: t("trips.offlineManifestManager.savedSummary"),
+                savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
                 refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
                 refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
                 openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
@@ -502,7 +511,7 @@ export default async function TripManifestPage({
           body: t("shared.waterLocker.body"),
           holdLine1: t("shared.waterLocker.holdLine1"),
           holdLine2: t("shared.waterLocker.holdLine2"),
-          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          unlockingProgress: t.raw("shared.waterLocker.unlockingProgress"),
           holdToUnlock: t("shared.waterLocker.holdToUnlock"),
         }}
       />

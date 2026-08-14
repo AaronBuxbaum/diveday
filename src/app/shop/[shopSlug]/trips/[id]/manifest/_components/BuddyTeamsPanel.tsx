@@ -124,7 +124,15 @@ export function BuddyTeamsPanel({
               const addableCrew = free(crewOptions);
               return (
                 <li key={team.teamId} className="px-4 py-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  {/* No `justify-between`: it pushed "Dissolve team" to the
+                      row's far right edge, ~500px from the team it dissolves at
+                      a 1280 viewport, aligned to nothing. The control now
+                      follows the members/recorded-by block as a trailing item,
+                      so it reads as belonging to that team rather than to the
+                      panel's right margin. `flex-wrap` still carries it to its
+                      own line on a phone, and a team of five wraps its members
+                      freely without stranding the button. */}
+                  <div className="flex flex-wrap items-start gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                         {t("manifest.buddyTeamLabel", { number: index + 1 })}
@@ -210,7 +218,14 @@ export function BuddyTeamsPanel({
                       className="mt-3 flex flex-wrap items-end gap-2"
                     >
                       <input type="hidden" name="teamId" value={team.teamId} />
-                      <Field label={t("manifest.buddyAddMemberLabel")}>
+                      {/* `markRequired={false}`: this is a one-field form
+                          whose submit button is "Add", so the asterisk
+                          distinguishes nothing — and two or three open teams
+                          put two or three red marks into a panel whose only
+                          meaningful warning colour is the dissolve control. The
+                          `<select>` keeps `required`; the server refusal it
+                          pairs with is real. */}
+                      <Field label={t("manifest.buddyAddMemberLabel")} markRequired={false}>
                         <select name="member" required defaultValue="" className={controlClass}>
                           <option value="" disabled>
                             {t("manifest.buddySelectPlaceholder")}
@@ -280,8 +295,8 @@ export function BuddyTeamsPanel({
                   ].filter((group) => group.options.length > 0)}
                   copy={{
                     hint: t("manifest.buddyDragHint"),
-                    holding: t("manifest.buddyDragHolding"),
-                    over: t("manifest.buddyDragOver"),
+                    holding: t.raw("manifest.buddyDragHolding"),
+                    over: t.raw("manifest.buddyDragOver"),
                   }}
                 />
                 {/* The action row is where this form's own answer lands — a

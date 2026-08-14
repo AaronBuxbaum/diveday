@@ -20,7 +20,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
+import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
 
@@ -182,6 +182,48 @@ describe("refreshCanonicalDemoSchedule", () => {
       .from(staffShifts)
       .where(eq(staffShifts.personId, restored[0].id));
     expect(shifts).toEqual([{ note: "Demo schedule" }]);
+  });
+
+  /**
+   * A diver is called whatever the booking form was given, and
+   * `e2e/returning-diver.spec.ts` books a seat as "Sal Moretti" — the seeded
+   * captain's own name. An earlier cut of the repair keyed the cast by name and
+   * handed that diver the `captain` role: the shop then had two captains,
+   * `seedDemoSchedule` rostered whichever the role lookup returned first, and
+   * the real captain's Today lost the boat they crew. A staff role granted to a
+   * customer is the serious half; the failing lens test was only the symptom.
+   */
+  it("never mistakes a diver who shares a staff member's name for that staff member", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    // Read off the cast rather than typed here, so this keeps testing the
+    // captain even if the demo's crew is recast.
+    const captain = staffDefs.find((member) => member.roles.some((role) => role === "captain"));
+    if (!captain) throw new Error("seed-cast: no captain in staffDefs");
+    // The same booking `e2e/returning-diver.spec.ts` makes: the captain's name,
+    // the diver's own address.
+    const [impostor] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: captain.fullName, email: "sal@example.com" })
+      .returning({ id: people.id });
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+
+    await refreshCanonicalDemoSchedule(db);
+
+    // Whatever became of the booking, the diver is not on the crew.
+    const granted = await db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(eq(personRoles.personId, impostor.id));
+    expect(granted).toEqual([]);
+    // And the shop still has exactly one captain — the seeded one.
+    const captains = await db
+      .select({ fullName: people.fullName, email: people.email })
+      .from(personRoles)
+      .innerJoin(people, eq(people.id, personRoles.personId))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "captain")));
+    expect(captains).toEqual([
+      { fullName: captain.fullName, email: `${captain.local}@demo.invalid` },
+    ]);
   });
 
   /** A role lost on its own is the same outage: the lookups join through `person_roles`. */

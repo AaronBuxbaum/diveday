@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
@@ -200,6 +201,26 @@ async function GuideBody({
                 {t(guide.coexist.replace.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
+              {/* The one forward link to /pricing on a switching guide, and it
+                  belongs here rather than in the closing band. This page has
+                  just told a shop owner what the incumbent's per-booking fee
+                  costs them; "and yours costs what?" is the next thought, and
+                  until now the only answer was the nav tab several thousand
+                  pixels up (these guides run 6,000-8,000px). The closing band
+                  already carries three controls, so a fourth there would break
+                  principles.md #8's one-primary rule.
+
+                  A destination, never a claim: no figure, no "flat price", no
+                  savings arithmetic. The price renders only from
+                  src/lib/marketing.ts (marketing.md's claims policy), and
+                  /pricing already links back here for the fee citation -- this
+                  is what closes that loop in the other direction. */}
+              <Link
+                href="/pricing"
+                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
+              >
+                {t("switching.common.seePricing")}
+              </Link>
             </div>
           </div>
         </section>

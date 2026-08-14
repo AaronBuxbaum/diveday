@@ -1220,6 +1220,30 @@ export const trips = pgTable(
     minimumBookings: integer("minimum_bookings"),
     minimumDecisionHours: integer("minimum_decision_hours"),
     status: tripStatus("status").notNull().default("scheduled"),
+    /**
+     * When the shop called this departure off. Null while it is scheduled, and
+     * null for every trip cancelled before this column existed — no backfill,
+     * because those genuinely have no recorded time and inventing one would be
+     * worse than admitting there isn't one.
+     *
+     * A fact about the departure, deliberately not a state about money. The
+     * owed-refund queue is derivable on purpose — a seat still holding a capture
+     * on a cancelled trip — so that a staffer handing back cash by hand never
+     * leaves a stored flag to reconcile with Stripe. This column adds no such
+     * flag; it answers "when did we cancel this?", which the schema previously
+     * threw away entirely, and which the departure log and the blow-out story
+     * both want independently.
+     *
+     * It also makes the owed-refund staleness bound mean what its name says.
+     * That bound used to compare against `booking_payments.updated_at`, which
+     * for these rows is when the diver *paid* — so a Saturday charter everyone
+     * paid for weeks ago was instantly past the bound, while a walk-in who paid
+     * cash on Friday morning for a Friday-evening dive that blew out stayed
+     * hidden until Saturday. The freshest, most-likely-to-be-asked-about money
+     * was the last to show. Stamped by `setTripStatus`, which is the one seam
+     * every cancellation goes through.
+     */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     conditionsSummary: text("conditions_summary"),

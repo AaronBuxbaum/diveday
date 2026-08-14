@@ -550,7 +550,7 @@ test("the summary panel names who is still to call, one jump chip each", async (
   // "Who's left?" is a mid-roll-call question: before anyone is recorded the
   // chips would restate the whole roster above the roster itself, so they
   // hold off until the first result lands.
-  const chips = page.getByRole("list", { name: "Divers still to call" });
+  const chips = page.getByRole("list", { name: "People still to call" });
   await expect(chips).toHaveCount(0);
   const boardTom = page
     .locator("#roll-call-list li")
@@ -574,6 +574,13 @@ test("the summary panel names who is still to call, one jump chip each", async (
   const priyaChip = chips.getByRole("link", { name: /Priya/ });
   await expect(priyaChip.getByText("Blocked")).toBeVisible();
 
+  // Crew are the other half of the head count (DOM-H1) and the half most
+  // reliably in the water, so an uncalled crew member is named here too —
+  // marked "(crew)" in the same words the buddy panel uses — rather than
+  // reaching this panel only as the muted "N crew members still to call".
+  const keikoChip = chips.getByRole("link", { name: /Keiko Tanaka \(crew\)/ });
+  await expect(keikoChip).toBeVisible();
+
   // Tapping a chip jumps to that diver's own row.
   await priyaChip.click();
   await expect(page).toHaveURL(/#diver-row-/);
@@ -581,6 +588,15 @@ test("the summary panel names who is still to call, one jump chip each", async (
     page
       .locator("#roll-call-list li")
       .filter({ has: page.getByRole("heading", { name: "Priya Sharma" }) }),
+  ).toBeInViewport();
+
+  // And a crew chip jumps to that crew member's own row, which is otherwise
+  // below the entire diver roster — the anchor is the whole reason the chip
+  // is worth more than the count it replaces.
+  await keikoChip.click();
+  await expect(page).toHaveURL(/#crew-row-/);
+  await expect(
+    page.locator("li[id^='crew-row-']").filter({ hasText: "Keiko Tanaka" }),
   ).toBeInViewport();
 });
 

@@ -305,10 +305,15 @@ export async function setTripStatus(
   shopId: string,
   tripId: string,
   status: "scheduled" | "cancelled",
+  now: Date = nowDate(),
 ) {
   const [trip] = await db
     .update(trips)
-    .set({ status })
+    // Stamped on the way into `cancelled` and **cleared** on the way back to
+    // `scheduled`: an un-cancelled departure that kept a stale cancellation date
+    // would tell the owed-refund queue it had been owed since the day the shop
+    // changed its mind, and would put a date on a trip that is sailing.
+    .set({ status, cancelledAt: status === "cancelled" ? now : null })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
     .returning();
   return trip ?? null;

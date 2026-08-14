@@ -445,21 +445,21 @@ export default async function EditCoursePage({
               <DayByDayEditor
                 initialDays={course.scheduleDays}
                 copy={{
-                  dayLabel: t("courses.dayByDay.dayLabel"),
+                  dayLabel: t.raw("courses.dayByDay.dayLabel"),
                   removeDay: t("courses.dayByDay.removeDay"),
-                  dayTitleLabel: t("courses.dayByDay.dayTitleLabel"),
+                  dayTitleLabel: t.raw("courses.dayByDay.dayTitleLabel"),
                   dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
-                  startTimeLabel: t("courses.dayByDay.startTimeLabel"),
-                  endTimeLabel: t("courses.dayByDay.endTimeLabel"),
-                  timeNoteLabel: t("courses.dayByDay.timeNoteLabel"),
+                  startTimeLabel: t.raw("courses.dayByDay.startTimeLabel"),
+                  endTimeLabel: t.raw("courses.dayByDay.endTimeLabel"),
+                  timeNoteLabel: t.raw("courses.dayByDay.timeNoteLabel"),
                   timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
                   timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
                   timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
-                  whatHappens: t("courses.dayByDay.whatHappens"),
+                  whatHappens: t.raw("courses.dayByDay.whatHappens"),
                   whatHappensHint: t("courses.edit.oneItemPerLine"),
                   itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
-                  itemsOverMax: t("courses.dayByDay.itemsOverMax"),
-                  daysMax: t("courses.dayByDay.daysMax"),
+                  itemsOverMax: t.raw("courses.dayByDay.itemsOverMax"),
+                  daysMax: t.raw("courses.dayByDay.daysMax"),
                   addDay: t("courses.dayByDay.addDay"),
                 }}
               />

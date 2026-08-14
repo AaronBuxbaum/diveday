@@ -827,6 +827,10 @@ export async function loadShopExportBundleInput(
             "id",
             "title",
             "status",
+            // Beside the status it qualifies: a shop reading its own history
+            // wants to know *when* a departure was called off, not only that it
+            // was. Null for anything cancelled before the column existed.
+            "cancelled_at",
             "starts_at",
             "ends_at",
             "capacity",
@@ -854,6 +858,7 @@ export async function loadShopExportBundleInput(
             row.id,
             row.title,
             row.status,
+            row.cancelledAt,
             row.startsAt,
             row.endsAt,
             row.capacity,

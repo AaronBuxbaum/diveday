@@ -1,6 +1,7 @@
 import { createTranslator } from "next-intl";
 import enUS from "./locales/en-US/staff";
 import esES from "./locales/es-ES/staff";
+import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
 /**
@@ -44,7 +45,7 @@ export function staffTranslator(locale: string | null | undefined) {
   return createTranslator({
     locale: resolved,
     messages: staffMessagesFor(resolved),
-    onError: () => {},
+    onError: translatorOnError,
     getMessageFallback: ({ key }) => staffFallbackMessage(key),
   });
 }

@@ -185,17 +185,29 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
-  claims exist at two densities on purpose — `featuresPerGroup={1}` is the summary card (`/`,
-  `/pricing`), and the full inventory is `productCapabilityIndex`, rendered flat on `/product` as a
-  spec sheet: group name on a left rail, terse lines in two columns, hairline rules, no boxes.
-  There were three until 2026-08-13. `/product` used to render *all* of `productFeatureGroups` (30
-  bullets) about a thousand pixels above a `<details>` holding 46 better organized ones covering
-  the same ground; a reader scrolled one wall of bullets to reach a longer one. Cutting the middle
-  density left the page announcing "the whole list, plainly" above a heading, two lines and a "The
-  full list" link in an otherwise empty band — so the disclosure went too, and the list a buyer
-  came for is simply on the page. Pricing had already been cut back for the same reason. Before
-  adding a list to a page, check the other density: the answer is usually a mockup or a link, not a
-  second copy.
+  claims exist at exactly two densities, and each has one page: `productFeatureGroups` is the
+  summary card — four groups, each an eyebrow, a heading and *one paragraph* (`summary`) — rendered
+  by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered flat on
+  `/product` as a spec sheet: group name on a left rail, terse lines in two columns, hairline
+  rules, no boxes.
+
+  There were three densities until 2026-08-13. `/product` used to render *all* of
+  `productFeatureGroups` (30 bullets) about a thousand pixels above a `<details>` holding 46 better
+  organized ones covering the same ground; a reader scrolled one wall of bullets to reach a longer
+  one. Cutting the middle density left the page announcing "the whole list, plainly" above a
+  heading, two lines and a "The full list" link in an otherwise empty band — so the disclosure went
+  too, and the list a buyer came for is simply on the page. Pricing had already been cut back for
+  the same reason.
+
+  The middle density's *machinery* outlived it by a day and was removed on 2026-08-14: the grid's
+  `featuresPerGroup` prop chose between a `✓` checklist and a paragraph, and with no caller left
+  asking for the checklist, 26 of the 30 claims were translated in both locales and rendered on no
+  page at all. Each group now carries a `summary` written as a summary rather than the grid reading
+  the first line of a deleted list. If a checklist density is ever wanted again, it needs a page
+  behind it before it needs a prop.
+
+  Before adding a list to a page, check the other density: the answer is usually a mockup or a
+  link, not a second copy.
 - **No unprovable superlatives** ("everything", "best", "complete") — scope claims to what ships:
   "from booking to head count".
 - Buttons are verbs; eyebrows are short; body copy earns each sentence. Read it aloud as a dive
@@ -394,7 +406,8 @@ a second rounded box beside the import mockup read as the mockup's twin, when th
 picture and a list.
 
 **The homepage's four-card breadth band is deliberately still four assertions.** It renders
-`FeatureGroupsGrid` at `featuresPerGroup={1}` under the whiteboard/clipboard statement, and it is
+`FeatureGroupsGrid` — four cards, one summary paragraph each — under the whiteboard/clipboard
+statement, and it is
 now the only band on that page that asks a reader to take a claim on trust. It was reviewed on
 2026-08-12 and again in the 2026-08-13 redesign and left alone, with the reason stated rather than
 deferred: the band exists to give breadth in one glance and hand the reader to `/product`, and
@@ -452,6 +465,26 @@ unfurls) are the deliberate exception: they stay English in the page file until 
 decision exists, because a single canonical URL serves one `<head>` to every crawler.
 
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
+
+**A switching guide may carry exactly one forward link to `/pricing`, and it sits under the coexist
+section's leave-path box** (decided 2026-08-14). Two of the guides argue hard on an incumbent's
+per-booking fee — FareHarbor's, Rezdy's — and then gave the reader nowhere to learn what DiveDay
+costs except the nav tab several thousand pixels above them. The link is worded as a destination
+(`switching.common.seePricing`), never as a claim: no figure, no "flat price", no comparison and no
+savings arithmetic, since the price renders only from `src/lib/marketing.ts`. It is deliberately
+*not* in the closing band, which already carries three controls. `/pricing` links back to the guides
+for the fee citation, so this closes that loop rather than opening a second one; a second forward
+link anywhere on these pages is not covered by this and needs its own decision.
+
+**Per-location pricing stays exactly as published** (decided 2026-08-14, closing
+FU-20260813-per-location-price-has-no-location with no change). `/pricing` charges "per location /
+month" for a product whose `shops` row is one location, which reads like a priced dimension the
+product does not have. It stays anyway: the phrase sets a two-storefront operator's expectation at
+two subscriptions *before* anyone signs, which is far easier than raising it later, and the pricing
+FAQ already answers the question honestly ("Each DiveDay shop runs one location today… email us").
+Implying the capability *could* exist is acceptable here precisely because a multi-location shop has
+to reach out directly regardless, which is where the real conversation happens. Do not "tidy" the
+cadence to "per shop" — that is a pricing change wearing a documentation cleanup's clothes.
 Each names one incumbent's own export click-path, renders the import scope table from
 `IMPORT_HONESTY_TABLE` verbatim (never paraphrased), and ends on a demo CTA. Every incumbent claim
 is documented fact from [assessments/competitive-strategy.md](assessments/competitive-strategy.md),

@@ -16,7 +16,7 @@ import {
   refundBookingsForShopCancelledTrip,
   shopCancellationPaymentStory,
 } from "./refunds";
-import { bookingPayments } from "./schema";
+import { bookingPayments, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -816,27 +816,78 @@ describe("listOwedShopCancellationRefunds", () => {
     expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
   });
 
-  it("holds back money that only just changed hands, for Today's sake", async () => {
-    // The panel shows everything; Today waits a day, so a seat settled minutes
-    // before the sweep does not land in the queue the same breath it was taken.
-    const { db, shop, bookingIds } = await cancelledDepartureContext();
+  it("holds back a departure the shop only just cancelled, for Today's sake", async () => {
+    // The panel shows everything; Today waits a day, so a trip called off
+    // minutes before the sweep does not land in the queue the same breath.
+    //
+    // Backdates the **trip**, not the payment rows. Staleness is a property of
+    // the cancellation, which is one act on one departure -- so every seat on it
+    // becomes owed at the same instant, and the two seats below move together by
+    // design. Until 2026-08-14 this bounded on `booking_payments.updated_at`,
+    // i.e. when each diver happened to pay, which let two seats on one cancelled
+    // trip disagree about whether the shop owed them yet.
+    const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
+    await db
+      .update(trips)
+      .set({ cancelledAt: new Date(nowMs()) })
+      .where(eq(trips.id, reef.id));
+
+    expect(
+      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
+    ).not.toContain(bookingIds[0]);
+    // Unbounded, the panel still shows it.
+    expect(await owedIds(db, shop.id)).toContain(bookingIds[0]);
+
+    await db
+      .update(trips)
+      .set({ cancelledAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
+      .where(eq(trips.id, reef.id));
+
+    const stale = await owedIds(db, shop.id, {
+      olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS),
+    });
+    expect(stale).toEqual(expect.arrayContaining(bookingIds));
+  });
+
+  it("ages a walk-in's cash from the blow-out, not from when they paid", async () => {
+    // The case the old payment-stamp bound got backwards. Somebody pays on the
+    // morning of a dive that is called off that afternoon: the freshest and
+    // most-likely-to-be-asked-about money on the list. Bounding on the payment
+    // held it back until the next day; bounding on the cancellation shows it as
+    // soon as the cancellation itself is old enough.
+    const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
     await db
       .update(bookingPayments)
       .set({ updatedAt: new Date(nowMs()) })
       .where(eq(bookingPayments.bookingId, bookingIds[0]));
     await db
-      .update(bookingPayments)
-      .set({ updatedAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
-      .where(eq(bookingPayments.bookingId, bookingIds[1]));
+      .update(trips)
+      .set({ cancelledAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
+      .where(eq(trips.id, reef.id));
 
-    const stale = await owedIds(db, shop.id, {
-      olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS),
-    });
+    expect(
+      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
+    ).toContain(bookingIds[0]);
+  });
 
-    expect(stale).not.toContain(bookingIds[0]);
-    expect(stale).toContain(bookingIds[1]);
-    // Unbounded, the panel still shows the fresh one.
-    expect(await owedIds(db, shop.id)).toContain(bookingIds[0]);
+  it("treats a departure cancelled before the column existed as already stale", async () => {
+    // No backfill: those trips genuinely have no recorded cancellation time.
+    // Failing toward showing the money is the right direction to fail.
+    const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
+    await db.update(trips).set({ cancelledAt: null }).where(eq(trips.id, reef.id));
+
+    expect(
+      await owedIds(db, shop.id, { olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS) }),
+    ).toEqual(expect.arrayContaining(bookingIds));
+  });
+
+  it("clears the stamp when a cancelled departure is put back on the board", async () => {
+    // A stale date on a sailing trip would tell the queue it had been owed since
+    // the day the shop changed its mind.
+    const { db, shop, reef } = await cancelledDepartureContext();
+    const restored = await setTripStatus(db, shop.id, reef.id, "scheduled");
+    expect(restored?.cancelledAt).toBeNull();
+    expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
   });
 
   it("is bounded, so one bad weekend cannot render an unbounded list", async () => {

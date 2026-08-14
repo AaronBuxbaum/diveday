@@ -1,6 +1,7 @@
 import { createTranslator } from "next-intl";
 import enUS from "./locales/en-US/diver.json";
 import esES from "./locales/es-ES/diver.json";
+import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
 /**
@@ -65,7 +66,7 @@ export function diverTranslator(locale: string | null | undefined) {
     // rather than a union of every locale's (they are structurally identical
     // — `pnpm check:locale` is what keeps them that way).
     messages: messagesFor(resolved),
-    onError: () => {},
+    onError: translatorOnError,
     getMessageFallback: ({ key }) => fallbackMessage(key),
   });
 }

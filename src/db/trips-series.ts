@@ -734,7 +734,12 @@ export async function cancelOffCadenceSeriesTrips(
   if (stale.length === 0) return 0;
   const cancelled = await db
     .update(trips)
-    .set({ status: "cancelled" })
+    // Same stamp as any other cancellation. An off-cadence occurrence being
+    // taken off the board *is* the shop calling that departure off -- it can
+    // carry booked, paid seats, which is exactly why narrowing a cadence lists
+    // the orphaned dates with their head counts before doing it -- so the money
+    // it leaves behind is owed from this instant like any other.
+    .set({ status: "cancelled", cancelledAt: now })
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -872,7 +877,7 @@ export async function cancelFutureSeriesTrips(
 ): Promise<number> {
   const cancelled = await db
     .update(trips)
-    .set({ status: "cancelled" })
+    .set({ status: "cancelled", cancelledAt: now })
     .where(
       and(
         eq(trips.seriesId, seriesId),

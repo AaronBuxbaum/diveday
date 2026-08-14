@@ -36,6 +36,13 @@ import { at } from "./seed-clock";
  * and the guarantee it makes about `bookingId` is exactly the kind of invariant
  * a wedged-in exception erodes.
  */
+/**
+ * The invoice's own description. Exported so the test that pins "this row must
+ * not lead the Orders index" names the same row the seed writes, rather than a
+ * copy of the string that can drift out from under it.
+ */
+export const OPEN_INVOICE_DESCRIPTION = "Two-tank charter — balance due";
+
 export async function seedOpenInvoice(
   db: DbExecutor,
   shopId: string,
@@ -57,10 +64,21 @@ export async function seedOpenInvoice(
   const diver = ctx.divers.find((person) => person.id === booking.personId);
   if (!diver) return;
 
-  // Raised yesterday, not today: "today at 10:00" is still in the future for
-  // anyone who opens the demo before the boat leaves, and an invoice dated in
-  // the future reads as a bug rather than as an unpaid seat.
-  const raisedAt = at(-1, 10, 20);
+  // Not today: "today at 10:00" is still in the future for anyone who opens the
+  // demo before the boat leaves, and an invoice dated in the future reads as a
+  // bug rather than as an unpaid seat.
+  //
+  // Three days back rather than one, and that is load-bearing rather than
+  // arbitrary. `seed-orders.ts` already raises an order one day back, and the
+  // Orders index sorts on `created_at`, which is **not unique** across the seed
+  // (its own paging comment says so). Dated yesterday this row tied with that
+  // one for the first row of the index — which is the row `e2e/visual.spec.ts`
+  // clicks through to build the `order-detail` capture. So it silently took that
+  // capture over, replacing a *paid* counter sale showing "Refund payment" with
+  // this open one, and left which of the two won resting on a minute value in a
+  // sibling module. `daysAgo: 3` is unoccupied by any existing plan, so this row
+  // lands in the middle of the index where nothing is anchored to it.
+  const raisedAt = at(-3, 14, 5);
 
   const [order] = await db
     .insert(orders)
@@ -73,7 +91,7 @@ export async function seedOpenInvoice(
       currency: "usd",
       totalCents: 17_500,
       amountPaidCents: 0,
-      description: "Two-tank charter — balance due",
+      description: OPEN_INVOICE_DESCRIPTION,
       stripeAccountId: "acct_demo",
       stripeCustomerId: `cus_demo_${shopId}_open_seat`,
       stripeInvoiceId: `in_demo_${shopId}_open_seat`,

@@ -72,62 +72,46 @@ export const marketingMockups = {
 } as const;
 
 /**
- * The `productFeatureGroups` grid rendered on landing, product, and pricing.
+ * The `productFeatureGroups` grid rendered on landing and pricing: four cards,
+ * each an eyebrow, a heading and one summary paragraph.
  *
- * `featuresPerGroup` caps how many features each card lists; `1` renders a
- * single summary paragraph (the compact landing treatment), anything higher
- * renders a checklist. `columns` chooses the responsive grid width. The groups
- * arrive as message keys (src/lib/marketing.ts holds structure, not words), so
- * the caller passes the negotiated `locale` and the words resolve here.
+ * **One density, deliberately.** This grid used to take `featuresPerGroup` and
+ * branch between a checklist of `✓` bullets and a paragraph. `/product` was the
+ * only caller that ever asked for the checklist, and when its middle density
+ * was removed on 2026-08-13 the branch became unreachable — leaving 26
+ * translated claims in two locales that no page could render. The checklist and
+ * the prop are gone; the full inventory lives on `/product` as
+ * `productCapabilityIndex`, which is the density a buyer came for.
+ *
+ * The `columns` prop went the same way and for the same reason: pricing had
+ * already dropped this grid, so the two-column branch had no caller either.
+ * One caller, one width — if a second page wants a narrower grid, the prop
+ * comes back then, with a page behind it.
+ *
+ * The groups arrive as message keys (src/lib/marketing.ts holds structure, not
+ * words), so the caller passes the negotiated `locale` and the words resolve
+ * here.
  */
-export function FeatureGroupsGrid({
-  locale,
-  featuresPerGroup,
-  columns = 2,
-}: {
-  locale: DiverLocale;
-  featuresPerGroup?: number;
-  columns?: 2 | 4;
-}) {
+export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
-  // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
-  // uppercase eyebrows onto two lines and knocked the four headings onto
-  // three different baselines — a comfortable 2×2 reads calmer there.
-  const gridClass =
-    columns === 4 ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : "grid gap-5 md:grid-cols-2";
 
   return (
-    <div className={gridClass}>
-      {productFeatureGroups.map((group) => {
-        const features = featuresPerGroup
-          ? group.features.slice(0, featuresPerGroup)
-          : group.features;
-        const summaryOnly = featuresPerGroup === 1;
-
-        return (
-          <article
-            key={group.eyebrow}
-            className="rounded-xl border border-border bg-background p-5 sm:p-6"
-          >
-            <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-              {t(group.eyebrow)}
-            </p>
-            <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
-            {summaryOnly ? (
-              <p className="mt-3 text-sm leading-6 text-muted">{t(features[0])}</p>
-            ) : (
-              <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
-                {features.map((feature) => (
-                  <li key={feature} className="flex gap-2">
-                    <span className="font-semibold text-primary">✓</span>
-                    <span>{t(feature)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        );
-      })}
+    // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
+    // uppercase eyebrows onto two lines and knocked the four headings onto
+    // three different baselines — a comfortable 2×2 reads calmer there.
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {productFeatureGroups.map((group) => (
+        <article
+          key={group.eyebrow}
+          className="rounded-xl border border-border bg-background p-5 sm:p-6"
+        >
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+            {t(group.eyebrow)}
+          </p>
+          <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
+          <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
+        </article>
+      ))}
     </div>
   );
 }

@@ -1798,6 +1798,7 @@
       "scopeTableTitle": "Qué se traslada — y qué no",
       "scopeTableDescription": "La misma tabla que DiveDay te muestra antes de importar una sola fila.",
       "comesAcross": "Se traslada",
+      "seePricing": "Ver cuánto cuesta DiveDay →",
       "staysBehind": "Se queda atrás",
       "bothWaysTitle": "La misma tabla, leída al revés.",
       "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim}",
@@ -2092,48 +2093,22 @@
       "welcome": {
         "eyebrow": "Recibe bien a los buceadores",
         "title": "Del primer clic a una plaza confirmada en el barco",
-        "item1": "Un horario en vivo que los buceadores reservan por sí mismos — nunca más allá de lo que cabe en el barco",
-        "item2": "Cursos, chárteres y salidas de buceo en un solo calendario",
-        "item3": "Un widget de reservas que pegas en la web que ya tienes",
-        "item4": "Reserva para todo el grupo de una vez, o como regalo para otra persona",
-        "item5": "Códigos de descuento para todo el centro, o una oferta de última hora en un barco con plazas libres",
-        "item6": "Correos de confirmación cuya llegada puedes ver — y reenviar cuando no llegaron",
-        "item7": "Los buceadores comparten sus tallas y necesidades de equipo antes de llegar al mostrador",
-        "item8": "Cada página pública en el idioma del visitante, inglés o español"
+        "summary": "Un horario en vivo que los buceadores reservan por sí mismos, un widget de reservas para la web que ya tienes y confirmaciones cuya llegada puedes ver — cada página pública en el idioma del visitante."
       },
       "ready": {
         "eyebrow": "Prepárate antes del muelle",
         "title": "El papeleo, la evidencia y las excepciones se quedan juntos",
-        "item1": "Exenciones firmadas desde casa, con alertas médicas levantadas mucho antes del barco",
-        "item2": "Un cuestionario médico que corresponde a la jurisdicción donde buceal centro",
-        "item3": "Tarjetas de certificación fotografiadas una vez, verificadas por el personal y guardadas con el buceador",
-        "item4": "Una respuesta honesta a “¿está listo este buceador?” — exención, certificación, sitios y pago juntos",
-        "item5": "Tarjetas de especialidad y nitrox controladas por sitio y por salida, no por intuición",
-        "item6": "Una vista clara para el personal de exactamente qué falta por atender",
-        "item7": "La página propia de cada buceador con lo que le queda, y un contacto de emergencia que él mismo rellena"
+        "summary": "Exenciones, respuestas médicas y tarjetas de certificación recogidas desde casa, para que “¿está listo este buceador?” tenga una respuesta honesta mucho antes del muelle."
       },
       "diveDay": {
         "eyebrow": "Lleva el día de buceo",
         "title": "Tripulación, preparación y barco comparten una sola fuente de verdad",
-        "item1": "Las tallas de alquiler de cada buceador en la lista de preparación de la salida, para cargar el barco sin portapapeles",
-        "item2": "Briefings de sitios de buceo con la ruta y las notas de condiciones que las tripulaciones usan de verdad",
-        "item3": "Nitrox solicitado por reserva — servido como aire normal hasta verificar la tarjeta de nitrox del buceador",
-        "item4": "Una cola de mostrador hecha para una fila de buceadores, no para una base de datos",
-        "item5": "Guarda el listado en un teléfono y el pase de lista sigue funcionando sin señal — en cada inmersión, con respaldo impreso incluido",
-        "item6": "Un historial de embarque que conserva cada corrección en vez de sobrescribirla",
-        "item7": "Condiciones de la tripulación y un pronóstico marino automático en la salida que el buceador ya reservó"
+        "summary": "Tallas de alquiler, briefings de sitios, nitrox y un pase de lista que sigue funcionando sin señal — el mostrador y el barco leyendo lo mismo."
       },
       "motion": {
         "eyebrow": "Mantén el centro en marcha",
         "title": "El siguiente relevo ya está claro",
-        "item1": "Construye el propio tablero: añade una salida, muévela, cópiala hacia adelante, quítala",
-        "item2": "Las salidas repetidas ponen una temporada en el calendario de una pasada",
-        "item3": "Cada salida y clase muestra quién la dirige y quién va de tripulación",
-        "item4": "Una imagen en vivo de reservas, bloqueos y huecos de personal — antes de que sean el problema de mañana",
-        "item5": "Pagos con tarjeta, depósitos, facturas y reembolsos a través de la cuenta de Stripe del propio centro",
-        "item6": "Una página de recuerdo que cada buceador conserva, una valoración que puedes publicar y una propina que llega a la tripulación",
-        "item7": "Recorre el día como recepción, capitán o buceador antes de comprometerte",
-        "item8": "Vete cualquier día con una exportación en un ZIP de los registros de tu centro — sin llamadas, sin tarifa"
+        "summary": "Construye el tablero, ponle tripulación, cobra y entrega el relevo — con una imagen en vivo de lo que viene y una exportación en un ZIP con la que puedes irte."
       }
     },
     "price": {

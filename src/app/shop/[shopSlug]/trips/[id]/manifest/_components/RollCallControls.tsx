@@ -54,6 +54,26 @@ export type RollCallRowState = {
   recordedHere: boolean;
 };
 
+/**
+ * The scroll margin every roll-call row wears, diver and crew alike.
+ *
+ * Both lists are jump targets — the summary panel's chips link to any uncalled
+ * person — and both sit under the same sticky checkpoint panel, so the margin
+ * that keeps a name clear of it is one fact, not two. It lived in `DiverRollCall`
+ * alone until crew rows became jump targets too (FU-20260810); duplicating the
+ * two magic numbers would mean a future change to the panel's height silently
+ * fixing one list and not the other.
+ *
+ * Sized to the panel at its tallest for the checkpoint kind: after a dive it can
+ * carry up to three pinned danger lines. A jump that buries the name under the
+ * panel is what invites a tap on the *next* visible row's button, for the wrong
+ * person (dive-domain review 20260810) — which is why this is bounded by the
+ * panel rather than by taste.
+ */
+export function rollCallScrollMargin(isDeparture: boolean): string {
+  return isDeparture ? "scroll-mt-64" : "scroll-mt-80";
+}
+
 export function rollCallRowState(
   checkpoint: RollCallCheckpoint,
   rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,

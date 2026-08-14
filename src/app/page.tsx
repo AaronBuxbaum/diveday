@@ -394,7 +394,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             {t("marketing.home.productTitle")}
           </h2>
           <div className="mt-12">
-            <FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />
+            <FeatureGroupsGrid locale={locale} />
           </div>
           <div className="mt-10 text-center">
             <Link

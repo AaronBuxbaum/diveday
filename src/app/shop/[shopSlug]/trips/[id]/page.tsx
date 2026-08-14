@@ -91,6 +91,18 @@ export const metadata: Metadata = {
  * action — lives on the Guests tab; the day-of boarding and roll call live on
  * the Manifest. Keeping this page free of the roster is what gives each action
  * a single home.
+ *
+ * **One column at every width, deliberately.** A design review asked for an
+ * `lg` two-column split — the operational spine (details, requirements, crew)
+ * left, the post-trip material right — on the grounds that a 1280 viewport
+ * leaves the right half empty. Declined by the owner (2026-08-14), and the
+ * complaint it answered no longer holds: the two post-trip sections that made
+ * the page long are `departed`-gated, so before a boat sails this page is the
+ * operational spine and nothing else. A second column would then have to be
+ * filled with something, which is how a page acquires content that exists to
+ * occupy space. The reading measure a single ~800px column gives is also the
+ * right one for the prose these sections carry. If this changes, it changes
+ * because a section was added, not because the screen is wide.
  */
 export default async function ManageTripPage({
   params,
@@ -604,9 +616,9 @@ export default async function ManageTripPage({
           notAssignedYet: t("trips.crew.notAssignedYet"),
           assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
           assignOption: t("shared.today.departureBoard.assignCrewOption"),
-          unassignAria: t("shared.today.departureBoard.unassignAria"),
+          unassignAria: t.raw("shared.today.departureBoard.unassignAria"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
-          roleAria: t("trips.crew.roleAria"),
+          roleAria: t.raw("trips.crew.roleAria"),
           roleUnspecified: t("trips.crew.roleUnspecified"),
           roleOptions: {
             instructor: t("trips.crew.roleInstructor"),

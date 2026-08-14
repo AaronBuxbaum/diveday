@@ -3,6 +3,17 @@
  * implementation shared by every client component that composes copy at
  * render time from props a server component translated ahead of it (never a
  * translator itself; that never crosses the client boundary).
+ *
+ * **Fetch that template with `t.raw(key)`, never `t(key)`.** `t()` *formats*,
+ * so on a message with a placeholder it looks for an argument that by
+ * definition is not there yet — the whole point of this helper is that the
+ * value is client-derived (the current instant, `window.location.origin`) and
+ * cannot be known on the server. That raised an ICU `FORMATTING_ERROR` on every
+ * such call, and until 2026-08-14 both translators were built with
+ * `onError: () => {}`, so it was swallowed and the template happened to survive
+ * as the fallback. Seven call sites were relying on that accident. `t.raw()` is
+ * the supported way to ask for a message without formatting it, and it says at
+ * the call site that a template is what was wanted.
  */
 
 import { cachedPluralRules } from "@/lib/intl-cache";
