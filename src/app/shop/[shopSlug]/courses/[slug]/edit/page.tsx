@@ -73,7 +73,7 @@ export default async function EditCoursePage({
     }),
     // A half-edited depth marker. Refused at save rather than left to render
     // its own braces to a diver — see saveCourseContentAction.
-    "depth-placeholder": t.raw("courses.edit.errorDepthPlaceholder"),
+    "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
   };
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
@@ -138,7 +138,7 @@ export default async function EditCoursePage({
           typed into any prose box on this page, and it is the one piece of
           syntax this editor asks a shop to learn. */}
       <p className="mt-6 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-        {t.raw("courses.edit.depthMarkersHint")}
+        {t("courses.edit.depthMarkersHint")}
       </p>
 
       <UnsavedChangesGuard>
