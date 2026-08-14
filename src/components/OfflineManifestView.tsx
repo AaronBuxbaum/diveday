@@ -1451,7 +1451,7 @@ export function OfflineManifestView() {
           body: t("shared.waterLocker.body"),
           holdLine1: t("shared.waterLocker.holdLine1"),
           holdLine2: t("shared.waterLocker.holdLine2"),
-          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          unlockingProgress: t.raw("shared.waterLocker.unlockingProgress"),
           holdToUnlock: t("shared.waterLocker.holdToUnlock"),
         }}
       />

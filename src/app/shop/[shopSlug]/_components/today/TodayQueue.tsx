@@ -205,19 +205,19 @@ export function TodayQueue({
   // `WaitlistInvite` is a Client Component, so this composes the full copy
   // object server-side rather than passing a translator across the boundary.
   const inviteCopy: WaitlistInviteCopy = {
-    invitedRelative: t("trips.waitlist.invitedRelative"),
+    invitedRelative: t.raw("trips.waitlist.invitedRelative"),
     inviteEmailed: t("trips.waitlist.inviteEmailed"),
     reSendInvite: t("trips.waitlist.reSendInvite"),
-    emailAnInvite: t("trips.waitlist.emailAnInvite"),
+    emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
     copied: t("trips.waitlist.copied"),
     copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
     copyFailed: t("trips.waitlist.copyFailed"),
     justNow: t("trips.waitlist.justNow"),
-    minutesAgo: t("trips.waitlist.minutesAgo"),
-    hoursAgo: t("trips.waitlist.hoursAgo"),
-    daysAgo: t("trips.waitlist.daysAgo"),
-    emailSubject: t("trips.waitlist.emailSubject"),
-    emailBody: t("trips.waitlist.emailBody"),
+    minutesAgo: t.raw("trips.waitlist.minutesAgo"),
+    hoursAgo: t.raw("trips.waitlist.hoursAgo"),
+    daysAgo: t.raw("trips.waitlist.daysAgo"),
+    emailSubject: t.raw("trips.waitlist.emailSubject"),
+    emailBody: t.raw("trips.waitlist.emailBody"),
   };
   const paymentCopy: PaymentActionCopy = {
     copyLink: t("shared.today.paymentAction.copyLink"),

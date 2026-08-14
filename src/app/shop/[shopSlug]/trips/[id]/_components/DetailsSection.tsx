@@ -125,13 +125,13 @@ export function DetailsSection({
             }))}
             copy={{
               heading: t("shared.tripDiveFields.heading"),
-              description: t("shared.tripDiveFields.description"),
+              description: t.raw("shared.tripDiveFields.description"),
               twoTankTrip: t("shared.tripDiveFields.twoTankTrip"),
-              diveCountTrip: t("shared.tripDiveFields.diveCountTrip"),
+              diveCountTrip: t.raw("shared.tripDiveFields.diveCountTrip"),
               numberOfDivesLabel: t("shared.tripDiveFields.numberOfDivesLabel"),
-              diveOptionOne: t("shared.tripDiveFields.diveOptionOne"),
-              diveOptionOther: t("shared.tripDiveFields.diveOptionOther"),
-              diveLegend: t("shared.tripDiveFields.diveLegend"),
+              diveOptionOne: t.raw("shared.tripDiveFields.diveOptionOne"),
+              diveOptionOther: t.raw("shared.tripDiveFields.diveOptionOther"),
+              diveLegend: t.raw("shared.tripDiveFields.diveLegend"),
               nameLabel: t("shared.tripDiveFields.nameLabel"),
               optionalHint: t("shared.tripDiveFields.optionalHint"),
               namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),

@@ -412,9 +412,11 @@ export default async function TripManifestPage({
               {
                 checkingDevice: t("trips.offlineManifestManager.checkingDevice"),
                 reconcileRejectedOne: t("trips.offlineManifestManager.reconcileRejectedOne"),
-                reconcileRejectedOther: t("trips.offlineManifestManager.reconcileRejectedOther"),
+                reconcileRejectedOther: t.raw(
+                  "trips.offlineManifestManager.reconcileRejectedOther",
+                ),
                 reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
-                reconcilePendingOther: t("trips.offlineManifestManager.reconcilePendingOther"),
+                reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
                 reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
                 reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
                 savingMessage: t("trips.offlineManifestManager.savingMessage"),
@@ -436,7 +438,7 @@ export default async function TripManifestPage({
                 freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
                 freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
                 freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
-                savedSummary: t("trips.offlineManifestManager.savedSummary"),
+                savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
                 refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
                 refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
                 openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
@@ -502,7 +504,7 @@ export default async function TripManifestPage({
           body: t("shared.waterLocker.body"),
           holdLine1: t("shared.waterLocker.holdLine1"),
           holdLine2: t("shared.waterLocker.holdLine2"),
-          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          unlockingProgress: t.raw("shared.waterLocker.unlockingProgress"),
           holdToUnlock: t("shared.waterLocker.holdToUnlock"),
         }}
       />

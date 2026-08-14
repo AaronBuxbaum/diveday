@@ -1,8 +1,12 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { seededShopContext } from "@/test/db";
+
 import { countOpenTripOrders } from "./orders";
 import { listTripReadiness } from "./readiness";
+import { orders } from "./schema";
+import { OPEN_INVOICE_DESCRIPTION } from "./seed-open-invoice";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -30,6 +34,25 @@ describe("seeded open invoice", () => {
   it("gives today's reef departure one order awaiting payment, so the pulse has a fact", async () => {
     const { db, shop, trip } = await reefTrip();
     expect(await countOpenTripOrders(db, shop.id, trip.id)).toBe(1);
+  });
+
+  it("is not the newest order, so it cannot take over the order-detail capture", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    // `e2e/visual.spec.ts` builds `order-detail` by clicking the **first row**
+    // of the Orders index, and that index sorts on a `created_at` the seed does
+    // not make unique. Dated a day back this row tied with `seed-orders.ts`'s
+    // newest and won, quietly replacing a paid counter sale (and its "Refund
+    // payment" action) in the baseline with this one. Which order leads the
+    // index is a fact another surface is anchored to, so it is asserted here
+    // rather than left to a minute value in a sibling module.
+    const rows = await db
+      .select({ description: orders.description, createdAt: orders.createdAt })
+      .from(orders)
+      .where(eq(orders.shopId, shop.id));
+    const mine = rows.find((row) => row.description === OPEN_INVOICE_DESCRIPTION);
+    expect(mine, "the seeded open invoice is missing").toBeDefined();
+    const newest = rows.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
+    expect(newest.description).not.toBe(OPEN_INVOICE_DESCRIPTION);
   });
 
   it("settles nothing, which is why `open` is the status that may be booking-linked", async () => {
