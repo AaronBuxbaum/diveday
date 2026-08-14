@@ -886,7 +886,15 @@ test("the legal pages are published, honest about what is unsettled, and not yet
   // The honest-no that keeps this page from pre-empting an open human decision:
   // H-02 has not settled how long a waiver and its medical answers are kept, so
   // the page says the question is open rather than inventing a number.
-  await expect(page.getByText("Still being decided")).toBeVisible();
+  //
+  // Anchored to the <dt> rather than to the text. `getByText` matches a
+  // case-insensitive *substring*, and the page's opening paragraph ends "where
+  // something is still being decided it says so instead of guessing" -- so the
+  // plain text locator matched two elements and failed strict mode. Asserting
+  // the term is also the better assertion: what matters is that the retention
+  // question is a labelled entry in the list, not that the phrase appears
+  // somewhere on a long page.
+  await expect(page.getByRole("term").filter({ hasText: "Still being decided" })).toBeVisible();
 
   await page.goto("/terms");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("What we owe each other");
