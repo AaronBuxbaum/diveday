@@ -1,6 +1,6 @@
-# FU-20260814-ses-from-email-stale-override — Remove the retired `SES_FROM_EMAIL` from Vercel Production, which is refusing every email
+# FU-20260814-ses-from-email-stale-override — Redeploy and prove email recovered, then make a retired key visible
 
-- **Status:** Open — the variable is gone; the redeploy, the proof, and the guard are not
+- **Status:** Open
 - **Raised:** 2026-08-14 — production log triage alongside the dive-site 23505 and the check-in `pg` warning
 - **Kind:** risk
 - **Effort:** S
