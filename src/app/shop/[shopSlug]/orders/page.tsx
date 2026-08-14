@@ -27,7 +27,7 @@ import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
-import { isUuid } from "@/lib/uuid";
+import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -185,10 +185,16 @@ export default async function OrdersIndexPage({
   const trimmedQuery = personQuery?.trim() || undefined;
   // Validated the way `?status=` is validated against its enum, and for the
   // reason `dayBoundary` above gives: a malformed value is simply not a filter.
-  // `trips.id` is a `uuid` column, so a stray `?tripId=nope` reaching the query
-  // is not an empty list — it is a thrown `invalid input syntax for type uuid`
-  // and a 500 on a page a staffer only mistyped their way onto.
-  const tripFilter = tripId && isUuid(tripId) ? tripId : undefined;
+  // `trips.id` and `orders.person_id` are `uuid` columns, so a stray
+  // `?tripId=nope`/`?personId=nope` reaching the query is not an empty list —
+  // it is a thrown `invalid input syntax for type uuid` and a 500 on a page a
+  // staffer only mistyped their way onto. Both ids arrive from links other
+  // pages build, and a link is exactly the thing that gets truncated in a chat
+  // message. `personFilter` is used *everywhere* the raw param used to be
+  // (query, hidden rider, self-links, pinned name), so a bad id leaves no
+  // trace for the staffer to carry around.
+  const tripFilter = uuidParam(tripId);
+  const personFilter = uuidParam(personId);
 
   const fromBoundary = dayBoundary(from, shop.timezone, 0);
   const toBoundary = dayBoundary(to, shop.timezone, 1);
@@ -208,11 +214,11 @@ export default async function OrdersIndexPage({
     shop.id,
     {
       status: statusFilter,
-      personId: personId || undefined,
+      personId: personFilter,
       // A `personId` link (roster, diver record) is exact and takes priority
       // over a typed name — the two never combine, so the filter box always
       // reflects what it can actually change.
-      personQuery: personId ? undefined : trimmedQuery,
+      personQuery: personFilter ? undefined : trimmedQuery,
       // Arrives from a link, exactly like `personId` — the trip pulse's "N
       // orders are awaiting payment ›". `listShopOrders` matches it through the
       // order's booking and counts with the same joins, so the pager cannot
@@ -231,7 +237,7 @@ export default async function OrdersIndexPage({
   const hrefWith = (overrides: { page?: number; range?: string | null }) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
-    if (personId) query.set("personId", personId);
+    if (personFilter) query.set("personId", personFilter);
     if (personQuery) query.set("personQuery", personQuery);
     if (tripFilter) query.set("tripId", tripFilter);
     if (from) query.set("from", from);
@@ -248,13 +254,15 @@ export default async function OrdersIndexPage({
   // Looked up rather than read off `rows[0]` — a filter that matches nothing
   // still has to say whose orders it was looking for, and the row-derived name
   // vanished on exactly the empty screen that needed the explanation most.
-  const filteredPersonName = personId ? await getShopPersonName(db, shop.id, personId) : null;
+  const filteredPersonName = personFilter
+    ? await getShopPersonName(db, shop.id, personFilter)
+    : null;
   // Same reason, same shape: shop-scoped so another tenant's `?tripId=` names
   // nothing, and looked up so a departure with no open orders left still says
   // which departure the empty screen is about.
   const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
   const hasFilters = Boolean(
-    statusFilter || personId || trimmedQuery || tripFilter || from || to || showAll,
+    statusFilter || personFilter || trimmedQuery || tripFilter || from || to || showAll,
   );
 
   return (
@@ -401,16 +409,16 @@ export default async function OrdersIndexPage({
               which is what this form's missing `personId` used to do. */}
             <input
               type="text"
-              name={personId ? undefined : "personQuery"}
-              defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
+              name={personFilter ? undefined : "personQuery"}
+              defaultValue={personFilter ? (filteredPersonName ?? "") : (personQuery ?? "")}
               placeholder={t("orders.index.filters.diverPlaceholder")}
               maxLength={120}
-              readOnly={Boolean(personId)}
-              disabled={Boolean(personId)}
+              readOnly={Boolean(personFilter)}
+              disabled={Boolean(personFilter)}
               className={controlClass}
             />
           </Field>
-          {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {personFilter ? <input type="hidden" name="personId" value={personFilter} /> : null}
           {/* Same rider as `personId`: this filter arrives from the trip
               pulse's link, and applying a status or a date here must not
               silently throw the staffer back to every departure. */}
@@ -444,7 +452,7 @@ export default async function OrdersIndexPage({
         </FieldGrid>
       </QueryForm>
 
-      {personId && filteredPersonName ? (
+      {personFilter && filteredPersonName ? (
         <p className="mt-4 text-sm text-muted">
           {t("orders.index.filteredByDiver", { name: filteredPersonName })}
         </p>

@@ -237,3 +237,75 @@ describe("the trip filter", () => {
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/trips/${tripId}`);
   });
 });
+
+/*
+ * `?personId=` — the roster's and the diver record's link into this page. It
+ * was the one filter here that still handed its raw string to a `uuid` column,
+ * so a truncated link 500'd a staff page (FU-20260814-orders-stray-person-id-500).
+ */
+describe("the diver filter", () => {
+  /** Every `/orders/<id>` row link — one per order the page decided to list. */
+  const listedOrders = (element: unknown) =>
+    hrefsIn(element).filter((href) => /\/orders\/[0-9a-f-]{36}$/.test(href)).length;
+
+  /**
+   * A shop billing two different divers — so "narrowed to one of them" is a
+   * claim with something to narrow away from. The lean unit-test template is
+   * deliberately order-free (`src/db/seed.ts`), so the rows are written here.
+   */
+  async function shopWithOrders() {
+    const { db, session } = await sessionFor("owner");
+    const shopId = session.user.shopId;
+    const booked = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(eq(trips.shopId, shopId));
+    const [first, second] = [...new Set(booked.map((row) => row.personId))];
+    if (!first || !second) throw new Error("the seed has fewer than two booked divers");
+    await db.insert(orders).values(
+      [first, second].map((personId, index) => ({
+        shopId,
+        bookingId: null,
+        personId,
+        createdByPersonId: session.user.personId,
+        status: "open" as const,
+        currency: "usd",
+        totalCents: 9_000,
+        amountPaidCents: 0,
+        description: `counter sale ${index}`,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: `cus_test_person_${index}`,
+        stripeInvoiceId: `in_test_person_${index}`,
+        createdAt: nowDate(),
+        updatedAt: nowDate(),
+      })),
+    );
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(session);
+    return { personId: first };
+  }
+
+  it("narrows the list to that diver's orders", async () => {
+    const { personId } = await shopWithOrders();
+    // The claim the malformed case below rests on: this filter is live, so
+    // "unfiltered" is a distinguishable outcome rather than the only one.
+    expect(listedOrders(await renderWith({ range: "all" }))).toBeGreaterThan(1);
+    expect(listedOrders(await renderWith({ personId, range: "all" }))).toBe(1);
+  });
+
+  it("treats a malformed diver id as no filter at all", async () => {
+    await shopWithOrders();
+    const all = listedOrders(await renderWith({ range: "all" }));
+    // `orders.person_id` is a `uuid` column, so a stray `?personId=nope`
+    // reaching the query is not an empty list but a thrown "invalid input
+    // syntax for type uuid" — a 500 on a page a staffer only mistyped their
+    // way onto. Same courtesy `?status=`, `?from=`, `?to=` and `?tripId=` get.
+    const element = await renderWith({ personId: "nope", range: "all" });
+    expect(listedOrders(element)).toBe(all);
+    // And it leaves no trace: no hidden rider, no filter pinned on the page's
+    // own links, so the staffer is not carrying the bad id around with them.
+    expect(hiddenInputNamesIn(element)).not.toContain("personId");
+    expect(hrefsIn(element).filter((href) => href.includes("personId="))).toEqual([]);
+  });
+});
