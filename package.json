@@ -58,11 +58,11 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1109.0",
-    "@aws-sdk/client-geo-places": "^3.1109.0",
-    "@aws-sdk/client-sesv2": "^3.1109.0",
-    "@aws-sdk/client-sns": "^3.1109.0",
-    "@electric-sql/pglite": "^0.5.4",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1110.0",
+    "@aws-sdk/client-geo-places": "^3.1110.0",
+    "@aws-sdk/client-sesv2": "^3.1110.0",
+    "@aws-sdk/client-sns": "^3.1110.0",
+    "@electric-sql/pglite": "^0.5.5",
     "@sentry/nextjs": "^10.70.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
@@ -70,7 +70,7 @@
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "rc",
     "fflate": "^0.8.3",
-    "next": "^16.3.0",
+    "next": "^16.3.1",
     "next-auth": "beta",
     "next-intl": "^4.13.6",
     "pg": "^8.23.0",
@@ -96,7 +96,7 @@
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.0.5",
     "aws-cdk": "^2.1136.0",
-    "aws-cdk-lib": "^2.264.0",
+    "aws-cdk-lib": "^2.265.0",
     "constructs": "^10.8.1",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "rc",
@@ -113,7 +113,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
-    "vercel": "^58.10.0",
+    "vercel": "^59.0.0",
     "vitest": "^4.1.10"
   }
 }
