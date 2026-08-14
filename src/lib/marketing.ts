@@ -110,7 +110,6 @@ export const earlyAccessPrice = {
   price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
-  descriptionKey: "marketing.price.description",
   includedKeys: [
     "marketing.price.item1",
     "marketing.price.item2",
@@ -123,7 +122,6 @@ export const earlyAccessPrice = {
   price: string;
   nameKey: DiverMessageKey;
   cadenceKey: DiverMessageKey;
-  descriptionKey: DiverMessageKey;
   includedKeys: readonly DiverMessageKey[];
 };
 
