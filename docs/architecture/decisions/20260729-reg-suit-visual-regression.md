@@ -84,3 +84,18 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   with an error naming the consequence and the fix (re-run the failed shard; a green re-run publishes
   the snapshot). Pull requests are deliberately exempt — a PR's missed snapshot is never anyone else's
   baseline, and its `reg` status and sticky comment already say what happened.
+- **Two merges landing within `visual-report`'s 6-10 minute runtime raced the checkout onto the wrong
+  commit** (found 2026-08-14). The job's checkout used `ref: ${{ github.event.pull_request.head.sha ||
+  github.ref_name }}` — a branch *name* (`main`) for push events, resolved to whatever `main` currently
+  points to when the checkout step actually runs, not the commit that triggered this run. Every other
+  job in the workflow checks out `github.sha` implicitly (no `ref` at all), pinning to the exact
+  triggering commit; this was the one job that didn't. If a second push landed on `main` while the
+  first push's `visual-report` job was still running, the checkout would silently pick up the *second*
+  commit while the screenshots downloaded via `download-artifact` in the same job stayed the first
+  commit's own (artifacts are matched by workflow run, not by SHA). reg-suit then derived its git keys
+  from the wrong commit and published the first commit's screenshots to S3 tagged under the second
+  commit's hash — so the first commit's own hash was never published. The next run's baseline lookup
+  (`HEAD^`, per the entry above) found nothing under that hash and fell back to the same "no baseline"
+  path as a missing snapshot: every screenshot read as new, none as compared. Reproduced by merging
+  twice in quick succession on main (427 new items, 0 compared, 0 deleted). Fixed by pinning the
+  checkout to `github.sha` for push events too, matching every other job.
