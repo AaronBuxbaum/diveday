@@ -84,6 +84,19 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   // clears the minimum — otherwise the next hourly pass would cancel the same
   // departure again and the shop would be arguing with a cron job.
   await page.getByRole("button", { name: "Reinstate trip" }).click();
+  // Wait for the badge to *go*, not for the minimum-seats section to be absent.
+  // Both are absence assertions, but only this one bars anything: the badge is
+  // on the page right now (asserted four lines up), so it can only disappear
+  // once the reinstate has landed. "Minimum head count" is a section eyebrow
+  // that need not be on this render at all, so waiting for its absence could
+  // pass instantly and let the sweep below fire while the reinstate was still
+  // in flight — which is the only way this test can see "Cancelled" again.
+  // `cancelDeparturesBelowMinimum` cannot re-cancel a reinstate that has
+  // committed (its UPDATE carries `minimum_bookings is not null`, and
+  // reinstating clears the minimum in the same statement that sets the status),
+  // so there is no product race here to hide. Failed exactly once this way on
+  // 2026-08-14 and never reproduced, which is what a vacuous barrier looks like.
+  await expect(page.getByText("Cancelled")).toHaveCount(0);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);
 
   const again = await request.get("/api/cron/minimum-seats", {
