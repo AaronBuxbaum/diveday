@@ -111,10 +111,18 @@ export function Field({
   description,
   error,
   htmlFor,
+  markRequired = true,
   className = "",
   children,
 }: {
   label: ReactNode;
+  /**
+   * Whether a `required` control gets the visible `*`. Default true. Set false
+   * only where every field in the form is required, so the marker distinguishes
+   * nothing — see the note beside `isRequired` below. Never a way to hide that
+   * a field is required from a form that also has optional ones.
+   */
+  markRequired?: boolean;
   /** Short qualifier rendered inline after the label, e.g. "(optional)". */
   hint?: ReactNode;
   /**
@@ -163,7 +171,13 @@ export function Field({
     typeof children.type === "string" &&
     CONTROL_TAGS.has(children.type);
   const controlId = htmlFor ?? (isControl ? (children.props.id ?? autoId) : undefined);
-  const isRequired = isControl && children.props.required === true;
+  // `markRequired={false}` opts a field out of the asterisk without touching
+  // the control's own `required` (the server refusal it pairs with is real).
+  // For a form whose *every* field is required and where the marker therefore
+  // distinguishes nothing — a one-field "add a member" row, say. Used sparingly:
+  // the marker's whole job is telling required apart from optional, so silencing
+  // it on a form that has both would be a lie rather than a tidy-up.
+  const isRequired = isControl && children.props.required === true && markRequired;
 
   // The asterisk is aria-hidden and stays *outside* the `<label>` itself
   // (not just inside an aria-hidden span within it): a `<label>`'s own text
