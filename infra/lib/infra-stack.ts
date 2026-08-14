@@ -2419,9 +2419,14 @@ exports.handler = async () => {
   const censusEntries = (objects.Contents ?? []).filter((entry) =>
     /_run\\.shops-\\d+\\.stored-\\d+\\.failed-\\d+\\.skipped-\\d+$/.test(entry.Key ?? ""),
   );
+  //
+  // new Date(...) rather than Date.parse(...): the SDK hands LastModified back as
+  // a Date object, and Date.parse takes a string -- it would round-trip through
+  // toString() and quietly drop the milliseconds, which are exactly what
+  // separates two censuses written seconds apart by a retry.
   const censusKey = censusEntries
     .slice()
-    .sort((a, b) => (Date.parse(a.LastModified ?? 0) < Date.parse(b.LastModified ?? 0) ? -1 : 1))
+    .sort((a, b) => Number(new Date(a.LastModified ?? 0)) - Number(new Date(b.LastModified ?? 0)))
     .map((entry) => entry.Key ?? "")
     .pop();
   const censusMatch = censusKey
@@ -2456,12 +2461,6 @@ exports.handler = async () => {
     return { status: "empty", latest, ageDays, ...dump };
   }
 
-  // A prefix with bundles in it is no longer enough. These three are the blind
-  // spot this watchdog had until 2026-08-14: a pass that outgrows its 300-second
-  // slot backs up the oldest N shops in a STABLE order and skips the rest, so
-  // the same newest-joined shops lose every single week, and the bucket looks
-  // healthy the whole time (ADR 20260812-platform-backup-runner; the entry that
-  // raised it was FU-20260812-backup-watchdog-cannot-see-a-short-run).
   // A listing caps at 1000 keys and this code never paginates. That is fine
   // today and fails LOUD rather than silent when it stops being fine -- the
   // bundle count would cap at 1000 and trip the shortfall arm below -- but the
@@ -2490,6 +2489,12 @@ exports.handler = async () => {
     );
   }
 
+  // A prefix with bundles in it is no longer enough. The two checks below are the
+  // blind spot this watchdog had until 2026-08-14: a pass that outgrows its
+  // 300-second slot backs up the oldest N shops in a STABLE order and skips the
+  // rest, so the same newest-joined shops lose every single week while the bucket
+  // looks healthy the whole time (ADR 20260812-platform-backup-runner; the entry
+  // that raised it was FU-20260812-backup-watchdog-cannot-see-a-short-run).
   if (!census) {
     await alarm(
       "DiveDay backup: the newest run left no census",
