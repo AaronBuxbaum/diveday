@@ -10,6 +10,7 @@ import { hasTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { listDepartureBoardedByTrip } from "@/db/manifests";
+import { countOpenTripOrders } from "@/db/orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
@@ -149,6 +150,7 @@ export default async function ManageTripPage({
     pulseReadiness,
     pulsePrepDivers,
     pulseBoardedByTrip,
+    pulseOpenOrders,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewAssignments(db, shop.id, tripId),
@@ -175,6 +177,12 @@ export default async function ManageTripPage({
     pulseNeeded
       ? listDepartureBoardedByTrip(db, shop.id, [tripId])
       : new Map<string, Set<string>>(),
+    // …and the third question a staffer asks of an upcoming boat, after "can
+    // everyone board" and "can the packer pack": is anyone still owing money
+    // for it. `countOpenTripOrders` asks the Orders index's own question
+    // (`shopOrderWhere`, src/db/orders.ts) so this number and the filtered
+    // index the fact opens can never disagree.
+    pulseNeeded ? countOpenTripOrders(db, shop.id, tripId) : 0,
   ]);
   // Only ever non-empty right after staff narrowed this run's cadence, and only
   // for someone who can act on it — a second query rather than a field on the
@@ -327,6 +335,20 @@ export default async function ManageTripPage({
           {
             text: t("trips.pulse.prepGaps", { count: pulsePrepGaps }),
             href: `/shop/${shopSlug}/trips/${tripId}/prep`,
+          },
+        ]
+      : []),
+    // Money owed is work, not a boarding hazard — so it reads in the pulse's
+    // neutral ink, below the facts that hold the boat up, and it is the one
+    // fact here whose fix lives off the trip entirely. `range=all` because the
+    // count is unwindowed: a seat sold months ahead was invoiced months ago,
+    // and the index's default 90-day window would open on fewer orders than
+    // the fact just promised.
+    ...(pulseOpenOrders > 0
+      ? [
+          {
+            text: t("trips.pulse.awaitingPayment", { count: pulseOpenOrders }),
+            href: `/shop/${shopSlug}/orders?tripId=${tripId}&status=open&range=all`,
           },
         ]
       : []),

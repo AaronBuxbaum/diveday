@@ -13,11 +13,13 @@ import { getShopBySlug } from "@/db/shops";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
+import { diverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
+import { courseDepthFormat } from "@/i18n/unit-labels";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { courseTotalCents } from "@/lib/courses";
+import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
@@ -65,8 +67,18 @@ export async function generateMetadata({
   // `description` is the internal staff-picker blurb (schema comment on
   // `courses.description`), never diver-facing — falling back to it here
   // would leak it into a public <meta> tag. `summary` is the only field this
-  // page may quote.
-  const description = course.summary ?? undefined;
+  // page may quote. Resolved for depth markers like the body is, or the
+  // unfurl card would be the one surface still showing a raw `{depth18}`.
+  // The shop's own locale, not the reader's: `generateMetadata` resolves
+  // ahead of locale negotiation (the same reason a static `metadata.title` is
+  // i18n-exempt), and reading request headers here would cost the route its
+  // static shell.
+  const description = course.summary
+    ? resolveCourseDepths(
+        course.summary,
+        courseDepthFormat(diverTranslator(shop?.defaultLocale), shop?.depthUnit ?? "meters"),
+      )
+    : undefined;
   return {
     title,
     description,
@@ -91,17 +103,23 @@ export default async function CoursePage({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
-  const course = await getCourseBySlug(db, shop.id, slug);
-  if (!course) notFound();
+  const stored = await getCourseBySlug(db, shop.id, slug);
+  if (!stored) notFound();
 
   // A hidden course is invisible to the public, but its own staff need to
   // preview it — that is what the editor's Preview button opens.
   const session = await auth();
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
-  if (!course.isActive && !staffView) notFound();
+  if (!stored.isActive && !staffView) notFound();
 
-  const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
+  const sessions = await listUpcomingSessionsForCourse(db, shop.id, stored.id);
   const { locale, t } = await requestTranslator(shop.defaultLocale);
+  // Every `{depth18}` in the shop's own prose becomes "18 meters" or "60 feet"
+  // here, once, before anything reads a field — a component that reached past
+  // this for `stored.overview` would be publishing the raw marker. The whole
+  // row is resolved rather than the fields this page happens to render, so a
+  // new prose field cannot quietly opt out (src/lib/courses.ts).
+  const course = resolveCourseContentDepths(stored, courseDepthFormat(t, shop.depthUnit));
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {

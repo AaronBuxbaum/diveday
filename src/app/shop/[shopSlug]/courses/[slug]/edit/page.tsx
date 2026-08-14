@@ -71,6 +71,9 @@ export default async function EditCoursePage({
     "too-many-photos": t("courses.edit.errorTooManyPhotos", {
       max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
     }),
+    // A half-edited depth marker. Refused at save rather than left to render
+    // its own braces to a diver — see saveCourseContentAction.
+    "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
   };
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
@@ -131,8 +134,15 @@ export default async function EditCoursePage({
           fallback (first aria-invalid control) must not fire on a clean load. */}
       {error ? <FieldErrorFocus field={field} /> : null}
 
+      {/* Above the form, not buried in one field's hint: a depth marker may be
+          typed into any prose box on this page, and it is the one piece of
+          syntax this editor asks a shop to learn. */}
+      <p className="mt-6 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
+        {t("courses.edit.depthMarkersHint")}
+      </p>
+
       <UnsavedChangesGuard>
-        <form action={saveAction} className="mt-8 flex flex-col gap-6">
+        <form action={saveAction} className="mt-6 flex flex-col gap-6">
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
             <legend className="px-1 text-sm font-semibold">{t("courses.edit.pitchLegend")}</legend>
             <FieldGrid columns={1} className="mt-3 gap-y-5">

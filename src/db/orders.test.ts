@@ -19,6 +19,7 @@ import {
 import { createBooking } from "./bookings";
 import { updateCourse } from "./courses";
 import {
+  countOpenTripOrders,
   createOrder,
   getBookingContext,
   getOrder,
@@ -1243,6 +1244,120 @@ describe("orders", () => {
       const otherShopId = "00000000-0000-4000-8000-000000000000";
       const otherShopOrders = await listShopOrders(db, otherShopId);
       expect(otherShopOrders.rows.map((row) => row.order.id)).not.toContain(result.order.id);
+    });
+  });
+
+  /**
+   * The trip pulse's money fact. What it has to get right is not the count —
+   * it is *which* orders the count is of, because the fact links to the Orders
+   * index filtered the same way and a staffer who taps "2 orders are awaiting
+   * payment" and finds one row stops trusting the strip.
+   */
+  describe("countOpenTripOrders", () => {
+    it("counts only this trip's open orders — not paid ones, another trip's, or an unbooked invoice", async () => {
+      const { db, shop, reef, entry, staff } = await orderContext();
+      await connectedShop(db, shop.id);
+      // One invoicing fake for the whole test: each instance mints invoice ids
+      // from its own counter, and two of them would collide on `in_1`.
+      const invoicing = fakeInvoicing();
+
+      // A departure with no invoices raised against it says nothing at all —
+      // the pulse renders no fact (principle 9: "none" is not a status).
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(0);
+
+      const open = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: staff,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        invoicing,
+      );
+      if (!open.ok) throw new Error("expected the open order to be created");
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
+
+      // An invoice Stripe has since reported paid is not work — settling it is
+      // exactly what makes the fact disappear.
+      const paid = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: staff,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        invoicing,
+      );
+      if (!paid.ok) throw new Error("expected the second order to be created");
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(2);
+      await markOrderPaidByInvoiceId(db, paid.order.stripeInvoiceId, paid.order.totalCents);
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
+
+      // A shop-wide invoice (a gear sale, a course deposit taken off any
+      // booking) belongs to no departure, so no departure's pulse claims it.
+      const unbooked = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: staff,
+          lineItems,
+        },
+        invoicing,
+      );
+      if (!unbooked.ok) throw new Error("expected the unbooked order to be created");
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
+
+      // …and an open order on a *different* departure stays on that departure.
+      const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+      const otherTrip = upcoming.find((trip) => trip.id !== reef.id && trip.booked > 0);
+      if (!otherTrip) throw new Error("demo shop is missing a second booked trip");
+      const [otherEntry] = await getTripRoster(db, shop.id, otherTrip.id);
+      if (!otherEntry) throw new Error("demo booking missing on the second trip");
+      const elsewhere = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: otherEntry.person.id,
+          createdByPersonId: staff,
+          bookingId: otherEntry.booking.id,
+          lineItems,
+        },
+        invoicing,
+      );
+      if (!elsewhere.ok) throw new Error("expected the other trip's order to be created");
+      expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
+      expect(await countOpenTripOrders(db, shop.id, otherTrip.id)).toBe(1);
+    });
+
+    it("agrees with the Orders index the fact links to, and stays inside the tenant", async () => {
+      const { db, shop, reef, entry, staff } = await orderContext();
+      await connectedShop(db, shop.id);
+      const created = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: staff,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!created.ok) throw new Error("expected the order to be created");
+
+      // The contract the pulse depends on: the number on the strip is the
+      // number of rows behind `?tripId=…&status=open`.
+      const filtered = await listShopOrders(db, shop.id, { tripId: reef.id, status: "open" });
+      expect(filtered.total).toBe(await countOpenTripOrders(db, shop.id, reef.id));
+      expect(filtered.rows.map((row) => row.order.id)).toEqual([created.order.id]);
+
+      const otherShopId = "00000000-0000-4000-8000-000000000000";
+      expect(await countOpenTripOrders(db, otherShopId, reef.id)).toBe(0);
     });
   });
 });

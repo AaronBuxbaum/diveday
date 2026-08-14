@@ -332,11 +332,41 @@ export type ShopOrderFilter = {
   personId?: string;
   /** Substring match against the diver's name — the index page's own filter box. */
   personQuery?: string;
+  /**
+   * Orders raised against a booking on one departure — the trip pulse's
+   * awaiting-payment fact and the index link it points at.
+   *
+   * Matched through the order's booking, never a column on `orders`: an order
+   * belongs to a diver and, optionally, to the booking that occasioned it, and
+   * the booking is what names a trip. An order with no booking (a shop-wide
+   * invoice, a gear sale) is therefore on no trip and never matches.
+   */
+  tripId?: string;
   /** Inclusive lower bound on `created_at`. */
   from?: Date;
   /** Exclusive upper bound on `created_at`, so a whole day/month reads as `[from, to)`. */
   to?: Date;
 };
+
+/**
+ * The one `where` every read of the order index is built from — the paged
+ * list, its total, and the per-trip count the trip pulse states.
+ *
+ * Shared rather than repeated so a count can never disagree with the list it
+ * links to: the pulse says "2 orders are awaiting payment" and the Orders
+ * index it opens has to show those same two rows, which only holds while both
+ * ask the database the same question.
+ */
+function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
+  const conditions = [eq(orders.shopId, shopId)];
+  if (filter.status) conditions.push(eq(orders.status, filter.status));
+  if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
+  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.tripId) conditions.push(eq(bookings.tripId, filter.tripId));
+  if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
+  if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
+  return and(...conditions);
+}
 
 /**
  * The shop-wide order index (task 158, UX persona lens 17): every invoice the
@@ -371,13 +401,7 @@ export async function listShopOrders(
   filter: ShopOrderFilter = {},
   page: { page?: number; pageSize?: number } = {},
 ) {
-  const conditions = [eq(orders.shopId, shopId)];
-  if (filter.status) conditions.push(eq(orders.status, filter.status));
-  if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
-  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
-  if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
-  if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
-  const where = and(...conditions);
+  const where = shopOrderWhere(shopId, filter);
 
   const paged = await offsetPage({
     page: page.page,
@@ -386,7 +410,14 @@ export async function listShopOrders(
       const [counted] = await db
         .select({ total: count() })
         .from(orders)
+        // The same joins the row query makes, so the count shares the row
+        // query's exact scope (ADR 20260803-one-pagination-model): a `tripId`
+        // filter reads through `bookings`, and a pager whose total was
+        // computed without that join would promise pages that render nothing.
+        // `orders.booking_id` is a foreign key, so the left join can only ever
+        // add one row per order — it never inflates the count.
         .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         .where(where);
       return counted?.total ?? 0;
     },
@@ -413,6 +444,40 @@ export async function listShopOrders(
     pageSize: paged.pageSize,
     pageCount: paged.pageCount,
   };
+}
+
+/**
+ * How many of one departure's orders are still awaiting payment — the trip
+ * pulse's money fact ("2 orders are awaiting payment ›").
+ *
+ * A count rather than the rows: the pulse states a number and hands the work
+ * to the Orders index, which is where an order is chased. It is deliberately
+ * the *same* question that index answers under `?tripId=…&status=open` — one
+ * `shopOrderWhere`, one set of joins — so the strip can never claim work the
+ * page it opens does not show.
+ *
+ * `open` and nothing else. Stripe's `open` is precisely "invoiced, not yet
+ * paid"; `void`/`uncollectible` are settled decisions and `refunded` money
+ * already moved. Counting those would put a number on the pulse that no one
+ * can act on, which is the one thing a fact here must never do.
+ *
+ * Unwindowed, unlike the index's default 90 days — a seat sold well in
+ * advance can be invoiced long before the boat sails, and a fact that quietly
+ * dropped those orders would read as an all clear. The link the pulse builds
+ * says `range=all` for the same reason.
+ */
+export async function countOpenTripOrders(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<number> {
+  const [counted] = await db
+    .select({ total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(shopOrderWhere(shopId, { status: "open", tripId }));
+  return counted?.total ?? 0;
 }
 
 /**

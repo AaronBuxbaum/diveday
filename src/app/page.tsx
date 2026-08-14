@@ -18,7 +18,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
@@ -27,9 +27,13 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
-// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
-// one placed inside the page — so the frame lands without waiting on the
-// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+// read sits behind a `<Suspense>` boundary placed inside the page — the root
+// segment is the one place a `loading.tsx` is not an option, because
+// `src/app/loading.tsx` wraps *every* route below it (`/switching/**`,
+// `/sign-in`, `/about`, `/offline-manifest` all lack a boundary of their own
+// and would inherit this page's skeleton). ADR 20260804-instant-navigation
+// names the in-page boundary as the sanctioned alternative; `next build`
+// audits the claim either way.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -84,7 +88,19 @@ export default function Home() {
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<HomeBody locale={DEFAULT_DIVER_LOCALE} />}>
+      {/* The body renders **once**, in the reader's own language, behind a
+          skeleton — never twice, with an English copy of itself standing in
+          for the localized one. That older arrangement bought the instant
+          paint by rendering the whole page as its own fallback, and the swap
+          that followed tore down and rebuilt the subtree, discarding whatever
+          the visitor had already done to it: for an en-US reader the two
+          renders were identical words, so it was invisible in every
+          screenshot and assertion, and for an `es-ES` reader a link tapped
+          before the Spanish body landed left them somewhere else on the page
+          (FU-20260812-marketing-suspense-swap-discards-interaction, and
+          `ProductPage` for the fuller note). A skeleton has nothing to tap, so
+          there is nothing to lose — keep it that way. */}
+      <Suspense fallback={<HomeBodySkeleton />}>
         <LocalizedHomeBody />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
@@ -97,6 +113,70 @@ export default function Home() {
 async function LocalizedHomeBody() {
   const locale = await requestLocale();
   return <HomeBody locale={locale} />;
+}
+
+/**
+ * What the static shell paints while {@link LocalizedHomeBody} resolves — this
+ * page's equivalent of the `loading.tsx` that `/product` and `/pricing` now
+ * carry, living inside the page because the root segment cannot have one (see
+ * the `instant` note above).
+ *
+ * Shaped like the hero and the first daily-moment row so the streamed body
+ * lands where the bars stood. Nothing in here is a link, a button, or a form:
+ * that is the fix, not an economy.
+ */
+function HomeBodySkeleton() {
+  return (
+    <main className="flex-1 animate-pulse">
+      <section className="border-b border-border">
+        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
+          <div className="max-w-2xl">
+            <div className="h-4 w-40 rounded bg-surface-sunken" />
+            <div className="mt-6 h-14 w-full rounded bg-surface-sunken sm:h-16" />
+            <div className="mt-3 h-14 w-4/5 rounded bg-surface-sunken sm:h-16" />
+            <div className="mt-7 h-5 w-full max-w-xl rounded bg-surface-sunken" />
+            <div className="mt-2 h-5 w-2/3 max-w-lg rounded bg-surface-sunken" />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
+              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
+            </div>
+            <div className="mt-4 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+          </div>
+          {/* The captain's phone, and the card that overlaps its lower edge. */}
+          <div className="mx-auto w-full max-w-sm lg:max-w-md">
+            <div className="h-[30rem] rounded-[2.5rem] border border-border bg-surface" />
+            <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3">
+              <div className="h-3 w-24 rounded bg-surface-sunken" />
+              <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The day, told in alternating proof rows — one of them, at height. */}
+      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+        <div className="max-w-2xl">
+          <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
+          <div className="mt-5 h-5 w-full rounded bg-surface-sunken" />
+          <div className="mt-2 h-5 w-3/4 rounded bg-surface-sunken" />
+        </div>
+        <div className="mt-14 grid items-center gap-8 lg:mt-20 lg:grid-cols-11 lg:gap-14">
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-4">
+              <div className="h-4 w-28 rounded bg-surface-sunken" />
+              <span aria-hidden="true" className="h-px flex-1 bg-border" />
+            </div>
+            <div className="mt-4 h-8 w-full max-w-sm rounded bg-surface-sunken" />
+            <div className="mt-3 h-4 w-full max-w-md rounded bg-surface-sunken" />
+            <div className="mt-2 h-4 w-2/3 max-w-sm rounded bg-surface-sunken" />
+          </div>
+          <div className="lg:col-span-6">
+            <div className="h-80 rounded-2xl border border-border bg-surface" />
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
 
 /**

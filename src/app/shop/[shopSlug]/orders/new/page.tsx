@@ -18,6 +18,7 @@ import { formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { createOrderAction } from "./actions";
 import { LINE_ITEM_ROWS } from "./order-form";
 
@@ -62,7 +63,18 @@ export default async function NewOrderPage({
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, personId: prefillPersonId, bookingId: prefillBookingId } = await searchParams;
+  const { notice, personId, bookingId } = await searchParams;
+  // Both ids arrive from a link another page built (a diver record, a roster
+  // row), and a link is the thing that gets truncated in a chat message.
+  // `bookings.id` is a `uuid` column: handed a stray string,
+  // `getBookingContext` does not come back empty — it throws `invalid input
+  // syntax for type uuid` and 500s the page. `personId` never reaches a query
+  // here, but it is written straight into this page's own links back to
+  // `/divers/<id>`, so it is guarded too rather than handed on to a page that
+  // *does* look it up. A malformed id is simply not a prefill — the staffer
+  // gets the blank order form they can still use.
+  const prefillPersonId = uuidParam(personId);
+  const prefillBookingId = uuidParam(bookingId);
   const db = await getDb();
 
   // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization),

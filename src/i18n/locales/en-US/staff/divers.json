@@ -116,12 +116,11 @@
     "emptyImportBody": "Coming from a spreadsheet or another system? Bring the whole roster over in one go.",
     "emptyImportAction": "Import your roster",
     "noContactDetails": "No contact details yet",
-    "cardCountOne": "{count} card",
-    "cardCountOther": "{count} cards",
     "pendingReviewText": "{count} pending review",
     "toConfirmText": "{count} to confirm",
     "tableHeaderPerson": "Person",
-    "tableHeaderCards": "Cards",
+    "tableHeaderLevel": "Level",
+    "noCertificationLevel": "No current card",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
     }

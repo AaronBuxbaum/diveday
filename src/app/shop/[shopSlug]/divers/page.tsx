@@ -14,9 +14,11 @@ import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { DiverList } from "./_components/DiverList";
@@ -168,6 +170,22 @@ export default async function DiversPage({
     );
   }
 
+  /**
+   * The shop's one level vocabulary, resolved once and handed to the roster as
+   * plain strings: it names a diver's level with the same words the diver
+   * record and a trip's requirements do. Every word still comes from the one
+   * `CERTIFICATION_LEVEL_KEYS` map (src/i18n/readiness-labels.ts) — never a
+   * second mapping here — and the `Record<CertificationLevel, string>` type
+   * makes a new rung of the ladder a compile error rather than a blank cell.
+   */
+  const certificationLevels: Record<CertificationLevel, string> = {
+    open_water: t(CERTIFICATION_LEVEL_KEYS.open_water),
+    advanced_open_water: t(CERTIFICATION_LEVEL_KEYS.advanced_open_water),
+    rescue: t(CERTIFICATION_LEVEL_KEYS.rescue),
+    divemaster: t(CERTIFICATION_LEVEL_KEYS.divemaster),
+    instructor: t(CERTIFICATION_LEVEL_KEYS.instructor),
+  };
+
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
@@ -266,7 +284,6 @@ export default async function DiversPage({
         shopSlug={shopSlug}
         query={query}
         filter={filter}
-        locale={locale}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         restoreAction={canDelete ? restoreDiverAction : null}
         pager={
@@ -308,12 +325,12 @@ export default async function DiversPage({
           emptyImportBody: t("divers.list.emptyImportBody"),
           emptyImportAction: t("divers.list.emptyImportAction"),
           noContactDetails: t("divers.list.noContactDetails"),
-          cardCountOne: t("divers.list.cardCountOne"),
-          cardCountOther: t("divers.list.cardCountOther"),
+          certificationLevels,
+          noCertificationLevel: t("divers.list.noCertificationLevel"),
           pendingReviewText: t("divers.list.pendingReviewText"),
           toConfirmText: t("divers.list.toConfirmText"),
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
-          tableHeaderCards: t("divers.list.tableHeaderCards"),
+          tableHeaderLevel: t("divers.list.tableHeaderLevel"),
         }}
       />
     </main>

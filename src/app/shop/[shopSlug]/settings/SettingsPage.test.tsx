@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
+import { listDiveSites } from "@/db/dive-sites";
+import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
@@ -242,5 +244,32 @@ describe("the data-compliance queues in the Data group", () => {
     });
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     expect(hiddenInputNamesIn(element)).not.toContain("obligationId");
+  });
+});
+
+/*
+ * The dock-day preview describes the shop's own six numbers, and a dive site
+ * may override one of them (`dive_sites.expected_bottom_time_minutes`). The
+ * preview used to say nothing about that, so a shop reading it had no way to
+ * know which departures it did not describe.
+ */
+describe("the dock-day preview and the sites that override it", () => {
+  it("says nothing extra when no site sets its own bottom time", async () => {
+    const hrefs = hrefsIn(await renderSettings("owner"));
+    expect(hrefs.filter((href) => href.includes("/dive-sites/"))).toHaveLength(0);
+  });
+
+  it("links the sites that do", async () => {
+    let overridden = "";
+    const element = await renderSettings("owner", async (db, session) => {
+      const [site] = await listDiveSites(db, session.user.shopId);
+      if (!site) throw new Error("the seed has no dive site");
+      overridden = site.id;
+      await db
+        .update(diveSites)
+        .set({ expectedBottomTimeMinutes: 30 })
+        .where(eq(diveSites.id, site.id));
+    });
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/dive-sites/${overridden}`);
   });
 });

@@ -155,7 +155,9 @@
       "stepReturn": "De vuelta en el muelle",
       "minutesBefore": "{count} min antes",
       "minutesAfter": "{count} min después",
-      "atDeparture": "A la hora"
+      "atDeparture": "A la hora",
+      "siteOverrides": "{count, plural, one {# punto de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# puntos de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
+      "siteOverride": "{name} · {count} min"
     },
     "units": {
       "heading": "Unidades",
@@ -460,11 +462,11 @@
         "detail": "Se importa como una tarjeta de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
       },
       "signedWaivers": {
-        "what": "Descargos firmados y aptitud médica",
+        "what": "Exenciones firmadas y aptitud médica",
         "detail": "Una fila marcada como ya aceptada se da por buena, aptitud médica incluida, y queda marcada como importada — las respuestas médicas individuales nunca se reconstruyen, solo el resultado."
       },
       "waiverDocuments": {
-        "what": "Documentos de descargo / médicos",
+        "what": "Documentos de exención / médicos",
         "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
       },
       "role": {

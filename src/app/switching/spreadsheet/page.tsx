@@ -9,7 +9,7 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   ClosingCta,
@@ -88,30 +88,42 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SpreadsheetSwitchPage() {
+/**
+ * The body renders **once**, in the reader's own language.
+ *
+ * Until 2026-08-14 the `<Suspense>` below wrapped
+ * `<SpreadsheetBody locale={DEFAULT_DIVER_LOCALE} …>` — this whole guide, a
+ * second time, in English — as the fallback for the negotiated-locale one. That
+ * bought the instant paint and cost the visitor everything they had done to the
+ * page before the real body landed: React carries no DOM state across a
+ * replaced subtree, so an `es-ES` reader who reached the template download or
+ * the importer door on the move rail lost the interaction, and because both
+ * renders are identical copy for an en-US reader nothing in a screenshot or an
+ * English-pinned assertion could see it
+ * (FU-20260812-marketing-suspense-swap-discards-interaction; ADR
+ * 20260804-instant-navigation's 2026-08-14 amendment states the rule — a
+ * fallback holds shape, never interaction).
+ *
+ * The paint is still instant, and it is this segment's `loading.tsx` that makes
+ * it so. The nav keeps its own boundary because it reads the *session* as well
+ * as the locale; the body must not wait on that.
+ */
+export default async function SpreadsheetSwitchPage() {
+  const locale = await requestLocale();
+  const t = diverTranslator(locale);
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<SpreadsheetBody locale={DEFAULT_DIVER_LOCALE} importCta={null} />}>
-        <LocalizedSpreadsheetBody />
-      </Suspense>
+      <SpreadsheetBody
+        locale={locale}
+        importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
+      />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
     </div>
-  );
-}
-
-async function LocalizedSpreadsheetBody() {
-  const locale = await requestLocale();
-  const t = diverTranslator(locale);
-  return (
-    <SpreadsheetBody
-      locale={locale}
-      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
-    />
   );
 }
 

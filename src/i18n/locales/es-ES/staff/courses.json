@@ -21,6 +21,7 @@
   "edit": {
     "backToCourses": "← Cursos",
     "description": "Todo lo que un buceador lee antes de reservar — el texto, las fotos y tu precio. La certificación y la edad mínima vienen de la agencia.",
+    "depthMarkersHint": "Marcas de profundidad: escribe '{depth18}' en cualquier parte de esta página y los buceadores leen «18 metros» o «60 pies», según la unidad que use tu centro. Las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'; añade una n para el número solo en un rango, como en «a '{depth30n}'–'{depth40}'». Borra una marca cuando prefieras escribir tú la profundidad.",
     "liveAt": "Publicado en",
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "noticeSaved": "Página del curso guardada.",
@@ -28,6 +29,7 @@
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5 MB.",
     "errorTooManyPhotos": "Añade hasta {max} fotos nuevas de galería por guardado. Guarda este lote y añade más después.",
+    "errorDepthPlaceholder": "Una de tus marcas de profundidad está mal escrita, así que no se guardó nada. Escríbela exactamente como '{depth18}': las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'. Si prefieres escribir la profundidad con tus propias palabras, borra la marca.",
     "pitchLegend": "La propuesta",
     "subheadLabel": "Subtítulo",
     "subheadDescription": "Una línea bajo el título, p. ej. “Cómo hacerse Open Water Diver de PADI”.",

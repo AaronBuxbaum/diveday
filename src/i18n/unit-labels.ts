@@ -1,3 +1,4 @@
+import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import { depthInUnit } from "@/lib/depth-units";
 import type { SeaState } from "@/lib/marine-forecast";
@@ -31,6 +32,26 @@ const TEMPERATURE_UNIT_KEYS: Record<TemperatureUnit, DiverMessageKey> = {
 /** A stored depth (metres) written out in the shop's unit. */
 export function depthText(t: DiverTranslator, meters: number, unit: DepthUnit): string {
   return t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
+}
+
+/**
+ * The words a course page's `{depth18}` placeholders resolve to.
+ *
+ * Spelled out ("18 meters"), not abbreviated: these land mid-sentence in a
+ * shop's own marketing prose, where "18 m" reads like a spec sheet. The
+ * abbreviations above stay abbreviated because they sit in fact strips and
+ * table cells, which is a different register.
+ *
+ * `src/lib/courses.ts` does the substitution and never sees a word — it hands
+ * this the number already chosen from the agency pair (AGENTS.md — the domain
+ * returns values, the UI picks the copy).
+ */
+export function courseDepthFormat(t: DiverTranslator, unit: DepthUnit): CourseDepthFormat {
+  return {
+    unit,
+    withUnit: (value) =>
+      t(unit === "feet" ? "course.depthUnits.feet" : "course.depthUnits.meters", { value }),
+  };
 }
 
 /** A stored water temperature (Celsius) written out in the shop's unit. */

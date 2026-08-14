@@ -841,14 +841,6 @@ export const diveSites = pgTable(
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
-    /**
-     * Legacy: the shop's own adjective for how demanding this site is, written
-     * by releases up to 2026-08-13 and read by nothing since — `difficulty_level`
-     * replaced it with a code the app can render in any language. Kept for one
-     * release because the migration lands while the previous deployment is
-     * still serving and still selects it (ADR 20260806-destructive-migration-guard).
-     */
-    difficulty: text("difficulty"),
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
@@ -890,7 +882,7 @@ export const diveSites = pgTable(
     /**
      * Which fit reading the briefing shows above the facts table — "Welcoming
      * dive" or "Best with recent experience". Null means *derive it* from
-     * `difficulty`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
+     * `difficulty_level`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
      * which is what every site did before this column existed and is still the
      * ordinary case.
      *
@@ -1085,18 +1077,6 @@ export const diveSiteCreatures = pgTable(
      * skipped by every reader (`fieldGuideCards`). Nothing writes null now.
      */
     catalogSlug: text("catalog_slug"),
-    /**
-     * Legacy: the shop's own copy of a species' words, written by releases up
-     * to 2026-08-13 and read by nothing since. Kept for one release because the
-     * migration lands while the previous deployment is still serving and still
-     * selecting them (ADR 20260806-destructive-migration-guard); the follow-up
-     * register carries the drop.
-     */
-    name: text("name"),
-    kind: text("kind"),
-    imageUrl: text("image_url"),
-    description: text("description"),
-    preparationTip: text("preparation_tip"),
     /**
      * Where this face sits in the guide. The list had no order at all until the
      * shop could edit it — the query returned whatever the planner felt like,

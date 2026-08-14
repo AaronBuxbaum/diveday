@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
-import { fill, pluralForm } from "@/i18n/fill";
+import { fill } from "@/i18n/fill";
+import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
@@ -51,12 +53,21 @@ export interface DiverListCopy {
   emptyImportBody: string;
   emptyImportAction: string;
   noContactDetails: string;
-  cardCountOne: string;
-  cardCountOther: string;
+  /**
+   * One word per rung of the certification ladder, already translated — handed
+   * down whole from the shop's single level-label source
+   * (`CERTIFICATION_LEVEL_KEYS`, `src/i18n/readiness-labels.ts`), the same map
+   * the diver record and the trip requirements read. Never a second mapping
+   * here: two surfaces that name a diver's level differently is exactly the
+   * drift this shape prevents.
+   */
+  certificationLevels: Record<CertificationLevel, string>;
+  /** No verified, unexpired level card on file — see `levelText` below. */
+  noCertificationLevel: string;
   pendingReviewText: string;
   toConfirmText: string;
   tableHeaderPerson: string;
-  tableHeaderCards: string;
+  tableHeaderLevel: string;
 }
 
 function initials(fullName: string): string {
@@ -77,8 +88,21 @@ function confirmCount(diver: DiverSummary): number {
   return diver.importedUnconfirmedCount;
 }
 
-function cardCount(diver: DiverSummary): number {
-  return diver.certificationCount + diver.specialtyCount + diver.nitroxCertificationCount;
+/**
+ * What the roster says a diver's level is.
+ *
+ * `certificationLevel` is already the highest *verified, unexpired* card
+ * (`summarizeDivers`, src/db/divers.ts, reading `diverDepthLimit`'s rule) — an
+ * expired higher card never outranks a valid lower one, and a card still
+ * awaiting review says nothing here. When there is no such card the cell says
+ * so in words rather than showing a bare dash: "nothing on file" and "we don't
+ * know" have to read differently on a safety-adjacent list. Cards that *are*
+ * on file but not yet speaking still raise their badge beside this text.
+ */
+function levelText(diver: DiverSummary, copy: DiverListCopy): string {
+  return diver.certificationLevel
+    ? copy.certificationLevels[diver.certificationLevel]
+    : copy.noCertificationLevel;
 }
 
 /**
@@ -126,7 +150,6 @@ export function DiverList({
   shopSlug,
   query,
   filter,
-  locale,
   importHref,
   restoreAction,
   copy,
@@ -136,7 +159,6 @@ export function DiverList({
   shopSlug: string;
   query: string;
   filter: DiverFilter;
-  locale: string;
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
@@ -155,10 +177,6 @@ export function DiverList({
    */
   pager?: React.ReactNode;
 }) {
-  const cardCountText = (count: number) =>
-    fill(pluralForm(count, { one: copy.cardCountOne, other: copy.cardCountOther }, locale), {
-      count,
-    });
   // The three questions the counter asks of the roster, in the order a day
   // runs: who is on a boat today, whose paperwork needs a staffer, and who
   // still owes a safety contact. Each is a server-side WHERE clause
@@ -398,12 +416,10 @@ export function DiverList({
                     </span>
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    {/* The count is roster fact, not an alert — muted ink, not a
-                        pill. Badges below appear only when a row actually needs
-                        a staffer (design principle 9). */}
-                    <span className="whitespace-nowrap text-muted tabular-nums">
-                      {cardCountText(cardCount(diver))}
-                    </span>
+                    {/* The level is roster fact, not an alert — muted ink, not
+                        a pill. Badges below appear only when a row actually
+                        needs a staffer (design principle 9). */}
+                    <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">
                         {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -432,94 +448,93 @@ export function DiverList({
               </li>
             ))}
           </ul>
-          <div className="relative mt-4 hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm sm:block">
-            {/* No `min-w-*` floor: this is a two-column table, and the 720px
-                floor it used to carry forced a sideways scroll on exactly the
-                narrow-desktop widths the phone cards no longer cover. The
-                wrapper's `overflow-x-auto` stays as the safety net. */}
-            <table className="w-full border-collapse text-left">
-              <thead className="bg-surface-sunken text-xs tracking-wider text-muted uppercase">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderPerson}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderCards}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {divers.map((diver) => (
-                  <tr
-                    key={diver.person.id}
-                    className="group relative transition-colors duration-200 hover:bg-surface-sunken"
-                  >
-                    <td className="relative px-4 py-3">
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                        className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+          {/* Desktop: the shared table vocabulary (`@/components/ui/table`) —
+              one shell, one header voice, one row divider, one density, shared
+              with orders, reports, the departure log and the import preview.
+              No `minWidth` floor: this is a two-column table, and the 720px
+              floor it used to carry forced a sideways scroll on exactly the
+              narrow-desktop widths the phone cards no longer cover. The shell's
+              own `overflow-x-auto` stays as the safety net, and `relative` on
+              it keeps the stretched row link's positioning context inside the
+              card. */}
+          <Table shellClassName="relative mt-4 hidden sm:block">
+            <THead>
+              <Th>{copy.tableHeaderPerson}</Th>
+              <Th>{copy.tableHeaderLevel}</Th>
+            </THead>
+            <TBody>
+              {divers.map((diver) => (
+                <tr
+                  key={diver.person.id}
+                  className="group relative transition-colors duration-200 hover:bg-surface-sunken"
+                >
+                  {/* `text-base` because the person's name is the row's own
+                      voice, not table small print — a directly-applied size
+                      beats the shell's inherited `text-sm`. `align-middle`
+                      centres this cell's avatar against the taller of the two,
+                      as it did before the conversion. */}
+                  <Td className="relative align-middle text-base">
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                      className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                    >
+                      <span
+                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                        aria-hidden="true"
                       >
-                        <span
-                          className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(diver.person.fullName)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold group-hover:text-primary">
-                            {diver.person.fullName}
-                            <span
-                              aria-hidden="true"
-                              className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                              →
-                            </span>
-                          </p>
-                          <p className="truncate text-sm font-normal text-muted">
-                            {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
-                          </p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {/* One quiet cell instead of a pill column plus an
-                          Attention column that said "None" on nearly every
-                          row: the count is muted roster fact, and a badge
-                          appears beside it only when this person actually
-                          needs a staffer (design principle 9). */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* The column header already says "Cards" — repeating
-                            the unit on every row is the residue principle 9
-                            clears. The phone cards keep the full phrase; they
-                            have no header to carry it. */}
-                        <span className="whitespace-nowrap text-muted tabular-nums">
-                          {cardCount(diver)}
-                        </span>
-                        {pendingCount(diver) > 0 ? (
-                          <Badge tone="warning">
-                            {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
-                          </Badge>
-                        ) : null}
-                        {confirmCount(diver) > 0 ? (
-                          <Badge tone="neutral">
-                            {fill(copy.toConfirmText, { count: confirmCount(diver) })}
-                          </Badge>
-                        ) : null}
-                        {filter === "removed" && restoreAction ? (
-                          <RestoreRow
-                            action={restoreAction}
-                            personId={diver.person.id}
-                            fullName={diver.person.fullName}
-                            copy={copy}
-                          />
-                        ) : null}
+                        {initials(diver.person.fullName)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold group-hover:text-primary">
+                          {diver.person.fullName}
+                          <span
+                            aria-hidden="true"
+                            className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            →
+                          </span>
+                        </p>
+                        <p className="truncate text-sm font-normal text-muted">
+                          {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </Link>
+                  </Td>
+                  {/* One quiet cell instead of a pill column plus an Attention
+                      column that said "None" on nearly every row: the level is
+                      muted roster fact, and a badge appears beside it only when
+                      this person actually needs a staffer (design principle 9).
+                      It replaced a card *count*, whose value was `1` on nearly
+                      every row and which answered a question staff rarely ask;
+                      "what level is this diver?" is the one they ask at booking
+                      time (FU-20260813). */}
+                  <Td className="align-middle">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
+                      {pendingCount(diver) > 0 ? (
+                        <Badge tone="warning">
+                          {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
+                        </Badge>
+                      ) : null}
+                      {confirmCount(diver) > 0 ? (
+                        <Badge tone="neutral">
+                          {fill(copy.toConfirmText, { count: confirmCount(diver) })}
+                        </Badge>
+                      ) : null}
+                      {filter === "removed" && restoreAction ? (
+                        <RestoreRow
+                          action={restoreAction}
+                          personId={diver.person.id}
+                          fullName={diver.person.fullName}
+                          copy={copy}
+                        />
+                      ) : null}
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </TBody>
+          </Table>
         </>
       )}
       {pager}

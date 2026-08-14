@@ -80,6 +80,19 @@ Hard: this is a genuine loosening of a safety posture on a gated surface, made a
 looking at them, the evidence will no longer be in the row, and the honest fix is the queue 20260725
 named — a surface listing every card awaiting a sighting — rather than restoring a checkbox.
 
+**Follow-up review declined 2026-08-14 (Aaron Buxbaum).** The missing `dive-domain-expert` pass was
+filed as a follow-up — not to re-open the decision, but to ask a narrower question: with the
+attestation gone, is the per-card confirm doing enough, and does nitrox deserve a different answer
+from the recreational specialties, since a fill is chemical rather than procedural? The owner closed
+it without commissioning the review, having made the call deliberately with the trade-off stated in
+front of them. Recorded here rather than dropped, because "this was decided, not overlooked" is the
+thing a future reader needs and the follow-up file that carried it is gone.
+
+Nothing in `.claude/agents/dive-domain-expert.md` had to change: the card-sighting attestation came
+from a one-off review finding, not from that agent's standing instructions, so there was no rule
+left in the tree contradicting the owner's call. AGENTS.md's general requirement — that cert gating
+gets a `dive-domain-expert` review — stands unchanged and is not narrowed by this.
+
 Escape hatch: 20260725's own reversal instructions run in this direction too. Restoring the
 attestation means re-adding `cardSighted` to both signatures, the two `importedAt` refusal branches,
 `CARD_SIGHTING_NOTE`/`reviewNoteFor`'s second argument, the disclosure component, and one notice code

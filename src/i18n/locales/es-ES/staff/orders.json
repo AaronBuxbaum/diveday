@@ -103,6 +103,8 @@
       "clear": "Borrar filtros"
     },
     "filteredByDiver": "Mostrando los pedidos de {name}.",
+    "filteredByTrip": "Mostrando los pedidos de {title}.",
+    "openFilteredTrip": "Abrir la salida",
     "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
     "emptyFiltered": "Ningún pedido coincide con estos filtros.",
     "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",

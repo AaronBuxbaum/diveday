@@ -200,7 +200,7 @@
       "light_chop": "Small waves — most divers stop noticing them once they're under.",
       "choppy": "A bumpy ride out. Worth taking something for seasickness if you're prone to it.",
       "rough": "Hard work on the boat, and getting in and out takes more care.",
-      "very_rough": "The kind of sea that often keeps boats at the dock — expect the crew to be watching it."
+      "very_rough": "Big, steep seas — demanding on the boat and getting in and out of the water. What that means for this trip is the crew's call."
     }
   },
   "booking": {
@@ -341,6 +341,10 @@
       "cmas": "CMAS (World Underwater Federation)",
       "raid": "RAID (Dive RAID International)",
       "gue": "GUE (Global Underwater Explorers)"
+    },
+    "depthUnits": {
+      "meters": "{value} meters",
+      "feet": "{value} feet"
     },
     "seeDates": "See dates",
     "askAboutDates": "Ask about dates",
@@ -1730,19 +1734,15 @@
       "passwordPlaceholder": "At least 8 characters",
       "reassurance": {
         "noCard": {
-          "lead": "No card, no setup fee.",
-          "body": "Nothing to pay to look around. Put your first trip on the calendar and see how the day runs."
+          "lead": "No card, no setup fee."
         },
         "yourRecords": {
-          "lead": "Your records leave with you.",
-          "body": "Settings hands back one ZIP of your shop's files — divers, bookings, waivers, payments, photos. It works on your first day, not just your last."
+          "lead": "Your records leave with you."
         },
         "supportLine": {
-          "lead": "Real support, one email away.",
-          "body": "Write in any time — a real person answers, and what your crew runs into shapes what ships next."
+          "lead": "Real support, one email away."
         }
       },
-      "exploreNote": "Your shop starts empty and ready for your own trips and divers. Want to explore a shop that's already full of sample trips first?",
       "demoNote": "Want to explore a sample shop first?",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
@@ -2139,7 +2139,6 @@
     "price": {
       "name": "Founding shop",
       "cadence": "per location / month",
-      "description": "One clear price for the whole shop — every role, every workflow, no per-seat math.",
       "item1": "Bookings, courses, waivers, certifications, rental fit, dive sites, nitrox, and the offline-ready manifest",
       "item2": "Every staff role, from front desk to captain, in one place",
       "item3": "New features as they ship, all through early access",

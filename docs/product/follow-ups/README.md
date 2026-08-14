@@ -69,3 +69,7 @@ judged, the item belongs in the file that carries committed work, per
   own PR — and deleting the entry is part of it.
 - `pnpm check:follow-ups` (inside `pnpm check:repo` → `pnpm check`) enforces the mechanical parts
   and prints how many entries are open and how old the oldest is.
+- `pnpm gates` ages the whole register — id, status, kind, effort, and days since the date in the
+  id, oldest first — beside the human-decision gates it reports on. Age is deliberately reported
+  there and nowhere else: an entry waiting on your judgment is not a build failure, so no check
+  fails on a stale one, and nothing that report lists is an agent's to close.

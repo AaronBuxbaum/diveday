@@ -51,6 +51,30 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     : null;
 }
 
+/**
+ * One departure's title, or null — the bounded lookup a page uses when it is
+ * *filtered* to a trip and has to name it.
+ *
+ * The Orders index reads this rather than the title on `rows[0]`, for the same
+ * reason it looks a pinned diver's name up (`getShopPersonName`): a filter that
+ * matches nothing still has to say what it filtered for, and a row-derived
+ * title vanishes on exactly the empty screen that needed the explanation most.
+ * Shop-scoped in the query, so a `?tripId=` from another tenant reads as null
+ * rather than leaking a title.
+ */
+export async function getShopTripTitle(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ title: trips.title })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .limit(1);
+  return row?.title ?? null;
+}
+
 /** One dive site's diver-facing preview facts — no shop-internal fields. */
 export type TripSitePeek = {
   name: string;

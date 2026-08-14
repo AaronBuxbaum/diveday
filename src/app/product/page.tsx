@@ -15,14 +15,15 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 
-// `instant = true`: navigating here paints immediately. Every request-scoped
-// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
-// one placed inside the page — so the frame lands without waiting on the
-// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+// `instant = true`: navigating here paints immediately. The request-scoped
+// read this page makes (`requestLocale()`) sits behind this segment's
+// `loading.tsx` — the boundary of record for a page — so the frame lands
+// without waiting on the request. `next build` audits the claim. See ADR
+// 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -50,25 +51,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProductPage() {
+/**
+ * The body renders **once**, in the reader's own language.
+ *
+ * Until 2026-08-14 this page wrapped the body in a `<Suspense>` whose fallback
+ * was `<ProductBody locale={DEFAULT_DIVER_LOCALE} />` — the whole page, a
+ * second time, in English. That bought the instant paint, and it cost the
+ * visitor everything they did before the negotiated-locale body resolved: a
+ * replaced subtree carries no DOM state over, so a tap on the anchor strip
+ * below scrolled to a heading in a subtree that was about to be thrown away,
+ * and an `es-ES` reader landed somewhere else on the page (the Spanish
+ * chapters above it are taller). It was invisible in every en-US screenshot
+ * and assertion, because both renders were the same words
+ * (FU-20260812-marketing-suspense-swap-discards-interaction).
+ *
+ * The paint is still instant, and it is `loading.tsx` — this segment's
+ * `<Suspense>` boundary, the arrangement ADR 20260804-instant-navigation
+ * already establishes — that makes it so. Nothing in that skeleton is
+ * interactive, so there is nothing to lose when the real body lands. The nav
+ * keeps its own boundary because it reads the *session* as well as the locale;
+ * the body must not wait on that.
+ */
+export default async function ProductPage() {
+  const locale = await requestLocale();
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <Suspense fallback={<ProductBody locale={DEFAULT_DIVER_LOCALE} />}>
-        <LocalizedProductBody />
-      </Suspense>
+      <ProductBody locale={locale} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
     </div>
   );
-}
-
-async function LocalizedProductBody() {
-  const locale = await requestLocale();
-  return <ProductBody locale={locale} />;
 }
 
 /**
@@ -449,10 +465,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           no disclosure: a section headed "the whole list, plainly" that showed
           a heading, two lines, and a "The full list" link in 350px of empty
           band was the emptiest thing on the page. Rendering it flat also puts
-          it in find-in-page, in the accessibility tree, and out of reach of
-          the localized-body swap that used to snap the disclosure shut
-          mid-click (FU-20260812, which still stands for the pages that keep
-          interactive state). */}
+          it in find-in-page and in the accessibility tree. It was once out of
+          reach of the localized-body swap that snapped the disclosure shut
+          mid-click as well; that swap is gone (see `ProductPage`), so a
+          disclosure here would be safe again — it is still flat because the
+          band read better this way. */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">

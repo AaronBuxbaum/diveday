@@ -49,12 +49,18 @@ const copy = {
   emptyImportBody: t("divers.list.emptyImportBody"),
   emptyImportAction: t("divers.list.emptyImportAction"),
   noContactDetails: t("divers.list.noContactDetails"),
-  cardCountOne: t("divers.list.cardCountOne"),
-  cardCountOther: t("divers.list.cardCountOther"),
+  certificationLevels: {
+    open_water: t("shared.readiness.certificationLevels.openWater"),
+    advanced_open_water: t("shared.readiness.certificationLevels.advancedOpenWater"),
+    rescue: t("shared.readiness.certificationLevels.rescue"),
+    divemaster: t("shared.readiness.certificationLevels.divemaster"),
+    instructor: t("shared.readiness.certificationLevels.instructor"),
+  },
+  noCertificationLevel: t("divers.list.noCertificationLevel"),
   pendingReviewText: t("divers.list.pendingReviewText"),
   toConfirmText: t("divers.list.toConfirmText"),
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
-  tableHeaderCards: t("divers.list.tableHeaderCards"),
+  tableHeaderLevel: t("divers.list.tableHeaderLevel"),
 };
 
 function renderList({
@@ -73,7 +79,6 @@ function renderList({
       shopSlug="blue-mantis"
       query={query}
       filter={filter}
-      locale="en-US"
       importHref={importHref}
       restoreAction={restoreAction}
       copy={{ ...copy, ...copyOverrides }}
@@ -201,6 +206,7 @@ describe("DiverList removed view", () => {
           phone: null,
           deletedAt: new Date("2026-08-01T00:00:00Z"),
         },
+        certificationLevel: null,
         certificationCount: 0,
         pendingCertificationCount: 0,
         specialtyCount: 0,
@@ -302,7 +308,6 @@ describe("DiverList removed view", () => {
         page: emptyPage,
         shopSlug: "blue-mantis",
         filter: "needs_attention" as DiverFilter,
-        locale: "en-US",
         importHref: null,
         restoreAction: null,
         copy,
@@ -348,5 +353,87 @@ describe("DiverList removed view", () => {
     const heading = screen.getByRole("heading", { name: /People/ });
     expect(heading).toHaveTextContent("12");
     expect(screen.getByText("12 divers on file")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The Cards column carried a card *count* whose value was `1` on nearly every
+ * row. It now carries the fact staff actually ask for at booking time — the
+ * diver's level — worded from the shop's one level vocabulary and computed
+ * server-side (`certificationLevel`, src/db/divers.ts). The badges beside it
+ * are unchanged: they still appear only when a row needs a staffer.
+ */
+describe("DiverList level cell", () => {
+  function rosterPage(diver: {
+    certificationLevel: string | null;
+    pendingCertificationCount?: number;
+    pendingSpecialtyOrNitroxCount?: number;
+    importedUnconfirmedCount?: number;
+  }): DiverPage {
+    return {
+      ...emptyPage,
+      total: 1,
+      pageCount: 1,
+      divers: [
+        {
+          person: {
+            id: "person-1",
+            fullName: "Nadia Okafor",
+            email: "nadia@example.com",
+            phone: null,
+            deletedAt: null,
+          },
+          certificationCount: 1,
+          pendingCertificationCount: 0,
+          specialtyCount: 0,
+          pendingSpecialtyOrNitroxCount: 0,
+          importedUnconfirmedCount: 0,
+          nitroxCertificationCount: 0,
+          rentalFit: null,
+          ...diver,
+        } as unknown as DiverPage["divers"][number],
+      ],
+    };
+  }
+
+  it("heads the column with the level, and names it in the shop's own level words", () => {
+    renderList({ page: rosterPage({ certificationLevel: "advanced_open_water" }) });
+    expect(screen.getByRole("columnheader", { name: "Level" })).toBeInTheDocument();
+    // Once per layout: the phone card and the table row both render.
+    expect(screen.getAllByText("Advanced Open Water").length).toBeGreaterThan(0);
+    // The count it replaced is gone from the row entirely.
+    expect(screen.queryByText("1 card")).toBeNull();
+  });
+
+  it("says so in words when no card speaks for this diver", () => {
+    renderList({ page: rosterPage({ certificationLevel: null }) });
+    expect(screen.getAllByText("No current card").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the pending and to-confirm badges beside the level", () => {
+    renderList({
+      page: rosterPage({
+        certificationLevel: "open_water",
+        pendingCertificationCount: 1,
+        pendingSpecialtyOrNitroxCount: 1,
+        importedUnconfirmedCount: 2,
+      }),
+    });
+    expect(screen.getAllByText("2 pending review").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2 to confirm").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Open Water").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * A card awaiting review is not a level: the diver's *verified* card is what
+   * the cell names, with the pending one raising its badge beside it. The rule
+   * itself is pinned in src/db/divers.test.ts; this is the render half.
+   */
+  it("shows the verified level, not the pending one, when both are on file", () => {
+    renderList({
+      page: rosterPage({ certificationLevel: "open_water", pendingCertificationCount: 1 }),
+    });
+    expect(screen.getAllByText("Open Water").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Divemaster")).toBeNull();
   });
 });

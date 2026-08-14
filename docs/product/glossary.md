@@ -185,6 +185,15 @@ new domain concept, define it here in the same PR.
   product shows, not only depths — including the automated outlook's wave height, at its own
   precision rule (a tenth of a metre, a whole foot), because whole metres would collapse the entire
   range a reef boat ever sees into 0 and 1.
+- **Depth marker** — `{depth18}` in a course page's prose, which renders as "18 meters" or
+  "60 feet" depending on the shop's **depth unit**. Course copy is free text in the shop's own row,
+  so nothing could convert it and a Key Largo shop was reading "No deeper than 12 meters" on its own
+  page. The number in the marker is metres, but resolution is a **lookup into the agency pairs**
+  (12/40, 18/60, 21/70, 30/100, 40/130 — the same table as the depth ceiling above), never a
+  conversion, which would print "59 ft". `{depth18n}` is the bare number, for a range. A shop may
+  delete a marker and write the depth in its own words at any time; only a *broken* marker is
+  refused, when the course editor saves.
+  See [20260814-course-depth-markers](../architecture/decisions/20260814-course-depth-markers.md).
 - **Temperature unit** — `shops.temperature_unit`, whether a shop's staff and divers read water
   temperature in Celsius or Fahrenheit. Display and entry only, on the same terms as the depth unit
   above: storage is canonical Celsius (`trips.water_temperature_c`), so switching it moves no

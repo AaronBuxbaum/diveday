@@ -116,12 +116,11 @@
     "emptyImportBody": "¿Vienes de una hoja de cálculo o de otro sistema? Trae toda la lista de una vez.",
     "emptyImportAction": "Importar tu lista",
     "noContactDetails": "Aún sin datos de contacto",
-    "cardCountOne": "{count} tarjeta",
-    "cardCountOther": "{count} tarjetas",
     "pendingReviewText": "{count} pendiente de revisión",
     "toConfirmText": "{count} por confirmar",
     "tableHeaderPerson": "Persona",
-    "tableHeaderCards": "Tarjetas",
+    "tableHeaderLevel": "Nivel",
+    "noCertificationLevel": "Sin tarjeta vigente",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
     }

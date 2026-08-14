@@ -90,6 +90,24 @@ describe("paged schedule queries", () => {
     );
   });
 
+  it("treats a hand-crafted cursor carrying a non-uuid id as page one", async () => {
+    const { db, shop } = await seededShopContext();
+    // `?after=` on the **public** schedule (`/s/[shopSlug]`) is a URL string
+    // from an anonymous visitor, and its id half lands in `gt(trips.id, …)`
+    // against a `uuid` column. A cursor of the right shape carrying junk used
+    // to reach Postgres as a literal it cannot parse — `invalid input syntax
+    // for type uuid`, a 500 with no session in front of it
+    // (FU-20260814-orders-stray-person-id-500's sweep). `decodeCursor` already
+    // says anything unparsable is page one; this is that.
+    const forged = Buffer.from(
+      JSON.stringify(["2026-07-24T00:00:00.000Z", "nope"]),
+      "utf8",
+    ).toString("base64url");
+    const forgedPage = await pagedUpcomingTripsWithCounts(db, shop.id, { cursor: forged });
+    const firstPage = await pagedUpcomingTripsWithCounts(db, shop.id);
+    expect(forgedPage.trips.map((t) => t.id)).toEqual(firstPage.trips.map((t) => t.id));
+  });
+
   it("filters to fun dives or course sessions on request", async () => {
     const { db, shop } = await seededShopContext();
     const all = await upcomingTripsWithCounts(db, shop.id);
