@@ -20,9 +20,14 @@
   (FU-20260812-marketing-suspense-swap-discards-interaction). So: **a fallback holds shape, never
   interaction.** `/product` and `/pricing` now render their body once behind an ordinary
   body-shaped `loading.tsx`, exactly as rule 1 has it. `/` renders its body once behind an in-page
-  `<Suspense>` with the same kind of skeleton, because the *root* segment is the one place
-  `loading.tsx` is not segment-scoped — `src/app/loading.tsx` would become the boundary for
-  `/switching/**`, `/sign-in`, `/about` and `/offline-manifest` as well. The regression guard is the
+  `<Suspense>` with the same kind of skeleton, because `loading.tsx` is scoped to a segment *and
+  everything under it* — `src/app/loading.tsx` would become the boundary for `/switching/**`,
+  `/sign-in`, `/about` and `/offline-manifest` as well. That is not special to the root: any
+  segment with children has it. `/switching` is the second instance and took the same treatment,
+  because a `src/app/switching/loading.tsx` would also be what a client navigation into
+  `/switching/[competitor]` paints — a guide's hero-and-rail body wearing the hub's
+  index-of-rows bars. **The rule: a segment whose children render a different shape puts its
+  skeleton in an in-page `<Suspense>`, not in `loading.tsx`.** The regression guard is the
   `Accept-Language: es` describe at the end of `e2e/marketing.spec.ts`: it records, from an init
   script, whether default-locale body copy is *ever* in the document for a Spanish reader.
 
