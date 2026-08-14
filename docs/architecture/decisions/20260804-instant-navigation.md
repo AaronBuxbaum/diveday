@@ -8,6 +8,23 @@
   Since this ADR requires that boundary of every route, it makes JavaScript a requirement of the whole
   app. That is now stated, and the fallbacks written against the opposite assumption are gone —
   20260812-javascript-is-required.
+- **Amended:** 2026-08-14 — a fallback may not be the page. `/`, `/product` and `/pricing` earned
+  their instant paint by passing their **whole body, in the default locale**, as the `<Suspense>`
+  fallback for the negotiated-locale one. It paints real content, and it costs the visitor
+  everything they did to that subtree before the real body resolves: React carries no DOM state
+  across a replaced subtree, and for an en-US reader the two renders are identical copy, so the
+  swap is invisible in every screenshot and every English-pinned assertion while still tearing the
+  DOM down. It cost a `<details>` its open state (a CI-only failure in `e2e/marketing.spec.ts`,
+  PR #473) and then, once that disclosure was deleted, cost an `es-ES` reader their scroll position
+  when they tapped `/product`'s anchor strip early
+  (FU-20260812-marketing-suspense-swap-discards-interaction). So: **a fallback holds shape, never
+  interaction.** `/product` and `/pricing` now render their body once behind an ordinary
+  body-shaped `loading.tsx`, exactly as rule 1 has it. `/` renders its body once behind an in-page
+  `<Suspense>` with the same kind of skeleton, because the *root* segment is the one place
+  `loading.tsx` is not segment-scoped — `src/app/loading.tsx` would become the boundary for
+  `/switching/**`, `/sign-in`, `/about` and `/offline-manifest` as well. The regression guard is the
+  `Accept-Language: es` describe at the end of `e2e/marketing.spec.ts`: it records, from an init
+  script, whether default-locale body copy is *ever* in the document for a Spanish reader.
 
 ## Context
 

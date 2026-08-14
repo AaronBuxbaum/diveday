@@ -137,27 +137,25 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // against a directly-rendered document as well as a client navigation.
   //
   // This block used to click a `<details>` open, and that click was the one
-  // interaction on the page that could lose a race. `/product` paints a
-  // **default-locale body as its own Suspense fallback** and swaps in the
-  // negotiated-locale one when it resolves (see `ProductPage`); for an en-US
-  // run both render identical copy, but the swap replaces the subtree, and
-  // `<details>` open/closed is DOM state a replaced subtree does not carry
-  // over. A click landing in that window opened a disclosure that was about to
-  // be thrown away, and the next assertion then queried a *closed* `<details>`
-  // — contents outside the accessibility tree, so `getByRole` reported
+  // interaction on the page that could lose a race. `/product` painted a
+  // **default-locale body as its own Suspense fallback** and swapped in the
+  // negotiated-locale one when it resolved; for an en-US run both rendered
+  // identical copy, but the swap replaced the subtree, and `<details>`
+  // open/closed is DOM state a replaced subtree does not carry over. A click
+  // landing in that window opened a disclosure that was about to be thrown
+  // away, and the next assertion then queried a *closed* `<details>` —
+  // contents outside the accessibility tree, so `getByRole` reported
   // "element(s) not found" rather than "not visible". That is exactly how this
   // failed on CI (shard 3/4, run 31549005047) and never once locally.
   //
-  // The disclosure is gone: the index renders flat, because a section headed
-  // "the whole list, plainly" that hid the list was the emptiest band on the
-  // page. So there is no *open/closed* state left for the swap to drop, and
-  // the assertions below are ordinary auto-retrying ones. The page still keeps
-  // one thing across the swap that the swap can spoil — scroll position, now
-  // that the hero is followed by a five-entry anchor strip — so the
-  // architecture half of this is still open, with that as its acceptance case
-  // (FU-20260812-marketing-suspense-swap-discards-interaction). The load-gated
-  // `goto` stays: it is the navigation's own completion, never a guessed
-  // interval.
+  // Both halves are closed now. The disclosure went first (the index renders
+  // flat — a section headed "the whole list, plainly" that hid the list was the
+  // emptiest band on the page), and on 2026-08-14 the double render went too:
+  // the body renders once, in the reader's own language, behind the segment's
+  // `loading.tsx`, so there is no doomed subtree left to interact with at all
+  // (see `ProductPage`, and the `Accept-Language: es` describe at the bottom of
+  // this file, which is the regression guard). The load-gated `goto` stays: it
+  // is the navigation's own completion, never a guessed interval.
   await page.goto("/product");
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
@@ -711,4 +709,125 @@ test("a signed-out visitor reaches the demo from the top of a switching guide", 
 
   await expect(page).toHaveURL(/\/shop\//);
   await expect(page.getByText("Demo shop")).toBeVisible();
+});
+
+/**
+ * **The marketing pages render their body once, in the reader's own language.**
+ *
+ * Until 2026-08-14 each of `/`, `/product` and `/pricing` rendered its body
+ * *twice*: the `<Suspense>` fallback was the whole page in the default locale,
+ * and the negotiated-locale body replaced it when `requestLocale()` resolved.
+ * That is what made these routes paint instantly, and it meant a visitor could
+ * see, scroll, and tap a subtree that was about to be torn down — React carries
+ * no DOM state across a replaced subtree. On `/product` the cost was the anchor
+ * strip: an `es-ES` reader who tapped "Con el barco de vuelta" before the
+ * Spanish body landed scrolled to that heading in the *English* subtree, and
+ * the preserved offset then put them somewhere in the payment band, because
+ * every Spanish section above it is taller. Quiet, and impossible to attribute
+ * from the reader's side (FU-20260812-marketing-suspense-swap-discards-interaction).
+ *
+ * Why no en-US test could ever have caught it: for an en-US reader the two
+ * renders are the same words, so the swap is invisible in every screenshot and
+ * every English-pinned assertion, and it still tears the DOM down.
+ *
+ * Why this one catches it without a timing guess. Under the old arrangement the
+ * English body was not merely *likely* to be on screen first — it was literally
+ * in the first HTML frame, part of the prerendered static shell, before a byte
+ * of Spanish existed. So the assertion is not "wait and hope to catch the
+ * window": an init script (installed before any page script runs) watches the
+ * document from its creation and records whether English body copy is *ever*
+ * present, however briefly. Old code: recorded every run. New code: never,
+ * because the first frame is a skeleton with no words and nothing to tap.
+ *
+ * The markers are body copy, never chrome — `MarketingNavFallback` and
+ * `MarketingFooterFallback` still render the default-locale header and footer
+ * for one frame, which is a separate (stateless) trade and not what this guards.
+ */
+test.describe("with Accept-Language: es", () => {
+  test.use({ locale: "es-ES" });
+
+  /** One phrase per page, unique to its body and absent from the chrome. */
+  const bodyCopy = {
+    "/": {
+      english: "Run the whole dive day, from booking to head count.",
+      spanish: "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
+    },
+    "/product": {
+      english: "From the first booking to the last head count.",
+      spanish: "Desde la primera reserva hasta el último recuento.",
+    },
+    "/pricing": {
+      english: "One flat price for the whole shop.",
+      spanish: "Un precio fijo para todo el centro.",
+    },
+  } as const;
+
+  test("a marketing page never paints a body in a language its reader did not ask for", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      (markers: string[]) => {
+        const recorder = window as unknown as { __englishBodyEverSeen?: string[] };
+        const seen: string[] = [];
+        recorder.__englishBodyEverSeen = seen;
+        const look = () => {
+          const text = document.body?.textContent ?? "";
+          for (const marker of markers) {
+            if (text.includes(marker) && !seen.includes(marker)) seen.push(marker);
+          }
+        };
+        look();
+        // Parser-inserted nodes generate mutation records too, so this sees the
+        // streamed document as it is built — including a Suspense fallback that
+        // exists for a single frame.
+        new MutationObserver(look).observe(document, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      },
+      Object.values(bodyCopy).map((copy) => copy.english),
+    );
+
+    for (const [path, copy] of Object.entries(bodyCopy)) {
+      await page.goto(path);
+      // The page is finished rendering in the reader's language — so anything
+      // the recorder caught was on screen at some point before this, which is
+      // exactly the window the old fallback lived in.
+      await expect(page.getByRole("heading", { level: 1, name: copy.spanish })).toBeVisible();
+      const seen = await page.evaluate(
+        () =>
+          (window as unknown as { __englishBodyEverSeen?: string[] }).__englishBodyEverSeen ?? [],
+      );
+      expect(seen, `${path} painted default-locale body copy before its own`).toEqual([]);
+    }
+  });
+
+  test("/product's anchor strip lands an es-ES reader in the chapter they asked for", async ({
+    page,
+  }) => {
+    // The acceptance case from the follow-up, and the reason the fix is worth
+    // its skeleton: the strip is the page's whole table of contents, it is the
+    // first interactive thing under the hero, and it was the control the swap
+    // could spoil. (The `<details>` that originally raised this was deleted on
+    // 2026-08-13; the strip replaced it as the thing to prove.)
+    await page.goto("/product");
+
+    const arc = page.getByRole("navigation", { name: "Un día de buceo" });
+    await expect(arc).toBeVisible();
+    const recapEntry = arc.getByRole("link", { name: /Con el barco de vuelta/ });
+    await expect(recapEntry).toHaveAttribute("href", "#recap");
+
+    await recapEntry.click();
+    await expect(page).toHaveURL(/\/product#recap$/);
+    // Still looking at chapter 05 — in Spanish, in the one and only body this
+    // page renders. Under the old double render this heading existed twice in
+    // succession at two different offsets, and a tap early enough scrolled to
+    // the copy that was about to be discarded.
+    await expect(
+      page.getByRole("heading", {
+        name: "El día termina con un resumen que los buceadores quieren compartir.",
+      }),
+    ).toBeInViewport();
+  });
 });
