@@ -970,12 +970,23 @@ export async function resetDemoSchedule(
  * back by then, so the demo simply aged, and the only visible symptom was the
  * cron's own alarm.
  *
- * Matched by name, the same key `seedDemoSchedule` and the purge above use. The
- * address convention differs between the canonical demo (`<local>@demo.invalid`)
- * and a minted one (`<local>@<slug>.demo.invalid`), so it is read off a
- * colleague who is still here rather than rebuilt from the shop's slug — one
- * fewer copy of a rule to drift, and `people_shop_email_unique` is unforgiving
- * about getting it wrong.
+ * **A name is not identity here, and this is the whole subtlety.** The purge
+ * above and `seedDemoSchedule` can both match the cast by name because they run
+ * after it, on rows they control — but a *diver* is called whatever the booking
+ * form was given, and `e2e/returning-diver.spec.ts` books a seat as "Sal
+ * Moretti", the seeded captain's own name. Keyed by name, this granted that
+ * diver the `captain` role, the shop then had two captains, `seedDemoSchedule`
+ * rostered whichever one the role lookup returned first, and the real captain's
+ * Today lost the boat they crew. A staff role handed to a customer is the
+ * serious half of that; the failing lens test was only how it surfaced.
+ *
+ * So the key is the **address**. `people_shop_email_unique` makes it one row
+ * per shop, and the seed writes `<local>@<domain>` for every member of the cast
+ * — `demo.invalid` for the canonical demo, `<slug>.demo.invalid` for a minted
+ * one. The domain is read off a colleague who is both still here and *actually
+ * on staff*, rather than rebuilt from the shop's slug: one fewer copy of a rule
+ * to drift, and a diver who books as `sal@example.com` cannot answer the
+ * question, because holding a staff role is part of being asked.
  *
  * Roles are reconciled for the whole cast, not just the people this inserts: the
  * lookups that throw join through `person_roles`, so a member who is present but
@@ -986,38 +997,52 @@ export async function resetDemoSchedule(
  * persona has never had one.
  */
 async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promise<void> {
-  const castNames = new Set<string>(staffDefs.map((s) => s.fullName));
-  const present = (
-    await db
-      .select({ id: people.id, fullName: people.fullName, email: people.email })
-      .from(people)
-      .where(eq(people.shopId, shopId))
-  ).filter((person) => castNames.has(person.fullName));
-  const byName = new Map(present.map((person) => [person.fullName, person]));
+  const castLocals = new Set<string>(staffDefs.map((s) => s.local));
+  const localPartOf = (email: string | null) => (email ?? "").split("@")[0];
+  const domainOf = (email: string | null) => (email ?? "").split("@")[1];
 
-  const missing = staffDefs.filter((s) => !byName.has(s.fullName));
+  // Which address convention this shop follows, answered only by someone who
+  // holds a staff role — see the note above on why a matching name, or even a
+  // matching local part, is not enough on its own.
+  const onStaff = await db
+    .select({ email: people.email })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])));
+  const domain = onStaff
+    .map((person) => (castLocals.has(localPartOf(person.email)) ? domainOf(person.email) : ""))
+    .find(Boolean);
+  // Not a demo shop that drifted — it is a shop with no recognisable cast at
+  // all, and inventing an address for one would be a guess.
+  if (!domain) return;
+
+  const addressFor = (local: string) => `${local}@${domain}`;
+  const idByAddress = new Map(
+    (
+      await db
+        .select({ id: people.id, email: people.email })
+        .from(people)
+        .where(eq(people.shopId, shopId))
+    )
+      .filter((person) => person.email)
+      .map((person) => [person.email as string, person.id]),
+  );
+
+  const missing = staffDefs.filter((s) => !idByAddress.has(addressFor(s.local)));
   if (missing.length > 0) {
-    // A seeded *colleague's* address answers "which shop's convention is this",
-    // which is why `present` is narrowed to the cast first: a walk-up booked
-    // through the demo carries whatever address they typed, and building a
-    // staff email on that domain would collide or mislead. A shop with none of
-    // the cast left is not one this can repair — it is not a demo shop that
-    // drifted, and inventing a domain for it would be a guess.
-    const domain = present.map((person) => person.email?.split("@")[1]).find(Boolean);
-    if (!domain) return;
     const restored = await db
       .insert(people)
       .values(
         missing.map((s) => ({
           shopId,
           fullName: s.fullName,
-          email: `${s.local}@${domain}`,
+          email: addressFor(s.local),
           emergencyContactName: s.emergencyContact?.[0] ?? null,
           emergencyContactPhone: s.emergencyContact?.[1] ?? null,
         })),
       )
-      .returning({ id: people.id, fullName: people.fullName });
-    for (const person of restored) byName.set(person.fullName, { ...person, email: null });
+      .returning({ id: people.id, email: people.email });
+    for (const person of restored) idByAddress.set(person.email as string, person.id);
     // The same shift the stable seed gives every one of them. Without it the
     // repair leaves a person on the roster and off the rostering surface, which
     // is a different wrong answer from the one it just fixed — and the reset
@@ -1036,23 +1061,23 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     );
   }
 
-  const staffIds = staffDefs
-    .map((s) => byName.get(s.fullName)?.id)
+  const castIds = staffDefs
+    .map((s) => idByAddress.get(addressFor(s.local)))
     .filter((id) => id !== undefined);
   const heldRoles = new Set(
     (
       await db
         .select({ personId: personRoles.personId, role: personRoles.role })
         .from(personRoles)
-        .where(inArray(personRoles.personId, staffIds))
+        .where(inArray(personRoles.personId, castIds))
     ).map((row) => `${row.personId}:${row.role}`),
   );
   const owedRoles = staffDefs.flatMap((s) => {
-    const person = byName.get(s.fullName);
-    if (!person) return [];
+    const personId = idByAddress.get(addressFor(s.local));
+    if (!personId) return [];
     return s.roles
-      .filter((role) => !heldRoles.has(`${person.id}:${role}`))
-      .map((role) => ({ personId: person.id, role }));
+      .filter((role) => !heldRoles.has(`${personId}:${role}`))
+      .map((role) => ({ personId, role }));
   });
   if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
