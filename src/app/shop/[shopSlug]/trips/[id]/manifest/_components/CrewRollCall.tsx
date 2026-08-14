@@ -21,6 +21,7 @@ import {
   RollCallControls,
   rollCallRecordedTone,
   rollCallRowState,
+  rollCallScrollMargin,
 } from "./RollCallControls";
 
 /**
@@ -152,17 +153,13 @@ export function CrewRollCall({
                   key={member.id}
                   // A jump target, exactly as every diver row is: the summary
                   // panel's chips now name uncalled *crew* too, and this row
-                  // sits below the whole diver roster — so on a phone the
-                  // chip is often several screens from the person it names.
-                  // The scroll margin keeps the name clear of the sticky
-                  // checkpoint panel, sized to that panel at its tallest for
-                  // the checkpoint kind (after a dive it can carry three
-                  // pinned danger lines). Landing a name *under* the panel is
-                  // what invites a tap on the next visible row's button for
-                  // the wrong person — the same reason the diver rows carry
-                  // it (dive-domain review 20260810).
+                  // sits below the whole diver roster — so on a phone the chip
+                  // is often several screens from the person it names. The
+                  // margin that keeps the landing clear of the sticky panel is
+                  // shared with the diver rows rather than restated here
+                  // (`rollCallScrollMargin`).
                   id={`crew-row-${member.id}`}
-                  className={`border-l-4 px-4 py-4 ${isDeparture ? "scroll-mt-64" : "scroll-mt-80"} ${
+                  className={`border-l-4 px-4 py-4 ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
