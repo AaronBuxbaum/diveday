@@ -397,17 +397,34 @@ jobs:
       # GitHub keeps it reachable via refs/pull/N/head forever — so fetching
       # the SHA always works; the step after this puts a local branch name on
       # it, which is all reg-keygen actually needs.
+      #
+      # `github.sha` for `push` too, not `github.ref_name`: this job runs 6-10
+      # minutes into the run (it needs every visual shard), and `ref: main`
+      # checks out whatever `main` points to *at that moment* — not the commit
+      # that triggered this run. A second merge landing in that window moves
+      # the branch tip, so this step would silently check out someone else's
+      # commit while the screenshots downloaded below stay this run's own
+      # (matched by workflow run, not by SHA). reg-suit then computes its git
+      # keys from the wrong commit and publishes this run's screenshots to S3
+      # under the *next* commit's hash — so this commit's own hash is never
+      # published, and the next run's baseline lookup finds nothing and
+      # reports everything as new. Two merges within ~10 minutes of each other
+      # reproduced this exactly (427 new items, 0 compared, on a push to
+      # main). Pinning to `github.sha` — the exact commit this run is for,
+      # same as every other job's default checkout — closes the race.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       # reg-keygen-git-hash-plugin refuses a detached HEAD ("Can't detect
       # branch name"), so give the checked-out commit its branch name back
       # locally. `-B` because nothing else owns this name in a fresh workspace,
-      # and the remote branch may no longer exist to track.
-      - name: Name the detached PR head for reg-keygen
-        if: github.event_name == 'pull_request'
-        run: git checkout -B "${GITHUB_HEAD_REF}"
+      # and the remote branch may no longer exist to track. For `push`, this
+      # intentionally reuses `main`'s name for a local branch that may now
+      # point at an older commit than the remote tip — reg-keygen only needs
+      # *a* name to stop calling HEAD detached, not for it to track anything.
+      - name: Name the detached head for reg-keygen
+        run: git checkout -B "${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}"
       # reg-keygen-git-hash-plugin's expected-key algorithm only works by
       # triangulating a merge-base against *other* local branches (it's built
       # for topic-branch-vs-trunk, per the checkout comment above) — it has no
