@@ -288,6 +288,7 @@
       "emergencyContact": "Contact",
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Cleanup",
+      "owedRefund": "Refund owed",
       "reviewsPending": "Reviews"
     },
     "blockerAction": {
@@ -424,7 +425,9 @@
         "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",
         "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
       },
-      "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
+      "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}.",
+      "owedRefundDetail": "{amount} for {tripTitle} on {when} — you cancelled the departure and the money couldn't go back by card. Return it, then mark the seat refunded.",
+      "owedRefundDetailNoAmount": "Owed for {tripTitle} on {when} — you cancelled the departure and no amount was recorded against the payment. Return what they paid, then mark the seat refunded."
     },
     "reviewsPending": {
       "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",

@@ -99,5 +99,12 @@ cancelled, which is a consumer-protection question in most jurisdictions rather 
   values; `paid`/`deposit` stay parseable so a message queued before this change still sends on
   retry.
 - One additive migration: `ALTER TYPE payment_event_operation ADD VALUE 'shop_cancellation_refund'`.
-- The swept-departure path has no staff surface listing money it could not return — the blow-out has
-  one, the sweep does not. Filed as `FU-20260813-owed-refunds-have-no-staff-queue`.
+- **Closed 2026-08-14.** The swept-departure path had no staff surface listing money it could not
+  return: the blow-out cascade's own page rendered each seat's payment status to whoever had just
+  called it, while the hourly sweep counted `refundsOwed` into a single log line and told the diver
+  the shop would be in touch. `listOwedShopCancellationRefunds` now derives that residue — a seat
+  still holding a capture on a cancelled trip, with no stored flag to reconcile — and renders it as
+  a panel on the Orders index beside the stuck-payment queue, mirrored into Today once the money has
+  sat for a day. The predicate deliberately excludes a **cancelled booking**, matching
+  `refundBookingsForShopCancelledTrip` seat for seat: a diver who cancelled inside no window
+  forfeited their fare, and the departure being called off later does not hand it back.

@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
@@ -10,7 +10,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookings, trips } from "./schema";
+import { bookingPayments, bookings, people, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 /**
@@ -288,6 +288,105 @@ export function shopCancellationPaymentStory(
  * a diver whose person row was erased, is unreachable but has just as much money
  * with the shop. Money comes back whether or not anyone can be told.
  */
+/**
+ * How long a captured payment must have been sitting before an owed refund is
+ * loud enough for Today. A day.
+ *
+ * The clock this measures is `booking_payments.updated_at`, which for one of
+ * these rows is when the money was *captured* — a refund that could not be
+ * issued deliberately leaves the payment row untouched, so there is no "we
+ * tried and failed at T" stamp to read, and inventing a column to hold one
+ * would be the stored flag this queue is built to avoid. So the rule this
+ * states is the honest one: money the shop has held for more than a day that
+ * now belongs to somebody else. In practice a swept Saturday crosses it almost
+ * at once, which is the intent — the diver has already been told the shop will
+ * be in touch.
+ */
+export const OWED_REFUND_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/** How many owed refunds one read will return. A panel, not a ledger. */
+const OWED_REFUND_LIMIT = 50;
+
+/** One seat whose departure the shop cancelled and whose money never went back. */
+export type OwedShopCancellationRefund = {
+  bookingId: string;
+  tripId: string;
+  tripTitle: string;
+  tripStartsAt: Date;
+  diverName: string;
+  /** Null for a counter mark that recorded no amount — staff know what they took. */
+  amountCents: number | null;
+  currency: string;
+  /** Only the deposit was ever captured, so only the deposit is owed back. */
+  depositOnly: boolean;
+  /** When this money was last touched; see `OWED_REFUND_STALE_AFTER_MS`. */
+  since: Date;
+};
+
+/**
+ * Money the shop owes divers for departures it cancelled and could not refund
+ * automatically.
+ *
+ * There is no `refund_owed` column and there should not be one. This residue is
+ * *derivable* — a seat still holding a capture on a trip that no longer exists —
+ * and a stored flag would have to be reconciled with Stripe every time a staff
+ * member handed the cash back, which is exactly the drift a queue like this is
+ * meant to remove.
+ *
+ * The predicate mirrors `refundBookingsForShopCancelledTrip`'s own set, seat for
+ * seat, so this lists precisely what that cascade left behind and nothing else.
+ * In particular it excludes a **cancelled booking**, and that exclusion is
+ * load-bearing rather than incidental: a diver who cancelled inside no window
+ * forfeited their fare and still reads `paid`, and the shop does not owe them
+ * anything just because the departure was later called off
+ * (ADR 20260813-shop-cancellation-refunds-itself).
+ *
+ * A seat that *was* refunded reads `refunded`, not `paid`, so it never appears —
+ * the obvious way to get this wrong.
+ *
+ * Bounded and shop-scoped, like every other back-office reader. Newest money
+ * first, so the seat a shop is most likely to be asked about is on top.
+ */
+export async function listOwedShopCancellationRefunds(
+  db: AppDb,
+  shopId: string,
+  options: { olderThan?: Date; limit?: number } = {},
+): Promise<OwedShopCancellationRefund[]> {
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
+      diverName: people.fullName,
+      amountCents: bookingPayments.amountCents,
+      currency: bookingPayments.currency,
+      paymentStatus: bookingPayments.status,
+      since: bookingPayments.updatedAt,
+    })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+        eq(trips.status, "cancelled"),
+        // The forfeit carve-out — see the doc comment above.
+        ne(bookings.status, "cancelled"),
+        ...(options.olderThan ? [lt(bookingPayments.updatedAt, options.olderThan)] : []),
+      ),
+    )
+    .orderBy(desc(bookingPayments.updatedAt))
+    .limit(options.limit ?? OWED_REFUND_LIMIT);
+
+  return rows.map(({ paymentStatus, ...row }) => ({
+    ...row,
+    depositOnly: paymentStatus === "deposit_paid",
+  }));
+}
+
 export async function refundBookingsForShopCancelledTrip(
   db: AppDb,
   input: { shopId: string; tripId: string },

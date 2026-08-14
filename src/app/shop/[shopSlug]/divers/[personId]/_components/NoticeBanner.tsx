@@ -47,11 +47,6 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "divers.notices.cardRestoreConflict",
   },
-  "card-sighting-required": {
-    form: "specialty-cards",
-    tone: "danger",
-    key: "divers.notices.cardSightingRequired",
-  },
   // The card-removal toast is handled by the page itself (`UndoToast`); this
   // entry is the fallback for a `?notice=card-deleted` with no id to undo.
   "card-deleted": { form: "cards", tone: "success", key: "divers.notices.cardDeleted" },

@@ -89,6 +89,22 @@ export const EMPTY_REVIEW_AGGREGATE: ReviewAggregate = {
 export const MAX_SUPPRESSED_SHARE_FOR_RATING = 0.2;
 
 /**
+ * How many reviews a shop must have ruled on before the share above means
+ * anything.
+ *
+ * Ten. Under that a ratio is noise rather than a pattern: a shop with three
+ * reviews that takes down one piece of spam sits at 33% and would lose its
+ * search-result stars over a single honest act, while the shop the rule is
+ * actually for — a record curated into a 5.0 — cannot be built out of nine
+ * reviews. Every other thin-sample judgement in the product works this way.
+ *
+ * The cost is a window near the start where suppression is unconstrained, and
+ * it is bounded on purpose: below the floor a shop's rating is one no reader
+ * is relying on yet, and the tenth judged review closes it.
+ */
+export const MIN_JUDGED_REVIEWS_FOR_SUPPRESSION = 10;
+
+/**
  * Whether the published average still describes the shop's real record — the
  * one question that decides if `aggregateRating` is emitted
  * (ADR 20260813-review-moderation-has-a-floor).
@@ -99,9 +115,45 @@ export const MAX_SUPPRESSED_SHARE_FOR_RATING = 0.2;
  * that will render it as a verdict beside a search result.
  */
 export function ratingIsRepresentative(aggregate: ReviewAggregate): boolean {
+  // Nothing published is nothing to stand behind. This also catches the shop
+  // whose every review is hidden, which arrives here with a real suppressed
+  // count and no average to describe anything.
+  if (aggregate.count === 0) return false;
   const judged = aggregate.count + aggregate.suppressedCount;
-  if (judged === 0) return false;
+  if (judged < MIN_JUDGED_REVIEWS_FOR_SUPPRESSION) return true;
   return aggregate.suppressedCount / judged <= MAX_SUPPRESSED_SHARE_FOR_RATING;
+}
+
+/**
+ * Whether a shop has a rating that DiveDay is declining to publish — the
+ * question the staff Reviews page asks, which is not quite the one above.
+ *
+ * `ratingIsRepresentative` is false in two very different situations: a shop
+ * with nothing published yet, and a shop whose record has been curated past
+ * the line. The first has nothing withheld and nothing to act on; warning it
+ * would be nonsense. Only the second gets told.
+ */
+export function ratingIsWithheld(aggregate: ReviewAggregate): boolean {
+  return aggregate.count > 0 && !ratingIsRepresentative(aggregate);
+}
+
+/**
+ * How many hidden reviews a shop would have to republish to have its rating
+ * published again, or 0 when nothing is being withheld.
+ *
+ * This is what makes the warning actionable instead of merely true. The
+ * denominator does not move when a review is republished — it is every review
+ * the shop has ruled on either way — so this is just the count that has to
+ * come back out of the suppressed side to land under the share.
+ */
+export function reviewsToRepublishForRating(aggregate: ReviewAggregate): number {
+  if (!ratingIsWithheld(aggregate)) return 0;
+  const judged = aggregate.count + aggregate.suppressedCount;
+  const excess = aggregate.suppressedCount - MAX_SUPPRESSED_SHARE_FOR_RATING * judged;
+  // Withheld means the share is strictly over the line, so `excess` is
+  // positive and this is at least one. The clamp is against float dust in that
+  // multiplication, never against a real zero.
+  return Math.max(1, Math.ceil(excess));
 }
 
 /**

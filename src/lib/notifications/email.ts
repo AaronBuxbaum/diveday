@@ -83,6 +83,13 @@ type CheckoutRecoveryEmailInput = {
   timezone: string;
   /** Stripe's hosted checkout page for this exact session — resumes, doesn't restart. */
   checkoutUrl: string;
+  /**
+   * This recipient's own self-serve opt-out. Required, not optional: nobody
+   * receiving this has a confirmed booking behind them, which is what makes it
+   * a commercial send rather than service messaging
+   * (ADR 20260814-checkout-recovery-is-commercial).
+   */
+  unsubscribeUrl: string;
 };
 
 /**
@@ -564,11 +571,15 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
     shopName: escapeHtml(input.shopName),
   });
   const pickUp = t("notifications.checkoutRecovery.pickUp");
+  // The same words and the same opt-out flag the wait-list invite carries —
+  // one courtesy-email switch, so a diver who turns it off turns off all of it.
+  const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
+  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
     subject: t("notifications.checkoutRecovery.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greetingGeneric")}\n\n${body}\n\n${date}\n${time}\n\n${pickUp}:\n${input.checkoutUrl}\n`,
-    html: `<p>${t("notifications.common.greetingGeneric")}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.checkoutRecovery.finishPaying")}</a></p>`,
+    text: `${t("notifications.common.greetingGeneric")}\n\n${body}\n\n${date}\n${time}\n\n${pickUp}:\n${input.checkoutUrl}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${t("notifications.common.greetingGeneric")}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.checkoutRecovery.finishPaying")}</a></p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 

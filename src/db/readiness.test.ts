@@ -221,28 +221,19 @@ describe("trip readiness (in-memory PGlite)", () => {
       (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
     ).toContainEqual(expect.objectContaining({ code: "specialty_import_unconfirmed" }));
 
-    // A confirm with no attestation is refused, and the gate stays shut.
-    expect(
-      await reviewSpecialtyCertification(db, {
-        shopId: shop.id,
-        certificationId: imported.id,
-        status: "verified",
-      }),
-    ).toEqual({ ok: false, reason: "card_sighting_required" });
-    expect(
-      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
-    ).toContainEqual(expect.objectContaining({ code: "specialty_import_unconfirmed" }));
-
-    // With the attestation the gate opens, and the row records what was asserted.
+    // The confirm is one tap, the same as the level card's
+    // (ADR 20260814-one-tap-imported-card-confirm) — what still holds the gate
+    // is that a staffer has to make it, per card.
     const confirmed = await reviewSpecialtyCertification(db, {
       shopId: shop.id,
       certificationId: imported.id,
       status: "verified",
-      cardSighted: true,
     });
     expect(confirmed.ok).toBe(true);
     if (confirmed.ok) {
-      expect(confirmed.certification.reviewNote).toContain("seen in person");
+      // Nothing is written into the note on the shop's behalf. A staffer's own
+      // words still land there; a claim they never made does not.
+      expect(confirmed.certification.reviewNote).toBeNull();
     }
     expect(await getBookingReadiness(db, shop.id, rosterEntry.booking.id)).toEqual({
       status: "ready",

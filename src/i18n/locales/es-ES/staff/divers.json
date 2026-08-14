@@ -239,10 +239,7 @@
     "nitroxOption": "Nitrox",
     "captureForReview": "Capturar especialidad para revisión",
     "emptyState": "Aún no hay tarjetas de especialidad o nitrox — añade una arriba cuando la obtengan.",
-    "nitroxAgencyLine": "{agency} · Nitrox",
-    "confirmDisclosure": "He visto la tarjeta de este buceador, o he verificado el número con la agencia emisora. Confirmar despeja {what}.",
-    "whatSpecialtyDive": "la inmersión de especialidad de {specialty} que permite esta tarjeta",
-    "whatNitroxFill": "la carga de Nitrox que permite esta tarjeta"
+    "nitroxAgencyLine": "{agency} · Nitrox"
   },
   "stats": {
     "cards": "Tarjetas",
@@ -301,7 +298,6 @@
     "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
     "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad del centro, y no puedes borrar el tuyo propio.",
     "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
-    "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
     "cardRemovedToast": "Tarjeta eliminada.",
     "waiverPaperRecorded": "Liberación en papel registrada — firmada y archivada.",

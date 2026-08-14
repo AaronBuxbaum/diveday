@@ -6,8 +6,10 @@ import {
   parseReviewRating,
   publishesImmediately,
   ratingIsRepresentative,
+  ratingIsWithheld,
   reviewAggregate,
   reviewerDisplayName,
+  reviewsToRepublishForRating,
 } from "./reviews";
 
 describe("parseReviewRating", () => {
@@ -119,11 +121,11 @@ describe("ratingIsRepresentative", () => {
   });
 
   it("counts the share of what was judged, not of what survived", () => {
-    // 4 published + 1 hidden is one in five, exactly at the line and allowed;
+    // 16 published + 4 hidden is one in five, exactly at the line and allowed;
     // one more removal is over it. The denominator is every review the shop
     // ruled on, or a shop could dilute its own suppression by publishing more.
-    expect(ratingIsRepresentative(aggregate(4, 1))).toBe(true);
-    expect(ratingIsRepresentative(aggregate(4, 2))).toBe(false);
+    expect(ratingIsRepresentative(aggregate(16, 4))).toBe(true);
+    expect(ratingIsRepresentative(aggregate(15, 5))).toBe(false);
   });
 
   it("says no when there is nothing to describe", () => {
@@ -132,5 +134,86 @@ describe("ratingIsRepresentative", () => {
 
   it("says no for a shop whose every review is hidden", () => {
     expect(ratingIsRepresentative({ count: 0, average: null, suppressedCount: 3 })).toBe(false);
+  });
+
+  /**
+   * The small-sample floor. A ratio over three reviews describes whoever
+   * happened to write them, not how a shop moderates, so the rule waits until
+   * it has ten judged reviews to describe.
+   */
+  describe("below the small-sample floor", () => {
+    it("leaves a young shop's rating alone when it removes the one piece of spam it got", () => {
+      // 2 of 3 judged is 67% — far over the share, and meaningless at this size.
+      expect(ratingIsRepresentative(aggregate(1, 2))).toBe(true);
+      expect(ratingIsRepresentative(aggregate(4, 2))).toBe(true);
+    });
+
+    it("starts judging at the tenth review the shop has ruled on", () => {
+      // 9 judged: unconstrained. 10 judged with the same 3 hidden: over the
+      // share, and now large enough for the share to mean something.
+      expect(ratingIsRepresentative(aggregate(6, 3))).toBe(true);
+      expect(ratingIsRepresentative(aggregate(7, 3))).toBe(false);
+    });
+
+    it("still says no to a shop below the floor with nothing published at all", () => {
+      // The floor forgives a share, never an absent average — three hidden
+      // reviews and no published one is not a rating to stand behind.
+      expect(ratingIsRepresentative({ count: 0, average: null, suppressedCount: 3 })).toBe(false);
+    });
+  });
+});
+
+describe("ratingIsWithheld", () => {
+  it("separates a curated record from a shop that simply has no reviews", () => {
+    // Both are "not representative"; only the first is something the shop did
+    // and can undo, and only the first gets a warning on the Reviews page.
+    expect(ratingIsWithheld({ count: 7, average: 5, suppressedCount: 3 })).toBe(true);
+    expect(ratingIsWithheld({ count: 0, average: null, suppressedCount: 0 })).toBe(false);
+  });
+
+  it("says nothing is withheld from a shop under the floor", () => {
+    expect(ratingIsWithheld({ count: 4, average: 5, suppressedCount: 2 })).toBe(false);
+  });
+});
+
+describe("reviewsToRepublishForRating", () => {
+  it("is nothing to do when the rating is publishing", () => {
+    expect(reviewsToRepublishForRating({ count: 16, average: 5, suppressedCount: 4 })).toBe(0);
+    expect(reviewsToRepublishForRating({ count: 4, average: 5, suppressedCount: 2 })).toBe(0);
+  });
+
+  it("names the smallest number of republishes that brings the rating back", () => {
+    // 7 + 3 judged: one back over the line leaves 2 hidden of 10, exactly the
+    // share, which passes.
+    expect(reviewsToRepublishForRating({ count: 7, average: 5, suppressedCount: 3 })).toBe(1);
+    // 6 + 6 judged: 12 ruled on, so at most 2 may stay hidden — four come back.
+    expect(reviewsToRepublishForRating({ count: 6, average: 5, suppressedCount: 6 })).toBe(4);
+  });
+
+  it("answers with a number that actually clears the line", () => {
+    // The property worth holding, checked across every shape that is over it
+    // rather than at two hand-picked points: republishing exactly this many is
+    // enough, and one fewer is not.
+    for (let count = 1; count <= 30; count++) {
+      for (let suppressed = 0; suppressed <= 30; suppressed++) {
+        const aggregate = { count, average: 5, suppressedCount: suppressed };
+        const needed = reviewsToRepublishForRating(aggregate);
+        if (needed === 0) continue;
+        expect(
+          ratingIsRepresentative({
+            count: count + needed,
+            average: 5,
+            suppressedCount: suppressed - needed,
+          }),
+        ).toBe(true);
+        expect(
+          ratingIsRepresentative({
+            count: count + needed - 1,
+            average: 5,
+            suppressedCount: suppressed - needed + 1,
+          }),
+        ).toBe(false);
+      }
+    }
   });
 });

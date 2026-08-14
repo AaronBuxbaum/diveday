@@ -1,23 +1,27 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
-import { createBookingParty } from "./bookings";
+import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
 import {
+  listOwedShopCancellationRefunds,
+  OWED_REFUND_STALE_AFTER_MS,
   refundBookingOnCancellation,
   refundBookingOnShopCancellation,
   refundBookingsForShopCancelledTrip,
   shopCancellationPaymentStory,
 } from "./refunds";
+import { bookingPayments } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 const REEF_PRICE_CENTS = 18_000;
 
@@ -735,5 +739,108 @@ describe("refundBookingsForShopCancelledTrip", () => {
       });
       expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
     }
+  });
+});
+
+/**
+ * The residue this cascade leaves behind when a refund cannot land — the money
+ * a shop owes and, before this reader, had no screen anywhere that said so
+ * (ADR 20260813-shop-cancellation-refunds-itself).
+ */
+describe("listOwedShopCancellationRefunds", () => {
+  /** A paid party on a departure the shop then called off, with no refund run. */
+  async function cancelledDepartureContext() {
+    const context = await paidBookingContext(48);
+    await setTripStatus(context.db, context.shop.id, context.reef.id, "cancelled");
+    return context;
+  }
+
+  /**
+   * The owed booking ids.
+   *
+   * Membership, never an exact list: the demo reef trip is already carrying
+   * seeded paid seats beside this party's two, and every one of them is money
+   * the shop genuinely owes once the departure is cancelled — the same reason
+   * `refundBookingsForShopCancelledTrip`'s test counts the roster rather than
+   * the party. Asserting the whole list would be asserting the seed.
+   */
+  async function owedIds(...args: Parameters<typeof listOwedShopCancellationRefunds>) {
+    return (await listOwedShopCancellationRefunds(...args)).map((row) => row.bookingId);
+  }
+
+  it("lists a seat still holding its money on a departure the shop cancelled", async () => {
+    const { db, shop, bookingIds } = await cancelledDepartureContext();
+
+    const owed = await listOwedShopCancellationRefunds(db, shop.id);
+
+    expect(owed.map((row) => row.bookingId)).toEqual(expect.arrayContaining(bookingIds));
+    const party = owed.find((row) => row.bookingId === bookingIds[0]);
+    expect(party).toMatchObject({ depositOnly: false, amountCents: REEF_PRICE_CENTS });
+    expect(party?.diverName).toMatch(/Pat Party|Sam Second/);
+    expect(party?.tripTitle).toContain("Two-Tank Reef");
+  });
+
+  it("drops a seat the moment its money actually goes back", async () => {
+    // The obvious way to get this reader wrong: a refunded seat still sits on a
+    // cancelled trip, and only its payment status tells the two apart.
+    const { db, shop, bookingIds, capturedCents } = await cancelledDepartureContext();
+    await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId: bookingIds[0] },
+      fakeCheckout({ status: "refunded", refundId: "re_owed" }, [], capturedCents),
+    );
+
+    const owed = await owedIds(db, shop.id);
+
+    expect(owed).not.toContain(bookingIds[0]);
+    expect(owed).toContain(bookingIds[1]);
+  });
+
+  it("never claims a forfeited seat is owed money", async () => {
+    // A diver who cancelled inside no window forfeited their fare and still
+    // reads `paid`. The shop does not owe them anything just because the
+    // departure was later called off — and `refundBookingsForShopCancelledTrip`
+    // skips them for the same reason, so this reader must agree with it.
+    const { db, shop, bookingIds } = await cancelledDepartureContext();
+    await cancelBooking(db, shop.id, bookingIds[0]);
+
+    const owed = await owedIds(db, shop.id);
+
+    expect(owed).not.toContain(bookingIds[0]);
+    expect(owed).toContain(bookingIds[1]);
+  });
+
+  it("says nothing about a departure that is still sailing", async () => {
+    // Paid seats on a scheduled trip are just paid seats.
+    const { db, shop } = await paidBookingContext(48);
+    expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
+  });
+
+  it("holds back money that only just changed hands, for Today's sake", async () => {
+    // The panel shows everything; Today waits a day, so a seat settled minutes
+    // before the sweep does not land in the queue the same breath it was taken.
+    const { db, shop, bookingIds } = await cancelledDepartureContext();
+    await db
+      .update(bookingPayments)
+      .set({ updatedAt: new Date(nowMs()) })
+      .where(eq(bookingPayments.bookingId, bookingIds[0]));
+    await db
+      .update(bookingPayments)
+      .set({ updatedAt: new Date(nowMs() - 2 * OWED_REFUND_STALE_AFTER_MS) })
+      .where(eq(bookingPayments.bookingId, bookingIds[1]));
+
+    const stale = await owedIds(db, shop.id, {
+      olderThan: new Date(nowMs() - OWED_REFUND_STALE_AFTER_MS),
+    });
+
+    expect(stale).not.toContain(bookingIds[0]);
+    expect(stale).toContain(bookingIds[1]);
+    // Unbounded, the panel still shows the fresh one.
+    expect(await owedIds(db, shop.id)).toContain(bookingIds[0]);
+  });
+
+  it("is bounded, so one bad weekend cannot render an unbounded list", async () => {
+    const { db, shop } = await cancelledDepartureContext();
+    expect(await listOwedShopCancellationRefunds(db, shop.id, { limit: 1 })).toHaveLength(1);
   });
 });

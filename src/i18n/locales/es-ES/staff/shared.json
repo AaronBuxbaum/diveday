@@ -288,6 +288,7 @@
       "emergencyContact": "Contacto",
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Limpieza",
+      "owedRefund": "Reembolso pendiente",
       "reviewsPending": "Reseñas"
     },
     "blockerAction": {
@@ -424,7 +425,9 @@
         "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",
         "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
       },
-      "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}."
+      "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}.",
+      "owedRefundDetail": "{amount} de {tripTitle} del {when} — cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca la plaza como reembolsada.",
+      "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when} — cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada."
     },
     "reviewsPending": {
       "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",

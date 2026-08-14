@@ -143,6 +143,12 @@ const lastMinuteDealSchema = z.object({
 // scoped to the checkout itself and, like welcome/staff_invite above,
 // structurally excluded from TrackedNotification — dedup lives on
 // booking_checkouts.abandonedRecoverySentAt instead of a per-booking row.
+//
+// `unsubscribeUrl` is required, in the same shape as the two siblings above:
+// this send goes to someone with no confirmed booking behind it, which is what
+// makes it commercial rather than service messaging
+// (ADR 20260814-checkout-recovery-is-commercial, H-09). Required rather than
+// optional on purpose — an optional field is one a future caller forgets.
 const checkoutRecoverySchema = z.object({
   kind: z.literal("checkout_recovery"),
   checkoutId: z.uuid(),
@@ -155,6 +161,7 @@ const checkoutRecoverySchema = z.object({
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   checkoutUrl: z.url().max(2_000),
+  unsubscribeUrl: z.url().max(2_000),
 });
 
 const tripReminderFields = {

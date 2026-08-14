@@ -209,7 +209,14 @@ describe("resolveDiverNotice", () => {
     expect(resolve("restored")?.form).toBe("page");
     expect(resolve("restore-refused")?.form).toBe("restore");
     expect(resolve("erase-name-mismatch")?.form).toBe("erase");
-    expect(resolve("card-sighting-required")?.form).toBe("specialty-cards");
+  });
+
+  it("no longer knows the card-sighting refusal, because nothing can produce it", () => {
+    // Confirming an imported card is one tap again and the domain layer has no
+    // `card_sighting_required` branch left to refuse with
+    // (ADR 20260814-one-tap-imported-card-confirm). An unknown code resolves to
+    // nothing rather than to a banner with no sentence behind it.
+    expect(resolve("card-sighting-required")).toBeUndefined();
   });
 
   it("lets an action name the form when the code alone cannot", () => {

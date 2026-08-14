@@ -27,6 +27,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -126,6 +127,11 @@ export default async function ReviewsPage({
     countReviewsAwaitingModeration(db, session.user.shopId),
   ]);
   const { reviews, total } = reviewPage;
+  // Whether DiveDay has stopped publishing this shop's rating as a
+  // machine-readable claim. Not the same as "the rating is unrepresentative":
+  // a shop with no reviews at all is also not representative and has nothing
+  // to be told about (src/lib/reviews.ts).
+  const ratingWithheld = ratingIsWithheld(aggregate);
   const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
   // Three of these are the bulk control's own outcome and belong on the list
@@ -189,7 +195,10 @@ export default async function ReviewsPage({
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
-      <section aria-label={t("reviews.overviewLabel")} className="mb-2 grid gap-3 sm:grid-cols-3">
+      <section
+        aria-label={t("reviews.overviewLabel")}
+        className="mb-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
         <ShopStat
           label={t("reviews.publicRating")}
           value={aggregate.average === null ? "—" : aggregate.average.toFixed(1)}
@@ -212,7 +221,28 @@ export default async function ReviewsPage({
           detail={t("reviews.waitingDetail")}
           tone={waitingCount > 0 ? "primary" : undefined}
         />
+        {/* The number that decides whether the rating beside it is being
+            published at all, and until now the one fact this page kept to
+            itself — a shop could hide its way out of search results and read
+            "4.9" here the whole time. Warning-toned only when it has actually
+            cost the shop something; a hidden review is a normal thing to have. */}
+        <ShopStat
+          label={t("reviews.hiddenStat")}
+          value={aggregate.suppressedCount}
+          detail={t("reviews.hiddenStatDetail")}
+          tone={ratingWithheld ? "warning" : undefined}
+        />
       </section>
+
+      {/* Sits under the stats because it explains two of them together: the
+          rating that is still showing and the hidden count that stopped it
+          being published. Addressed at the situation, never at the shop —
+          the common case here is a small shop that removed real spam. */}
+      {ratingWithheld ? (
+        <StaffNoticeBanner tone="warning">
+          {t("reviews.ratingWithheld", { count: reviewsToRepublishForRating(aggregate) })}
+        </StaffNoticeBanner>
+      ) : null}
 
       {monthAggregate.count > 0 && monthAggregate.average !== null ? (
         <p className="mb-6 text-sm text-muted">

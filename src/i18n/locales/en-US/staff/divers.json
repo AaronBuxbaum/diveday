@@ -239,10 +239,7 @@
     "nitroxOption": "Nitrox",
     "captureForReview": "Capture specialty for review",
     "emptyState": "No specialty or nitrox cards yet — add one above when they earn it.",
-    "nitroxAgencyLine": "{agency} · Nitrox",
-    "confirmDisclosure": "I've seen this diver's card, or checked the number with the issuing agency. Confirming clears {what}.",
-    "whatSpecialtyDive": "the {specialty} specialty dive this card allows",
-    "whatNitroxFill": "the Nitrox fill this card allows"
+    "nitroxAgencyLine": "{agency} · Nitrox"
   },
   "stats": {
     "cards": "Cards",
@@ -301,7 +298,6 @@
     "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
     "eraseRefused": "This record can't be erased. Staff records keep the shop's own accountability trail, and you can't erase your own.",
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
-    "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
     "invalid": "Check the details and try again.",
     "cardRemovedToast": "Card removed.",
     "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",

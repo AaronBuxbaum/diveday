@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
@@ -154,28 +154,26 @@ export function SpecialtyCards({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {card.status === "pending" && !needsImportConfirm(card) ? (
+                    {/* One control, two labels — the same shape the level card
+                        beside it has always had. An imported card's confirm no
+                        longer opens a disclosure holding an attestation
+                        checkbox (ADR 20260814-one-tap-imported-card-confirm). */}
+                    {card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <SubmitButton
-                          pendingLabel={t("divers.certifications.markingCertified")}
+                          pendingLabel={
+                            needsImportConfirm(card)
+                              ? t("divers.certifications.confirming")
+                              : t("divers.certifications.markingCertified")
+                          }
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("divers.certifications.markCertified")}
+                          {needsImportConfirm(card)
+                            ? t("divers.certifications.confirmCard")
+                            : t("divers.certifications.markCertified")}
                         </SubmitButton>
                       </form>
-                    ) : null}
-                    {needsImportConfirm(card) ? (
-                      <ConfirmImportedCard
-                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                        certificationId={card.id}
-                        confirmationText={t("divers.specialty.confirmDisclosure", {
-                          what: t("divers.specialty.whatSpecialtyDive", {
-                            specialty: t(SPECIALTY_KEYS[card.specialty]),
-                          }),
-                        })}
-                        t={t}
-                      />
                     ) : null}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
@@ -224,28 +222,23 @@ export function SpecialtyCards({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {card.status === "pending" && !needsImportConfirm(card) ? (
+                    {card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="cardType" value="nitrox" />
                         <SubmitButton
-                          pendingLabel={t("divers.certifications.markingCertified")}
+                          pendingLabel={
+                            needsImportConfirm(card)
+                              ? t("divers.certifications.confirming")
+                              : t("divers.certifications.markingCertified")
+                          }
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("divers.certifications.markCertified")}
+                          {needsImportConfirm(card)
+                            ? t("divers.certifications.confirmCard")
+                            : t("divers.certifications.markCertified")}
                         </SubmitButton>
                       </form>
-                    ) : null}
-                    {needsImportConfirm(card) ? (
-                      <ConfirmImportedCard
-                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                        certificationId={card.id}
-                        cardType="nitrox"
-                        confirmationText={t("divers.specialty.confirmDisclosure", {
-                          what: t("divers.specialty.whatNitroxFill"),
-                        })}
-                        t={t}
-                      />
                     ) : null}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
@@ -266,78 +259,5 @@ export function SpecialtyCards({
         </ul>
       )}
     </section>
-  );
-}
-
-/**
- * The confirm for an imported specialty or nitrox card. Unlike "Mark certified"
- * — which already means a staffer looked the number up with the agency — this tap
- * is the *only* thing standing between a spreadsheet cell and the dive or fill it
- * authorizes, so it states what the staffer is asserting instead of being a bare
- * button (H-24, `dive-domain-expert` review). Same shape as the paper waiver's
- * medical attestation: a disclosure, a required checkbox naming the claim, then
- * the submit. The server refuses without the checkbox too, so this is a prompt,
- * not the enforcement.
- *
- * Deliberately per-card and deliberately not offered in bulk: a "confirm all"
- * would be the same unlabelled tap this replaces, times twelve.
- *
- * **At rest it is one button in the card's own control row**, exactly like the
- * level card's Confirm card beside it (`CertificationCards`). It used to sit
- * *below* the row instead, which made two cards on one screen answer the same
- * question in two shapes — a level card with its confirm inline next to Delete,
- * a specialty card with its confirm stranded under the card number — and read
- * as two different features rather than one act with an attestation on it. The
- * attestation is unchanged: it is the panel this button opens, anchored under
- * the row so expanding it never shoves the card's own title around.
- */
-function ConfirmImportedCard({
-  action,
-  certificationId,
-  cardType,
-  confirmationText,
-  t,
-}: {
-  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
-  action: (formData: FormData) => void | Promise<void>;
-  certificationId: string;
-  cardType?: "nitrox";
-  confirmationText: string;
-  t: StaffTranslator;
-}) {
-  return (
-    <details className="relative">
-      <summary
-        className={buttonClass({
-          variant: "secondary",
-          size: "sm",
-          className: "cursor-pointer list-none",
-        })}
-      >
-        {t("divers.certifications.confirmCard")}
-      </summary>
-      {/* Anchored to the button rather than laid out under the whole card: the
-          row keeps the level card's shape whether this is open or shut.
-          `right-0` on the wide layout so a panel opened at the right-hand edge
-          of the row stays on screen; `max-sm:left-0` because on a phone the
-          controls stack left and there is no right edge to hang from. */}
-      <form
-        action={action}
-        className="absolute top-full right-0 z-10 mt-2 w-72 rounded-lg border border-border bg-surface p-3 shadow-lg max-sm:right-auto max-sm:left-0"
-      >
-        <input type="hidden" name="certificationId" value={certificationId} />
-        {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="cardSighted" required className="mt-1 size-4 shrink-0" />
-          <span>{confirmationText}</span>
-        </label>
-        <SubmitButton
-          pendingLabel={t("divers.certifications.confirming")}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-        >
-          {t("divers.certifications.confirmCard")}
-        </SubmitButton>
-      </form>
-    </details>
   );
 }

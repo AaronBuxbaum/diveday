@@ -156,6 +156,12 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(email.sent).toHaveLength(1);
     expect(email.sent[0].kind).toBe("checkout_recovery");
     expect((email.sent[0] as { to: string }).to).toBe("casey-cart@example.com");
+    // This send is classified commercial, so it carries a way out of it — the
+    // same shape the wait-list invite and the last-minute deal already do
+    // (ADR 20260814-checkout-recovery-is-commercial).
+    expect((email.sent[0] as { unsubscribeUrl: string }).unsubscribeUrl).toMatch(
+      /\/unsubscribe\/[A-Za-z0-9_-]+$/,
+    );
 
     const [row] = await db
       .select()
@@ -171,6 +177,90 @@ describe("sendDueCheckoutRecoveries", () => {
     });
     expect(again.sent).toBe(0);
     expect(email.sent).toHaveLength(1);
+  });
+
+  /**
+   * The consent half of ADR 20260814-checkout-recovery-is-commercial. The
+   * recipient here is an address on a checkout row, not a booking's diver, so
+   * the opt-out has to be resolved through that address — and where it cannot
+   * be resolved, the mail does not go.
+   */
+  describe("as a commercial send", () => {
+    it("never nudges someone who has opted out of courtesy email", async () => {
+      const { db, shop } = await pendingCheckoutContext(3);
+      await db
+        .update(people)
+        .set({ courtesyEmailOptOutAt: new Date(NOW.getTime() - 24 * HOUR_MS) })
+        .where(and(eq(people.shopId, shop.id), eq(people.email, "casey-cart@example.com")));
+
+      const email = fakeEmail();
+      const summary = await sendDueCheckoutRecoveries(db, {
+        now: NOW,
+        emailProvider: email.provider,
+        checkoutProvider: fakeCheckoutProvider(stillOpen),
+      });
+
+      expect(summary).toMatchObject({ sent: 0, optedOut: 1 });
+      expect(email.sent).toHaveLength(0);
+      // Left unsent, not marked sent: an opt-out is not a delivery, and the row
+      // must not carry a dedup stamp claiming this person was emailed.
+      const [row] = await db
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.shopId, shop.id));
+      expect(row?.abandonedRecoverySentAt).toBeNull();
+    });
+
+    it("does not send to an address no person in the shop answers to", async () => {
+      // The checkout's own address, changed to one nobody holds — the case a
+      // party checkout can produce, where the submitter is not a diver on it.
+      const { db, checkoutId } = await pendingCheckoutContext(3);
+      await db
+        .update(bookingCheckouts)
+        .set({ customerEmail: "someone-else@example.com" })
+        .where(eq(bookingCheckouts.id, checkoutId));
+
+      const email = fakeEmail();
+      const summary = await sendDueCheckoutRecoveries(db, {
+        now: NOW,
+        emailProvider: email.provider,
+        checkoutProvider: fakeCheckoutProvider(stillOpen),
+      });
+
+      // There is no opt-out to honour and no token to mint against, and a
+      // commercial mail with no way out of it does not go. Counted rather than
+      // silently dropped, and never counted as a passed consent check.
+      expect(summary).toMatchObject({ sent: 0, unaddressable: 1, optedOut: 0 });
+      expect(email.sent).toHaveLength(0);
+      const [row] = await db
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.id, checkoutId));
+      // Deliberately still pending: a person row can appear later, and the
+      // session ages out of the scan on its own expiry either way.
+      expect(row?.status).toBe("pending");
+      expect(row?.abandonedRecoverySentAt).toBeNull();
+    });
+
+    it("matches the address case-insensitively, like every other people lookup", async () => {
+      const { db, checkoutId } = await pendingCheckoutContext(3);
+      await db
+        .update(bookingCheckouts)
+        .set({ customerEmail: "Casey-Cart@Example.com" })
+        .where(eq(bookingCheckouts.id, checkoutId));
+
+      const email = fakeEmail();
+      const summary = await sendDueCheckoutRecoveries(db, {
+        now: NOW,
+        emailProvider: email.provider,
+        checkoutProvider: fakeCheckoutProvider(stillOpen),
+      });
+
+      // A capitalised address is the same person — resolving it as "nobody"
+      // would silently turn the opt-out check into a no-op for that recipient.
+      expect(summary).toMatchObject({ sent: 1, unaddressable: 0 });
+      expect(email.sent).toHaveLength(1);
+    });
   });
 
   it("does not fire before the recovery delay has elapsed", async () => {
