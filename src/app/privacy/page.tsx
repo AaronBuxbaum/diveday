@@ -144,6 +144,19 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             { term: p("processors.metaTerm"), body: p("processors.metaBody") },
             { term: p("processors.vercelTerm"), body: p("processors.vercelBody") },
             { term: p("processors.neonTerm"), body: p("processors.neonBody") },
+            // The three a security review found missing on 2026-08-14, all of
+            // them live and none of them visible from
+            // `observability-client.tsx`, which is where the first draft's
+            // derivation stopped. Sentry mounts from `instrumentation.ts` and
+            // `instrumentation-client.ts`; Google arrives as the embedded map
+            // in `src/lib/maps.ts`, which renders on a *diver's* trip-prep
+            // page; the push vendors are the endpoint allowlist in
+            // `src/lib/notifications/web-push.ts`. A list that reads as
+            // exhaustive has to actually be exhaustive — the next third party
+            // added anywhere in the app belongs here in the same change.
+            { term: p("processors.sentryTerm"), body: p("processors.sentryBody") },
+            { term: p("processors.googleTerm"), body: p("processors.googleBody") },
+            { term: p("processors.pushTerm"), body: p("processors.pushBody") },
           ]}
         />
       </LegalSection>

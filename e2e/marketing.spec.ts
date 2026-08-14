@@ -861,16 +861,27 @@ test("the legal pages are published, honest about what is unsettled, and not yet
     "What we hold, where it lives, and how it leaves",
   );
 
-  // The two sub-processor claims most likely to rot: both are read off the
-  // code, so a page that keeps naming them after they change is the failure
-  // mode this assertion exists to catch.
-  await expect(page.getByText("Neon", { exact: false }).first()).toBeVisible();
-  await expect(page.getByText("us-east-1", { exact: false })).toBeVisible();
+  // The sub-processor list reads as exhaustive, so it has to be. A 2026-08-14
+  // security review found three live ones missing from the first draft --
+  // Sentry (mounted from instrumentation.ts, invisible to the
+  // observability-client.tsx derivation the copy was written from), Google
+  // (the embedded map on a *diver's* trip-prep page), and the browser push
+  // vendors. Naming each here means adding a fourth third party to the app
+  // without adding it to this page fails a test rather than shipping a
+  // published falsehood.
+  for (const processor of ["Stripe", "AWS", "Meta", "Vercel", "Neon", "Sentry", "Google"]) {
+    await expect(page.getByRole("term").filter({ hasText: processor }).first()).toBeVisible();
+  }
 
   // The retention windows are RETENTION_DAYS as prose. If that constant moves,
-  // this copy is part of that change.
+  // this copy is part of that change. "Attempts", not "outcomes": the 400-day
+  // window prunes notification_delivery_attempts, and the first draft attached
+  // that number to notification_deliveries, which has no timer at all.
   await expect(page.getByText("Staff activity history: 3 years.")).toBeVisible();
-  await expect(page.getByText("Payment history: 7 years", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("Message delivery attempts: 400 days", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText("Payment event history: 7 years", { exact: false })).toBeVisible();
 
   // The honest-no that keeps this page from pre-empting an open human decision:
   // H-02 has not settled how long a waiver and its medical answers are kept, so

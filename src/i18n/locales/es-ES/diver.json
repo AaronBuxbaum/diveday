@@ -2773,7 +2773,7 @@
       },
       "where": {
         "heading": "Dónde se procesa",
-        "body": "En Estados Unidos. La base de datos es Neon (US East), la aplicación corre en Vercel, y el correo, la mensajería y la monitorización corren en AWS us-east-1. Hoy no hay ninguna otra región en juego, y si eso cambia esta página cambia con ello."
+        "body": "Principalmente en Estados Unidos. La base de datos es Neon, la aplicación y su almacenamiento de archivos corren en Vercel, y el correo, la mensajería, las copias de seguridad y la monitorización corren en AWS. Vercel sirve el sitio desde donde esté el lector, así que una petición se responde primero cerca de él antes de llegar a Estados Unidos."
       },
       "processors": {
         "heading": "Quién más lo toca",
@@ -2781,13 +2781,19 @@
         "stripeTerm": "Stripe",
         "stripeBody": "pagos, en la cuenta conectada del propio centro. Los datos de tarjeta van directamente a Stripe y nunca pasan por nosotros.",
         "awsTerm": "AWS",
-        "awsBody": "envío de correo y SMS, almacenamiento de fotos y copias de seguridad, y registros y métricas de rendimiento.",
+        "awsBody": "envío de correo y SMS, almacenamiento de las copias de seguridad semanales, y registros y métricas de rendimiento.",
         "metaTerm": "Meta",
         "metaBody": "mensajes de WhatsApp, y solo para un centro que haya conectado su propio remitente de WhatsApp. Un centro que no lo haya conectado no envía nada a Meta.",
         "vercelTerm": "Vercel",
-        "vercelBody": "alojamiento y analítica a nivel de página. La analítica registra qué páginas se ven, no quién las vio, y a los enlaces que funcionan como credencial se les quita el token antes de que el evento salga del servidor.",
+        "vercelBody": "alojamiento, el almacenamiento de archivos donde viven las fotos y la evidencia de las tarjetas de certificación, y analítica a nivel de página. La analítica registra qué páginas se ven; no asociamos la identidad de un buceador ni de un miembro del personal a una visita.",
         "neonTerm": "Neon",
-        "neonBody": "la base de datos en sí."
+        "neonBody": "la base de datos en sí.",
+        "sentryTerm": "Sentry",
+        "sentryBody": "informes de errores. Cuando algo se rompe, el fallo se envía aquí para que podamos arreglarlo. A la dirección de la página se le quita cualquier token antes de enviarla, y no mandamos registros de buceadores con ella.",
+        "googleTerm": "Google",
+        "googleBody": "el mapa incrustado en la ficha de un punto de buceo y en la página de preparación de un buceador. Abrir una de esas páginas contacta con Google directamente, así que ve la petición como la ve cualquier mapa incrustado; el enlace propio de la página se le oculta.",
+        "pushTerm": "Apple, Google, Mozilla y Microsoft",
+        "pushBody": "notificaciones push del navegador para el personal que las activa. Cada uno recibe una dirección de dispositivo y un contenido cifrado que no puede leer."
       },
       "links": {
         "heading": "Enlaces que funcionan como llaves",
@@ -2797,8 +2803,8 @@
         "heading": "Cuánto tiempo se guarda",
         "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. Los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
         "activity": "Historial de actividad del personal: 3 años.",
-        "delivery": "Resultados de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error, nunca el contenido de los mensajes.",
-        "payments": "Historial de pagos: 7 años, acorde con el horizonte habitual de los registros financieros.",
+        "delivery": "Intentos de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error más que el contenido de los mensajes, aunque el texto de error de un proveedor a veces cita la dirección a la que no pudo llegar.",
+        "payments": "Historial de eventos de pago: 7 años, acorde con el horizonte habitual de los registros financieros. Los pedidos y los pagos en sí son registros del centro y se conservan hasta que el centro los elimina.",
         "webhooks": "Registros de eventos del procesador de pagos: 400 días. No contienen ningún dato de buceadores.",
         "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",
         "push": "Registros de notificaciones por dispositivo: 30 días.",
@@ -2808,9 +2814,9 @@
       "out": {
         "heading": "Sacar los datos, y borrarlos",
         "exportTerm": "Exportación",
-        "exportBody": "un centro puede descargar todo lo que tiene en DiveDay en un solo ZIP, desde sus propios ajustes, cualquier día, sin pedírnoslo y sin tarifa. Es el mismo paquete con el que se hacen nuestras propias copias de seguridad.",
+        "exportBody": "un centro puede descargar sus registros de DiveDay en un solo ZIP, desde sus propios ajustes, cualquier día, sin pedírnoslo y sin tarifa. Es el mismo paquete con el que se hacen nuestras propias copias de seguridad. Algunas tablas internas quedan fuera — mecánica de reintentos de entrega, registros de dispositivos, las credenciales selladas del destino de copia del propio centro — y nada de lo que queda fuera es el registro de un buceador.",
         "erasureTerm": "Borrado",
-        "erasureBody": "un centro puede borrar el registro de un buceador. Cuando ese registro llegó a un procesador de pagos, el borrado se sigue hasta que el procesador también lo confirma, en vez de darlo por hecho en nuestro propio borde, y el centro puede ver los que siguen pendientes."
+        "erasureBody": "un centro puede borrar el registro de un buceador. Cuando ese registro llegó a un procesador de pagos, el borrado se sigue como pendiente hasta que se salda, en vez de darlo por hecho en nuestro propio borde: un objeto de cliente lo borra DiveDay y lo confirma; una factura que el procesador ya emitió es una solicitud que una persona debe presentar, y el centro la ve ahí hasta que lo hace."
       },
       "contact": {
         "heading": "Preguntarnos algo",

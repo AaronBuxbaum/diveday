@@ -2773,7 +2773,7 @@
       },
       "where": {
         "heading": "Where it is processed",
-        "body": "In the United States. The database is Neon (US East), the application runs on Vercel, and the mail, messaging and monitoring pieces run in AWS us-east-1. There is no other region in play today, and if that changes this page changes with it."
+        "body": "Primarily in the United States. The database is Neon, the application and its file storage run on Vercel, and the mail, messaging, backup and monitoring pieces run in AWS. Vercel serves the site from wherever the reader is, so a request is first answered near them before it reaches the United States."
       },
       "processors": {
         "heading": "Who else touches it",
@@ -2781,13 +2781,19 @@
         "stripeTerm": "Stripe",
         "stripeBody": "payments, on the shop's own connected account. Card details go to Stripe directly and never through us.",
         "awsTerm": "AWS",
-        "awsBody": "sending email and SMS, storing photos and backups, and holding logs and performance metrics.",
+        "awsBody": "sending email and SMS, storing the weekly backups, and holding logs and performance metrics.",
         "metaTerm": "Meta",
         "metaBody": "WhatsApp messages, and only for a shop that has connected its own WhatsApp sender. A shop that has not connected one sends Meta nothing.",
         "vercelTerm": "Vercel",
-        "vercelBody": "hosting, plus page-level analytics. Analytics records which pages are viewed, not who viewed them, and links that act as credentials are stripped of their token before the event leaves the server.",
+        "vercelBody": "hosting, the file storage that holds photos and certification-card evidence, and page-level analytics. Analytics records which pages are viewed; we do not attach a diver's or a staff member's identity to a page view.",
         "neonTerm": "Neon",
-        "neonBody": "the database itself."
+        "neonBody": "the database itself.",
+        "sentryTerm": "Sentry",
+        "sentryBody": "error reporting. When something breaks, the crash is sent here so we can fix it. The address of the page is stripped of any token before it goes, and we do not send diver records with it.",
+        "googleTerm": "Google",
+        "googleBody": "the embedded map on a dive-site briefing and on a diver's trip-prep page. Opening one of those pages reaches Google directly, so it sees the request the way any embedded map does; the page's own link is withheld from it.",
+        "pushTerm": "Apple, Google, Mozilla and Microsoft",
+        "pushBody": "browser push notifications for staff who turn them on. Each gets a device address and an encrypted payload it cannot read."
       },
       "links": {
         "heading": "Links that work as keys",
@@ -2797,8 +2803,8 @@
         "heading": "How long it is kept",
         "intro": "The shop's own records are kept while the shop is using DiveDay, and go when the shop deletes them or ends its account. The append-only trails have fixed windows, and these are the real numbers the system prunes on:",
         "activity": "Staff activity history: 3 years.",
-        "delivery": "Message delivery outcomes: 400 days. These hold provider identifiers and error codes, never message bodies.",
-        "payments": "Payment history: 7 years, matching the ordinary horizon for financial records.",
+        "delivery": "Message delivery attempts: 400 days. These hold provider identifiers and error codes rather than message bodies, though a provider's own error text sometimes quotes the address it failed to reach.",
+        "payments": "Payment event history: 7 years, matching the ordinary horizon for financial records. The orders and payments themselves are the shop's records and stay until the shop removes them.",
         "webhooks": "Payment-processor event records: 400 days. These hold no diver data at all.",
         "tokens": "Expired sign-in and reset tokens: 90 days past their own expiry. A live one is never pruned.",
         "push": "Device notification registrations: 30 days.",
@@ -2808,9 +2814,9 @@
       "out": {
         "heading": "Getting data out, and getting it deleted",
         "exportTerm": "Export",
-        "exportBody": "a shop can download everything it has in DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of.",
+        "exportBody": "a shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it — delivery retry mechanics, device registrations, the sealed credentials for a shop's own backup destination — and nothing left out is a record of a diver.",
         "erasureTerm": "Erasure",
-        "erasureBody": "a shop can erase a diver's record. Where that record reached a payment processor, the erasure is tracked until the processor confirms it too, rather than being declared done at our own edge — and a shop can see any still owed."
+        "erasureBody": "a shop can erase a diver's record. Where that record reached a payment processor, the erasure is tracked as owed until it is discharged rather than being declared done at our own edge — a customer object DiveDay deletes itself and confirms; an invoice a processor has already issued is a request a person has to file, and the shop can see it sitting there until they do."
       },
       "contact": {
         "heading": "Asking us something",
