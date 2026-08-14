@@ -15,6 +15,18 @@
  * rows longer than a minimal-retention posture would. Shortening any of them
  * is a policy change: edit this one table, say so in the ADR, and nothing else
  * in the codebase has to move.
+ *
+ * **This mechanism prunes trails, never people.** Every table below is an
+ * append-only operational log — webhook events, delivery attempts, activity
+ * rows, tokens. No table holding a person lives here, and that is a standing
+ * decision rather than an omission: DiveDay retains customer and contact data
+ * indefinitely and deletes it only when somebody explicitly asks it to
+ * (product owner, 2026-08-14). So a dormancy clock on `people`,
+ * `course_inquiries` or `trip_waitlist_entries` — expiring the record of
+ * someone who inquired once and never booked — is not something to add here.
+ * It was proposed and declined: a lead who books eight months later is
+ * ordinary dive-shop behaviour, and the erasure path that does exist is the
+ * requested one (`src/db/anonymize.ts`), not a timer.
  */
 
 import { DAY_MS } from "@/lib/clock";
