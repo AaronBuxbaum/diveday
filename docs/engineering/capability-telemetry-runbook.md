@@ -81,6 +81,140 @@ all, while still signing out every staff member — check which one is set first
 Either way it is a blunt, shop-wide instrument rather than a scoped revocation,
 and it does **not** touch `booking_capabilities` rows.
 
+## Advertising and analytics tags: the one rule
+
+**No third-party advertising, conversion, or analytics tag may be added outside
+`src/app/observability-client.tsx`.** Not in `layout.tsx`, not with
+`next/script`, not in a `<head>` block, not "just for a week to test it".
+
+One third-party Meta script is deliberately in the tree and is **not** covered by
+this rule: `connect.facebook.net/en_US/sdk.js`, loaded by
+`settings/whatsapp/EmbeddedSignupButton.tsx` so a shop can connect its own
+WhatsApp sender. It is a functional SDK, not a tag — it initialises no `fbq`, it
+mounts on one staff-only `/shop/**` route no diver reaches, and no capability URL
+exists in that navigation. It is a precedent for nothing here. Any *other* Meta,
+Google, LinkedIn or Bing script is the thing this rule refuses.
+
+The reason this needs saying out loud, when the rest of this runbook already
+explains the redaction seam: the standard installation instructions for **every**
+advertising platform are a `<script>` in the document head, and they are correct
+for every normal site. `gtag.js` sends `page_location` on every pageview by
+default. So does the Meta pixel, the LinkedIn Insight tag and Bing UET. On this
+site those page locations include `/waivers/[token]`, `/ready/[token]`,
+`/recap/[token]`, `/claim/[token]` and `/calendar/[token]` — URLs that **are** the
+credential, most of them attached to signed waivers and medical evidence. And,
+easiest of all to miss because it is not path-shaped:
+`/s/<shopSlug>/trips/<id>?booking=<token>`, which **is** the booking
+confirmation, i.e. the single page a conversion tag is most likely to be put on.
+"Tokened route" in this section means anything in `CAPABILITY_ROUTE_PREFIXES`
+**or** carrying a `CAPABILITY_QUERY_PARAMS` value (`src/app/observability.ts`) —
+read that file, do not work from this list. A session told "turn on
+conversion tracking" that follows Google's own setup wizard ships live capability
+URLs to Google or Meta on every visit, and the guardrail it walked past is one
+comment in a file it never opened.
+
+Nothing is broken today: there is no ad pixel in the tree, and the
+[paid-acquisition assessment](../product/assessments/paid-acquisition-assessment.md)
+recommends `$0` of ad spend until a design partner exists. This section exists so
+the answer stays safe if that changes.
+
+### If a conversion tag is ever genuinely wanted
+
+In order of preference:
+
+1. **Import conversions offline.** `src/lib/analytics.ts` already measures both
+   marketing conversions server-side (`demo_entered`, `trial_started`) with a
+   funnel tag per surface, and `src/lib/funnel.ts` registers the vocabulary. That
+   is a better instrument than a browser pixel — it cannot be blocked and cannot
+   be double-counted — and every ad platform accepts an offline conversion
+   import. At the click volumes the assessment projects, this is almost certainly
+   the whole answer. Import the **funnel** events only, and read the warning
+   under "the seam is a direction, not a file" below before wiring anything: the
+   server SDK composes its own page URL, so `trackEvent` is not itself
+   token-safe on a capability route.
+2. **If a browser tag is unavoidable, it mounts through `Observability` and it
+   never sends a URL it composed itself.** "Excluded on tokened routes" cannot be
+   a conditional mount: the tag is already loaded from an earlier page in the
+   same client session, and its automatic pageview fires on the History
+   transition into `/waivers/<token>` whether or not the component rendered.
+   Concretely that means initialising with automatic pageviews **off**
+   (`gtag('config', ID, { send_page_view: false })`, `fbq` with no `PageView`),
+   sending every pageview by hand through `redactCapabilityUrl`, and returning
+   early — no event at all — on a tokened route. Redaction is the right treatment
+   for a URL that merely happens to contain an id; a bearer-token page should not
+   appear in an advertising platform's event stream in any form.
+
+**The referrer chain is the exclusion's blind spot.** Keeping a tag off a tokened
+route does not stop the token reaching the platform, because the *next* page
+carries it: `document.referrer` / `page_referrer` is a default field on `gtag.js`
+and the Meta pixel. Path-shaped capability routes are protected by
+`Referrer-Policy: no-referrer` (`src/lib/security-headers.ts`, whose list is now
+derived from the redaction seam's rather than re-typed — it was one route short
+until 2026-08-14, leaving `/claim/<token>` handing its own token to the next
+page). The `?booking=<token>` confirm URL is **not** protected that way and
+cannot be, since it lives on an ordinary public route: any tag anywhere on this
+site must strip or suppress the referrer field.
+
+### Remarketing is a separate and worse thing
+
+Building a retargeting audience from visitors to `/waivers/[token]` means
+building an advertising audience out of **people who signed a medical form**, and
+handing the fact of their membership to the ad platform. That is not a URL leak
+with a redaction fix; the audience itself is the disclosure.
+
+**So the rule is about the population, not the route** — a route-shaped rule is
+satisfied by an audience keyed on an *event* instead, which reaches the same
+people. Refused outright, by any mechanism — pixel, tag manager, server-side
+conversions API, offline import, or hashed-email upload:
+
+- any audience, custom audience, lookalike or seed list whose membership is
+  derived from a tokened route;
+- any audience or conversion keyed on a **diver** event (`waiver_signed`,
+  `seat_claimed`, `booking_cancelled`, `checkout_abandoned`, a review
+  submission) rather than a marketing-funnel event;
+- any upload of a diver's contact detail, hashed or not, to an advertising
+  platform.
+
+The offline import recommended above is safe **only** because `demo_entered` and
+`trial_started` are shop-owner funnel events with no diver in them. That is the
+boundary rather than an accident: the importable set is exactly
+`src/lib/funnel.ts`'s vocabulary, and extending an import to a diver event turns
+the recommended option into the refused one.
+
+### The seam is a direction, not a file
+
+`observability-client.tsx` is where **browser** telemetry mounts. It has no
+authority over anything sent server to server, and reading the rule above as
+"one file is the boundary" is how the next leak gets built.
+
+There is already one in the tree, found by the security review of this section
+(2026-08-14) and tracked as
+[FU-20260814-server-track-ships-capability-urls](../product/follow-ups/FU-20260814-server-track-ships-capability-urls.md):
+`trackEvent` (`src/lib/analytics.ts`) calls `@vercel/analytics/server`, whose
+`track` composes the event's page URL **itself** — from Vercel's request context,
+falling back to the `Referer` header — with no hook this repo can pass a redacted
+value through. `trackEvent` is called while rendering `/waivers/[token]`
+(`waiver_signed`), from `/ready/[token]`'s actions, and from `/claim/[token]`'s
+seat-claim path, so those raw capability URLs reach Vercel Analytics today.
+
+The rule that follows from it: **any server-to-server transmission to a third
+party must either omit the request URL or redact it at the call site**, because
+unlike a browser SDK there is no `beforeSend` to add later. That covers a Meta
+Conversions API call, Google Enhanced Conversions, an offline-import job, and the
+Vercel server SDK already here.
+
+### Why there is no check script for this
+
+Considered and deliberately declined (2026-08-14, product owner). A
+`scripts/check-*.mjs` refusing `googletagmanager.com`, `connect.facebook.net`,
+`snap.licdn.com` and `bat.bing.com` literals outside `src/app/observability*`
+would be cheap and would match the shape of the clock and Intl-cache guards. But
+those two exist because their invariant regressed repeatedly under real editing
+pressure; this one has **zero** instances and no scheduled ad spend, so a guard
+would be machinery protecting a thing nobody is doing yet. The rule lives here
+instead. If a pixel is ever approved, add the guard in the same change — at that
+point there *is* editing pressure, and the failure it prevents is silent.
+
 ## What redaction cannot reach: the platform's access logs
 
 Everything above happens **inside this application's process**. Every consumer calls

@@ -89,6 +89,7 @@ import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
+import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
 import { seedPromos } from "./seed-promos";
 import { seedRentalFit } from "./seed-rental-fit";
@@ -565,6 +566,17 @@ export async function seedDemoSchedule(
         roster: bookingRows,
         divers: customers,
         actorPersonId: instructor.id,
+      });
+      // One unpaid seat on that same boat, so the Overview's pulse has a money
+      // fact to state and the Orders index has something to be narrowed to
+      // (src/db/seed-open-invoice.ts). Deliberately `open`: a booking-linked
+      // paid or refunded order would cascade onto the seat's payment gate,
+      // which is what seed-orders.ts's bookingId-null rule is protecting.
+      await seedOpenInvoice(db, shopId, {
+        trip: reefTrip,
+        roster: bookingRows,
+        divers: customers,
+        createdByPersonId: instructor.id,
       });
     }
   }

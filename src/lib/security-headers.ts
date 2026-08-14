@@ -51,6 +51,14 @@ const TOKEN_ROUTE_SOURCES = [
   "/invite/:token",
   "/unsubscribe/:token",
   "/calendar/:token",
+  // Added 2026-08-14: this list said it was in parity with
+  // CAPABILITY_ROUTE_PREFIXES and had been missing `claim` since that route was
+  // built, so `/claim/<token>` fell back to `strict-origin-when-cross-origin`
+  // and handed the **full URL, token included**, to the next page as
+  // `document.referrer`. A seat-claim token is identity takeover for that seat,
+  // and any third-party script on the destination page reads the referrer by
+  // default. Found by a security review of the advertising-tag rule.
+  "/claim/:token",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

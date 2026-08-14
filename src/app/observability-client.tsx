@@ -27,6 +27,18 @@ const CloudWatchRum = dynamic(() => import("./rum-client").then((mod) => mod.Clo
  * redaction (CR-001) can't be bypassed by adding a raw <Analytics />,
  * <SpeedInsights />, or RUM client elsewhere.
  *
+ * That "elsewhere" covers **anything that reports a URL**, not only the three
+ * SDKs this file happens to mount — the list below is what exists today, not
+ * the boundary. It explicitly includes advertising and conversion tags (Google
+ * Ads `gtag.js`, the Meta pixel, LinkedIn Insight, Bing UET), whose documented
+ * installation is a `<script>` in the document head and which send
+ * `page_location` on every pageview by default. This app has pages where the
+ * URL *is* the credential, several of them attached to signed waivers and
+ * medical answers, so a tag installed the way its own setup guide describes
+ * would exfiltrate live capability URLs on every visit. There is no such tag in
+ * the tree and none planned; the rule, and what to do if one is ever wanted,
+ * are in docs/engineering/capability-telemetry-runbook.md.
+ *
  * Nothing mounts until the browser is idle after hydration (task 123 /
  * persona 15, Leo): a diver on a slow hotel-wifi or 3G connection gets the
  * booking form's own scripts and data first, with telemetry arriving a beat
