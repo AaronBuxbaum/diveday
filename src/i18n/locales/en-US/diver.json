@@ -2093,48 +2093,22 @@
       "welcome": {
         "eyebrow": "Welcome divers well",
         "title": "From first click to confirmed place on the boat",
-        "item1": "A live schedule divers book themselves — never past what the boat can hold",
-        "item2": "Courses, charters, and dive trips on one calendar",
-        "item3": "A booking widget you paste into the website you already have",
-        "item4": "Book for the whole party in one go, or as a gift for someone else",
-        "item5": "Discount codes shop-wide, or a last-minute deal on one under-booked boat",
-        "item6": "Confirmation emails you can see arrived — and resend when they didn't",
-        "item7": "Divers share their sizes and gear needs before they ever reach the counter",
-        "item8": "Every public page in the visitor's own language, English or Spanish"
+        "summary": "A live schedule divers book themselves, a booking widget for the site you already have, and confirmations you can see arrived — every public page in the visitor's own language."
       },
       "ready": {
         "eyebrow": "Get ready before the dock",
         "title": "The paperwork, evidence, and exceptions stay together",
-        "item1": "Waivers signed from home, with medical flags raised long before the boat",
-        "item2": "A medical questionnaire that matches the jurisdiction the shop dives in",
-        "item3": "C-cards photographed once, certified by staff, and kept with the diver",
-        "item4": "One honest answer to “is this diver ready?” — waiver, cert, sites, and payment together",
-        "item5": "Specialty and nitrox cards gated per site and per trip, not per hunch",
-        "item6": "A clear staff view of exactly what still needs attention",
-        "item7": "Each diver's own page for what's left, with an emergency contact they fill in"
+        "summary": "Waivers, medical answers and C-cards collected from home, so “is this diver ready?” has one honest answer long before anyone reaches the dock."
       },
       "diveDay": {
         "eyebrow": "Run the dive day",
         "title": "Crew, prep, and the boat share one source of truth",
-        "item1": "Every diver's rental sizes on the trip's prep list, so the boat is packed without a clipboard",
-        "item2": "Dive-site briefings with the route and conditions notes crews actually use",
-        "item3": "Nitrox requested per booking — filled as plain air until the diver's nitrox card is verified",
-        "item4": "A counter queue built for a line of divers, not a database",
-        "item5": "Save the manifest to a phone and roll call keeps working with no signal — every dive, print backup included",
-        "item6": "A boarding history that keeps every correction instead of overwriting it",
-        "item7": "Crew conditions and an automated marine outlook on the trip a diver already booked"
+        "summary": "Rental sizes, site briefings, nitrox and a roll call that keeps working with no signal — the counter and the boat reading the same thing."
       },
       "motion": {
         "eyebrow": "Keep the shop in motion",
         "title": "The next handoff is already clear",
-        "item1": "Build the board itself: add a departure, move it, copy it forward, take it off",
-        "item2": "Repeating trips put a season on the calendar in one pass",
-        "item3": "Every trip and class shows who's leading it and who's crewing",
-        "item4": "A live picture of bookings, blockers, and staffing gaps — before they become tomorrow's problem",
-        "item5": "Card payments, deposits, invoices, and refunds through the shop's own Stripe account",
-        "item6": "A recap page each diver keeps, a rating you can publish, and a tip that reaches the crew",
-        "item7": "Walk the day as the front desk, the captain, or the diver before you commit",
-        "item8": "Leave any day with a one-ZIP export of your shop's records — no phone call, no fee"
+        "summary": "Build the board, staff it, take the money and hand the day off — with a live picture of what's coming and a one-ZIP export you can leave with."
       }
     },
     "price": {
