@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import {
   copyDiveSite,
   createDiveSite,
+  createDiveSiteForForm,
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibraryStats,
@@ -11,8 +12,10 @@ import {
   listDiveSites,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
+  SITE_NAME_TAKEN,
   shopSearchAnchor,
   updateDiveSite,
+  updateDiveSiteForForm,
 } from "./dive-sites";
 import { globalDiveSites, globalDiveSiteVersions } from "./schema";
 
@@ -48,6 +51,56 @@ describe("dive-site library", () => {
       .filter((name) => name.startsWith("Molasses Reef"));
     expect(molasses).toEqual(["Molasses Reef", "Molasses Reef 2", "Molasses Reef 3"]);
     expect(second?.sourceTemplateVersion).toBe(catalogEntry.version.version);
+  });
+
+  /**
+   * A production save of "Christ of the Abyss" on 2026-08-14 threw the raw
+   * 23505 out of the edit action: a 500 error page, and the whole briefing the
+   * staffer had typed gone with it. The name is the one rule the form's parse
+   * cannot check, so the database refuses it — and a refusal has to come back
+   * as an answer the form can word, like every other one.
+   */
+  it("answers a name the shop already holds instead of throwing the unique violation", async () => {
+    const { db, shop } = await seededShopContext();
+    // A name off the shop's own library rather than a literal: the site the
+    // production save collided with was one the shop had imported from the
+    // catalog, which is how most of a shop's sites arrive.
+    const [existing] = await listDiveSites(db, shop.id);
+    if (!existing) throw new Error("seed: demo shop has no dive sites");
+
+    expect(await createDiveSiteForForm(db, { shopId: shop.id, name: existing.name })).toBe(
+      SITE_NAME_TAKEN,
+    );
+
+    const other = await createDiveSite(db, { shopId: shop.id, name: "Rename Me Reef" });
+    expect(
+      await updateDiveSiteForForm(db, shop.id, other.id, { shopId: shop.id, name: existing.name }),
+    ).toBe(SITE_NAME_TAKEN);
+    // Refused, not half-applied: the site the staffer was editing is untouched.
+    expect((await listDiveSites(db, shop.id)).find((s) => s.id === other.id)?.name).toBe(
+      "Rename Me Reef",
+    );
+  });
+
+  /**
+   * The index does not exclude archived sites, so a name can be held by a row
+   * that is nowhere in the staffer's library — which is why the refusal is
+   * worded to mention them rather than sending someone hunting for a site they
+   * cannot see.
+   */
+  it("refuses a name an archived site still holds", async () => {
+    const { db, shop } = await seededShopContext();
+    const archived = await createDiveSite(db, { shopId: shop.id, name: "Retired Ledge" });
+    await deleteDiveSite(db, shop.id, archived.id);
+    // Gone from the library the staffer can see...
+    expect((await listDiveSites(db, shop.id)).map((site) => site.name)).not.toContain(
+      "Retired Ledge",
+    );
+
+    // ...and still holding its name, which is what the wording has to explain.
+    expect(await createDiveSiteForForm(db, { shopId: shop.id, name: "Retired Ledge" })).toBe(
+      SITE_NAME_TAKEN,
+    );
   });
 
   it("keeps the full briefing and readiness gates through create and edit", async () => {

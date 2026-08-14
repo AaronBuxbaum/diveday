@@ -356,6 +356,39 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
   });
 
+  test("a name the shop already uses is refused on the form, not as an error page", async ({
+    page,
+  }) => {
+    // The same shape as the GPS rule above, for the one rule the form's parse
+    // cannot check — `dive_sites_shop_name_unique`. A production save of an
+    // already-held name on 2026-08-14 threw the raw 23505 out of the action:
+    // a 500 error page, and the whole briefing gone with it.
+    test.setTimeout(30_000);
+    const taken = `Twin Ledges ${e2eNow().getTime()}`;
+
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(taken);
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: taken })).toBeVisible();
+
+    // A second site reaching for the same name gets an answer, not a stack.
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(taken);
+    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("button", { name: "Save dive site" }).click();
+
+    // Not `getByRole("alert")` — Next's own route announcer is one too.
+    const refusal = page.getByText(/already goes by that name/);
+    await expect(refusal).toBeVisible();
+    await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
+    // Still on the form, still filled in — a rename is all it takes.
+    await expect(page).toHaveURL(/\/dive-sites\/new$/);
+    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await page.getByLabel("Name").fill(`${taken} south`);
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: `${taken} south` })).toBeVisible();
+  });
+
   test("staff import a DiveDay catalog site and it lands in the shop's own library", async ({
     page,
   }) => {

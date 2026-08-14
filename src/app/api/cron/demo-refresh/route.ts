@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
-import { getDb } from "@/db/client";
+import { getDb, sqlStateOf } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -102,10 +102,14 @@ export async function GET(request: Request) {
     // than prose: an error class name and Postgres's own SQLSTATE. Neither can
     // carry a row value, so this stays inside the no-PII-in-logs rule that
     // keeps the message itself out.
-    const sqlState = (error as { code?: unknown } | null)?.code;
+    //
+    // `sqlStateOf`, not `error.code`: drizzle wraps every driver error in a
+    // `DrizzleQueryError` that carries no `code` of its own, so reading the top
+    // level logged `sqlState: undefined` for exactly the failures the field was
+    // added to explain. The whole point of the field is the query error.
     log("cron_demo_refresh.pass_failed", "error", {
       errorName: error instanceof Error ? error.name : "unknown_error",
-      sqlState: typeof sqlState === "string" ? sqlState : undefined,
+      sqlState: sqlStateOf(error),
     });
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
     return NextResponse.json({ error: "refresh_unavailable" }, { status: 503 });

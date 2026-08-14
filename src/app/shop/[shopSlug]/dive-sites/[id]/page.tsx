@@ -15,7 +15,8 @@ import {
   listDiveSiteCreatures,
   listDiveSites,
   listUpcomingTripsForSite,
-  updateDiveSite,
+  SITE_NAME_TAKEN,
+  updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
@@ -147,7 +148,7 @@ export default async function EditDiveSitePage({
       expectedBottomTime: _expectedBottomTime,
       ...siteFields
     } = parsed.fields;
-    const updated = await updateDiveSite(activeDb, activeSession.user.shopId, id, {
+    const updated = await updateDiveSiteForForm(activeDb, activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...siteFields,
       forecastLatitude:
@@ -176,6 +177,10 @@ export default async function EditDiveSitePage({
       routeNote: parsed.route.note,
       routeZoom: parsed.route.zoom,
     });
+    // The name is the one rule the parse above could not check — it takes the
+    // whole shop's library to know — so the database refuses it and the
+    // briefing comes back to the form like any other refusal.
+    if (updated === SITE_NAME_TAKEN) return refuse("nameTaken");
     if (!updated) notFound();
     // Only once the row is durably saved: a photo this save replaced or
     // removed is queued for provider deletion, never blocked on storage and

@@ -25,13 +25,21 @@ export const MAX_SITE_IMAGES = 6;
  * form — twenty optional fields, and the one pairing rule between two of them —
  * and it used to arrive as a generic "check the required name and links", which
  * names neither coordinate.
+ *
+ * `nameTaken` is the one code raised by the database rather than by the parse:
+ * `dive_sites_shop_name_unique` is a hard (shop_id, name) index, and until it
+ * had a code the clash surfaced as an unhandled 23505 — a 500 error page with
+ * the whole briefing gone (a real production save of "Christ of the Abyss" on
+ * 2026-08-14). The index does not exclude archived sites, so the name may be
+ * held by a row the staffer cannot see in their library; the message says so.
  */
 export type DiveSiteFormError =
   | "invalid"
   | "coordinatesIncomplete"
   | "depthTooDeep"
   | "images"
-  | "imagesUnconfigured";
+  | "imagesUnconfigured"
+  | "nameTaken";
 
 /**
  * Everything a staffer had typed when a submission was refused, keyed by field

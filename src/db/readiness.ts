@@ -10,7 +10,7 @@ import {
   unavailableReadiness,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
+import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { CertificationAgency, DiveSpecialty } from "./schema";
 import {
@@ -481,19 +481,25 @@ export async function listTripReadiness(
   tripId: string,
   now: Date = nowDate(),
 ) {
-  const [rows, shopRow, tripMaxDepthMeters, tripRow] = await Promise.all([
-    listTripsReadiness(db, shopId, [tripId], now),
-    db
-      .select({ timezone: shops.timezone, depthUnit: shops.depthUnit })
-      .from(shops)
-      .where(eq(shops.id, shopId))
-      .limit(1),
-    getTripMaxDepthMeters(db, shopId, tripId),
-    db
-      .select({ startsAt: trips.startsAt })
-      .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-      .limit(1),
+  // `queryAll`, not `Promise.all`: this reader runs both on the pool (every
+  // roster and manifest render) and inside `checkInBooking`'s transaction,
+  // where a `Promise.all` is concurrent queries on one pinned client. See its
+  // comment in `src/db/client.ts`.
+  const [rows, shopRow, tripMaxDepthMeters, tripRow] = await queryAll(db, [
+    () => listTripsReadiness(db, shopId, [tripId], now),
+    () =>
+      db
+        .select({ timezone: shops.timezone, depthUnit: shops.depthUnit })
+        .from(shops)
+        .where(eq(shops.id, shopId))
+        .limit(1),
+    () => getTripMaxDepthMeters(db, shopId, tripId),
+    () =>
+      db
+        .select({ startsAt: trips.startsAt })
+        .from(trips)
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+        .limit(1),
   ]);
   const [shop] = shopRow;
   if (!shop) throw new Error(`listTripReadiness: shop ${shopId} not found`);
@@ -621,39 +627,45 @@ export async function listTripsReadiness(
   if (tripIds.length === 0) return [];
 
   const [requirements, siteRequirements, waiverRows, currentTemplate, shopRow, courseRows] =
-    await Promise.all([
-      db
-        .select()
-        .from(tripRequirements)
-        .where(and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds))),
+    await queryAll(db, [
+      () =>
+        db
+          .select()
+          .from(tripRequirements)
+          .where(
+            and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds)),
+          ),
       // Every site every trip visits — see `tripVisitedSites` for why the join
       // reaches through `trip_dives` too, and why `dive_sites.shop_id` is
       // re-proven here.
-      db
-        .select({
-          tripId: trips.id,
-          minimumCertificationLevel: diveSites.minimumCertificationLevel,
-          requiredSpecialties: diveSites.requiredSpecialties,
-          requiresNitrox: diveSites.requiresNitrox,
-        })
-        .from(trips)
-        .innerJoin(
-          diveSites,
-          sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+      () =>
+        db
+          .select({
+            tripId: trips.id,
+            minimumCertificationLevel: diveSites.minimumCertificationLevel,
+            requiredSpecialties: diveSites.requiredSpecialties,
+            requiresNitrox: diveSites.requiresNitrox,
+          })
+          .from(trips)
+          .innerJoin(
+            diveSites,
+            sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
             select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
           )`,
-        )
-        .where(
-          and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)),
-        ),
-      listTripsWaiverStatuses(db, shopId, tripIds),
-      getCurrentWaiverTemplate(db, shopId),
-      db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
-      db
-        .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
-        .from(trips)
-        .leftJoin(courses, eq(courses.id, trips.courseId))
-        .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+          )
+          .where(
+            and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)),
+          ),
+      () => listTripsWaiverStatuses(db, shopId, tripIds),
+      () => getCurrentWaiverTemplate(db, shopId),
+      () =>
+        db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
+      () =>
+        db
+          .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
+          .from(trips)
+          .leftJoin(courses, eq(courses.id, trips.courseId))
+          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
     ]);
 
   const [shop] = shopRow;
@@ -686,38 +698,41 @@ export async function listTripsReadiness(
   const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
     personIds.length === 0
       ? [[], [], [], new Map<string, never[]>()]
-      : await Promise.all([
-          db
-            .select()
-            .from(certifications)
-            .where(
-              and(
-                eq(certifications.shopId, shopId),
-                inArray(certifications.personId, personIds),
-                isNull(certifications.deletedAt),
+      : await queryAll(db, [
+          () =>
+            db
+              .select()
+              .from(certifications)
+              .where(
+                and(
+                  eq(certifications.shopId, shopId),
+                  inArray(certifications.personId, personIds),
+                  isNull(certifications.deletedAt),
+                ),
               ),
-            ),
-          db
-            .select()
-            .from(specialtyCertifications)
-            .where(
-              and(
-                eq(specialtyCertifications.shopId, shopId),
-                inArray(specialtyCertifications.personId, personIds),
-                isNull(specialtyCertifications.deletedAt),
+          () =>
+            db
+              .select()
+              .from(specialtyCertifications)
+              .where(
+                and(
+                  eq(specialtyCertifications.shopId, shopId),
+                  inArray(specialtyCertifications.personId, personIds),
+                  isNull(specialtyCertifications.deletedAt),
+                ),
               ),
-            ),
-          db
-            .select()
-            .from(nitroxCertifications)
-            .where(
-              and(
-                eq(nitroxCertifications.shopId, shopId),
-                inArray(nitroxCertifications.personId, personIds),
-                isNull(nitroxCertifications.deletedAt),
+          () =>
+            db
+              .select()
+              .from(nitroxCertifications)
+              .where(
+                and(
+                  eq(nitroxCertifications.shopId, shopId),
+                  inArray(nitroxCertifications.personId, personIds),
+                  isNull(nitroxCertifications.deletedAt),
+                ),
               ),
-            ),
-          listSignedWaiversByPerson(db, shopId, personIds),
+          () => listSignedWaiversByPerson(db, shopId, personIds),
         ]);
 
   const currentTemplateVersion = currentTemplate?.version ?? null;

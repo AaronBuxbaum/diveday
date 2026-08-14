@@ -13,7 +13,7 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
@@ -254,9 +254,12 @@ export async function tripAdmissionFor(
       courseSession: true,
     });
   }
-  const [requirement, siteRequirement] = await Promise.all([
-    getTripRequirements(tx, shopId, tripId),
-    getTripSiteRequirement(tx, shopId, tripId),
+  // `queryAll`, not `Promise.all`: every caller of this gate reaches it inside
+  // `createBookingRecord`'s transaction, which is one pinned client. See
+  // `queryAll` in `src/db/client.ts`.
+  const [requirement, siteRequirement] = await queryAll(tx, [
+    () => getTripRequirements(tx, shopId, tripId),
+    () => getTripSiteRequirement(tx, shopId, tripId),
   ]);
   const demandsSomething = Boolean(
     requirement?.minimumCertificationLevel ||
@@ -283,37 +286,40 @@ const NO_EVIDENCE: TripAdmissionEvidence = {
 
 /** One diver's live cert evidence at this shop — the same rows readiness reads. */
 async function readCertificationEvidence(tx: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await Promise.all([
-    tx
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
+  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(tx, [
+    () =>
+      tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.personId, personId),
+            isNull(certifications.deletedAt),
+          ),
         ),
-      ),
-    tx
-      .select()
-      .from(specialtyCertifications)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, shopId),
-          eq(specialtyCertifications.personId, personId),
-          isNull(specialtyCertifications.deletedAt),
+    () =>
+      tx
+        .select()
+        .from(specialtyCertifications)
+        .where(
+          and(
+            eq(specialtyCertifications.shopId, shopId),
+            eq(specialtyCertifications.personId, personId),
+            isNull(specialtyCertifications.deletedAt),
+          ),
         ),
-      ),
-    tx
-      .select()
-      .from(nitroxCertifications)
-      .where(
-        and(
-          eq(nitroxCertifications.shopId, shopId),
-          eq(nitroxCertifications.personId, personId),
-          isNull(nitroxCertifications.deletedAt),
+    () =>
+      tx
+        .select()
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, shopId),
+            eq(nitroxCertifications.personId, personId),
+            isNull(nitroxCertifications.deletedAt),
+          ),
         ),
-      ),
   ]);
   return {
     certifications: certificationRows,

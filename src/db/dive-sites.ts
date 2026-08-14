@@ -17,7 +17,7 @@ import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "@/lib/dive-sit
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import type { CertificationLevel } from "@/lib/readiness";
-import type { AppDb } from "./client";
+import { type AppDb, violatesUniqueIndex } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage } from "./paging";
 import {
@@ -252,6 +252,43 @@ export async function getDiveSite(db: AppDb, shopId: string, siteId: string) {
   return site ?? null;
 }
 
+/**
+ * What a site write answers with when the shop already holds that name.
+ *
+ * A code, never a sentence, like everything else `src/db` returns — the two
+ * site forms map it to their own message key.
+ */
+export const SITE_NAME_TAKEN = "name_taken";
+
+/** A site write's outcome, or the one collision the database decides. */
+export type DiveSiteWrite<T> = T | typeof SITE_NAME_TAKEN;
+
+/**
+ * Run one site write, converting `dive_sites_shop_name_unique` into an answer.
+ *
+ * The (shop_id, name) index is the one rule a form parse cannot check: it takes
+ * the whole shop's library to know, and a concurrent save could take the name
+ * in the gap between a read and the write anyway. So the database is the
+ * arbiter, and this turns its refusal into a value the caller can word.
+ *
+ * Matched by **index name** rather than by SQLSTATE alone: a site write also
+ * touches `dive_site_creatures`, and a 23505 from anywhere else is a bug that
+ * must keep travelling rather than be reported to a staffer as a name clash.
+ *
+ * Unhandled, this was a 500: a real 2026-08-14 production save of "Christ of
+ * the Abyss" threw out of the server action and took twenty fields of typing
+ * with it. Note the index does not exclude archived sites, so the name can be
+ * held by a row the staffer cannot see — which is why the wording names them.
+ */
+async function refusingNameClash<T>(write: () => Promise<T>): Promise<DiveSiteWrite<T>> {
+  try {
+    return await write();
+  } catch (error) {
+    if (violatesUniqueIndex(error, "dive_sites_shop_name_unique")) return SITE_NAME_TAKEN;
+    throw error;
+  }
+}
+
 export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
   const [site] = await db
     .insert(diveSites)
@@ -340,6 +377,29 @@ export async function updateDiveSite(
   // things.
   if (input.creatures) await replaceDiveSiteCreatures(db, shopId, siteId, input.creatures);
   return site;
+}
+
+/**
+ * `createDiveSite` for the form a staffer types into: a name the shop already
+ * holds comes back as `SITE_NAME_TAKEN` to be worded, rather than thrown.
+ *
+ * The bare writers above stay as they are, because their two internal callers —
+ * "Copy and tailor" and the template import — each pick a free name for
+ * themselves (`availableSiteName`) and have nothing to say to a staffer if that
+ * ever loses a race.
+ */
+export function createDiveSiteForForm(db: AppDb, input: DiveSiteInput) {
+  return refusingNameClash(() => createDiveSite(db, input));
+}
+
+/** `updateDiveSite` for the form a staffer types into. See `createDiveSiteForForm`. */
+export function updateDiveSiteForForm(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  input: DiveSiteInput,
+) {
+  return refusingNameClash(() => updateDiveSite(db, shopId, siteId, input));
 }
 
 /** Keep historical trip briefings intact while removing a site from new-trip pickers. */

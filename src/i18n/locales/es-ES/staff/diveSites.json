@@ -180,7 +180,8 @@
     "errorCoordinates": "Agrega ambas coordenadas GPS, o deja las dos en blanco: una ubicación necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
     "errorImages": "Una de esas fotos no se pudo guardar — un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
-    "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure."
+    "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
+    "errorNameTaken": "Otro sitio de buceo de este centro ya se llama así, y un sitio archivado también conserva su nombre. Dale a este briefing un nombre propio y vuelve a guardar — todo lo demás que escribiste sigue aquí."
   },
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",

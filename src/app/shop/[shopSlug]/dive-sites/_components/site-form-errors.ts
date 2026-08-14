@@ -20,5 +20,6 @@ export function siteFormErrorMessages(
     depthTooDeep: t("diveSites.form.errorDepth"),
     images: t("diveSites.form.errorImages"),
     imagesUnconfigured: t("diveSites.form.errorImagesUnconfigured"),
+    nameTaken: t("diveSites.form.errorNameTaken"),
   };
 }
