@@ -93,6 +93,21 @@ const APP_LOG_GROUP_NAME = "/diveday/app";
 const DUMP_PREFIX = "dumps/";
 
 /**
+ * Where the per-shop export bundles land, and the only prefix the uploader
+ * credential in S11 may write. Its counterpart to {@link DUMP_PREFIX}, and the
+ * reason both are named: the two prefixes share a bucket but not a writer, and
+ * the grant that says so has to name one of them or it names both.
+ *
+ * The keys themselves are built in the app, by `platformBackupObjectKey` and
+ * `platformBackupCensusKey` (src/features/backup-export/period.ts). This
+ * constant is the infrastructure half of that agreement, so
+ * infra/lib/backup-freshness.test.ts asserts the two against each other rather
+ * than trusting this string on its own -- a prefix that drifts from the app's
+ * key builder fails as a silent weekly backup nobody notices for a week.
+ */
+const EXPORT_PREFIX = "exports/";
+
+/**
  * How long a dump is kept. Deliberately short, and deliberately not the
  * bundles' "never expire": the file holds every password hash and every medical
  * answer in the platform, and it answers a question ("Neon is gone and PITR
@@ -920,6 +935,17 @@ exports.handler = async (event) => {
     // DeleteObject, no ListBucket. A leaked uploader credential therefore
     // cannot read a shop's exported waivers back out, and cannot destroy an
     // existing backup (versioning plus RETAIN cover the rest).
+    //
+    // Scoped to EXPORT_PREFIX, not to the whole bucket. Until 2026-08-15 this
+    // said arnForObjects("*"), which reached the dumps/ prefix as well -- so a
+    // leaked Vercel environment could overwrite the weekly pg_dump, the one
+    // artifact that can restore a *login* (the per-shop bundles exclude
+    // user_accounts, account_tokens and calendar_feeds by design, so restoring
+    // from bundles alone gives every shop record and nobody who can sign in).
+    // It could never read one, which is the property this whole design rests
+    // on and which is unchanged; but S19's checkDump only asks whether a dated
+    // prefix exists and is recent, so an overwritten dump read as a fresh one.
+    // The dump has its own writer, already scoped to its own prefix, in S20.
     const backupUploaderUser = new iam.User(this, "BackupUploaderUser", {
       userName: BACKUP_UPLOADER_USER_NAME,
     });
@@ -928,7 +954,7 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "WriteBackupBundlesOnly",
         actions: ["s3:PutObject", "s3:AbortMultipartUpload"],
-        resources: [backupBucket.arnForObjects("*")],
+        resources: [backupBucket.arnForObjects(`${EXPORT_PREFIX}*`)],
       }),
     );
 
@@ -2271,6 +2297,19 @@ exports.handler = async (event) => {
     // a day of slack and still catches a single missed week.
     const backupMaxAgeDays = 8;
 
+    // The floor under "that object is a database dump". Deliberately far below
+    // any real one -- DiveDay's schema alone is over a hundred tables, so even
+    // a dump of an empty cluster gzips to tens of kilobytes -- because this
+    // exists to catch a zero-byte, truncated or overwritten object, not to
+    // judge whether a dump is healthy. A floor that can never fire on a genuine
+    // dump is worth more than a tighter one somebody learns to ignore.
+    //
+    // Not a substitute for the S11 grant that stops the uploader reaching this
+    // prefix at all: anyone who can still write here can write plausible bytes.
+    // It is the half that also catches an *accidental* truncation, which no
+    // amount of IAM narrowing would.
+    const minDumpBytes = 4096;
+
     const backupFreshnessCheck = new lambda.Function(this, "BackupFreshnessCheck", {
       functionName: "diveday-backup-freshness-check",
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -2282,6 +2321,7 @@ exports.handler = async (event) => {
         TOPIC_ARN: observabilityAlarms.topicArn,
         MAX_AGE_DAYS: String(backupMaxAgeDays),
         DUMP_PREFIX,
+        MIN_DUMP_BYTES: String(minDumpBytes),
       },
       // Inline for the same reason as the SMS forwarder in S10: a couple of
       // dozen lines against SDK clients the runtime already ships, where a
@@ -2320,6 +2360,7 @@ async function alarm(subject, message) {
 // alarms, not whichever one is tested first.
 async function checkDump(bucket, maxAgeDays) {
   const prefix = process.env.DUMP_PREFIX;
+  const minBytes = Number(process.env.MIN_DUMP_BYTES);
   const runs = await s3.send(new ListObjectsV2Command({
     Bucket: bucket,
     Prefix: prefix,
@@ -2344,8 +2385,37 @@ async function checkDump(bucket, maxAgeDays) {
       "project's most recent build, and that the diveday/database-url-unpooled secret is filled " +
       "in. See docs/engineering/backup-and-restore-runbook.md section 2c."
     );
+    return { newestDump: latest, dumpAgeDays: ageDays, dumpBytes: null };
   }
-  return { newestDump: latest, dumpAgeDays: ageDays };
+
+  // A dated prefix proves a run started. It does not prove it left anything
+  // restorable behind, and until 2026-08-15 nothing anywhere asked: an object
+  // truncated to nothing, or overwritten with garbage, read as a fresh dump and
+  // this function reported ok. The date is the cheap question and the size is
+  // the one that would have caught a real loss, so both get asked.
+  //
+  // One more ListObjectsV2, over the newest run only, and only once the date
+  // check has passed -- a stale dump has already alarmed above and does not
+  // need a second alarm saying the same week is broken.
+  const contents = await s3.send(new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: prefix + latest + "/",
+  }));
+  const bytes = (contents.Contents ?? []).reduce((total, entry) => total + (entry.Size ?? 0), 0);
+
+  if (bytes < minBytes) {
+    await alarm(
+      "DiveDay backup: the newest database dump is too small to be one",
+      "The dump under " + prefix + latest + "/ in " + bucket + " totals " + bytes +
+      " bytes, below the " + minBytes + " byte floor. A dump of DiveDay's schema is far larger " +
+      "than this even with no rows in it, so the object is truncated, empty or overwritten -- " +
+      "treat the login-restoring layer as absent for this week. The bucket is versioned: the " +
+      "previous good object should still be there as a non-current version. Check the " +
+      "diveday-database-dump CodeBuild project's most recent build first, then who else holds " +
+      "s3:PutObject on this prefix. See docs/engineering/backup-and-restore-runbook.md section 2c."
+    );
+  }
+  return { newestDump: latest, dumpAgeDays: ageDays, dumpBytes: bytes };
 }
 
 exports.handler = async () => {
