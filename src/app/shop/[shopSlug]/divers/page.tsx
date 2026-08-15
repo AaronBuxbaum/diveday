@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -245,7 +246,7 @@ export default async function DiversPage({
             +
           </span>
         </summary>
-        <div className="mt-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+        <div className={sectionCardClass({ padding: "lg", className: "mt-3" })}>
           <p className="text-sm text-muted">{t("divers.page.addDiverBody")}</p>
           {/* The same name/email/phone trio every seat-a-diver door wears
             (src/components/seat-diver/). This one mints a person without a

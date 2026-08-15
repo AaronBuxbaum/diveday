@@ -24,6 +24,25 @@
 
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
+/**
+ * The refusal an offline **retraction** gets when the statement it names is no
+ * longer the one standing (ADR 20260815-an-offline-retraction-names-its-target).
+ *
+ * A shared constant rather than the same string literal at both ends, because
+ * the two ends are a database writer and a service-worker-bundled reader, and
+ * they mean different things by it: `recordRollCall`/`recordCrewRollCall`
+ * *produce* it, and `explicitResultAt` (`src/lib/offline-manifests.ts`) treats
+ * it as the one rejection that says something specific — *the server holds a
+ * statement newer than anything this device can see* — and reads the row down
+ * to awaiting on the strength of it. Spelled twice, a rename on the writer side
+ * would leave the reader silently believing a stale value forever, with every
+ * test on both sides green. Here it is a `tsc` failure.
+ *
+ * It lives in this dependency-free leaf for the usual reason: the reader is
+ * compiled into the service worker, so it cannot reach `src/db`.
+ */
+export const RETRACTION_SUPERSEDED = "retraction_superseded";
+
 export type RollCallCheckpoint = "departure" | `after_dive_${number}`;
 
 export function rollCallCheckpoints(plannedDives: number): RollCallCheckpoint[] {

@@ -16,6 +16,18 @@ import { productFeatureGroups } from "@/lib/marketing";
  * components) as the design. `MarketingMockup` preserves the framing the old
  * `MarketingScreenshot` fallback branch provided: an accessible `role="img"`
  * with an `aria-label`, plus the rounded bordered surface.
+ *
+ * **Neither panel in this file is a `SectionCard`, deliberately.**
+ * `MarketingMockup` is a *device frame* rather than a section of a page: it is
+ * a `role="img"`, it clips its contents (`overflow-hidden`), and
+ * `CaptainPhoneFrame` overrides its radius and removes its border outright to
+ * sit inside a phone bezel — three things the canonical card has no prop for
+ * and should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
+ * because they render on a `bg-surface` band on the homepage, and `SectionCard`
+ * hard-codes `bg-surface`; passing a second background utility through
+ * `className` would be resolved by stylesheet order rather than by intent.
+ * Converting that one is a decision in `src/components/ui/card.tsx` about what
+ * a card on a surface band is, not a call-site override here.
  */
 export function MarketingMockup({
   label,

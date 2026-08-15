@@ -8,7 +8,12 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // bundle and fails `scripts/build-service-worker.mjs` outright, with
 // `pnpm typecheck` none the wiser. See the head of `./roll-call`.
 import type { RollCallRecord } from "./roll-call";
-import { carryForwardNotBoarded, isNotBackAboard, rollCallCheckpoints } from "./roll-call";
+import {
+  carryForwardNotBoarded,
+  isNotBackAboard,
+  RETRACTION_SUPERSEDED,
+  rollCallCheckpoints,
+} from "./roll-call";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -264,6 +269,34 @@ export type OfflineRollCallEvent = {
    * device holding older events keeps parsing them unchanged.
    */
   status: "boarded" | "not_boarded" | "cleared";
+  /**
+   * What a `cleared` is taking back: the `clientEventId` of the statement this
+   * device was looking at when somebody tapped undo (ADR
+   * 20260815-an-offline-retraction-names-its-target). Absent on every other
+   * status, and on a retraction queued by a build that predates the field.
+   *
+   * It is what makes the retraction a **compare-and-set** rather than a blind
+   * newest-wins write: `recordRollCall`/`recordCrewRollCall` apply it only while
+   * that event is still the newest one standing at this subject and checkpoint,
+   * so a device holding a copy up to a fortnight old cannot unsay a *different*
+   * device's "did not come back from the dive". Before this the only guard was
+   * `newest.occurredAt > occurredAt`, and a retraction is stamped at tap time —
+   * so one tapped now beat everything recorded before now.
+   *
+   * **The target's own client event id, not a row id or a `seq`.** This device
+   * mints it locally, at queue time, which is the only identity an event has
+   * while it is still sitting in this queue unsynced — and retracting a mark
+   * that has not reached DiveDay yet is the ordinary case, not the exotic one.
+   * A status-and-timestamp pair would not do: two taps share a millisecond
+   * under a coarse or frozen clock, which is the very tie `latestQueuedAttempt`
+   * exists to break.
+   *
+   * **Additive, and no `OFFLINE_MANIFEST_RECORD_VERSION` bump** — the same
+   * reasoning as `cleared` itself, one field later. The snapshot payload is
+   * untouched, older events parse with this undefined, and undefined means
+   * "took the pre-change path", which the server still accepts.
+   */
+  retractsClientEventId?: string;
   note: string | null;
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
@@ -744,20 +777,40 @@ export type OfflineRollCallResult = {
    * the saved snapshot — i.e. somebody tapped it here.
    *
    * It is what scopes the retraction (ADR 20260815-offline-can-unsay-a-missing-diver,
-   * amended after the 2026-08-15 security review). An offline `cleared` is a
-   * blind newest-wins write like every other offline event: the server has no
-   * compare-and-set against the result the device was actually looking at, so a
-   * retraction aimed at a *snapshot* result — which may be up to fourteen days
-   * old, and may have been superseded by a live write or another device since —
-   * could take a missing-diver mark off a boat on the strength of a stale copy.
-   * A retraction of this device's own queued statement cannot: it undoes the tap
-   * the crew member just made, which is the case the control exists for.
+   * amended after the 2026-08-15 security review). A retraction aimed at a
+   * *snapshot* result — a copy up to fourteen days old, which a live write or
+   * another device may have superseded since — is a claim about a statement this
+   * device never saw made; one aimed at this device's own queued statement undoes
+   * the tap the crew member just made, which is the case the control exists for.
+   *
+   * The **first** of the two guards on that write, and still load-bearing. The
+   * second is `clientEventId` below: the server now compares the named event
+   * against the newest one standing before applying a retraction (ADR
+   * 20260815-an-offline-retraction-names-its-target), which catches the case this
+   * flag cannot — a mark this device queued, synced, and retracts an hour later,
+   * by which time a second device has changed the row. Belt and braces, not one
+   * guard written twice: this one keeps the control honest about *whose*
+   * statement it offers to undo, and a snapshot reading has no id to name anyway.
    *
    * A carried-forward value inherits it from the departure result it came from,
    * so undoing a dock no-show is offered exactly where the dock no-show was
    * recorded here.
    */
   local: boolean;
+  /**
+   * The queued event this reading came from, when it came from one — the id a
+   * retraction of it must name (ADR 20260815-an-offline-retraction-names-its-target).
+   *
+   * Undefined for a snapshot reading, which is not a coincidence but the same
+   * fact `local: false` states: a result off the saved copy has no client event
+   * id here to name, and the control refuses to aim a retraction at it anyway.
+   * A carried-forward value inherits the departure event's id along with
+   * `local`, which is inert — `rollCallRowState`'s `recordedNotBoarded` is false
+   * for a carried result, so no control offers a retraction there, and the
+   * server's compare-and-set would refuse one aimed at a checkpoint the named
+   * event was not recorded at.
+   */
+  clientEventId?: string;
 };
 
 /**
@@ -781,6 +834,11 @@ function recordedResult(event: OfflineRollCallEvent): OfflineRollCallResult | nu
     pending: event.syncStatus === "pending",
     implied: false,
     local: true,
+    // Carried so a retraction of this reading can name the statement it undoes.
+    // Set here, in the one function both readers build a local result through,
+    // for the same reason the tie-break is: the diver and crew halves of one
+    // head count must not disagree about which event a row is showing.
+    clientEventId: event.clientEventId,
   };
 }
 
@@ -831,6 +889,14 @@ function resultStrength(
  * direction that can only ever raise an alarm the server has not seen. A local
  * `boarded`, or a local retraction, never survives a rejection; it is the
  * optimism the server refused.
+ *
+ * One rejection carries more information than "the server knows something",
+ * and it is spent here rather than thrown away: `retraction_superseded` (ADR
+ * 20260815-an-offline-retraction-names-its-target) says precisely *the newest
+ * statement at this subject and checkpoint is not the one you named*. Two
+ * consequences, both below — the value that would otherwise stand is read down
+ * to awaiting unless it is an alarm, and a rescued alarm stops presenting
+ * itself as this device's own statement to undo.
  */
 function explicitResultAt(
   events: readonly OfflineRollCallEvent[],
@@ -864,7 +930,45 @@ function explicitResultAt(
     local && isNotBackAboard(checkpoint, local) && (!saved || local.occurredAt >= saved.occurredAt)
       ? local
       : undefined;
-  return resultStrength(checkpoint, alarm) > resultStrength(checkpoint, saved) ? alarm : saved;
+  // A `retraction_superseded` refusal is the one rejection that says something
+  // *specific*, and both branches below spend it.
+  const superseded =
+    latestAttempt.status === "cleared" && latestAttempt.rejectionReason === RETRACTION_SUPERSEDED;
+  // `alarm &&` is redundant to the comparison — an absent alarm scores 0 and
+  // can never outrank anything — and is written for the type narrowing alone.
+  if (alarm && resultStrength(checkpoint, alarm) > resultStrength(checkpoint, saved)) {
+    // The alarm stands — but it is no longer *this device's* statement to take
+    // back, and the row must stop saying it is. Left `local`, the hint under it
+    // keeps reading "tap again to undo" and every tap queues another retraction
+    // the server refuses identically: an undo that can never succeed, under copy
+    // promising it will (dive-domain review, 2026-08-15). Dropping `local` and
+    // the id switches the line to "Recorded on another device or on the live
+    // manifest — undo it there, not here", which is exactly what the refusal
+    // just told us.
+    return superseded ? { ...alarm, local: false, clientEventId: undefined } : alarm;
+  }
+  // What the refusal means, spelled out: *the server holds a statement newer
+  // than anything this device can see*. So the value that would otherwise stand
+  // here is known-stale, and this copy has no current answer — which is
+  // `awaiting`, and `null` rather than `undefined` because the chain above must
+  // not then fall through to the snapshot the retraction was aimed at.
+  //
+  // **It matters most at `departure`, which is why refusing is not enough on its
+  // own.** After a dive, leaving a mark standing holds a count open. At the dock
+  // `not_boarded` means *never left* — an accounted-for state that carries
+  // forward — so leaving it standing does not hold one count open, it closes
+  // every later one: the crew's own dock mark, superseded by a desk that boarded
+  // the diver after all, would read "not boarded · carried" after dive 1 and
+  // print roll call complete about somebody in the water (dive-domain review,
+  // 2026-08-15). Awaiting is the fail-open answer, the same call ADR
+  // 20260815-a-rejected-correction-may-not-silence-a-missing-diver made one door
+  // along.
+  //
+  // Never over an alarm, though, whoever recorded it: a stated "did not come
+  // back" is the one value where silence *is* the failure, so it outranks this
+  // whole rule.
+  if (superseded && !isNotBackAboard(checkpoint, saved)) return null;
+  return saved;
 }
 
 /**

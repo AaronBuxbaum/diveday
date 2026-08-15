@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 /**
  * The card — the bordered panel a staff page is mostly made of, and the last
@@ -26,6 +26,36 @@ import type { ReactNode } from "react";
  * hanging a `mt-*` off each one (nine different values were in use), and a
  * list of *like* cards — two calendar feeds, a roster of people — keeps its own
  * tighter gap, because that is a list rather than a run of sections.
+ *
+ * ## What is *not* a section card
+ *
+ * Three migrations asked for a prop to widen this component, and the answer
+ * each time was that the thing in front of them is a different object. Written
+ * down so the fourth does not ask again:
+ *
+ * - **A sunken inset** (`bg-surface-sunken`, a roll-call row, a flagged
+ *   fallback, a form's nested note). It is *carved into* a card rather than
+ *   raised on the page. `ShopStat`'s `inset` variant is the precedent.
+ * - **A panel on a `bg-surface` band** — the marketing pages set `bg-background`
+ *   on their cards precisely because the band behind them is already
+ *   `bg-surface`. This component hard-codes `bg-surface` and will not gain a
+ *   fill prop: two fills is how a card starts meaning "any rectangle".
+ * - **An overlay** — a dropdown, a modal, a toast, a bottom sheet. They carry
+ *   `shadow-lg`/`shadow-2xl` because they float above the page rather than
+ *   sitting in it.
+ *
+ * A card nested directly inside another card at the same radius and fill reads
+ * as a rendering bug, not as structure. If that is where you have arrived, the
+ * inner thing is one of the three above.
+ *
+ * ## Headings
+ *
+ * `title` renders the staff type scale (`text-lg`, or `text-base` for a card
+ * inside a group that already owns the `h2`). The **marketing pages keep their
+ * own scale at the call site** and pass no `title` — their headings sit under a
+ * 36px display type where `text-base` would turn a page's one checkable proof
+ * into fine print. A design system that flattens a deliberately different
+ * surface is not being consistent, it is being indiscriminate.
  */
 
 const PADDING = {
@@ -113,12 +143,42 @@ export function SectionCard({
 }) {
   const Heading = titleAs;
   const hasHeader = title != null || description != null || actions != null;
+  // A titled card names itself to a screen reader. Hand-rolled panels did this
+  // with a hand-written `aria-labelledby` pointing at a hand-written heading id,
+  // which is a pair that has to be kept in step — so most of them simply did not
+  // have it, and one that did (`PartyClaimPanel`, on `/ready/[token]`) lost it on
+  // the way in here and became the only unnamed region on a page whose siblings
+  // are all named. Deriving the id removes the bookkeeping: the label follows the
+  // title for free, and cannot drift from it.
+  //
+  // `useId` rather than a slug of the title: the title is a `ReactNode`, and two
+  // cards on one page may legitimately share a heading ("Notes", "Details").
+  //
+  // `useId` in a component with no `"use client"` is deliberate and is fine: it
+  // needs no state, only a stable position in the tree, and React allows it in a
+  // Server Component. `Field` in `./form.tsx` has done the same since it was
+  // written, and six Server Component pages render it. Do not add `"use client"`
+  // here to satisfy a doubt about that — it would drag every staff page's panels
+  // into the client bundle to buy nothing.
+  const generatedId = useId();
+  const headingId = title != null ? `${generatedId}-title` : undefined;
   return (
-    <Tag id={id} className={sectionCardClass({ padding, elevated, className })}>
+    <Tag
+      id={id}
+      // Only when this element is a landmark a name means something on. An `li`
+      // in a list of cards is named by its content, and labelling it would make
+      // a screen reader announce the heading twice.
+      aria-labelledby={headingId != null && Tag !== "li" ? headingId : undefined}
+      className={sectionCardClass({ padding, elevated, className })}
+    >
       {hasHeader ? (
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
-            {title != null ? <Heading className={TITLE_CLASS[titleAs]}>{title}</Heading> : null}
+            {title != null ? (
+              <Heading id={headingId} className={TITLE_CLASS[titleAs]}>
+                {title}
+              </Heading>
+            ) : null}
             {description != null ? (
               <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>
             ) : null}

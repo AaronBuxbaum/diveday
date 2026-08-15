@@ -136,12 +136,19 @@ What that cost, and what it bought:
   buckets exactly as they were. Keeping the grant scoped to it after it stopped being the boundary
   costs nothing, and widening it *because* the bucket is now dedicated is precisely how a dedicated
   bucket stops being dedicated.
-- **The bundle bucket's `dumps/` prefix keeps its expiry rule**, renamed `drain-legacy-database-dumps`
-  so its status is legible. Nothing writes it any more, but the dumps already there are real dumps;
-  deleting the rule would strand them in a bucket whose other prefix never expires. It goes when the
-  prefix is empty of *versions* (roughly 70 days after the deploy, per the paragraph above —
-  `aws s3api list-object-versions`, not `aws s3 ls`). Until then the uploader's `exports/*` scoping is
-  still load-bearing, not merely tidy.
+- **The bundle bucket's `dumps/` prefix is abandoned, not drained.** For one day it kept its expiry
+  rule, renamed `drain-legacy-database-dumps`, on the reasoning that the dumps already there are real
+  dumps and deleting the rule would strand them in a bucket whose other prefix never expires — a wait
+  of roughly 70 days, since that bucket is versioned and an expiry there writes a delete marker. That
+  reasoning was wrong about the data. [H-47](../../product/human-decisions.md) records that DiveDay is
+  pre-pilot, has no users, and treats the database as disposable, so those objects are dumps of seeded
+  demo data: no real password hash, no real medical answer, nothing anyone would miss. Keeping a
+  lifecycle rule, a CDK assertion and a ten-week reminder alive to tidy them was more machinery than
+  the data was worth, so the rule went (2026-08-15, same day). The consequences are stated where an
+  operator will meet them, in §2c of the runbook: **a restore looks in one bucket**, those objects now
+  expire never, and removing them is a documented `aws s3api delete-objects` a human runs once. What
+  did **not** change is the uploader's `exports/*` scoping — it was never a legacy accommodation, it is
+  least privilege for a write-only key that ships to Vercel.
 
 **Not done: moving `exports/` instead.** The bundles are what the app writes constantly and the dump
 is the rarer, more dangerous artifact. If one moves behind a stricter boundary it is the dump.
@@ -194,16 +201,14 @@ is the rarer, more dangerous artifact. If one moves behind a stricter boundary i
   read it, its bucket expires everything in it, and the job that writes it has no grant on the bundle
   bucket — but the file exists, and anyone with account admin can read it. That is the same posture as
   the bundles and it is worth stating rather than implying.
-- **The 2026-08-15 split is a migration, not a rename** — the old bucket is `RemovalPolicy.RETAIN`
-  with a live weekly writer and a restore procedure pointing at it. The sequence, and the transition
-  window it opens, are §2c of
-  [the backup and restore runbook](../../engineering/backup-and-restore-runbook.md); the two facts
-  that make it one rather than a cutover are that **old dumps are not copied** (they stay readable in
-  the bundle bucket for the rest of their 35-day window rather than being re-dated by a copy, which
-  would restart their expiry clock) and that **the new bucket is empty until a dump runs into it**, so
-  a deploy that lands between a Monday dump and the Tuesday watchdog raises one honest false alarm
-  unless a build is started by hand. Starting one is the same command the setup step already
-  documents, and it doubles as proof the new grant works.
+- **The 2026-08-15 split is a cutover with one deploy-day step, and one prefix left behind.** The
+  sequence is §2c of [the backup and restore runbook](../../engineering/backup-and-restore-runbook.md).
+  The step that is not optional: **the new bucket is empty until a dump runs into it**, so a deploy
+  landing between a Monday dump and the Tuesday watchdog raises one honest false alarm unless a build
+  is started by hand — the same command the setup step already documents, which doubles as proof the
+  new grant works. The prefix left behind: **old dumps are not copied** (a copy re-dates them and
+  restarts their expiry clock) and, per the bullet above, not drained either. They are abandoned in a
+  `RETAIN` bucket until a human deletes them, and no restore consults them.
 - **Two buckets to re-adopt after a `cdk destroy`, not one.** The `backup-bucket-readoption` manual
   action (§17) now names both, and `--context dumpBucketName=` is the escape hatch beside
   `--context backupBucketName=`.

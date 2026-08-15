@@ -628,12 +628,19 @@ export async function deleteOfflineManifest(
  * event nobody can attribute is worse than no event, because it survives in
  * storage, syncs, and is a claim about the one thing this surface exists to
  * record.
+ *
+ * `retractsClientEventId` rides along on a `cleared` and names the statement it
+ * takes back, which is what makes the retraction a compare-and-set on the server
+ * rather than a blind newest-wins write (ADR
+ * 20260815-an-offline-retraction-names-its-target). Nothing is validated about
+ * it here: the only honest check is against the newest event the *server* holds,
+ * and this function runs where there is no server.
  */
 export async function appendOfflineRollCall(
   tripId: string,
   input: Pick<
     OfflineRollCallEvent,
-    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "note"
+    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "note" | "retractsClientEventId"
   >,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {

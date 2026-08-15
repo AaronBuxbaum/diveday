@@ -98,10 +98,28 @@ new domain concept, define it here in the same PR.
   refutes "there is no card", and nothing is written. It **retracts the joiner's own still-unsighted
   claims** (archived, never destroyed) so a correction downward cannot be outlived by the higher claim
   it corrects, and it is **ignored rather than deleted** once evidence lands beside it — where a
-  record began is history, so the column keeps the answer and the *reader* stops repeating it.
+  record began is history, so the column keeps the answer and the *reader* stops repeating it. There
+  is a second supersession path, made by a person rather than by evidence: see **Clearing a
+  declared-uncertified stamp** below.
   "Ignored" is that same three-table test: any live card the shop holds drops it from the summary,
   while a level the diver merely *claimed* later leaves it standing and simply renders ahead of it.
   It gates nothing ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
+- **Clearing a declared-uncertified stamp** — a staffer saying, on the diver record, that this diver
+  never gave that answer. The forms that write it are unauthenticated and resolve a person by shop +
+  email, so for a diver the shop holds no card for anybody with a name and an email address can leave
+  the stamp; before this the only thing that removed it was owner-only erasure of the whole record.
+  It **supersedes rather than deletes** (`people.no_certification_cleared_at`, plus the staff member
+  who did it) for the same reason the stamp itself survives a real card: where a record began is
+  history. The direction is the whole safety argument — clearing can only take a record from a
+  *stated* absence of a card to *no statement at all*, the silence of somebody nobody asked. It never
+  touches the three card tables, so it can never turn a claim into evidence; a **Card sighting** is
+  still the only door. A later declaration un-clears it, so one correction cannot silently swallow
+  every answer the diver gives afterwards — but only the timestamp, never the staff member who made
+  it, because the writer of that later declaration is an anonymous form and must not be able to erase
+  the shop's own audit of its own correction. It is also, in effect, a **mute button on the deal
+  list**: a stated "I hold no card" counts as below the departure's minimum and is lifted to the top
+  of the capped preview, and a cleared one is quiet, so the control's own words name that consequence
+  ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
 - **Certification summary** — the one staff-facing phrase for *what a person may dive, as far as
   anybody here knows*, rendered beside a name on the last-minute-deal recipient list and the
   wait-list rows: a card the shop holds reads plainly, a **Self-declared certification** reads
@@ -122,8 +140,10 @@ new domain concept, define it here in the same PR.
   copied the number off a genuine Open Water card while keeping the diver's typed "Instructor" would
   verify the one field nobody looked at. Enforced twice, in `reviewCertification` and in the
   database's own `certifications_identifier_present_unless_self_declared`, so a numberless card can
-  never reach `verified` — the constraint catches a *null* number, and the empty string is the
-  application's to refuse. The number is also **shape-checked** as of 2026-08-15
+  never reach `verified` — the constraint catches a *null* **and** a blank number as of 2026-08-15
+  (it caught only null before, and `''` satisfied it; the tightened predicate keeps both conjuncts,
+  because `length(btrim(NULL)) > 0` is NULL and a CHECK passes on NULL). The number is also
+  **shape-checked** as of 2026-08-15
   (`isPlausibleCardNumber`: three characters and at least one digit, on this form and on the capture
   forms beside it), because *"xx"* certified a self-declared "Instructor" for a day. That check is a
   typo filter and never evidence: what the record rests on is the staffer holding the card and the
@@ -590,12 +610,10 @@ new domain concept, define it here in the same PR.
   The population an after-dive count is counting is **who boarded**, never who bought a seat or was
   rostered — a diver who never showed and was never tapped is an unfinished *dock* count, not
   somebody left in the water, and a shop that has never tapped a crew roll call raises no crew rows
-  at all rather than one on every trip it has run. The count-level **crew attestation** used to be the one
-  piece of an open checkpoint Today did not chase; it is retired, so the queue now chases the whole
+  at all rather than one on every trip it has run. The queue chases the whole
   crew half — the named results themselves. An open checkpoint held only because nobody is *aboard*
-  (an empty crew list, or a whole crew marked ashore) still raises no queue row, for the reason the
-  attestation never did: it fires on trips whose crew was never recorded at all, and would bury the
-  rows that mean a person is in the water. The manifest states it; the queue chases what somebody
+  (an empty crew list, or a whole crew marked ashore) raises no queue row: it fires on trips whose
+  crew was never recorded at all, and would bury the rows that mean a person is in the water. The manifest states it; the queue chases what somebody
   actually recorded.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
@@ -611,25 +629,22 @@ new domain concept, define it here in the same PR.
   own event so the correction stays in the audit trail rather than deleting history. **Cleared is
   emitted offline too**, and it is the reason it has to be: without it the only way to take back a
   mis-tapped "not back aboard" was to tap "aboard" — a positive claim that a person is back on the
-  boat, which nobody had made. A device may only retract a statement *that same device queued*; a
-  mark that arrived on the saved copy says so instead, because the device cannot know what the
-  crew who recorded it saw. Asserting **aboard over a stated "not back aboard"** takes a
+  boat, which nobody had made. **A retraction is scoped twice.** A device may only retract a statement
+  *that same device queued*; a mark that arrived on the saved copy says so instead, because the
+  device cannot know what the crew who recorded it saw. And the queued retraction **names the
+  statement it undoes**, so the server applies it only while that statement is still the one
+  standing — otherwise a device that queued a mark, synced it, and retracts it an hour later could
+  unsay whatever a second device has recorded since. A retraction can therefore come back
+  **refused**: after a dive the mark stays up and the row says to undo it where it was made, and at
+  the dock — where "not boarded" means *never left*, an accounted-for state that carries forward —
+  the row goes back to awaiting rather than closing every later checkpoint on a statement the server
+  has moved past. Asserting **aboard over a stated "not back aboard"** takes a
   confirming second tap that names the person, on a separate control, so a wet thumb on a rolling
   boat cannot turn the loudest row in the product green by bouncing. A note still
   being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
   connection never loses it; that device draft is transient and unencrypted — separate from, and not
   protected like, the encrypted **offline manifest snapshot**.
-- **Crew attestation** — *retired.* A named staff member's statement of how many crew were aboard at
-  one roll-call checkpoint, out of how many the trip had assigned ("crew aboard: 2 of 2"). It was
-  the count-level half of the crew head count, and it is no longer asked for: the **crew roll-call
-  event** below is the whole crew half now
-  ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md),
-  superseding [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
-  A number named nobody, so it could not help anyone find a missing person, and it asked the crew to
-  re-state as a figure what they had just recorded by name. Rows already written stay: they are
-  statements humans made about departures that sailed, the **departure log** renders them,
-  and `roll_call_crew_attestations.csv` remains part of the shop export.
-- **Crew roll-call event** — the per-person half: a named staff member said one **assigned crew
+- **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
   is a person on the trip's crew list rather than a booking, which is why it is its own table
@@ -704,9 +719,9 @@ new domain concept, define it here in the same PR.
   them is actually **aboard**. Divers alone were never the whole boat. The last clause is what stops
   the two shapes of an empty boat from closing themselves: a trip with nobody on its crew list, and
   a trip whose whole crew is marked ashore. Both are a departure that sailed with nobody recorded
-  running it, which is stronger evidence of an unrostered hand than of an empty boat. The
-  count-level **crew attestation** used to be the other half of this and is retired — a number that
-  named nobody was never the whole crew either
+  running it, which is stronger evidence of an unrostered hand than of an empty boat. A count-level
+  crew *attestation* ("crew aboard: 2 of 2") preceded this and is gone, table and all — a number
+  that named nobody could not help anyone find a missing person
   ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md)).
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal

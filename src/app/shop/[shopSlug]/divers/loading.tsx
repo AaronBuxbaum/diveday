@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the Divers roster (design principle 1) — a
@@ -20,7 +21,12 @@ export default function DiversLoading() {
           ))}
         </div>
         <div className="mt-6 h-11 w-full max-w-sm rounded-lg bg-surface-sunken" />
-        <div className="mt-6 flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
+        <div
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-6 flex flex-col divide-y divide-border",
+          })}
+        >
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-16 bg-surface" />
           ))}

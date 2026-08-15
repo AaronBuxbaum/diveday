@@ -40,6 +40,7 @@ const checks = [
   ["route-coverage", "check-route-coverage.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],
   ["notice-codes", "check-notice-codes.mjs"],
+  ["redirect-in-try", "check-redirect-in-try.mjs"],
   ["text", "check-source-text.mjs"],
   ["infra-ascii", "check-infra-ascii.mjs"],
   ["locale", "check-locale.mjs"],

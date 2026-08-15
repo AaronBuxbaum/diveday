@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Roll-call-shaped skeleton for the boat manifest (design principle 1). Like
@@ -19,7 +20,7 @@ export default function ManifestLoading() {
       <div className="mt-6 h-12 w-full rounded-xl bg-surface-sunken" />
       <ul className="mt-6 flex flex-col gap-3">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <li key={i} className="h-20 rounded-lg border border-border bg-surface" />
+          <li key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
         ))}
       </ul>
     </div>

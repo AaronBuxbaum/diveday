@@ -269,9 +269,83 @@ async function recordNoCertification(
 
   await tx
     .update(people)
-    .set({ noCertificationDeclaredAt: now })
+    .set({
+      noCertificationDeclaredAt: now,
+      // **A fresh answer un-clears an old correction — but only the half that
+      // is current state.** Without this, one `clearNoCertificationDeclaration`
+      // would silently swallow every "I'm not certified yet" the diver gave
+      // afterwards: a permanent, invisible gate on one answer of one form,
+      // chosen by nobody. Nulling it is also what lets every reader below test
+      // `clearedAt IS NULL` and nothing else — the frozen e2e clock makes two
+      // timestamps genuinely incomparable, so "which statement is later" has to
+      // be structural rather than chronological.
+      noCertificationClearedAt: null,
+      // **`clearedByPersonId` deliberately survives.** This function is reached
+      // from an *unauthenticated* form, and the row it is writing carries a fact
+      // a member of staff authored. Clearing that too would let an anonymous
+      // post erase the shop's own audit of its own correction — the same shape
+      // as the 2026-08-14 bug this ADR records, one column over — and would let
+      // a griefer loop the stamp back on with nothing left saying a staffer had
+      // ever disagreed (`security-reviewer`/`dive-domain-expert`, 2026-08-15).
+      // A set `clearedByPersonId` with a null `clearedAt` is a real and
+      // readable state: *corrected once, and stated again since*.
+    })
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)));
   return "recorded";
+}
+
+/**
+ * **A staffer saying this diver never told us that** — the eraser for a stamp
+ * `recordNoCertification` wrote on an unauthenticated form.
+ *
+ * Those forms resolve a person by shop + email, so for a diver the shop holds
+ * no card for, anybody holding a name and an email address off any manifest can
+ * mark them *"Not certified yet — diver's word"* on the send lists and in every
+ * CSV the shop exports from then on. Until this existed the only thing that
+ * cleared it was owner-only erasure of the whole record.
+ *
+ * **It supersedes rather than deletes** (`people.no_certification_cleared_at`),
+ * for the reason the ADR gives about `self_declared_at`: where a record began is
+ * history, and an eraser that destroyed the evidence of its own subject leaves a
+ * shop unable to answer whether the diver ever said it.
+ *
+ * **It cannot launder a claim into evidence, structurally.** Its only effect is
+ * to move this person from a *stated* absence of a card to *no statement at
+ * all* — the silence of somebody nobody asked. Evidence lives in
+ * `certifications`, `nitrox_certifications` and `specialty_certifications`, and
+ * this function touches none of them; nothing it writes can raise a level, add
+ * a card, or move a row toward `verified`. That is the whole reason it is safe
+ * to open to every staff role, which is what capturing a card already is —
+ * H-48 is the open question about who may *sight* one, and this deliberately
+ * does not pre-empt it by inventing a narrower gate for a weaker act.
+ *
+ * Shop-scoped like every writer here, so a staffer holding a foreign person id
+ * still reaches nothing. Returns false when there was no stamp to clear, so the
+ * surface can tell "corrected" from "nothing to correct" rather than reporting
+ * a no-op as an act.
+ */
+export async function clearNoCertificationDeclaration(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; byPersonId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [cleared] = await db
+    .update(people)
+    .set({ noCertificationClearedAt: now, noCertificationClearedByPersonId: input.byPersonId })
+    .where(
+      and(
+        eq(people.id, input.personId),
+        eq(people.shopId, input.shopId),
+        isNotNull(people.noCertificationDeclaredAt),
+        // Idempotent: a second submit of the same form (a double tap, a
+        // back-button replay) must not rewrite the timestamp or the name on a
+        // correction that already happened, which would make the trail lie
+        // about when — and by whom — the record was actually corrected.
+        isNull(people.noCertificationClearedAt),
+      ),
+    )
+    .returning({ id: people.id });
+  return Boolean(cleared);
 }
 
 async function recordLevel(
@@ -393,6 +467,10 @@ export type CertificationSummary = {
    * A *claim* does not supersede it: a person who declared "no card" and later
    * declared a rung keeps both flags, and the phrase renders the rung — the
    * later, more specific statement.
+   *
+   * False too once a staffer has cleared it
+   * (`clearNoCertificationDeclaration`): that is not a fact this reader is
+   * choosing to ignore, it is a fact the shop has said was never stated.
    */
   noCertificationDeclared: boolean;
   nitrox: boolean;
@@ -424,6 +502,12 @@ export async function listCertificationSummaries(
   // safety-relevant answer on the form is the one that renders as silence. It
   // is provisional until the card reads below have had their say: anything the
   // shop actually holds supersedes it.
+  //
+  // A stamp a staffer has **cleared** is out here rather than suppressed at the
+  // end beside `carded`, and the difference matters: a cleared stamp is not a
+  // statement this reader is choosing to ignore, it is a statement the shop has
+  // said was never made. There is no pair of timestamps to compare because
+  // `recordNoCertification` nulls the clear whenever a fresh answer arrives.
   const declaredRows = await db
     .select({ id: people.id })
     .from(people)
@@ -432,6 +516,7 @@ export async function listCertificationSummaries(
         eq(people.shopId, shopId),
         inArray(people.id, [...personIds]),
         isNotNull(people.noCertificationDeclaredAt),
+        isNull(people.noCertificationClearedAt),
       ),
     );
   const declared = new Set(declaredRows.map((row) => row.id));

@@ -1,5 +1,6 @@
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNavFallback } from "@/components/MarketingNav";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * The `/about` segment's `<Suspense>` boundary, and what a client navigation
@@ -42,7 +43,10 @@ export default function AboutLoading() {
           </div>
         </section>
 
-        {/* The four operating rules, each in the card it lands in. */}
+        {/* The four operating rules, each in the card it lands in — the shell
+            taken from `sectionCardClass()` with the same `padding` the page
+            passes `SectionCard`, so the skeleton and what replaces it can no
+            longer drift into a layout jump on every navigation here. */}
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
             <div className="h-4 w-40 rounded bg-surface-sunken" />
@@ -52,7 +56,7 @@ export default function AboutLoading() {
           </div>
           <div className="mt-12 grid gap-5 sm:grid-cols-2">
             {[0, 1, 2, 3].map((rule) => (
-              <div key={rule} className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+              <div key={rule} className={sectionCardClass({ padding: "lg" })}>
                 <div className="h-6 w-2/3 max-w-xs rounded bg-surface-sunken" />
                 <div className="mt-4 h-4 w-full rounded bg-surface-sunken" />
                 <div className="mt-2 h-4 w-5/6 rounded bg-surface-sunken" />

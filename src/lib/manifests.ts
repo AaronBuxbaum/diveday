@@ -24,6 +24,7 @@ export {
   carryForwardNotBoarded,
   isNotBackAboard,
   isRollCallCheckpoint,
+  RETRACTION_SUPERSEDED,
   rollCallCheckpoints,
 } from "./roll-call";
 

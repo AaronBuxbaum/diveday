@@ -8,6 +8,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -373,7 +374,10 @@ export default async function OrdersIndexPage({
           filter tore the document down and landed the staffer back at the top
           of the page, above the row they were reading. Same URL, same server
           render (see `src/components/ui/QueryForm.tsx`). */}
-      <QueryForm className="rounded-lg border border-border bg-surface p-4">
+      {/* A `form`, so it takes the card's chrome as a class rather than
+          wrapping in one — same shell as the `<Table>` below it, which is the
+          point: a filter panel and the list it filters are one object. */}
+      <QueryForm className={sectionCardClass()}>
         <FieldGrid columns={4}>
           <Field label={t("orders.index.filters.statusLabel")}>
             <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>

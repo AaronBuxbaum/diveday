@@ -39,6 +39,7 @@
     "check:e2e-hygiene": "node scripts/check-e2e-hygiene.mjs",
     "check:route-coverage": "node scripts/check-route-coverage.mjs",
     "check:notice-codes": "node scripts/check-notice-codes.mjs",
+    "check:redirect-in-try": "node scripts/check-redirect-in-try.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:infra-ascii": "node scripts/check-infra-ascii.mjs",
     "check:locale": "node scripts/check-locale.mjs",

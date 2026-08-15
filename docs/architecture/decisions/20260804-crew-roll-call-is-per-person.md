@@ -171,3 +171,49 @@ mechanism) narrows rather than reopens: the per-person mechanism remains, and it
 informative than the count. If a jurisdiction turns out to require an attested *number*, the table
 and its writer are still here, and the surface to put it on would be the shop's end-of-day close-out
 rather than the boat.
+
+## Amendment 2026-08-15 — the retired table is gone, not merely unused
+
+`roll_call_crew_attestations` has been **dropped**, along with `recordCrewAttestation`, the
+attestation timeline on the departure log, the `roll_call_crew_attestations.csv` file in the shop
+export, and the seed and schedule-guard references to it (migration
+`20260815221413_drop-roll-call-crew-attestations`, carrying the required
+`-- diveday:allow-destructive` acknowledgement).
+
+The decision above retired the *concept* and left the machinery standing because rows existed. That
+reasoning does not survive [H-49](../../product/human-decisions.md) (2026-08-15, Aaron Buxbaum):
+DiveDay is pre-pilot, there are no users, no data worth retaining, and no legacy code to keep. What
+tipped it from a judgement call to a plain deletion is that the writer had **no production caller at
+all** — the only three callers were its own tests, so the table was a schema object kept alive by
+its own test suite, and the follow-up register had begun proposing migrations (a `seq` column, so
+dead rows would sort deterministically) to maintain machinery nothing wrote.
+
+Two paragraphs above are now stale in one respect each, and this amendment is where a reader is
+told rather than left to discover it:
+
+- The **HD-7** paragraph closes by saying that if a jurisdiction turns out to require an attested
+  *number*, "the table and its writer are still here". They are not. HD-7 still narrows rather than
+  reopens, and the answer is unchanged — the per-person mechanism stays, and it is strictly more
+  informative than a count — but building the count back would now mean a new table, a new writer,
+  and the surface named there (the end-of-day close-out, not the boat).
+- The **glossary** no longer carries a `Crew attestation` entry: **Crew roll-call event** is the
+  whole crew half of a head count, and there is no second half to distinguish it from.
+
+What a shop's export bundle no longer contains: `roll_call_crew_attestations.csv`. Every other
+roll-call file is unchanged, and the per-person `roll_call_crew_events.csv` — which names each crew
+member rather than counting them — carries strictly more than the deleted file did. No row in it was
+ever written by a shop, so the file could only ever have been a header line. The bundle's README is
+generated from the file list, so it self-corrects.
+
+Two consequences worth stating rather than leaving to be discovered:
+
+- **The departure log's integrity code covers its timeline.** Removing the `crew_count` entry kind
+  means a log regenerated now would hash differently from one printed earlier off the same
+  departure — the failure mode that reads as tampering. It is empty in practice, because nothing
+  ever wrote a row to hash, but it is the reason a *populated* table would not have been deletable
+  this cheaply.
+- **This is not expand/contract-clean, deliberately.** The previous release still reads the table in
+  three places (the export bundle, its row-count query behind Settings, and the departure log), so
+  those three surfaces 500 for the length of the production build window. Accepted under H-49 — no
+  users, no data — and said plainly on the migration's acknowledgement line rather than papered
+  over. A table with a real reader would have taken two deploys.

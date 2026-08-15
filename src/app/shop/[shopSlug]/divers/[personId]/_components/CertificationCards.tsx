@@ -1,14 +1,21 @@
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
-import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
+import {
+  addCertificationAction,
+  clearNoCertificationAction,
+  deleteCertificationAction,
+  reviewAction,
+} from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
 import { CardStatusMark } from "./CardStatusMark";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -40,6 +47,21 @@ export async function CertificationCards({
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  // A refused card *number* belongs on the box it names, not in this section's
+  // action row — and emphatically not opening the add-a-card form, which is a
+  // different form entirely and had nothing to do with the submit.
+  const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
+  const sectionStatus = numberError ? undefined : status;
+  // The diver's own "I hold no card", still standing: set, never cleared by
+  // staff, and not yet refuted by a card. `listCertificationSummaries` decides
+  // the same thing for the send lists; here the list of cards below *is* the
+  // refutation, so the third condition is read off it directly.
+  const noCertificationDeclared =
+    Boolean(diver.person.noCertificationDeclaredAt) &&
+    !diver.person.noCertificationClearedAt &&
+    !diver.certifications.some((card) => !isUnsightedSelfDeclaration(card)) &&
+    !diver.nitroxCertifications.some((card) => !isUnsightedSelfDeclaration(card)) &&
+    diver.specialtyCertifications.length === 0;
   return (
     <section className="mt-10" aria-labelledby="cards-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -53,7 +75,7 @@ export async function CertificationCards({
             `<details>`, and an answer rendered inside a shut disclosure is
             worse than the page-top banner it replaces — invisible rather than
             merely far away. */}
-        <details open={Boolean(status)}>
+        <details open={Boolean(sectionStatus)}>
           {/* Through the wrapper, like every other button-shaped thing (see
               divers/page.tsx and reviews/page.tsx): the hand-written string
               this replaces was `buttonClass()`'s primary/md output copied out
@@ -78,7 +100,9 @@ export async function CertificationCards({
             as="form"
             action={addCertificationAction.bind(null, shopSlug, personId)}
             columns={2}
-            className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
+            className={sectionCardClass({
+              className: "mt-3 gap-y-3 sm:w-[32rem]",
+            })}
           >
             <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
@@ -129,17 +153,91 @@ export async function CertificationCards({
               >
                 {t("divers.certifications.captureForReview")}
               </SubmitButton>
-              <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+              <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
             </FieldActions>
           </FieldGrid>
         </details>
       </div>
+      {noCertificationDeclared ? (
+        /* **The one statement on this record a staffer could not correct.**
+           `people.no_certification_declared_at` is written by two
+           unauthenticated forms that resolve a person by shop + email, so for a
+           diver the shop holds no card for, anybody with a name and an email
+           address off a manifest can leave it here — and until this control the
+           only way back was owner-only erasure of the whole record.
+
+           Warning-toned and worded as the diver's word, the same way the claim
+           on a card row below is, because it is exactly as weak. Clearing it
+           takes the record to *silence*, never to "certified": there is no card
+           anywhere in this control's path.
+
+           The phrase itself comes from `shared.certificationSummary.notCertified`
+           and is never respelled here — it is the same fact at the same strength
+           the send lists render, and the first draft of this panel had already
+           drifted from it in Spanish, in the locale nobody reads as closely.
+           Only the words about the *control* are this namespace's own. */
+        <SectionCard
+          as="div"
+          // `h3`: this section already owns the `h2` above it.
+          titleAs="h3"
+          title={t("shared.certificationSummary.notCertified")}
+          description={t("divers.certifications.clearNoCertificationHint")}
+          className="mt-4 border-warning/25 bg-warning/10"
+          actions={
+            <form action={clearNoCertificationAction.bind(null, shopSlug, personId)}>
+              <SubmitButton
+                pendingLabel={t("divers.certifications.clearingNoCertification")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("divers.certifications.clearNoCertification")}
+              </SubmitButton>
+            </form>
+          }
+        >
+          {/* **This came back after somebody already corrected it.** A set
+              `clearedByPersonId` beside a null `clearedAt` is the one state the
+              plain panel above would render identically to a first-time answer —
+              and the difference is exactly the signal a staffer needs, because
+              it separates "somebody is looping this through the public form"
+              from "the diver really did answer that". The public form is
+              unauthenticated, so the loop is reachable by anyone holding this
+              diver's name and email. */}
+          {diver.person.noCertificationClearedByPersonId ? (
+            <p className="text-sm text-muted">
+              {t("divers.certifications.noCertificationRestated")}
+            </p>
+          ) : null}
+        </SectionCard>
+      ) : diver.person.noCertificationClearedAt ? (
+        /* **A correction that leaves no mark is not a correction.** The panel
+           above unmounts the moment it succeeds, so without this line the next
+           staffer cannot see that this diver ever gave that answer, or that a
+           colleague overrode it — only a full CSV export could answer, and that
+           is behind the owner/manager export gate. An archived card keeps a
+           visible row for the same reason.
+
+           The date, not the name: the staff member is on the row
+           (`no_certification_cleared_by_person_id`) and in the export, but
+           resolving it to a name needs a join this component does not have —
+           `_components` here take their data as props and never read the
+           database (FU-20260815-a-cleared-not-certified-stamp-does-not-name-who-cleared-it). */
+        <p className="mt-4 text-sm text-muted">
+          {t("divers.certifications.noCertificationClearedNote", {
+            date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
+          })}
+        </p>
+      ) : null}
       {diver.certifications.length === 0 ? (
         <EmptyState className="mt-4">
           <p className="text-sm text-muted">{t("divers.certifications.empty")}</p>
         </EmptyState>
       ) : (
-        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+        <ul
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-4 divide-y divide-border",
+          })}
+        >
           {diver.certifications.map((card) => {
             const display = cardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
@@ -206,6 +304,7 @@ export async function CertificationCards({
                       action={reviewAction.bind(null, shopSlug, personId)}
                       certificationId={card.id}
                       claimedLevel={card.level}
+                      numberError={numberError}
                     />
                   ) : card.status === "pending" || needsImportConfirm(card) ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>

@@ -1,4 +1,5 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { SectionCard } from "@/components/ui/card";
 import type { TripSitePeek } from "@/db/trips";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -28,10 +29,9 @@ export function DiveSitesPeek({
       <p className="mt-1 text-sm text-muted">{subheading}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {sites.map((site) => (
-          <div
-            key={site.name}
-            className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
-          >
+          // A shell, not a padded card: the photo runs to the card's edge and
+          // the text block below it does its own padding.
+          <SectionCard as="article" key={site.name} padding="none" className="overflow-hidden">
             {site.imageUrls && site.imageUrls.length > 0 ? (
               <StoredPhoto
                 src={site.imageUrls[0]}
@@ -62,7 +62,7 @@ export function DiveSitesPeek({
                 <p className="mt-2 text-sm text-muted line-clamp-3">{site.description}</p>
               )}
             </div>
-          </div>
+          </SectionCard>
         ))}
       </div>
     </section>

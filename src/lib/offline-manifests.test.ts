@@ -242,6 +242,10 @@ describe("offline manifest policy", () => {
       pending: true,
       implied: false,
       local: true,
+      // Which of this device's queued events the row is showing — the id a
+      // retraction of it has to name (ADR
+      // 20260815-an-offline-retraction-names-its-target).
+      clientEventId: "event-1",
     });
   });
 
@@ -341,6 +345,215 @@ describe("offline manifest policy", () => {
       pending: false,
       implied: false,
       local: true,
+      // The rescued event, not the rejected one on top of it: a retraction
+      // aimed at this row would name the mark the crew can actually see.
+      clientEventId: "event-missing",
+    });
+  });
+
+  /**
+   * The device side of a refused compare-and-set (ADR
+   * 20260815-an-offline-retraction-names-its-target), and the reason refusing is
+   * safe rather than merely conservative-sounding.
+   *
+   * The crew tapped undo on their own mark; the server refused, because a second
+   * device had said something about that diver since. That refusal has to leave
+   * the loudest row the product has *on the screen the crew is holding* — a
+   * retraction that comes back rejected and takes the alarm with it would be the
+   * same silence ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver
+   * exists to prevent, reached by a different door.
+   *
+   * The alarm survives on the rescue that was already there. What the refusal
+   * *changes* is what the row then says about itself: it stops claiming to be
+   * this device's own statement (`local`) and stops naming an event to retract
+   * (`clientEventId`), because the server has just said in so many words that
+   * the statement standing is somebody else's. Without that the row keeps
+   * offering "Tap 'Not back aboard' again to undo" and every tap queues another
+   * retraction the server refuses identically — an undo that can never succeed,
+   * under copy promising it will (dive-domain review, 2026-08-15). A crew that
+   * taps the loudest row's undo three times into silence is a crew that stops
+   * trusting the control.
+   */
+  it("keeps the alarm on screen when a retraction of it is refused, and stops offering that undo", () => {
+    const saved = snapshot();
+    const alarm = {
+      clientEventId: "event-missing",
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      bookingId: "ready",
+      checkpoint: "after_dive_1" as const,
+      status: "not_boarded" as const,
+      note: null,
+      occurredAt: "2026-07-20T14:00:00.000Z",
+      syncStatus: "applied" as const,
+    };
+    const refusedRetraction = {
+      ...alarm,
+      clientEventId: "event-undo",
+      status: "cleared" as const,
+      retractsClientEventId: "event-missing",
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "rejected" as const,
+      rejectionReason: "retraction_superseded",
+    };
+    expect(
+      latestOfflineRollCall(saved, [alarm, refusedRetraction], "ready", "after_dive_1"),
+    ).toEqual({
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:00:00.000Z",
+      pending: false,
+      implied: false,
+      // Not `local` any more, which is what switches the line under the row to
+      // "Recorded on another device or on the live manifest — undo it there,
+      // not here." That sentence is now literally true.
+      local: false,
+      clientEventId: undefined,
+    });
+    // The crew half of the same composition, because the two halves of one head
+    // count must not disagree about whether somebody is still in the water.
+    const crewSaved = crewSnapshot();
+    const crewAlarm = {
+      ...alarm,
+      snapshotId: crewSaved.snapshotId,
+      snapshotSavedAt: crewSaved.savedAt,
+      bookingId: undefined,
+      crewPersonId: "crew-dana",
+    };
+    const crewRefused = {
+      ...crewAlarm,
+      clientEventId: "event-crew-undo",
+      status: "cleared" as const,
+      retractsClientEventId: "event-missing",
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "rejected" as const,
+      rejectionReason: "retraction_superseded",
+    };
+    expect(
+      latestOfflineCrewRollCall(crewSaved, [crewAlarm, crewRefused], "crew-dana", "after_dive_1"),
+    ).toMatchObject({ state: "not_boarded", local: false, clientEventId: undefined });
+  });
+
+  /**
+   * The refusal at **`departure`**, where it is a different act (dive-domain
+   * review, 2026-08-15). After a dive `not_boarded` means *did not come back*
+   * and holding it keeps a count open. At the dock it means *never left*, which
+   * is **accounted for** and carries forward to every later checkpoint — so a
+   * refusal that leaves the dock mark standing does not hold one count open, it
+   * closes three.
+   *
+   * The sequence, with no malice and no bug in any step: the tablet marks Priya
+   * ashore at the dock and syncs it; Priya turns up late and the desk boards her
+   * on the live manifest; the crew tap to take their mark back; the server
+   * refuses, correctly, because the desk's sighting is what stands. Left there,
+   * this device would read Priya "not boarded · carried" after dive 1 and print
+   * roll call complete — about somebody who is in the water.
+   *
+   * So a `retraction_superseded` refusal reads the row down to **awaiting**
+   * wherever the value it would otherwise leave standing is not itself an alarm.
+   * Awaiting is the fail-open answer (ADR
+   * 20260815-a-rejected-correction-may-not-silence-a-missing-diver's own
+   * reasoning, one door along): the count stays open, the crew are asked again,
+   * and nothing on this copy claims a person is accounted for on the strength of
+   * a statement the server has moved past.
+   */
+  it("reads a superseded dock retraction down to awaiting, so nothing carries forward", () => {
+    const saved = snapshot();
+    // The snapshot came home carrying this device's own dock mark, which is
+    // exactly the value the server has since moved past.
+    for (const manifest of saved.manifests) {
+      const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
+      if (!diver) throw new Error("fixture lost a diver");
+      diver.rollCall =
+        manifest.checkpoint === "departure"
+          ? {
+              state: "not_boarded",
+              occurredAt: "2026-07-20T11:30:00.000Z",
+              recordedByName: "Dana Divemaster",
+              note: null,
+            }
+          : undefined;
+    }
+    const dock = {
+      clientEventId: "event-dock",
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      bookingId: "ready",
+      checkpoint: "departure" as const,
+      status: "not_boarded" as const,
+      note: null,
+      occurredAt: "2026-07-20T11:30:00.000Z",
+      syncStatus: "applied" as const,
+    };
+    const refused = {
+      ...dock,
+      clientEventId: "event-dock-undo",
+      status: "cleared" as const,
+      retractsClientEventId: "event-dock",
+      occurredAt: "2026-07-20T11:45:00.000Z",
+      syncStatus: "rejected" as const,
+      rejectionReason: "retraction_superseded",
+    };
+    const events = [dock, refused];
+    expect(latestOfflineRollCall(saved, events, "ready", "departure")).toBeUndefined();
+    // And nothing carries: the after-dive checkpoints stay open rather than
+    // reading "ashore, accounted for" about a diver who is aboard.
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toBeUndefined();
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_2")).toBeUndefined();
+
+    // Crew are read down the same way, through the same function.
+    const crewSaved = crewSnapshot();
+    const crewEvents = events.map((event) => ({
+      ...event,
+      bookingId: undefined,
+      crewPersonId: "crew-dana",
+      snapshotId: crewSaved.snapshotId,
+      snapshotSavedAt: crewSaved.savedAt,
+    }));
+    expect(
+      latestOfflineCrewRollCall(crewSaved, crewEvents, "crew-dana", "departure"),
+    ).toBeUndefined();
+    expect(
+      latestOfflineCrewRollCall(crewSaved, crewEvents, "crew-dana", "after_dive_1"),
+    ).toBeUndefined();
+  });
+
+  /**
+   * The one direction the rule above may never run. A refusal reads a row down
+   * to awaiting because awaiting is fail-open — but a stated "did not come back"
+   * is the one value where *silence is the failure*, so it stands regardless of
+   * where it came from. Here the snapshot holds the alarm and this device has no
+   * local event to rescue; the refusal must leave the alarm exactly where it is.
+   */
+  it("never reads an alarm down to awaiting, whoever recorded it", () => {
+    const saved = snapshot();
+    const afterDive = saved.manifests.find((manifest) => manifest.checkpoint === "after_dive_1");
+    const diver = afterDive?.divers.find((entry) => entry.bookingId === "ready");
+    if (!diver) throw new Error("fixture lost a diver");
+    diver.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:20:00.000Z",
+      recordedByName: "Sal Ortiz",
+      note: null,
+    };
+    const refused = {
+      clientEventId: "event-undo",
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      bookingId: "ready",
+      checkpoint: "after_dive_1" as const,
+      status: "cleared" as const,
+      retractsClientEventId: "event-somebody-elses",
+      note: null,
+      occurredAt: "2026-07-20T14:30:00.000Z",
+      syncStatus: "rejected" as const,
+      rejectionReason: "retraction_superseded",
+    };
+    expect(latestOfflineRollCall(saved, [refused], "ready", "after_dive_1")).toMatchObject({
+      state: "not_boarded",
+      local: false,
     });
   });
 
@@ -514,13 +727,20 @@ describe("offline manifest policy", () => {
       pending: false,
       implied: false,
       local: true,
+      clientEventId: "event-dock",
     });
+    // The carried copies name the dock event too, and that is inert rather than
+    // a licence: `rollCallRowState`'s `recordedNotBoarded` is false for an
+    // `implied` result, so no control offers a retraction here — and one aimed
+    // here anyway would be refused by the server, whose newest-event lookup is
+    // scoped to *this* checkpoint, where the dock event is not.
     expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toEqual({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:30:00.000Z",
       pending: false,
       implied: true,
       local: true,
+      clientEventId: "event-dock",
     });
     expect(latestOfflineRollCall(saved, events, "ready", "after_dive_2")).toEqual({
       state: "not_boarded",
@@ -528,6 +748,7 @@ describe("offline manifest policy", () => {
       pending: false,
       implied: true,
       local: true,
+      clientEventId: "event-dock",
     });
   });
 
@@ -1014,6 +1235,7 @@ describe("offline crew roll call", () => {
       pending: true,
       implied: false,
       local: true,
+      clientEventId: "event-crew",
     });
     // The other crew member has said nothing — absence is awaiting, which is
     // what keeps the checkpoint open.
@@ -1096,6 +1318,9 @@ describe("offline crew roll call", () => {
       pending: false,
       implied: false,
       local: true,
+      // The rescued mark, so the crew half names its target exactly as the
+      // diver half does.
+      clientEventId: "event-crew-missing",
     });
   });
 
@@ -1119,6 +1344,7 @@ describe("offline crew roll call", () => {
       pending: false,
       implied: true,
       local: true,
+      clientEventId: "event-crew-dock",
     });
     const retraction = {
       ...ashore,
@@ -1300,6 +1526,7 @@ describe("offline crew roll call", () => {
       pending: true,
       implied: false,
       local: true,
+      clientEventId: "event-newer",
     });
   });
 

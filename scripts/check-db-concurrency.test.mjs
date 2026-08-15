@@ -150,3 +150,62 @@ describe("what the token scan buys over a regex", () => {
     expect(lines(findings)).toEqual([3]);
   });
 });
+
+describe("the scanner's own blind spots", () => {
+  it("does not match a Promise.all named inside a comment", () => {
+    // The guard's docblock has always promised this, and it was false. A
+    // template literal with a substitution left the scanner mid-template, so
+    // the closing backtick opened a phantom template that ran to the next
+    // backtick anywhere in the file — and `src/db/seed-trip-legs.ts` had one in
+    // a comment reading "Sequential, never `Promise.all`". The guard reported a
+    // violation against a comment saying the opposite of a violation.
+    const findings = findTransactionFanOut(`
+      async function f(tx: DbExecutor): Promise<void> {
+        if (missing.length > 0) throw new Error(\`nope: \${missing.join(", ")}\`);
+        // Sequential, never \`Promise.all\`: this can be handed a transaction.
+        for (const row of rows) await tx.insert(row);
+      }
+    `);
+
+    expect(findings).toEqual([]);
+  });
+
+  it("still sees a real fan-out after a template literal with a substitution", () => {
+    // The visible half of that bug was the false positive; the dangerous half
+    // was that every brace after such a template was misattributed, so
+    // `inTransaction()` could be wrong in either direction.
+    const findings = findTransactionFanOut(`
+      async function f(tx: DbExecutor): Promise<void> {
+        log(\`seeding \${rows.length} rows\`);
+        await Promise.all(rows.map((row) => tx.insert(row)));
+      }
+    `);
+
+    expect(lines(findings)).toEqual([4]);
+  });
+
+  it("checks the body of a function whose return type is an object literal", () => {
+    // `Promise<{ … }>` is what every async reader returning an object looks
+    // like, and its `{` used to spend the "takes a transaction" flag before the
+    // body ever opened — exempting the whole function. The sibling returning
+    // `Promise<void>` was caught, which made the hole look like intent.
+    const findings = findTransactionFanOut(`
+      async function f(tx: DbExecutor): Promise<{ slug: string; count: number }> {
+        return { slug: "s", count: (await Promise.all([one(tx), two(tx)])).length };
+      }
+    `);
+
+    expect(lines(findings)).toEqual([3]);
+  });
+
+  it("leaves a pool-only reader alone even with an object return type", () => {
+    const findings = findTransactionFanOut(`
+      async function f(db: AppDb): Promise<{ slug: string }> {
+        await Promise.all([one(db), two(db)]);
+        return { slug: "s" };
+      }
+    `);
+
+    expect(findings).toEqual([]);
+  });
+});

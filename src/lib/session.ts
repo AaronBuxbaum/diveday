@@ -101,6 +101,17 @@ export type ShopSurface = {
  * returned a `{ allowed: false }` the caller might forget to branch on would
  * be a tenant-isolation bug wearing a helper's clothes, and
  * `src/lib/session.test.ts` pins it.
+ *
+ * Which leaves the other end of the same rope: **a caller may not wrap this in a
+ * `try`.** A `catch` above a throwing gate turns the refusal back into exactly
+ * the returned `{ allowed: false }` above — except invisibly, since execution
+ * simply continues and the page renders for someone this function said no to.
+ * The test can only pin the helper's own behaviour, so the callers are held by
+ * `scripts/check-repo.mjs`'s `redirect-in-try` rule
+ * (`scripts/check-redirect-in-try.mjs`), which refuses any unwinding call
+ * written inside a `try` body and leaves `catch { redirect(…) }` alone. It was
+ * worth a script rather than a convention for the reason the notice-code rule
+ * was: the failure renders nothing, so nothing goes red.
  */
 export async function requireShopSurface(
   shopSlug: string,

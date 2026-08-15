@@ -193,15 +193,14 @@ export function certificationSummaryText(
  * A sibling rather than a parameter on {@link certificationSummaryText}, and
  * deliberately: only a caller that already holds a departure's effective
  * minimum can honestly say this, so the shared phrase stays sayable by a caller
- * that does not. Today that is the last-minute-deal recipient preview, via
- * `reviewLastMinuteRecipients`.
- *
- * The wait-list rows render the shared phrase and **could** reach this one — a
- * DiveDay wait list is per-trip, and the page that draws it has already folded
- * that trip's requirement for the panel below. They do not yet, and that is
- * scope rather than a rule: a wait-list invite is a staffer offering one named
- * person a seat on that exact departure, which is if anything the stronger act.
- * FU-20260815-the-wait-list-rows-carry-no-below-the-bar-mark.
+ * that does not. Two callers hold one: the last-minute-deal recipient preview
+ * (via `reviewLastMinuteRecipients`) and, since 2026-08-15, the wait-list rows
+ * on the same page — a DiveDay wait list is per-trip, and an invite is a
+ * staffer offering one named person a seat on that exact departure, which is if
+ * anything the stronger act of the two. The deal list *reorders* to lift
+ * below-the-bar names; the wait list may not, because its order is who asked
+ * first (ADR 20260813-wait-list-is-a-lead-list). The mark travels without the
+ * ordering.
  *
  * **It is a word, not a colour.** The row's warning tone already means exactly
  * one thing, "nobody has seen this card", and the whole argument for it (ADR

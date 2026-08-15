@@ -235,20 +235,30 @@ describe("POST /api/offline-manifests/sync", () => {
    * to tap "Mark aboard" — a positive claim that this person is back on the
    * boat — so the trail held a sighting nobody made. `cleared` arrives through
    * this same route, under the same gate, and reads back as awaiting.
+   *
+   * Both taps in **one batch**, sharing one `occurredAt` — the shape a device
+   * actually produces (queue the mistake, queue the undo, sync once) and the
+   * only shape the frozen e2e clock can produce at all. It is where the two
+   * offline rules meet and both have to hold: `newest.occurredAt > occurredAt`
+   * stays strict so the equal timestamp is accepted, *and* the compare-and-set
+   * matches, because the batch is applied oldest-first so the mark this
+   * retraction names is the one standing when it arrives.
    */
-  it("applies an offline retraction and returns the diver to awaiting", async () => {
+  it("applies an offline retraction naming the mark it undoes, in one batch, and returns the diver to awaiting", async () => {
     const { db, shop, trip, booking, staffPersonId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
     const now = nowDate().toISOString();
+    const mark = crypto.randomUUID();
     const event = (status: "not_boarded" | "cleared") => ({
-      clientEventId: crypto.randomUUID(),
+      clientEventId: status === "not_boarded" ? mark : crypto.randomUUID(),
       snapshotId: crypto.randomUUID(),
       snapshotSavedAt: now,
       bookingId: booking.id,
       tripId: trip.id,
       checkpoint: "departure" as const,
       status,
+      ...(status === "cleared" ? { retractsClientEventId: mark } : {}),
       note: null,
       occurredAt: now,
     });
@@ -260,6 +270,66 @@ describe("POST /api/offline-manifests/sync", () => {
     expect(
       manifest?.divers.find((entry) => entry.bookingId === booking.id)?.rollCall,
     ).toBeUndefined();
+  });
+
+  /**
+   * The compare-and-set, from the outside (ADR
+   * 20260815-an-offline-retraction-names-its-target). The route's only job here
+   * is to carry `retractsClientEventId` through to the writer unaltered — it is
+   * the one field on this body that decides whether a retraction is a
+   * compare-and-set or a blind newest-wins write, and a schema that quietly
+   * dropped it would leave every device-side and writer-side test green while
+   * the property it exists for was gone.
+   *
+   * Two events, then a retraction of the *first*. On a boat that second event is
+   * another crew member's phone, or the live manifest; here it is simply the
+   * statement standing when the undo arrives.
+   */
+  it("carries a retraction's target through, and refuses one whose target no longer stands", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const now = nowDate().toISOString();
+    const mine = crypto.randomUUID();
+    const theirs = crypto.randomUUID();
+    const event = (clientEventId: string, extra: Record<string, unknown> = {}) => ({
+      clientEventId,
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      bookingId: booking.id,
+      tripId: trip.id,
+      checkpoint: "departure" as const,
+      status: "not_boarded",
+      note: null,
+      occurredAt: now,
+      ...extra,
+    });
+
+    const applied = await POST(postRequest({ events: [event(mine), event(theirs)] }));
+    expect(applied.status).toBe(200);
+
+    const retraction = crypto.randomUUID();
+    const response = await POST(
+      postRequest({
+        events: [event(retraction, { status: "cleared", retractsClientEventId: mine })],
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      results: Array<{ clientEventId: string; status: string; reason?: string }>;
+    };
+    expect(body.results).toEqual([
+      { clientEventId: retraction, status: "rejected", reason: "retraction_superseded" },
+    ]);
+    // The statement the device could not see is still standing. A refused
+    // retraction leaves the record as the better-informed device left it, and
+    // the device reads its own event as `rejected` — which
+    // `explicitResultAt`'s asymmetry is written never to turn into silence
+    // (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
+    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
+    expect(
+      manifest?.divers.find((entry) => entry.bookingId === booking.id)?.rollCall,
+    ).toMatchObject({ state: "not_boarded" });
   });
 
   /**

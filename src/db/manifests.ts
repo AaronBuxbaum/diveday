@@ -12,6 +12,7 @@ import {
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
+  RETRACTION_SUPERSEDED,
   type RollCallCheckpoint,
   type RollCallRecord,
   rollCallCheckpoints,
@@ -29,7 +30,6 @@ import {
   bookings,
   people,
   personRoles,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
@@ -574,6 +574,68 @@ function offlineEventOutOfBounds(input: {
   );
 }
 
+/**
+ * The compare-and-set an offline **retraction** is subject to, shared by both
+ * writers (ADR 20260815-an-offline-retraction-names-its-target).
+ *
+ * `newest.occurredAt > occurredAt` — the refusal directly above both call sites
+ * — is a timestamp comparison, and `appendOfflineRollCall` stamps `occurredAt`
+ * at tap time, so a retraction tapped *now* beats everything recorded before
+ * now. That is fine for a statement (a later opinion supersedes an earlier one)
+ * and wrong for a retraction, which is not an opinion about the diver at all:
+ * it says "the thing I said is not a thing anybody said". A device holding a
+ * copy up to a fortnight old could therefore unsay a *different* device's "did
+ * not come back from the dive", and `src/db/today.ts` would drop that diver
+ * from its `notBackAboard` count with it.
+ *
+ * So a retraction names the event it undoes and applies only while that event
+ * is still the newest one standing at this subject and checkpoint.
+ *
+ * **The identifier is the target's `client_event_id`, not its row id or `seq`.**
+ * The device mints it at queue time (`crypto.randomUUID()` in
+ * `appendOfflineRollCall`) — which is the only identity that exists for an
+ * event the server has never seen, and the whole point is that a crew member
+ * may retract a mark that is still sitting in the queue behind it. A row id or
+ * `seq` is assigned here, on a boat with no radio, and a status-plus-timestamp
+ * pair is not an identity at all: two taps share a millisecond under a coarse
+ * or frozen clock, which is exactly the tie `latestQueuedAttempt` exists to
+ * break.
+ *
+ * **A retraction naming nothing keeps the old behaviour**, deliberately and
+ * with no expiry date on it. Those are events queued by a build that predates
+ * the field, on a phone in a dry bag — the case this whole feature is for — and
+ * refusing them would discard a statement a crew member really made to enforce
+ * a rule their device cannot know about. The device half (`OfflineRollCallResult.local`,
+ * ADR 20260815-offline-can-unsay-a-missing-diver) already scopes those to this
+ * device's own statement, which is what has been carrying the risk since
+ * 2026-08-15; this is a strict tightening on top of it, never a replacement.
+ *
+ * Read only for `cleared`. An event carrying the field with any other status is
+ * a device bug, and it is *ignored* rather than refused: refusing would cost the
+ * whole batch (the route answers non-2xx and the device keeps every event
+ * pending) to punish a claim that grants no authority.
+ */
+function offlineRetractionSuperseded(input: {
+  status: "boarded" | "not_boarded" | "cleared";
+  retractsClientEventId: string | undefined;
+  newest: { clientEventId: string | null } | undefined;
+}): boolean {
+  if (input.status !== "cleared" || !input.retractsClientEventId) return false;
+  // Case-folded on both sides, because the sibling dedup lookup a few lines
+  // above compares the same value *inside* Postgres against a `uuid` column,
+  // where `AAAA…` and `aaaa…` are one value. Compared here as raw JavaScript
+  // strings they are two, so one id would mean "the same event" for idempotency
+  // and "a different event" for this check — and the disagreement would surface
+  // as a silently refused correction on a missing-diver row (security review,
+  // 2026-08-15). No producer sends uppercase today (`crypto.randomUUID()` is
+  // lowercase); this is so the next client is not the one that finds out.
+  //
+  // `newest` undefined — nothing at all recorded here — mismatches too: the
+  // statement this retraction is about is not standing, so there is nothing
+  // for it to take back.
+  return input.newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase();
+}
+
 export type RecordRollCallOutcome =
   | { ok: true; eventId: string; duplicate?: boolean }
   | {
@@ -584,6 +646,14 @@ export type RecordRollCallOutcome =
         | "not_ready"
         | "invalid_checkpoint"
         | "newer_event_exists"
+        /**
+         * The statement being retracted no longer stands — see
+         * {@link offlineRetractionSuperseded}. Spelled through
+         * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
+         * device reads this exact code back and reads a row down to awaiting
+         * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
+         */
+        | typeof RETRACTION_SUPERSEDED
         | "snapshot_invalid";
     };
 
@@ -605,6 +675,8 @@ export async function recordRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
+    /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
+    retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
     note?: string;
     occurredAt?: Date;
@@ -662,7 +734,10 @@ export async function recordRollCall(
         return { ok: false, reason: "snapshot_invalid" };
       }
       const [newest] = await tx
-        .select({ occurredAt: rollCallEvents.occurredAt })
+        .select({
+          occurredAt: rollCallEvents.occurredAt,
+          clientEventId: rollCallEvents.clientEventId,
+        })
         .from(rollCallEvents)
         .where(
           and(
@@ -680,6 +755,21 @@ export async function recordRollCall(
         .limit(1);
       if (newest && newest.occurredAt > occurredAt) {
         return { ok: false, reason: "newer_event_exists" };
+      }
+      // Second, and narrower: a retraction must still be about the statement
+      // that is standing. Refusing leaves that statement in place, which is the
+      // only direction that is safe here — the row this can be wrong about is a
+      // diver somebody said did not come back from a dive, and the device turns
+      // a refusal into an alarm that stays on screen rather than one that
+      // quietly clears (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
+      if (
+        offlineRetractionSuperseded({
+          status: input.status,
+          retractsClientEventId: input.retractsClientEventId,
+          newest,
+        })
+      ) {
+        return { ok: false, reason: RETRACTION_SUPERSEDED };
       }
     }
 
@@ -730,6 +820,14 @@ export type RecordCrewRollCallOutcome =
         | "crew_not_assigned"
         | "invalid_checkpoint"
         | "newer_event_exists"
+        /**
+         * The statement being retracted no longer stands — see
+         * {@link offlineRetractionSuperseded}. Spelled through
+         * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
+         * device reads this exact code back and reads a row down to awaiting
+         * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
+         */
+        | typeof RETRACTION_SUPERSEDED
         | "snapshot_invalid";
     };
 
@@ -770,6 +868,8 @@ export async function recordCrewRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
+    /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
+    retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
     note?: string;
     occurredAt?: Date;
@@ -862,7 +962,10 @@ export async function recordCrewRollCall(
         return { ok: false, reason: "snapshot_invalid" };
       }
       const [newest] = await tx
-        .select({ occurredAt: rollCallCrewEvents.occurredAt })
+        .select({
+          occurredAt: rollCallCrewEvents.occurredAt,
+          clientEventId: rollCallCrewEvents.clientEventId,
+        })
         .from(rollCallCrewEvents)
         .where(
           and(
@@ -880,6 +983,19 @@ export async function recordCrewRollCall(
         .limit(1);
       if (newest && newest.occurredAt > occurredAt) {
         return { ok: false, reason: "newer_event_exists" };
+      }
+      // The same compare-and-set the diver path applies, through the same
+      // predicate — a crew-specific reading of when a retraction is still about
+      // the statement standing is how the two halves of one head count start
+      // disagreeing about whether a divemaster is still in the water.
+      if (
+        offlineRetractionSuperseded({
+          status: input.status,
+          retractsClientEventId: input.retractsClientEventId,
+          newest,
+        })
+      ) {
+        return { ok: false, reason: RETRACTION_SUPERSEDED };
       }
     }
 
@@ -912,115 +1028,6 @@ export async function recordCrewRollCall(
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }
-  return outcome;
-}
-
-export type RecordCrewAttestationOutcome =
-  | { ok: true; attestationId: string; crewAboard: number; crewAssigned: number }
-  | {
-      ok: false;
-      reason: "trip_unavailable" | "staff_not_found" | "invalid_checkpoint" | "invalid_count";
-    };
-
-/**
- * The largest crew count this accepts. Nothing DiveDay serves floats a boat
- * with more than a couple of dozen crew, and an unbounded integer typed with wet
- * hands is how a checkpoint gets "closed" by a fat-fingered 999 that nobody
- * reads as wrong.
- */
-const MAX_CREW_ABOARD = 99;
-
-/**
- * Record how many crew are aboard at one checkpoint. Append-only: every call
- * inserts a row, and the newest one is the current answer, mirroring
- * `recordRollCall`. There is no update path and no "crew ok" boolean — a head
- * count is a statement someone made at a time, not a flag.
- *
- * **No surface calls this any more** (ADR 20260804-crew-roll-call-is-per-person).
- * The manifest's typed "how many crew are aboard" control is gone, and roll-call
- * completeness reads the named crew list alone. The writer, the table, and the
- * `roll_call_crew_attestations.csv` export stay because rows already exist:
- * they are part of departures shops have sailed, the incident export renders
- * them, and the export file is a published data-portability contract. Deleting
- * it is a separate change with a migration in it, not a side effect of a UI fix.
- *
- * The **denominator is never taken from the caller**. `crewAssigned` is read
- * server-side from the trip's own assignments inside the transaction, so a
- * client cannot close a checkpoint by claiming the boat only had one crew
- * member. `crewAboard` is the only number staff supply, because it is the only
- * one that comes from looking at people.
- */
-export async function recordCrewAttestation(
-  db: AppDb,
-  input: {
-    shopId: string;
-    tripId: string;
-    attestedByPersonId: string;
-    crewAboard: number;
-    checkpoint?: RollCallCheckpoint;
-    note?: string;
-    occurredAt?: Date;
-  },
-): Promise<RecordCrewAttestationOutcome> {
-  const outcome = await db.transaction(async (tx): Promise<RecordCrewAttestationOutcome> => {
-    const checkpoint = input.checkpoint ?? "departure";
-    const occurredAt = input.occurredAt ?? nowDate();
-    if (
-      !Number.isInteger(input.crewAboard) ||
-      input.crewAboard < 0 ||
-      input.crewAboard > MAX_CREW_ABOARD
-    ) {
-      return { ok: false, reason: "invalid_count" };
-    }
-
-    const staffId = await activeStaffRecorderId(tx, input.shopId, input.attestedByPersonId);
-    if (!staffId) return { ok: false, reason: "staff_not_found" };
-
-    // Same tenancy and trip-status gate `recordRollCall` applies before writing
-    // a diver event: a trip belonging to another shop, or one already cancelled,
-    // takes no head count.
-    const [trip] = await tx
-      .select({ id: trips.id, plannedDives: trips.plannedDives })
-      .from(trips)
-      .where(
-        and(
-          eq(trips.id, input.tripId),
-          eq(trips.shopId, input.shopId),
-          eq(trips.status, "scheduled"),
-        ),
-      )
-      .limit(1);
-    if (!trip) return { ok: false, reason: "trip_unavailable" };
-    if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
-      return { ok: false, reason: "invalid_checkpoint" };
-    }
-
-    const crew = await listTripCrew(tx, input.shopId, input.tripId);
-
-    const [attestation] = await tx
-      .insert(rollCallCrewAttestations)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        checkpoint,
-        crewAboard: input.crewAboard,
-        crewAssigned: crew.length,
-        attestedByPersonId: staffId,
-        note: input.note?.trim() || null,
-        occurredAt,
-      })
-      .returning({ id: rollCallCrewAttestations.id });
-    if (!attestation) throw new Error("recordCrewAttestation: insert returned no row");
-    return {
-      ok: true,
-      attestationId: attestation.id,
-      crewAboard: input.crewAboard,
-      crewAssigned: crew.length,
-    };
-  });
-  // Same push signal a roll-call write raises — a crew count changes whether
-  // the checkpoint reads complete on every device holding this manifest open.
-  if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
   return outcome;
 }
 

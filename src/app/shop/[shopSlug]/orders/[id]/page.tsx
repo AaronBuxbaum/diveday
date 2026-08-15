@@ -7,6 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -244,7 +245,11 @@ export default async function OrderDetailPage({
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
+      {/* `padding="lg"`: the receipt is a card someone works *inside* —
+          Refresh, Void and Refund all live in it. No `title`; the page header
+          above already names the order, and the status badge is the heading
+          row's whole content. */}
+      <SectionCard padding="lg">
         <div className="flex items-center justify-between gap-3">
           {/* This page is *about* one order, so every status earns its badge —
               including `paid`, which the index deliberately leaves off a
@@ -368,7 +373,7 @@ export default async function OrderDetailPage({
         {demo && (order.order.status === "open" || order.order.status === "paid") ? (
           <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
         ) : null}
-      </section>
+      </SectionCard>
     </main>
   );
 }

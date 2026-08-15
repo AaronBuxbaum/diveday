@@ -383,7 +383,7 @@ property is wrong for a backup. Do not consolidate them.
 | Public access | `BlockPublicAccess.BLOCK_ALL` | Bundles contain waiver and medical records |
 | Encryption | SSE-S3, plus `enforceSSL` (a bucket policy denying non-TLS requests) | At rest and in transit |
 | Removal policy | `RETAIN` | One of the two resources in this stack that must survive `cdk destroy` (the other is `DatabaseDumpBucket`, below). Deleting production backups should require a deliberate manual act |
-| Lifecycle | Infrequent Access at 30 days; Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **Current versions never expire.** | Cost is managed by getting colder, not by deleting. Waiver retention is "indefinite" pending [H-02](../product/human-decisions.md), so a lifecycle rule must never be what decides evidence has outlived its usefulness. Glacier *Instant*, not Flexible or Deep, because a restore happens during an incident and a multi-hour thaw would make the backup useless exactly when it is needed |
+| Lifecycle | One rule, about bundles: Infrequent Access at 30 days; Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **Current versions never expire.** Nothing expires the `dumps/` prefix this bucket held until 2026-08-15 — those objects are abandoned deliberately (§2c of [backup-and-restore-runbook.md](backup-and-restore-runbook.md)) | Cost is managed by getting colder, not by deleting. Waiver retention is "indefinite" pending [H-02](../product/human-decisions.md), so a lifecycle rule must never be what decides evidence has outlived its usefulness. Glacier *Instant*, not Flexible or Deep, because a restore happens during an incident and a multi-hour thaw would make the backup useless exactly when it is needed |
 | Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` on `arnForObjects("exports/*")` and nothing else | Write-only, same least-privilege posture as `cdk-deployer` in §5. A leaked uploader credential can neither read a shop's exported waivers back out nor destroy an existing backup. The prefix is load-bearing rather than tidy: this key ships to **Vercel**, and until 2026-08-15 the grant was `arnForObjects("*")` on a bucket that also held the full-cluster database dump, so a leaked environment could overwrite it |
 
 **The database dump lives in its own bucket** (`DatabaseDumpBucket` / `diveday-database-dumps`,
@@ -396,7 +396,9 @@ the bundles deliberately exclude `user_accounts`, the dump is every password has
 answer, and it is the only artifact that can restore a login. Colocating them meant every grant on
 this bucket had to be *remembered* to be prefix-scoped; the one that was not is the one that shipped
 a credential to a third party. No principal holding Vercel-resident credentials has any grant on the
-dump bucket at all. Restore procedure and the transition window are in
+dump bucket at all. The dumps written into this bucket before the split were left where they were and
+are part of no recovery plan; the restore procedure, the deploy-day step, and the manual command for
+clearing that abandoned prefix are in
 [backup-and-restore-runbook.md](backup-and-restore-runbook.md) §2c.
 
 The uploader's access key is minted by the deploy and delivered in the credentials secret

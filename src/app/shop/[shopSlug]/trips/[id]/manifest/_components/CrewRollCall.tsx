@@ -4,6 +4,7 @@ import type {
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
@@ -138,7 +139,12 @@ export function CrewRollCall({
               that used to sit below this list named nobody. Same control,
               same append-only write, same undo as a diver's — the subject is
               a person, not a booking. */}
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-3 divide-y divide-border",
+            })}
+          >
             {crew.map((member) => {
               const rc = member.rollCall;
               // The same derivation and the same tone order the diver rows

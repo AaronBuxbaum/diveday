@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   NOTICE_CODE_PATTERN,
+  type NoticeCodeOf,
   noticeCode,
   noticeFromParam,
   noticeRole,
   noticeUrl,
   shopPath,
+  type WidenedNoticeReason,
 } from "./staff-notices";
 
 /**
@@ -106,6 +108,49 @@ describe("noticeCode", () => {
     for (const reason of ["not_authorized", "trip_departed", "half_filled", "saved"]) {
       expect(noticeCode(reason)).toMatch(NOTICE_CODE_PATTERN);
     }
+  });
+
+  /**
+   * `NoticeCodeOf` is the same normalisation at the type level, and the whole
+   * point of it is that a page can type its notice map `Record<NoticeCodeOf<
+   * Reason>, …>` and get a compile error instead of a silent blank banner. It is
+   * only worth that if the two agree exactly — a type that kebabs differently
+   * from the function would demand map keys no URL ever carries, which is the
+   * same silent banner with extra steps.
+   *
+   * Asserted by assigning the function's output to the type: `tsc` refuses the
+   * line if they diverge, and the runtime `expect` keeps the case honest if the
+   * annotation is ever loosened to `string`.
+   */
+  it("matches NoticeCodeOf, the type-level spelling of the same rule", () => {
+    const single: NoticeCodeOf<"saved"> = noticeCode("saved") as NoticeCodeOf<"saved">;
+    const many: NoticeCodeOf<"already_checked_in"> = noticeCode(
+      "already_checked_in",
+    ) as NoticeCodeOf<"already_checked_in">;
+    const shouted: NoticeCodeOf<"NOT_FOUND"> = noticeCode("NOT_FOUND") as NoticeCodeOf<"NOT_FOUND">;
+    expect([single, many, shouted]).toEqual(["saved", "already-checked-in", "not-found"]);
+  });
+
+  /**
+   * The failure mode that would make every map typed on it decorative: given the
+   * wide `string`, a kebab type answers `string`, `Record<string, …>` demands no
+   * key at all, and nothing goes red. The trigger is an edit that reads like a
+   * loosening — a `reason` widened to `string`, or a `(string & {})` member added
+   * for autocomplete — not like switching a check off.
+   *
+   * `never` is *not* the answer, which is worth pinning: `Record<never, …>` is
+   * the empty object type and every map satisfies it, so the first version of
+   * this guard let the widening through in silence. The sentinel key does not —
+   * no map holds it, so the widening fails to compile at the map that lost its
+   * guarantee. Asserted at the type level; `tsc` refuses these annotations if it
+   * ever degrades again.
+   */
+  it("demands an impossible key, not never, when a reason union is widened", () => {
+    type Equals<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+    const widened: Equals<NoticeCodeOf<string>, WidenedNoticeReason> = true;
+    const notNever: Equals<NoticeCodeOf<string>, never> = false;
+    const narrow: Equals<NoticeCodeOf<"not_found">, "not-found"> = true;
+    expect([widened, notNever, narrow]).toEqual([true, false, true]);
   });
 });
 

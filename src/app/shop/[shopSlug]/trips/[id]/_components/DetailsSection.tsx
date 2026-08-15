@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -225,7 +226,7 @@ export function DetailsSection({
               />
             </Field>
           </FieldGrid>
-          <fieldset className="rounded-lg border border-border bg-surface p-5">
+          <fieldset className={sectionCardClass({ padding: "lg" })}>
             <legend className="px-1 text-sm font-medium">
               {t("trips.details.payAtBookingLegend")}
             </legend>

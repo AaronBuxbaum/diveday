@@ -7,7 +7,6 @@ import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
-import { recordCrewAttestation } from "./manifests";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -48,7 +47,6 @@ const EXPECTED_FILES = [
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
   "roll_call_events.csv",
-  "roll_call_crew_attestations.csv",
   "roll_call_crew_events.csv",
   "buddy_pairs.csv",
   "waiver_templates.csv",
@@ -101,7 +99,6 @@ const EXPORTED_TABLES = [
   "last_minute_list_entries",
   "trip_last_minute_promos",
   "roll_call_events",
-  "roll_call_crew_attestations",
   "roll_call_crew_events",
   "buddy_pair_members",
   "waiver_templates",
@@ -253,7 +250,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_promotion_code_id",
   ],
   roll_call_events: ["shop_id"],
-  roll_call_crew_attestations: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
@@ -475,69 +471,6 @@ describe("full-shop export dataset", () => {
     expect(rollCall.header).toContain("offline_snapshot_saved_at");
   });
 
-  /**
-   * A crew attestation is part of the trip's safety record — the half of the
-   * head count that says whether the divemaster came back — so it leaves with
-   * the shop like every other roll-call row (DOM-H1/DOM-H3). It arrived with the
-   * crew-attestation change and had no export decision at all, which the schema
-   * coverage guard above caught.
-   */
-  it("exports the crew half of the head count, with who counted and what the denominator was", async () => {
-    const { db, shop } = await seededShopContext();
-    const [trip] = await db
-      .select({ id: trips.id, title: trips.title })
-      .from(trips)
-      .where(and(eq(trips.shopId, shop.id), eq(trips.status, "scheduled")))
-      .limit(1);
-    if (!trip) throw new Error("seeded shop has no scheduled trip");
-    const [staff] = await db
-      .select({ id: people.id, fullName: people.fullName })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
-      .limit(1);
-    if (!staff) throw new Error("seeded shop has no owner");
-
-    const recorded = await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 2,
-      checkpoint: "after_dive_1",
-      note: "Both DMs back on the ladder",
-      occurredAt: new Date("2026-07-23T15:30:00.000Z"),
-    });
-    expect(recorded.ok).toBe(true);
-
-    const input = await loadShopExportBundleInput(db, shop.id);
-    if (!input) throw new Error("seeded shop failed to load");
-    const attestations = table(input, "roll_call_crew_attestations.csv");
-    const cell = (row: (typeof attestations.rows)[number], header: string) =>
-      row[attestations.header.indexOf(header)];
-    const row = attestations.rows.find((entry) => cell(entry, "trip_id") === trip.id);
-    expect(row).toBeDefined();
-    if (!row) return;
-    // Denormalized the same way roll_call_events.csv is, so an incident review
-    // reads the file without joining by hand.
-    expect(cell(row, "trip_title")).toBe(trip.title);
-    expect(cell(row, "checkpoint")).toBe("after_dive_1");
-    expect(cell(row, "crew_aboard")).toBe(2);
-    // Evidence of what the assignment list said at the time, not a claim about
-    // now — the server, never the caller, supplied it.
-    expect(cell(row, "crew_assigned")).toBe(recorded.ok ? recorded.crewAssigned : Number.NaN);
-    // A head count is never anonymous.
-    expect(cell(row, "attested_by_person_id")).toBe(staff.id);
-    expect(cell(row, "attested_by_name")).toBe(staff.fullName);
-    expect(cell(row, "note")).toBe("Both DMs back on the ladder");
-    expect(cell(row, "occurred_at")).toEqual(new Date("2026-07-23T15:30:00.000Z"));
-
-    // The settings page's count comes off the same table, so the two can't drift.
-    const counts = await loadShopExportCounts(db, shop.id);
-    expect(counts?.find((entry) => entry.file === "roll_call_crew_attestations.csv")?.count).toBe(
-      attestations.rows.length,
-    );
-  });
-
   it("flattens each person into an import-ready contacts row", async () => {
     const { db, shop } = await seededShopContext();
     const input = await loadShopExportBundleInput(db, shop.id);
@@ -640,6 +573,124 @@ describe("full-shop export dataset", () => {
     if (!erin) return;
     expect(cell(erin, "certification_number")).toBe("EXPIRED-AOW-1");
     expect(cell(erin, "certification_expires_at")).toBe("2024-06-01");
+  });
+
+  /**
+   * **"Said they hold no card" and "was never asked" were byte-identical in
+   * contacts.csv** — blank agency, blank level, blank number — which is the
+   * exact ambiguity `people.no_certification_declared_at` was added to remove,
+   * reintroduced for the reader most likely to act on it. A destination system
+   * mapping this file prompts staff to "complete" a blank record; a shop
+   * reading it in a spreadsheet reads a gap as an oversight.
+   */
+  it("tells an uncertified diver from an unasked one in contacts.csv", async () => {
+    const { db, shop } = await seededShopContext();
+    const declaredAt = new Date("2026-07-20T09:00:00.000Z");
+    const [stated] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Discover Scuba Dee",
+        email: "dee@example.com",
+        noCertificationDeclaredAt: declaredAt,
+      })
+      .returning();
+    const [unasked] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Never Asked Nina", email: "nina@example.com" })
+      .returning();
+    // The same answer, refuted by a card the shop actually holds: the reader
+    // ignores the stamp there, and so must the flat file — handing a
+    // destination both a card and "there is no card" leaves it to arbitrate.
+    const [carded] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Carded Cass",
+        email: "cass@example.com",
+        noCertificationDeclaredAt: declaredAt,
+      })
+      .returning();
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: carded.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "CASS-OW-1",
+      status: "verified",
+    });
+    // And the same answer a staffer has since said was never given.
+    const [cleared] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Corrected Cleo",
+        email: "cleo@example.com",
+        noCertificationDeclaredAt: declaredAt,
+        noCertificationClearedAt: new Date("2026-07-21T09:00:00.000Z"),
+      })
+      .returning();
+
+    const [changedMind] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Changed Mind Cam",
+        email: "cam@example.com",
+        noCertificationDeclaredAt: declaredAt,
+      })
+      .returning();
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: changedMind.id,
+      agency: "other",
+      level: "open_water",
+      identifier: null,
+      status: "pending",
+      selfDeclaredAt: new Date("2026-07-22T09:00:00.000Z"),
+    });
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    const contacts = table(input, "contacts.csv");
+    const cell = (name: string, header: string) => {
+      const row = contacts.rows.find((r) => r[contacts.header.indexOf("full_name")] === name);
+      if (!row) throw new Error(`no contacts row for ${name}`);
+      return row[contacts.header.indexOf(header)];
+    };
+
+    expect(cell("Discover Scuba Dee", "no_certification_declared_at")).toEqual(declaredAt);
+    expect(cell("Never Asked Nina", "no_certification_declared_at")).toBeNull();
+    expect(cell("Carded Cass", "no_certification_declared_at")).toBeNull();
+    expect(cell("Corrected Cleo", "no_certification_declared_at")).toBeNull();
+    // A diver who said "no card" and later declared a *rung* has made two
+    // statements, and the staff reader renders the rung as the later, more
+    // specific one. `bestCertification` ranks a still-unsighted claim too, so
+    // without the `card` test this row would ship a level **and** "there is no
+    // card" — the contradiction this column's own comment says it prevents.
+    expect(cell("Changed Mind Cam", "certification_level")).toBe("open_water");
+    expect(cell("Changed Mind Cam", "certification_status")).toBe("pending");
+    expect(cell("Changed Mind Cam", "no_certification_declared_at")).toBeNull();
+
+    // Never a value in a certification column: a "none" level is the
+    // `certifications`-row mistake the ADR refuses, one file format down, and
+    // the first importer to rank that column would put it on the ladder.
+    expect(cell("Discover Scuba Dee", "certification_level")).toBeUndefined();
+    expect(cell("Discover Scuba Dee", "certification_agency")).toBeUndefined();
+    expect(cell("Discover Scuba Dee", "certification_status")).toBeUndefined();
+
+    // people.csv is the dump, so it keeps the raw pair for anyone auditing what
+    // the shop was actually told and who corrected it.
+    const peopleTable = table(input, "people.csv");
+    const peopleRow = peopleTable.rows.find(
+      (r) => r[peopleTable.header.indexOf("id")] === cleared.id,
+    );
+    expect(peopleRow?.[peopleTable.header.indexOf("no_certification_declared_at")]).toEqual(
+      declaredAt,
+    );
+    expect(peopleRow?.[peopleTable.header.indexOf("no_certification_cleared_at")]).not.toBeNull();
+    expect(stated.id).toBeTruthy();
+    expect(unasked.id).toBeTruthy();
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {

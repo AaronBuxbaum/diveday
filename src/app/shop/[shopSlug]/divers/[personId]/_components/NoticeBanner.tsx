@@ -59,7 +59,54 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "divers.notices.cardSightingRequired",
   },
+  // The *shape* of the number was wrong, which is a different thing from
+  // carrying no sighting at all — and until this code existed both arrived as
+  // the sentence above, telling a staffer who had just typed the agency and
+  // number to type the agency and number. The fastest way past that is to
+  // delete the claim and capture the same bad number by hand, which reaches the
+  // identical `verified` state and destroys `self_declared_at` on the way
+  // (ADR 20260814-self-declared-cards). It belongs on the box it is about, so
+  // it names one.
+  "card-number-implausible": {
+    form: "cards",
+    tone: "danger",
+    key: "divers.notices.cardNumberImplausible",
+    field: "sighted-identifier",
+  },
   "duplicate-card": { form: "cards", tone: "danger", key: "divers.notices.duplicateCard" },
+  // A staffer saying a diver never gave the "I'm not certified yet" answer a
+  // public form recorded for them. `"page"` for the same reason `restored`
+  // below is: the panel that carried the control renders only while the stamp
+  // is set, so a *successful* clear unmounts the very thing this would have sat
+  // in and the confirmation could never be seen.
+  "no-certification-cleared": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.noCertificationCleared",
+  },
+  // A double tap or a replayed submit. It is not a failure — the record already
+  // says what the staffer wanted — so it is neither `invalid` in a danger tone
+  // (which reads as "your correction failed") nor a fresh success (which would
+  // claim an act that did not happen).
+  "no-certification-nothing-to-clear": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.noCertificationNothingToClear",
+  },
+  // A staff account that has since been demoted, removed or disabled, still
+  // holding a valid token. Every mutation on this page re-reads live roles for
+  // the same reason.
+  //
+  // `"page"`, not `"cards"`, and the difference is not cosmetic: the cards
+  // section renders its own notice inside the **add a card** `<details>`, which
+  // it also *opens* — so filing this under `cards` would pop open a form the
+  // staffer never submitted and put the refusal in its action row. Every card
+  // action can emit this one, so it has no single form to sit beside anyway.
+  "not-authorized-cards": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedCards",
+  },
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },

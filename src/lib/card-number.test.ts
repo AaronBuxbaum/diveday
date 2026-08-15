@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isPlausibleCardNumber, MAX_CARD_NUMBER_LENGTH } from "./card-number";
+import {
+  CARD_NUMBER_INPUT_PATTERN,
+  isPlausibleCardNumber,
+  MAX_CARD_NUMBER_LENGTH,
+} from "./card-number";
 
 /**
  * The field that turns a diver's claim into the shop's evidence. Both halves
@@ -40,5 +44,45 @@ describe("isPlausibleCardNumber", () => {
     // A staffer typing on an Arabic-Indic keyboard is holding a real card; the
     // check exists to catch words, not to insist on ASCII.
     expect(isPlausibleCardNumber("١٢٣٤")).toBe(true);
+  });
+});
+
+/**
+ * The browser half. A server refusal on the sighting form costs more than its
+ * sentence — the form lives in a `<details>` a redirect re-collapses, taking the
+ * agency and level with it — so the box refuses the ordinary typo itself.
+ *
+ * The property that has to hold is one-directional: **the browser may never
+ * refuse a card the server would accept.** Anything stricter here is a real card
+ * a staffer cannot record, which is the failure this whole feature exists to
+ * prevent; anything looser simply arrives as the ordinary refusal.
+ */
+describe("CARD_NUMBER_INPUT_PATTERN", () => {
+  // Anchored the way an HTML `pattern` attribute is, and compiled with the same
+  // unicode-aware flag, so this is what the browser actually applies.
+  const browserRefuses = (value: string) =>
+    !new RegExp(`^(?:${CARD_NUMBER_INPUT_PATTERN})$`, "u").test(value);
+
+  it("never refuses a value the server would accept", () => {
+    for (const value of [
+      "1234567",
+      "SSI-4839201",
+      "AOW 55 12 993",
+      "NAUI#88213",
+      "  padi 12345  ",
+      "R2-D2",
+      "A47",
+      "\u0661\u0662\u0663\u0664",
+    ]) {
+      expect(isPlausibleCardNumber(value)).toBe(true);
+      expect(browserRefuses(value)).toBe(false);
+    }
+  });
+
+  it("catches the shapes that used to certify a claim, before the round trip", () => {
+    for (const value of ["xx", "", "-", "none", "asdf"]) {
+      expect(isPlausibleCardNumber(value)).toBe(false);
+      expect(browserRefuses(value)).toBe(true);
+    }
   });
 });

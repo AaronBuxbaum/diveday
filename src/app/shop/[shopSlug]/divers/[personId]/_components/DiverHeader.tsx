@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -129,7 +130,7 @@ export function DiverHeader({
             as="form"
             action={savePersonAction.bind(null, shopSlug, personId)}
             columns={2}
-            className="mt-3 w-full gap-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm"
+            className={sectionCardClass({ className: "mt-3 w-full gap-y-3" })}
           >
             <Field label={t("divers.header.fullNameLabel")}>
               <input

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * "This is the boat you picked, and here is the way back to the list" — the
@@ -23,9 +24,9 @@ export function SelectedTripCard({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6 ${className}`}
-    >
+    // No `title`: the label above the summary is an uppercase eyebrow, not the
+    // section's heading — the page the card stands under owns that.
+    <SectionCard className={className}>
       <p className="text-xs font-bold tracking-wide text-muted uppercase">{label}</p>
       <p className="mt-1 font-semibold">{summary}</p>
       <Link
@@ -34,6 +35,6 @@ export function SelectedTripCard({
       >
         {changeLabel}
       </Link>
-    </section>
+    </SectionCard>
   );
 }

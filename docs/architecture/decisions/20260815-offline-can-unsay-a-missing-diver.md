@@ -84,7 +84,9 @@ The offline and live surfaces now share one undo model, and the departure log st
 sightings nobody made. One control on the whole surface takes two taps, and it is the one that can
 silence a missing-diver alarm.
 
-**What this does not fix, and the shape of the fix.** A retraction remains a blind newest-wins
+**What this does not fix, and the shape of the fix** — *closed later the same day by ADR
+20260815-an-offline-retraction-names-its-target, which took exactly the shape described here; read
+that one for what the writers do now.* A retraction remains a blind newest-wins
 write: `recordRollCall`/`recordCrewRollCall` refuse an offline event only when
 `newest.occurredAt > occurredAt`, which is a timestamp comparison, not a compare-and-set against
 the event being retracted (security review, 2026-08-15). Scoping the control to this device's own

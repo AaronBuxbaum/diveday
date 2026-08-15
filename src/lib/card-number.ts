@@ -44,6 +44,25 @@ export const MIN_CARD_NUMBER_LENGTH = 3;
 /** Longest, mirroring the column's own bound on the capture forms. */
 export const MAX_CARD_NUMBER_LENGTH = 120;
 
+/**
+ * The same two properties as an HTML `pattern`, so the browser can refuse a
+ * typo **without a round trip**.
+ *
+ * This is not a second opinion — the server check below is the gate, and a
+ * hand-built post never sees this. It is there because a server refusal on this
+ * particular form costs more than the sentence it delivers: the sighting lives
+ * in a `<details>` that a redirect re-collapses, and the agency and level the
+ * staffer picked go with it. Refusing in the box keeps every value where it was
+ * typed and puts the cursor back on the one that was wrong.
+ *
+ * Deliberately **weaker** than {@link isPlausibleCardNumber}, never stricter:
+ * it cannot trim, so it counts raw characters, and the upper bound is left off
+ * entirely. Anything this refuses the server refuses too; the reverse is
+ * allowed and simply arrives as the ordinary refusal. A browser that cannot
+ * compile it ignores the attribute, which is the same outcome.
+ */
+export const CARD_NUMBER_INPUT_PATTERN = `(?=[\\s\\S]*\\p{Nd})[\\s\\S]{${MIN_CARD_NUMBER_LENGTH},}`;
+
 export function isPlausibleCardNumber(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed.length < MIN_CARD_NUMBER_LENGTH) return false;

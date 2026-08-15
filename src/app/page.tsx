@@ -448,9 +448,16 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 this one is a flex *item* in the column, so without it the item
                 stretches to the full column width and `buttonClass`'s
                 `justify-center` centers the label under a left-aligned
-                paragraph. */}
+                paragraph.
+
+                `#columns` lands the reader on the column table this link's own
+                words name, rather than on the guide's hero three blocks above
+                it — the wedge there is a good argument about what a spreadsheet
+                cannot do, but it is not what was promised, and the gap reads as
+                bait. The fragment goes through `switchingHref` so it can only
+                land after the `?from=` tag. */}
             <Link
-              href={switchingHref("/switching/spreadsheet", "home-records-arriving")}
+              href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
               className={buttonClass({
                 variant: "link",
                 flush: true,

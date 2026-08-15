@@ -44,9 +44,29 @@ const FIXED_SOURCES = [
   "nav",
   "product",
   "product-mid",
+  // The in-page switching doors on `/product` and `/about` — one each, so they
+  // take the page's name rather than a position suffix (the split above is for
+  // one *action* offered from several places, which is `product`/`product-mid`
+  // and `home-records`/`home-records-arriving`). They are named apart from those
+  // demo/trial tags because they are a different action: the reader is going to
+  // read about moving, not to open the demo. Untagged until 2026-08-15, which
+  // left `/switching/spreadsheet` with one measurable inbound door and one
+  // invisible one — and `/product` is the page a reader lands on *after* the
+  // homepage convinced them, so the hole was in the denominator of the exact
+  // question the homepage door was added to answer.
+  //
+  // **A switching tag names its destination, not just its page**, because the
+  // question these numbers answer is which of the two destinations a reader
+  // chose. So `product-spreadsheet` groups with `home-records-arriving` (the
+  // spreadsheet guide direct) and `about-switching` with `home-records` (the
+  // hub, which forks) — a matched-looking `product-switching`/`about-switching`
+  // pair would have hidden that they land in different places. A third page's
+  // door follows the same rule: name where it goes.
+  "product-spreadsheet",
   "pricing",
   "pricing-close",
   "about-closing",
+  "about-switching",
   "sign-in",
   "switching-hub",
   "switching-spreadsheet",
@@ -117,6 +137,19 @@ export function scheduleAttributionHref(shopSlug: string, source: FunnelSource):
  */
 export type SwitchingDestination = "/switching" | "/switching/spreadsheet";
 
-export function switchingHref(destination: SwitchingDestination, source: FunnelSource): string {
-  return `${destination}?from=${source}`;
+/**
+ * `hash` lands the reader on the part of the guide the link's own words point
+ * at — the homepage's "Your spreadsheet, column by column" opens two to three
+ * screens above the column table it names unless it says `#columns`. It is
+ * built here rather than at the call site so the ordering can only be right:
+ * a fragment goes *after* the query string, and `"/switching/spreadsheet#columns?from=…"`
+ * is a URL whose `?from=` is part of the fragment and never reaches analytics.
+ * The fragment is our own literal, never anything off a request.
+ */
+export function switchingHref(
+  destination: SwitchingDestination,
+  source: FunnelSource,
+  hash?: string,
+): string {
+  return `${destination}?from=${source}${hash ? `#${hash}` : ""}`;
 }

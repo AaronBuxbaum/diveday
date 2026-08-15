@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
@@ -417,6 +418,11 @@ async function TripGuestsBody({
           tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
           certificationSummaries={certificationSummaries}
+          /* The same folded gate the deal panel below states — a wait list is
+             per-trip, so the departure the staffer is inviting onto is the one
+             already resolved above. Passed as the rung alone: this list is not
+             reordered, filtered, or gated by it, it is only said on the row. */
+          minimumCertificationLevel={dealRequirement.minimumCertificationLevel}
           locale={locale}
           timezone={shop.timezone}
         />
@@ -515,7 +521,12 @@ async function TripGuestsBody({
       {showPromote ? (
         <AutoOpenDetails
           openOnHash="last-minute-deal"
-          className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface"
+          // A `<details>` whose summary and panel pad themselves is a card
+          // that is a *shell* — `padding="none"`.
+          className={sectionCardClass({
+            padding: "none",
+            className: "group mt-10 scroll-mt-6",
+          })}
         >
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
             <span>{t("trips.guests.promoteHeading")}</span>

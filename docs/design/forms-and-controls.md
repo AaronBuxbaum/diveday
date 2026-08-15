@@ -81,10 +81,22 @@ import { sectionCardClass } from "@/components/ui/card";
 </div>
 ```
 
-**Where this has landed so far:** all of `src/app/shop/[shopSlug]/settings/**`. About 130 other
-files still carry the hand-typed spelling and are being converted route by route — see
-`docs/product/follow-ups/`. New code uses `SectionCard` from the start; a migrated route never
-goes back.
+**Where this has landed so far:** 88 files, converted cluster by cluster on 2026-08-15 — all of
+`src/app/shop/[shopSlug]/settings/**`, then `trips/**`, `divers/**`, `orders/**`, the shared
+`src/components/**`, the diver-facing `src/app/s/[shopSlug]/**`, the bearer-token pages,
+`dive-sites/**`, and the marketing routes.
+
+About 85 files still carry a hand-typed `border border-border bg-surface` — but that count is no
+longer a to-do list, and reading it as one is the mistake to avoid. Each cluster's pass sorted the
+remainder into things that are genuinely **not** section cards, and left the reason at the site:
+sunken insets (`bg-surface-sunken`), overlays carrying `shadow-lg`/`shadow-2xl`, tone-carrying
+panels, `<fieldset>`s whose `<legend>` is a control's accessible name, and the marketing pages'
+`bg-background` cards, which are that colour precisely because the band behind them is
+`bg-surface`. See the "What is *not* a section card" section of
+[`src/components/ui/card.tsx`](../../src/components/ui/card.tsx), which records the three widening
+props that were asked for and refused.
+
+New code uses `SectionCard` from the start; a migrated route never goes back.
 
 ## Fields: `FieldGrid` + `Field`
 

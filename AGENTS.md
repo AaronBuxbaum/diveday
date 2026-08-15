@@ -43,6 +43,7 @@ adapters and must not introduce unique requirements.
 | `pnpm check:timezone` | every `Intl.DateTimeFormat`/`toLocale*String` under `src/app`, `src/components`, `src/lib`, `src/db`, `src/features` names a `timeZone`. Omitting it renders in the **host** zone — UTC on every server and CI box — so a 7:30 AM departure silently reads 11:30 AM and no test on a UTC machine can tell. The `src/lib/format.ts` formatters take `timeZone` as a **required** parameter, so calls through them are already proven by `pnpm typecheck`; this covers code reaching for `Intl` directly. A deliberate `timeZone: "UTC"` passes — the rule is *name* a zone, not name the shop's, because a date-only value or a wall-clock time of day genuinely has no instant in it |
 | `pnpm check:route-coverage` | every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json` with the `e2e/` specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason for having neither. The coverage lists are hand-maintained (a spec usually *clicks* its way to a route, which no grep can see); `--write` regenerates only the mechanical facts and refuses to add an exemption or drop coverage, `--absorb` records a merge-in loss, `--report` prints the per-route table |
 | `node scripts/stray-processes.mjs` | report (never a gate, never in `check`) — background shells a Claude session spawned that are still alive after 10 minutes, plus dev/test processes reparented to init that nobody will ever reap. Wired in `.claude/settings.json` at three points: **`Stop`** and **`SubagentStop`** report, handing what they find back to the agent that has to act on it, and **`SessionEnd`** runs `--kill`, because a session ending is the one moment nobody is left to warn. `--kill` only ever reaps this session's own shells plus orphans, never a sibling session's live work; `--list` reports without the non-zero exit. It exists because a wait-loop ran for **nine hours** on 2026-08-15: a `pnpm test` piped through `tail` (which cannot flush, so its output file stayed empty) was backgrounded, a second task waited on that file for a success marker with no timeout and no failure branch, and the producer was then killed — leaving a condition that could never be satisfied. The rule against exactly that loop was already written and was followed anyway, and **`TaskList` reported "No tasks found" while the shell was alive**, so the process table is the only honest check |
+| `node scripts/unfinished-promises.mjs` | the sibling of the row above, for work never *begun* rather than left running. A `Stop` hook: it reads the turn's closing message off the transcript and blocks the stop when that message promises a next action ("next I'll", "once that lands") **and** the working tree is dirty — the pair that means a turn stopped mid-change with its queue living only in a sentence that has already been sent. It stays quiet for a closing question, for a handoff ("say the word"), and for a promise on a clean tree, which is the ordinary "finished and pushed, here is what happens next". It honours `stop_hook_active` so it cannot loop a session against itself, and it fails open on any parse or git error, because a hook that blocks a turn because it broke is worse than the thing it prevents. Written after a session ended three turns running on "now the queued work: ..." and the user, seeing nothing happen, had to ask whether it was still working |
 | `pnpm gates` | report (never a gate, never in `check`): days since each `docs/product/human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days". Ages derived from dated outcomes in the rows and `git blame`, printed as `≥ N` when a shallow clone can only bound them. It also ages both rooms of the `docs/product/follow-ups/` register — id, status, kind, effort, days since the date in the id, oldest first — since that inbox rots the same way and `pnpm check:follow-ups` only counts it. `waiting/` is aged separately and deliberately: "waiting on upstream" is an honest answer only for as long as somebody is still checking, and the age is the only thing that says otherwise. Nothing it reports is an agent's to close |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
@@ -293,6 +294,34 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   with a fallback that holds its height. `next build` fails on a route that breaks this
   (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component. See ADR
   20260804-instant-navigation.
+- **A queue in a closing message is not a queue.** Ending a turn with "next I'll drop
+  the retired table" starts nothing: the message is sent, the turn ends, and the next turn has only
+  what is written down. On 2026-08-15 a session did that three turns running and the user sat
+  watching silence until they asked whether anything was still working — nothing had broken, the
+  work simply never began. So a turn ends in exactly one of three states: the thing is **done**, it
+  is **filed** in `docs/product/follow-ups/` where a cold reader can run it, or it is **handed over**
+  in as many words ("I've stopped here, I need X from you"). A turn that ends on a question is a
+  fine ending. A turn that ends on an intention is not. More than one item in flight goes in the
+  task list (`TaskCreate`/`TaskUpdate`), never in prose. `scripts/unfinished-promises.mjs` is a
+  `Stop` hook that blocks a turn whose closing message promises work while the tree is dirty — it
+  reads the transcript, skips handoff phrasings, and fails open, so treat it as a reminder rather
+  than an adversary.
+- **There is no legacy. Delete it.** DiveDay is pre-pilot: no users, no data anyone would miss
+  (H-49, extending H-47). A table nothing writes gets **dropped**, not carried behind a `seq` column
+  so its dead rows sort nicely. A code path that exists only to tolerate old rows gets **deleted**,
+  not documented. A lifecycle rule that exists only to age out abandoned objects gets **removed**,
+  not waited out. Do not write reconciliation, backfill, dual-read, or version-tolerance code for
+  pre-pilot data, and do not read the absence of one as an oversight to fix — three follow-ups
+  proposed exactly that in one week, and each was a migration spent on rows that have never had a
+  reader. When in doubt the answer is the smaller tree.
+  **Two things this does not relax**, because they are not about the value of the data:
+  the **destructive-migration guard** and the expand/contract rule keep the *previous release* alive
+  while a migration runs inside the production build, and having no users does not help a shop
+  watching its schedule mid-deploy — a destructive migration still carries its
+  `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
+  H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are
+  promises about data we *will* hold; they stand. This rule expires the moment the first pilot shop
+  has real divers in the system — Aaron will say so, and it is not an agent's call to make.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

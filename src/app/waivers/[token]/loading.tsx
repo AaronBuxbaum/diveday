@@ -1,3 +1,5 @@
+import { sectionCardClass } from "@/components/ui/card";
+
 /**
  * Body-shaped skeleton for /waivers (design principle 1) — the token lookup,
  * booking, and shop context have no loading state to show meanwhile, and
@@ -34,7 +36,14 @@ export default function WaiverLoading() {
                 <div className="size-7 rounded-full bg-surface-sunken" />
                 <div className="h-5 w-48 max-w-full rounded bg-surface-sunken" />
               </div>
-              <div className="mt-4 h-14 rounded-xl border border-border bg-surface" />
+              {/* The shell comes from the same place the signing form's own
+                  card does. It stands in for all three steps at one shape:
+                  only step 3 (the signature) is a card on the page, step 1's
+                  boxes are per-question `<fieldset>`s and step 2 has no box at
+                  all — an approximation this file already made, kept here so a
+                  refactor of the panel does not quietly restate a medical
+                  page's structure. */}
+              <div className={sectionCardClass({ padding: "none", className: "mt-4 h-14" })} />
             </div>
           ))}
         </div>

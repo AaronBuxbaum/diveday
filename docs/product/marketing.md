@@ -351,14 +351,30 @@ consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign)
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
 accumulated still reads.
 
-**Not every tagged door is a conversion.** Two links carry a tag without firing either event: the
-diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and the two
-switching doors in the homepage records band (`switchingHref` — `home-records` to the hub,
-`home-records-arriving` to the spreadsheet guide, added 2026-08-15). Both build a `?from=` the
-Vercel `<Analytics />` page view already carries, so they need no companion event; a switching page
-retags its own demo and trial CTAs with its own source, which is exactly why the hop *into* it has
-to be attributed on the way in. Read them as reach, not as conversion — they say which door a
-reader chose, and the guide's own `switching-*` pair says what happened next.
+**Not every tagged door is a conversion.** Some links carry a tag without firing either event: the
+diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and **every
+in-page door onto the switching surface** (`switchingHref`). As of 2026-08-15 that is all four of
+them — `home-records` to the hub and `home-records-arriving` to the spreadsheet guide from the
+homepage records band, `product-spreadsheet` from `/product`'s closing band, and `about-switching`
+from `/about`'s "how you leave" band. They all build a `?from=` the Vercel `<Analytics />` page view
+already carries, so they need no companion event; a switching page retags its own demo and trial
+CTAs with its own source, which is exactly why the hop *into* it has to be attributed on the way in.
+Read them as reach, not as conversion — they say which door a reader chose, and the guide's own
+`switching-*` pair says what happened next.
+
+The last two were bare hrefs until 2026-08-15, which would have left the question that put a direct
+spreadsheet door on the homepage — does the spreadsheet audience need one, or does the hub serve
+them? — read against a denominator quietly missing `/product`, the page a reader lands on *after*
+the homepage convinced them. **The nav and footer links to `/switching` stay untagged deliberately**:
+they render on every marketing page, so one tag across all of them would answer no question, and a
+per-page chrome tag is a bigger decision about what chrome attribution means.
+
+The homepage's spreadsheet door also carries a fragment — `#columns`, the third argument to
+`switchingHref` — because its words ("Your spreadsheet, column by column") name the column table,
+which sits three blocks down the guide behind the hero, the wedge list and the mid-page CTA. A
+reader who clicks a specific promise and lands on a general argument reads the gap as bait. The
+fragment is built in the helper rather than at the call site so it can only land *after* the query
+string; `/switching/spreadsheet#columns?from=…` is a URL whose tag never reaches analytics at all.
 
 ## Product visuals
 

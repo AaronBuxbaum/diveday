@@ -61,7 +61,6 @@
   "timelineBuddyMemberRemoved": "Buddy team member removed",
   "timelineBuddyMembers": "Members at that moment: {names}",
   "actionCleared": "Entry cleared (correction)",
-  "crewCountLine": "Crew count: {aboard} aboard, {assigned} assigned",
   "recordedByName": "Recorded by {name}",
   "noteLine": "Note: {note}",
   "footerHashLabel": "Integrity code (SHA-256)",

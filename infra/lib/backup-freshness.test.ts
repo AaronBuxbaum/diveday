@@ -198,10 +198,10 @@ describe("the platform backup uploader credential", () => {
    *
    * The dump left this bucket later the same day, which is what makes that
    * class of mistake unrepresentable rather than merely fixed. This assertion
-   * outlives the move for two reasons: the dumps written before it are still
-   * here, draining under `dumps/` for their remaining window, and a credential
-   * that ships to a third party has no business reaching anything it was not
-   * built to write.
+   * outlives the move anyway: a credential that ships to a third party has no
+   * business reaching anything it was not built to write, and the abandoned
+   * pre-split dumps still sitting under `dumps/` stay out of its reach for
+   * free.
    *
    * Asserted against the app's own key builders rather than against the string
    * "exports/", because the failure this guards is the two drifting apart. A
@@ -413,7 +413,7 @@ describe("the dump watchdog, executed", () => {
    * The 2026-08-15 split, from the watchdog's side. The dump is no longer a
    * prefix in the bundles' bucket, so a function that kept reading `dumps/` in
    * `BUCKET` would find nothing and alarm every week -- or, worse, find the
-   * draining legacy prefix and report a months-old dump as this week's. Each
+   * abandoned legacy prefix and report a months-old dump as this week's. Each
    * listing has to go to the bucket that artifact now lives in, and nothing
    * else in this file would notice if it did not.
    */

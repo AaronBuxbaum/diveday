@@ -62,6 +62,47 @@ export function noticeCode(notice: string): string {
   return notice.toLowerCase().replaceAll("_", "-");
 }
 
+type Kebab<Code extends string> = Code extends `${infer Head}_${infer Rest}`
+  ? `${Head}-${Kebab<Rest>}`
+  : Code;
+
+/**
+ * `noticeCode` at the type level: the kebab spelling of a domain reason union.
+ *
+ * The check script (`scripts/check-notice-codes.mjs`) can prove every code in
+ * the tree is spelled one way. What no grep can prove is that a page's
+ * `Record<code, …>` map has an entry for every code its own domain union can
+ * produce — a code with no entry renders no banner at all, which looks exactly
+ * like a dead link and fails nothing. That is a type-system job, and this is the
+ * piece that was missing: with it a page types its map
+ * `Record<NoticeCodeOf<Reason>, …>` and both halves of the drift become compile
+ * errors — a reason added to the union with no copy, and a map entry left behind
+ * after a reason is removed.
+ *
+ * It found one on the day it was written: `checkInBooking`'s reason union
+ * carried `already_checked_in` while the check-in queue's map did not (the code
+ * path answers idempotent success instead, so nothing was red).
+ *
+ * The `string extends Reason` branch is load-bearing. Given the wide `string`,
+ * every branch below answers `string`, `Record<string, …>` demands no particular
+ * key, and the exhaustiveness check silently becomes decoration — from an edit
+ * that reads like a loosening (`reason: string`, or a `(string & {})`
+ * autocomplete member) rather than like switching a control off.
+ *
+ * It answers a **sentinel key** rather than `never`, which was the first attempt
+ * and did nothing: `Record<never, …>` is the empty object type, satisfied by any
+ * map at all, so the widening still compiled clean (caught by deliberately
+ * widening `CheckInOutcome["reason"]` and watching `tsc` stay green). A key no
+ * map will ever hold makes the widening a compile error at the map that lost its
+ * guarantee, with the reason spelled out in the error text.
+ */
+export type WidenedNoticeReason =
+  "NoticeCodeOf was given a widened reason union, so this map no longer proves anything";
+
+export type NoticeCodeOf<Reason extends string> = string extends Reason
+  ? WidenedNoticeReason
+  : Kebab<Lowercase<Reason>>;
+
 /**
  * A path under a shop's staff namespace, with every segment escaped.
  *

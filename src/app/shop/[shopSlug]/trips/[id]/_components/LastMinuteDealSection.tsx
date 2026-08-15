@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { TripLastMinutePromo } from "@/db/schema";
 import type { CertificationSummary } from "@/db/self-declared-cards";
@@ -194,7 +195,9 @@ export function LastMinuteDealSection({
       {canSend ? (
         <form
           action={sendAction}
-          className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4"
+          className={sectionCardClass({
+            className: "mt-4 flex flex-wrap items-end gap-3",
+          })}
         >
           {/* **The list, then the button.** It used to be the other way round,
               and the comment here called that a virtue — the list "sits under
@@ -356,7 +359,12 @@ export function LastMinuteDealSection({
       )}
 
       {promos.length > 0 ? (
-        <ol className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+        <ol
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-4 divide-y divide-border",
+          })}
+        >
           {promos.map((promo) => (
             <li
               key={promo.id}

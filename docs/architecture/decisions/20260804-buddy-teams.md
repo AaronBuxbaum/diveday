@@ -14,7 +14,7 @@ constraints that operators have since contradicted:
 1. **A pair is exactly two.** Real boats dive in threes and fours, and a divemaster commonly leads a
    group rather than buddying one person. The original ADR's answer to a trio — "pair the strongest
    two, buddy the third with a divemaster" — was unrecordable in the very model that recommended it.
-2. **Both members hold a booking.** Crew hold no booking (see the glossary's **Crew attestation**),
+2. **Both members hold a booking.** Crew hold no booking (see the glossary's **Crew roll-call event**),
    so a diver deliberately placed with a divemaster printed on the incident export identically to a
    diver nobody paired. On the one document where the difference matters, "accompanied" and
    "unaccompanied" read the same.

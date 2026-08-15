@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
@@ -303,11 +304,12 @@ export default async function EditDiveSitePage({
         </p>
       ) : null}
       {upcomingTrips.length > 0 ? (
-        <section aria-labelledby="upcoming-dives-heading" className="mt-8">
-          <h2 id="upcoming-dives-heading" className="text-lg font-semibold">
-            {t("diveSites.edit.upcomingHeading")}
-          </h2>
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+        <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
+          {/* Full-bleed rows inside the card rather than a second bordered box
+              inside it: each row pads itself and its hover fill has to reach
+              the card's own edge, so the list undoes the card's padding and
+              `overflow-hidden` clips that fill to the corner radius. */}
+          <ul className="-mx-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {upcomingTrips.map((trip) => (
               <li key={trip.tripId}>
                 <Link
@@ -322,7 +324,7 @@ export default async function EditDiveSitePage({
               </li>
             ))}
           </ul>
-        </section>
+        </SectionCard>
       ) : null}
       <SiteFormShell
         action={saveAction}

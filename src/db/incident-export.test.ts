@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
-import { recordCrewAttestation, recordRollCall } from "./manifests";
+import { recordRollCall } from "./manifests";
 import { shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -31,8 +31,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     const [first] = await getTripRoster(db, shop.id, reef.id);
     if (!first) throw new Error("demo booking missing");
 
-    // Board one diver the real way (waiver, then the gated roll-call write),
-    // and put a crew count on the record too.
+    // Board one diver the real way: waiver, then the gated roll-call write.
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
     await completeWaiver(db, issued.token, {
@@ -48,14 +47,6 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       status: "boarded",
     });
     expect(boarded).toMatchObject({ ok: true });
-    const attested = await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 2,
-    });
-    expect(attested).toMatchObject({ ok: true });
-
     const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
     expect(doc).not.toBeNull();
     if (!doc) throw new Error("unreachable");
@@ -72,13 +63,10 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     });
     expect(boardedEntry?.waiver.state).toBe("complete");
 
-    // The timeline carries both the diver event and the crew count.
+    // The timeline carries the diver event.
     expect(doc.timeline.some((entry) => entry.kind === "diver" && entry.action === "boarded")).toBe(
       true,
     );
-    expect(
-      doc.timeline.some((entry) => entry.kind === "crew_count" && entry.crewAboard === 2),
-    ).toBe(true);
 
     // Same records, same hash — regenerated a moment later with the same
     // frozen clock, the document reproduces byte-identically.

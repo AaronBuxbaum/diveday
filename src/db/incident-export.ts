@@ -5,7 +5,6 @@ import {
   buildIncidentExport,
   type IncidentBuddyTeamEventInput,
   type IncidentBuddyTeamInput,
-  type IncidentCrewCountInput,
   type IncidentExportDocument,
   type IncidentTimelineEventInput,
 } from "@/lib/incident-export";
@@ -14,13 +13,7 @@ import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
 import { listTripReadiness } from "./readiness";
-import {
-  bookings,
-  people,
-  rollCallCrewAttestations,
-  rollCallCrewEvents,
-  rollCallEvents,
-} from "./schema";
+import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
 /**
@@ -57,56 +50,44 @@ export async function getIncidentExport(
   if (!manifests || manifests.length === 0) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, readinessRows, generator, diverEventRows, crewEventRows, attestationRows] =
-    await Promise.all([
-      getShopById(db, shopId),
-      listTripReadiness(db, shopId, tripId, generatedAt),
-      db
-        .select({ fullName: people.fullName })
-        .from(people)
-        .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
-        .limit(1),
-      // The full history, oldest first — not the latest-per-subject reduction
-      // the live manifest shows. An incident document is the audit trail.
-      db
-        .select({ event: rollCallEvents, subject: people, recorder: recorders })
-        .from(rollCallEvents)
-        .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
-        .innerJoin(people, eq(people.id, bookings.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-        // `seq` last, for a reason sharper here than anywhere else: this
-        // document is hashed, so two orderings of the same events produce two
-        // different SHA-256 integrity codes for one departure. A tie on
-        // transaction time would make the hash a coin toss.
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
-      db
-        .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-        .from(rollCallCrewEvents)
-        .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-        .orderBy(
-          asc(rollCallCrewEvents.occurredAt),
-          asc(rollCallCrewEvents.createdAt),
-          asc(rollCallCrewEvents.seq),
-        ),
-      db
-        .select({ attestation: rollCallCrewAttestations, attester: people })
-        .from(rollCallCrewAttestations)
-        .innerJoin(people, eq(people.id, rollCallCrewAttestations.attestedByPersonId))
-        .where(
-          and(
-            eq(rollCallCrewAttestations.shopId, shopId),
-            eq(rollCallCrewAttestations.tripId, tripId),
-          ),
-        )
-        .orderBy(asc(rollCallCrewAttestations.occurredAt), asc(rollCallCrewAttestations.createdAt)),
-    ]);
+  const [shop, readinessRows, generator, diverEventRows, crewEventRows] = await Promise.all([
+    getShopById(db, shopId),
+    listTripReadiness(db, shopId, tripId, generatedAt),
+    db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
+      .limit(1),
+    // The full history, oldest first — not the latest-per-subject reduction
+    // the live manifest shows. An incident document is the audit trail.
+    db
+      .select({ event: rollCallEvents, subject: people, recorder: recorders })
+      .from(rollCallEvents)
+      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      // `seq` last, for a reason sharper here than anywhere else: this
+      // document is hashed, so two orderings of the same events produce two
+      // different SHA-256 integrity codes for one departure. A tie on
+      // transaction time would make the hash a coin toss.
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      ),
+    db
+      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
+      .from(rollCallCrewEvents)
+      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
+      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
+  ]);
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
@@ -136,16 +117,6 @@ export async function getIncidentExport(
       createdAt: event.createdAt,
     })),
   ];
-
-  const crewCounts: IncidentCrewCountInput[] = attestationRows.map(({ attestation, attester }) => ({
-    checkpoint: attestation.checkpoint,
-    crewAboard: attestation.crewAboard,
-    crewAssigned: attestation.crewAssigned,
-    attestedByName: attester.fullName,
-    note: attestation.note,
-    occurredAt: attestation.occurredAt,
-    createdAt: attestation.createdAt,
-  }));
 
   // The teams standing on this departure, plus the append-only trail behind
   // them. Read here rather than off the manifest, whose carried team is
@@ -197,7 +168,6 @@ export async function getIncidentExport(
       waiver: row.waiver,
     })),
     events,
-    crewCounts,
     buddyTeams,
     buddyTeamEvents,
     generatedAt,

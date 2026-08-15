@@ -78,9 +78,40 @@ describe("switchingHref", () => {
     );
   });
 
+  it("tags the other pages' in-page switching doors", () => {
+    // Until 2026-08-15 these two were bare hrefs, so `/switching/spreadsheet`
+    // had one measurable inbound door and one invisible one — and the page the
+    // invisible one sits on is `/product`, where a reader lands *after* the
+    // homepage convinced them.
+    expect(switchingHref("/switching/spreadsheet", "product-spreadsheet")).toBe(
+      "/switching/spreadsheet?from=product-spreadsheet",
+    );
+    expect(switchingHref("/switching", "about-switching")).toBe("/switching?from=about-switching");
+  });
+
+  it("puts the fragment after the query, so the tag survives it", () => {
+    // A hash before the `?` would make the query part of the fragment, and the
+    // page view would carry no tag at all — the failure this helper exists to
+    // make unrepresentable.
+    expect(switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")).toBe(
+      "/switching/spreadsheet?from=home-records-arriving#columns",
+    );
+  });
+
   it("round-trips: every href it builds survives eventSource", () => {
     const href = switchingHref("/switching/spreadsheet", "home-records-arriving");
     expect(eventSource(href.split("=")[1])).toBe("home-records-arriving");
+    // …including through a fragment, which the query string precedes.
+    const anchored = switchingHref("/switching/spreadsheet", "home-records-arriving", "columns");
+    expect(eventSource(new URL(anchored, "https://dive.day").searchParams.get("from"))).toBe(
+      "home-records-arriving",
+    );
+    for (const source of ["product-spreadsheet", "about-switching"] as const) {
+      const tagged = switchingHref("/switching", source);
+      expect(eventSource(new URL(tagged, "https://dive.day").searchParams.get("from"))).toBe(
+        source,
+      );
+    }
   });
 });
 

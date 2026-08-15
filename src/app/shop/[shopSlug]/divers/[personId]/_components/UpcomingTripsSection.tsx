@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { sectionCardClass } from "@/components/ui/card";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -58,7 +59,14 @@ export function UpcomingTripsSection({
       <h2 id="upcoming-trips-heading" className="text-lg font-semibold">
         {t("divers.upcoming.heading")}
       </h2>
-      <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+      {/* A divided row list is a card that is a *shell* — its rows pad
+          themselves — so it takes `padding="none"` and the same chrome the
+          `<Table>` beside it on other pages wears. `sectionCardClass` rather
+          than `<SectionCard>` because this is a `ul`, which the component's
+          closed `as` set deliberately does not carry. */}
+      <ul
+        className={sectionCardClass({ padding: "none", className: "mt-3 divide-y divide-border" })}
+      >
         {upcoming.map(({ booking, trip, course }) => (
           // The row is no longer one big `<Link>`: it carries a billing link of
           // its own now, and an anchor inside an anchor is invalid markup that

@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -11,7 +12,11 @@ import {
   reviewCertification,
 } from "./readiness";
 import { certifications, nitroxCertifications, people, shops } from "./schema";
-import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
+import {
+  clearNoCertificationDeclaration,
+  listCertificationSummaries,
+  recordSelfDeclaredCards,
+} from "./self-declared-cards";
 
 /**
  * The writer behind both public "tell me when something comes up" join forms
@@ -1086,5 +1091,362 @@ describe("listCertificationSummaries", () => {
       nitrox: false,
       nitroxSelfDeclared: false,
     });
+  });
+});
+
+/**
+ * **The eraser for a stamp a stranger left.** The forms that write
+ * `no_certification_declared_at` are unauthenticated and resolve a person by
+ * shop + email, so for a diver the shop holds no card for, anybody with a name
+ * and an email address off a manifest could mark them permanently. Until this
+ * writer the only thing that cleared it was owner-only erasure of the whole
+ * record.
+ *
+ * Every test below is really one property: **clearing can only reach silence.**
+ * It supersedes a statement; it never creates, promotes or touches a card.
+ */
+describe("clearNoCertificationDeclaration", () => {
+  async function stamped() {
+    const context = await joiner();
+    await recordSelfDeclaredCards(context.db, {
+      shopId: context.shop.id,
+      personId: context.person.id,
+      noCertification: true,
+    });
+    return context;
+  }
+
+  const staffOf = async (db: Awaited<ReturnType<typeof joiner>>["db"], shopId: string) =>
+    (
+      await findOrCreatePerson(db, {
+        shopId,
+        fullName: "Dana Reyes",
+        email: "dana@example.com",
+      })
+    ).person;
+
+  it("supersedes the stamp, names who corrected it, and stops the reader reporting it", async () => {
+    const { db, shop, person } = await stamped();
+    const staff = await staffOf(db, shop.id);
+
+    const cleared = await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: staff.id,
+    });
+
+    expect(cleared).toBe(true);
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    // Superseded, never deleted: where a record began is history, exactly as
+    // `certifications.self_declared_at` is kept after a sighting. A shop has to
+    // be able to answer "did this diver ever tell us that?".
+    expect(row?.noCertificationDeclaredAt).not.toBeNull();
+    expect(row?.noCertificationClearedAt).not.toBeNull();
+    expect(row?.noCertificationClearedByPersonId).toBe(staff.id);
+
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
+    expect(profiles.get(person.id)).toBeUndefined();
+  });
+
+  it("cannot turn a claim into evidence — it leaves every card table untouched", async () => {
+    const { db, shop, person } = await joiner();
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      level: "instructor",
+    });
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      noCertification: true,
+    });
+    const staff = await staffOf(db, shop.id);
+
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: staff.id,
+    });
+
+    // The "Instructor" claim this diver retracted is still archived, and no row
+    // anywhere reached `verified`. Clearing the stamp is a statement about a
+    // statement; the only path from claim to evidence is still a card sighting.
+    const live = await liveCards(db, shop.id);
+    expect(live.filter((row) => row.personId === person.id)).toHaveLength(0);
+    const all = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, person.id));
+    expect(all.every((row) => row.status === "pending")).toBe(true);
+    expect(all.every((row) => row.identifier === null)).toBe(true);
+  });
+
+  it("refuses a person at another shop", async () => {
+    const { db, shop, person } = await stamped();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other shop", slug: "other-shop", timezone: "UTC" })
+      .returning();
+
+    const cleared = await clearNoCertificationDeclaration(db, {
+      shopId: other?.id ?? "",
+      personId: person.id,
+      byPersonId: person.id,
+    });
+
+    expect(cleared).toBe(false);
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.noCertificationClearedAt).toBeNull();
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
+    expect(profiles.get(person.id)?.noCertificationDeclared).toBe(true);
+  });
+
+  it("reports nothing to clear rather than stamping a correction that did not happen", async () => {
+    const { db, shop, person } = await joiner();
+    const staff = await staffOf(db, shop.id);
+
+    const cleared = await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: staff.id,
+    });
+
+    expect(cleared).toBe(false);
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.noCertificationClearedAt).toBeNull();
+  });
+
+  it("is idempotent — a replayed submit never rewrites who corrected it, or when", async () => {
+    const { db, shop, person } = await stamped();
+    const first = await staffOf(db, shop.id);
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: first.id,
+    });
+    const [after] = await db.select().from(people).where(eq(people.id, person.id));
+    const { person: second } = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Sam Ortiz",
+      email: "sam@example.com",
+    });
+
+    const again = await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: second.id,
+    });
+
+    expect(again).toBe(false);
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.noCertificationClearedByPersonId).toBe(first.id);
+    expect(row?.noCertificationClearedAt).toEqual(after?.noCertificationClearedAt);
+  });
+
+  /**
+   * The half that would otherwise be a silent, permanent gate: one correction
+   * must not swallow every answer the diver gives afterwards. Nobody chose
+   * that, and nothing on any screen would say it had happened.
+   */
+  it("a later declaration un-clears it, so a fresh answer is heard", async () => {
+    const { db, shop, person } = await stamped();
+    const staff = await staffOf(db, shop.id);
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: staff.id,
+    });
+
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      noCertification: true,
+    });
+
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.noCertificationClearedAt).toBeNull();
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
+    expect(profiles.get(person.id)?.noCertificationDeclared).toBe(true);
+  });
+
+  /**
+   * The half of that which an **unauthenticated** caller must not be able to
+   * reach. `recordSelfDeclaredCards` is posted to by two public forms, and the
+   * fact it is writing next to is one a member of staff authored. If a fresh
+   * declaration cleared *both* columns, an anonymous poster who knows a diver's
+   * name and email could loop the stamp back on with nothing left saying a
+   * staffer had ever disagreed — the same shape as the 2026-08-14 anonymous
+   * mutation of a staff-authored field this ADR records, one column over.
+   */
+  it("a later declaration cannot erase who corrected it", async () => {
+    const { db, shop, person } = await stamped();
+    const staff = await staffOf(db, shop.id);
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: staff.id,
+    });
+
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      noCertification: true,
+    });
+
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    // Set, with a null `clearedAt` beside it: *corrected once, and stated again
+    // since*. Both facts survive, and the reader still needs only the null test.
+    expect(row?.noCertificationClearedByPersonId).toBe(staff.id);
+  });
+
+  it("can be cleared again after a re-declaration, recording the staffer who did it", async () => {
+    const { db, shop, person } = await stamped();
+    const first = await staffOf(db, shop.id);
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: first.id,
+    });
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      noCertification: true,
+    });
+    const { person: second } = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Sam Ortiz",
+      email: "sam@example.com",
+    });
+
+    const again = await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: person.id,
+      byPersonId: second.id,
+    });
+
+    expect(again).toBe(true);
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.noCertificationClearedByPersonId).toBe(second.id);
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
+    expect(profiles.get(person.id)).toBeUndefined();
+  });
+});
+
+/**
+ * `certifications_identifier_present_unless_self_declared` was credited, in
+ * three comments and the ADR, with keeping a numberless row out of `verified`.
+ * It read `identifier is not null`, and `''` satisfies that — so the claim was
+ * true of NULL and held up by the application alone for the empty string.
+ */
+describe("the card-number constraint", () => {
+  /**
+   * The regression the tightening itself introduced for one afternoon, caught by
+   * a `dive-domain-expert` and a `security-reviewer` pass independently.
+   *
+   * A CHECK passes when its expression is TRUE **or NULL**, and
+   * `length(btrim(NULL)) > 0` is NULL — so a predicate written as
+   * `length(...) > 0 or (…)` evaluated to `NULL OR FALSE` = NULL on a numberless
+   * `verified` row and *accepted* it, which is weaker than the
+   * `identifier is not null or (…)` it was supposed to be tightening. Both
+   * conjuncts are load-bearing; this test is the one that says so.
+   */
+  it("refuses a null card number on a verified row — a CHECK is satisfied by NULL", async () => {
+    const { db, shop, person } = await joiner();
+
+    await expect(
+      db.insert(certifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        level: "instructor",
+        identifier: null,
+        status: "verified",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses a null card number on a verified nitrox row too", async () => {
+    const { db, shop, person } = await joiner();
+
+    await expect(
+      db.insert(nitroxCertifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        identifier: null,
+        status: "verified",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses a null card number on a self-declared row the moment it is verified", async () => {
+    const { db, shop, person } = await joiner();
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      level: "instructor",
+    });
+    // This diver's row specifically — `liveCards` is shop-wide and the seeded
+    // shop's own divers hold real numbered cards, whose promotion is legal.
+    const [claim] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+    if (!claim) throw new Error("self-declaration wrote no card");
+
+    // The exact escalation the constraint exists to make impossible: a claim
+    // promoted to `verified` with no number behind it. `reviewCertification`
+    // refuses this too — the point is that the database does as well, so the
+    // refusal does not depend on one action remembering to ask.
+    await expect(
+      db.update(certifications).set({ status: "verified" }).where(eq(certifications.id, claim.id)),
+    ).rejects.toThrow();
+  });
+
+  it("refuses a blank card number on a verified row, not merely a null one", async () => {
+    const { db, shop, person } = await joiner();
+
+    await expect(
+      db.insert(certifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: "   ",
+        status: "verified",
+      }),
+    ).rejects.toThrow();
+  });
+
+  // Bare `btrim()` strips spaces and nothing else, so a lone tab used to satisfy
+  // it. Unreachable from the app (`cardNumberSchema` trims in JS and demands a
+  // digit) — but this constraint is the backstop, and a backstop that only holds
+  // when the layer above it already did is not one.
+  it("refuses whitespace that is not a space", async () => {
+    const { db, shop, person } = await joiner();
+
+    await expect(
+      db.insert(certifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: "\t\n",
+        status: "verified",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("still lets a self-declared row carry no number at all", async () => {
+    const { db, shop, person } = await joiner();
+
+    await expect(
+      db.insert(certifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "other",
+        level: "open_water",
+        identifier: null,
+        status: "pending",
+        selfDeclaredAt: nowDate(),
+      }),
+    ).resolves.toBeDefined();
   });
 });

@@ -276,6 +276,11 @@ export async function reviewCertification(
     // in the database, which would reject the update outright. This refusal
     // exists so the surface can say *what to do* instead of surfacing a
     // constraint violation.
+    //
+    // That sentence used to overstate the constraint: it read
+    // `identifier is not null`, and `''` satisfies that, so the *blank* half of
+    // this check was the application's alone. The constraint now tests
+    // `length(btrim(identifier)) > 0` and the two agree (2026-08-15).
     return { ok: false, reason: "card_sighting_required" };
   }
 

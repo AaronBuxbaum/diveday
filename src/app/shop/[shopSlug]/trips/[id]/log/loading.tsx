@@ -1,3 +1,5 @@
+import { sectionCardClass } from "@/components/ui/card";
+
 /**
  * Document-shaped skeleton for the incident-ready export (design principle 1).
  * Like its sibling `manifest/loading.tsx` this renders as the trip layout's
@@ -15,10 +17,10 @@ export default function IncidentExportLoading() {
       </div>
       <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-20 rounded-lg border border-border bg-surface" />
+          <div key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
         ))}
       </div>
-      <div className="mt-8 h-64 w-full rounded-lg border border-border bg-surface" />
+      <div className={sectionCardClass({ padding: "none", className: "mt-8 h-64 w-full" })} />
     </div>
   );
 }

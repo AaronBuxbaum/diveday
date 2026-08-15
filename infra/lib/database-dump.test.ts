@@ -248,18 +248,21 @@ describe("the weekly database dump", () => {
   });
 
   /*
-   * The old dumps do not evaporate on deploy day: they sit in the bundle bucket
-   * for their remaining window, and the rule that drains them has to stay or
-   * they never leave a bucket whose other prefix never expires. Deleting this
-   * rule is the migration's one irreversible mistake, so it is asserted rather
-   * than only commented.
+   * The dumps this bucket held before the 2026-08-15 split are ABANDONED, not
+   * drained. A `drain-legacy-database-dumps` rule expired them for a day, on
+   * the assumption that they were real dumps worth waiting out roughly 70 days
+   * of versioned lifecycle for; H-47 says otherwise -- DiveDay is pre-pilot,
+   * the database is disposable, and what is under that prefix is seeded demo
+   * data. So the rule went, and this asserts the bundle bucket now carries
+   * exactly one lifecycle rule about bundles and nothing about dumps. Deleting
+   * those objects is a human's `aws s3api delete-objects`, written down in
+   * section 2c of the backup-and-restore runbook and deliberately not in code.
    */
-  it("keeps draining the dumps the bundle bucket still holds", () => {
+  it("carries no lifecycle rule for the abandoned legacy dump prefix", () => {
     const rules = bucketNamed("diveday-backups")?.Properties?.LifecycleConfiguration?.Rules ?? [];
-    const drain = rules.find((rule) => rule.Id === "drain-legacy-database-dumps");
 
-    expect(drain?.Prefix).toBe("dumps/");
-    expect(drain?.ExpirationInDays).toBe(35);
+    expect(rules.map((rule) => rule.Id)).toEqual(["age-backups-into-colder-storage"]);
+    expect(rules.some((rule) => rule.Prefix === "dumps/")).toBe(false);
   });
 
   it("is watched by the same weekly check as the bundles", () => {

@@ -3,6 +3,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { PartyClaimPanel, type PartyClaimSeat } from "@/components/PartyClaimPanel";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -51,7 +52,11 @@ function PaymentSection({
     // divides by *that* currency's minor unit — a ¥9,000 deposit is not ¥90.
     const money = (cents: number) => formatMoneyCents(cents, payment.currency, locale);
     return (
-      <div className="mt-4 rounded-xl border border-success/40 bg-success/10 p-4 text-left">
+      // Not a `SectionCard`: this panel carries a *tone* (a settled payment),
+      // which the shared card deliberately does not model. Its radius follows
+      // the canonical one so the paid and unpaid states — which alternate in
+      // the same slot — never render at two different corners.
+      <div className="mt-4 rounded-2xl border border-success/40 bg-success/10 p-4 text-left sm:p-5">
         <h3 className="font-semibold text-success">
           {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
           {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✅
@@ -68,20 +73,22 @@ function PaymentSection({
   }
 
   return (
-    <div className="mt-4 rounded-xl border border-border bg-surface/70 p-4 text-left">
-      <h3 className="font-semibold">
-        {payCancelled ? t("booking.paymentStillOpen") : t("booking.paymentOneThingLeft")}
-      </h3>
-      <p className="mt-1 text-sm text-muted">{t("booking.paymentBody")}</p>
+    <SectionCard
+      as="div"
+      className="mt-4 text-left"
+      titleAs="h3"
+      title={payCancelled ? t("booking.paymentStillOpen") : t("booking.paymentOneThingLeft")}
+      description={t("booking.paymentBody")}
+    >
       {payment.state === "pending" ? (
         <a
           href={payment.checkoutUrl}
-          className={buttonClass({ className: "mt-3 px-5 py-2.5 text-base" })}
+          className={buttonClass({ className: "px-5 py-2.5 text-base" })}
         >
           {t("booking.finishPaying")}
         </a>
       ) : (
-        <form action={payForBooking.bind(null, payRef)} className="mt-3">
+        <form action={payForBooking.bind(null, payRef)}>
           <SubmitButton
             pendingLabel={t("booking.openingPayment")}
             className={buttonClass({ className: "px-5 py-2.5 text-base disabled:opacity-70" })}
@@ -90,7 +97,7 @@ function PaymentSection({
           </SubmitButton>
         </form>
       )}
-    </div>
+    </SectionCard>
   );
 }
 
@@ -213,51 +220,62 @@ export function BookingConfirmation({
       />
       {terms}
 
-      <div className="mt-4 rounded-xl border border-border bg-surface/70 p-4 text-left">
-        {nextStep ? (
-          <>
-            <h3 className="font-semibold">
-              {t("booking.nextStep", {
-                step: checklistCategoryText(t, nextStep.category).toLowerCase(),
-              })}
-            </h3>
-            <p className="mt-1 text-sm text-muted">{checklistDetailText(t, nextStep)}</p>
-          </>
-        ) : readiness?.status === "ready" ? (
-          <h3 className="font-semibold text-success">{t("booking.allSet")}</h3>
-        ) : (
-          <>
-            <h3 className="font-semibold">{t("booking.shopTakesOver")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("booking.shopTakesOverBody")}</p>
-          </>
-        )}
-        {waiverStep ? (
-          <form action={signWaiverFromConfirmation.bind(null, fitRef)} className="mt-3">
-            <SubmitButton
-              pendingLabel={t("booking.openingWaiver")}
-              className={buttonClass({
-                variant: paymentHoldsThePrimary ? "secondary" : "primary",
-                size: "lg",
-                className: "disabled:opacity-70",
-              })}
-            >
-              {t("booking.signWaiverNow")}
-            </SubmitButton>
-          </form>
-        ) : null}
-        <Link
-          href={readinessLink ?? "#"}
-          aria-disabled={readinessLink === null}
-          // /ready/[token] isn't in the embed framing allowlist (docs ADR
-          // 20260726-schedule-embed) — inside the iframe this must break out
-          // to the top-level window, or the click would swap the working
-          // embed for a frame Content-Security-Policy silently blocks.
-          target={fitRef.embed ? "_top" : undefined}
-          className="mt-3 inline-block text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
-        >
-          {t("booking.trackReadiness")}
-        </Link>
-      </div>
+      {/* `titleAs="h3"`: this sits under the `EarnedMoment`'s own heading, so
+          the step card must not shout at the same volume as the confirmation
+          it follows. The success wording keeps its tone through the title node
+          — the shared card models containment and padding, not tone. */}
+      <SectionCard
+        as="div"
+        className="mt-4 text-left"
+        titleAs="h3"
+        title={
+          nextStep ? (
+            t("booking.nextStep", {
+              step: checklistCategoryText(t, nextStep.category).toLowerCase(),
+            })
+          ) : readiness?.status === "ready" ? (
+            <span className="text-success">{t("booking.allSet")}</span>
+          ) : (
+            t("booking.shopTakesOver")
+          )
+        }
+        description={
+          nextStep
+            ? checklistDetailText(t, nextStep)
+            : readiness?.status === "ready"
+              ? undefined
+              : t("booking.shopTakesOverBody")
+        }
+      >
+        <div className="flex flex-col items-start gap-3">
+          {waiverStep ? (
+            <form action={signWaiverFromConfirmation.bind(null, fitRef)}>
+              <SubmitButton
+                pendingLabel={t("booking.openingWaiver")}
+                className={buttonClass({
+                  variant: paymentHoldsThePrimary ? "secondary" : "primary",
+                  size: "lg",
+                  className: "disabled:opacity-70",
+                })}
+              >
+                {t("booking.signWaiverNow")}
+              </SubmitButton>
+            </form>
+          ) : null}
+          <Link
+            href={readinessLink ?? "#"}
+            aria-disabled={readinessLink === null}
+            // /ready/[token] isn't in the embed framing allowlist (docs ADR
+            // 20260726-schedule-embed) — inside the iframe this must break out
+            // to the top-level window, or the click would swap the working
+            // embed for a frame Content-Security-Policy silently blocks.
+            target={fitRef.embed ? "_top" : undefined}
+            className="text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
+          >
+            {t("booking.trackReadiness")}
+          </Link>
+        </div>
+      </SectionCard>
 
       {/* The organizer's share-and-track panel, right after their own next
           step: the moment they finish booking is the moment the group chat is

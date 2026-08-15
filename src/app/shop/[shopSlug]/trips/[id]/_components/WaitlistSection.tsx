@@ -1,9 +1,15 @@
 import { EmptyState } from "@/components/EmptyState";
+import { sectionCardClass } from "@/components/ui/card";
 import type { CertificationSummary } from "@/db/self-declared-cards";
-import { certificationSummaryText, certificationSummaryUnchecked } from "@/i18n/readiness-labels";
+import {
+  certificationSummaryBelowRequirementText,
+  certificationSummaryText,
+  certificationSummaryUnchecked,
+} from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
+import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import type { Waitlist } from "./types";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
 
@@ -16,6 +22,7 @@ export function WaitlistSection({
   tripWhen,
   inviteAction,
   certificationSummaries,
+  minimumCertificationLevel,
   locale,
   timezone,
 }: {
@@ -35,6 +42,21 @@ export function WaitlistSection({
    * not a queue (ADR 20260813-wait-list-is-a-lead-list).
    */
   certificationSummaries: Map<string, CertificationSummary>;
+  /**
+   * **This departure's effective minimum rung** — its own requirement folded
+   * with every dive site it visits (`combineCertRequirements`, resolved once by
+   * the page for the deal panel below). Null when the departure asks for no
+   * level, in which case nobody is under a bar because there isn't one.
+   *
+   * It is here so a row can *say* that this lead ranks below what the departure
+   * asks for. The deal panel beside it has said so since 2026-08-15, and an
+   * invite is the stronger act of the two: bulk mail versus a staffer offering
+   * one named diver a freed seat on this exact departure. It informs and
+   * nothing else — it does not order this list, filter it, or touch the Invite
+   * button (ADR 20260813-wait-list-is-a-lead-list, ADR
+   * 20260814-self-declared-cards decision 4).
+   */
+  minimumCertificationLevel: CertificationLevel | null;
   locale: string;
   timezone: string;
 }) {
@@ -78,55 +100,78 @@ export function WaitlistSection({
         // date each diver asked is the honest version of the same cue — it
         // still shows who has been waiting longest, without ranking them
         // (ADR 20260813-wait-list-is-a-lead-list).
-        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-          {waitlist.map(({ entry, person }) => (
-            <li key={entry.id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
-              <div className="min-w-0">
-                <p className="font-medium">{person.fullName}</p>
-                <p className="text-muted">
-                  {person.email ?? t("trips.waitlist.noEmailOnFile")}
-                  {" · "}
-                  {t("trips.waitlist.joined", {
-                    date: formatShortDate(entry.createdAt, locale, timezone),
-                  })}
-                </p>
-                {/* On its own line rather than appended to the contact line:
-                    this is the fact that decides whether the invite is a good
-                    idea, and it must not be the thing that scrolls off a
-                    phone-width row behind an email address. */}
-                {/* Warning-toned when any part of it is only the diver's word,
-                    matching the imported specialty card's "on file, gate still
-                    shut" treatment. A muted parenthetical was the only thing
-                    separating a claim from a card the shop holds, and it is
-                    exactly what truncates on a phone. */}
-                <p
-                  className={
-                    certificationSummaryUnchecked(certificationSummaries.get(person.id) ?? null)
-                      ? "text-warning"
-                      : "text-muted"
-                  }
-                >
-                  {certificationSummaryText(
-                    t,
-                    certificationSummaries.get(person.id) ?? null,
-                    locale,
-                  )}
-                </p>
-              </div>
-              <WaitlistInvite
-                entryId={entry.id}
-                personName={person.fullName}
-                personEmail={person.email}
-                invitedAt={entry.invitedAt}
-                bookingPath={bookingPath}
-                shopName={shopName}
-                tripTitle={tripTitle}
-                tripWhen={tripWhen}
-                invite={inviteAction}
-                copy={inviteCopy}
-              />
-            </li>
-          ))}
+        <ul
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-4 divide-y divide-border",
+          })}
+        >
+          {waitlist.map(({ entry, person }) => {
+            const summary = certificationSummaries.get(person.id) ?? null;
+            // Only the ladder, and only for somebody who is on it: a required
+            // specialty or nitrox card does not rank one level under another,
+            // and the phrase would be claiming a comparison it cannot make.
+            const belowRequirement =
+              minimumCertificationLevel !== null &&
+              summary?.level != null &&
+              certificationRank(summary.level) < certificationRank(minimumCertificationLevel);
+            return (
+              <li
+                key={entry.id}
+                className="flex items-start justify-between gap-3 px-4 py-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">{person.fullName}</p>
+                  <p className="text-muted">
+                    {person.email ?? t("trips.waitlist.noEmailOnFile")}
+                    {" · "}
+                    {t("trips.waitlist.joined", {
+                      date: formatShortDate(entry.createdAt, locale, timezone),
+                    })}
+                  </p>
+                  {/* On its own line rather than appended to the contact line:
+                      this is the fact that decides whether the invite is a good
+                      idea, and it must not be the thing that scrolls off a
+                      phone-width row behind an email address. */}
+                  {/* Warning-toned when any part of it is only the diver's word,
+                      matching the imported specialty card's "on file, gate still
+                      shut" treatment. A muted parenthetical was the only thing
+                      separating a claim from a card the shop holds, and it is
+                      exactly what truncates on a phone.
+
+                      Under the departure's bar is a *word* on this line and
+                      never a second reason to warm the row: the tone answers
+                      "has anybody seen this card?" and only that, and the whole
+                      argument for it collapses the moment it answers two
+                      questions at once (ADR 20260814-self-declared-cards
+                      decision 4, docs/design/principles.md #6). So a verified
+                      Open Water diver on an Advanced departure stays calm and
+                      muted — and says he is under the bar. */}
+                  <p
+                    className={
+                      certificationSummaryUnchecked(summary) ? "text-warning" : "text-muted"
+                    }
+                  >
+                    {belowRequirement
+                      ? certificationSummaryBelowRequirementText(t, summary, locale)
+                      : certificationSummaryText(t, summary, locale)}
+                  </p>
+                </div>
+                <WaitlistInvite
+                  entryId={entry.id}
+                  personName={person.fullName}
+                  personEmail={person.email}
+                  invitedAt={entry.invitedAt}
+                  bookingPath={bookingPath}
+                  shopName={shopName}
+                  tripTitle={tripTitle}
+                  tripWhen={tripWhen}
+                  invite={inviteAction}
+                  copy={inviteCopy}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

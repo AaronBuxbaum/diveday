@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { SectionCard } from "@/components/ui/card";
 import type { diveSites } from "@/db/schema";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -76,7 +77,13 @@ export function DiveBriefingCard({
   const momentImageUrl = moments[0]?.imageUrl ?? null;
 
   return (
-    <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
+    // A shell: the site map (or satellite photo) runs to the card's edge, and
+    // the prose block below it pads itself.
+    <SectionCard
+      as="article"
+      padding="none"
+      className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden sm:w-full"
+    >
       {site && canDrawRoute(site) ? (
         <DiveSiteMap site={site} t={t} />
       ) : site?.satelliteImageUrl ? (
@@ -200,6 +207,6 @@ export function DiveBriefingCard({
           </details>
         ) : null}
       </div>
-    </article>
+    </SectionCard>
   );
 }

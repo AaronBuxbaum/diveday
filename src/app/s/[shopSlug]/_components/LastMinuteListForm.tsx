@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { DiveDeclarationFields } from "@/components/DiveDeclarationFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
 
@@ -25,24 +26,25 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
 
   if (state.success) {
     return (
-      <section
+      <SectionCard
         id="last-minute-list"
-        className="rise-in mt-10 rounded-2xl border border-border bg-surface p-6"
-      >
-        <h2 className="font-semibold">{t("lastMinute.joinedHeading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("lastMinute.joinedBody")}</p>
-      </section>
+        padding="lg"
+        className="rise-in mt-10"
+        title={t("lastMinute.joinedHeading")}
+        description={t("lastMinute.joinedBody")}
+      />
     );
   }
 
   return (
-    <section
+    <SectionCard
       id="last-minute-list"
-      className="mt-10 rounded-2xl border border-border bg-surface p-6"
+      padding="lg"
+      className="mt-10"
+      title={t("lastMinute.heading")}
+      description={t("lastMinute.body")}
     >
-      <h2 className="font-semibold">{t("lastMinute.heading")}</h2>
-      <p className="mt-1 text-sm text-muted">{t("lastMinute.body")}</p>
-      <p className="mt-2 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
+      <p className="text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
           <Field label={t("common.name")}>
@@ -103,6 +105,6 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
           <FormStatus tone="danger">{state.error}</FormStatus>
         </div>
       </form>
-    </section>
+    </SectionCard>
   );
 }

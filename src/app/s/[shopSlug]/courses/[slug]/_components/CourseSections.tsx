@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import type { Course } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import {
@@ -100,7 +101,11 @@ export function CourseHero({
     maximumFractionDigits: 0,
   });
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+    // The poster, as a shell: the photo bleeds to the card's edge and the body
+    // below it pads itself, so the card contributes only its chrome. Its radius
+    // is the app-wide one now — this was one of four `rounded-3xl` panels left
+    // outside the shared vocabulary.
+    <SectionCard as="div" padding="none" className="overflow-hidden">
       {course.heroImageUrl ? (
         <StoredPhoto
           src={course.heroImageUrl}
@@ -162,7 +167,7 @@ export function CourseHero({
           ))}
         </dl>
       ) : null}
-    </div>
+    </SectionCard>
   );
 }
 

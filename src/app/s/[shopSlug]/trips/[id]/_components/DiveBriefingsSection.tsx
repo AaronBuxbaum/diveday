@@ -1,4 +1,5 @@
 import { DiveBriefingCard } from "@/components/DiveBriefingCard";
+import { SectionCard } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -36,7 +37,7 @@ export function DiveBriefingsSection({
         </h2>
       </div>
       {comparableSites ? (
-        <details className="mt-5 rounded-xl border border-border bg-surface p-4">
+        <SectionCard as="details" className="mt-5">
           <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
             {t("trip.compareSites")}
           </summary>
@@ -78,7 +79,7 @@ export function DiveBriefingsSection({
             </TBody>
           </Table>
           <p className="mt-3 text-xs text-muted">{t("trip.compareNote")}</p>
-        </details>
+        </SectionCard>
       ) : null}
       {/* Directly above the cards it describes, not up in the section header:
           from there it sat above the compare block and read as an instruction

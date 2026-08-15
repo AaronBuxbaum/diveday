@@ -138,3 +138,19 @@ Two statements above are narrowed by the follow-on rather than contradicted:
   fail-closed rule is untouched: a copy saved before crew ids rode along still cannot record its
   crew, absence is still "nobody has said", and the dock copy still never reads complete while the
   live page says the checkpoint is open.
+
+## Amendment 2026-08-15 — the table this ADR introduced has been dropped
+
+This ADR was already superseded (see the status line). Recording the last step for a reader who
+arrives here looking for the machinery: `roll_call_crew_attestations` no longer exists. The table,
+`recordCrewAttestation`, the departure log's attestation timeline, and the
+`roll_call_crew_attestations.csv` export file were all deleted on 2026-08-15 under
+[H-49](../../product/human-decisions.md) — pre-pilot, no users, no data worth retaining — after the
+writer was found to have no production caller at all, only its own tests. Migration
+`20260815221413_drop-roll-call-crew-attestations`. See
+[20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md)'s 2026-08-15
+amendment for the full reasoning.
+
+Nothing above is retracted: the *problem* this ADR named — that the head count excluded exactly the
+people most reliably in the water — is real, and is solved by the per-person crew roll call. Only
+the count-level mechanism it chose is gone.

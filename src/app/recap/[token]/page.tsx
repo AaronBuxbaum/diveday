@@ -10,6 +10,7 @@ import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
@@ -397,16 +398,18 @@ export default async function DiveRecapPage({
       {/* ——— Act II: the one ask. The review is the page's single bordered
           card and its single primary action — it's one tap, it stays on this
           page, and it's the only review a diver can leave that DiveDay can
-          prove came from someone who was actually on the boat. Its geometry
-          (rounded-2xl, p-6/7) deliberately echoes the EarnedMoment above:
-          two cards on the page, the joy and the ask. */}
-      <section className="mt-12 rounded-2xl border border-border bg-surface p-6 sm:mt-14 sm:p-7">
-        <h2 className="text-xl font-semibold tracking-tight">{t("reviews.askHeading")}</h2>
-        <p className="mt-1 text-base text-muted">{t("reviews.askBody")}</p>
+          prove came from someone who was actually on the boat. It is the
+          shared card now, at `padding="lg"` — a card someone works inside —
+          rather than a geometry of its own hand-matched to the EarnedMoment
+          above it; both are on their way to the one spelling. */}
+      <SectionCard
+        padding="lg"
+        className="mt-12 sm:mt-14"
+        title={t("reviews.askHeading")}
+        description={t("reviews.askBody")}
+      >
         {reviewNotice ? (
-          <FormStatus tone={reviewNotice.tone} className="mt-3">
-            {reviewNotice.text}
-          </FormStatus>
+          <FormStatus tone={reviewNotice.tone}>{reviewNotice.text}</FormStatus>
         ) : null}
         {ownReview ? (
           <p className="mt-3 text-sm text-muted">
@@ -473,7 +476,7 @@ export default async function DiveRecapPage({
             />
           </div>
         ) : null}
-      </section>
+      </SectionCard>
 
       {/* ——— Act III: quiet follows. Real affordances at secondary weight —
           hairline-topped sections, never rival cards to the one ask above. */}

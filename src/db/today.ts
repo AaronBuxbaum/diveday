@@ -324,13 +324,6 @@ function inAfterDivePopulation(states: readonly ("boarded" | "not_boarded" | und
  * water (review 20260803, D1). Crew rows are built by the same rules, in the
  * same pass, and age on the same schedule; only the words differ.
  *
- * The count-level `crew attestation` deliberately does **not** raise a row of
- * its own. It is a per-checkpoint form on the live manifest that most shops
- * have never filled in, so it would fire on essentially every trip ever run,
- * and a danger-toned row that fires on every trip is what stops the row that
- * means a person is in the water from being read. The manifest states it; Today
- * chases only what somebody actually recorded.
- *
  * "Not closed" is defined the same way the manifest defines it, except for the
  * `not_boarded` split above:
  *

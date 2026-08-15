@@ -22,6 +22,7 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
+import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { AppDb } from "./client";
 import {
@@ -51,7 +52,6 @@ import {
   recapPhotos,
   rentalFitProfiles,
   reviewModerationEvents,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
@@ -422,17 +422,8 @@ export async function loadShopExportBundleInput(
         // file a shop is meant to be able to diff against last week's.
         .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq));
 
-      // The crew half of the same head count. Same ordering rule as the events
-      // above (oldest first), so a reader replaying the file in order ends on
-      // the count that stood.
-      const crewAttestationRows = await tx
-        .select()
-        .from(rollCallCrewAttestations)
-        .where(eq(rollCallCrewAttestations.shopId, shopId))
-        .orderBy(asc(rollCallCrewAttestations.occurredAt), asc(rollCallCrewAttestations.id));
-
-      // And the per-person half: who, not just how many. Same oldest-first
-      // ordering, same append-only replay rule as the diver events.
+      // The crew half: who, not just how many. Same oldest-first ordering, same
+      // append-only replay rule as the diver events.
       const crewRollCallRows = await tx
         .select()
         .from(rollCallCrewEvents)
@@ -504,6 +495,30 @@ export async function loadShopExportBundleInput(
           .map((card) => card.personId),
       );
       const fitByPerson = new Map(rentalFitRows.map((row) => [row.personId, row]));
+      /**
+       * **People a card the shop actually holds refutes** — the same three-table
+       * test `listCertificationSummaries` applies before it will render "Not
+       * certified yet — diver's word", restated here rather than called because
+       * that reader takes an `inArray` of person ids and a long-lived shop's
+       * lifetime roster would blow PostgreSQL's bind-parameter limit (the same
+       * reason `personRoles` above is joined rather than filtered by id list).
+       *
+       * A still-unsighted self-declaration is not a card, on any of the three:
+       * a diver who declared a rung and later said they hold nothing has made
+       * two statements and neither is evidence. A specialty row settles it
+       * outright — `specialty_certifications` has no `self_declared_at` at all,
+       * so every live row in it is a card a staffer captured or a CSV brought in.
+       */
+      const cardedPeople = new Set<string>();
+      for (const card of certificationRows) {
+        if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
+      }
+      for (const card of nitroxRows) {
+        if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
+      }
+      for (const card of specialtyRows) {
+        if (!card.deletedAt) cardedPeople.add(card.personId);
+      }
 
       const waiversByPerson = new Map<string, typeof waiverRows>();
       for (const record of waiverRows) {
@@ -629,6 +644,21 @@ export async function loadShopExportBundleInput(
             "certification_number",
             "certification_status",
             "certification_expires_at",
+            // **"Said they hold no card" is not the same fact as "was never
+            // asked", and in this file they were byte-identical.** The four
+            // certification columns above are blank for both, which is the exact
+            // ambiguity `people.no_certification_declared_at` exists to remove —
+            // reintroduced for the reader most likely to act on it, since a
+            // destination system importing this file prompts staff to "complete"
+            // a blank record and a shop reading it in a spreadsheet reads a gap
+            // as an oversight.
+            //
+            // It sits here, beside the certification columns, and deliberately
+            // **never** as a value inside `certification_level` or
+            // `certification_agency`: a "none" rung is the `certifications`-row
+            // mistake the ADR refuses, one file format down, and the first
+            // importer to sort or rank that column would put it on the ladder.
+            "no_certification_declared_at",
             "nitrox_certified",
             "bcd_size",
             "wetsuit_size",
@@ -666,6 +696,27 @@ export async function loadShopExportBundleInput(
               card?.identifier,
               card?.status,
               card?.expiresAt,
+              // Blank unless the answer still stands: cleared by a staffer,
+              // refuted by a card the shop holds, or contradicted by the very
+              // level this row is already exporting, and this file says nothing.
+              // contacts.csv is the *interpreted* row — "the strongest honest
+              // claim per diver" — so it must not hand a destination system both
+              // a card and a statement that there is no card and leave it to
+              // arbitrate. people.csv carries the raw pair for anyone auditing.
+              //
+              // The `card` test is the one `cardedPeople` cannot do and is not
+              // redundant with it. A diver may declare "no card" and later
+              // declare a *rung*: the writer keeps both flags and the staff
+              // reader renders the rung as the later, more specific statement,
+              // but `bestCertification` above ranks a still-unsighted claim too,
+              // so without this the same row would ship `certification_level`
+              // **and** "there is no card" (`dive-domain-expert`, 2026-08-15).
+              row.noCertificationDeclaredAt &&
+              !row.noCertificationClearedAt &&
+              !cardedPeople.has(row.id) &&
+              !card
+                ? row.noCertificationDeclaredAt
+                : null,
               nitroxVerified.has(row.id),
               fit?.bcdSize,
               fit?.wetsuitSize,
@@ -698,6 +749,14 @@ export async function loadShopExportBundleInput(
             // to travel in, so it travels here or not at all (ADR
             // 20260814-self-declared-cards).
             "no_certification_declared_at",
+            // And the correction, when a staffer said the diver never gave that
+            // answer. Both halves travel because this is the normalized dump:
+            // a cleared stamp is *superseded*, not deleted (people.no_certification_cleared_at),
+            // so a file that carried only the first column would re-assert a
+            // statement the shop has withdrawn. contacts.csv, which interprets
+            // rather than dumps, resolves the pair down to one cell.
+            "no_certification_cleared_at",
+            "no_certification_cleared_by_person_id",
             "deleted_at",
             // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
             // Every identifying column above is already blank for such a row, so
@@ -720,6 +779,8 @@ export async function loadShopExportBundleInput(
             row.emergencyContactPhone,
             row.courtesyEmailOptOutAt,
             row.noCertificationDeclaredAt,
+            row.noCertificationClearedAt,
+            row.noCertificationClearedByPersonId,
             row.deletedAt,
             row.anonymizedAt,
             row.anonymizedByPersonId,
@@ -1344,38 +1405,6 @@ export async function loadShopExportBundleInput(
             ];
           }),
           note: EXPORT_FILE_NOTES["roll_call_events.csv"],
-        },
-        {
-          file: "roll_call_crew_attestations.csv",
-          header: [
-            "id",
-            "trip_id",
-            "trip_title",
-            "trip_starts_at",
-            "checkpoint",
-            "crew_aboard",
-            "crew_assigned",
-            "attested_by_person_id",
-            "attested_by_name",
-            "note",
-            "occurred_at",
-            "created_at",
-          ],
-          rows: crewAttestationRows.map((row) => [
-            row.id,
-            row.tripId,
-            tripTitle.get(row.tripId),
-            tripStartsAt.get(row.tripId),
-            row.checkpoint,
-            row.crewAboard,
-            row.crewAssigned,
-            row.attestedByPersonId,
-            personName.get(row.attestedByPersonId),
-            row.note,
-            row.occurredAt,
-            row.createdAt,
-          ]),
-          note: EXPORT_FILE_NOTES["roll_call_crew_attestations.csv"],
         },
         {
           file: "roll_call_crew_events.csv",
@@ -2327,12 +2356,6 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(rollCallCrewEvents)
         .where(eq(rollCallCrewEvents.shopId, shopId)),
-    ),
-    "roll_call_crew_attestations.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(rollCallCrewAttestations)
-        .where(eq(rollCallCrewAttestations.shopId, shopId)),
     ),
     "buddy_pairs.csv": await countOf(
       db.select({ n: count() }).from(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId)),

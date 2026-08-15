@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a public course page (design principle 1): the
@@ -9,7 +10,8 @@ export default function CoursePageLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+        {/* The hero's own shell, from the same place `CourseHero` takes it. */}
+        <div className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}>
           <div className="h-56 w-full bg-surface-sunken sm:h-80" />
           <div className="p-6 sm:p-8">
             <ShopPageHeaderSkeleton

@@ -10,6 +10,7 @@ import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import type { CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -22,7 +23,7 @@ import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 import { QueueRowButton } from "./QueueRowButton";
@@ -41,15 +42,54 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The refusals the two counter mutations beside this file can answer with, in
+ * the spelling that reaches this page's URL.
+ *
+ * `undoCheckInAction` translates its one divergent reason (`not_checked_in`) to
+ * the queue's `not-bookable` before redirecting and passes the rest straight
+ * through, so this is exactly what those two domain unions can put in the query.
+ * Deriving it rather than listing it holds the two halves of the `?notice=`
+ * pattern together — an emitter in `./actions.ts`, a map here: **a reason added
+ * to either union with no words below is a compile error.**
+ *
+ * Precisely that and no more. The reverse — a map entry left behind after a
+ * reason is deleted — is *not* caught, because the map also carries codes from
+ * two vocabularies this page only borrows (`SEAT_SURFACES["walk-in"]` and
+ * `recordInPersonWaiver`, plus the actions' own `invalid`), and accepting those
+ * means an index signature, which accepts anything else too. That is a real
+ * limit, written down rather than implied, because a guard claimed to be
+ * stronger than it is gets trusted where it does not hold.
+ *
+ * It has already caught one in the direction it does cover: `checkInBooking`'s
+ * union carries `already_checked_in`, which had no entry below. Nothing was red,
+ * because the code path answers idempotent success instead — but a union member
+ * nothing returns is a member the next edit can start returning, and the counter
+ * would have said nothing at all.
+ */
+type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
+type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
+type CheckInNoticeCode = NoticeCodeOf<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">>;
+
+type NoticeDefinition = {
+  tone: "success" | "danger" | "warning" | "neutral";
+  key: StaffMessageKey;
+};
+
+type BorrowedNoticeMap = Record<string, NoticeDefinition>;
+/** Loose in the keys it accepts, exact in the ones it demands. */
+type NoticeMap = BorrowedNoticeMap & Record<CheckInNoticeCode, NoticeDefinition>;
+
+/**
  * A notice query param maps to a message key, never to a sentence — the words
  * come from the staff bundle at render time (docs ADR
  * 20260730-staff-copy-localization). Typing the value as `StaffMessageKey`
  * makes a stale key a compile error rather than a rendered key on screen.
+ *
+ * The `Record<string, …>` half is what lets the walk-in and waiver codes below
+ * sit here too: those arrive from `SEAT_SURFACES["walk-in"]` and
+ * `recordInPersonWaiver`, whose own vocabularies this page only borrows.
  */
-const noticeCopy: Record<
-  string,
-  { tone: "success" | "danger" | "warning" | "neutral"; key: StaffMessageKey }
-> = {
+const noticeCopy: NoticeMap = {
   // No success entries for checking in or undoing one: the row itself settles
   // into (or out of) "Checked in ☑️" beside the tap that did it, and a banner
   // at the top of the page would say the same fact a screen away (design
@@ -57,6 +97,13 @@ const noticeCopy: Record<
   // refusal or a walk-in/waiver outcome with no row state to land on.
   "not-ready": { tone: "warning", key: "checkIn.notice.notReady" },
   "not-bookable": { tone: "danger", key: "checkIn.notice.notBookable" },
+  // Neutral, not a refusal: a diver who is already checked in is a diver in the
+  // state the staffer wanted, so the sentence states the fact rather than
+  // scolding a second tap. `checkInBooking` answers this case with idempotent
+  // success today and the row itself says "Checked in ☑️" — this exists because
+  // the reason is still in its union, and a union member with no words is one
+  // edit away from a counter that says nothing.
+  "already-checked-in": { tone: "neutral", key: "checkIn.notice.alreadyCheckedIn" },
   "not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },

@@ -1,4 +1,5 @@
 import { Copyable } from "@/components/Copyable";
+import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 
 /** One party seat as the organizer's surfaces render it. */
@@ -35,15 +36,17 @@ export function PartyClaimPanel({
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
   return (
-    <section
-      className={`rounded-2xl border border-border bg-surface p-5 text-left sm:p-6 ${className}`}
-      aria-labelledby="party-claims-heading"
+    <SectionCard
+      padding="lg"
+      className={`text-left ${className}`}
+      title={t("seatClaim.panelHeading")}
+      description={t("seatClaim.panelBody")}
     >
-      <h2 id="party-claims-heading" className="text-xl font-semibold">
-        {t("seatClaim.panelHeading")}
-      </h2>
-      <p className="mt-2 text-sm text-muted">{t("seatClaim.panelBody")}</p>
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="flex flex-col gap-3">
+        {/* A row inside the panel, deliberately not a card of its own: giving
+            it the card's chrome would put a `rounded-2xl bg-surface` panel
+            inside a `rounded-2xl bg-surface` panel at the same radius, which
+            reads as a rendering bug rather than as structure. */}
         {seats.map((seat) => (
           <li key={seat.bookingId} className="rounded-xl border border-border bg-surface/70 p-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -86,6 +89,6 @@ export function PartyClaimPanel({
           </li>
         ))}
       </ul>
-    </section>
+    </SectionCard>
   );
 }

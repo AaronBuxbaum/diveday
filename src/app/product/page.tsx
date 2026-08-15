@@ -13,10 +13,11 @@ import {
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { trialHref } from "@/lib/funnel";
+import { switchingHref, trialHref } from "@/lib/funnel";
 import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
@@ -371,7 +372,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             the page's own tag it could never be shown to have earned its
             place, and the hero/closing pair keeps the original tag so their
             history holds. */}
-        <div className="mt-14 flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+        <SectionCard
+          as="div"
+          padding="lg"
+          className="mt-14 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left"
+        >
           <h3 className="text-xl font-semibold tracking-tight">
             {t("marketing.common.midCtaTitle")}
           </h3>
@@ -392,7 +397,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.common.startTrial")}
             </Link>
           </div>
-        </div>
+        </SectionCard>
       </section>
 
       {/* Chapter 05 — after the boat is back: the day's earned moment, so the
@@ -405,12 +410,12 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         <p className="mt-5 text-lg leading-8 text-muted">
           {t("marketing.product.recapDescription")}
         </p>
-        <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-border bg-surface p-6 text-left sm:p-8">
+        <SectionCard as="div" padding="lg" className="mx-auto mt-8 max-w-xl text-left">
           <p className="text-xs font-semibold tracking-widest text-primary uppercase">
             {t("marketing.product.recapCardLabel")}
           </p>
           <p className="mt-3 leading-7 text-muted">{t("marketing.product.afterTripBody")}</p>
-        </div>
+        </SectionCard>
       </section>
 
       {/* Money is not a chapter — it runs under every one of them, so it sits
@@ -549,8 +554,13 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.product.closingTitle")}
             </h2>
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
+            {/* Tagged, like the homepage's two doors onto the same surface:
+                the question that put a direct spreadsheet door on `/` is which
+                door a spreadsheet shop takes, and an untagged one here would
+                have left it read against a denominator missing the page a
+                reader reaches *after* the homepage convinced them. */}
             <Link
-              href="/switching/spreadsheet"
+              href={switchingHref("/switching/spreadsheet", "product-spreadsheet")}
               className={buttonClass({ variant: "link", flush: true, className: "mt-2 text-left" })}
             >
               {t("marketing.product.spreadsheetLink")}

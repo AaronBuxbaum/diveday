@@ -89,11 +89,10 @@ const APP_LOG_GROUP_NAME = "/diveday/app";
  * Where the full-cluster `pg_dump` lands, inside its OWN bucket since
  * 2026-08-15 (S11's `DatabaseDumpBucket`, written by S20). It shared the
  * bundles' bucket until then, and the prefix was the boundary; now the bucket
- * is the boundary and the prefix is kept for three cheap reasons: every
- * documented path (`dumps/<YYYY-MM-DD>/diveday.dump.gz`), the watchdog's
- * date-folder listing, and a one-line `aws s3 sync` between the two buckets all
- * stay exactly as they were. A trailing slash so it reads as a folder in every
- * place it is concatenated.
+ * is the boundary and the prefix is kept for two cheap reasons: every
+ * documented path (`dumps/<YYYY-MM-DD>/diveday.dump.gz`) and the watchdog's
+ * date-folder listing stay exactly as they were. A trailing slash so it reads
+ * as a folder in every place it is concatenated.
  */
 const DUMP_PREFIX = "dumps/";
 
@@ -102,10 +101,10 @@ const DUMP_PREFIX = "dumps/";
  * credential in S11 may write. Its counterpart to {@link DUMP_PREFIX}.
  *
  * The two no longer share a bucket, so this scoping is no longer the only thing
- * standing between a leaked Vercel environment and the dump. It is still
- * load-bearing until the old `dumps/` prefix in the bundle bucket finishes
- * draining (S11's `drain-legacy-database-dumps` rule), and worth keeping after
- * that as the habit the split exists to make unnecessary.
+ * standing between a leaked Vercel environment and the dump. It stays anyway:
+ * a write-only credential that ships to a third party has no business reaching
+ * anything it was not built to write, and widening it *because* the dump moved
+ * out is how the split stops being worth having.
  *
  * The keys themselves are built in the app, by `platformBackupObjectKey` and
  * `platformBackupCensusKey` (src/features/backup-export/period.ts). This
@@ -921,33 +920,21 @@ exports.handler = async (event) => {
           // indefinitely and is not a usable backup.
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
         },
-        {
-          // The drain for the dumps this bucket held until 2026-08-15. Nothing
-          // writes this prefix any more -- S20 writes DatabaseDumpBucket below
-          // -- but the objects already here are real dumps with real password
-          // hashes in them, and deleting this rule would strand them in a
-          // bucket whose bundles never expire. So it stays until the prefix is
-          // empty, and its id says which it is.
-          //
-          // Empty means empty of VERSIONS: this bucket is versioned, so
-          // expiration writes a delete marker and the bytes live on as a
-          // non-current version for another DUMP_RETENTION_DAYS. Roughly 70
-          // days after the split, not 35. `aws s3api list-object-versions
-          // --bucket diveday-backups --prefix dumps/` is the honest check;
-          // `aws s3 ls` stops showing them at 35 and they are still there.
-          //
-          // When that comes back empty, delete this rule -- and note that the
-          // uploader grant below stays prefix-scoped either way.
-          id: "drain-legacy-database-dumps",
-          enabled: true,
-          prefix: DUMP_PREFIX,
-          expiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
-          // Never transitioned to a colder class first: IA has a 30-day minimum
-          // billing duration, so aging an object that expires before then costs
-          // *more* than leaving it standard.
-          noncurrentVersionExpiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
-        },
+        // There is no rule for the `dumps/` prefix this bucket held until
+        // 2026-08-15, and that is a decision rather than an omission. The dumps
+        // written before the split were left where they were (copying them
+        // would have re-dated them and restarted their expiry clock), and for
+        // one day a `drain-legacy-database-dumps` rule sat here to age them out
+        // over roughly 70 days of versioned lifecycle. Then it went, because
+        // H-47 records that DiveDay is pre-pilot with no users and a disposable
+        // database, so what is under that prefix is seeded demo data, not
+        // anybody's password hash or medical answer, and it is not worth a rule
+        // in this file or a reminder in anybody's queue. Those objects are
+        // abandoned, which means they now stay until a human deletes them --
+        // the command is in docs/engineering/backup-and-restore-runbook.md
+        // section 2c. Nothing reachable from the app can read them: the bucket
+        // is BLOCK_ALL, SSE-S3, enforceSSL, and the uploader credential that
+        // ships to Vercel is write-only into `exports/`.
       ],
     });
 
@@ -1009,10 +996,10 @@ exports.handler = async (event) => {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       lifecycleRules: [
         {
-          // Deliberately unprefixed, unlike the drain rule above: this bucket
-          // holds dumps and nothing else, so everything in it expires. A future
-          // artifact parked here outside `dumps/` should be caught by the
-          // 35-day sweep rather than quietly outlive it.
+          // Deliberately unprefixed, unlike the bundles' rules next door: this
+          // bucket holds dumps and nothing else, so everything in it expires. A
+          // future artifact parked here outside `dumps/` should be caught by
+          // the 35-day sweep rather than quietly outlive it.
           id: "expire-database-dumps",
           enabled: true,
           expiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
@@ -1041,11 +1028,11 @@ exports.handler = async (event) => {
     // prefix exists and is recent, so an overwritten dump read as a fresh one.
     //
     // The dump moved out of this bucket the same day, so this scoping is no
-    // longer what stands between this credential and a dump. It is still what
-    // stands between it and the OLD dumps draining under dumps/ here, which is
-    // a real window measured in weeks, and it stays afterwards on the same
-    // grounds a write-only credential has no business reaching anything it was
-    // not built to write.
+    // longer what stands between this credential and a live dump. It stays on
+    // its own merits: a write-only credential that ships to a third party has
+    // no business reaching anything it was not built to write, and the
+    // abandoned pre-split dumps under dumps/ here are still out of its reach
+    // for free.
     const backupUploaderUser = new iam.User(this, "BackupUploaderUser", {
       userName: BACKUP_UPLOADER_USER_NAME,
     });
@@ -2502,8 +2489,7 @@ async function checkDump(bucket, maxAgeDays) {
       "(user_accounts, account_tokens and calendar_feeds are excluded by design), so without a " +
       "dump the only recovery for those is Neon PITR. Check the diveday-database-dump CodeBuild " +
       "project's most recent build, and that the diveday/database-url-unpooled secret is filled " +
-      "in. Dumps written before the 2026-08-15 bucket split are in the export bucket under the " +
-      "same prefix and are not read by this check. " +
+      "in. " +
       "See docs/engineering/backup-and-restore-runbook.md section 2c."
     );
     return { newestDump: latest, dumpAgeDays: ageDays, dumpBytes: null };

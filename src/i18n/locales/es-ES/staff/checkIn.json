@@ -35,6 +35,7 @@
   "notice": {
     "notReady": "La preparación ha cambiado. <guestsLink>Abre Buceadores para resolver el bloqueo</guestsLink> y vuelve a intentarlo.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",
+    "alreadyCheckedIn": "Ese buceador ya había hecho el check-in.",
     "notFound": "No se encontró esa reserva.",
     "staffNotFound": "No se pudo confirmar tu acceso de personal.",
     "invalid": "Elige un buceador de la cola antes de registrarlo.",

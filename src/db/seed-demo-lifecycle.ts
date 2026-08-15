@@ -40,7 +40,6 @@ import {
   recapPhotos,
   rentalFitProfiles,
   reviewModerationEvents,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
@@ -124,7 +123,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
-  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear

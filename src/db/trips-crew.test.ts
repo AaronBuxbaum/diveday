@@ -5,7 +5,7 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { getTripManifest, recordCrewAttestation, recordCrewRollCall } from "./manifests";
+import { getTripManifest, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
 import { bookings, courses, people, personRoles, shops } from "./schema";
 import {
@@ -312,30 +312,6 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
         }),
       ).resolves.toMatchObject({ ok: true });
       expect(await deleteTrip(db, shop.id, bare.id)).toEqual({
-        ok: false,
-        reason: "already_sailed",
-      });
-
-      // The attested count on its own is enough too — it is a statement a named
-      // human made about this boat.
-      const attestOnly = await createTrip(db, {
-        shopId: shop.id,
-        title: "Attested-only charter",
-        startsAt: new Date(nowDate().getTime() + 310 * 24 * 60 * 60 * 1000),
-        endsAt: new Date(nowDate().getTime() + 310 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
-        capacity: 8,
-        plannedDives: 1,
-      });
-      if (!attestOnly) throw new Error("failed to create trip");
-      await expect(
-        recordCrewAttestation(db, {
-          shopId: shop.id,
-          tripId: attestOnly.id,
-          attestedByPersonId: first.id,
-          crewAboard: 0,
-        }),
-      ).resolves.toMatchObject({ ok: true });
-      expect(await deleteTrip(db, shop.id, attestOnly.id)).toEqual({
         ok: false,
         reason: "already_sailed",
       });

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { sectionCardClass } from "@/components/ui/card";
 import { toneGlyph } from "@/components/ui/tone";
 
 const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
@@ -212,11 +213,11 @@ export function ShopStat({
 
   return (
     <div
-      className={
-        inset
-          ? "rounded-xl bg-surface-sunken px-4 py-3"
-          : "rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-      }
+      // The raised tile takes its chrome from the card, not from a copy of the
+      // card's spelling: a stat tile and a section card are the same object
+      // (docs/design/forms-and-controls.md), so neither can drift from the
+      // other. `inset` is the sunken, chrome-less variant and has none of it.
+      className={inset ? "rounded-xl bg-surface-sunken px-4 py-3" : sectionCardClass()}
     >
       <Label
         className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}

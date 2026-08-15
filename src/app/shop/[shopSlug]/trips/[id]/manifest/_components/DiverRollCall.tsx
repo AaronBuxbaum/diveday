@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { RollCallNote } from "@/components/RollCallNote";
 import { Badge } from "@/components/ui/badge";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
@@ -274,7 +275,9 @@ export function DiverRollCall({
           </p>
         )}
       </div>
-      <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+      <ul
+        className={sectionCardClass({ padding: "none", className: "mt-4 divide-y divide-border" })}
+      >
         {divers.map((diver, index) => {
           const diverStatus = diver.readiness.status;
           const ready = diverStatus === "ready";

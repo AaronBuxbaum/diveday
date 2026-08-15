@@ -5,6 +5,7 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FunnelSource } from "@/lib/funnel";
@@ -207,20 +208,42 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
   );
 }
 
-/** One phase on the move rail: a numbered marker, a connecting line, a heading. */
+/**
+ * One phase on the move rail: a numbered marker, a connecting line, a heading.
+ *
+ * `id` makes a phase a link target. A guide's move rail is the part of it
+ * another page can usefully point *into* — the homepage's "Your spreadsheet,
+ * column by column" promises the column table, which is the first phase of the
+ * spreadsheet guide and three blocks below its hero, so without this the reader
+ * lands on an argument about what a spreadsheet cannot do and reads the gap as
+ * bait.
+ *
+ * The scroll offset that comes with it is deliberately generous — enough to
+ * leave "How the move works" and its opening line on screen above the phase.
+ * A reader arriving from another page has had no hero, and the marketing header
+ * does not stick, so at a tight offset the whole first screen is a bare numeral,
+ * a heading and a table with nothing on it naming the page or showing this is
+ * step one of three. "Where am I" is a bad first beat for an owner who has been
+ * burned by software before, however right the content under it is.
+ */
 export function MovePhase({
+  id,
   number,
   title,
   intro,
   children,
 }: {
+  id?: string;
   number: number;
   title: string;
   intro?: string;
   children?: ReactNode;
 }) {
   return (
-    <li className="group relative pb-14 pl-14 last:pb-0 sm:pl-16">
+    <li
+      id={id}
+      className={`group relative pb-14 pl-14 last:pb-0 sm:pl-16 ${id ? "scroll-mt-48" : ""}`}
+    >
       <span
         aria-hidden
         className="absolute top-0 left-0 flex size-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary"
@@ -399,7 +422,17 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
   const t = diverTranslator(locale);
   return (
     <section className="mx-auto max-w-4xl px-6 py-14 lg:py-16">
-      <div className="flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+      {/* The panel is `SectionCard`, so every guide's hinge CTA is spelled the
+          same as every other bordered panel in the app. The heading and body
+          stay call-site children rather than `title`/`description`: this is a
+          persuasion block, and `description` renders `text-sm`, which would
+          quietly demote the one sentence standing between a reader and the
+          demo. Chrome shared, marketing type scale kept. */}
+      <SectionCard
+        as="div"
+        padding="lg"
+        className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+      >
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
             {t("switching.common.midCtaTitle")}
@@ -409,7 +442,7 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
         <div className="lg:shrink-0">
           <DemoTrialCtas locale={locale} source={source} />
         </div>
-      </div>
+      </SectionCard>
     </section>
   );
 }

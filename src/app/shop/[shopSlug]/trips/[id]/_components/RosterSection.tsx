@@ -8,6 +8,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -942,7 +943,12 @@ export function RosterSection({
                 // Today's queue deep-links straight to the diver it is about;
                 // scroll-mt keeps the row clear of the sticky shop header.
                 id={`booking-${booking.id}`}
-                className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 shadow-sm"
+                // A roster row is a card someone works inside — waivers, notes,
+                // an emergency contact, a removal all happen in it — so
+                // `padding="lg"`. The `grid gap-4` above is a list of like
+                // cards, which keeps its own tighter gap rather than the
+                // page's section rhythm.
+                className={sectionCardClass({ padding: "lg", className: "scroll-mt-24" })}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   {headerLeft}

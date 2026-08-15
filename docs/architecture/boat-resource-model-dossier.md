@@ -47,7 +47,7 @@ migration cost against this list.
 | `bookings` | FK `trip_id`; capacity is enforced against `trips.capacity` inside the booking transaction. |
 | `trip_assignments` | Crew per trip (`trip_role` narrows a shop-wide role, ADR [20260803-per-trip-crew-role](decisions/20260803-per-trip-crew-role.md)). Crew collisions across boats are invisible today because there is only one implicit boat. |
 | `staff_shifts` | Dated working windows per shop — no boat dimension. |
-| `trip_waitlist_entries`, `trip_last_minute_promos`, `trip_requirements`, `roll_call_events`, `roll_call_crew_attestations`/`_events`, `trip_reviews`, `recap_photos` | All per-trip; none needs to know about boats. The manifest/roll-call spine keys on the trip and must stay that way — a buyout must never weaken it. |
+| `trip_waitlist_entries`, `trip_last_minute_promos`, `trip_requirements`, `roll_call_events`, `roll_call_crew_events`, `trip_reviews`, `recap_photos` | All per-trip; none needs to know about boats. The manifest/roll-call spine keys on the trip and must stay that way — a buyout must never weaken it. |
 
 ### Domain logic (`src/lib`)
 

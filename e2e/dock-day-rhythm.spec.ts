@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { daysFromNow, openSettingsRow, seededTripId } from "./helpers";
+import { daysFromNow, openSettingsRow, seededTripId, signInAsOwner } from "./helpers";
 
 /**
  * The dock-day rhythm, end to end: six numbers a shop types in Settings, and
@@ -143,4 +143,52 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
   // and it says "next site", because a ride out is a thing that happens once.
   await expect(rhythm).toContainText("Ride to the next site");
   await expect(rhythm).not.toContainText("Surface interval");
+});
+
+/**
+ * The same join a third time, and the one neither test above can make: **the
+ * seeded demo shop states legs of its own**
+ * (FU-20260815-the-demo-shop-runs-every-leg-at-twenty-minutes).
+ *
+ * Both tests above build their fixture through the real forms, which is the
+ * right way to prove the *code* path and says nothing about the demo. Every
+ * seeded `trip_dives` row left `travel_minutes` null until
+ * `src/db/seed-trip-legs.ts`, so every departure a shop owner clicked through
+ * fell back to the shop's single twenty-minute figure and the feature was
+ * invisible in the product's own shop window.
+ *
+ * The long-range run is the departure worth asserting: it is the only seeded one
+ * whose second leg is longer than the shop's surface interval, which is the only
+ * shape that changes which beat a diver reads. Read-only against the shared
+ * blue-mantis fixture — it writes nothing, and in particular touches none of the
+ * shop-level settings that would need a shop of its own.
+ */
+test("the demo shop's long-range run reads its own legs", async ({ page }) => {
+  // A live sign-in and a board crawl before the page under test even loads.
+  test.setTimeout(45_000);
+  await signInAsOwner(page);
+  const tripId = await seededTripId(
+    page,
+    "blue-mantis",
+    "Tortugas Run — 3 days out, 6 divers to sail",
+  );
+
+  await page.goto(`/s/blue-mantis/trips/${tripId}`);
+  await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+  const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
+
+  // Departs 6:30 AM. Two hours out to the Tortugas rather than the shop's
+  // twenty minutes, which would have put dive one at 6:50.
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 1" })).toContainText("8:30 AM");
+  // Then a 75-minute run between sites, which is longer than the 60-minute
+  // interval it displaces — so the window is a ride, and dive two lands at
+  // 8:30 + 45 under + 75 across rather than at the interval's 10:15.
+  await expect(rhythm).toContainText("Ride to the next site");
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 2" })).toContainText(
+    "10:30 AM",
+  );
+  // ...and the third leg is short enough to disappear back into the interval,
+  // which is the other half of the same rule and the state most of the seeded
+  // board is deliberately left in.
+  await expect(rhythm).toContainText("Surface interval");
 });

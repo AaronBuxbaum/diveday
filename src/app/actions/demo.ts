@@ -183,18 +183,23 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
   if (role === "diver") {
     try {
       const session = await auth();
-      if (session) {
-        // Auth.js signOut will throw a redirect error to execute the redirect.
-        await signOut({ redirectTo: publicSchedulePath(shopSlug) });
-      } else {
-        redirect(publicSchedulePath(shopSlug));
-      }
+      // Auth.js signOut will throw a redirect error to execute the redirect.
+      if (session) await signOut({ redirectTo: publicSchedulePath(shopSlug) });
     } catch (error) {
       if (error instanceof AuthError) {
         redirect(publicSchedulePath(shopSlug));
       }
       throw error; // NEXT_REDIRECT will propagate
     }
+    // Nobody was signed in, so there was nothing to sign out of — an ordinary
+    // navigation, and deliberately *outside* the `try` it used to sit in.
+    // `redirect()` unwinds by throwing, and the `catch` above sorts throws by
+    // shape (`instanceof AuthError`): a redirect written inside was a refusal
+    // handed to error handling that never asked for it, surviving only because
+    // the `throw error` line happened to re-raise it. One edit to that catch and
+    // the diver preview would have gone nowhere, silently
+    // (scripts/check-redirect-in-try.mjs).
+    redirect(publicSchedulePath(shopSlug));
   } else {
     // Look the target person up by their role *within this shop* rather than by
     // hardcoded seed emails, so role-switching works on any seeded demo tenant

@@ -11,6 +11,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
@@ -729,8 +730,12 @@ export default async function WaiverPage({
             the end of a paper release gets the same visual weight here. The
             link's own expiry sits in its fine print, next to "Save and finish
             later", because "can I come back to this?" is asked at the moment of
-            signing, not while reading the page title. */}
-        <section className="rounded-xl border border-border bg-surface p-5">
+            signing, not while reading the page title.
+            No `title` prop: the heading is a numbered `StepHeading`, and the
+            three steps have to announce themselves identically whether or not
+            the step happens to be boxed. `padding="lg"` is the card someone
+            works *inside*, and on a phone it is the `p-5` this already had. */}
+        <SectionCard padding="lg">
           <StepHeading number={3}>{t("waiver.signature")}</StepHeading>
           <FieldGrid columns={1} className="mt-4">
             <Field
@@ -824,7 +829,7 @@ export default async function WaiverPage({
               date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
             })}
           </p>
-        </section>
+        </SectionCard>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
         {shop.contactEmail || shop.contactPhone

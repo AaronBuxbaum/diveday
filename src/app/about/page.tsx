@@ -9,10 +9,11 @@ import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { trialHref } from "@/lib/funnel";
+import { switchingHref, trialHref } from "@/lib/funnel";
 import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
@@ -174,12 +175,17 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             {t("marketing.about.rulesDescription")}
           </p>
         </div>
+        {/* `SectionCard`, so this panel is spelled the same as every other
+            bordered panel in the app (one radius, one elevation) instead of a
+            fifth hand-typed variant. The heading stays a call-site `h3` at the
+            marketing scale rather than going through `title`: the section above
+            it is `text-4xl`, and `titleAs="h3"` renders `text-base`, which
+            would set the page's only checkable proof as fine print under a
+            36px heading. The card's *chrome* is shared; the marketing type
+            scale is not the staff one. */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
           {operatingRules.map((rule) => (
-            <article
-              key={rule.title}
-              className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
-            >
+            <SectionCard as="article" key={rule.title} padding="lg">
               <h3 className="text-xl font-semibold tracking-tight">{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
               <p className="mt-3 text-sm leading-6 text-muted">
@@ -188,7 +194,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 </span>
                 {rule.check}
               </p>
-            </article>
+            </SectionCard>
           ))}
         </div>
       </section>
@@ -260,12 +266,27 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             </p>
           </div>
           {/* `bg-background`, not `bg-surface`: these cards sit *on* a surface
-              band, and surface-on-surface left them a border with no card. */}
+              band, and surface-on-surface left them a border with no card.
+              Which is also why these three are **not** `SectionCard` — it
+              hard-codes `bg-surface` on purpose and offers no way to invert a
+              card sitting on a band, and passing `bg-background` through
+              `className` would be two conflicting background utilities
+              resolved by stylesheet order rather than by intent. Converting
+              them needs a decision in `src/components/ui/card.tsx` about what a
+              card on a surface band is, not a call-site override here.
+
+              The padding is `SectionCard`'s `lg` spelled by hand in the
+              meantime, so it matches the four checkable rules above rather than
+              sitting a step roomier than them. Left at `p-6 sm:p-8` these
+              *concession* cards would be the most generous thing on the page
+              and the page's only *proof* the tightest — inverting the hierarchy
+              the section order was rearranged to get (docs/product/marketing.md,
+              "concede the facts; never apologize for them"). */}
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}
-                className="rounded-2xl border border-border bg-background p-6 sm:p-8"
+                className="rounded-2xl border border-border bg-background p-5 sm:p-6"
               >
                 <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
                 <p className="mt-3 leading-7 text-muted">{truth.body}</p>
@@ -289,13 +310,23 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               <p className="mt-4 text-lg leading-8 text-muted">
                 {t("marketing.about.leaveP2", { terms: t(fullShopExport.termsKey) })}
               </p>
+              {/* Tagged like the homepage's doors onto the same surface — this
+                  is the one in-page switching door on `/about`, so it takes the
+                  page's own name. The nav and footer links stay bare on
+                  purpose: they render on every marketing page, so one tag
+                  across all of them would answer nothing. */}
               <Link
-                href="/switching"
+                href={switchingHref("/switching", "about-switching")}
                 className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
               >
                 {t("marketing.about.switchingLink")}
               </Link>
             </div>
+            {/* Same `bg-background` exemption as the honest-no cards above:
+                this list sits against the page and is deliberately the quieter
+                surface of the two columns. `SectionCard padding="none"` is
+                otherwise exactly its shape, and it converts the day the
+                component grows an answer for a card that is not `bg-surface`. */}
             <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
               <div className="p-6">
                 <dt className="text-xs font-semibold tracking-widest text-primary uppercase">

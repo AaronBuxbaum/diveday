@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { sectionCardClass } from "@/components/ui/card";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { shopWaiverStatusText, shopWaiverStatusTone } from "@/i18n/waiver-labels";
@@ -43,9 +44,15 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-lg border p-4 ${
-        attention ? "border-warning/40 bg-warning/5" : "border-border bg-surface"
-      }`}
+      // A stat tile is the same object as a card and a table shell, so the
+      // calm state takes its chrome from `sectionCardClass()`. "Needs
+      // attention" is a *tone* variant of that one geometry — same radius,
+      // same padding, same elevation, only the border and fill change.
+      className={
+        attention
+          ? "rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
+          : sectionCardClass()
+      }
     >
       {/* `flex-wrap`, and the badge nowraps. Four of these sit in one `lg`
           row, so each card is about 200px wide — and "Rental fit" beside
