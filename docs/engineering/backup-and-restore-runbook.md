@@ -138,7 +138,7 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 | Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §11), default name `diveday-backups`, override with `--context backupBucketName=...` |
 | Properties | Versioned, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, `RemovalPolicy.RETAIN` |
 | Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days |
-| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list |
+| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list — and scoped to `exports/*`, so it cannot reach the dumps under `dumps/` |
 | Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
 
 The uploader's access key is minted by `cdk deploy` and delivered in the credentials secret
@@ -148,9 +148,20 @@ application credential. It rode in the "Not .env values" section until 2026-08-1
 was undecided.
 
 Shipping it to a third-party environment is acceptable *because* of how narrow it is: `s3:PutObject`
-and `s3:AbortMultipartUpload` on this bucket's objects, nothing else. It cannot list the bucket, read
-an object back, or delete one — so a leak of the Vercel environment cannot become a download of every
-shop's exported waivers. That is also why the freshness check below has to run somewhere else.
+and `s3:AbortMultipartUpload` on this bucket's `exports/` objects, nothing else. It cannot list the
+bucket, read an object back, or delete one — so a leak of the Vercel environment cannot become a
+download of every shop's exported waivers. That is also why the freshness check below has to run
+somewhere else.
+
+The prefix half of that scoping was missing until 2026-08-15: the grant said `arnForObjects("*")`,
+which is the *whole* bucket, and the bucket also holds `dumps/`. So a leaked Vercel environment could
+overwrite the weekly `pg_dump` — the one artifact that restores a login, since the bundles exclude
+`user_accounts`, `account_tokens` and `calendar_feeds` by design. It could never *read* one, which is
+the property the whole design rests on and which was never at risk. Versioning meant the real dump
+survived as a non-current version, so this was a risk rather than an incident, but nothing would have
+said so: the freshness check only asked whether a dated prefix under `dumps/` was recent. It now also
+checks that what is there is big enough to be a dump (§2c), which catches an accidental truncation as
+well as a deliberate overwrite.
 
 ```bash
 AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
@@ -295,7 +306,7 @@ portability feature it was built as.
 | Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). Deploys holding the literal `unset`; a build refuses with a named message until a human fills it in |
 | Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` — it cannot reach the shop bundles under `exports/`, and it cannot delete. Reading a dump back needs the admin profile |
 | Streaming | `pg_dump \| gzip \| aws s3 cp -` under `set -o pipefail`. No temp file. **`pipefail` is load-bearing**: without it the build's status is the upload's, so a `pg_dump` that died mid-stream would store a truncated dump and report success |
-| Monitors | The same weekly `diveday-backup-freshness-check` — it lists `dumps/` too and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms |
+| Monitors | The same weekly `diveday-backup-freshness-check` — it lists `dumps/` too and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms. Since 2026-08-15 it also alarms when the newest dump is **under 4 KiB**, which is far below any real dump (DiveDay's schema alone gzips to more than that with no rows in it): a date proves a run started, not that it left a restorable file. That catches a `pg_dump` truncated despite `pipefail`, an empty object, and an overwrite. One alarm per broken week — a dump stale enough to alarm on its age does not also alarm on its size |
 
 Set it up (once), and run one by hand:
 

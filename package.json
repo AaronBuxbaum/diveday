@@ -59,10 +59,10 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1110.0",
-    "@aws-sdk/client-geo-places": "^3.1110.0",
-    "@aws-sdk/client-sesv2": "^3.1110.0",
-    "@aws-sdk/client-sns": "^3.1110.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1111.0",
+    "@aws-sdk/client-geo-places": "^3.1111.0",
+    "@aws-sdk/client-sesv2": "^3.1111.0",
+    "@aws-sdk/client-sns": "^3.1111.0",
     "@electric-sql/pglite": "^0.5.5",
     "@sentry/nextjs": "^10.70.0",
     "@vercel/analytics": "^2.0.1",
