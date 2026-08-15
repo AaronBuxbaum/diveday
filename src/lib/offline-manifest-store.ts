@@ -2,6 +2,7 @@
 import { nowDate } from "./clock";
 
 import {
+  canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
@@ -10,6 +11,7 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
   offlineManifestExpiresAt,
+  offlineRollCallSubject,
 } from "./offline-manifests";
 
 const DB_NAME = "diveday-offline-manifests";
@@ -617,9 +619,22 @@ export async function deleteOfflineManifest(
   }
 }
 
+/**
+ * Queue one roll-call result on this device — a diver's or a crew member's.
+ *
+ * The subject comes in as the two optional fields `OfflineRollCallEvent` now
+ * carries, and is read exactly once, through `offlineRollCallSubject`. An input
+ * naming neither or both is refused as `not_allowed` rather than written: an
+ * event nobody can attribute is worse than no event, because it survives in
+ * storage, syncs, and is a claim about the one thing this surface exists to
+ * record.
+ */
 export async function appendOfflineRollCall(
   tripId: string,
-  input: Pick<OfflineRollCallEvent, "bookingId" | "checkpoint" | "status" | "note">,
+  input: Pick<
+    OfflineRollCallEvent,
+    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "note"
+  >,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {
     const envelope = await loadOfflineManifest(tripId);
@@ -632,9 +647,23 @@ export async function appendOfflineRollCall(
     if (isOfflineManifestExpired(envelope.snapshot)) {
       throw new OfflineManifestError("expired");
     }
-    if (
-      !canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status, input.checkpoint)
-    ) {
+    const subject = offlineRollCallSubject(input);
+    if (!subject) throw new OfflineManifestError("not_allowed");
+    const allowed =
+      subject.kind === "crew"
+        ? canRecordOfflineCrewStatus(
+            envelope.snapshot,
+            subject.crewPersonId,
+            input.status,
+            input.checkpoint,
+          )
+        : canRecordOfflineStatus(
+            envelope.snapshot,
+            subject.bookingId,
+            input.status,
+            input.checkpoint,
+          );
+    if (!allowed) {
       throw new OfflineManifestError("not_allowed");
     }
     envelope.events.push({

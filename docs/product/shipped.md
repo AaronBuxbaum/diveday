@@ -730,6 +730,12 @@ rediscovered:
   crew panel now says so in a **third, neutral tone** — "not recordable here" is a limitation, "a
   named crew member is not back aboard" is the alarm — because rendering both in warning-yellow on
   every out-of-signal dive teaches crews to stop reading the panel. Fail-closed is unchanged.
+  **Shipped 2026-08-14** (H-46): `roll_call_crew_events` gained `source` and `client_event_id`,
+  `recordCrewRollCall` mirrors the diver recorder's offline branch, and the crew panel carries the
+  same two controls the diver rows do. No record-version bump was needed — the event type was
+  widened additively and the snapshot's new `crew[].id` is optional, so a copy saved before the
+  change still parses and still fails closed. The neutral third tone survives, narrowed to the one
+  copy that genuinely cannot record: one saved before crew ids rode along.
 - **Today's departure board still assigns crew without a job.** It is a drag-and-drop scheduling
   surface; the job someone is doing is set on the trip page, where the ratio that reads it lives.
 - **Unassign-then-reassign does not preserve a per-trip role**, and cannot — the row and the role go

@@ -65,6 +65,11 @@
     "confirming": "Confirming…",
     "markingCertified": "Marking certified…",
     "confirmCard": "Confirm card",
+    "selfDeclaredLabel": "Self-declared — no card number yet",
+    "sightCard": "Certify from card",
+    "sightCardHint": "The diver told us this level. Type what the card in your hand says.",
+    "sightCardLevel": "Level on the card",
+    "sightCardLevelHint": "Prefilled with what the diver said. Change it to match the card in your hand.",
     "markCertified": "Mark certified",
     "deleting": "Deleting…",
     "delete": "Delete"
@@ -238,7 +243,8 @@
     "nitroxOption": "Nitrox",
     "captureForReview": "Capture specialty for review",
     "emptyState": "No specialty or nitrox cards yet — add one above when they earn it.",
-    "nitroxAgencyLine": "{agency} · Nitrox"
+    "nitroxAgencyLine": "{agency} · Nitrox",
+    "nitroxLine": "Nitrox"
   },
   "stats": {
     "cards": "Cards",
@@ -301,6 +307,8 @@
     "cardRemovedToast": "Card removed.",
     "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
-    "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why."
+    "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why.",
+    "cardSightingRequired": "This card is only what the diver told us. Enter the agency and number from the card in front of you to certify it.",
+    "duplicateCard": "Another live card at this shop already has that number. Check the number, or delete the card that holds it."
   }
 }

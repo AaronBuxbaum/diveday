@@ -1,4 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
+import type { DeclaredDiveProfile } from "@/db/self-declared-cards";
+import { declaredDiveProfileText, declaredDiveProfileUnchecked } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
@@ -13,6 +15,7 @@ export function WaitlistSection({
   tripTitle,
   tripWhen,
   inviteAction,
+  diveProfiles,
   locale,
   timezone,
 }: {
@@ -23,6 +26,15 @@ export function WaitlistSection({
   tripTitle: string;
   tripWhen: string;
   inviteAction: (entryId: string) => Promise<"sent" | "fallback">;
+  /**
+   * What each waiting diver can dive, by person id
+   * (`listDeclaredDiveProfiles`). A joiner may name their own level on the
+   * public form, and this is where the staffer sees it — marked self-declared —
+   * before they pick who to invite onto a gated departure. It informs the
+   * choice; it never orders or filters this list, which is a set of leads and
+   * not a queue (ADR 20260813-wait-list-is-a-lead-list).
+   */
+  diveProfiles: Map<string, DeclaredDiveProfile>;
   locale: string;
   timezone: string;
 }) {
@@ -77,6 +89,24 @@ export function WaitlistSection({
                   {t("trips.waitlist.joined", {
                     date: formatShortDate(entry.createdAt, locale, timezone),
                   })}
+                </p>
+                {/* On its own line rather than appended to the contact line:
+                    this is the fact that decides whether the invite is a good
+                    idea, and it must not be the thing that scrolls off a
+                    phone-width row behind an email address. */}
+                {/* Warning-toned when any part of it is only the diver's word,
+                    matching the imported specialty card's "on file, gate still
+                    shut" treatment. A muted parenthetical was the only thing
+                    separating a claim from a card the shop holds, and it is
+                    exactly what truncates on a phone. */}
+                <p
+                  className={
+                    declaredDiveProfileUnchecked(diveProfiles.get(person.id) ?? null)
+                      ? "text-warning"
+                      : "text-muted"
+                  }
+                >
+                  {declaredDiveProfileText(t, diveProfiles.get(person.id) ?? null, locale)}
                 </p>
               </div>
               <WaitlistInvite

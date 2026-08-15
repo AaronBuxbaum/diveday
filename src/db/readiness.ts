@@ -2,17 +2,18 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
-import type { SiteCertRequirement } from "@/lib/readiness";
+import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
   combineSiteRequirements,
+  isUnsightedSelfDeclaration,
   unavailableReadiness,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { paymentsByBooking } from "./payments";
-import type { CertificationAgency, DiveSpecialty } from "./schema";
+import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
 import {
   bookings,
   certifications,
@@ -201,6 +202,36 @@ export async function createCertification(db: AppDb, input: NewCertification) {
   }
 }
 
+/**
+ * **What a staffer is looking at**, when the row they are verifying is only a
+ * diver's word so far.
+ *
+ * Every other pending card got here because a staffer already held something
+ * and typed its number, so one tap ("Mark certified") is the whole review. A
+ * self-declared row (`certifications.selfDeclaredAt`) has no number at all and
+ * would otherwise inherit that one tap — promoting a stranger's typing to
+ * `verified`, which is what readiness and the fill gate read.
+ *
+ * So verifying one asks for the agency and the card number in front of the
+ * staffer. That is the same act as capturing a card, and it is the point at
+ * which the diver's claim stops being the evidence.
+ */
+export type CardSighting = { agency: CertificationAgency; identifier: string };
+
+/**
+ * A **level** card's sighting also names the rung printed on it.
+ *
+ * The diver typed a level, and the likeliest reason a claim is wrong is that
+ * they overstated it — so a sighting that copied the agency and number off a
+ * genuine Open Water card while silently keeping "Instructor" from the claim
+ * would launder the one field nobody checked into a `verified` row. Capturing a
+ * card has always asked for the level; sighting one now asks the same question,
+ * prefilled with the claim so the staffer has to look at it to leave it alone.
+ *
+ * The nitrox twin keeps the bare {@link CardSighting}: that table has no level.
+ */
+export type LevelCardSighting = CardSighting & { level: CertificationLevel };
+
 export async function reviewCertification(
   db: AppDb,
   input: {
@@ -208,20 +239,82 @@ export async function reviewCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** Required for, and only meaningful on, a still-unsighted self-declaration. */
+    sighting?: LevelCardSighting;
   },
-) {
-  const [certification] = await db
-    .update(certifications)
-    .set({
-      status: input.status,
-      reviewNote: input.reviewNote?.trim() || null,
-      reviewedAt: nowDate(),
+): Promise<
+  { ok: true; certification: Certification } | { ok: false; reason: CertificationReviewRefusal }
+> {
+  // Read first: whether this row needs a sighting is a property of the row, and
+  // an update that silently matched nothing is a different failure to report.
+  const [existing] = await db
+    .select({
+      id: certifications.id,
+      status: certifications.status,
+      selfDeclaredAt: certifications.selfDeclaredAt,
     })
+    .from(certifications)
     .where(
-      and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        // An archived card never comes back through a review, matching both
+        // siblings (`reviewSpecialtyCertification`, `reviewNitroxCertification`
+        // — a prior `security-reviewer` finding). It matters more now that the
+        // self-declaration surface tells staff the right answer to a bad claim
+        // is often to delete it: without this, replaying that form's POST would
+        // restore the deleted row to the roster as `verified`.
+        isNull(certifications.deletedAt),
+      ),
     )
-    .returning();
-  return certification ?? null;
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+
+  const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
+  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+    // Also enforced by `certifications_identifier_present_unless_self_declared`
+    // in the database, which would reject the update outright. This refusal
+    // exists so the surface can say *what to do* instead of surfacing a
+    // constraint violation.
+    return { ok: false, reason: "card_sighting_required" };
+  }
+
+  try {
+    const [certification] = await db
+      .update(certifications)
+      .set({
+        status: input.status,
+        reviewNote: reviewNoteFor(input.reviewNote),
+        reviewedAt: nowDate(),
+        // Only ever written on the sighting path: a normal review must not be
+        // able to rewrite the agency, number or level already on a captured
+        // card. `level` rides with the other two because all three are read off
+        // the same card in the staffer's hand, and promoting the diver's typed
+        // rung while transcribing a genuine number is the one way a sighting
+        // could certify something nobody looked at.
+        ...(sighting
+          ? {
+              agency: sighting.agency,
+              identifier: sighting.identifier.trim(),
+              level: sighting.level,
+            }
+          : undefined),
+      })
+      .where(
+        and(
+          eq(certifications.id, input.certificationId),
+          eq(certifications.shopId, input.shopId),
+          isNull(certifications.deletedAt),
+        ),
+      )
+      .returning();
+    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  } catch (error) {
+    // The sighted number collides with a live card this shop already holds —
+    // the same partial unique index `createCertification` refuses on (CR-009).
+    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
+    throw error;
+  }
 }
 
 /**
@@ -329,6 +422,16 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
  * mistaken for a miss.
  */
 export type ReviewRefusal = "not_found";
+
+/**
+ * A level card's review can refuse for two more reasons than a specialty's:
+ * the row is a self-declaration nobody has sighted yet, or the number the
+ * staffer read off the card is already on another live card at this shop.
+ */
+export type CertificationReviewRefusal =
+  | ReviewRefusal
+  | "card_sighting_required"
+  | "duplicate_card";
 
 /**
  * Confirming a specialty card — the tap that opens a specialty gate, depth past

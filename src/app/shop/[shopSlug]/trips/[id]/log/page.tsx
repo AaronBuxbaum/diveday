@@ -548,22 +548,26 @@ function CertificationLine({
   const specialtyKey = card.specialty
     ? SPECIALTY_KEYS[card.specialty as keyof typeof SPECIALTY_KEYS]
     : undefined;
+  // A self-declared card has no number, and "absence is stated, never blank" is
+  // rule 2 of this document (src/lib/incident-export.ts) — a bare gap where a
+  // card number belongs reads as a missing page to an investigator.
+  const identifier = card.identifier ?? t("incidentExport.certNoNumber");
   const line =
     card.kind === "level" && levelKey
       ? t("incidentExport.certLevelLine", {
           agency: agencyText(card.agency),
           level: t(levelKey),
-          identifier: card.identifier,
+          identifier,
         })
       : card.kind === "specialty" && specialtyKey
         ? t("incidentExport.certSpecialtyLine", {
             agency: agencyText(card.agency),
             specialty: t(specialtyKey),
-            identifier: card.identifier,
+            identifier,
           })
         : t("incidentExport.certNitroxLine", {
             agency: agencyText(card.agency),
-            identifier: card.identifier,
+            identifier,
           });
   const status =
     card.status === "verified"
@@ -575,6 +579,8 @@ function CertificationLine({
     <>
       {line} · {status}
       {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
+      {/* The weakest thing on the page, and it has to read that way. */}
+      {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
       {card.expiresAt ? (
         <>
           {" "}

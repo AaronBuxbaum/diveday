@@ -7,7 +7,9 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
+import { CardSightingForm } from "./CardSightingForm";
 import { CardStatusMark } from "./CardStatusMark";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
@@ -130,6 +132,11 @@ export async function CertificationCards({
           {diver.certifications.map((card) => {
             const display = cardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
+            // A card the diver named for themselves on a public opt-in, which
+            // nobody here has looked at yet. It is the weakest thing on this
+            // list and reads that way: no agency, no number, and no one-tap
+            // certify (ADR 20260814-self-declared-cards).
+            const selfDeclared = isUnsightedSelfDeclaration(card);
             return (
               <li
                 key={card.id}
@@ -142,11 +149,16 @@ export async function CertificationCards({
                       label={t(CARD_STATUS_KEYS[display])}
                     />
                     <span>
-                      {t(AGENCY_KEYS[card.agency])} · {t(CERTIFICATION_LEVEL_KEYS[card.level])}
+                      {/* A self-declared row's agency is `other` because the
+                          public form never asks — naming one would invent
+                          evidence, so the level stands alone until a staffer
+                          sights the real card. */}
+                      {selfDeclared ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
+                      {t(CERTIFICATION_LEVEL_KEYS[card.level])}
                     </span>
                   </p>
                   <p className="mt-1 break-all text-sm text-muted">
-                    {card.identifier}
+                    {selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
                     {card.expiresAt ? (
                       <span className={expired ? "font-medium text-danger" : undefined}>
                         {t(
@@ -177,7 +189,14 @@ export async function CertificationCards({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {card.status === "pending" || needsImportConfirm(card) ? (
+                  {selfDeclared ? (
+                    <CardSightingForm
+                      t={t}
+                      action={reviewAction.bind(null, shopSlug, personId)}
+                      certificationId={card.id}
+                      claimedLevel={card.level}
+                    />
+                  ) : card.status === "pending" || needsImportConfirm(card) ? (
                     <form action={reviewAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <SubmitButton

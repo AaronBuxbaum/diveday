@@ -12,6 +12,12 @@
     "phone": "Teléfono",
     "saving": "Guardando…",
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "diveProfile": {
+      "level": "Nivel de certificación",
+      "levelUnsaid": "Prefiero no decirlo",
+      "levelDescription": "Ayuda al centro a elegir de qué salidas avisarte. Aquí no se comprueba nada: verán tu tarjeta antes de que bucees.",
+      "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
+    },
     "units": {
       "meters": "{value} m",
       "feet": "{value} ft",
@@ -545,6 +551,7 @@
       "medicalReview": "Gracias por firmar. Una respuesta médica necesita una revisión más de cerca — puede requerirse el visto bueno de un médico, y tu centro se pondrá en contacto sobre los siguientes pasos.",
       "certificationMissing": "Haz llegar tu tarjeta de certificación al centro — sube una foto o ponte en contacto — para que puedan añadirla a tu ficha.",
       "certificationPending": "Tu tarjeta de certificación está con el centro para verificación.",
+      "certificationSelfDeclared": "Le dijiste al centro tu nivel de certificación, pero aún no han visto la tarjeta. Añádela abajo para que esté en tu ficha antes de la salida.",
       "certificationExpired": "Tu certificación registrada ha superado la fecha de actualización que fijó tu centro — consulta con ellos sobre una actualización antes de bucear.",
       "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu centro puede hablar contigo sobre las opciones.",
       "specialtyMissing": "Esta inmersión necesita una tarjeta de especialidad — envía una foto al centro o ponte en contacto para que puedan añadirla.",
@@ -553,6 +560,7 @@
       "specialtyImportUnconfirmed": "Tu tarjeta de especialidad llegó del sistema anterior de tu centro y está pendiente de que la confirmen.",
       "nitroxMissing": "Esta inmersión usa nitrox — envía una foto de tu tarjeta de nitrox al centro o ponte en contacto para que puedan añadirla.",
       "nitroxPending": "Tu tarjeta de nitrox está con el centro para verificación.",
+      "nitroxSelfDeclared": "Le dijiste al centro que tienes certificación de nitrox, pero aún no han visto la tarjeta. Envíales una foto o ponte en contacto para que puedan añadirla.",
       "paymentDue": "Hay un saldo pendiente. Tu centro puede cobrarlo antes de la salida.",
       "waiverDone": "Firmada y registrada.",
       "certificationDone": "Verificada y registrada.",
@@ -2152,7 +2160,7 @@
         "title": "El día de buceo",
         "item1": "Una página de salida: inmersión, participantes, preparación y listado",
         "item2": "Pases de lista por inmersión con historial de embarque de solo añadir",
-        "item3": "Un listado sin conexión cifrado, reconciliado cuando vuelve la señal",
+        "item3": "Un recuento sin señal, que coincide con el del mostrador cuando vuelves",
         "item4": "Una vista de impresión del listado y la lista de preparación",
         "item5": "Una lista de preparación hecha con las tallas que te dieron",
         "item6": "Briefings de sitio: rutas, referencias, guía de campo y momentos",
@@ -2769,7 +2777,9 @@
         "paymentsTerm": "Pagos",
         "paymentsBody": "DiveDay nunca ve un número de tarjeta. Las tarjetas se introducen directamente en Stripe, en la cuenta conectada del propio centro. Guardamos el importe, el estado y los identificadores de Stripe, para que un centro pueda cuadrar un reembolso sin que tengamos nada que valga la pena robar.",
         "trailsTerm": "Historiales operativos",
-        "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro."
+        "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
+        "devicesTerm": "La copia en un teléfono del barco",
+        "devicesBody": "para que el recuento siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días: los participantes, los contactos de emergencia y si cada buceador puede embarcar. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo — aunque quien tenga el teléfono desbloqueado puede abrirla, igual que con la tablilla de papel a la que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
       "where": {
         "heading": "Dónde se procesa",

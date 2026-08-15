@@ -245,7 +245,15 @@ export async function commitContactImport(
       })
       .from(certifications)
       .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
-    const seenCerts = new Map(liveCerts.map((c) => [cardKey(c.agency, c.identifier), c.personId]));
+    // A self-declared row has no card number at all, so it can neither collide
+    // with an incoming one nor prove a diver is already carded — it drops out
+    // of the dedupe map rather than keying it on an empty string, which would
+    // make every numberless row look like the same card.
+    const seenCerts = new Map(
+      liveCerts
+        .filter((c) => c.identifier !== null)
+        .map((c) => [cardKey(c.agency, c.identifier as string), c.personId]),
+    );
 
     // Keyed on the specialty too, matching
     // specialty_certifications_shop_agency_specialty_identifier_unique: an agency
@@ -274,8 +282,11 @@ export async function commitContactImport(
       })
       .from(nitroxCertifications)
       .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)));
+    // Numberless self-declared rows drop out here for the same reason.
     const seenNitrox = new Map(
-      liveNitrox.map((c) => [cardKey(c.agency, c.identifier), c.personId]),
+      liveNitrox
+        .filter((c) => c.identifier !== null)
+        .map((c) => [cardKey(c.agency, c.identifier as string), c.personId]),
     );
 
     for (const row of rows) {

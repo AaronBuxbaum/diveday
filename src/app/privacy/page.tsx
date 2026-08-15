@@ -127,6 +127,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             { term: p("collect.waiversTerm"), body: p("collect.waiversBody") },
             { term: p("collect.paymentsTerm"), body: p("collect.paymentsBody") },
             { term: p("collect.trailsTerm"), body: p("collect.trailsBody") },
+            { term: p("collect.devicesTerm"), body: p("collect.devicesBody") },
           ]}
         />
       </LegalSection>

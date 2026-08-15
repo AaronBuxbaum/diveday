@@ -1,8 +1,9 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
-import { type ReviewRefusal, reviewNoteFor } from "./readiness";
+import { type CardSighting, type CertificationReviewRefusal, reviewNoteFor } from "./readiness";
 import { bookings, type CertificationAgency, nitroxCertifications, people, shops } from "./schema";
 
 export type NewNitroxCertification = {
@@ -48,6 +49,10 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
  * Like the specialty confirm beside it, an imported card no longer carries a
  * separate card-sighting attestation: every imported card confirms on one tap
  * (H-24, revised 2026-08-14 — ADR 20260814-one-tap-imported-card-confirm).
+ *
+ * A **self-declared** card is the one exception, for the reason `CardSighting`
+ * spells out: nobody has seen anything, and this tap is what authorizes a gas
+ * fill. It asks for the agency and number off the card in the staffer's hand.
  */
 export async function reviewNitroxCertification(
   db: AppDb,
@@ -56,13 +61,19 @@ export async function reviewNitroxCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** Required for, and only meaningful on, a still-unsighted self-declaration. */
+    sighting?: CardSighting;
   },
 ): Promise<
   | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
-  | { ok: false; reason: ReviewRefusal }
+  | { ok: false; reason: CertificationReviewRefusal }
 > {
   const [existing] = await db
-    .select({ id: nitroxCertifications.id })
+    .select({
+      id: nitroxCertifications.id,
+      status: nitroxCertifications.status,
+      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+    })
     .from(nitroxCertifications)
     .where(
       and(
@@ -74,24 +85,37 @@ export async function reviewNitroxCertification(
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
 
-  const [certification] = await db
-    .update(nitroxCertifications)
-    .set({
-      status: input.status,
-      reviewNote: reviewNoteFor(input.reviewNote),
-      reviewedAt: nowDate(),
-    })
-    .where(
-      and(
-        eq(nitroxCertifications.id, input.certificationId),
-        eq(nitroxCertifications.shopId, input.shopId),
-        // An archived card never comes back through a review — same rule the
-        // specialty path applies, and this one authorizes a gas fill.
-        isNull(nitroxCertifications.deletedAt),
-      ),
-    )
-    .returning();
-  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
+  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+    return { ok: false, reason: "card_sighting_required" };
+  }
+
+  try {
+    const [certification] = await db
+      .update(nitroxCertifications)
+      .set({
+        status: input.status,
+        reviewNote: reviewNoteFor(input.reviewNote),
+        reviewedAt: nowDate(),
+        ...(sighting
+          ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
+          : undefined),
+      })
+      .where(
+        and(
+          eq(nitroxCertifications.id, input.certificationId),
+          eq(nitroxCertifications.shopId, input.shopId),
+          // An archived card never comes back through a review — same rule the
+          // specialty path applies, and this one authorizes a gas fill.
+          isNull(nitroxCertifications.deletedAt),
+        ),
+      )
+      .returning();
+    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
+    throw error;
+  }
 }
 
 /**

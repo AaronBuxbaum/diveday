@@ -211,12 +211,25 @@ describe("resolveDiverNotice", () => {
     expect(resolve("erase-name-mismatch")?.form).toBe("erase");
   });
 
-  it("no longer knows the card-sighting refusal, because nothing can produce it", () => {
-    // Confirming an imported card is one tap again and the domain layer has no
-    // `card_sighting_required` branch left to refuse with
-    // (ADR 20260814-one-tap-imported-card-confirm). An unknown code resolves to
-    // nothing rather than to a banner with no sentence behind it.
-    expect(resolve("card-sighting-required")).toBeUndefined();
+  /**
+   * The card-sighting refusal came back, narrower.
+   *
+   * It was removed when confirming an **imported** card became one tap again
+   * (ADR 20260814-one-tap-imported-card-confirm) — at that point nothing in the
+   * domain layer could produce it, and this test asserted exactly that. A
+   * **self-declared** card then reintroduced the only case that still needs it:
+   * a level a diver typed about themselves, with no number behind it, which
+   * must not inherit the one tap every staff-captured card gets
+   * (ADR 20260814-self-declared-cards).
+   */
+  it("knows the card-sighting refusal again, for self-declared cards only", () => {
+    expect(resolve("card-sighting-required")?.form).toBe("cards");
+    expect(resolve("card-sighting-required")?.tone).toBe("danger");
+    // It says what to do, not merely that something was refused: the staffer is
+    // one field away from certifying the card properly.
+    expect(resolve("card-sighting-required")?.text).toMatch(/agency and number/);
+    // Confirming an imported card is still one tap, and still cannot raise it.
+    expect(resolve("imported-card-sighting-required")).toBeUndefined();
   });
 
   it("lets an action name the form when the code alone cannot", () => {

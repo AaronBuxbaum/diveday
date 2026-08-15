@@ -1117,6 +1117,118 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       ).toHaveLength(2);
     });
 
+    /**
+     * The offline contract, mirrored from `recordRollCall` (H-46). These are
+     * the three protections that make a device-recorded head count safe to
+     * apply, and each one is tested here for crew because a crew-specific
+     * reading of any of them is how a retried sync double-writes, or an
+     * out-of-order one overwrites, the record of who came back from a dive.
+     */
+    it("applies a retried offline sync exactly once, however many times it arrives", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const member = crew[0];
+      if (!member) throw new Error("crew missing");
+      const now = nowMs();
+      const offlineInput = {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "boarded" as const,
+        checkpoint: "after_dive_1" as const,
+        source: "offline" as const,
+        clientEventId: "44444444-4444-4444-8444-444444444444",
+        offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+        occurredAt: new Date(now - 60 * 60 * 1000),
+      };
+
+      const first = await recordCrewRollCall(db, offlineInput);
+      const replay = await recordCrewRollCall(db, offlineInput);
+      expect(first).toMatchObject({ ok: true });
+      // Answered `ok`, so the device marks it settled and stops holding the
+      // record alive — but nothing was written the second time.
+      expect(replay).toMatchObject({ ok: true, duplicate: true });
+      expect(
+        (await db.select().from(rollCallCrewEvents)).filter(
+          (event) => event.clientEventId === offlineInput.clientEventId,
+        ),
+      ).toHaveLength(1);
+      // The row records where it came from, which is what makes an offline
+      // result auditable afterwards rather than indistinguishable from a tap.
+      const [written] = (await db.select().from(rollCallCrewEvents)).filter(
+        (event) => event.clientEventId === offlineInput.clientEventId,
+      );
+      expect(written?.source).toBe("offline");
+
+      // Newest wins: a live correction recorded since, then a *later-arriving*
+      // but earlier-occurring offline event, which must not overwrite it.
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(now - 10 * 60 * 1000),
+      });
+      await expect(
+        recordCrewRollCall(db, {
+          ...offlineInput,
+          clientEventId: "55555555-5555-4555-8555-555555555555",
+          occurredAt: new Date(now - 30 * 60 * 1000),
+        }),
+      ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
+      // And the live correction still stands — a divemaster the boat says did
+      // not come back cannot be quietly re-boarded by a late sync.
+      const reread = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+      expect(reread?.crew.find((entry) => entry.id === member.id)?.rollCall).toMatchObject({
+        state: "not_boarded",
+      });
+    });
+
+    it("refuses an offline crew event whose snapshot bounds do not hold", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const member = crew[0];
+      if (!member) throw new Error("crew missing");
+      const base = {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "boarded" as const,
+        source: "offline" as const,
+      };
+
+      // A snapshot claiming to postdate the result recorded from it, and a
+      // result recorded in the future — the same two clauses the diver path
+      // applies, through the same shared predicate.
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          clientEventId: "66666666-6666-4666-8666-666666666666",
+          offlineSnapshotSavedAt: new Date("2099-01-01T00:00:00.000Z"),
+          occurredAt: new Date("2099-01-01T00:01:00.000Z"),
+        }),
+      ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+
+      // No idempotency key means the write is not replay-safe, so it is not
+      // accepted at all rather than accepted once and duplicated on retry.
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          clientEventId: undefined,
+          offlineSnapshotSavedAt: nowDate(),
+          occurredAt: nowDate(),
+        }),
+      ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+
+      // Nothing was written by either, so the checkpoint stays open — the
+      // fail-closed direction.
+      expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
+    });
+
     it("undoes a mis-tap with a cleared event, returning the crew member to awaiting", async () => {
       const { db, shop, reef, staff } = await manifestContext();
       const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
@@ -1353,7 +1465,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
     });
 
-    it("carries each crew member's result into the offline snapshot, without their id", async () => {
+    it("carries each crew member's result into the offline snapshot, with their id", async () => {
       const { db, shop, reef, staff } = await manifestContext();
       const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
       const member = crew[0];
@@ -1377,8 +1489,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       expect(saved?.rollCall).toMatchObject({ state: "boarded", recordedByName: staff.fullName });
       // ISO string, not a Date — the snapshot is JSON before it is encrypted.
       expect(typeof saved?.rollCall?.occurredAt).toBe("string");
-      // Read-only on the dock, so no id ever needs to reach a crew phone.
-      expect(departure?.crew.every((entry) => !("id" in entry))).toBe(true);
+      // The id rides along (H-46): it is the subject of a crew roll-call
+      // write, and without it the crew half of the head count cannot be
+      // recorded on a phone with no signal — which meant an after-dive
+      // checkpoint could not be closed at sea at all.
+      expect(saved?.id).toBe(member.id);
+      expect(departure?.crew.every((entry) => typeof entry.id === "string")).toBe(true);
       // And the crew member nobody counted reads as awaiting there, which is
       // what makes the offline copy fail closed.
       const uncounted = departure?.crew.find((entry) => entry.fullName !== member.fullName);
@@ -1429,8 +1545,13 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(afterDive?.crew.every((member) => member.rollCall?.state === "boarded")).toBe(true);
     // ISO string, not a Date: the snapshot is JSON before it is encrypted.
     expect(typeof afterDive?.crew[0]?.rollCall?.occurredAt).toBe("string");
-    // Crew person ids stay on the live manifest; the dock copy needs names.
-    expect(afterDive?.crew.every((member) => !("id" in member))).toBe(true);
+    // Crew person ids now ride along (H-46): they are the subject of a crew
+    // roll-call write, and carrying them is what makes the crew half of the
+    // head count recordable with the radio off. Deliberately added to the
+    // payload's allow-list, which is the allow-list working rather than being
+    // abandoned — a diver's age, minor status and birthday are still absent,
+    // asserted directly in offline-manifests.test.ts.
+    expect(afterDive?.crew.every((member) => typeof member.id === "string")).toBe(true);
     // Same function the offline view calls, same answer as the live page.
     expect(
       rollCallCompleteness({

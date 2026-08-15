@@ -171,18 +171,41 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // "Fresh copy".
   await expect(page.getByText("Fresh copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
+  // Two lists on this page carry roll-call controls now (H-46), and the crew
+  // panel renders *above* the diver list — so every click below names which
+  // list it means. An unscoped `.first()` here silently moved to a crew member
+  // the moment crew gained buttons, and the diver half of this test stopped
+  // testing the diver half.
+  const diverList = page.locator("#offline-roll-call");
+  const crewList = page.locator("#offline-crew-roll-call");
   // After a dive the offline copy words this control the same way the live
   // manifest does — "not back aboard", never a settled "Not boarded ☑️" (DOM-H3).
   await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Mark not back aboard" }).first().click();
+  await diverList.getByRole("button", { name: "Mark not back aboard" }).first().click();
   // Two live regions exist here (the action message and the connectivity
   // badge); scope to the one carrying the sync message.
   await expect(
     page.getByRole("status").filter({ hasText: "when you're back in service" }),
   ).toBeVisible();
 
+  // The crew half of the same head count, still with the radio off (H-46).
+  // Until this shipped a captain offshore could count divers and not crew, and
+  // `rollCallCompleteness` needs both — so the after-dive checkpoint, the one
+  // where a person may still be in the water, could not be closed at sea at
+  // all. The button settling to "Aboard ☑️" is the crew row's own recorded
+  // state, so this asserts the write landed on *that* row rather than
+  // re-reading the panel's count (which depends on how many crew the seed
+  // rosters).
+  const crewRow = crewList.getByRole("listitem").first();
+  await crewRow.getByRole("button", { name: "Mark aboard" }).click();
+  await expect(crewRow.getByRole("button", { name: "Aboard ☑️" })).toBeVisible();
+
   await context.setOffline(false);
+  // One message for both queued events — the diver's and the crew member's go
+  // through the same sync route and the same reconcile.
   await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+  // And the crew result stuck: reconciled, not rolled back by the server.
+  await expect(crewRow.getByRole("button", { name: "Aboard ☑️" })).toBeVisible();
 });
 
 test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({

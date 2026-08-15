@@ -174,6 +174,10 @@ describe("buildIncidentExport", () => {
         reviewedAt: "2026-07-20T09:00:00.000Z",
         expiresAt: null,
         imported: false,
+        // A card the shop captured. `false` is the assertion, not noise: an
+        // unmarked card on an incident document has to mean somebody here
+        // actually looked at it.
+        selfDeclared: false,
       },
     ]);
     expect(ana?.waiver).toEqual({

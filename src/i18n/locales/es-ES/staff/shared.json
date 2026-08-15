@@ -131,6 +131,7 @@
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
+      "certificationSelfDeclared": "El buzo indicó su nivel por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
       "certificationExpired": "La certificación registrada ha superado su fecha de actualización.",
       "certificationInsufficient": "Se requiere {level} o superior para esta salida.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay tarjeta registrada.",
@@ -139,6 +140,7 @@
       "specialtyImportUnconfirmed": "La tarjeta de especialidad {specialty} llegó en una importación — un miembro del personal debe confirmarla antes de esta inmersión.",
       "nitroxMissing": "Se requiere certificación de nitrox; no hay tarjeta registrada.",
       "nitroxPending": "La tarjeta de nitrox espera verificación del personal.",
+      "nitroxSelfDeclared": "El buzo marcó nitrox por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
       "underMinimumAge": "Por debajo de la edad mínima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
       "paymentDue": "Hay un pago pendiente para esta salida.",
       "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
@@ -301,6 +303,7 @@
       "reissueWaiver": "Reemitir exención",
       "reviewMedical": "Revisar informe médico",
       "addCard": "Añadir tarjeta",
+      "askForCard": "Pedir tarjeta",
       "verifyCard": "Verificar tarjeta",
       "updateCard": "Actualizar tarjeta",
       "reviewCard": "Revisar tarjeta",
@@ -309,6 +312,7 @@
       "updateSpecialty": "Actualizar especialidad",
       "confirmSpecialty": "Confirmar especialidad",
       "addNitroxCard": "Añadir tarjeta de nitrox",
+      "askForNitroxCard": "Pedir tarjeta de nitrox",
       "verifyNitroxCard": "Verificar tarjeta de nitrox",
       "takePayment": "Cobrar pago",
       "checkReadiness": "Verificar disponibilidad"
@@ -322,6 +326,7 @@
       "reissueWaivers": "Reemitir exenciones",
       "reviewMedicals": "Revisar informes médicos",
       "reviewCards": "Revisar tarjetas",
+      "askForCards": "Pedir tarjetas",
       "verifyCards": "Verificar tarjetas",
       "updateCards": "Actualizar tarjetas",
       "reviewSpecialties": "Revisar especialidades",
@@ -329,6 +334,7 @@
       "updateSpecialties": "Actualizar especialidades",
       "confirmImportedSpecialties": "Confirmar especialidades importadas",
       "reviewNitroxCards": "Revisar tarjetas de nitrox",
+      "askForNitroxCards": "Pedir tarjetas de nitrox",
       "verifyNitroxCards": "Verificar tarjetas de nitrox",
       "takePayments": "Cobrar pagos",
       "checkReadiness": "Verificar disponibilidad"
@@ -511,12 +517,12 @@
       "someNotBoarded": "Todos tienen un resultado — {count} marcados como no embarcados. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",
       "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado.} other {Los # tripulantes, contabilizados.}}",
-      "crewNoneAssigned": "No hay tripulación asignada a esta salida. La tripulación se añade en la lista de tripulación de la salida, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
-      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. La tripulación se añade en la lista de tripulación de la salida, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
+      "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
+      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera de verdad se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
-      "crewReadOnlyHere": "La mitad de tripulación del pase de lista se registra en la lista en vivo: no se puede marcar desde esta copia guardada.",
+      "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}}: se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
       "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo está a bordo se registra en el pase de lista en vivo — esta copia no lo sigue.",
-      "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} A la tripulación se le pasa lista en el manifiesto en vivo, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
+      "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulación necesita su propio resultado.",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
@@ -611,5 +617,10 @@
     "current": "Firmado",
     "expired": "Hay que firmarlo de nuevo",
     "medicalReview": "Revisión médica"
+  },
+  "declaredProfile": {
+    "selfDeclared": "{value} — dicho por el buzo, sin tarjeta",
+    "levelNotSaid": "Nivel no indicado",
+    "nitrox": "Nitrox"
   }
 }

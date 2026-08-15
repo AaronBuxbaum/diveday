@@ -12,6 +12,12 @@
     "phone": "Phone",
     "saving": "Saving…",
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "diveProfile": {
+      "level": "Certification level",
+      "levelUnsaid": "Rather not say",
+      "levelDescription": "Helps the shop pick which trips to tell you about. Nothing here is checked — they'll look at your card before you dive.",
+      "nitrox": "I'm certified for nitrox (enriched air)"
+    },
     "units": {
       "meters": "{value} m",
       "feet": "{value} ft",
@@ -545,6 +551,7 @@
       "medicalReview": "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
       "certificationMissing": "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
       "certificationPending": "Your certification card is with the shop for verification.",
+      "certificationSelfDeclared": "You told the shop your certification level, but they haven't seen the card yet. Add it below so it's on file before the boat.",
       "certificationExpired": "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "specialtyMissing": "This dive needs a specialty card — send the shop a photo or get in touch so they can add it.",
@@ -553,6 +560,7 @@
       "specialtyImportUnconfirmed": "Your specialty card came across from your shop’s old system and is with them to confirm.",
       "nitroxMissing": "This dive uses Nitrox — send the shop a photo of your Nitrox card or get in touch so they can add it.",
       "nitroxPending": "Your nitrox card is with the shop for verification.",
+      "nitroxSelfDeclared": "You told the shop you're nitrox certified, but they haven't seen the card yet. Send them a photo of it or get in touch so they can add it.",
       "paymentDue": "There’s a balance to settle. Your shop can take payment before the trip.",
       "waiverDone": "Signed and on file.",
       "certificationDone": "Verified and on file.",
@@ -2152,7 +2160,7 @@
         "title": "The dive day",
         "item1": "One trip page: the dive, roster, prep list, and manifest",
         "item2": "Per-dive roll call with an append-only boarding history",
-        "item3": "An encrypted offline manifest, reconciled when signal returns",
+        "item3": "A head count with no signal, matching the counter's once you're back",
         "item4": "A print view of the manifest and prep list",
         "item5": "A rental prep list built from the sizes divers gave you",
         "item6": "Site briefings: routes, landmarks, field guide, diver moments",
@@ -2769,7 +2777,9 @@
         "paymentsTerm": "Payments",
         "paymentsBody": "DiveDay never sees a card number. Cards are entered directly with Stripe on the shop's own connected account. We keep the amount, the state and Stripe's identifiers, so a shop can reconcile a refund without us holding anything worth stealing.",
         "trailsTerm": "Operational trails",
-        "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop's own tenant."
+        "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop's own tenant.",
+        "devicesTerm": "The copy on a boat phone",
+        "devicesBody": "so a head count still works with no signal, a crew phone holds its own copy of the next two days of manifests: the roster, emergency contacts, and whether each diver is cleared to board. It is stored encrypted on that phone, under a key the browser will not hand back out, so it cannot be read off the device's storage — though anyone holding the unlocked phone can open it, the same as the paper manifest it replaces. It is removed when a different shop signs in on that phone, and it deletes itself at the earlier of fourteen days after it was saved or seven days after the trip ended."
       },
       "where": {
         "heading": "Where it is processed",

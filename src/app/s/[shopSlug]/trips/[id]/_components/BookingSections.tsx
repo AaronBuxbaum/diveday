@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
+import { DiveDeclarationFields } from "@/components/DiveDeclarationFields";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -221,6 +222,11 @@ export function TripFullSection({
           contactEmail={contactEmail}
           contactPhone={contactPhone}
         />
+        {/* The same optional question the shop-wide deal list asks, in the same
+            words, so a staffer working either list is reading one claim rather
+            than two (FU-20260813). It describes the person joining — the lead
+            of the party — and never gates the join. */}
+        <DiveDeclarationFields />
         <div>
           <SubmitButton
             pendingLabel={t("waitlistJoining")}

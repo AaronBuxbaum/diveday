@@ -1,15 +1,36 @@
 import { describe, expect, it } from "vitest";
 import type { TripManifest } from "./manifests";
 import {
+  canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
+  latestOfflineCrewRollCall,
   latestOfflineRollCall,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestSnapshot,
   offlineManifestExpiresAt,
   offlineManifestFreshness,
+  offlineRollCallSubject,
   serializeManifests,
 } from "./offline-manifests";
+
+/**
+ * A copy with crew on it, in the two shapes a device can actually be holding:
+ * one saved since H-46, whose crew carry person ids and are therefore
+ * recordable here, and one saved before it, whose crew carry none and are not.
+ * Both have to render and both have to fail closed; only one has controls.
+ */
+function crewSnapshot(opts: { withIds?: boolean } = {}): OfflineManifestSnapshot {
+  const withIds = opts.withIds ?? true;
+  const saved = snapshot();
+  for (const manifest of saved.manifests) {
+    manifest.crew = [
+      { id: withIds ? "crew-dana" : undefined, fullName: "Dana Divemaster", roles: ["divemaster"] },
+      { id: withIds ? "crew-sal" : undefined, fullName: "Sal Ortiz", roles: ["captain"] },
+    ];
+  }
+  return saved;
+}
 
 /**
  * One manifest per checkpoint, the way a real snapshot is built: the payload
@@ -566,5 +587,159 @@ describe("offline manifest policy", () => {
     // so an inherited property could never sneak past the assertions above.
     expect(JSON.stringify(payload)).not.toContain("minor");
     expect(JSON.stringify(payload)).not.toContain("birthday");
+  });
+});
+
+/**
+ * The crew half of the head count, with the radio off (H-46). Everything here
+ * is written against one failure direction: **offline reading "closed" while
+ * online says otherwise** — a checkpoint that looks finished while somebody is
+ * still in the water. Every refusal below holds the checkpoint open; none of
+ * them closes it.
+ */
+describe("offline crew roll call", () => {
+  it("refuses every crew member on a copy saved before crew ids, so the checkpoint stays open", () => {
+    const old = crewSnapshot({ withIds: false });
+    // There is no subject to write against, so there is nothing to record —
+    // in either direction, at any checkpoint. That is the pre-H-46 behaviour
+    // preserved exactly for the copies already sitting on devices (I2).
+    expect(canRecordOfflineCrewStatus(old, "crew-dana", "boarded", "departure")).toBe(false);
+    expect(canRecordOfflineCrewStatus(old, "crew-dana", "not_boarded", "after_dive_1")).toBe(false);
+    // And an empty id — what `member.id` actually is on that copy — is refused
+    // rather than matching the first crew member whose id is also absent.
+    expect(canRecordOfflineCrewStatus(old, "", "not_boarded", "after_dive_1")).toBe(false);
+    // The crew half therefore has no results, which `crewRollCallCounts` reads
+    // as awaiting — never as accounted for.
+    expect(old.manifests[0]?.crew.every((member) => !member.rollCall)).toBe(true);
+  });
+
+  it("boards a crew member at departure with no readiness question asked", () => {
+    const saved = crewSnapshot();
+    // The diver beside them can be refused at the dock for a pending waiver;
+    // a divemaster has no waiver, no payment and no card to check, and
+    // `recordCrewRollCall` has no readiness gate either.
+    expect(canRecordOfflineCrewStatus(saved, "crew-dana", "boarded", "departure")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "departure")).toBe(false);
+  });
+
+  it("never lets an unknown person id be recorded, in either direction", () => {
+    const saved = crewSnapshot();
+    // No name behind the id, so the event would be a claim about nobody.
+    expect(canRecordOfflineCrewStatus(saved, "crew-nobody", "boarded", "departure")).toBe(false);
+    expect(canRecordOfflineCrewStatus(saved, "crew-nobody", "not_boarded", "after_dive_1")).toBe(
+      false,
+    );
+    // A booking id is not a person id and must not cross over.
+    expect(canRecordOfflineCrewStatus(saved, "ready", "not_boarded", "after_dive_1")).toBe(false);
+  });
+
+  it("refuses to board at a checkpoint the snapshot has no manifest for, but never refuses the alarm", () => {
+    const saved = crewSnapshot();
+    // Same asymmetry the diver path has, and for the same reason: after a
+    // numbered dive `not_boarded` means *this person did not come back*, and a
+    // gap in the saved copy's contents never makes that less true or gives the
+    // deck a reason to stay quiet.
+    expect(canRecordOfflineCrewStatus(saved, "crew-sal", "boarded", "after_dive_3")).toBe(false);
+    expect(canRecordOfflineCrewStatus(saved, "crew-sal", "not_boarded", "after_dive_3")).toBe(true);
+    // Still nobody, though.
+    expect(canRecordOfflineCrewStatus(saved, "crew-nobody", "not_boarded", "after_dive_3")).toBe(
+      false,
+    );
+  });
+
+  it("reads a crew member's own device events, and never a diver's", () => {
+    const saved = crewSnapshot();
+    const events = [
+      {
+        clientEventId: "event-crew",
+        snapshotId: saved.snapshotId,
+        snapshotSavedAt: saved.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-dana",
+        checkpoint: "after_dive_1" as const,
+        status: "not_boarded" as const,
+        note: null,
+        occurredAt: "2026-07-20T14:05:00.000Z",
+        syncStatus: "pending" as const,
+      },
+      {
+        clientEventId: "event-diver",
+        snapshotId: saved.snapshotId,
+        snapshotSavedAt: saved.savedAt,
+        tripId: "trip-1",
+        bookingId: "ready",
+        checkpoint: "after_dive_1" as const,
+        status: "boarded" as const,
+        note: null,
+        occurredAt: "2026-07-20T14:06:00.000Z",
+        syncStatus: "pending" as const,
+      },
+    ];
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toEqual({
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      pending: true,
+      implied: false,
+    });
+    // The other crew member has said nothing — absence is awaiting, which is
+    // what keeps the checkpoint open.
+    expect(latestOfflineCrewRollCall(saved, events, "crew-sal", "after_dive_1")).toBeUndefined();
+    // And the two subject spaces do not leak into one another.
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")?.state).toBe("boarded");
+    expect(latestOfflineCrewRollCall(saved, events, "ready", "after_dive_1")).toBeUndefined();
+  });
+
+  it("falls back to the saved result, not a superseded local event, when the latest crew attempt was rejected", () => {
+    const saved = crewSnapshot();
+    const afterDive1 = saved.manifests.find((manifest) => manifest.checkpoint === "after_dive_1");
+    const dana = afterDive1?.crew.find((member) => member.id === "crew-dana");
+    if (!dana) throw new Error("fixture lost a crew member");
+    dana.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:30:00.000Z",
+      recordedByName: "Sal Ortiz",
+      note: null,
+    };
+    const event = {
+      clientEventId: "event-crew",
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      crewPersonId: "crew-dana",
+      checkpoint: "after_dive_1" as const,
+      status: "boarded" as const,
+      note: null,
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "rejected" as const,
+    };
+    // The server knows something this device does not, so the rejected
+    // "boarded" must not keep reading aboard beside a divemaster the live page
+    // says did not come back.
+    expect(latestOfflineCrewRollCall(saved, [event], "crew-dana", "after_dive_1")).toEqual({
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:30:00.000Z",
+      pending: false,
+      implied: false,
+    });
+  });
+
+  it("attributes an event to exactly one subject, and refuses to guess", () => {
+    expect(offlineRollCallSubject({ bookingId: "booking-1" })).toEqual({
+      kind: "diver",
+      bookingId: "booking-1",
+    });
+    expect(offlineRollCallSubject({ crewPersonId: "crew-dana" })).toEqual({
+      kind: "crew",
+      crewPersonId: "crew-dana",
+    });
+    // Neither is a claim about nobody; both is a claim two recorders cannot
+    // both honour. Different mistakes, same safe answer.
+    expect(offlineRollCallSubject({})).toBeNull();
+    expect(
+      offlineRollCallSubject({ bookingId: "booking-1", crewPersonId: "crew-dana" }),
+    ).toBeNull();
+    // An empty string is not a subject either — that is what a widened type
+    // plus a hand-built object can produce.
+    expect(offlineRollCallSubject({ bookingId: "" })).toBeNull();
   });
 });

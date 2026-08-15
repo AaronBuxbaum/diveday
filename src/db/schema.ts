@@ -3208,7 +3208,14 @@ export const certifications = pgTable(
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
     level: certificationLevel("level").notNull(),
-    identifier: text("identifier").notNull(),
+    /**
+     * The card number. Nullable **only** for a still-pending self-declaration
+     * (`selfDeclaredAt`), which is a level and nothing else — see that column,
+     * and the check constraint below that is the real rule. A placeholder
+     * string was the alternative and is worse: "PENDING" in a card-number
+     * column gets read as a card number eventually.
+     */
+    identifier: text("identifier"),
     /**
      * Date-only, no time-of-day or timezone (CR-009): a card is valid
      * through the end of its own local calendar day in the shop's
@@ -3233,6 +3240,41 @@ export const certifications = pgTable(
      */
     importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
+    /**
+     * **A stranger typed this about themselves.** Set when a diver names their
+     * own level on one of the two public "tell me when something comes up"
+     * opt-ins (the shop-wide last-minute-deal list, a full trip's wait list) —
+     * nobody at the shop has seen a card, and the person may not even be who
+     * the email says (FU-20260813, ADR 20260814-self-declared-cards).
+     *
+     * Deliberately a *separate* provenance from `importedAt`, not a reuse of
+     * it: an imported card came from a CSV the shop itself uploaded out of its
+     * own prior system, which is a materially more trustworthy thing. Without
+     * this column the feature would launder a self-declaration into something
+     * that reads as shop-supplied.
+     *
+     * Three consequences hang off it, and all three are load-bearing:
+     *
+     * 1. `identifier` (and a real `agency`) may be absent while it is set —
+     *    see the check constraint below. A self-declared row carries `other`
+     *    as its agency because the form never asks; the staff UI renders the
+     *    level alone rather than claiming an agency nobody stated.
+     * 2. `decideTripAdmission` (src/lib/trip-admission.ts) **ignores** a
+     *    still-pending self-declared row entirely. That function's own
+     *    docstring required this in the same change that made cards
+     *    diver-writable, because it otherwise reads any card on file as
+     *    evidence and a refused diver could type their way past the gate.
+     * 3. Verifying one is **not** the one-tap promote every other pending card
+     *    gets: `reviewCertification` refuses without the agency and card number
+     *    the staffer is looking at, which is the same act as capturing a card
+     *    and is the point the diver's claim stops being the evidence.
+     *
+     * The stamp stays forever, like `importedAt` — where a row began is
+     * history. "Still a claim" is `selfDeclaredAt IS NOT NULL AND status =
+     * 'pending'`; once a staffer has sighted the card it is a sighted card
+     * that happens to have started as a claim.
+     */
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -3244,9 +3286,23 @@ export const certifications = pgTable(
     // re-entry (e.g. a renewed card carrying the same identifier).
     // Case-insensitive so "ab1234" and "AB1234" can't create two live rows
     // for what is the same physical card (CR-009).
+    //
+    // A null identifier is invisible to a unique index (nulls never collide),
+    // which is exactly right: two divers who each declared "Open Water" and no
+    // number are not the same physical card.
     uniqueIndex("certifications_shop_agency_identifier_unique")
       .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
+    // The rule the nullable `identifier` above is worth having: a card number
+    // may be absent **only** while the row is a still-pending self-declaration.
+    // It covers both ends at once — a staff or imported capture must still
+    // carry a number, and a self-declared row cannot reach `verified` without
+    // one, so the review gate is enforced by the database and not only by the
+    // action that calls it.
+    check(
+      "certifications_identifier_present_unless_self_declared",
+      sql`${table.identifier} is not null or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+    ),
   ],
 );
 
@@ -3495,7 +3551,9 @@ export const nitroxCertifications = pgTable(
       .notNull()
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
-    identifier: text("identifier").notNull(),
+    /** Nullable only for a still-pending self-declaration — see
+     * `selfDeclaredAt` below and `certifications.identifier`. */
+    identifier: text("identifier"),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -3509,6 +3567,14 @@ export const nitroxCertifications = pgTable(
      */
     importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
+    /**
+     * Self-declared provenance, mirroring `certifications.selfDeclaredAt` and
+     * carrying every one of its consequences — read that column's comment. The
+     * public join forms ask "nitrox certified?" as a checkbox, so what lands
+     * here is a yes with no agency and no number behind it, and a fill is
+     * still authorized only by a `verified` card.
+     */
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -3530,6 +3596,11 @@ export const nitroxCertifications = pgTable(
     uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
       .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
+    // Same rule as `certifications_identifier_present_unless_self_declared`.
+    check(
+      "nitrox_certifications_identifier_present_unless_self_declared",
+      sql`${table.identifier} is not null or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+    ),
   ],
 );
 
@@ -3668,10 +3739,23 @@ export const rollCallCrewAttestations = pgTable(
  * the point is that the count names somebody, not that a second person
  * witnesses it.
  *
- * No `source`/`client_event_id`: crew roll call is **not recordable offline**
- * in this slice, so there is no device-generated event to deduplicate. The
- * offline snapshot carries these results read-only and fails closed when they
- * are absent (see `OFFLINE_MANIFEST_RECORD_VERSION`, src/lib/offline-manifests.ts).
+ * `source`/`client_event_id` carry the same offline contract `roll_call_events`
+ * does, and for the same reason: crew roll call **is** recordable with no
+ * signal, so a device-generated event has to be deduplicable on retry. Without
+ * them a captain offshore could count divers but not crew, and
+ * `rollCallCompleteness` needs both halves — so an after-dive checkpoint, the
+ * one where a person may still be in the water, could not be closed at sea
+ * (H-46, 2026-08-14). The partial unique index on `(shop_id, client_event_id)`
+ * is what makes a replayed sync idempotent; live events leave both at their
+ * defaults.
+ *
+ * Deliberately **no** `offline_snapshot_saved_at` here, unlike the diver table.
+ * That column records *which snapshot supplied the readiness evidence*, and
+ * crew have no readiness to evidence — nothing gates a crew member at
+ * departure. The snapshot timestamp is still required as an *input* on an
+ * offline crew write (it is what the staleness bound is computed against, the
+ * same arithmetic `recordRollCall` does); it simply has nothing to attest to
+ * once the row is written.
  *
  * Tenancy: `shop_id` is carried here (unlike `trip_assignments`, CR-007) so a
  * read never has to reach through `trips` to know whose row it is — the same
@@ -3698,6 +3782,9 @@ export const rollCallCrewEvents = pgTable(
     status: rollCallStatus("status").notNull(),
     /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
     checkpoint: text("checkpoint").notNull(),
+    source: rollCallSource("source").notNull().default("live"),
+    /** Device-generated idempotency key. Live events leave this null. */
+    clientEventId: uuid("client_event_id"),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -3709,6 +3796,10 @@ export const rollCallCrewEvents = pgTable(
       table.checkpoint,
       table.personId,
       table.occurredAt,
+    ),
+    uniqueIndex("roll_call_crew_events_shop_client_event_unique").on(
+      table.shopId,
+      table.clientEventId,
     ),
   ],
 );

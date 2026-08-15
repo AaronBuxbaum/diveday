@@ -137,6 +137,7 @@ export type ReadinessBlockerCode =
   | "medical_review"
   | "certification_missing"
   | "certification_pending"
+  | "certification_self_declared"
   | "certification_expired"
   | "certification_insufficient"
   | "specialty_missing"
@@ -145,6 +146,7 @@ export type ReadinessBlockerCode =
   | "specialty_import_unconfirmed"
   | "nitrox_missing"
   | "nitrox_pending"
+  | "nitrox_self_declared"
   | "under_minimum_age"
   | "payment_due"
   | "payment_refunded"
@@ -177,6 +179,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   medical_review: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
+  certification_self_declared: "certification",
   certification_expired: "certification",
   certification_insufficient: "certification",
   specialty_missing: "certification",
@@ -185,6 +188,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   specialty_import_unconfirmed: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
+  nitrox_self_declared: "certification",
   // "setup", not "certification": age is not a card the diver holds, and it is
   // entirely shop-side work. Filing it here also collapses it into the single
   // generic setup line on the diver's own checklist, which is what keeps the
@@ -265,6 +269,31 @@ export function validVerifiedCertification(
   );
 }
 
+/**
+ * **A card that is still only somebody's word for it.**
+ *
+ * A diver naming their own level on one of the two public opt-ins writes a
+ * `pending` card stamped `selfDeclaredAt` (src/db/self-declared-cards.ts).
+ * Nobody at the shop has seen anything, and the person may not even be who the
+ * email says — so this is not evidence, and `decideTripAdmission` reads it as
+ * absent rather than as a card.
+ *
+ * The stamp stays forever, because where a row began is history. What changes
+ * is the `status`: once a staffer has entered the agency and number off a card
+ * in their hand, the row is a sighting that happens to have started as a claim,
+ * and it counts like any other. That is why this is a *pair* of conditions and
+ * not just `selfDeclaredAt !== null`.
+ *
+ * Shaped structurally rather than over `Certification` so the nitrox table's
+ * identical rows go through the same one definition.
+ */
+export function isUnsightedSelfDeclaration(card: {
+  selfDeclaredAt?: Date | string | null;
+  status: "pending" | "verified";
+}): boolean {
+  return Boolean(card.selfDeclaredAt) && card.status === "pending";
+}
+
 /** Shared rank check for course admission and final trip readiness. */
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],
@@ -289,10 +318,19 @@ function certificationBlocker(
   if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, todayLocal)) {
     return null;
   }
+  // `pending` means **a staffer is holding something** — a card was captured
+  // and is waiting on the agency lookup. A still-unsighted self-declaration is
+  // `pending` too but the shop is holding nothing at all, so it is excluded
+  // here and answered by its own code below. Conflating the two told the diver
+  // on /ready "your card is with the shop for verification" about a card that
+  // does not exist, and simultaneously withdrew the card-entry form that was
+  // their only way to send one (`CERT_ENTRY_CODES`) — a diver who ticked a
+  // dropdown was left with no move and arrived at the dock without a card.
   if (
     certifications.some(
       (certification) =>
         certification.status === "pending" &&
+        !isUnsightedSelfDeclaration(certification) &&
         levelRank[certification.level] >= levelRank[minimumLevel],
     )
   ) {
@@ -308,6 +346,13 @@ function certificationBlocker(
     )
   ) {
     return { code: "certification_expired" };
+  }
+  // Below every state backed by something the shop holds, and above plain
+  // `missing` only because it can say more: the diver told us a level and
+  // nobody has seen a card. Both are "the shop is holding nothing usable", and
+  // both offer the diver the card-entry form.
+  if (certifications.some(isUnsightedSelfDeclaration)) {
+    return { code: "certification_self_declared" };
   }
   return { code: "certification_missing" };
 }
@@ -375,8 +420,18 @@ function nitroxBlocker(
   nitroxCertifications: readonly NitroxCertification[],
 ): ReadinessBlocker | null {
   if (nitroxCertifications.some((card) => card.status === "verified")) return null;
-  if (nitroxCertifications.some((card) => card.status === "pending")) {
+  // Same split as the level ladder above: a bare tick on a public opt-in is not
+  // a card in a staffer's hand, so it must not tell the diver their nitrox card
+  // is with the shop.
+  if (
+    nitroxCertifications.some(
+      (card) => card.status === "pending" && !isUnsightedSelfDeclaration(card),
+    )
+  ) {
     return { code: "nitrox_pending" };
+  }
+  if (nitroxCertifications.some(isUnsightedSelfDeclaration)) {
+    return { code: "nitrox_self_declared" };
   }
   return { code: "nitrox_missing" };
 }

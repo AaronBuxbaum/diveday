@@ -12,8 +12,9 @@ import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
 import { listBookingNotes, listTripActivity } from "@/db/operations";
-import { getTripRequirements, listTripReadiness } from "@/db/readiness";
+import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
+import { listDeclaredDiveProfiles } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
@@ -24,7 +25,8 @@ import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
+import { lastMinuteEntryMatchesTripDate, orderLastMinuteRecipients } from "@/lib/last-minute-list";
+import { combineCertRequirements } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -161,6 +163,7 @@ async function TripGuestsBody({
   const [
     roster,
     requirement,
+    siteRequirement,
     readinessRows,
     prepDivers,
     waitlist,
@@ -172,6 +175,7 @@ async function TripGuestsBody({
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
+    getTripSiteRequirement(db, shop.id, tripId),
     listTripReadiness(db, shop.id, tripId),
     listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
@@ -197,9 +201,46 @@ async function TripGuestsBody({
     notesByBooking.set(row.note.bookingId, rows);
   }
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteEligibleCount = lastMinuteList.filter(({ entry }) =>
-    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
-  ).length;
+  // The same set, in the same order, that `sendLastMinuteDealBlast` would mail:
+  // matched on the stated date window, then wait-listed divers first. A preview
+  // that disagreed with the send would be worse than no preview — the staffer
+  // would be vetting a list that isn't the one going out.
+  const lastMinuteRecipients = orderLastMinuteRecipients(
+    lastMinuteList.filter(({ entry }) => lastMinuteEntryMatchesTripDate(entry, tripDateIso)),
+    waitlist.map(({ person }) => person.id),
+  );
+  /**
+   * **The gate the deal panel states above its recipient list** — the trip's
+   * own requirement folded with every dive site it visits, which is the same
+   * effective requirement admission and readiness hold a diver to. The trip row
+   * alone would go quiet on exactly the departure that hurts: a two-tank day
+   * whose Advanced gate comes from the *second* site, where a shop would then
+   * be told the trip asks for nothing and mail the discount to everybody.
+   *
+   * A missing requirements row folds to the identity rather than short-circuiting
+   * to null, so a site-only gate still gets said out loud. That the row is
+   * missing at all is the trip page's own warning to give (`RequirementsSection`
+   * renders it in warning tone); this panel does not gate, so it does not
+   * re-state it.
+   */
+  const dealRequirement = combineCertRequirements(
+    requirement ?? {
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    },
+    siteRequirement,
+  );
+  // One read for both panels: what each of these people can dive, as far as
+  // anybody here knows. A joiner may have named their own level on the public
+  // form, and it renders marked self-declared — the fact that stops a shop
+  // mailing an Open Water diver a discount on a deep wreck (FU-20260813).
+  const diveProfiles = await listDeclaredDiveProfiles(db, shop.id, [
+    ...new Set([
+      ...lastMinuteRecipients.map(({ person }) => person.id),
+      ...waitlist.map(({ person }) => person.id),
+    ]),
+  ]);
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -230,7 +271,7 @@ async function TripGuestsBody({
   // received it. Today's own "fill these seats" row is gated on the same reach
   // (src/db/today.ts), so its `#last-minute-deal` anchor cannot point at a
   // section this hides.
-  const showPromote = lastMinuteEligibleCount > 0 || lastMinutePromos.length > 0;
+  const showPromote = lastMinuteRecipients.length > 0 || lastMinutePromos.length > 0;
   // The deal panel, when shown, is inside a <details> whose `#last-minute-deal`
   // landing auto-opens; the add-diver section is not rendered on a cancelled
   // departure, so its notices fall back to the banner — as do the deal's own on
@@ -374,6 +415,7 @@ async function TripGuestsBody({
           tripTitle={trip.title}
           tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+          diveProfiles={diveProfiles}
           locale={locale}
           timezone={shop.timezone}
         />
@@ -519,7 +561,12 @@ async function TripGuestsBody({
             <LastMinuteDealSection
               shopSlug={shopSlug}
               locale={locale}
-              eligibleCount={lastMinuteEligibleCount}
+              recipients={lastMinuteRecipients.map(({ person }) => ({
+                personId: person.id,
+                fullName: person.fullName,
+                profile: diveProfiles.get(person.id) ?? null,
+              }))}
+              requirement={dealRequirement}
               openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
               cancelled={cancelled}
               promos={lastMinutePromos}

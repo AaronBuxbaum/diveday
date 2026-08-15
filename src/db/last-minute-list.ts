@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import type { DiveDeclaration } from "@/lib/dive-declaration";
 import type { LastMinuteListWindow } from "@/lib/last-minute-list";
 import type { AppDb, DbExecutor } from "./client";
 import { findOrCreatePerson } from "./people";
@@ -12,6 +13,7 @@ import {
   people,
   shops,
 } from "./schema";
+import { recordSelfDeclaredCards } from "./self-declared-cards";
 
 export type JoinLastMinuteListInput = {
   shopId: string;
@@ -21,6 +23,12 @@ export type JoinLastMinuteListInput = {
   /** Date-only (YYYY-MM-DD); either bound omitted means "no preference" on that side. */
   availableFrom?: string;
   availableUntil?: string;
+  /**
+   * What the joiner optionally said they can dive. Written onto the **person**
+   * as a self-declared pending card, not onto the list entry — see
+   * `recordSelfDeclaredCards`. Absent, or all-empty, records nothing.
+   */
+  declaration?: DiveDeclaration;
 };
 
 export type JoinLastMinuteListOutcome = { entryId: string; personName: string };
@@ -43,12 +51,39 @@ export async function joinLastMinuteList(
   const availableUntil = input.availableUntil || null;
 
   return db.transaction(async (tx) => {
-    const { person } = await findOrCreatePerson(tx, {
+    const { person, nameMatches } = await findOrCreatePerson(tx, {
       shopId: input.shopId,
       fullName,
       email,
       phone: input.phone,
     });
+
+    // Inside the same transaction as the opt-in itself: a joiner who told the
+    // shop their level and a joiner who did not are two outcomes, not three, so
+    // the card must not be able to land without the entry or the reverse. It
+    // refuses to touch a card the shop actually captured — see the
+    // anti-displacement rule, which is what makes this safe on a path anyone
+    // can post to.
+    //
+    // `nameMatches` is H-13's borrowed-identity rule, applied to the one write
+    // here that is evidence about a body. This form is unauthenticated, and an
+    // email that already belongs to a diver under a *different* name is a
+    // possible second human — a family sharing an inbox, or somebody typing an
+    // address that is not theirs. Everywhere else that reaches this fork
+    // refuses to write on a mismatch (`seat-claims.ts` will not even record a
+    // phone number, `people.ts` will not record a locale), and certification
+    // data is stronger than either. The **entry** is still created: joining a
+    // marketing list under a borrowed address is the behaviour this feature
+    // found, not one it introduced, and refusing the opt-in would be a new
+    // regression. Only the safety record is withheld.
+    if (nameMatches) {
+      await recordSelfDeclaredCards(tx, {
+        shopId: input.shopId,
+        personId: person.id,
+        level: input.declaration?.level,
+        nitrox: input.declaration?.nitrox,
+      });
+    }
 
     const [existing] = await tx
       .select()

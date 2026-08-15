@@ -34,6 +34,18 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * a decrypted record is inert. Purging a fortnight of dock copies — and any
  * unsynced roll call riding on them — to delete a field nobody looks at would
  * trade a real safety cost for tidiness.
+ *
+ * And **not bumped for `crew[].id`** (H-46, 2026-08-14), the field that makes
+ * the crew half of a head count recordable with no signal. Same reasoning a
+ * third time, and it is the reasoning that matters most here: the copies this
+ * would purge are precisely the ones a boat is out with, and the queued roll
+ * call it would discard is the record of who came back from a dive. The field
+ * is optional and additive, and its absence fails *closed* — a snapshot saved
+ * before this change has crew with no id, those crew stay unrecordable on that
+ * copy, and the checkpoint stays open there exactly as it does today. A device
+ * that never sees a newer snapshot is no worse off than before; one that does
+ * gains the control. Neither direction can read "done" while online says
+ * otherwise, which is the only direction a bump would be worth paying for.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
 
@@ -78,18 +90,35 @@ export type OfflineManifestPayload = {
         endsAt: string;
       };
       /**
-       * Names, roles, and each crew member's saved result — **no person ids**.
-       * The live manifest carries ids because they are the subject of a crew
-       * roll-call write (ADR 20260803-per-person-crew-roll-call); the dock copy
-       * cannot record one, so it needs only what it shows.
+       * Names, roles, each crew member's saved result — and, since H-46, their
+       * **person id**, which is the subject of a crew roll-call write (ADR
+       * 20260803-per-person-crew-roll-call). The dock copy carries it because
+       * it can now record one: a captain offshore with the radio off could
+       * count divers but not crew, and `rollCallCompleteness` needs both
+       * halves, so the after-dive checkpoint — the one where a person may still
+       * be in the water — could not be closed at sea.
        *
-       * `rollCall` absent means nobody had said, and that is what makes this
-       * fail closed: an older snapshot carries no crew results at all, so every
-       * crew member on it reads as awaiting and the checkpoint stays open here
-       * exactly as it does online. Never the reverse.
+       * H-46 (2026-08-14) settled the minimisation question this asks and it is
+       * consumed here, not re-opened: while DiveDay is pre-pilot, the fuller
+       * feature beats a tighter posture. Adding one field to this allow-list
+       * deliberately is the allow-list working, not being abandoned — the
+       * *reason* it is an allow-list is that a deny-list once shipped H-21's
+       * age, minor status and birthdays to every crew phone for a fortnight
+       * with nothing rendering them.
+       *
+       * **Optional, and its absence fails closed.** A copy saved before this
+       * change has crew with no id; they stay unrecordable on that copy and the
+       * checkpoint stays open, exactly as it does today. The same is true of
+       * `rollCall` absent, which means nobody had said — so an older snapshot
+       * reads every crew member as awaiting and the checkpoint stays open here
+       * exactly as it does online. Never the reverse: offline reading *closed*
+       * while online says otherwise is a checkpoint that looks finished while
+       * somebody is still down.
        */
       crew: Array<
         Pick<TripManifest["crew"][number], "fullName" | "roles"> & {
+          /** See above: optional, because a snapshot older than H-46 has none. */
+          id?: string;
           /**
            * Everyone on the teams this crew member is on, by name only — the
            * same rule and the same reason as a diver's `buddyTeamNames` below.
@@ -184,12 +213,29 @@ export type OfflineManifestSnapshot = OfflineManifestPayload & {
   expiresAt: string;
 };
 
+/**
+ * One result a device recorded with no signal, waiting to reach the server.
+ *
+ * **Widened additively, and deliberately not a discriminated union.** An event
+ * names exactly one subject — a diver's `bookingId` or a crew member's
+ * `crewPersonId` — but that is expressed as two optional fields plus
+ * {@link offlineRollCallSubject}, not as a union keyed on some `subject` tag.
+ * The events that matter most here are the ones **already sitting in a
+ * captain's IndexedDB**, written with `bookingId` and nothing else: an unsynced
+ * event is a person somebody counted with no radio, and a union would make
+ * every one of them fail its own type the moment the app updates. A stored
+ * record is not a wire format that can be migrated on the next deploy; there is
+ * no deploy that reaches a phone in a dry bag on a boat.
+ */
 export type OfflineRollCallEvent = {
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
   tripId: string;
-  bookingId: string;
+  /** A diver's paid seat. Absent on a crew event; see the note above. */
+  bookingId?: string;
+  /** A rostered crew member's `people.id`. Absent on a diver event. */
+  crewPersonId?: string;
   checkpoint: TripManifest["checkpoint"];
   status: "boarded" | "not_boarded";
   note: string | null;
@@ -197,6 +243,34 @@ export type OfflineRollCallEvent = {
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
 };
+
+/**
+ * Who one queued event is about, or `null` when that cannot be answered.
+ *
+ * The one reader of the two optional subject fields above, so "exactly one of
+ * them is set" is checked in a single place rather than assumed at each. `null`
+ * for **neither** (an event that claims something about nobody) and for
+ * **both** (a claim the two recorders cannot both honour) — those are not the
+ * same mistake, but they have the same safe answer, and neither may be guessed
+ * at: guessing writes a result against the wrong person on the one screen that
+ * says who came back from a dive.
+ *
+ * `appendOfflineRollCall` refuses a null subject rather than storing an event
+ * nobody can attribute, and the sync route's schema refuses the same shape on
+ * the way in.
+ */
+export function offlineRollCallSubject(
+  event: Pick<OfflineRollCallEvent, "bookingId" | "crewPersonId">,
+): { kind: "diver"; bookingId: string } | { kind: "crew"; crewPersonId: string } | null {
+  const { bookingId, crewPersonId } = event;
+  const hasBooking = typeof bookingId === "string" && bookingId.length > 0;
+  const hasCrew = typeof crewPersonId === "string" && crewPersonId.length > 0;
+  // Neither or both: no safe reading, so no reading at all.
+  if (hasBooking === hasCrew) return null;
+  if (hasBooking) return { kind: "diver", bookingId };
+  if (hasCrew) return { kind: "crew", crewPersonId };
+  return null;
+}
 
 export type OfflineManifestEnvelope = {
   snapshot: OfflineManifestSnapshot;
@@ -348,6 +422,9 @@ export function serializeManifests(
         endsAt: manifest.trip.endsAt.toISOString(),
       },
       crew: manifest.crew.map((member) => ({
+        // The subject of a crew roll-call write, and the only reason the crew
+        // half is recordable on this copy at all (H-46).
+        id: member.id,
         fullName: member.fullName,
         roles: member.roles,
         // Names only, and de-duplicated: a teammate who shares two of this
@@ -506,6 +583,53 @@ export function canRecordOfflineStatus(
   return diver.readiness.status === "ready";
 }
 
+/**
+ * The crew sibling of {@link canRecordOfflineStatus} — a separate function, not
+ * a branch inside it. Crew differ from divers in two ways that are easy to get
+ * wrong once and never notice:
+ *
+ * - **No readiness gate at departure.** Crew hold no booking and therefore no
+ *   readiness, so there is nothing to check and nothing to refuse. That mirrors
+ *   `recordCrewRollCall`, which has no readiness gate either.
+ * - **A crew member with no `id` is refused.** A copy saved before H-46 carries
+ *   crew with no person id, so there is no subject to write an event against;
+ *   that crew member stays uncounted on that copy and the checkpoint stays
+ *   open, exactly as it does today. Fail closed, and closed here means the
+ *   checkpoint stays *open* — the dangerous direction is a device calling a
+ *   head count done while somebody is still in the water.
+ *
+ * What is identical is the rule that matters most: **`not_boarded` is always
+ * recordable**, at any checkpoint, including one this snapshot carries no
+ * manifest for. After a numbered dive it means *this person did not come back*
+ * — the loudest thing this app can say — and a gap in the saved copy's contents
+ * never makes that less true or gives the deck a reason to stay quiet.
+ */
+export function canRecordOfflineCrewStatus(
+  snapshot: OfflineManifestSnapshot,
+  crewPersonId: string,
+  status: OfflineRollCallEvent["status"],
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+): boolean {
+  // "Is this person on this dock copy's crew at all?", asked across every
+  // manifest and asked first, the same way a booking is. An id nothing here
+  // has heard of — including the `undefined` an older snapshot's crew carry —
+  // is refused outright rather than queuing a claim about nobody.
+  if (!crewPersonId) return false;
+  const known = snapshot.manifests.some((manifest) =>
+    manifest.crew.some((member) => member.id === crewPersonId),
+  );
+  if (!known) return false;
+
+  if (status === "not_boarded") return true;
+
+  // Aboard is answered from the checkpoint's own manifest, and having no
+  // manifest for it refuses — the same DOM-L4 rule the diver path follows,
+  // minus the readiness question crew do not have.
+  return !!snapshot.manifests
+    .find((manifest) => manifest.checkpoint === checkpoint)
+    ?.crew.some((member) => member.id === crewPersonId);
+}
+
 export function latestOfflineRollCall(
   snapshot: OfflineManifestSnapshot,
   events: readonly OfflineRollCallEvent[],
@@ -538,6 +662,52 @@ export function latestOfflineRollCall(
   const server = snapshot.manifests
     .find((manifest) => manifest.checkpoint === checkpoint)
     ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall;
+  return server
+    ? {
+        state: server.state,
+        occurredAt: server.occurredAt,
+        pending: false,
+        implied: server.implied ?? false,
+      }
+    : undefined;
+}
+
+/**
+ * The crew sibling of {@link latestOfflineRollCall} — again a separate
+ * function, and again reading the single latest attempt across every sync
+ * status rather than the latest non-rejected one. A rejection means the server
+ * knows something this device does not (another device wrote first, the person
+ * came off the roster, a newer event won), so falling through to an older local
+ * event on rejection would re-assert exactly the stale optimism reconciliation
+ * exists to overrule.
+ *
+ * `crewPersonId` is required, so a crew member an older snapshot carries with
+ * no id never reaches this: the caller reads that member's saved result
+ * directly, which is all a pre-H-46 copy has. Both routes agree that *absence*
+ * is awaiting, never accounted for.
+ */
+export function latestOfflineCrewRollCall(
+  snapshot: OfflineManifestSnapshot,
+  events: readonly OfflineRollCallEvent[],
+  crewPersonId: string,
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+):
+  | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
+  | undefined {
+  const latestAttempt = events
+    .filter((event) => event.crewPersonId === crewPersonId && event.checkpoint === checkpoint)
+    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
+  if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
+    return {
+      state: latestAttempt.status,
+      occurredAt: latestAttempt.occurredAt,
+      pending: latestAttempt.syncStatus === "pending",
+      implied: false,
+    };
+  }
+  const server = snapshot.manifests
+    .find((manifest) => manifest.checkpoint === checkpoint)
+    ?.crew.find((member) => member.id === crewPersonId)?.rollCall;
   return server
     ? {
         state: server.state,

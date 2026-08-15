@@ -134,13 +134,18 @@ Six checks, in the order they'd fail:
 "Divers get counted there with the radio off, but it has never been on a real boat" is doing two
 jobs, and each half is load-bearing.
 
-**The assertion is scoped to the half that is true.** Divers can be counted on a device copy with
-no signal; **the crew half cannot** — `src/components/OfflineManifestView.tsx` says it plainly:
-*"Divers can be counted with the radio off; crew cannot, in this slice."* A checkpoint needs both
-halves, so an after-dive count offshore stays **open** on a device copy exactly as it would online.
-The email therefore says *divers get counted*, never *roll call works offline* or *after-dive roll
-calls work from that copy*. Widening it to the second phrasing makes it wrong about the one
-checkpoint where a person may still be in the water.
+**The assertion is scoped to what has been *tested*, not to what has been built.** Both halves now
+work: divers *and* rostered crew can be counted on a device copy with no signal, so an after-dive
+checkpoint closes offshore (H-46, 2026-08-14 — before that the crew half genuinely could not be
+recorded and this paragraph scoped the claim to the diver half for that reason).
+
+What has not changed is the reason the line stays narrow. The
+[claims policy](../marketing.md#claims-policy-hard-rules) holds that offline roll call may not be
+spoken about as *proven* until V-02 passes, and V-02 has not run. So the email still says *divers
+get counted there with the radio off* — an understatement now rather than a scoping — and still
+never says *roll call is proven offline*. If you widen it to name the crew half as well, keep the
+"it has never been on a real boat" clause welded to it: the second half of the sentence is what
+makes the first half honest, and it is doing more work now that the product does more.
 
 **The disclosure is the hook, not a hedge.** Recruiting this reader **is** the documented path to
 V-02 ([rollout.md](../rollout.md#03-field-validation-v-01-v-02-v-04-rehearsal)): the field test is

@@ -6,6 +6,11 @@ import { joinLastMinuteList } from "@/db/last-minute-list";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import {
+  diveDeclarationInput,
+  diveDeclarationSchema,
+  toDiveDeclaration,
+} from "@/lib/dive-declaration";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -51,6 +56,10 @@ export async function joinLastMinuteListAction(
     availableFrom: formData.get("availableFrom") || undefined,
     availableUntil: formData.get("availableUntil") || undefined,
   });
+  // Parsed apart from the identity fields on purpose: the "what can you dive?"
+  // pair is optional, so a level code that fails validation is *not said* — it
+  // must never be the reason a sign-up is refused (src/lib/dive-declaration.ts).
+  const declaration = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
   if (!parsed.success) return { error: t("lastMinute.errors.invalid") };
   if (
     parsed.data.availableFrom &&
@@ -71,6 +80,10 @@ export async function joinLastMinuteListAction(
     phone: parsed.data.phone,
     availableFrom: parsed.data.availableFrom,
     availableUntil: parsed.data.availableUntil,
+    // Recorded against the resolved person as a self-declared pending card, and
+    // shown to staff before a blast goes out — never used to filter one
+    // (src/db/self-declared-cards.ts).
+    declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
   });
   return { success: true };
 }

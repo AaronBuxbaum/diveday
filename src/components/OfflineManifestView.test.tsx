@@ -130,6 +130,13 @@ function richPayload(
     crewNotBackAboard?: boolean;
     /** Two crew who share a full name and a role — the list-key collision. */
     crewNamesake?: boolean;
+    /**
+     * A copy saved **before H-46**, whose crew carry no person id. Those crew
+     * have no subject to record an event against, so the copy can only ever
+     * show their save-time result and the checkpoint stays open — the
+     * fail-closed direction (`crewOlderCopy`, `canRecordOfflineCrewStatus`).
+     */
+    crewWithoutIds?: boolean;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
@@ -142,14 +149,34 @@ function richPayload(
         note: null,
       }
     : undefined;
+  // A current copy carries person ids (H-46) — that is what makes the crew half
+  // recordable here at all. `crewWithoutIds` is the copy a device saved before
+  // that, still sitting in IndexedDB and still having to render.
+  const crewId = (id: string) => (opts.crewWithoutIds ? undefined : id);
   const crew = opts.crewNamesake
     ? [
-        { fullName: "Sal Ortiz", roles: ["captain"], rollCall: crewRollCall },
-        { fullName: "Sal Ortiz", roles: ["captain"], rollCall: undefined },
+        {
+          id: crewId("crew-sal-1"),
+          fullName: "Sal Ortiz",
+          roles: ["captain"],
+          rollCall: crewRollCall,
+        },
+        {
+          id: crewId("crew-sal-2"),
+          fullName: "Sal Ortiz",
+          roles: ["captain"],
+          rollCall: undefined,
+        },
       ]
     : [
-        { fullName: "Dana Divemaster", roles: ["divemaster"], rollCall: crewRollCall },
         {
+          id: crewId("crew-dana"),
+          fullName: "Dana Divemaster",
+          roles: ["divemaster"],
+          rollCall: crewRollCall,
+        },
+        {
+          id: crewId("crew-sal"),
           fullName: "Sal Ortiz",
           roles: ["captain"],
           rollCall: opts.crewNotBackAboard
@@ -1042,9 +1069,9 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
  * src/lib/manifests.ts), consumed by the live manifest and by this view. It
  * used to be written inline in both places as divers-only, so a checkpoint
  * with every booked diver counted read complete with the crew unaccounted
- * for. A crew roll call is not recordable offline in this slice — so the one
- * thing that must never happen is the dock copy reading "complete" while the
- * live page says the checkpoint is still open.
+ * for. A crew roll call is recordable offline now (H-46), and the one thing
+ * that must still never happen is unchanged: the dock copy reading "complete"
+ * while the live page says the checkpoint is still open.
  */
 describe("OfflineManifestView — crew are part of the head count offline too", () => {
   it("does not read complete when every diver has a result but the crew were never called", async () => {
@@ -1081,10 +1108,15 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     // complete, on both surfaces.
     expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
-    // And it says why, rather than going quiet: the crew roll call lives on
-    // the live manifest, so this checkpoint stays open until there's signal.
+    // And it says why, rather than going quiet — naming the count that is
+    // holding it open, in the same words the live manifest uses.
     expect(screen.getByText(/2 crew members still to call/)).toBeInTheDocument();
-    expect(screen.getByText(/called on the live manifest/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Every person on the crew list needs a result of their own/),
+    ).toBeInTheDocument();
+    // And the way to close it is right there, on this copy, with no signal:
+    // one aboard control per crew member, which is the whole point of H-46.
+    expect(screen.getAllByRole("button", { name: "Mark aboard" })).toHaveLength(2);
   });
 
   it("reads complete once the saved snapshot has a result for every assigned crew member", async () => {
@@ -1171,14 +1203,17 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
 });
 
 /**
- * Review 20260803, D6. Both crew halves are online-only and both are required,
- * so on an out-of-signal trip *every* checkpoint reads open — on the surface
- * built specifically for no signal. It has to stay fail-closed, but "the crew
- * half isn't recordable here" and "somebody is unaccounted for" are different
- * facts, and a crew seeing warning-yellow on every dive stops reading it.
+ * Review 20260803, D6, re-read after H-46. "A crew member is still to call"
+ * and "a crew member is unaccounted for" are different facts, and a crew
+ * seeing warning-yellow on every single dive stops reading it at all. What
+ * changed is which of the two an ordinary out-of-signal trip produces: the
+ * crew half is now recordable here, so an uncalled crew member is work in
+ * front of the deck rather than a limitation to apologise for. The apology is
+ * left for the one copy that genuinely cannot do it — one saved before crew
+ * ids rode along — and even that stays calm-toned.
  */
-describe("OfflineManifestView — the crew panel tells apart 'not recordable here' from 'missing'", () => {
-  it("states the read-only limitation, without alarming, when only the crew half is open", async () => {
+describe("OfflineManifestView — the crew panel tells apart 'still to call' from 'missing'", () => {
+  it("does not apologise on a current copy: an uncalled crew member is work, and untoned", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     const saved = richEnvelope("trip-1", {
       withCarriedNotBoarded: true,
@@ -1192,13 +1227,42 @@ describe("OfflineManifestView — the crew panel tells apart 'not recordable her
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
     // Still open — the fail-closed rule is untouched.
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
-    // And it says whose surface this belongs to, rather than reading as one
-    // more thing the boat has failed to do.
-    const note = screen.getByText(/can’t be tapped from this saved copy/);
+    const note = screen.getByText(/1 crew member still to call/);
+    const panel = note.closest("div");
+    expect(panel?.className).not.toContain("warning");
+    expect(panel?.className).not.toContain("danger");
+    // The limitation line belongs to an older copy only, and this is not one.
+    expect(screen.queryByText(/saved before crew roll call worked offline/)).toBeNull();
+  });
+
+  /**
+   * Invariant I2, on screen. A copy saved before H-46 has crew with no person
+   * id, so there is no subject a tap could be about. It says so — with a
+   * count, so a captain can tell one late addition from the whole crew — the
+   * checkpoint stays open, and no aboard control is offered for somebody the
+   * device cannot name to the server.
+   */
+  it("says so, calmly and with a count, when the saved copy predates crew ids", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", {
+      withCarriedNotBoarded: true,
+      crewCalled: true,
+      crewMemberUncounted: true,
+      crewWithoutIds: true,
+    });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    const note = screen.getByText(/2 crew members on this saved copy can’t be called here/);
     expect(note).toBeInTheDocument();
     const panel = note.closest("div");
     expect(panel?.className).not.toContain("warning");
     expect(panel?.className).not.toContain("danger");
+    // No control for a person this copy cannot name to the server.
+    expect(screen.queryByRole("button", { name: "Mark aboard" })).toBeNull();
   });
 
   it("does alarm, in danger tone, when a named crew member is not back aboard", async () => {

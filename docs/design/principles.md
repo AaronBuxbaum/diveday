@@ -47,13 +47,22 @@ engineering-doc vocabulary have no place in anything a shop owner or diver reads
 belong in `docs/`, commit messages, and code comments, never in a page, email, or error message.
 Say what the person gets — "saved on this phone", "works without signal", "DiveDay double-checks
 it when you're back in service" — not how we built it, and not what we wrote down to decide to
-build it. Two carve-outs:
+build it. Three carve-outs:
 
 - **Payment** may say "pay securely" — that is the reassurance people expect at a checkout, and
   nothing more technical than that.
 - **Safety surfaces keep their precision, in human words.** A stale device copy must never look
   current — but the label is "Saved 4 hours ago — refresh before you rely on it", not "stale
   snapshot". Translating jargon is never license to blur an operational state.
+- **`/privacy` may name the protection, because that is the question its reader came with.** On a
+  page whose whole subject is who can read a shop's divers' data, "encrypted" is the answer rather
+  than the machinery — it is why that page already says a push service gets "an encrypted payload
+  it cannot read", and why it says the same of the copy a crew phone holds. This is a carve-out for
+  a **disclosure**, never for a capability claim: the same fact is refused on `/product`, where the
+  offline line says a head count works with no signal and never that a snapshot is encrypted. A
+  disclosure also has to be honest about where the protection stops — the phone copy is encrypted
+  against a reader of the device's storage, not against someone holding the unlocked phone, and the
+  page says so.
 
 **The name is DiveDay** — one word, two capitals. Use it as the actor when the system does
 something on the user's behalf ("DiveDay will catch up when you're back in service"), and

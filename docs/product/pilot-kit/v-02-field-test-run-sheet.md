@@ -55,9 +55,10 @@ defect found here is a stop-the-line fix (AGENTS.md safety rules), not a punch-l
 
 Open the trip's manifest on Phone A.
 
-Expect: **Live manifest** and **Glare mode active** badges; an **Offline safety copy** panel; a
-connectivity pill reading **Online**; a freshness pill (**Fresh copy** / **Aging copy** / **Stale
-copy**); and a saved-summary line reading *Saved {date} · {n} waiting to send · {n} need a look*.
+Expect: a **Boat mode** control in the trip header (**Auto** / **Land mode** / **Boat mode**); an
+**Offline safety copy** panel; inside it a connectivity pill reading **Online**, a freshness pill
+(**Fresh copy** / **Aging copy** / **Stale copy**), and a saved-summary line reading *Saved {date} ·
+{n} waiting to send · {n} need a look*.
 
 - [ ] As described. Otherwise: ______________________________________________
 - Freshness pill shown: ____________  Saved line read: ____________________
@@ -69,7 +70,10 @@ and every five minutes; the one manual control is **Refresh now** (H-05, revised
 
 - [ ] Leave the page open for six minutes without touching it; the freshness pill stays **Fresh
       copy** on its own. (Fresh ≤ 15 min since save; Aging ≤ 4 h; Stale beyond.)
-- [ ] Tap **Refresh now** once with signal — expect *"This device has an up-to-date offline copy."*
+- [ ] Tap **Refresh now** once with signal. A successful refresh says **nothing** — the message line
+      clears and the *Saved {date}* line moves to the current time with the pill back on **Fresh
+      copy**. That silence is the expected observation; a sentence appearing there means something
+      went wrong, so write it down verbatim: ____________________________________
 - Notes: ________________________________________________________________
 
 ### 3 — Glare and sunlight
@@ -79,7 +83,7 @@ Outdoors, in the worst light of the day. Phone at arm's length, as a captain hol
 - [ ] Can you read a diver's name at arm's length without shading the screen? Y / N
 - [ ] Can you tell a **blocked** row from a **boarded** row *by its words*, not by colour alone?
       (Rows carry a **Ready to board** / **Blocked** badge as well as the red/green fill.) Y / N
-- [ ] Cycle the contrast control through **Auto / Standard / Full AAA**. Which was usable in
+- [ ] Cycle the **Boat mode** control through **Auto / Land mode / Boat mode**. Which was usable in
       sun? __________ Did Auto pick it by itself? Y / N
 - [ ] Screen brightness at max — still readable? Y / N. Photograph the screen in sun.
 - Worst thing you couldn't read: _________________________________________
@@ -172,19 +176,62 @@ This is the step most likely to surface something. Do not skip it.
       do? Y / N
 - [ ] Do the counts on the live manifest now match the printed manifest plus your pen marks? Y / N
 
-### 9 — After-dive roll call, on the water
+### 9 — After-dive roll call, on the water — **this is the step that tests the crew half**
+
+Do this one **still offline**, on `/offline-manifest`, before step 10. A checkpoint needs both
+halves — every diver accounted for *and* every rostered crew member — and until 2026-08-14 the crew
+half could not be recorded without signal at all, so an after-dive checkpoint could never be closed
+at sea. It can now, and this step is the only thing that will tell us whether that is true on a
+boat. There is **no typed crew count** anywhere any more: every crew member is called by name, the
+same way a diver is.
 
 - [ ] Run the **after dive 1** checkpoint as a physical head count. Boarding here does **not** wait
       on readiness — confirm a diver blocked at departure can still be counted aboard. Y / N
 - [ ] A diver marked not boarded at departure should carry forward as *Not boarded · carried*.
       Y / N
-- [ ] With every diver counted and **no crew count entered**, the checkpoint must *not* read
-      complete — the screen should ask for the crew count instead. Y / N
-- [ ] Enter a crew count that is one short of the assigned crew. Still not complete? Y / N
-- [ ] Enter the full count. Roll call complete: does the screen say so unmistakably
-      ("Roll call complete")? Y / N
-- [ ] Ask the captain, cold: "who counts as crew here, and who counted them?" Does the screen's
-      attribution match their answer? Notes: ______________
+
+**a. A rostered crew member still to call.** With every diver counted and nobody having tapped the
+crew, expect the crew panel (**Crew aboard**) to read *"{n} crew members still to call. Every person
+on the crew list needs a result of their own."*, to name each of them, and the checkpoint **not** to
+read complete.
+
+- [ ] As described. Otherwise: ______________________________________________
+- [ ] Each crew member's row carries **Mark aboard** and **Mark not back aboard**, at the same size
+      as a diver's buttons, and they work with the radio off. Y / N
+- [ ] Nothing on the panel says the crew half belongs to the live manifest or can't be tapped here.
+      If it *does* say that, this phone's saved copy predates the change — write down what it says
+      verbatim and refresh the copy in signal before continuing: ____________________
+
+**b. A crew member who did not come back.** Pick one crew member and tap **Mark not back aboard**
+(agree it with them first — this is a drill). Expect the panel to turn **red**, to read *"1 crew
+member is not back aboard. This checkpoint stays open."*, and the button to settle to a red **Not
+back aboard** with **no** ☑️ on it.
+
+- [ ] As described. Otherwise: ______________________________________________
+- [ ] **Read as an emergency, not as a limitation of the phone?** Show it to someone who has not
+      read this sheet and ask what it is telling them. Their words: ____________________
+      (A "the app can't do that bit offline" reading here is a **safety finding**.)
+- [ ] Tapping the red button again takes it back. Y / N
+- [ ] Now count them back aboard. Does the red clear? Y / N
+
+**c. A trip with no crew at all.** If the trip under test has crew, this needs a second seeded trip
+with an empty crew list — do it ashore in the V-04 dry run if you cannot rig it here.
+
+- [ ] Expect *"No crew are assigned to this trip, so there is nobody to call…"* and the checkpoint
+      **open**, never complete. Y / N — if it read complete, that is a stop-the-line finding.
+- [ ] Exercised on the water / ashore / not exercised (circle one).
+
+**d. Reaching a complete roll call at sea.** Count every crew member aboard.
+
+- [ ] Roll call complete: does the screen say so unmistakably (**Roll call complete 🎉**)? Y / N
+- [ ] It happened **with the radio off** — no reconnect, no live manifest. Y / N
+      (If you had to reconnect to close it, that is the finding this whole step exists for.)
+- [ ] The crew results show **· waiting to send** until you reconnect. How many were queued: ____
+- [ ] Ask the captain, cold: **"who counts as crew here, and who counted them?"** Does the screen's
+      list match their answer — the same people, nobody extra, nobody missing? Notes:
+      _______________________________________________________________________
+      (A deckhand or a spouse nobody rostered is the classic gap: the app can only ever call the
+      people on the trip's crew list, so an unrostered hand is invisible to the count.)
 - [ ] Second dive: repeat on **after dive 2** if the trip has one. Notes: ______________
 
 ### 10 — The stale / expired / missing copy
@@ -227,7 +274,8 @@ not exercised in the field.
 | Spray-guard true triggers, water only (trial D) | ____ / 10 |
 | Seconds lost per false lock | ____ |
 | Wet-hand taps registering first time | ____ / 10 dry-hand baseline ____ / 10 |
-| Roll-call results recorded offline | ____ |
+| Roll-call results recorded offline | ____ divers + ____ crew |
+| After-dive checkpoints **closed** with the radio off (step 9d) | ____ of ____ attempted |
 | Offline results that reconciled cleanly | ____ |
 | Offline results rejected on reconnect | ____ |
 | Minutes offline before reconnect | ____ |

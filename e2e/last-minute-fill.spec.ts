@@ -144,3 +144,97 @@ test("an unknown unsubscribe link reads as unavailable, not a crash", async ({ p
   await page.goto("/unsubscribe/not-a-real-token");
   await expect(page.getByRole("heading", { name: "This link isn't available" })).toBeVisible();
 });
+
+/**
+ * **The email this feature exists to prevent** (FU-20260813).
+ *
+ * A joiner may optionally say what they can dive, and the staffer about to send
+ * a discount sees it beside their name, marked self-declared, *before* they
+ * press send. Nothing filters the blast — that is the deliberate design, argued
+ * in the follow-up — so the whole safeguard is that the claim is legible at the
+ * moment of the decision. This spec is that claim surviving the trip from a
+ * public form to the panel.
+ */
+test("a joiner's declared level reaches the staffer before they send a deal", async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto("/s/blue-mantis");
+  const dealList = page.locator("#last-minute-list");
+  await dealList.getByLabel("Name").fill("Tess Alvarez");
+  await dealList.getByLabel("Email").fill("tess.e2e@example.com");
+  await dealList.getByLabel("Certification level").selectOption("open_water");
+  await dealList.getByLabel("I'm certified for nitrox (enriched air)").check();
+  await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis");
+  const nudge = page
+    .locator("li")
+    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ visible: true });
+  await nudge.getByRole("link", { name: "Open trip" }).click();
+  await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
+
+  // The row a staffer reads before deciding. Both halves carry the mark
+  // independently, because a shop can hold a real level card for someone who
+  // has only *claimed* enriched air.
+  const recipient = page
+    .locator("li")
+    .filter({ hasText: "Tess Alvarez" })
+    .filter({ visible: true });
+  await expect(recipient).toContainText("Open Water — diver's word, no card");
+  await expect(recipient).toContainText("Nitrox — diver's word, no card");
+
+  // And the send is still offered: informing, never gating. A filter here would
+  // quietly stop the blast reaching everyone the shop has never carded, which
+  // is most of a deal list.
+  await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
+});
+
+/**
+ * The other half of the same promise: the claim never becomes a shortcut. A
+ * self-declared card cannot be certified on the one tap every other pending
+ * card gets — the staffer has to enter the agency, number **and level** off the
+ * card in their hand, which is the same act as capturing one.
+ *
+ * The level is the half worth exercising end to end: this diver claimed Rescue
+ * and the card the staffer is actually holding says Open Water. Without the
+ * select, transcribing the number would have certified Rescue.
+ */
+test("a self-declared card cannot be certified without the card in hand", async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto("/s/blue-mantis");
+  const dealList = page.locator("#last-minute-list");
+  await dealList.getByLabel("Name").fill("Milo Vance");
+  await dealList.getByLabel("Email").fill("milo.e2e@example.com");
+  await dealList.getByLabel("Certification level").selectOption("rescue");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+
+  await signInAsOwner(page);
+  // Search rather than the bare index: the roster is paged, and a joiner who
+  // signed up seconds ago is not on page 1 of a seeded shop.
+  await page.goto("/shop/blue-mantis/divers?q=Milo+Vance");
+  await page.getByRole("link", { name: "Milo Vance" }).click();
+  const card = page.locator("li").filter({ hasText: "Rescue" }).filter({ visible: true }).first();
+  await expect(card).toContainText("Self-declared — no card number yet");
+  // The one-tap control every staff-captured pending card wears is absent here.
+  await expect(card.getByRole("button", { name: "Mark certified" })).toBeHidden();
+
+  await card.getByText("Certify from card").click();
+  // Prefilled with the claim, so leaving it alone is still one glance — but the
+  // card in hand says Open Water, and this is where that gets corrected.
+  await expect(card.getByLabel("Level on the card")).toHaveValue("rescue");
+  await card.getByLabel("Level on the card").selectOption("open_water");
+  await card.getByLabel("Card number").fill("RES-8080");
+  await card.getByRole("button", { name: "Mark certified" }).click();
+
+  // Sighted: it now reads as an ordinary certified card carrying the number the
+  // staffer read off it — at the level *they* read, not the one the diver typed.
+  const certified = page.locator("li").filter({ hasText: "RES-8080" }).filter({ visible: true });
+  await expect(certified).toContainText("certified");
+  await expect(certified).toContainText("Open Water");
+  await expect(certified).not.toContainText("Rescue");
+  await expect(certified).not.toContainText("Self-declared — no card number yet");
+});

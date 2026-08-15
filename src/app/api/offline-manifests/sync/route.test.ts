@@ -2,7 +2,15 @@ import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { people, personRoles, rollCallEvents, shops, userAccounts } from "@/db/schema";
+import { getTripManifest } from "@/db/manifests";
+import {
+  people,
+  personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
+  shops,
+  userAccounts,
+} from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -219,6 +227,96 @@ describe("POST /api/offline-manifests/sync", () => {
       results: Array<{ clientEventId: string; status: string }>;
     };
     expect(body.results).toEqual([{ clientEventId, status: "applied" }]);
+  });
+
+  /**
+   * H-46. The crew half of a head count arrives through this same route, and
+   * the only thing that differs is which subject field the event names — the
+   * gate above it, the ordering, and the offline contract underneath are all
+   * shared. Crew carry no readiness, so unlike the diver test below this one
+   * boards successfully with nothing signed.
+   */
+  it("applies a crew event to the crew recorder, by person id", async () => {
+    const { db, shop, trip, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const crew = (await getTripManifest(db, shop.id, trip.id))?.crew ?? [];
+    const member = crew[0];
+    if (!member) throw new Error("expected seeded trip to have crew");
+
+    const clientEventId = crypto.randomUUID();
+    const now = nowDate().toISOString();
+    const response = await POST(
+      postRequest({
+        events: [
+          {
+            clientEventId,
+            snapshotId: crypto.randomUUID(),
+            snapshotSavedAt: now,
+            crewPersonId: member.id,
+            tripId: trip.id,
+            checkpoint: "departure",
+            status: "boarded",
+            note: null,
+            occurredAt: now,
+          },
+        ],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).results).toEqual([{ clientEventId, status: "applied" }]);
+    // Written to the crew table, marked as having come off a device, and
+    // idempotent on the key the device generated.
+    const rows = await db
+      .select()
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.personId, member.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: "offline", clientEventId, status: "boarded" });
+    // And nothing landed on the diver table, which has its own subject column.
+    expect(await db.select().from(rollCallEvents)).toHaveLength(0);
+  });
+
+  /**
+   * An event naming no subject is a claim about nobody; one naming two is a
+   * claim the two recorders cannot both honour. The whole batch is refused
+   * (400) rather than the event being guessed at or marked settled — a refused
+   * batch stays `pending` on the device and keeps its hold against the next
+   * purge, which is the same reasoning the auth gate above it follows.
+   */
+  it("refuses a batch whose event names neither subject, or both, and writes nothing", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const crew = (await getTripManifest(db, shop.id, trip.id))?.crew ?? [];
+    const member = crew[0];
+    if (!member) throw new Error("expected seeded trip to have crew");
+    const now = nowDate().toISOString();
+    const event = {
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      tripId: trip.id,
+      checkpoint: "departure",
+      status: "not_boarded",
+      note: null,
+      occurredAt: now,
+    };
+
+    expect((await POST(postRequest({ events: [event] }))).status).toBe(400);
+    expect(
+      (
+        await POST(
+          postRequest({
+            events: [{ ...event, bookingId: booking.id, crewPersonId: member.id }],
+          }),
+        )
+      ).status,
+    ).toBe(400);
+
+    expect(await db.select().from(rollCallEvents)).toHaveLength(0);
+    expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
   });
 
   it("rejects boarding a diver who isn't ready instead of silently applying it", async () => {

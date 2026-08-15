@@ -391,6 +391,8 @@
     ],
     "visual": [
       "trip-guests",
+      "trip-guests-deal-below-requirement",
+      "trip-guests-deal-recipients",
       "trip-guests-depth-warning",
       "trip-guests-identity",
       "trip-guests-note-undo",

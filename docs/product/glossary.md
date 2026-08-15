@@ -60,15 +60,45 @@ new domain concept, define it here in the same PR.
   yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
   read as the same thing at a busy desk.
-- **Card sighting** — *retired 2026-08-14.* The attestation a staffer used to tick when confirming an
-  **imported** specialty or nitrox card: *“I've seen this diver's card, or checked the number with the
-  issuing agency.”* Dropped when the owner levelled the two confirms against the imported *level*
-  card, which opens the same depth on a bare tap and never asked
+- **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
+  one of the two public "tell me when something comes up" opt-ins: the shop-wide last-minute-deal
+  list, or a full trip's wait list. It is the weakest thing in the model and everything about it is
+  shaped to keep it that way. It lands on the person as a `pending` card stamped `self_declared_at`,
+  carries **no agency and no card number** (the forms never ask, and a placeholder would be read as a
+  card number eventually), and **no gate reads it** — readiness has always required `verified`, and
+  `decideTripAdmission` filters it out explicitly, so a refused diver cannot type their way onto a
+  boat. Staff see it marked *"— diver's word, no card"* in a warning tone wherever it renders, the
+  same treatment an **Imported specialty card** gets for the same reason: it must never be scanned as
+  a plain level. Deliberately *not* the same
+  thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is
+  materially more trustworthy than a stranger's typing, and the two provenances are separate columns
+  so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below. A claim
+  never displaces a card the shop already holds — if the person has any live card that is **not
+  itself a still-unsighted self-declaration**, nothing is written at all. "Still unsighted" is
+  `self_declared_at IS NOT NULL AND status = 'pending'`, and the second half is load-bearing: the
+  stamp stays forever after a sighting, so a rule phrased as "not self-declared" would read a
+  staff-verified card as displaceable and let an anonymous post re-grade it
+  ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
+- **Card sighting** — the staffer entering the agency, the card number **and the level off the card
+  in their hand**.
+  It is now the one thing that turns a **Self-declared certification** into evidence, and it is the
+  same act as capturing a card rather than an extra attestation — which is the point: the diver's
+  claim stops being what the record rests on. It asks for the **level** as well as the number,
+  prefilled with the claim: the likeliest wrong claim is an overstated one, and a sighting that
+  copied the number off a genuine Open Water card while keeping the diver's typed "Instructor" would
+  verify the one field nobody looked at. Enforced twice, in `reviewCertification` and in the
+  database's own `certifications_identifier_present_unless_self_declared`, so a numberless card can
+  never reach `verified`.
+  *Its earlier meaning was retired on 2026-08-14* — an attestation checkbox a staffer ticked when
+  confirming an **imported** specialty or nitrox card (*“I've seen this diver's card, or checked the
+  number with the issuing agency”*), dropped when the owner levelled the two confirms against the
+  imported *level* card, which opens the same depth on a bare tap and never asked
   (H-24 revised, [20260814-one-tap-imported-card-confirm](../architecture/decisions/20260814-one-tap-imported-card-confirm.md)).
-  Every imported card now confirms on one tap. What did **not** change is that the confirm exists at
-  all: an imported card clears nothing until a staffer makes that tap, per card, and there is still
-  deliberately no bulk confirm. Cards reviewed before that date keep the sentence the attestation
-  wrote into their `review_note`.
+  Every imported card still confirms on one tap; what came back here is narrower and applies only to
+  the diver-written rows that did not exist then. What did **not** change for imports is that the
+  confirm exists at all: an imported card clears nothing until a staffer makes that tap, per card,
+  and there is still deliberately no bulk confirm. Cards reviewed before that date keep the sentence
+  the old attestation wrote into their `review_note`.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
   record, not a dive record**: an export holds cancellations and no-shows, so the source's own status

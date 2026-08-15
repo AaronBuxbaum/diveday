@@ -15,8 +15,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and eleven key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 444 screenshots per run (see
+ * Visual regression coverage. A hundred and fourteen key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 456 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -2092,6 +2092,101 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Guests");
         await page.getByRole("heading", { name: /Divers/ }).waitFor();
         await capture(page, "trip-guests", scheme);
+      });
+
+      /**
+       * **The list, before the send** (FU-20260813,
+       * ADR 20260814-self-declared-cards).
+       *
+       * `trip-guests` above can never show this: the deal panel lives behind a
+       * collapsed disclosure, and it renders nothing at all until somebody is
+       * on the shop's last-minute list. What it photographs is the one thing
+       * standing between a shop and a discount emailed to a diver who cannot
+       * board — the recipient's level, marked self-declared, in the row above
+       * the send button. If that mark ever stops reading as weaker than a
+       * certified card, this is the baseline that catches it; nothing else in
+       * the suite looks at the two treatments side by side.
+       *
+       * Seeded through the real public form rather than a fixture, because the
+       * claim's whole journey — anonymous post to staff panel — is the thing
+       * under test. Safe to mutate: each worker owns its own database and
+       * resets before every test (e2e/servers.ts).
+       */
+      test(`the deal panel shows who it would reach (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis");
+        const dealList = page.locator("#last-minute-list");
+        await dealList.getByLabel("Name").fill("Tess Alvarez");
+        await dealList.getByLabel("Email").fill("tess.visual@example.com");
+        await dealList.getByLabel("Certification level").selectOption("open_water");
+        await dealList.getByLabel("I'm certified for nitrox (enriched air)").check();
+        await page
+          .locator('input[name="availableFrom"]')
+          .filter({ visible: true })
+          .fill("2020-01-01");
+        await page.getByRole("button", { name: "Notify me" }).click();
+        await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+
+        // Already signed in: `signedInAsOwner()` is describe-scoped over this
+        // block, which is also why the public form above renders with the staff
+        // preview bar. Neither affects the surface being photographed.
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        // The `#last-minute-deal` anchor is what auto-opens the disclosure.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        await page.getByText("Open Water — diver's word, no card").waitFor();
+        await capture(page, "trip-guests-deal-recipients", scheme);
+      });
+
+      /**
+       * **The same panel on the day it has something to say.**
+       *
+       * The capture above can never reach this state: the reef charter asks for
+       * Open Water, the bottom rung, so on it nobody is below anything and the
+       * summary reads "nobody". Here the departure is raised to Advanced Open
+       * Water first, and the list underneath it becomes two divers under the
+       * bar — one carded, one who merely said so — and one who said nothing at
+       * all. That is the sentence the whole panel is now built around, and the
+       * three treatments it distinguishes.
+       *
+       * It is also the only capture of the risk ordering. Wes joins the list
+       * *before* Tess and is drawn *after* her, because the list is capped and
+       * a cap that could hide someone below the requirement behind someone who
+       * clears it would be worse than the unbounded version it replaced.
+       */
+      test(`the deal panel weighs the list against the bar (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const join = async (name: string, email: string, level?: string) => {
+          await page.goto("/s/blue-mantis");
+          const dealList = page.locator("#last-minute-list");
+          await dealList.getByLabel("Name").fill(name);
+          await dealList.getByLabel("Email").fill(email);
+          if (level) await dealList.getByLabel("Certification level").selectOption(level);
+          await page
+            .locator('input[name="availableFrom"]')
+            .filter({ visible: true })
+            .fill("2020-01-01");
+          await page.getByRole("button", { name: "Notify me" }).click();
+          await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+        };
+        // The optional question, skipped — the common answer on a marketing
+        // opt-in, and the one a shop can weigh least.
+        await join("Wes Toledo", "wes.visual@example.com");
+        await join("Tess Alvarez", "tess.visual@example.com", "open_water");
+
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page.getByText("Edit requirements", { exact: true }).click();
+        await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
+        await page.getByRole("button", { name: "Save requirements" }).click();
+        // Raising the bar mid-season strands the divers already booked under
+        // the old one, so the save answers with its warning variant ("8 booked
+        // divers no longer meet them") rather than the plain confirmation.
+        // Matching the stem keeps this test about the deal panel.
+        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        await page.getByText("2 of 3 said a level below this departure's requirement.").waitFor();
+        await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
       test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {

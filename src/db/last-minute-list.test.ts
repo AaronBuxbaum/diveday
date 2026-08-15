@@ -10,6 +10,7 @@ import {
   unsubscribeLastMinuteListEntryByToken,
 } from "./last-minute-list";
 import { lastMinuteListUnsubscribeTokens, shops } from "./schema";
+import { listDeclaredDiveProfiles } from "./self-declared-cards";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
@@ -70,6 +71,66 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
     const list = await listLastMinuteList(db, shop.id);
     expect(list).toHaveLength(1);
     expect(list[0]?.entry.unsubscribedAt).toBeNull();
+  });
+
+  /**
+   * **H-13's borrowed-identity rule, applied to the one write here that is
+   * evidence about a body.**
+   *
+   * This form is unauthenticated and resolves a person by email alone, so an
+   * address that already belongs to a diver under a *different* name may be a
+   * second human — a family sharing an inbox, or somebody typing an address
+   * that is not theirs. Every other write on this fork already refuses on a
+   * mismatch: a booking is flagged `identityUnconfirmed`, `seat-claims.ts` will
+   * not record so much as a phone number, `people.ts` will not record a locale.
+   * A certification is stronger than all three.
+   */
+  it("does not write a declaration onto a person whose name does not match", async () => {
+    const { db, shop } = await seededShopContext();
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      ...visitor,
+      declaration: { level: "open_water", nitrox: false },
+    });
+
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      email: visitor.email,
+      fullName: "Someone Else Entirely",
+      declaration: { level: "instructor", nitrox: true },
+    });
+
+    const profiles = await listDeclaredDiveProfiles(db, shop.id, [
+      (await listLastMinuteList(db, shop.id))[0]?.person.id ?? "",
+    ]);
+    const profile = [...profiles.values()][0];
+    // The first joiner's own statement, untouched — and no nitrox claim at all,
+    // since the mismatched submission was the only thing that ticked it.
+    expect(profile?.level).toBe("open_water");
+    expect(profile?.nitrox).toBe(false);
+  });
+
+  it("still creates the list entry on a name mismatch — only the evidence is withheld", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+
+    const again = await joinLastMinuteList(db, {
+      shopId: shop.id,
+      email: visitor.email,
+      fullName: "Someone Else Entirely",
+      availableFrom: "2026-09-01",
+      declaration: { level: "instructor", nitrox: true },
+    });
+
+    // Joining a marketing list under a borrowed address is behaviour that
+    // predates this change; refusing the opt-in would be a new regression.
+    expect(again.entryId).toBe(first.entryId);
+    const list = await listLastMinuteList(db, shop.id);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.entry.availableFrom).toBe("2026-09-01");
+    expect(await listDeclaredDiveProfiles(db, shop.id, [list[0]?.person.id ?? ""])).toEqual(
+      new Map(),
+    );
   });
 });
 
