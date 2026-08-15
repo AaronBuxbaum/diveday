@@ -55,7 +55,16 @@ export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); 
 [competitive-strategy.md](../assessments/competitive-strategy.md#the-build-plan-in-order).
 
 - **Read API + webhooks**, every tier — token-scoped reads over the export schema plus
-  booking/waiver/manifest events. **ADR required** before building.
+  booking/waiver/manifest events. **ADR required** before building. This is the concrete mechanism
+  behind "keep your existing retail POS, DiveDay runs the boat day" (see the vision non-goals) — it
+  has real payload today (bookings, waivers, `rental_fit.csv`) and gains its most-asked-for one once
+  §3's gear register ships. Scope the two as one ADR rather than sequencing them independently: an
+  API with nothing new to read, or a register with no way out, each only answers half the question a
+  retail-heavy shop actually asks. **One-directional by design** — DiveDay emits, it never
+  consumes another system's API; a direct competitor (DiveShop360) has no reason to build the
+  receiving end itself, so the intended shape is DiveDay's webhooks feeding a no-code bridge (a
+  published Zapier/Make integration) a shop or its own tooling wires to whatever it already runs
+  (Shopify, QuickBooks, ...) — not a bespoke DiveDay-built connector per target system.
 
 ### 2. Third-party e-signature adapter (M3 follow-up)
 
@@ -70,7 +79,13 @@ M5 removed equipment inventory on purpose, but "who has what, what's due for ser
 for gear-heavy shops and a disqualifier for the classic retail shop
 ([competitive-analysis.md](../assessments/competitive-analysis.md#what-blocks-the-purchase) #3). The re-entry is a
 lightweight who-has-what + service-due register — **not** a POS, and **not** the deleted assignment
-model. **ADR required** (it reverses a shipped decision).
+model. **ADR required** (it reverses a shipped decision). A real DiveShop360-shop inquiry
+(2026-08-15) named exactly this gap unprompted, alongside modules DiveDay is declining (work orders,
+retail inventory/POS — see the competitive-analysis "explicitly fine to not have" list) — the first
+concrete buyer evidence behind this item, not just the audit finding. Scope with §1's read API as
+one slice; the item table above it (`gear_items`) is the register's likely shape: physical units,
+an assignment/reservation per booking date range (the double-booking guard the inquiry asked for by
+name), and a service-due flag, kept separate from `rental_fit_profiles` rather than replacing it.
 
 ### 4. Nitrox fill / analysis log (open question)
 

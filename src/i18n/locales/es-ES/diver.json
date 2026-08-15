@@ -2666,6 +2666,10 @@
           "title": "Un punto de venta minorista",
           "detail": "Conserva la caja que ya tienes. Un pedido puede llevar una línea de venta minorista, pero aquí no hay lector de código de barras ni control de inventario — DiveDay lleva el lado acuático del centro."
         },
+        "workOrders": {
+          "title": "Un taller de reparaciones",
+          "detail": "Conserva lo que ya usas para tu taller. DiveDay no lleva órdenes de reparación, piezas ni mano de obra — rastrea lo que un buceador alquila contigo, no lo que le reparas."
+        },
         "gearSerials": {
           "title": "Números de serie del equipo",
           "detail": "DiveDay rastrea las tallas de cada buceador y arma la lista de equipo del viaje. No gestiona equipos individuales ni su historial de mantenimiento."
