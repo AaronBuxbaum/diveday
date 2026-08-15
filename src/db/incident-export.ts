@@ -75,14 +75,26 @@ export async function getIncidentExport(
         .innerJoin(people, eq(people.id, bookings.personId))
         .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
         .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-        .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt)),
+        // `seq` last, for a reason sharper here than anywhere else: this
+        // document is hashed, so two orderings of the same events produce two
+        // different SHA-256 integrity codes for one departure. A tie on
+        // transaction time would make the hash a coin toss.
+        .orderBy(
+          asc(rollCallEvents.occurredAt),
+          asc(rollCallEvents.createdAt),
+          asc(rollCallEvents.seq),
+        ),
       db
         .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
         .from(rollCallCrewEvents)
         .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
         .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
         .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-        .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.createdAt)),
+        .orderBy(
+          asc(rollCallCrewEvents.occurredAt),
+          asc(rollCallCrewEvents.createdAt),
+          asc(rollCallCrewEvents.seq),
+        ),
       db
         .select({ attestation: rollCallCrewAttestations, attester: people })
         .from(rollCallCrewAttestations)

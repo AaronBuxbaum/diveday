@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe("stripe connect callback authorization", () => {
-  it("refuses to link the account and redirects with not_authorized when the staff member can no longer manage payment settings", async () => {
+  it("refuses to link the account and redirects with not-authorized when the staff member can no longer manage payment settings", async () => {
     vi.mocked(canPersonManagePaymentSettings).mockResolvedValue(false);
 
     const response = await GET(request("nonce_1"));
@@ -66,7 +66,7 @@ describe("stripe connect callback authorization", () => {
     expect(response.status).toBe(307);
     const location = new URL(response.headers.get("location") ?? "");
     expect(location.pathname).toBe("/shop/reef/settings");
-    expect(location.searchParams.get("notice")).toBe("not_authorized");
+    expect(location.searchParams.get("notice")).toBe("not-authorized");
     // The state cookie round trip and demo-shop checks never even matter here:
     // authorization is re-checked against live roles before any account is linked.
     expect(getShopById).not.toHaveBeenCalled();
@@ -120,7 +120,7 @@ describe("stripe connect callback authorization", () => {
     const response = await GET(request("nonce_1"));
 
     const location = new URL(response.headers.get("location") ?? "");
-    expect(location.searchParams.get("notice")).toBe("connect_failed");
+    expect(location.searchParams.get("notice")).toBe("connect-failed");
     expect(connectProviderFromEnvironment).not.toHaveBeenCalled();
     expect(upsertShopStripeAccount).not.toHaveBeenCalled();
   });

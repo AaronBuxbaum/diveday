@@ -1,6 +1,11 @@
 # FU-20260811-remove-rum-endpoint-workaround — Drop the explicit RUM `endpoint` once aws-rum-web fixes region substitution upstream
 
-- **Status:** Open
+- **Status:** Waiting
+- **Waiting on:** an `aws-rum-web` release that fixes the region/endpoint merge order reported as
+  `aws-observability/aws-rum-web#881`. To check: read that package's CHANGELOG for "endpoint" or
+  "region", or re-read `defaultConfig()` in the installed
+  `node_modules/@aws-rum/web-slim/dist/*/orchestration/Orchestration.js`. Cheapest moment to look is
+  whenever the dependency is bumped for another reason.
 - **Raised:** 2026-08-11 — fixing a live 403 on every page load (`src/app/rum-client.tsx`)
 - **Kind:** cleanup
 - **Effort:** S
@@ -56,5 +61,5 @@ release fixes this (check its CHANGELOG for "endpoint" or "region"), bump the de
 the explicit `endpoint: https://dataplane.rum.${config.region}.amazonaws.com` line and its comment
 in src/app/rum-client.tsx, run `pnpm check`, and verify in a deployed environment that
 dataplane.rum.<real-region>.amazonaws.com receives 200s instead of the region-mismatch 403. Delete
-docs/product/follow-ups/FU-20260811-remove-rum-endpoint-workaround.md as part of the change.
+docs/product/follow-ups/waiting/FU-20260811-remove-rum-endpoint-workaround.md as part of the change.
 ```

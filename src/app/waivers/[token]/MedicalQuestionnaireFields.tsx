@@ -107,9 +107,9 @@ function QuestionnaireOutcome({
   if (!text) return null;
   const tone =
     outcome === "clear"
-      ? "border-success/40 bg-success/10 text-success"
+      ? "border-success/40 bg-success/10 text-success-strong"
       : outcome === "referral"
-        ? "border-warning/40 bg-warning/10 text-warning"
+        ? "border-warning/40 bg-warning/10 text-warning-strong"
         : "border-border bg-surface-sunken text-muted";
   return (
     // Polite, not assertive: this changes on nearly every answer, and a diver

@@ -198,6 +198,10 @@ export async function updateTrip(
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
         createdAt: rollCallEvents.createdAt,
+        // Selected so a mis-tap and its `cleared` written in one transaction
+        // resolve to the retraction rather than to heap order — see
+        // `maxRecordedDiveNumber`'s `seq` doc.
+        seq: rollCallEvents.seq,
       })
       .from(rollCallEvents)
       .where(eq(rollCallEvents.tripId, tripId));

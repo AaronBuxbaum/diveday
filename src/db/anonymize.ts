@@ -149,6 +149,10 @@ const ERASED_PERSON_COLUMNS = {
   diveInsurance: null,
   locale: null,
   courtesyEmailOptOutAt: null,
+  // A statement this person made about their own diving, and the erasure takes
+  // it with the certifications it stands in for — leaving it would keep saying
+  // something about a body whose record is supposed to be gone.
+  noCertificationDeclaredAt: null,
 } as const;
 
 /**

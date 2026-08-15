@@ -72,11 +72,13 @@ const STATE_STYLE: Record<
   ChecklistState,
   { glyph: string; word: DiverMessageKey; box: string; text: string }
 > = {
+  // `-strong` on the success pair: the raw light-palette hue reads 4.39:1 on
+  // its own 10% fill, under AA (docs/design/forms-and-controls.md).
   done: {
     glyph: "✓",
     word: "ready.stateDone",
-    box: "bg-success/10 text-success",
-    text: "text-success",
+    box: "bg-success/10 text-success-strong",
+    text: "text-success-strong",
   },
   action: {
     glyph: "→",
@@ -660,6 +662,10 @@ export default async function DiverReadinessPage({
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).
   const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
+  // ...and each leg of the run between them, same order: dock to the first
+  // site, then site to site (ADR 20260815-per-leg-travel-minutes). The morning
+  // of a dive is when a long second leg matters most.
+  const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const rescheduleBlockedKey =
@@ -898,6 +904,7 @@ export default async function DiverReadinessPage({
               // where the whole itinerary is laid out.
               multiDay={false}
               siteBottomTimes={siteBottomTimes}
+              legTravelTimes={legTravelTimes}
               // This page renders no conditions card at all, so the suit line
               // has nowhere else to land — and the morning of a dive is exactly
               // when a diver is deciding what to put in the car.

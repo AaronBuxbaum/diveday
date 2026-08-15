@@ -77,7 +77,18 @@ export function CardSightingForm({
         {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}
         <Field
           label={t("divers.certifications.agency")}
-          description={t("divers.certifications.sightCardHint")}
+          /* The nitrox twin needs its own sentence, not a shorter version of
+             this one. "Type what the card in your hand says" reads as *the
+             nitrox card* — and a RAID or GUE diver has no standalone enriched-
+             air card, because the gas is part of their level certification. A
+             staffer holding that diver's only card was being told, in effect,
+             that the right card did not exist, with a required number field
+             underneath. */
+          description={t(
+            cardType === "nitrox"
+              ? "divers.certifications.sightNitroxCardHint"
+              : "divers.certifications.sightCardHint",
+          )}
         >
           <select name="sightedAgency" className={controlClass}>
             {Object.entries(AGENCY_KEYS).map(([value, key]) => (

@@ -1,7 +1,16 @@
 # 20260812-configurable-dock-day-rhythm — A shop's dive day is six configured minute amounts, never inferred from the trip window
 
-- **Status:** Accepted
+- **Status:** Accepted — amended 2026-08-15 by
+  [20260815-per-leg-travel-minutes](20260815-per-leg-travel-minutes.md)
 - **Date:** 2026-08-12
+
+**Amendment (2026-08-15).** Everything below stands — the six columns, the two kinds of number, the
+`0`-takes-the-beat-out rule, the arrival clamp and the published-return invariant. One reading has
+changed: `boat_ride_minutes` is now the shop's *usual* run and the **fallback** for any leg a
+departure has not stated its own minutes for. A departure's legs live on `trip_dives.travel_minutes`
+— per leg, because a two-tank day is dock -> A -> B -> dock and A->B is not B->A. That is the
+"let each trip override the rhythm" alternative below, taken in the one shape that is not wrong:
+per leg rather than per trip.
 
 ## Context
 
@@ -88,7 +97,10 @@ from.
   departure they run, to solve a problem nobody has reported, before anyone has used the shop-level
   one. A departure that truly differs already states the two facts that matter most — its own
   departure and return times, and its own dive count — and those are inputs here. Left as a
-  follow-up rather than designed around.
+  follow-up rather than designed around. **Taken up 2026-08-15**, for the one beat that genuinely
+  varies per departure and in the one shape that is not wrong: per *leg* on `trip_dives`, never a
+  per-trip copy of these columns — see
+  [20260815-per-leg-travel-minutes](20260815-per-leg-travel-minutes.md).
 - **Absolute times per beat rather than offsets and durations.** Rejected because a rhythm has to
   compose with *every* departure a shop runs, including the 7:00 AM and the 1:30 PM; a beat pinned
   to a wall-clock time is a rhythm for one trip.

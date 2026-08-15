@@ -403,7 +403,15 @@ export async function listRollCallGaps(
         and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
       )
       .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
-      .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt)),
+      // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
+      // `created_at` is transaction time, so a batched write inside one
+      // transaction leaves the order arbitrary — and Today's missing-diver row
+      // and the manifest must never disagree about who is still in the water.
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      ),
     db
       .select({
         tripId: rollCallCrewEvents.tripId,
@@ -428,7 +436,11 @@ export async function listRollCallGaps(
       .where(
         and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
       )
-      .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.createdAt)),
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
   ]);
 
   const rosterByTrip = new Map<string, string[]>();

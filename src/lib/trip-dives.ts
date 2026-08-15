@@ -1,4 +1,22 @@
 import type { TripDiveDraft } from "@/db/trips";
+import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
+
+/**
+ * A leg's stated minutes, or null for "the shop's ride-out figure is right".
+ *
+ * Null rather than a refusal for anything outside the bounds the box already
+ * enforces: a leg is one optional hint among a card of optional hints, and
+ * losing a whole departure's edit because a forged post carried `travel=9999`
+ * would be a worse answer than falling back to the number the day used before
+ * anybody typed. The table's CHECK constraint is what makes that safe — it
+ * would refuse the write, so this never hands one down.
+ */
+function travelMinutesFromForm(raw: string): number | null {
+  if (!raw) return null;
+  const minutes = Number(raw);
+  const { min, max } = DOCK_DAY_LIMITS.boatRideMinutes;
+  return Number.isInteger(minutes) && minutes >= min && minutes <= max ? minutes : null;
+}
 
 /** Reads the ordered optional dive cards from a trip form. */
 export function tripDiveDraftsFromForm(formData: FormData, count: number): TripDiveDraft[] {
@@ -9,8 +27,33 @@ export function tripDiveDraftsFromForm(formData: FormData, count: number): TripD
       title: value("title") || null,
       diveSiteId: value("siteId") || null,
       description: value("description") || null,
+      travelMinutes: travelMinutesFromForm(value("travelMinutes")),
     };
   });
+}
+
+/**
+ * Did the staffer actually fill the per-dive cards in?
+ *
+ * The cards only exist in the DOM while the "More options" panel is expanded,
+ * so a form posted with the panel closed reads as a full set of blank drafts —
+ * and writing those over a departure would erase the quick row's single
+ * dive-site select. The caller therefore needs to tell "blank because it was
+ * never on screen" from "blank because that is what they typed", and this is
+ * that test.
+ *
+ * Every optional field counts, `travelMinutes` included: a staffer whose only
+ * per-dive edit is "ten minutes out to the house reef, then a long run across
+ * to the wall" has filled the cards in, and omitting that field threw the
+ * whole departure's timeline away as though the panel had never been opened.
+ * `0` is a stated leg (the same site twice, a shore entry), so the check is
+ * for presence rather than truthiness.
+ */
+export function hasTripDiveContent(drafts: readonly TripDiveDraft[]): boolean {
+  return drafts.some(
+    (draft) =>
+      Boolean(draft.title || draft.diveSiteId || draft.description) || draft.travelMinutes !== null,
+  );
 }
 
 /**

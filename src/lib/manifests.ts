@@ -3,26 +3,29 @@ import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
 import { unavailableReadiness } from "./readiness";
+import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
+import { isNotBackAboard } from "./roll-call";
 import type { MedicalWaiverMark } from "./waivers";
 
-export type RollCallState = "awaiting" | "boarded" | "not_boarded";
-
-export type RollCallCheckpoint = "departure" | `after_dive_${number}`;
-
-export function rollCallCheckpoints(plannedDives: number): RollCallCheckpoint[] {
-  const safeCount = Math.max(1, Math.min(4, Math.trunc(plannedDives)));
-  return [
-    "departure",
-    ...Array.from({ length: safeCount }, (_, index) => `after_dive_${index + 1}` as const),
-  ];
-}
-
-export function isRollCallCheckpoint(
-  value: string,
-  plannedDives: number,
-): value is RollCallCheckpoint {
-  return rollCallCheckpoints(plannedDives).some((checkpoint) => checkpoint === value);
-}
+/**
+ * The roll-call vocabulary lives in `./roll-call`, and is re-exported here so
+ * every existing `@/lib/manifests` import keeps working. It is split out for a
+ * bundling reason, stated in full at the top of that file: `offline-manifests.ts`
+ * is compiled into the service worker, and one value import from *this* module
+ * drags `readiness.ts` → `waivers.ts` → `node:crypto` into that bundle and
+ * fails the build.
+ */
+export type {
+  RollCallCheckpoint,
+  RollCallRecord,
+  RollCallState,
+} from "./roll-call";
+export {
+  carryForwardNotBoarded,
+  isNotBackAboard,
+  isRollCallCheckpoint,
+  rollCallCheckpoints,
+} from "./roll-call";
 
 /**
  * The highest dive number any *currently live* recorded roll-call checkpoint
@@ -53,6 +56,16 @@ export function maxRecordedDiveNumber(
     status: string;
     occurredAt: Date;
     createdAt: Date;
+    /**
+     * The append sequence, when the caller selected it. Optional only because
+     * a caller may not join it; one that can supply it always should, because
+     * `createdAt` is *transaction* time and two events written in one
+     * transaction tie on it exactly — leaving "which came last" to whatever
+     * order the heap hands back. Here that decides whether a `cleared` undoes
+     * a live result or the live result stands, which is the difference
+     * between a dive count that can be shrunk and one that cannot.
+     */
+    seq?: number | null;
   }[],
 ): number {
   const latestByKey = new Map<string, (typeof events)[number]>();
@@ -63,7 +76,13 @@ export function maxRecordedDiveNumber(
       !current ||
       event.occurredAt > current.occurredAt ||
       (event.occurredAt.getTime() === current.occurredAt.getTime() &&
-        event.createdAt > current.createdAt)
+        (event.createdAt > current.createdAt ||
+          // Same instant *and* same transaction: the sequence is the only
+          // thing left that records what actually came first. Both null (rows
+          // predating the column) falls through to "keep what we have", which
+          // is the behaviour this had before the column existed.
+          (event.createdAt.getTime() === current.createdAt.getTime() &&
+            (event.seq ?? 0) > (current.seq ?? 0))))
     ) {
       latestByKey.set(key, event);
     }
@@ -144,19 +163,6 @@ export type ManifestDiverInput = {
   checkedIn: boolean;
 };
 
-export type RollCallRecord = {
-  state: Exclude<RollCallState, "awaiting">;
-  occurredAt: Date;
-  recordedByName: string;
-  note: string | null;
-  /**
-   * True when this result was not recorded at this checkpoint but carried
-   * forward: a diver left the boat at an earlier checkpoint, so every later
-   * checkpoint defaults to not boarded until staff say otherwise.
-   */
-  implied?: boolean;
-};
-
 export type ManifestCrewMember = {
   /**
    * The crew member's `people.id` — the **subject** of their roll-call result
@@ -232,35 +238,6 @@ export type CrewAttestation = {
   occurredAt: Date;
   note: string | null;
 };
-
-/**
- * `not_boarded` means two opposite things depending on where it was recorded,
- * and conflating them is what let the manifest print "Roll call complete ✦" on
- * a boat the Today queue was raising a missing-diver alarm about (DOM-H3):
- *
- * - at `departure` it means **never left the dock**. Benign, genuinely
- *   accounted for, and correctly true of every later checkpoint too — which is
- *   what `carryForwardNotBoarded` below fills in (`implied: true`).
- * - explicitly at an `after_dive_n` checkpoint it means **did not return to the
- *   boat**. That *is* the missing-diver event: the crew member who taps the
- *   only control that isn't "Boarded" is saying "not back yet, check again",
- *   and the checkpoint must stay open.
- *
- * This predicate is the single place that split lives on the manifest side.
- * `src/db/today.ts` states the same rule for the work queue (see
- * `isAccountedForAfterDive` there); the two are asserted against each other on
- * one trip in src/db/today.test.ts so they can never drift apart again.
- */
-export function isNotBackAboard(
-  checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
-): boolean {
-  if (checkpoint === "departure") return false;
-  if (rollCall?.state !== "not_boarded") return false;
-  // Carried forward from the dock (see `carryForwardNotBoarded`): a diver who
-  // never left is accounted for at every later checkpoint, not missing from it.
-  return rollCall.implied !== true;
-}
 
 /**
  * Is this diver counted at this checkpoint? The one rule every head count on
@@ -886,41 +863,4 @@ export function rollCallLabel(
   if (rollCall.state === "boarded") return "boarded";
   if (isNotBackAboard(checkpoint, rollCall)) return "not_back_aboard";
   return rollCall.implied ? "not_boarded_carried" : "not_boarded";
-}
-
-/**
- * Fills the "never left the dock, so still ashore" default across one diver's
- * ordered checkpoints. A diver marked not boarded **at departure** defaults to
- * not boarded at every later checkpoint with no result of its own (flagged
- * `implied`) until an explicit result breaks the chain. Carry-forward never
- * fabricates a "boarded": the default can only ever read absent.
- *
- * **Only index 0 — `departure` — is ever a source, and this is the whole point
- * (DOM-H3).** A `not_boarded` at an after-dive checkpoint does not mean "left
- * ashore", it means **did not return to the boat** (`isNotBackAboard` above).
- * Carrying that forward as an accounted-for record is what closed every
- * subsequent checkpoint on exactly the boat that had a diver in the water — the
- * manifest printed "Roll call complete ✦" while the Today queue was raising a
- * top-severity missing-diver row about the same trip. A missing diver must
- * never satisfy a later count; the crew have to state, per checkpoint, whether
- * that person came back.
- *
- * A `cleared` undo has already been collapsed to "no result" upstream
- * (listLatestRollCallByBooking), so it is not seen here as a breaker. Clearing
- * the originating departure not-boarded removes the source and the whole chain
- * reverts to awaiting; clearing a later re-board reverts that checkpoint to the
- * carried default. Pure and order-sensitive: pass the checkpoints in
- * departure→last order.
- */
-export function carryForwardNotBoarded(
-  perCheckpoint: readonly (RollCallRecord | undefined)[],
-): (RollCallRecord | undefined)[] {
-  let carried: RollCallRecord | undefined;
-  return perCheckpoint.map((result, index) => {
-    if (result) {
-      carried = index === 0 && result.state === "not_boarded" ? result : undefined;
-      return result;
-    }
-    return carried ? { ...carried, implied: true } : undefined;
-  });
 }

@@ -10,8 +10,6 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
 import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -24,8 +22,8 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatTimeRangeTz } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { requireShopSurface } from "@/lib/session";
+import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { createShiftAction, deleteShiftAction } from "./actions";
 
@@ -50,7 +48,7 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "shift-saved": { tone: "success", key: "staffing.notice.shiftSaved" },
   "shift-deleted": { tone: "success", key: "staffing.notice.shiftDeleted" },
   overlap: { tone: "danger", key: "staffing.notice.overlap" },
-  staff_not_found: { tone: "danger", key: "staffing.notice.staffNotFound" },
+  "staff-not-found": { tone: "danger", key: "staffing.notice.staffNotFound" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
 };
@@ -64,7 +62,7 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  * two. `not-authorized` stays there too — a staffer without the right never
  * sees the form at all.
  */
-const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff_not_found", "invalid"]);
+const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff-not-found", "invalid"]);
 
 export default async function StaffingPage({
   params,
@@ -73,12 +71,9 @@ export default async function StaffingPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ from?: string; to?: string; notice?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const query = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(`/shop/${shopSlug}`);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   // Negotiated from the request, falling back to the shop's default — a staff
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
@@ -95,7 +90,7 @@ export default async function StaffingPage({
     query.to && isValidCalendarDate(query.to) ? query.to : shiftCalendarDate(fromValue, 6);
   const fromWall = parseWallTime(fromValue, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(toValue, 1), "00:00");
-  if (!fromWall || !toWall) redirect(`/shop/${shopSlug}/staffing`);
+  if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
   const view = await getStaffingView(
     db,
     shop.id,

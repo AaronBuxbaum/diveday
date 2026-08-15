@@ -33,7 +33,7 @@ import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -219,7 +219,6 @@ export default async function DiveSitesPage({
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
-                    className: "text-foreground",
                   })}
                 >
                   {t("diveSites.list.searchClear")}
@@ -360,7 +359,7 @@ async function CatalogView({
   /** A template to open in full before deciding — `?view=catalog&template=<slug>`. */
   slug?: string;
 }) {
-  const back = `/shop/${shopSlug}/dive-sites`;
+  const back = shopPath(shopSlug, "dive-sites");
   const catalogHref = `${back}?view=catalog`;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
@@ -374,7 +373,7 @@ async function CatalogView({
     const id = String(formData.get("templateId") ?? "");
     const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
     if (!site) revalidateAndRedirect(back);
-    revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
+    revalidateAndRedirect(back, noticeUrl(`${back}/${site.id}`, "imported"));
   }
 
   // Reading a template before taking it. Importing was a one-tap commitment
@@ -438,7 +437,6 @@ async function CatalogView({
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
-                    className: "text-foreground",
                   })}
                 >
                   {t("diveSites.catalog.importToLibrary")}

@@ -48,7 +48,9 @@ describe("dock-day rhythm", () => {
       "arrive",
       "briefing",
       "departure",
-      "boatRide",
+      // Numbered by the dive it delivers to, now that a departure has one run
+      // per leg rather than a single ride out.
+      "boatRide1",
       "dive1",
       "surfaceInterval1",
       "dive2",
@@ -177,6 +179,98 @@ describe("a dive site's own time in the water", () => {
     const offsets = dockDayOffsets(rhythm(), 2, [30, 60]);
     const dive2 = offsets.find((beat) => beat.step === "dive" && beat.number === 2);
     expect(dive2?.minutesFromDeparture).toBe(20 + 30 + 60);
+  });
+});
+
+/**
+ * The reason this exists: a departure is dock -> A -> B -> dock, and the legs
+ * are order-dependent — A->B is not B->A when the sites sit on different parts
+ * of the reef line. One number per trip could only be wrong in a way that
+ * varied per departure (ADR 20260815-per-leg-travel-minutes).
+ */
+describe("a departure's own legs", () => {
+  const start = new Date("2026-07-18T12:00:00Z");
+  const end = new Date("2026-07-18T20:00:00Z");
+  const diveAt = (entries: ReturnType<typeof dockDayTimeline>, number: number) =>
+    entries.find((beat) => beat.step === "dive" && beat.number === number)?.at.toISOString();
+
+  it("rides out on the trip's own first leg rather than the shop's usual one", () => {
+    // Ten minutes to the house reef, not the shop's habitual twenty.
+    const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [10]);
+    expect(diveAt(timeline, 1)).toBe("2026-07-18T12:10:00.000Z");
+  });
+
+  it("leaves a leg the trip says nothing about on the shop's own figure", () => {
+    // The whole no-regression promise: a departure that states one leg must not
+    // read worse than one that states none.
+    const partial = dockDayTimeline(start, rhythm(), end, 2, undefined, [10, null]);
+    const empty = dockDayTimeline(start, rhythm(), end, 2);
+    expect(beats(partial)).toEqual(beats(empty));
+    // Only the leg that was stated moved: dive 2 is still 45 under + 60 up.
+    expect(diveAt(partial, 2)).toBe("2026-07-18T13:55:00.000Z");
+    expect(diveAt(empty, 2)).toBe("2026-07-18T14:05:00.000Z");
+  });
+
+  it("changes nothing at all for a shop that has filled nothing in", () => {
+    const before = dockDayTimeline(start, rhythm(), end, 3);
+    const after = dockDayTimeline(start, rhythm(), end, 3, undefined, [null, undefined]);
+    expect(after).toEqual(before);
+  });
+
+  it("runs to the next site inside the surface interval it fits in", () => {
+    // Twenty-five minutes across the reef, under a sixty-minute interval: the
+    // boat moves while the divers sit it out, so the day does not grow.
+    const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [20, 25]);
+    expect(diveAt(timeline, 2)).toBe(diveAt(dockDayTimeline(start, rhythm(), end, 2), 2));
+    expect(beats(timeline)).toContain("surfaceInterval1");
+  });
+
+  it("lets a run longer than the interval push the next dive out, and name itself", () => {
+    // Ninety minutes out to the wall under a sixty-minute interval: the run is
+    // the dominant fact about that window, so it is what the diver reads.
+    const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [20, 90]);
+    expect(beats(timeline)).toEqual([
+      "arrive",
+      "briefing",
+      "departure",
+      "boatRide1",
+      "dive1",
+      "boatRide2",
+      "dive2",
+      "return",
+    ]);
+    // 20 out + 45 under + 90 across, rather than the 60 it would have been.
+    expect(diveAt(timeline, 2)).toBe("2026-07-18T14:35:00.000Z");
+  });
+
+  it("honours a stated zero, which a bottom time deliberately does not", () => {
+    // Same site twice, or a walk-in entry: `0` is an answer here, so the ride
+    // out drops rather than falling back to the shop's twenty minutes.
+    const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [0]);
+    expect(beats(timeline)).not.toContain("boatRide1");
+    expect(diveAt(timeline, 1)).toBe(start.toISOString());
+  });
+
+  it("ignores a nonsense leg rather than laying out a negative run", () => {
+    const nonsense = dockDayTimeline(start, rhythm(), end, 2, undefined, [-5, 12.5]);
+    expect(nonsense).toEqual(dockDayTimeline(start, rhythm(), end, 2));
+  });
+
+  it("still lets the published return time truncate a day the legs made too long", () => {
+    // Two hours out and two hours back across is a day this window cannot hold.
+    const short = new Date("2026-07-18T15:00:00Z");
+    const timeline = dockDayTimeline(start, rhythm(), short, 2, undefined, [120, 120]);
+    // The second run is walked back off the tail with the dive it existed for,
+    // rather than sitting at the end as a boat that set off and gave up.
+    expect(beats(timeline)).toEqual([
+      "arrive",
+      "briefing",
+      "departure",
+      "boatRide1",
+      "dive1",
+      "return",
+    ]);
+    expect(timeline.every(({ at }) => at <= short)).toBe(true);
   });
 });
 

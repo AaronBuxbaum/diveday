@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -14,11 +13,9 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
-import { getShopById } from "@/db/shops";
 import {
   canAcceptPayments,
   getShopStripeAccount,
@@ -51,7 +48,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   type CuratedTimeZone,
@@ -91,54 +88,54 @@ function noticeMessages(
   t: StaffTranslator,
 ): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
   return {
-    packing_saved: { tone: "success", text: t("settings.main.notice.packingSaved") },
-    packing_invalid: { tone: "danger", text: t("settings.main.notice.packingInvalid") },
-    timezone_saved: { tone: "success", text: t("settings.main.notice.timezoneSaved") },
-    timezone_invalid: { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
-    dock_saved: { tone: "success", text: t("settings.main.notice.dockSaved") },
-    dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
-    units_saved: { tone: "success", text: t("settings.main.notice.unitsSaved") },
-    units_invalid: { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
-    rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
-    rental_prices_saved: { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
-    rental_prices_invalid: {
+    "packing-saved": { tone: "success", text: t("settings.main.notice.packingSaved") },
+    "packing-invalid": { tone: "danger", text: t("settings.main.notice.packingInvalid") },
+    "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
+    "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
+    "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
+    "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
+    "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
+    "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
+    "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
+    "rental-prices-invalid": {
       tone: "danger",
       text: t("settings.main.notice.rentalPricesInvalid"),
     },
-    contact_saved: { tone: "success", text: t("settings.main.notice.contactSaved") },
-    contact_invalid: { tone: "danger", text: t("settings.main.notice.contactInvalid") },
-    address_saved: { tone: "success", text: t("settings.main.notice.addressSaved") },
-    address_removed: { tone: "success", text: t("settings.main.notice.addressRemoved") },
-    address_invalid: { tone: "danger", text: t("settings.main.notice.addressInvalid") },
-    review_url_saved: { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
-    review_url_invalid: { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
-    search_listing_on: { tone: "success", text: t("settings.main.notice.searchListingOn") },
-    search_listing_off: { tone: "success", text: t("settings.main.notice.searchListingOff") },
+    "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
+    "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
+    "address-saved": { tone: "success", text: t("settings.main.notice.addressSaved") },
+    "address-removed": { tone: "success", text: t("settings.main.notice.addressRemoved") },
+    "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
+    "review-url-saved": { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
+    "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
+    "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
+    "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
-    connect_failed: { tone: "danger", text: t("settings.main.notice.connectFailed") },
-    not_configured: { tone: "warning", text: t("settings.main.notice.notConfigured") },
+    "connect-failed": { tone: "danger", text: t("settings.main.notice.connectFailed") },
+    "not-configured": { tone: "warning", text: t("settings.main.notice.notConfigured") },
     disconnected: { tone: "success", text: t("settings.main.notice.disconnected") },
     refreshed: { tone: "success", text: t("settings.main.notice.refreshed") },
-    not_authorized: { tone: "danger", text: t("settings.main.notice.notAuthorized") },
+    "not-authorized": { tone: "danger", text: t("settings.main.notice.notAuthorized") },
     // Promos' own gate (`shop/[shopSlug]/promos/page.tsx`) bounces a
-    // non-owner/manager here — a distinct code from `not_authorized` above
+    // non-owner/manager here — a distinct code from `not-authorized` above
     // so it shows the promo-specific explanation rather than the rentals
     // one (task 82, UX persona 11 "Kai").
-    promos_not_authorized: { tone: "danger", text: t("promos.notice.notAuthorized") },
+    "promos-not-authorized": { tone: "danger", text: t("promos.notice.notAuthorized") },
     // Same shape and the same reason: the WhatsApp page's own gate bounces a
     // non-owner/manager here, and the payment-settings wording above would
     // explain the wrong surface.
-    whatsapp_not_authorized: { tone: "danger", text: t("whatsapp.notice.not_authorized") },
+    "whatsapp-not-authorized": { tone: "danger", text: t("whatsapp.notice.not-authorized") },
     // Team and Import are the last two Settings sub-pages whose gate used to
     // teleport a refused staffer to Today saying nothing at all. Same rule as
     // the four above: bounce to the nearest parent surface with a code it
     // handles (task 82).
-    team_not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
-    import_not_authorized: { tone: "danger", text: t("settings.import.notice.notAuthorized") },
+    "team-not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+    "import-not-authorized": { tone: "danger", text: t("settings.import.notice.notAuthorized") },
     // Backups hold the same bar as the export download — the destination
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
-    backup_not_authorized: { tone: "danger", text: t("backup.notice.not_authorized") },
+    "backup-not-authorized": { tone: "danger", text: t("backup.notice.not-authorized") },
   };
 }
 
@@ -310,6 +307,9 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
  * A labelled group of settings rows with an anchor `#id`. Rows keep their own
  * `<h3>`; this is the page's real `<h2>` level, so the heading hierarchy stays
  * `<h1>` (ShopPageHeader) -> group `<h2>` -> row `<h3>`.
+ *
+ * No outer margin: the page stacks its groups in one `space-y-10`, the same
+ * rhythm `SectionCard` assumes (docs/design/forms-and-controls.md).
  */
 export function SettingsGroup({
   group,
@@ -321,7 +321,7 @@ export function SettingsGroup({
   children: ReactNode;
 }) {
   return (
-    <div className="mt-10 first:mt-0">
+    <div>
       <h2
         id={group.id}
         className="mb-3 scroll-mt-24 text-xs font-semibold tracking-[0.14em] text-muted uppercase"
@@ -381,21 +381,18 @@ export default async function SettingsPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string; saved?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, saved } = await searchParams;
-  const db = await getDb();
   // Every row on this page changes the shop rather than the day, so the page
   // itself is owner/manager work (src/lib/authz.ts — canManageShopSettings),
   // checked against live roles. Bounced to Today with an explanatory notice
   // rather than teleporting silently, exactly like the export and import pages
   // below it. `/settings/calendar` is deliberately outside this gate: a staff
   // calendar subscription is a personal feed, not shop policy.
-  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${session.user.shopSlug}?notice=settings_not_authorized`);
-  }
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect("/");
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageShopSettings,
+    refusal: { notice: "settings-not-authorized" },
+  });
   const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
   const account = await getShopStripeAccount(db, session.user.shopId);
   const ready = canAcceptPayments(account);
@@ -464,7 +461,7 @@ export default async function SettingsPage({
   const trialEndLabel = formatShortDate(trialEndsAt(shop.createdAt), locale, shop.timezone);
   const banner = noticeFromParam(notice, noticeMessages(t));
   // A recognized section opens its own row and renders the notice inside it;
-  // anything else (chiefly `not_authorized`, which spans several sections
+  // anything else (chiefly `not-authorized`, which spans several sections
   // rather than owning one) keeps the old top-of-page banner.
   const activeSection = (SECTION_IDS as readonly string[]).includes(saved ?? "")
     ? (saved as SectionId)
@@ -536,39 +533,43 @@ export default async function SettingsPage({
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
       ) : null}
 
-      <SettingsGroup group={YOUR_SHOP_GROUP} label={t(YOUR_SHOP_GROUP.labelKey)}>
-        <SettingsRowList>
-          {/* Who works here comes first: an owner opening Settings to add a
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any group or card
+          (docs/design/forms-and-controls.md). */}
+      <div className="space-y-10">
+        <SettingsGroup group={YOUR_SHOP_GROUP} label={t(YOUR_SHOP_GROUP.labelKey)}>
+          <SettingsRowList>
+            {/* Who works here comes first: an owner opening Settings to add a
               colleague used to find no door to Team anywhere on this page — only
               the nav's "Set up" menu and ⌘K knew it existed. */}
-          {canManageTeam ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/team`}
-              heading={t("settings.main.team.heading")}
-              description={t("settings.main.team.description")}
-            />
-          ) : null}
+            {canManageTeam ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/team`}
+                heading={t("settings.main.team.heading")}
+                description={t("settings.main.team.description")}
+              />
+            ) : null}
 
-          {/* The two reference libraries the daily surfaces consume — the
+            {/* The two reference libraries the daily surfaces consume — the
               board's add panel reads the dive-site list, and every waiver a
               diver signs renders the template. Both left the header nav with
               the cut to five tabs; an owner's path to them is this page (and
               the palette), so each gets a door beside the other configure-once
               work. */}
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/dive-sites`}
-            heading={t("settings.main.diveSites.heading")}
-            description={t("settings.main.diveSites.description")}
-          />
-          {canManageWaivers ? (
             <SettingsDoorRow
-              href={`/shop/${shopSlug}/waivers`}
-              heading={t("settings.main.waivers.heading")}
-              description={t("settings.main.waivers.description")}
+              href={`/shop/${shopSlug}/dive-sites`}
+              heading={t("settings.main.diveSites.heading")}
+              description={t("settings.main.diveSites.description")}
             />
-          ) : null}
+            {canManageWaivers ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/waivers`}
+                heading={t("settings.main.waivers.heading")}
+                description={t("settings.main.waivers.description")}
+              />
+            ) : null}
 
-          {/* First editable row, because it is the setting every other date
+            {/* First editable row, because it is the setting every other date
               and time on every surface is read through — the board's day
               headers, "sailing today", a departure's 08:30. Sign-up asked once
               and nothing could change it afterwards, so a shop that clicked
@@ -578,259 +579,262 @@ export default async function SettingsPage({
               default primary — this is a settings hub (docs/design/forms-and-
               controls.md, "Settings hubs are the one place..."), so only the
               Stripe "Connect"/"Reconnect" CTA below keeps primary weight. */}
-          <SettingsRow
-            heading={t("settings.main.timezone.heading")}
-            value={timezoneValue}
-            description={t("settings.main.timezone.description")}
-            detail={t("settings.main.timezone.detail")}
-            open={activeSection === "timezone"}
-          >
-            <SectionNotice banner={banner} section="timezone" active={activeSection} />
-            <FieldGrid as="form" action={saveTimezoneAction} columns={1} className="mt-4">
-              <Field label={t("settings.main.timezone.label")}>
-                {/* No device detection here, unlike sign-up: a stored zone is
+            <SettingsRow
+              heading={t("settings.main.timezone.heading")}
+              value={timezoneValue}
+              description={t("settings.main.timezone.description")}
+              detail={t("settings.main.timezone.detail")}
+              open={activeSection === "timezone"}
+            >
+              <SectionNotice banner={banner} section="timezone" active={activeSection} />
+              <FieldGrid as="form" action={saveTimezoneAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.timezone.label")}>
+                  {/* No device detection here, unlike sign-up: a stored zone is
                     an answer somebody already gave, and the whole point of this
                     row is to change it deliberately. */}
-                <select
-                  name="timezone"
-                  required
-                  defaultValue={shop.timezone || DEFAULT_TIMEZONE}
-                  className={controlClass}
-                >
-                  <TimezoneOptions
-                    selected={shop.timezone || DEFAULT_TIMEZONE}
-                    groupLabels={{
-                      americas: t(TIMEZONE_GROUP_KEYS.americas),
-                      caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
-                      europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
-                      asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
-                      allZones: t(TIMEZONE_GROUP_KEYS.allZones),
-                    }}
-                    zoneLabels={
-                      Object.fromEntries(
-                        Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [zone, t(key)]),
-                      ) as TimezoneZoneLabels
-                    }
+                  <select
+                    name="timezone"
+                    required
+                    defaultValue={shop.timezone || DEFAULT_TIMEZONE}
+                    className={controlClass}
+                  >
+                    <TimezoneOptions
+                      selected={shop.timezone || DEFAULT_TIMEZONE}
+                      groupLabels={{
+                        americas: t(TIMEZONE_GROUP_KEYS.americas),
+                        caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
+                        europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
+                        asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
+                        allZones: t(TIMEZONE_GROUP_KEYS.allZones),
+                      }}
+                      zoneLabels={
+                        Object.fromEntries(
+                          Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [
+                            zone,
+                            t(key),
+                          ]),
+                        ) as TimezoneZoneLabels
+                      }
+                    />
+                  </select>
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.timezone.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.timezone.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("settings.main.contact.heading")}
+              value={contactValue}
+              description={t("settings.main.contact.description")}
+              detail={t("settings.main.contact.detail")}
+              open={activeSection === "contact"}
+              // The first-run checklist's "Add contact details" lands here — a
+              // link that promises a form must arrive with the row open.
+              openOnHash="contact"
+              anchorId="contact"
+            >
+              <SectionNotice banner={banner} section="contact" active={activeSection} />
+              <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
+                <Field label={t("settings.main.contact.emailLabel")}>
+                  <input
+                    name="contactEmail"
+                    type="email"
+                    maxLength={200}
+                    autoComplete="email"
+                    defaultValue={shop.contactEmail ?? ""}
+                    placeholder="hello@yourshop.com"
+                    className={controlClass}
                   />
-                </select>
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.timezone.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
+                </Field>
+                <Field
+                  label={t("settings.main.contact.phoneLabel")}
+                  hint={t("settings.main.contact.phoneHint")}
                 >
-                  {t("settings.main.timezone.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
+                  <input
+                    name="contactPhone"
+                    type="tel"
+                    maxLength={40}
+                    autoComplete="tel"
+                    defaultValue={shop.contactPhone ?? ""}
+                    placeholder="+1 305 555 0134"
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.contact.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.contact.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
 
-          <SettingsRow
-            heading={t("settings.main.contact.heading")}
-            value={contactValue}
-            description={t("settings.main.contact.description")}
-            detail={t("settings.main.contact.detail")}
-            open={activeSection === "contact"}
-            // The first-run checklist's "Add contact details" lands here — a
-            // link that promises a form must arrive with the row open.
-            openOnHash="contact"
-            anchorId="contact"
-          >
-            <SectionNotice banner={banner} section="contact" active={activeSection} />
-            <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
-              <Field label={t("settings.main.contact.emailLabel")}>
-                <input
-                  name="contactEmail"
-                  type="email"
-                  maxLength={200}
-                  autoComplete="email"
-                  defaultValue={shop.contactEmail ?? ""}
-                  placeholder="hello@yourshop.com"
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("settings.main.contact.phoneLabel")}
-                hint={t("settings.main.contact.phoneHint")}
-              >
-                <input
-                  name="contactPhone"
-                  type="tel"
-                  maxLength={40}
-                  autoComplete="tel"
-                  defaultValue={shop.contactPhone ?? ""}
-                  placeholder="+1 305 555 0134"
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.contact.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.contact.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
-
-          {/* One search box, no Save: picking a place *is* the save (ADR
+            {/* One search box, no Save: picking a place *is* the save (ADR
               20260811-address-is-one-search-box). The five free-text boxes that
               used to sit under the lookup are gone — they were the source of
               every mangled address the lookup was introduced to prevent. */}
-          <SettingsRow
-            heading={t("settings.main.address.heading")}
-            value={addressValue}
-            detail={t("settings.main.address.detail")}
-            open={activeSection === "address"}
-          >
-            <SectionNotice banner={banner} section="address" active={activeSection} />
-            <AddressSearch
-              initial={{
-                addressStreet: shop.addressStreet ?? "",
-                addressLocality: shop.addressLocality ?? "",
-                addressRegion: shop.addressRegion ?? "",
-                addressPostalCode: shop.addressPostalCode ?? "",
-                addressCountry: shop.addressCountry ?? "",
-              }}
-              // No geocoder credentials is the ordinary local and self-hosted
-              // case: the card says so in a sentence rather than offering a box
-              // that answers nothing (src/lib/address-lookup.ts).
-              enabled={addressLookupEnabled}
-              copy={{
-                searchLabel: t("settings.main.address.searchLabel"),
-                searchPlaceholder: t("settings.main.address.searchPlaceholder"),
-                searching: t("settings.main.address.searching"),
-                saving: t("settings.main.address.saving"),
-                noMatches: t("settings.main.address.noMatches"),
-                lookupFailed: t("settings.main.address.lookupFailed"),
-                lookupResting: t("settings.main.address.lookupResting"),
-                notConfigured: t("settings.main.address.notConfigured"),
-                suggestionsLabel: t("settings.main.address.suggestionsLabel"),
-                currentLabel: t("settings.main.address.currentLabel"),
-                noneSet: t("settings.main.address.noneSet"),
-                removeLabel: t("settings.main.address.remove"),
-                removing: t("settings.main.address.removing"),
-              }}
-            />
-          </SettingsRow>
+            <SettingsRow
+              heading={t("settings.main.address.heading")}
+              value={addressValue}
+              detail={t("settings.main.address.detail")}
+              open={activeSection === "address"}
+            >
+              <SectionNotice banner={banner} section="address" active={activeSection} />
+              <AddressSearch
+                initial={{
+                  addressStreet: shop.addressStreet ?? "",
+                  addressLocality: shop.addressLocality ?? "",
+                  addressRegion: shop.addressRegion ?? "",
+                  addressPostalCode: shop.addressPostalCode ?? "",
+                  addressCountry: shop.addressCountry ?? "",
+                }}
+                // No geocoder credentials is the ordinary local and self-hosted
+                // case: the card says so in a sentence rather than offering a box
+                // that answers nothing (src/lib/address-lookup.ts).
+                enabled={addressLookupEnabled}
+                copy={{
+                  searchLabel: t("settings.main.address.searchLabel"),
+                  searchPlaceholder: t("settings.main.address.searchPlaceholder"),
+                  searching: t("settings.main.address.searching"),
+                  saving: t("settings.main.address.saving"),
+                  noMatches: t("settings.main.address.noMatches"),
+                  lookupFailed: t("settings.main.address.lookupFailed"),
+                  lookupResting: t("settings.main.address.lookupResting"),
+                  notConfigured: t("settings.main.address.notConfigured"),
+                  suggestionsLabel: t("settings.main.address.suggestionsLabel"),
+                  currentLabel: t("settings.main.address.currentLabel"),
+                  noneSet: t("settings.main.address.noneSet"),
+                  removeLabel: t("settings.main.address.remove"),
+                  removing: t("settings.main.address.removing"),
+                }}
+              />
+            </SettingsRow>
 
-          {/* One of the few rows another surface links straight to: the Reviews
+            {/* One of the few rows another surface links straight to: the Reviews
               page's empty state names this box, so it opens itself on the
               `#review-link` fragment rather than dropping a shop at a closed
               row. */}
-          <SettingsRow
-            heading={t("settings.main.reviewLink.heading")}
-            value={reviewLinkValue}
-            description={t("settings.main.reviewLink.description")}
-            detail={t("settings.main.reviewLink.detail")}
-            open={activeSection === "reviewLink"}
-            openOnHash="review-link"
-            anchorId="review-link"
-          >
-            <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
-            <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
-              <Field
-                label={t("settings.main.reviewLink.label")}
-                hint={t("settings.main.reviewLink.hint")}
-              >
-                <input
-                  name="reviewUrl"
-                  type="url"
-                  maxLength={500}
-                  defaultValue={shop.reviewUrl ?? ""}
-                  placeholder="https://g.page/r/your-shop/review"
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.reviewLink.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
+            <SettingsRow
+              heading={t("settings.main.reviewLink.heading")}
+              value={reviewLinkValue}
+              description={t("settings.main.reviewLink.description")}
+              detail={t("settings.main.reviewLink.detail")}
+              open={activeSection === "reviewLink"}
+              openOnHash="review-link"
+              anchorId="review-link"
+            >
+              <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
+              <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
+                <Field
+                  label={t("settings.main.reviewLink.label")}
+                  hint={t("settings.main.reviewLink.hint")}
                 >
-                  {t("settings.main.reviewLink.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
+                  <input
+                    name="reviewUrl"
+                    type="url"
+                    maxLength={500}
+                    defaultValue={shop.reviewUrl ?? ""}
+                    placeholder="https://g.page/r/your-shop/review"
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.reviewLink.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.reviewLink.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
 
-          {/* Beside the review link, because both rows are about the shop's
+            {/* Beside the review link, because both rows are about the shop's
               public face rather than its operations. A shop is listed by
               default and the box says so; unticking it drops the shop out of
               sitemap.xml *and* makes its public pages emit robots: noindex
               (ADR 20260813-search-listing-is-a-choice). */}
-          <SettingsRow
-            heading={t("settings.main.searchListing.heading")}
-            value={
-              shop.searchListingOptOutAt
-                ? t("settings.main.searchListing.valueHidden")
-                : t("settings.main.searchListing.valueListed")
-            }
-            description={t("settings.main.searchListing.description")}
-            detail={t("settings.main.searchListing.detail")}
-            open={activeSection === "searchListing"}
-            openOnHash="search-listing"
-            anchorId="search-listing"
-          >
-            <SectionNotice banner={banner} section="searchListing" active={activeSection} />
-            <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
-              <label className="flex min-h-11 items-center gap-3 text-sm">
-                <input
-                  name="searchListed"
-                  type="checkbox"
-                  defaultChecked={!shop.searchListingOptOutAt}
-                  className="size-4 accent-primary"
-                />
-                {t("settings.main.searchListing.label")}
-              </label>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.searchListing.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.searchListing.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
+            <SettingsRow
+              heading={t("settings.main.searchListing.heading")}
+              value={
+                shop.searchListingOptOutAt
+                  ? t("settings.main.searchListing.valueHidden")
+                  : t("settings.main.searchListing.valueListed")
+              }
+              description={t("settings.main.searchListing.description")}
+              detail={t("settings.main.searchListing.detail")}
+              open={activeSection === "searchListing"}
+              openOnHash="search-listing"
+              anchorId="search-listing"
+            >
+              <SectionNotice banner={banner} section="searchListing" active={activeSection} />
+              <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    name="searchListed"
+                    type="checkbox"
+                    defaultChecked={!shop.searchListingOptOutAt}
+                    className="size-4 accent-primary"
+                  />
+                  {t("settings.main.searchListing.label")}
+                </label>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.searchListing.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.searchListing.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
 
-          <SettingsRow
-            heading={t("settings.main.packing.heading")}
-            value={packingValue}
-            description={t("settings.main.packing.description")}
-            open={activeSection === "packing"}
-          >
-            <SectionNotice banner={banner} section="packing" active={activeSection} />
-            <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
-              <Field label={t("settings.main.packing.label")}>
-                <textarea
-                  name="packingList"
-                  rows={6}
-                  maxLength={1212}
-                  defaultValue={shop.packingList.join("\n")}
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.packing.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.packing.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
+            <SettingsRow
+              heading={t("settings.main.packing.heading")}
+              value={packingValue}
+              description={t("settings.main.packing.description")}
+              open={activeSection === "packing"}
+            >
+              <SectionNotice banner={banner} section="packing" active={activeSection} />
+              <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.packing.label")}>
+                  <textarea
+                    name="packingList"
+                    rows={6}
+                    maxLength={1212}
+                    defaultValue={shop.packingList.join("\n")}
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.packing.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.packing.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
 
-          <SettingsRow
-            heading={t("settings.main.dockCall.heading")}
-            value={dockCallValue}
-            description={t("settings.main.dockCall.description")}
-            detail={t("settings.main.dockCall.detail")}
-            open={activeSection === "dockCall"}
-          >
-            <SectionNotice banner={banner} section="dockCall" active={activeSection} />
-            {/* Six numbers, one save. The day used to come out of the single
+            <SettingsRow
+              heading={t("settings.main.dockCall.heading")}
+              value={dockCallValue}
+              description={t("settings.main.dockCall.description")}
+              detail={t("settings.main.dockCall.detail")}
+              open={activeSection === "dockCall"}
+            >
+              <SectionNotice banner={banner} section="dockCall" active={activeSection} />
+              {/* Six numbers, one save. The day used to come out of the single
                 arrival-call box below: the briefing was half of it capped at
                 15, and the two beats on the water were the trip window's own
                 thirds — so a shop that briefs on the boat, kits up on board,
@@ -838,41 +842,41 @@ export default async function SettingsPage({
                 read DiveDay telling their divers a day they don't run. Each
                 field states what zero means where zero is meaningful, because
                 "0" is how a shop says "we don't do that one". */}
-            <FieldGrid
-              as="form"
-              action={saveDockDayRhythmAction}
-              columns={2}
-              className="mt-4 gap-x-5 gap-y-5"
-            >
-              {DOCK_DAY_FIELDS.map((field) => (
-                <Field
-                  key={field}
-                  label={t(DOCK_DAY_FIELD_KEYS[field].label)}
-                  description={t(DOCK_DAY_FIELD_KEYS[field].description)}
-                >
-                  <input
-                    name={field}
-                    type="number"
-                    inputMode="numeric"
-                    required
-                    min={DOCK_DAY_LIMITS[field].min}
-                    max={DOCK_DAY_LIMITS[field].max}
-                    step={5}
-                    defaultValue={shop[field]}
-                    className={`${controlClass} tabular-nums`}
-                  />
-                </Field>
-              ))}
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.dockCall.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.dockCall.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-            {/* The answer to "where do I set the dock-day rhythm?" — which used
+              <FieldGrid
+                as="form"
+                action={saveDockDayRhythmAction}
+                columns={2}
+                className="mt-4 gap-x-5 gap-y-5"
+              >
+                {DOCK_DAY_FIELDS.map((field) => (
+                  <Field
+                    key={field}
+                    label={t(DOCK_DAY_FIELD_KEYS[field].label)}
+                    description={t(DOCK_DAY_FIELD_KEYS[field].description)}
+                  >
+                    <input
+                      name={field}
+                      type="number"
+                      inputMode="numeric"
+                      required
+                      min={DOCK_DAY_LIMITS[field].min}
+                      max={DOCK_DAY_LIMITS[field].max}
+                      step={5}
+                      defaultValue={shop[field]}
+                      className={`${controlClass} tabular-nums`}
+                    />
+                  </Field>
+                ))}
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.dockCall.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.dockCall.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+              {/* The answer to "where do I set the dock-day rhythm?" — which used
                 to be nowhere a reader could see. Showing the beats the fields
                 produce, as offsets from departure, is what makes the form and
                 the diver-facing timeline visibly the same thing. Offsets, not
@@ -881,25 +885,25 @@ export default async function SettingsPage({
                 return, since each trip publishes its own. Two dives, because
                 that is what most of this catalogue is; a departure's own
                 planned count is what the diver's page lays out. */}
-            <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
-              {dockDayOffsets(shop).map(({ step, number, minutesFromDeparture }) => (
-                <div key={`${step}-${number ?? 0}`} className="flex items-baseline gap-2">
-                  <dt>{t(DOCK_DAY_STEP_KEYS[step], { number: number ?? 1 })}</dt>
-                  <dd className="font-medium text-foreground tabular-nums">
-                    {minutesFromDeparture === 0
-                      ? t("settings.main.dockCall.atDeparture")
-                      : minutesFromDeparture < 0
-                        ? t("settings.main.dockCall.minutesBefore", {
-                            count: -minutesFromDeparture,
-                          })
-                        : t("settings.main.dockCall.minutesAfter", {
-                            count: minutesFromDeparture,
-                          })}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            {/* The preview above describes every departure except the ones it
+              <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+                {dockDayOffsets(shop).map(({ step, number, minutesFromDeparture }) => (
+                  <div key={`${step}-${number ?? 0}`} className="flex items-baseline gap-2">
+                    <dt>{t(DOCK_DAY_STEP_KEYS[step], { number: number ?? 1 })}</dt>
+                    <dd className="font-medium text-foreground tabular-nums">
+                      {minutesFromDeparture === 0
+                        ? t("settings.main.dockCall.atDeparture")
+                        : minutesFromDeparture < 0
+                          ? t("settings.main.dockCall.minutesBefore", {
+                              count: -minutesFromDeparture,
+                            })
+                          : t("settings.main.dockCall.minutesAfter", {
+                              count: minutesFromDeparture,
+                            })}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {/* The preview above describes every departure except the ones it
                 doesn't. A site with its own `expected_bottom_time_minutes`
                 overrides "Time in the water per dive" for any dive that visits
                 it, and until this line the number could be read nowhere but the
@@ -909,390 +913,392 @@ export default async function SettingsPage({
                 link, because the answer to "why does that one differ?" is the
                 site's own page. A shop that has overridden nothing sees
                 nothing. */}
-            {siteBottomTimeOverrides.length > 0 ? (
-              <div className="mt-3">
-                <p className="text-sm text-muted">
-                  {t("settings.main.dockCall.siteOverrides", {
-                    count: siteBottomTimeOverrides.length,
-                  })}
-                </p>
-                <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  {siteBottomTimeOverrides.map((site) => (
-                    <li key={site.id}>
-                      <a
-                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {t("settings.main.dockCall.siteOverride", {
-                          name: site.name,
-                          count: site.minutes,
-                        })}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </SettingsRow>
+              {siteBottomTimeOverrides.length > 0 ? (
+                <div className="mt-3">
+                  <p className="text-sm text-muted">
+                    {t("settings.main.dockCall.siteOverrides", {
+                      count: siteBottomTimeOverrides.length,
+                    })}
+                  </p>
+                  <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    {siteBottomTimeOverrides.map((site) => (
+                      <li key={site.id}>
+                        <a
+                          href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {t("settings.main.dockCall.siteOverride", {
+                            name: site.name,
+                            count: site.minutes,
+                          })}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </SettingsRow>
 
-          {/* One row for the three units a shop reads its own numbers in.
+            {/* One row for the three units a shop reads its own numbers in.
               Depth stays stored in metres and water temperature in Celsius
               whatever these say (H-08); currency is the one that reinterprets
               rather than converts, which is what its own marker explains. The
               three are genuinely independent — a Caribbean operator serving
               American divers publishes feet and Celsius — so they are three
               fields, not one. */}
-          <SettingsRow
-            heading={t("settings.main.units.heading")}
-            value={unitsValue}
-            description={t("settings.main.units.description")}
-            open={activeSection === "units"}
-          >
-            <SectionNotice banner={banner} section="units" active={activeSection} />
-            {/* What Stripe reports for the connected account is advisory, so a
+            <SettingsRow
+              heading={t("settings.main.units.heading")}
+              value={unitsValue}
+              description={t("settings.main.units.description")}
+              open={activeSection === "units"}
+            >
+              <SectionNotice banner={banner} section="units" active={activeSection} />
+              {/* What Stripe reports for the connected account is advisory, so a
               disagreement is surfaced rather than silently resolved either way
               (ADR 20260731-shop-currency). Stripe refuses a session in a currency
               the account can't settle, so this is the difference between a
               warning here and a failed checkout later. */}
-            {currencyMismatch ? (
-              <div className="mt-4">
-                <ShopNotice tone="warning" role="status">
-                  {t("settings.main.units.currencyMismatch", {
-                    shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
-                    accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
-                  })}
-                </ShopNotice>
-              </div>
-            ) : null}
-            <FieldGrid as="form" action={saveUnitsAction} columns={2} className="mt-4">
-              {/* The explanations render as plain helper text, not InfoHint
+              {currencyMismatch ? (
+                <div className="mt-4">
+                  <ShopNotice tone="warning" role="status">
+                    {t("settings.main.units.currencyMismatch", {
+                      shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
+                      accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
+                    })}
+                  </ShopNotice>
+                </div>
+              ) : null}
+              <FieldGrid as="form" action={saveUnitsAction} columns={2} className="mt-4">
+                {/* The explanations render as plain helper text, not InfoHint
                   buttons — inside an open disclosure the reader has already
                   asked for detail, and three ⓘ controls hiding three facts
                   fail remove-until-it-breaks. */}
-              <Field
-                label={t("settings.main.units.depthLabel")}
-                description={t("settings.main.units.depthDetail")}
-              >
-                <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
-                  <option value="meters">{t("settings.main.units.meters")}</option>
-                  <option value="feet">{t("settings.main.units.feet")}</option>
-                </select>
-              </Field>
-              <Field
-                label={t("settings.main.units.temperatureLabel")}
-                description={t("settings.main.units.temperatureDetail")}
-              >
-                <select
-                  name="temperatureUnit"
-                  defaultValue={shop.temperatureUnit}
-                  className={controlClass}
+                <Field
+                  label={t("settings.main.units.depthLabel")}
+                  description={t("settings.main.units.depthDetail")}
                 >
-                  <option value="celsius">{t("settings.main.units.celsius")}</option>
-                  <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
-                </select>
-              </Field>
-              {/* Owner/manager only (H-14): this decides what a diver's card is
+                  <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
+                    <option value="meters">{t("settings.main.units.meters")}</option>
+                    <option value="feet">{t("settings.main.units.feet")}</option>
+                  </select>
+                </Field>
+                <Field
+                  label={t("settings.main.units.temperatureLabel")}
+                  description={t("settings.main.units.temperatureDetail")}
+                >
+                  <select
+                    name="temperatureUnit"
+                    defaultValue={shop.temperatureUnit}
+                    className={controlClass}
+                  >
+                    <option value="celsius">{t("settings.main.units.celsius")}</option>
+                    <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
+                  </select>
+                </Field>
+                {/* Owner/manager only (H-14): this decides what a diver's card is
                 charged in. Hiding it is convenience — `saveUnitsAction` re-checks
                 the gate against live roles for any submission that carries the
                 field anyway. */}
-              {canPayments ? (
-                <Field
-                  label={t("settings.main.units.currencyLabel")}
-                  description={t("settings.main.units.currencyDetail")}
-                >
-                  <select
-                    name="currency"
-                    defaultValue={toShopCurrency(shop.currency)}
-                    className={controlClass}
+                {canPayments ? (
+                  <Field
+                    label={t("settings.main.units.currencyLabel")}
+                    description={t("settings.main.units.currencyDetail")}
                   >
-                    {currencyOptions(locale).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              ) : null}
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("settings.main.units.submitting")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("settings.main.units.submit")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </SettingsRow>
-        </SettingsRowList>
-      </SettingsGroup>
+                    <select
+                      name="currency"
+                      defaultValue={toShopCurrency(shop.currency)}
+                      className={controlClass}
+                    >
+                      {currencyOptions(locale).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.units.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.units.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+          </SettingsRowList>
+        </SettingsGroup>
 
-      <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
-        <SettingsRowList>
-          {/* First row in "Money" — what DiveDay itself costs, before what the
+        <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
+          <SettingsRowList>
+            {/* First row in "Money" — what DiveDay itself costs, before what the
               shop charges divers. Soft expiry by product decision: a trial past
               its window keeps working exactly as before, so this is purely
               informational, never a lockout. */}
-          {canViewTrialStatus ? (
-            <SettingsRow
-              heading={t("settings.main.trial.heading")}
-              value={
-                trialExpired
-                  ? t("settings.main.trial.expiredValue", { endDate: trialEndLabel })
-                  : t("settings.main.trial.value", { count: trialDaysLeft })
-              }
-              description={
-                trialExpired
-                  ? t("settings.main.trial.expiredDescription", { endDate: trialEndLabel })
-                  : t("settings.main.trial.activeDescription", {
-                      count: trialDaysLeft,
-                      endDate: trialEndLabel,
-                    })
-              }
-            >
-              <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
-              <div className="mt-4">
-                <a
-                  href={`mailto:${UPGRADE_EMAIL}`}
-                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-                >
-                  {t("settings.main.trial.emailCta", { email: UPGRADE_EMAIL })}
-                </a>
-              </div>
-            </SettingsRow>
-          ) : null}
+            {canViewTrialStatus ? (
+              <SettingsRow
+                heading={t("settings.main.trial.heading")}
+                value={
+                  trialExpired
+                    ? t("settings.main.trial.expiredValue", { endDate: trialEndLabel })
+                    : t("settings.main.trial.value", { count: trialDaysLeft })
+                }
+                description={
+                  trialExpired
+                    ? t("settings.main.trial.expiredDescription", { endDate: trialEndLabel })
+                    : t("settings.main.trial.activeDescription", {
+                        count: trialDaysLeft,
+                        endDate: trialEndLabel,
+                      })
+                }
+              >
+                <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
+                <div className="mt-4">
+                  <a
+                    href={`mailto:${UPGRADE_EMAIL}`}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.trial.emailCta", { email: UPGRADE_EMAIL })}
+                  </a>
+                </div>
+              </SettingsRow>
+            ) : null}
 
-          {/* Orders is not here. It is money a shop *reads* every day, so it
+            {/* Orders is not here. It is money a shop *reads* every day, so it
               keeps its header row under "Run the shop" and this page stops
               offering a second door to it — one destination, one place to find
               it. Promo codes go the other way: they are configured rarely, so
               they left the header and this row is now the way in. */}
-          {canManagePromos ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/promos`}
-              heading={t("settings.main.promos.heading")}
-              description={t("settings.main.promos.description")}
-            />
-          ) : null}
+            {canManagePromos ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/promos`}
+                heading={t("settings.main.promos.heading")}
+                description={t("settings.main.promos.description")}
+              />
+            ) : null}
 
-          {canPayments ? (
-            <>
-              {/* Currency is not here. It lives in the "Units" row with depth
+            {canPayments ? (
+              <>
+                {/* Currency is not here. It lives in the "Units" row with depth
                 and water temperature — a shop looking for "what do we measure
                 things in" should find all three answers in one place, and this
                 group keeps what a shop *charges* and gets paid through. */}
-              <SettingsRow
-                heading={t("settings.main.rentals.heading")}
-                value={rentalsValue}
-                description={t("settings.main.rentals.description")}
-                detail={t("settings.main.rentals.detail")}
-                open={activeSection === "rentals"}
-              >
-                <SectionNotice banner={banner} section="rentals" active={activeSection} />
-                <form action={saveRentalItemsAction} className="mt-4">
-                  <fieldset>
-                    <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {SHOP_CATALOG_ITEMS.map((item) => (
-                        <label
+                <SettingsRow
+                  heading={t("settings.main.rentals.heading")}
+                  value={rentalsValue}
+                  description={t("settings.main.rentals.description")}
+                  detail={t("settings.main.rentals.detail")}
+                  open={activeSection === "rentals"}
+                >
+                  <SectionNotice banner={banner} section="rentals" active={activeSection} />
+                  <form action={saveRentalItemsAction} className="mt-4">
+                    <fieldset>
+                      <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {SHOP_CATALOG_ITEMS.map((item) => (
+                          <label
+                            key={item.kind}
+                            className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                          >
+                            <input
+                              name={item.name}
+                              type="checkbox"
+                              defaultChecked={offeredKinds.has(item.kind)}
+                              className="size-4 accent-primary"
+                            />
+                            {catalogItemLabel(t, item.kind)}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.rentals.submitting")}
+                      className={buttonClass({ variant: "secondary", className: "mt-3" })}
+                    >
+                      {t("settings.main.rentals.submit")}
+                    </SubmitButton>
+                  </form>
+                </SettingsRow>
+
+                <SettingsRow
+                  heading={t("settings.main.rentalPricing.heading")}
+                  value={rentalPricingValue}
+                  description={t("settings.main.rentalPricing.description")}
+                  detail={t("settings.main.rentalPricing.detail")}
+                  open={activeSection === "rentalPricing"}
+                >
+                  <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
+                  <form action={saveRentalPricingAction} className="mt-4">
+                    <FieldGrid columns={2}>
+                      <PriceField
+                        name="setPrice"
+                        label={t("settings.main.rentalPricing.fullSetLabel")}
+                        hint={t("settings.main.rentalPricing.fullSetHint")}
+                        cents={shop.rentalPricing.setCents}
+                        currency={shopCurrency}
+                        locale={locale}
+                      />
+                      {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
+                        <PriceField
                           key={item.kind}
-                          className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
-                        >
-                          <input
-                            name={item.name}
-                            type="checkbox"
-                            defaultChecked={offeredKinds.has(item.kind)}
-                            className="size-4 accent-primary"
-                          />
-                          {catalogItemLabel(t, item.kind)}
-                        </label>
+                          name={`price_${item.name}`}
+                          label={rentableItemLabel(t, item.kind)}
+                          cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
+                          currency={shopCurrency}
+                          locale={locale}
+                        />
                       ))}
-                    </div>
-                  </fieldset>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.rentals.submitting")}
-                    className={buttonClass({ variant: "secondary", className: "mt-3" })}
-                  >
-                    {t("settings.main.rentals.submit")}
-                  </SubmitButton>
-                </form>
-              </SettingsRow>
+                      {offeredKinds.has("nitrox") ? (
+                        <PriceField
+                          name="nitroxPrice"
+                          label={t("settings.main.rentalPricing.nitroxLabel")}
+                          hint={t("settings.main.rentalPricing.nitroxHint")}
+                          cents={shop.rentalPricing.nitroxCents}
+                          currency={shopCurrency}
+                          locale={locale}
+                        />
+                      ) : null}
+                    </FieldGrid>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.rentalPricing.submitting")}
+                      className={buttonClass({ variant: "secondary", className: "mt-4" })}
+                    >
+                      {t("settings.main.rentalPricing.submit")}
+                    </SubmitButton>
+                  </form>
+                </SettingsRow>
 
-              <SettingsRow
-                heading={t("settings.main.rentalPricing.heading")}
-                value={rentalPricingValue}
-                description={t("settings.main.rentalPricing.description")}
-                detail={t("settings.main.rentalPricing.detail")}
-                open={activeSection === "rentalPricing"}
-              >
-                <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
-                <form action={saveRentalPricingAction} className="mt-4">
-                  <FieldGrid columns={2}>
-                    <PriceField
-                      name="setPrice"
-                      label={t("settings.main.rentalPricing.fullSetLabel")}
-                      hint={t("settings.main.rentalPricing.fullSetHint")}
-                      cents={shop.rentalPricing.setCents}
-                      currency={shopCurrency}
-                      locale={locale}
-                    />
-                    {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
-                      <PriceField
-                        key={item.kind}
-                        name={`price_${item.name}`}
-                        label={rentableItemLabel(t, item.kind)}
-                        cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
-                        currency={shopCurrency}
-                        locale={locale}
-                      />
-                    ))}
-                    {offeredKinds.has("nitrox") ? (
-                      <PriceField
-                        name="nitroxPrice"
-                        label={t("settings.main.rentalPricing.nitroxLabel")}
-                        hint={t("settings.main.rentalPricing.nitroxHint")}
-                        cents={shop.rentalPricing.nitroxCents}
-                        currency={shopCurrency}
-                        locale={locale}
-                      />
-                    ) : null}
-                  </FieldGrid>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.rentalPricing.submitting")}
-                    className={buttonClass({ variant: "secondary", className: "mt-4" })}
-                  >
-                    {t("settings.main.rentalPricing.submit")}
-                  </SubmitButton>
-                </form>
-              </SettingsRow>
-
-              {/* The one row that opens itself: an unconnected or half-onboarded
+                {/* The one row that opens itself: an unconnected or half-onboarded
                   Stripe account is the difference between taking bookings online
                   and not, so the moment it needs a person it surfaces — and once
                   it is quietly working it folds away like everything else. */}
-              <SettingsRow
-                heading={t("settings.main.stripe.rowHeading")}
-                value={
-                  !account ? (
-                    <Badge tone="warning">{t("settings.main.stripe.summaryNotConnected")}</Badge>
-                  ) : account.disconnectedAt ? (
-                    <Badge tone="warning">{t("settings.main.stripe.summaryDisconnected")}</Badge>
-                  ) : ready ? (
-                    t("settings.main.stripe.accountEnding", {
-                      last6: account.stripeAccountId.slice(-6),
-                    })
-                  ) : (
-                    <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
-                  )
-                }
-                description={
-                  !account ? t("settings.main.stripe.notConnectedDescription") : undefined
-                }
-                detail={!account ? t("settings.main.stripe.notConnectedDetail") : undefined}
-                open={activeSection === "stripe" || !account || !ready}
-              >
-                <SectionNotice banner={banner} section="stripe" active={activeSection} />
-                {!account ? (
-                  connectConfigured ? (
-                    // A plain <a>, not <Link>: this route 302s to Stripe's
-                    // OAuth authorize URL, and Next's client-side navigation
-                    // would follow that redirect via fetch — a cross-origin
-                    // request Stripe's CORS policy rejects. A full
-                    // navigation handles the redirect natively.
-                    <a
-                      href={`/shop/${shopSlug}/settings/connect`}
-                      className={buttonClass({ className: "mt-4" })}
-                    >
-                      {t("settings.main.stripe.connect")}
-                    </a>
-                  ) : (
-                    <div className="mt-4">
-                      <ShopNotice tone="warning" role="status">
-                        {t("settings.main.stripe.notConfiguredWarning", { email: SUPPORT_EMAIL })}
-                      </ShopNotice>
-                    </div>
-                  )
-                ) : (
-                  <div className="mt-3">
-                    <p className="text-sm text-muted">
-                      {t("settings.main.stripe.accountEnding", {
+                <SettingsRow
+                  heading={t("settings.main.stripe.rowHeading")}
+                  value={
+                    !account ? (
+                      <Badge tone="warning">{t("settings.main.stripe.summaryNotConnected")}</Badge>
+                    ) : account.disconnectedAt ? (
+                      <Badge tone="warning">{t("settings.main.stripe.summaryDisconnected")}</Badge>
+                    ) : ready ? (
+                      t("settings.main.stripe.accountEnding", {
                         last6: account.stripeAccountId.slice(-6),
-                      })}
-                    </p>
-                    <ul className="mt-4 divide-y divide-border">
-                      <StatusRow
-                        label={t("settings.main.stripe.chargesEnabled")}
-                        ok={account.chargesEnabled}
-                        yesLabel={t("settings.main.stripe.statusYes")}
-                        notYetLabel={t("settings.main.stripe.statusNotYet")}
-                      />
-                      <StatusRow
-                        label={t("settings.main.stripe.payoutsEnabled")}
-                        ok={account.payoutsEnabled}
-                        yesLabel={t("settings.main.stripe.statusYes")}
-                        notYetLabel={t("settings.main.stripe.statusNotYet")}
-                      />
-                      <StatusRow
-                        label={t("settings.main.stripe.onboardingSubmitted")}
-                        ok={account.detailsSubmitted}
-                        yesLabel={t("settings.main.stripe.statusYes")}
-                        notYetLabel={t("settings.main.stripe.statusNotYet")}
-                      />
-                    </ul>
-                    <div className="mt-5 flex flex-wrap items-center gap-3">
-                      {account.disconnectedAt ? (
-                        connectConfigured ? (
-                          // A plain <a>, not <Link>: this route 302s to
-                          // Stripe's OAuth authorize URL, and Next's
-                          // client-side navigation would follow that
-                          // redirect via fetch — a cross-origin request
-                          // Stripe's CORS policy rejects. A full navigation
-                          // handles the redirect natively.
-                          <a href={`/shop/${shopSlug}/settings/connect`} className={buttonClass()}>
-                            {t("settings.main.stripe.reconnect")}
-                          </a> // i18n-exempt: JSX ternary punctuation below, not copy — scanner false positive.
-                        ) : null
-                      ) : (
-                        <>
-                          <form action={refreshAction}>
-                            <SubmitButton
-                              pendingLabel={t("settings.main.stripe.refreshing")}
-                              className={buttonClass({
-                                variant: "secondary",
-                                className: "text-foreground",
-                              })}
+                      })
+                    ) : (
+                      <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
+                    )
+                  }
+                  description={
+                    !account ? t("settings.main.stripe.notConnectedDescription") : undefined
+                  }
+                  detail={!account ? t("settings.main.stripe.notConnectedDetail") : undefined}
+                  open={activeSection === "stripe" || !account || !ready}
+                >
+                  <SectionNotice banner={banner} section="stripe" active={activeSection} />
+                  {!account ? (
+                    connectConfigured ? (
+                      // A plain <a>, not <Link>: this route 302s to Stripe's
+                      // OAuth authorize URL, and Next's client-side navigation
+                      // would follow that redirect via fetch — a cross-origin
+                      // request Stripe's CORS policy rejects. A full
+                      // navigation handles the redirect natively.
+                      <a
+                        href={`/shop/${shopSlug}/settings/connect`}
+                        className={buttonClass({ className: "mt-4" })}
+                      >
+                        {t("settings.main.stripe.connect")}
+                      </a>
+                    ) : (
+                      <div className="mt-4">
+                        <ShopNotice tone="warning" role="status">
+                          {t("settings.main.stripe.notConfiguredWarning", { email: SUPPORT_EMAIL })}
+                        </ShopNotice>
+                      </div>
+                    )
+                  ) : (
+                    <div className="mt-3">
+                      <p className="text-sm text-muted">
+                        {t("settings.main.stripe.accountEnding", {
+                          last6: account.stripeAccountId.slice(-6),
+                        })}
+                      </p>
+                      <ul className="mt-4 divide-y divide-border">
+                        <StatusRow
+                          label={t("settings.main.stripe.chargesEnabled")}
+                          ok={account.chargesEnabled}
+                          yesLabel={t("settings.main.stripe.statusYes")}
+                          notYetLabel={t("settings.main.stripe.statusNotYet")}
+                        />
+                        <StatusRow
+                          label={t("settings.main.stripe.payoutsEnabled")}
+                          ok={account.payoutsEnabled}
+                          yesLabel={t("settings.main.stripe.statusYes")}
+                          notYetLabel={t("settings.main.stripe.statusNotYet")}
+                        />
+                        <StatusRow
+                          label={t("settings.main.stripe.onboardingSubmitted")}
+                          ok={account.detailsSubmitted}
+                          yesLabel={t("settings.main.stripe.statusYes")}
+                          notYetLabel={t("settings.main.stripe.statusNotYet")}
+                        />
+                      </ul>
+                      <div className="mt-5 flex flex-wrap items-center gap-3">
+                        {account.disconnectedAt ? (
+                          connectConfigured ? (
+                            // A plain <a>, not <Link>: this route 302s to
+                            // Stripe's OAuth authorize URL, and Next's
+                            // client-side navigation would follow that
+                            // redirect via fetch — a cross-origin request
+                            // Stripe's CORS policy rejects. A full navigation
+                            // handles the redirect natively.
+                            <a
+                              href={`/shop/${shopSlug}/settings/connect`}
+                              className={buttonClass()}
                             >
-                              {t("settings.main.stripe.refresh")}
-                            </SubmitButton>
-                          </form>
-                          <form action={disconnectAction}>
-                            <SubmitButton
-                              pendingLabel={t("settings.main.stripe.disconnecting")}
-                              className={buttonClass({ variant: "danger" })}
-                            >
-                              {t("settings.main.stripe.disconnect")}
-                            </SubmitButton>
-                          </form>
-                        </>
-                      )}
+                              {t("settings.main.stripe.reconnect")}
+                            </a> // i18n-exempt: JSX ternary punctuation below, not copy — scanner false positive.
+                          ) : null
+                        ) : (
+                          <>
+                            <form action={refreshAction}>
+                              <SubmitButton
+                                pendingLabel={t("settings.main.stripe.refreshing")}
+                                className={buttonClass({
+                                  variant: "secondary",
+                                })}
+                              >
+                                {t("settings.main.stripe.refresh")}
+                              </SubmitButton>
+                            </form>
+                            <form action={disconnectAction}>
+                              <SubmitButton
+                                pendingLabel={t("settings.main.stripe.disconnecting")}
+                                className={buttonClass({ variant: "danger" })}
+                              >
+                                {t("settings.main.stripe.disconnect")}
+                              </SubmitButton>
+                            </form>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </SettingsRow>
-            </>
-          ) : null}
-        </SettingsRowList>
+                  )}
+                </SettingsRow>
+              </>
+            ) : null}
+          </SettingsRowList>
 
-        {canPayments ? null : (
-          <div className="mt-6">
-            <ShopNotice tone="neutral" role="status">
-              {t("settings.main.paymentsGate.notice")}
-            </ShopNotice>
-          </div>
-        )}
-      </SettingsGroup>
+          {canPayments ? null : (
+            <div className="mt-6">
+              <ShopNotice tone="neutral" role="status">
+                {t("settings.main.paymentsGate.notice")}
+              </ShopNotice>
+            </div>
+          )}
+        </SettingsGroup>
 
-      <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
-        {/*
+        <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
+          {/*
           Data this shop said it would delete and hasn't finished deleting —
           the group's own question, asked first because it is the only thing in
           it that is *owed* rather than merely configurable, and danger-toned
@@ -1301,46 +1307,46 @@ export default async function SettingsPage({
           queue is empty, which is nearly always, so the calm state of this
           group is the row list below.
         */}
-        {pendingMediaDeletions.length > 0 ? (
-          <section
-            aria-label={t("settings.main.dataJobs.mediaDeletions.sectionLabel")}
-            className="mb-6"
-          >
-            <ShopNotice tone="danger" role="status">
-              <p className="font-medium">
-                {t("settings.main.dataJobs.mediaDeletions.heading", {
-                  count: pendingMediaDeletions.length,
-                })}
-              </p>
-              <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
-              <ul className="mt-3 space-y-2 text-sm">
-                {pendingMediaDeletions.map((attempt) => (
-                  <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
-                    <span className="text-muted">
-                      ·{" "}
-                      {t("settings.main.dataJobs.mediaDeletions.queued", {
-                        date: formatShortDate(attempt.createdAt, locale, shop.timezone),
-                      })}
-                      {attempt.lastError ? ` · ${attempt.lastError}` : ""}
-                    </span>
-                    <form action={retryMediaDeletionAction}>
-                      <input type="hidden" name="attemptId" value={attempt.id} />
-                      <SubmitButton
-                        pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("settings.main.dataJobs.mediaDeletions.retry")}
-                      </SubmitButton>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            </ShopNotice>
-          </section>
-        ) : null}
+          {pendingMediaDeletions.length > 0 ? (
+            <section
+              aria-label={t("settings.main.dataJobs.mediaDeletions.sectionLabel")}
+              className="mb-6"
+            >
+              <ShopNotice tone="danger" role="status">
+                <p className="font-medium">
+                  {t("settings.main.dataJobs.mediaDeletions.heading", {
+                    count: pendingMediaDeletions.length,
+                  })}
+                </p>
+                <p className="mt-1 text-sm">{t("settings.main.dataJobs.mediaDeletions.detail")}</p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {pendingMediaDeletions.map((attempt) => (
+                    <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
+                      <span className="text-muted">
+                        ·{" "}
+                        {t("settings.main.dataJobs.mediaDeletions.queued", {
+                          date: formatShortDate(attempt.createdAt, locale, shop.timezone),
+                        })}
+                        {attempt.lastError ? ` · ${attempt.lastError}` : ""}
+                      </span>
+                      <form action={retryMediaDeletionAction}>
+                        <input type="hidden" name="attemptId" value={attempt.id} />
+                        <SubmitButton
+                          pendingLabel={t("settings.main.dataJobs.mediaDeletions.retrying")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("settings.main.dataJobs.mediaDeletions.retry")}
+                        </SubmitButton>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </ShopNotice>
+            </section>
+          ) : null}
 
-        {/*
+          {/*
           Erasures that are done here but not yet done at Stripe
           (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
           offers what can actually act on each: a customer delete DiveDay makes
@@ -1350,82 +1356,84 @@ export default async function SettingsPage({
           shows the `cus_…`/`in_…` handle and nothing else — the diver's identity
           is exactly what erasure already removed here.
         */}
-        {owedProcessorErasures.length > 0 ? (
-          <section
-            aria-label={t("settings.main.dataJobs.processorErasures.sectionLabel")}
-            className="mb-6"
-          >
-            <ShopNotice tone="danger" role="status">
-              <p className="font-medium">
-                {t("settings.main.dataJobs.processorErasures.heading", {
-                  count: owedProcessorErasures.length,
-                })}
-              </p>
-              <p className="mt-1 text-sm">{t("settings.main.dataJobs.processorErasures.detail")}</p>
-              <ul className="mt-3 space-y-2 text-sm">
-                {owedProcessorErasures.map((obligation) => (
-                  <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="font-medium">
-                      {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
-                    </span>
-                    <span className="font-mono">{obligation.externalId}</span>
-                    <span className="text-muted">
-                      ·{" "}
-                      {t("settings.main.dataJobs.processorErasures.raised", {
-                        date: formatShortDate(obligation.createdAt, locale, shop.timezone),
-                      })}
-                      {obligation.lastError ? ` · ${obligation.lastError}` : ""}
-                    </span>
-                    {canErase && obligation.target === "stripe_customer" ? (
-                      <form action={retryProcessorErasureAction}>
-                        <input type="hidden" name="obligationId" value={obligation.id} />
-                        <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {t("settings.main.dataJobs.processorErasures.retry")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                    {canErase ? (
-                      <form action={dischargeProcessorErasureAction}>
-                        <input type="hidden" name="obligationId" value={obligation.id} />
-                        <SubmitButton
-                          pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {t("settings.main.dataJobs.processorErasures.discharge")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </ShopNotice>
-          </section>
-        ) : null}
-
-        <SettingsRowList>
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/embed`}
-            heading={t("settings.main.embed.heading")}
-            description={t("settings.main.embed.description")}
-          />
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/calendar`}
-            heading={t("settings.main.calendar.heading")}
-            description={t("settings.main.calendar.description")}
-          />
-          {/* Owner/manager only, like the payment rows above: the credential it
-              stores can send messages as the business. */}
-          {canManageMessaging ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/whatsapp`}
-              heading={t("settings.main.whatsapp.heading")}
-              description={t("settings.main.whatsapp.description")}
-            />
+          {owedProcessorErasures.length > 0 ? (
+            <section
+              aria-label={t("settings.main.dataJobs.processorErasures.sectionLabel")}
+              className="mb-6"
+            >
+              <ShopNotice tone="danger" role="status">
+                <p className="font-medium">
+                  {t("settings.main.dataJobs.processorErasures.heading", {
+                    count: owedProcessorErasures.length,
+                  })}
+                </p>
+                <p className="mt-1 text-sm">
+                  {t("settings.main.dataJobs.processorErasures.detail")}
+                </p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {owedProcessorErasures.map((obligation) => (
+                    <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-medium">
+                        {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
+                      </span>
+                      <span className="font-mono">{obligation.externalId}</span>
+                      <span className="text-muted">
+                        ·{" "}
+                        {t("settings.main.dataJobs.processorErasures.raised", {
+                          date: formatShortDate(obligation.createdAt, locale, shop.timezone),
+                        })}
+                        {obligation.lastError ? ` · ${obligation.lastError}` : ""}
+                      </span>
+                      {canErase && obligation.target === "stripe_customer" ? (
+                        <form action={retryProcessorErasureAction}>
+                          <input type="hidden" name="obligationId" value={obligation.id} />
+                          <SubmitButton
+                            pendingLabel={t("settings.main.dataJobs.processorErasures.retrying")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("settings.main.dataJobs.processorErasures.retry")}
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                      {canErase ? (
+                        <form action={dischargeProcessorErasureAction}>
+                          <input type="hidden" name="obligationId" value={obligation.id} />
+                          <SubmitButton
+                            pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("settings.main.dataJobs.processorErasures.discharge")}
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </ShopNotice>
+            </section>
           ) : null}
-          {/* Owner/manager only, like the export row below it feeds: the
+
+          <SettingsRowList>
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/embed`}
+              heading={t("settings.main.embed.heading")}
+              description={t("settings.main.embed.description")}
+            />
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/calendar`}
+              heading={t("settings.main.calendar.heading")}
+              description={t("settings.main.calendar.description")}
+            />
+            {/* Owner/manager only, like the payment rows above: the credential it
+              stores can send messages as the business. */}
+            {canManageMessaging ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/whatsapp`}
+                heading={t("settings.main.whatsapp.heading")}
+                description={t("settings.main.whatsapp.description")}
+              />
+            ) : null}
+            {/* Owner/manager only, like the export row below it feeds: the
               destination it configures receives the whole shop every week.
 
               Two rows, one surface. Backups and the download are the same
@@ -1434,29 +1442,30 @@ export default async function SettingsPage({
               asking one of two different questions — "let me take a copy" and
               "make sure a copy keeps happening" — so both doors stay, and this
               one deep-links to the half it names. */}
-          {canExport ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/export#backups`}
-              heading={t("settings.main.backup.heading")}
-              description={t("settings.main.backup.description")}
-            />
-          ) : null}
-          {canImport ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/import`}
-              heading={t("settings.import.title")}
-              description={t("settings.main.dataImport.description")}
-            />
-          ) : null}
-          {canExport ? (
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/export`}
-              heading={t("settings.export.title")}
-              description={t("settings.main.dataExport.description")}
-            />
-          ) : null}
-        </SettingsRowList>
-      </SettingsGroup>
+            {canExport ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/export#backups`}
+                heading={t("settings.main.backup.heading")}
+                description={t("settings.main.backup.description")}
+              />
+            ) : null}
+            {canImport ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/import`}
+                heading={t("settings.import.title")}
+                description={t("settings.main.dataImport.description")}
+              />
+            ) : null}
+            {canExport ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/export`}
+                heading={t("settings.export.title")}
+                description={t("settings.main.dataExport.description")}
+              />
+            ) : null}
+          </SettingsRowList>
+        </SettingsGroup>
+      </div>
 
       <footer className="mt-12 border-t border-border pt-6 text-sm text-muted">
         <p>{t("settings.main.support.description")}</p>

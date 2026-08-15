@@ -665,6 +665,104 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
   });
+
+  /*
+   * The read-back's final tiebreak is a property of the data, not of the
+   * clock's resolution (ADR 20260815-roll-call-order-is-a-property-of-the-data).
+   *
+   * `occurred_at` ties routinely — the e2e clock is frozen, and an offline
+   * batch is applied with whatever timestamps the device recorded — and
+   * `created_at` is `defaultNow()`, which in Postgres is **transaction time**:
+   * two rows written inside one transaction share it to the microsecond. Both
+   * tied, the order was whatever the heap handed back, and the device/server
+   * agreement this repo pinned would have stopped holding silently, with every
+   * test green. `seq` is what makes "the later-appended row wins" true of the
+   * rows themselves.
+   */
+  it("resolves a same-transaction, same-timestamp pair to the later-appended event", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const occurredAt = new Date("2026-07-20T14:00:00.000Z");
+    await db.transaction(async (tx) => {
+      await tx.insert(rollCallEvents).values([
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: booking.booking.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: booking.booking.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+      ]);
+    });
+    const written = await db
+      .select({
+        status: rollCallEvents.status,
+        createdAt: rollCallEvents.createdAt,
+        seq: rollCallEvents.seq,
+      })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.tripId, reef.id),
+          eq(rollCallEvents.bookingId, booking.booking.id),
+          eq(rollCallEvents.checkpoint, "departure"),
+        ),
+      );
+    expect(written).toHaveLength(2);
+    // The tie is real: both halves of the old ordering key are equal here.
+    const [one, two] = written;
+    if (!one || !two) throw new Error("expected both events");
+    expect(one.createdAt.getTime()).toBe(two.createdAt.getTime());
+    expect(new Set(written.map((row) => row.seq)).size).toBe(2);
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("not_boarded");
+  });
+
+  it("resolves a same-transaction crew pair the same way", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const occurredAt = new Date("2026-07-20T14:00:00.000Z");
+    await db.transaction(async (tx) => {
+      await tx.insert(rollCallCrewEvents).values([
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: staff.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: staff.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+      ]);
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    expect(manifest?.crew.find((member) => member.id === staff.id)?.rollCall?.state).toBe(
+      "boarded",
+    );
+  });
 });
 
 /**

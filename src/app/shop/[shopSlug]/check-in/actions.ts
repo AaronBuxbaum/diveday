@@ -7,12 +7,17 @@ import { getDb } from "@/db/client";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 export async function checkInAction(shopSlug: string, formData: FormData) {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = `/shop/${shopSlug}/check-in`;
-  if (!bookingId) redirect(`${back}?notice=invalid`);
+  // `shopPath`, not a template literal: `shopSlug` is an ordinary argument to
+  // this action, so a caller chooses it, and an unescaped one makes the rest of
+  // the path — and the query the notice lands in — theirs to write
+  // (src/lib/staff-notices.ts).
+  const back = shopPath(shopSlug, "check-in");
+  if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await checkInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -44,9 +49,13 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
   // `not_ready` carries the diver's booking/trip so the notice can link
   // straight to their guest row instead of just naming the problem.
   if (outcome.reason === "not_ready" && outcome.tripId) {
-    redirect(`${back}?notice=not_ready&bid=${bookingId}&tid=${outcome.tripId}`);
+    redirect(noticeUrl(back, "not-ready", { bid: bookingId, tid: outcome.tripId }));
   }
-  redirect(`${back}?notice=${outcome.reason}`);
+  // `outcome.reason` is a domain code in the domain's own casing; `noticeUrl`
+  // encodes it and normalises it to the one spelling the queue's notice map
+  // holds. Interpolating it raw was how a value carrying `&` or `#` could
+  // append query params of its own.
+  redirect(noticeUrl(back, outcome.reason));
 }
 
 /**
@@ -58,8 +67,8 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
 export async function undoCheckInAction(shopSlug: string, formData: FormData) {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = `/shop/${shopSlug}/check-in`;
-  if (!bookingId) redirect(`${back}?notice=invalid`);
+  const back = shopPath(shopSlug, "check-in");
+  if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await undoCheckInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -74,9 +83,7 @@ export async function undoCheckInAction(shopSlug: string, formData: FormData) {
     return;
   }
   revalidatePath(back);
-  redirect(
-    `${back}?notice=${outcome.reason === "not_checked_in" ? "not_bookable" : outcome.reason}`,
-  );
+  redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));
 }
 
 /**
@@ -92,8 +99,8 @@ export async function undoCheckInAction(shopSlug: string, formData: FormData) {
 export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: FormData) {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = `/shop/${shopSlug}/check-in`;
-  if (!bookingId) redirect(`${back}?notice=invalid`);
+  const back = shopPath(shopSlug, "check-in");
+  if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: session.user.shopId,
@@ -112,10 +119,11 @@ export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: 
   }
   revalidateAndRedirect(
     back,
-    `${back}?notice=${
+    noticeUrl(
+      back,
       outcome.reason === "medical_attestation_required"
-        ? "waiver_medical_attestation"
-        : "waiver_error"
-    }`,
+        ? "waiver-medical-attestation"
+        : "waiver-error",
+    ),
   );
 }

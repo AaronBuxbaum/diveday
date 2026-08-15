@@ -60,6 +60,7 @@ import {
   weekdaySetFrom,
 } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
   minEnteredTemperature,
@@ -168,8 +169,17 @@ function parseAddDiver(formData: FormData) {
 // back on Overview — "what the dive is". Roster actions (add/remove diver,
 // wait list, waiver, payment) settle on Guests — "who is attending" — the one
 // place they live, so a mutation never bounces staff to a page without the row.
-const backPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}`;
-const guestsPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}/guests`;
+//
+// Built through `shopPath` rather than a template literal: `shopSlug` arrives
+// as a server-action argument, so it is client-supplied, and interpolating it
+// raw handed the caller the rest of the URL — `../../admin` traverses out of the
+// `/shop/` namespace, and a `?` or `#` in it detaches the `?notice=` appended
+// after it so the refusal renders nowhere. Every segment is escaped, so a
+// hostile value stays inside one path segment and 404s
+// (src/lib/staff-notices.ts).
+const backPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
+const guestsPath = (shopSlug: string, tripId: string) =>
+  shopPath(shopSlug, "trips", tripId, "guests");
 
 /**
  * Trip *definition* — what the dive is and who it admits (details, admission
@@ -187,7 +197,7 @@ const guestsPath = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trip
 async function requireTripConfig(shopSlug: string, tripId: string) {
   const s = await requireStaffSession();
   if (!(await canPersonConfigureTrips(await getDb(), s.user.shopId, s.user.personId))) {
-    redirect(`${backPath(shopSlug, tripId)}?notice=not-authorized`);
+    redirect(noticeUrl(backPath(shopSlug, tripId), "not-authorized"));
   }
   return s;
 }
@@ -196,7 +206,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid&form=details`);
+  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const {
     title,
     description,
@@ -214,25 +224,25 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   } = parsed.data;
   const sw = parseWallTime(date, startTime);
   const ew = parseWallTime(date, endTime);
-  if (!sw || !ew) redirect(`${back}?notice=invalid&form=details`);
+  if (!sw || !ew) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
-  if (!shopNow) redirect(`${back}?notice=invalid&form=details`);
+  if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
-  if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
+  if (endsAt <= startsAt) redirect(noticeUrl(back, "end-before-start"));
   // Day one's window, repeated across however many days the departure runs.
   // Each day is converted on its own date so a trip that straddles a DST
   // change keeps the wall-clock time the shop actually promised.
   const meetingDays = tripMeetingDays({ start: sw, end: ew }, dayCount);
-  if (!meetingDays) redirect(`${back}?notice=invalid&form=details`);
+  if (!meetingDays) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const scheduleDays = meetingDays.map((day, index) => ({
     dayNumber: index + 1,
     startsAt: wallTimeToUtc(day.start, shopNow.timezone),
     endsAt: wallTimeToUtc(day.end, shopNow.timezone),
   }));
   const lastDay = scheduleDays.at(-1);
-  if (!lastDay) redirect(`${back}?notice=invalid&form=details`);
+  if (!lastDay) redirect(noticeUrl(back, "invalid", { form: "details" }));
   // What the numbers in the price boxes mean — the shop's own currency.
   const tripCurrency = toShopCurrency(shopNow.currency);
   const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
@@ -248,7 +258,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
     (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
   ) {
-    redirect(`${back}?notice=invalid&form=details`);
+    redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
@@ -269,16 +279,18 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   });
   if (!outcome.ok) {
     if (outcome.reason === "capacity_below_booked") {
-      redirect(`${back}?notice=capacity-below-booked&count=${outcome.detail.bookedCount}`);
+      redirect(noticeUrl(back, "capacity-below-booked", { count: outcome.detail.bookedCount }));
     }
     if (outcome.reason === "planned_dives_below_history") {
       redirect(
-        `${back}?notice=planned-dives-below-history&count=${outcome.detail.recordedDiveCount}`,
+        noticeUrl(back, "planned-dives-below-history", {
+          count: outcome.detail.recordedDiveCount,
+        }),
       );
     }
-    redirect(`${back}?notice=invalid&form=details`);
+    redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
-  revalidateAndRedirect(back, `${back}?notice=saved`);
+  revalidateAndRedirect(back, noticeUrl(back, "saved"));
 }
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -289,14 +301,14 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   // all staff even though the rest of Overview is config-gated (H-14).
   const s = await requireStaffSession();
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid&form=conditions`);
+  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   const db = await getDb();
   // The units come from the shop row, never from the form. A hidden input would
   // let a crafted post store a 27 typed as °C as if it were °F — a 16-degree
   // error on every diver's brief — the same reason the dive-site depth entry
   // re-reads the shop rather than trusting what was submitted.
   const shop = await getShopById(db, s.user.shopId);
-  if (!shop) redirect(`${back}?notice=invalid&form=conditions`);
+  if (!shop) redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   const temperatureUnit = temperatureUnitFor(shop);
   const { waterTemperature, visibility } = parsed.data;
   if (
@@ -304,10 +316,10 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
     (waterTemperature < minEnteredTemperature(temperatureUnit) ||
       waterTemperature > maxEnteredTemperature(temperatureUnit))
   ) {
-    redirect(`${back}?notice=invalid&form=conditions`);
+    redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   }
   if (visibility !== undefined && visibility > maxEnteredVisibility(shop.depthUnit)) {
-    redirect(`${back}?notice=invalid&form=conditions`);
+    redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   }
   const { trip: saved, holdStarted } = await updateTripConditions(db, s.user.shopId, tripId, {
     conditionsSummary: parsed.data.conditionsSummary,
@@ -350,7 +362,10 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
       );
     }
   }
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions" : "invalid"}&form=conditions`);
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, saved ? "conditions" : "invalid", { form: "conditions" }),
+  );
 }
 
 export async function clearConditionsAction(shopSlug: string, tripId: string) {
@@ -361,7 +376,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(
     back,
-    `${back}?notice=${saved ? "conditions-cleared" : "invalid"}&form=conditions`,
+    noticeUrl(back, saved ? "conditions-cleared" : "invalid", { form: "conditions" }),
   );
 }
 
@@ -374,7 +389,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   // schedule management (reinstate, whole-series cancel, create) stays config.
   const s = await requireStaffSession();
   await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
-  revalidateAndRedirect(back, `${back}?notice=cancelled`);
+  revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
 
 export async function reinstateTripAction(shopSlug: string, tripId: string) {
@@ -389,7 +404,7 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
   // ordinary cancellation had no minimum to clear, so this is the same
   // statement either way rather than a branch.
   await reinstateTripClearingMinimum(await getDb(), s.user.shopId, tripId);
-  revalidateAndRedirect(back, `${back}?notice=reinstated`);
+  revalidateAndRedirect(back, noticeUrl(back, "reinstated"));
 }
 
 // Series-wide operations. A series is materialized as independent trips
@@ -407,7 +422,7 @@ export async function applySeriesDetailsAction(shopSlug: string, tripId: string,
     : result.skipped > 0
       ? "series-applied-partial"
       : "series-applied";
-  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 /** Cancel every upcoming date in the series at once; each stays reinstatable. */
@@ -415,10 +430,7 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
-  revalidateAndRedirect(
-    back,
-    `${back}?notice=${cancelled > 0 ? "series-cancelled" : "series-error"}`,
-  );
+  revalidateAndRedirect(back, noticeUrl(back, cancelled > 0 ? "series-cancelled" : "series-error"));
 }
 
 /**
@@ -441,7 +453,7 @@ export async function setSeriesRepeatAction(
   const keepRepeating = formData.get("keepRepeating") === "yes";
   const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
   const notice = !result ? "series-error" : keepRepeating ? "series-repeating" : "series-stopped";
-  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 const cadenceSchema = z.object({
@@ -478,7 +490,7 @@ export async function updateSeriesCadenceAction(
   // add panel does.
   const weekdays = weekdaySetFrom(formData.getAll("repeatWeekday").map((value) => Number(value)));
   if (!parsed.success || !isValidWeekdaySet(weekdays)) {
-    redirect(`${back}?notice=series-error`);
+    redirect(noticeUrl(back, "series-error"));
   }
   const result = await updateSeriesCadence(await getDb(), s.user.shopId, seriesId, {
     intervalWeeks: parsed.data.repeatIntervalWeeks,
@@ -490,7 +502,7 @@ export async function updateSeriesCadenceAction(
     : result.offCadence > 0
       ? "series-cadence-narrowed"
       : "series-cadence-saved";
-  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 /**
@@ -507,7 +519,7 @@ export async function cancelOffCadenceSeriesAction(
   const s = await requireTripConfig(shopSlug, tripId);
   const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
-  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 const recapShoutoutSchema = z.object({ recapShoutout: z.string().trim().max(400) });
@@ -523,14 +535,17 @@ export async function saveRecapShoutoutAction(
   const parsed = recapShoutoutSchema.safeParse({
     recapShoutout: formData.get("recapShoutout") ?? "",
   });
-  if (!parsed.success) redirect(`${back}?notice=invalid&form=recap-note`);
+  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "recap-note" }));
   const saved = await setTripRecapShoutout(
     await getDb(),
     s.user.shopId,
     tripId,
     parsed.data.recapShoutout,
   );
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "recap-note" : "invalid"}&form=recap-note`);
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, saved ? "recap-note" : "invalid", { form: "recap-note" }),
+  );
 }
 
 /** Take down a diver's recap photo — the shop's moderation seam. */
@@ -555,7 +570,7 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
       url: result.imageUrl,
     });
   }
-  revalidateAndRedirect(back, `${back}?notice=recap-photo-removed`);
+  revalidateAndRedirect(back, noticeUrl(back, "recap-photo-removed"));
 }
 
 /**
@@ -585,7 +600,7 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
     bookingId,
     body,
   });
-  if (!saved) revalidateAndRedirect(back, `${back}?notice=invalid`);
+  if (!saved) revalidateAndRedirect(back, noticeUrl(back, "invalid"));
   revalidatePath(back);
 }
 
@@ -612,8 +627,14 @@ export async function deleteInternalNoteAction(
   revalidateAndRedirect(
     back,
     result.deleted
-      ? `${back}?notice=note-deleted&noteBookingId=${result.bookingId}&noteBody=${encodeURIComponent(result.body)}`
-      : `${back}?notice=invalid`,
+      ? // The booking and the note's text ride along so the next render can offer
+        // the one-tap restore; `noticeUrl` percent-encodes both, which is what the
+        // hand-rolled `encodeURIComponent` here used to do for the body alone.
+        noticeUrl(back, "note-deleted", {
+          noteBookingId: result.bookingId,
+          noteBody: result.body,
+        })
+      : noticeUrl(back, "invalid"),
   );
 }
 
@@ -643,7 +664,7 @@ export async function restoreInternalNoteAction(
   // Reuses the "note-added" notice: a restore is, from the banner's
   // perspective, indistinguishable from adding a fresh note with the same
   // text — no dedicated "note-restored" code needed.
-  revalidateAndRedirect(back, `${back}?notice=${restored ? "note-added" : "invalid"}`);
+  revalidateAndRedirect(back, noticeUrl(back, restored ? "note-added" : "invalid"));
 }
 
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
@@ -651,7 +672,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const parsed = parseAddDiver(formData);
-  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
+  if (!parsed.success) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -661,7 +682,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "staff" });
-    revalidateAndRedirect(back, `${back}?notice=diver-waitlisted`);
+    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
   }
   const code =
     outcome.reason === "trip_available"
@@ -669,7 +690,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
       : outcome.reason === "already_booked"
         ? "diver-already"
         : "diver-unavailable";
-  redirect(`${back}?notice=${code}`);
+  redirect(noticeUrl(back, code));
 }
 
 /**
@@ -702,7 +723,7 @@ export async function inviteWaitlistAction(
   revalidatePath(guestsPath(shopSlug, tripId));
   // The freed-seat row also lives on Today, so refresh the queue after an invite
   // whether it was sent from the roster or straight from Today (WP-9 → §7).
-  revalidatePath(`/shop/${shopSlug}`);
+  revalidatePath(shopPath(shopSlug));
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
 }
 
@@ -722,7 +743,7 @@ export async function sendLastMinuteDealAction(
   const s = await requireStaffSession();
   const discountPercent = Number(formData.get("discountPercent"));
   if (!isValidLastMinuteDiscountPercent(discountPercent)) {
-    redirect(`${back}?notice=last-minute-invalid-discount${anchor}`);
+    redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
   }
   const outcome = await sendLastMinuteDealBlast(await getDb(), {
     shopId: s.user.shopId,
@@ -735,10 +756,14 @@ export async function sendLastMinuteDealAction(
     // Today's nudge disappears once any blast has been sent, so refresh it
     // alongside the trip page it was sent from.
     revalidatePath(back);
-    revalidatePath(`/shop/${shopSlug}`);
-    redirect(`${back}?notice=last-minute-sent&count=${outcome.recipientCount}${anchor}`);
+    revalidatePath(shopPath(shopSlug));
+    redirect(noticeUrl(`${back}${anchor}`, "last-minute-sent", { count: outcome.recipientCount }));
   }
-  redirect(`${back}?notice=last-minute-${outcome.reason.replaceAll("_", "-")}${anchor}`);
+  // The anchor goes into the path `noticeUrl` is handed, which puts the query
+  // ahead of the `#last-minute-deal` fragment where it belongs. The reason keeps
+  // the domain layer's own `snake_case` spelling: `noticeCode` inside `noticeUrl`
+  // kebabs it, so the hand-rolled `replaceAll` this used to end with is gone.
+  redirect(noticeUrl(`${back}${anchor}`, `last-minute-${outcome.reason}`));
 }
 
 /**
@@ -809,7 +834,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!(await canPersonRefund(dbi, s.user.shopId, s.user.personId))) {
     const owed = await bookingRefundMayBeOwed(dbi, s.user.shopId, bookingId);
     const notice = owed ? "booking-removed-refund-owner" : "booking-removed";
-    revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+    revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
   // A cancel inside the shop's stated window auto-refunds a Stripe payment;
   // everything else (no window, counter payment, Stripe off) degrades to the
@@ -822,7 +847,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (refund.status !== "no_policy" && refund.status !== "unpaid") {
     await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
   }
-  revalidateAndRedirect(back, `${back}?notice=${refundNotice(refund)}&bid=${bookingId}`);
+  revalidateAndRedirect(back, noticeUrl(back, refundNotice(refund), { bid: bookingId }));
 }
 
 export async function undoRemoveBookingAction(
@@ -864,7 +889,7 @@ export async function undoRemoveBookingAction(
       });
     }
   }
-  revalidateAndRedirect(back, `${back}?notice=${restoreNotice}`);
+  revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
 }
 
 /**
@@ -885,7 +910,7 @@ export async function confirmDiverIdentityAction(
   const confirmed = await confirmBookingIdentity(await getDb(), s.user.shopId, bookingId);
   revalidateAndRedirect(
     back,
-    `${back}?notice=${confirmed ? "identity-confirmed" : "invalid"}&bid=${bookingId}`,
+    noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
   );
 }
 
@@ -913,7 +938,7 @@ export async function markWaiverInPersonAction(
   const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) redirect(`${back}?notice=waiver-error`);
+  if (!bookingId) redirect(noticeUrl(back, "waiver-error"));
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: s.user.shopId,
     subject: { bookingId },
@@ -925,7 +950,7 @@ export async function markWaiverInPersonAction(
       outcome.reason === "medical_attestation_required"
         ? "waiver-medical-attestation"
         : "waiver-error";
-    revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+    revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
   revalidatePath(back);
 }
@@ -951,7 +976,7 @@ export async function saveRosterEmergencyContactAction(
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
-  if (!bookingId || !parsed.success) redirect(`${back}?notice=invalid`);
+  if (!bookingId || !parsed.success) redirect(noticeUrl(back, "invalid"));
   const name = (parsed.data.emergencyContactName ?? "").trim();
   const phone = (parsed.data.emergencyContactPhone ?? "").trim();
   await saveBookingEmergencyContact(await getDb(), {
@@ -965,7 +990,7 @@ export async function saveRosterEmergencyContactAction(
   const complete = Boolean(name && phone);
   revalidateAndRedirect(
     back,
-    `${back}?notice=${complete ? "contact-saved" : "contact-incomplete"}&bid=${bookingId}`,
+    noticeUrl(back, complete ? "contact-saved" : "contact-incomplete", { bid: bookingId }),
   );
 }
 
@@ -987,7 +1012,7 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           currency: await getShopCurrency(db, s.user.shopId),
         })
       : null;
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "payment" : "invalid"}`);
+  revalidateAndRedirect(back, noticeUrl(back, saved ? "payment" : "invalid"));
 }
 
 export async function saveRequirementsAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -998,11 +1023,11 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   // a course session's admission rules are frozen and must not be editable here,
   // and upsertTripRequirements has no independent course check.
   const trip = await getTripWithBooked(db, s.user.shopId, tripId);
-  if (trip?.courseId) redirect(`${back}?notice=invalid&form=requirements`);
+  if (trip?.courseId) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid&form=requirements`);
+  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
-  if (!specialties.success) redirect(`${back}?notice=invalid&form=requirements`);
+  if (!specialties.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const saved = await upsertTripRequirements(db, {
     shopId: s.user.shopId,
     tripId,
@@ -1012,7 +1037,7 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresNitrox: formData.get("requiresNitrox") === "on",
     requiresPayment: formData.get("requiresPayment") === "on",
   });
-  if (!saved) redirect(`${back}?notice=invalid&form=requirements`);
+  if (!saved) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   // **Who this just blocked.** Readiness is computed live from the trip's
   // current requirement row and the sites it visits, so a tightened gate
   // already reaches every booked diver the moment it is saved — they turn up
@@ -1029,8 +1054,8 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   revalidateAndRedirect(
     back,
     blocked > 0
-      ? `${back}?notice=requirements-blocking&count=${blocked}`
-      : `${back}?notice=requirements`,
+      ? noticeUrl(back, "requirements-blocking", { count: blocked })
+      : noticeUrl(back, "requirements"),
   );
 }
 
@@ -1063,9 +1088,9 @@ export async function updateTripCrewAction(
             : `removed ${person.fullName} from crew`,
       });
     }
-    revalidatePath(`/shop/${shopSlug}`);
-    revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);
-    revalidatePath(`/shop/${shopSlug}/trips/${tripId}/manifest`);
+    revalidatePath(shopPath(shopSlug));
+    revalidatePath(shopPath(shopSlug, "trips", tripId));
+    revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
     return { ok: true };
   }
   return { ok: false };

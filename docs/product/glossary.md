@@ -79,6 +79,40 @@ new domain concept, define it here in the same PR.
   stamp stays forever after a sighting, so a rule phrased as "not self-declared" would read a
   staff-verified card as displaceable and let an anonymous post re-grade it
   ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
+- **Declared uncertified** — a joiner's answer of *"I'm not certified yet"* on one of those same two
+  opt-ins: Discover Scuba and Try Scuba customers, snorkellers, the non-diving half of a couple,
+  somebody booked onto a course they have not started. It is **not a Self-declared certification and
+  not a level**: it lands as one nullable stamp on the person (`people.no_certification_declared_at`)
+  and never as a `certifications` row, because a Discover Scuba experience is not a certification and
+  every row in that table asserts that a card exists. Nor is it a rung on the ladder —
+  `certification_level` is an ordering, and a "none" member would eventually be compared as a level.
+  It exists because the alternative was worse than silence: an uncertified joiner had to pick
+  "Rather not say", which renders identically to a certified regular who skipped the question, so the
+  shop mailed them a certified two-tank charter. Staff read it as *"Not certified yet — diver's
+  word"*, in the same warning tone every unchecked claim wears, and on the last-minute-deal list the
+  person is counted and lifted like anyone else **below this departure's minimum** — under every
+  requirement there is, a rung, a specialty or nitrox, without being ranked on a ladder they are not
+  on. That last part makes them the *only* recipient that list can place on a departure gated by
+  cards rather than a rung. Same anti-displacement rule as a claim,
+  widened to all three card tables: any live card the shop holds — level, nitrox or specialty —
+  refutes "there is no card", and nothing is written. It **retracts the joiner's own still-unsighted
+  claims** (archived, never destroyed) so a correction downward cannot be outlived by the higher claim
+  it corrects, and it is **ignored rather than deleted** once evidence lands beside it — where a
+  record began is history, so the column keeps the answer and the *reader* stops repeating it.
+  "Ignored" is that same three-table test: any live card the shop holds drops it from the summary,
+  while a level the diver merely *claimed* later leaves it standing and simply renders ahead of it.
+  It gates nothing ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
+- **Certification summary** — the one staff-facing phrase for *what a person may dive, as far as
+  anybody here knows*, rendered beside a name on the last-minute-deal recipient list and the
+  wait-list rows: a card the shop holds reads plainly, a **Self-declared certification** reads
+  *"— diver's word, no card"* in a warning tone, a **Declared uncertified** joiner reads *"Not
+  certified yet — diver's word"* in the same tone, and nothing on file reads *"Level not said"* rather
+  than blank. On the deal list it also says *"· below this departure's minimum"* when that person
+  ranks under the trip's effective gate — a **word**, because the warning tone beside it already
+  means exactly one thing ("nobody has seen this card") and colour is never the only carrier of
+  meaning. It **informs and gates nothing**: no blast is filtered, no mail reordered, no button
+  disabled. Never called a *dive profile*, which to a diver is the depth/time curve of a dive that
+  already happened.
 - **Card sighting** — the staffer entering the agency, the card number **and the level off the card
   in their hand**.
   It is now the one thing that turns a **Self-declared certification** into evidence, and it is the
@@ -88,7 +122,12 @@ new domain concept, define it here in the same PR.
   copied the number off a genuine Open Water card while keeping the diver's typed "Instructor" would
   verify the one field nobody looked at. Enforced twice, in `reviewCertification` and in the
   database's own `certifications_identifier_present_unless_self_declared`, so a numberless card can
-  never reach `verified`.
+  never reach `verified` — the constraint catches a *null* number, and the empty string is the
+  application's to refuse. The number is also **shape-checked** as of 2026-08-15
+  (`isPlausibleCardNumber`: three characters and at least one digit, on this form and on the capture
+  forms beside it), because *"xx"* certified a self-declared "Instructor" for a day. That check is a
+  typo filter and never evidence: what the record rests on is the staffer holding the card and the
+  agency lookup they do before tapping.
   *Its earlier meaning was retired on 2026-08-14* — an attestation checkbox a staffer ticked when
   confirming an **imported** specialty or nitrox card (*“I've seen this diver's card, or checked the
   number with the issuing agency”*), dropped when the owner levelled the two confirms against the
@@ -569,7 +608,14 @@ new domain concept, define it here in the same PR.
   not boarded, or cleared, including the time and any note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
   current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
-  own event so the correction stays in the audit trail rather than deleting history. A note still
+  own event so the correction stays in the audit trail rather than deleting history. **Cleared is
+  emitted offline too**, and it is the reason it has to be: without it the only way to take back a
+  mis-tapped "not back aboard" was to tap "aboard" — a positive claim that a person is back on the
+  boat, which nobody had made. A device may only retract a statement *that same device queued*; a
+  mark that arrived on the saved copy says so instead, because the device cannot know what the
+  crew who recorded it saw. Asserting **aboard over a stated "not back aboard"** takes a
+  confirming second tap that names the person, on a separate control, so a wet thumb on a rolling
+  boat cannot turn the loudest row in the product green by bouncing. A note still
   being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
   connection never loses it; that device draft is transient and unencrypted — separate from, and not
   protected like, the encrypted **offline manifest snapshot**.
@@ -592,8 +638,9 @@ new domain concept, define it here in the same PR.
   rather than the divemaster who has not surfaced — which is why it is now the *only* crew evidence
   a checkpoint reads. A trip with **no crew assigned is not exempt**: an empty crew list holds the
   checkpoint open, because it is a scheduling gap rather than evidence nobody else was aboard, and
-  the manifest answers it with "Add crew to trip". Read-only on the offline copy, where a crew
-  member with no saved result reads as still-to-call. A subject must be assigned to the trip *and*
+  the manifest answers it with "Add crew to trip". **No longer read-only on the offline copy**: the
+  crew half records aboard, not aboard and cleared on the device exactly as the diver half does, and
+  a crew member with no saved result reads as still-to-call. A subject must be assigned to the trip *and*
   either hold a staff role **or already carry a result on that trip** — one condition
   (`isOnTripCrew`) the crew list reads through as well, so a result can never exist about somebody
   the head count cannot see, and somebody the head count is counting can never vanish out from under
@@ -683,7 +730,14 @@ new domain concept, define it here in the same PR.
   then resolve the tie the same way: in the order the device queued the events, so the later tap
   wins. That is what lets a crew member who marks the wrong row and corrects it within the same
   millisecond keep the correction, on the screen and after the sync alike — and it is a rule with
-  two halves that have to agree, so changing either one alone is a bug.
+  two halves that have to agree, so changing either one alone is a bug. On the server side that
+  order is now a property of the rows rather than of the clock's resolution: `roll_call_events` and
+  `roll_call_crew_events` carry a monotonic `seq` that is the final ordering key everywhere they are
+  read, because `created_at` is *transaction* time and a synced offline batch ties on it exactly.
+  A **rejected** device event is the one asymmetric case: it may never *downgrade* a "not back
+  aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
+  one direction that takes an alarm off the screen — while it still may never resurrect a superseded
+  "aboard", which is the stale optimism reconciliation exists to overrule.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the

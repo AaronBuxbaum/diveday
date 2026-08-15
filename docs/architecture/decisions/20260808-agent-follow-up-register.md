@@ -42,6 +42,26 @@ file deleted). There is no "done" status, matching the roadmap and assessment ru
 work leaves the planning doc rather than sitting there marked complete. Agents file; they do not
 act on entries as drive-bys.
 
+### Amended 2026-08-15 — a `waiting/` room for entries nobody here can move
+
+Three of the register's twenty-one entries were blocked on something outside the repository: an
+`aws-rum-web` release, a reply from `vercel/analytics`, and funnel numbers that need traffic the
+site has not had yet. Each was `Open`, so each asked the reader for a triage decision it could not
+receive — re-read weekly, deferred weekly, and (this is the cost) sitting between the entries that
+*could* move, teaching the reader that most of the folder is noise.
+
+`docs/product/follow-ups/waiting/` holds those. An entry there says `**Status:** Waiting` and
+carries a `**Waiting on:**` line naming the blocking event **and how a reader would check whether it
+has happened** — a changelog, an issue thread, a dashboard and the runbook for it. That second half
+is the load-bearing one: without it a waiting entry is indistinguishable from an entry nobody got
+round to, which is the state this split exists to end. `pnpm check:follow-ups` enforces both, checks
+each room's status vocabulary against the other's, and counts them separately.
+
+The boundary is *who owes the next move*, not how hard the work is. Blocked on Aaron is not waiting
+— that is what the inbox already is, and a call he has read and deferred stays upstairs as `Parked`.
+`pnpm gates` ages both rooms, deliberately: "waiting on upstream" is an honest answer only while
+somebody is still checking, and an age is the only thing that says otherwise.
+
 ## Alternatives considered
 
 - **One `follow-ups.md` everyone appends to** — simplest to read, but guarantees merge conflicts
@@ -56,6 +76,9 @@ act on entries as drive-bys.
   PR closes.
 - **No checker, format by convention** — the failure mode this exists to prevent is precisely the
   under-written entry ("revisit the pager here"), and conventions with no gate decay silently.
+- **A `Status: Waiting` value instead of a folder** (2026-08-15 amendment) — one less directory, but
+  it leaves the blocked entries interleaved with the actionable ones in every listing, which is the
+  whole cost being paid. A reader scanning a folder sees files, not statuses.
 
 ## Consequences
 

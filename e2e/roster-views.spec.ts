@@ -1,4 +1,9 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: the view chips are links and the search box drives the URL —
+ * every assertion is about which rows the roster query returns.
+ */
 
 // The roster's view chips (`?filter=`). The bug class this exists to catch is a
 // chip that decorates the URL and nothing else: the page reads
@@ -25,7 +30,9 @@ const DIVING_TODAY_DIVER = "Priya Sharma";
 const DIVING_LATER_DIVER = "Amara Osei";
 const PENDING_CARD_DIVER = "Mateo Duarte";
 
-test("the diver roster offers role-view chips that drive the filter", async ({ page }) => {
+test("the diver roster offers role-view chips that drive the filter", { tag: READ_ONLY }, async ({
+  page,
+}) => {
   await page.goto("/shop/blue-mantis/divers");
   await expect(page.getByRole("heading", { level: 1, name: "Divers" })).toBeVisible();
 
@@ -70,7 +77,9 @@ test("the diver roster offers role-view chips that drive the filter", async ({ p
 // that live off the row — a seat on a boat, a card waiting on a staffer — so
 // each is checked the same way: a diver the view must keep, and a diver on the
 // roster it must drop.
-test("the roster narrows to today's divers and to whoever needs a staffer", async ({ page }) => {
+test("the roster narrows to today's divers and to whoever needs a staffer", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
   const views = page.getByRole("navigation", { name: "Roster views" });
   const search = page.getByRole("searchbox", { name: "Search divers" });

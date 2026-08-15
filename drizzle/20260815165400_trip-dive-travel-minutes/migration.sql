@@ -1,0 +1,2 @@
+ALTER TABLE "trip_dives" ADD COLUMN "travel_minutes" integer;--> statement-breakpoint
+ALTER TABLE "trip_dives" ADD CONSTRAINT "trip_dives_travel_minutes_range" CHECK ("travel_minutes" is null or ("travel_minutes" >= 0 and "travel_minutes" <= 480));

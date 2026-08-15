@@ -8,6 +8,7 @@ import {
 } from "react";
 import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import { toneGlyph } from "./tone";
 
 /**
  * Canonical form primitives.
@@ -280,23 +281,22 @@ export function FieldActions({
   );
 }
 
-const STATUS_TONE: Record<NoticeTone, string> = {
-  success: "text-success",
-  danger: "text-danger",
-  warning: "text-warning",
-  neutral: "text-muted",
-};
-
 /**
- * Decorative tone glyph — the same vocabulary and the same reasoning as
- * `ShopNotice`'s (src/components/ShopPageHeader.tsx): a tone carried only by
- * hue is a tone a colourblind scan misses before it reaches the words.
+ * `-strong` for the two hues that need it. A `FormStatus` sits in whatever
+ * container its form does, and the light palette's raw `text-success`/
+ * `text-warning` clear AA on `bg-surface` (5.02:1) but fail on
+ * `bg-surface-sunken` (4.36:1) — and a disclosed settings row, a sunken inset
+ * panel, and a card's footer are all places a form's action row lands. `-strong`
+ * clears both (5.54:1 / 4.82:1), so the component does not have to know where
+ * it was mounted. This is the surface that tells a staffer their save was
+ * refused; it does not get to be the one that guessed. Numbers in
+ * docs/design/forms-and-controls.md.
  */
-const STATUS_GLYPH: Record<NoticeTone, string | null> = {
-  success: "✅",
-  danger: "❌",
-  warning: "⚠️",
-  neutral: null,
+const STATUS_TONE: Record<NoticeTone, string> = {
+  success: "text-success-strong",
+  danger: "text-danger",
+  warning: "text-warning-strong",
+  neutral: "text-muted",
 };
 
 /**
@@ -338,7 +338,7 @@ export function FormStatus({
   children?: ReactNode;
 }) {
   if (!children) return null;
-  const glyph = STATUS_GLYPH[tone];
+  const glyph = toneGlyph(tone);
   return (
     <p
       id={id}

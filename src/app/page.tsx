@@ -19,7 +19,7 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
+import { scheduleAttributionHref, switchingHref, trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -431,6 +431,34 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             >
               <ImportPreviewFallback locale={locale} />
             </MarketingMockup>
+            {/* The spreadsheet door, and it belongs to this column rather than
+                to the section: the mockup above it is the importer reading a
+                sheet, so the reader who recognizes their own sheet in it is
+                already looking here. Deliberately *not* a second link stacked
+                under the section copy beside the hub link — that shape came out
+                on 2026-08-13 and is not what this restores
+                (docs/product/marketing.md). Its copy is a label on the mockup
+                ("Your spreadsheet, column by column"), not a fourth sentence of
+                body copy: the paragraph above has already asked this reader for
+                their sheet, so re-asking "Running the day on a spreadsheet?"
+                here would qualify an audience the copy just addressed — and
+                would rhyme, question-then-arrow, with the band's closing link.
+
+                `self-start`, which the closing link needs no equivalent of:
+                this one is a flex *item* in the column, so without it the item
+                stretches to the full column width and `buttonClass`'s
+                `justify-center` centers the label under a left-aligned
+                paragraph. */}
+            <Link
+              href={switchingHref("/switching/spreadsheet", "home-records-arriving")}
+              className={buttonClass({
+                variant: "link",
+                flush: true,
+                className: "self-start text-left",
+              })}
+            >
+              {t("marketing.home.spreadsheetLink")}
+            </Link>
           </div>
 
           <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
@@ -455,15 +483,24 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           </div>
         </div>
 
-        {/* One door to the whole switching surface — the hub fronts both the
-            incumbent guides and the spreadsheet path, so two stacked link CTAs
-            here were one door pretending to be two. */}
-        <Link
-          href="/switching"
-          className={buttonClass({ variant: "link", flush: true, className: "mt-10 text-left" })}
-        >
-          {t("marketing.home.guidesLink", { competitors })}
-        </Link>
+        {/* One door to the whole switching surface, closing the band rather
+            than belonging to either half: the hub fronts every incumbent guide,
+            so two stacked link CTAs here were one door pretending to be two.
+            The rule above it is load-bearing now that the arriving column ends
+            in a link of its own: the left column is the taller one (a mockup
+            against a four-row list), so without a full-width line between them
+            these two land at the same left margin a short gap apart and scan as
+            a stacked pair — the exact shape the 2026-08-13 redesign removed,
+            reached from a different direction. The rule says this one closes
+            both columns. */}
+        <div className="mt-12 border-t border-border pt-6">
+          <Link
+            href={switchingHref("/switching", "home-records")}
+            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+          >
+            {t("marketing.home.guidesLink", { competitors })}
+          </Link>
+        </div>
       </section>
 
       {/* The one close. Until 2026-08-13 the page ended on three consecutive

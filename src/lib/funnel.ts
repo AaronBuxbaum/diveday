@@ -32,6 +32,14 @@ const FIXED_SOURCES = [
   "home-diver-moment",
   // Retired 2026-08-13 — kept for history, not for reuse. See above.
   "home-mid",
+  // The records band's two doors onto the switching surface, split by position
+  // for the reason above: `home-records` is the band-level link to the hub,
+  // `home-records-arriving` the spreadsheet door inside the "Coming in" column.
+  // Folded into one tag, neither could be read on its own — and which of them a
+  // spreadsheet shop uses is the question that put the second one there
+  // (docs/product/marketing.md).
+  "home-records",
+  "home-records-arriving",
   "home-closing",
   "nav",
   "product",
@@ -93,4 +101,22 @@ export function trialHref(source: FunnelSource): string {
  */
 export function scheduleAttributionHref(shopSlug: string, source: FunnelSource): string {
   return `${publicSchedulePath(shopSlug)}?from=${source}`;
+}
+
+/**
+ * The two doors onto the switching surface: the hub, which forks to the
+ * incumbent guides and the spreadsheet path, and the spreadsheet guide itself.
+ * A union rather than a free path because the question these tags answer is
+ * which of the two a reader takes — a third destination is a deliberate edit
+ * here, not a string a page invents.
+ *
+ * A switching page retags its own demo/trial CTAs with its own source, so the
+ * hop *into* it can only be attributed on the way in: the query string this
+ * builds rides the Vercel `<Analytics />` page view, the same way
+ * `scheduleAttributionHref` carries the diver-preview link's tag.
+ */
+export type SwitchingDestination = "/switching" | "/switching/spreadsheet";
+
+export function switchingHref(destination: SwitchingDestination, source: FunnelSource): string {
+  return `${destination}?from=${source}`;
 }

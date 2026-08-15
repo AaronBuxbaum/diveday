@@ -1,16 +1,23 @@
 import { strFromU8, unzipSync } from "fflate";
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
  * The full-shop export flow (ADR 20260722-full-shop-export): the promise that
  * a shop can leave with everything, any time. Happy path downloads and opens
  * the real ZIP; the failure path proves the bundle never leaves without a
  * staff session.
+ *
+ * READ_ONLY holds here: building the bundle is a pure read of the shop
+ * (`loadShopExportBundleInput`, no ledger row for having exported), and the two
+ * authorization tests only get refused. The clicks are a disclosure and a download.
  */
 test.describe("full-shop data export", () => {
   signedInAsOwner();
 
-  test("staff download the whole shop as documented CSVs", async ({ page, request }) => {
+  test("staff download the whole shop as documented CSVs", { tag: READ_ONLY }, async ({
+    page,
+    request,
+  }) => {
     await page.goto("/shop/blue-mantis/settings/export");
     await expect(page.getByRole("heading", { name: "Data export" })).toBeVisible();
 
@@ -83,7 +90,7 @@ test.describe("full-shop data export", () => {
   });
 });
 
-test("the export never leaves without a staff session", async ({ request }) => {
+test("the export never leaves without a staff session", { tag: READ_ONLY }, async ({ request }) => {
   const response = await request.get("/shop/blue-mantis/settings/export/download", {
     maxRedirects: 0,
   });
@@ -95,13 +102,16 @@ test("the export never leaves without a staff session", async ({ request }) => {
 test.describe("as captain", () => {
   signedInAs("captain");
 
-  test("staff outside owner/manager can't reach export", async ({ page, request }) => {
+  test("staff outside owner/manager can't reach export", { tag: READ_ONLY }, async ({
+    page,
+    request,
+  }) => {
     // The bundle carries the whole roster's medical evidence, so a captain —
     // staff everywhere else in the app — has no use for this surface. Bounced
     // to Today with an explanation, not teleported there silently (task 82,
     // UX persona 11 "Kai").
     await page.goto("/shop/blue-mantis/settings/export");
-    // Not a URL assertion: FlashParams strips `?notice=export_not_authorized`
+    // Not a URL assertion: FlashParams strips `?notice=export-not-authorized`
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);

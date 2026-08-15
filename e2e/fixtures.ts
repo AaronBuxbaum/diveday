@@ -32,6 +32,41 @@ export function makeActivitySafe(page: Page): Page {
   return page;
 }
 
+/**
+ * A test's own statement that it only **reads** — so `demoReset` below skips
+ * the wipe-and-reseed of the whole demo shop it would otherwise pay for.
+ *
+ * ```ts
+ * test("the schedule's filters narrow the list", { tag: READ_ONLY }, async ({ page }) => {
+ * ```
+ *
+ * The reset exists because a test that mutates the demo shop leaks its trips
+ * and bookings into every later spec's fixture (see that fixture's comment for
+ * the flake it was introduced to kill). A test that never writes cannot cause
+ * that leak, so it can skip the round trip — roughly 1.2s on an idle box, and
+ * far more on a loaded one.
+ *
+ * **This is an assertion by the author, and no check can prove it.** Writing
+ * the tag is the claim; a form submit, a server action, or a demo-shop mint
+ * added to that test later invalidates it, and the tag must come off. Deliberately
+ * not a lint rule that greps for `.click()`/`.fill()`: half the tests wearing
+ * this tag click filters, type in search boxes and open disclosures without
+ * touching a row, so such a check would be wrong in both directions.
+ *
+ * Read-only means "writes nothing", not "signs in nothing" — `signedInAs*` is
+ * fine under it, since the sign-in fixture mints its state in its own context.
+ *
+ * Per **test**, not per file, and that is the point of it being a tag rather
+ * than the second `test` export this replaces: with a file-level import, a test
+ * added underneath it months later inherited a claim nobody re-checked, silently
+ * and invisibly. A tag defaults the other way — an untagged test pays the reset —
+ * and it says so on the test's own line, in the runner's output, and to
+ * `--grep @read-only`. Each file also carries one line in its docblock saying
+ * *why* the claim holds there, so the next author meets the constraint rather
+ * than discovering it.
+ */
+export const READ_ONLY = "@read-only";
+
 /** A shop minted for one test alone — see the `privateShop` fixture below. */
 export type PrivateShop = {
   /** The minted shop's slug, for every `/shop/<slug>/…` and `/s/<slug>/…` path. */
@@ -67,7 +102,15 @@ export const test = base.extend<
   // on `request` (an API call to the worker's own server), so parallel resets
   // never interfere; the browser clock is frozen in the `context` fixture below.
   demoReset: [
-    async ({ request }, use) => {
+    async ({ request }, use, testInfo) => {
+      // The one opt-out: a test that has asserted it only reads (see READ_ONLY
+      // above). Checked here rather than by overriding this fixture in a second
+      // `test` export, so the claim lives on the test that makes it and an
+      // untagged test always pays the reset.
+      if (testInfo.tags.includes(READ_ONLY)) {
+        await use(undefined);
+        return;
+      }
       const response = await request.post("/api/test/reset");
       // Fail *here*, naming the reset, rather than letting the test run on a
       // half-wrecked shop. `resetDemoSchedule` is a hand-maintained topological
@@ -316,34 +359,6 @@ export const test = base.extend<
     },
     { scope: "worker" },
   ],
-});
-
-/**
- * `test` with the per-test demo reset turned off, for a spec file whose every
- * test only *reads*.
- *
- * The reset above exists because a test that mutates the demo shop would
- * otherwise leak its trips and bookings into every later spec's fixture (see
- * that fixture's comment for the flake it was introduced to kill). A file
- * that never writes cannot cause that leak, so it can skip the round trip —
- * which is a wipe-and-reseed of the whole demo shop, paid once per test.
- *
- * This is opt-in per file, and stays that way on purpose: it is an assertion
- * by the author that *every* test in that file is read-only, and there is no
- * check that can prove it. Importing this is the claim; a single form submit,
- * server action, or demo-shop mint added later invalidates it and the file
- * must go back to `test`. Read-only here means "writes nothing", not "signs
- * in nothing" — a `signedInAs*` session is fine, since the sign-in fixture
- * mints its state in its own context.
- */
-export const readOnlyTest = test.extend({
-  // Overriding an existing fixture inherits its options, so this stays `auto`
-  // (and Playwright's types reject restating `auto` on an override) — it just
-  // resolves to the same `undefined` without the POST.
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires the destructuring pattern.
-  demoReset: async ({}, use) => {
-    await use(undefined);
-  },
 });
 
 /**

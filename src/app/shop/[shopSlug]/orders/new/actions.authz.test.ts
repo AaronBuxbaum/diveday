@@ -108,7 +108,7 @@ describe("raising an invoice", () => {
 
     const to = await redirectedTo(() => createOrderAction(invoiceFor(customer)));
 
-    expect(to).toBe(`/shop/${shop.slug}/orders?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/orders?notice=not-authorized`);
     // The refusal is only worth anything if no invoice went out behind it.
     expect(await orderCount(db, shop.id)).toBe(before);
   });
@@ -133,7 +133,7 @@ describe("raising an invoice", () => {
 
     const to = await redirectedTo(() => createOrderAction(invoiceFor(customer)));
 
-    expect(to).toBe(`/shop/${shop.slug}/orders?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/orders?notice=not-authorized`);
     expect(await orderCount(db, shop.id)).toBe(before);
   });
 
@@ -149,6 +149,6 @@ describe("raising an invoice", () => {
     // fails there — on `orders/new` itself, with the invoice still to send. A
     // captain never sees this notice, which is the point: the two refusals are
     // distinguishable, and only one of them is about authorization.
-    expect(to).toBe(`/shop/${shop.slug}/orders/new?notice=stripe_failed`);
+    expect(to).toBe(`/shop/${shop.slug}/orders/new?notice=stripe-failed`);
   });
 });

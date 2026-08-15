@@ -28,7 +28,10 @@
 // cannot see past. Aging it is reported here for the same reason the gates are, and with
 // the same restraint: `pnpm check:follow-ups` deliberately does not fail on an old entry,
 // because an inbox waiting on a human's judgment is not a build failure, and nothing in
-// that folder is an agent's to close.
+// that folder is an agent's to close. The register's two rooms are aged separately —
+// the inbox, and `waiting/`, whose entries are blocked on an upstream release or a third
+// party's answer. Both are reported, because "waiting on upstream" is only an honest
+// answer for as long as somebody is still checking, and the age is what says otherwise.
 //
 // Time: `pnpm check:clock` guards src/lib, src/db, and src/features — not scripts/ — so
 // the bare `new Date()` in `main()` below is in bounds. Every function that reasons about
@@ -40,7 +43,10 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { DIRECTORY as FOLLOW_UPS } from "./check-follow-ups.mjs";
+import {
+  DIRECTORY as FOLLOW_UPS,
+  WAITING_DIRECTORY as FOLLOW_UPS_WAITING,
+} from "./check-follow-ups.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -320,10 +326,10 @@ function printRows(heading, rows) {
   }
 }
 
-function printFollowUps(entries) {
-  console.log(`\nFollow-up register (${FOLLOW_UPS}) — ${entries.length} awaiting triage`);
+function printFollowUps(entries, { directory, heading, empty }) {
+  console.log(`\n${heading} (${directory}) — ${entries.length}`);
   if (entries.length === 0) {
-    console.log("  Empty — nothing filed is waiting on a human.");
+    console.log(`  ${empty}`);
     return;
   }
   // The id is the entry's whole address — the slug is how a reader finds the file — so the
@@ -340,12 +346,11 @@ function printFollowUps(entries) {
   }
 }
 
-/** `{ filename, contents }` for every file in the follow-up folder; [] when it is absent. */
-function readFollowUpFiles() {
-  const directory = path.join(ROOT, FOLLOW_UPS);
+/** `{ filename, contents }` for every file in one follow-up room; [] when it is absent. */
+function readFollowUpFiles(directory) {
   let names;
   try {
-    names = readdirSync(directory);
+    names = readdirSync(path.join(ROOT, directory));
   } catch {
     return [];
   }
@@ -354,7 +359,7 @@ function readFollowUpFiles() {
     .sort()
     .map((filename) => ({
       filename,
-      contents: readFileSync(path.join(directory, filename), "utf8"),
+      contents: readFileSync(path.join(ROOT, directory, filename), "utf8"),
     }));
 }
 
@@ -415,7 +420,19 @@ async function main() {
     }
   }
 
-  printFollowUps(ageFollowUps(readFollowUpFiles(), now));
+  printFollowUps(ageFollowUps(readFollowUpFiles(FOLLOW_UPS), now), {
+    directory: FOLLOW_UPS,
+    heading: "Follow-up register — awaiting triage",
+    empty: "Empty — nothing filed is waiting on a human.",
+  });
+  // Reported separately, and reported at all: an entry parked on somebody else's
+  // release still rots, and "waiting on upstream" is only an honest answer for as
+  // long as somebody is still checking. The age is the thing that says otherwise.
+  printFollowUps(ageFollowUps(readFollowUpFiles(FOLLOW_UPS_WAITING), now), {
+    directory: FOLLOW_UPS_WAITING,
+    heading: "Follow-up register — waiting on somebody else",
+    empty: "Empty — nothing is blocked outside this repo.",
+  });
 
   const stalled = reconciled.filter((item) => item.unstarted);
   const unmeasurable = reconciled.filter((item) => item.unmeasurable);

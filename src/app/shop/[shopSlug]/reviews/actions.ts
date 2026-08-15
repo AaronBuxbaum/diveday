@@ -9,6 +9,7 @@ import {
 } from "@/db/reviews";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Publish or hide one diver review. The shop is taken from the staff session
@@ -29,26 +30,32 @@ import { requireStaffSession } from "@/lib/session";
  */
 export async function setReviewPublishedAction(formData: FormData) {
   const session = await requireStaffSession();
-  const reviews = `/shop/${session.user.shopSlug}/reviews`;
+  // `shopPath`, not a template: the slug rides in on the session but is still
+  // an ordinary string being spliced into a redirect target, and every segment
+  // it builds is escaped (src/lib/staff-notices.ts).
+  const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewId = String(formData.get("reviewId") ?? "");
   const publish = formData.get("publish") === "true";
-  if (!reviewId) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
+  if (!reviewId) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
 
   const outcome = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish, {
     recordedByPersonId: session.user.personId,
     reason: parseReviewModerationReason(formData.get("reason")),
     reasonNote: String(formData.get("reasonNote") ?? ""),
   });
-  if (outcome === "not_found") revalidateAndRedirect(reviews, `${reviews}?notice=error`);
+  if (outcome === "not_found") revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  // The `#review-<id>` fragment goes on the path handed to `noticeUrl`, which
+  // merges the notice into the query *ahead* of it — the refused row is still
+  // what the browser lands on.
   if (outcome === "reason_required") {
-    revalidateAndRedirect(reviews, `${reviews}?notice=reason_required#review-${reviewId}`);
+    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "reason-required"));
   }
   if (outcome === "note_required") {
-    revalidateAndRedirect(reviews, `${reviews}?notice=note_required#review-${reviewId}`);
+    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "note-required"));
   }
   revalidateAndRedirect(
     reviews,
-    publish ? `${reviews}?notice=published` : `${reviews}?notice=hidden&undo=${reviewId}`,
+    publish ? noticeUrl(reviews, "published") : noticeUrl(reviews, "hidden", { undo: reviewId }),
   );
 }
 
@@ -75,12 +82,12 @@ function parseReviewModerationReason(
  */
 export async function publishReviewsAction(formData: FormData) {
   const session = await requireStaffSession();
-  const reviews = `/shop/${session.user.shopSlug}/reviews`;
+  const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewIds = formData
     .getAll("reviewIds")
     .map((value) => String(value))
     .filter(Boolean);
-  if (reviewIds.length === 0) revalidateAndRedirect(reviews, `${reviews}?notice=none_selected`);
+  if (reviewIds.length === 0) revalidateAndRedirect(reviews, noticeUrl(reviews, "none-selected"));
 
   const published = await setReviewsPublished(
     await getDb(),
@@ -88,6 +95,6 @@ export async function publishReviewsAction(formData: FormData) {
     reviewIds,
     session.user.personId,
   );
-  if (published === 0) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
-  revalidateAndRedirect(reviews, `${reviews}?notice=published_many&published=${published}`);
+  if (published === 0) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  revalidateAndRedirect(reviews, noticeUrl(reviews, "published-many", { published }));
 }

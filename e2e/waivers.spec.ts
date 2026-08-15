@@ -34,7 +34,7 @@ test.describe("as captain", () => {
     // owner/manager work; a captain is bounced to Today with an explanation
     // rather than teleported there silently (task 82, UX persona 11 "Kai").
     await page.goto("/shop/blue-mantis/waivers");
-    // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
+    // Not a URL assertion: FlashParams strips `?notice=waivers-not-authorized`
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);

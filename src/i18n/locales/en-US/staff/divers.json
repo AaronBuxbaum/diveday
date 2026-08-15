@@ -68,6 +68,7 @@
     "selfDeclaredLabel": "Self-declared — no card number yet",
     "sightCard": "Certify from card",
     "sightCardHint": "The diver told us this level. Type what the card in your hand says.",
+    "sightNitroxCardHint": "The diver told us they're nitrox certified. Type what the enriched-air card in your hand says. RAID and GUE don't issue one — their enriched air is inside the level card (RAID Open Water 20 or Advanced 35, GUE Fundamentals or Rec 1), so record that card. Every other agency issues a separate enriched-air card, and a level card from them is not nitrox evidence.",
     "sightCardLevel": "Level on the card",
     "sightCardLevelHint": "Prefilled with what the diver said. Change it to match the card in your hand.",
     "markCertified": "Mark certified",

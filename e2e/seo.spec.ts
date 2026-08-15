@@ -1,6 +1,10 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
-import { expect, readOnlyTest as test } from "./fixtures";
+import { expect, READ_ONLY, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: every test fetches a document — robots.txt, sitemap.xml, a
+ * page's `<head>` — and asserts on its bytes.
+ */
 
 /**
  * A consolidated smoke pass over the SEO surface this batch touched:
@@ -12,9 +16,9 @@ import { expect, readOnlyTest as test } from "./fixtures";
  * the consolidated pass, per the audit that spawned it.
  */
 
-test("robots.txt disallows every token-route prefix and points at the sitemap", async ({
-  page,
-}) => {
+test("robots.txt disallows every token-route prefix and points at the sitemap", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   const response = await page.request.get("/robots.txt");
   expect(response.ok()).toBe(true);
   const body = await response.text();
@@ -45,9 +49,9 @@ test("robots.txt disallows every token-route prefix and points at the sitemap", 
  * left out (proving the `isDemo` filter is live, not a no-op), and a
  * bearer-token prefix never leaks into a publicly indexed URL list.
  */
-test("sitemap.xml lists the marketing pages, excludes the demo shop, and never leaks a token route", async ({
-  page,
-}) => {
+test("sitemap.xml lists the marketing pages, excludes the demo shop, and never leaks a token route", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   const response = await page.request.get("/sitemap.xml");
   expect(response.ok()).toBe(true);
   const body = await response.text();
@@ -66,9 +70,9 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
   expect(body).not.toContain("/waivers/");
 });
 
-test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", async ({
-  page,
-}) => {
+test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   // The `.locator()` calls in this file all target `<head>` elements
   // (link/meta/script) that never have a layout box, so
   // `.filter({ visible: true })` would zero out every match regardless of
@@ -90,7 +94,7 @@ test("the schedule page's canonical stays on the standalone URL in both standalo
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
 
-test("the homepage carries a resolvable og:image", async ({ page }) => {
+test("the homepage carries a resolvable og:image", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/");
   const content = await page.locator('meta[property="og:image"]').getAttribute("content");
   expect(content).toBeTruthy();
@@ -106,9 +110,9 @@ test("the homepage carries a resolvable og:image", async ({ page }) => {
  * say about itself inherited one. Every page that exports a block now spreads
  * `openGraphSite` (src/lib/site-metadata.ts).
  */
-test("every public page names the site in its unfurl, not just the ones with no words of their own", async ({
-  page,
-}) => {
+test("every public page names the site in its unfurl, not just the ones with no words of their own", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto(`/s/${DEMO_SHOP_SLUG}`);
   const tripHref = await page
     .locator(`a[href*="/s/${DEMO_SHOP_SLUG}/trips/"]`)
@@ -137,7 +141,9 @@ test("every public page names the site in its unfurl, not just the ones with no 
   }
 });
 
-test("the shop schedule page carries its own per-shop og:image", async ({ page }) => {
+test("the shop schedule page carries its own per-shop og:image", { tag: READ_ONLY }, async ({
+  page,
+}) => {
   await page.goto(`/s/${DEMO_SHOP_SLUG}`);
   const content = await page.locator('meta[property="og:image"]').getAttribute("content");
   expect(content).toBeTruthy();

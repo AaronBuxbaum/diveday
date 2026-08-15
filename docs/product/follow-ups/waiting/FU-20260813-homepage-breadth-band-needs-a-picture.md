@@ -1,6 +1,11 @@
 # FU-20260813-homepage-breadth-band-needs-a-picture — Decide whether the homepage's four-card breadth band earns its place, once the funnel pairs have numbers
 
-- **Status:** Open
+- **Status:** Waiting
+- **Waiting on:** real traffic through the page-level funnel pairs `home-hero` and `home-closing`
+  (`src/lib/funnel.ts`). To check: read those pairs following
+  [docs/engineering/capability-telemetry-runbook.md](../../../engineering/capability-telemetry-runbook.md).
+  Until they carry numbers there is nothing to decide — the predecessor door, `home-mid`, retired
+  without ever accumulating a single pair, which is exactly how this entry got here.
 - **Raised:** 2026-08-13 — the landing-page redesign (branch `claude/design-landing-page`)
 - **Kind:** question
 - **Effort:** M
@@ -38,7 +43,7 @@ page on taste, against a measurement that will exist shortly, is the wrong trade
 ## Proposed change
 
 Wait for the page-level pairs (`home-hero`, `home-closing` — see `src/lib/funnel.ts` and
-[docs/engineering/capability-telemetry-runbook.md](../../engineering/capability-telemetry-runbook.md))
+[docs/engineering/capability-telemetry-runbook.md](../../../engineering/capability-telemetry-runbook.md))
 to carry real numbers, then read them:
 
 - **If `/` converts well:** change nothing, and delete this file. The band is not the problem.
@@ -80,6 +85,6 @@ docs/product/marketing.md records what the numbers said.
 
 Run: pnpm check, then pnpm e2e:build && E2E_WORKERS=1 pnpm e2e:run e2e/marketing.spec.ts
 --reporter=line, and read the landing PNGs in e2e/screenshots/ in light and dark at 390 and 1280.
-Delete docs/product/follow-ups/FU-20260813-homepage-breadth-band-needs-a-picture.md as part of the
+Delete docs/product/follow-ups/waiting/FU-20260813-homepage-breadth-band-needs-a-picture.md as part of the
 change.
 ```

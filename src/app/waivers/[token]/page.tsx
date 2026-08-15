@@ -588,7 +588,7 @@ export default async function WaiverPage({
       ) : saved ? (
         <p
           role="status"
-          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success-strong"
         >
           {t("waiver.progressSaved")}
         </p>
@@ -623,7 +623,7 @@ export default async function WaiverPage({
           // Attached to the document it is about — the reader meets the "this
           // text is English-only" warning at the top of the English text, not
           // as a third bar stacked under the page title.
-          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-strong">
             {t("waiver.englishOnlyNotice")}
           </p>
         ) : null}
@@ -873,7 +873,7 @@ const RESCUE_NOTICES: Record<
 };
 
 const NOTICE_TONE: Record<"success" | "danger" | "neutral", string> = {
-  success: "bg-success/10 text-success",
+  success: "bg-success/10 text-success-strong",
   danger: "bg-danger/10 text-danger",
   neutral: "bg-surface-sunken text-muted",
 };

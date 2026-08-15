@@ -86,17 +86,26 @@ const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 const APP_LOG_GROUP_NAME = "/diveday/app";
 
 /**
- * Where the full-cluster `pg_dump` lands, under the same bucket as the per-shop
- * bundles (S11) but its own prefix, its own lifecycle rule, and its own writer.
- * A trailing slash so it reads as a folder in every place it is concatenated.
+ * Where the full-cluster `pg_dump` lands, inside its OWN bucket since
+ * 2026-08-15 (S11's `DatabaseDumpBucket`, written by S20). It shared the
+ * bundles' bucket until then, and the prefix was the boundary; now the bucket
+ * is the boundary and the prefix is kept for three cheap reasons: every
+ * documented path (`dumps/<YYYY-MM-DD>/diveday.dump.gz`), the watchdog's
+ * date-folder listing, and a one-line `aws s3 sync` between the two buckets all
+ * stay exactly as they were. A trailing slash so it reads as a folder in every
+ * place it is concatenated.
  */
 const DUMP_PREFIX = "dumps/";
 
 /**
  * Where the per-shop export bundles land, and the only prefix the uploader
- * credential in S11 may write. Its counterpart to {@link DUMP_PREFIX}, and the
- * reason both are named: the two prefixes share a bucket but not a writer, and
- * the grant that says so has to name one of them or it names both.
+ * credential in S11 may write. Its counterpart to {@link DUMP_PREFIX}.
+ *
+ * The two no longer share a bucket, so this scoping is no longer the only thing
+ * standing between a leaked Vercel environment and the dump. It is still
+ * load-bearing until the old `dumps/` prefix in the bundle bucket finishes
+ * draining (S11's `drain-legacy-database-dumps` rule), and worth keeping after
+ * that as the habit the split exists to make unnecessary.
  *
  * The keys themselves are built in the app, by `platformBackupObjectKey` and
  * `platformBackupCensusKey` (src/features/backup-export/period.ts). This
@@ -114,6 +123,11 @@ const EXPORT_PREFIX = "exports/";
  * cannot reach back far enough") that is asked within days of the loss, never
  * months. Five weeks leaves room for a missed run plus a holiday and still keeps
  * the window bounded. Change this one number if H-02 lands somewhere else.
+ *
+ * It is a real 35 days only because the dump bucket is unversioned -- see the
+ * bucket's own comment in S11. On a versioned bucket a lifecycle expiration
+ * writes a delete marker and keeps the bytes, so this number would be half of
+ * how long the file actually exists.
  */
 const DUMP_RETENTION_DAYS = 35;
 
@@ -853,10 +867,13 @@ exports.handler = async (event) => {
     // The attributes name the role, so it has to exist first.
     smsDeliveryStatusAttributes.node.addDependency(smsDeliveryStatusRole);
 
-    // 11. Backup destination for the scheduled logical export.
-    // See ADR 20260802-backup-and-restore-posture for why an S3 bucket rather
-    // than a second Neon branch, and docs/engineering/backup-and-restore-runbook.md
-    // for the procedure that writes to and restores from it.
+    // 11. Backup destinations: one bucket for the scheduled logical export's
+    // per-shop bundles, and -- since 2026-08-15 -- a SECOND one for the
+    // full-cluster dump S20 writes. See ADR 20260802-backup-and-restore-posture
+    // for why S3 rather than a second Neon branch, ADR
+    // 20260812-platform-database-dump for why the dump is not in this bucket,
+    // and docs/engineering/backup-and-restore-runbook.md for the procedures
+    // that write to and restore from both.
     //
     // Deliberately NOT the VisualRegressionBucket above: that one is
     // publicReadAccess, RemovalPolicy.DESTROY, and expires everything after 7
@@ -905,19 +922,23 @@ exports.handler = async (event) => {
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
         },
         {
-          // The `pg_dump` layer (S20) is the opposite retention story to the
-          // bundles above, on purpose. A bundle is a *portability* artifact with
-          // no credentials in it, and H-02 makes its waiver rows indefinite. A
-          // dump is a full-cluster disaster-recovery artifact: every password
-          // hash and every medical answer in one file. It exists to answer "the
-          // Neon project is gone and PITR cannot reach far enough back", which is
-          // a question asked within days of the loss, never months. So it is kept
-          // for a bounded window and then deleted -- holding a file like this for
-          // longer than it can plausibly be used is a liability, not a backup.
+          // The drain for the dumps this bucket held until 2026-08-15. Nothing
+          // writes this prefix any more -- S20 writes DatabaseDumpBucket below
+          // -- but the objects already here are real dumps with real password
+          // hashes in them, and deleting this rule would strand them in a
+          // bucket whose bundles never expire. So it stays until the prefix is
+          // empty, and its id says which it is.
           //
-          // DUMP_RETENTION_DAYS is the one number to change if H-02 lands
-          // somewhere else; nothing else keys on it.
-          id: "expire-database-dumps",
+          // Empty means empty of VERSIONS: this bucket is versioned, so
+          // expiration writes a delete marker and the bytes live on as a
+          // non-current version for another DUMP_RETENTION_DAYS. Roughly 70
+          // days after the split, not 35. `aws s3api list-object-versions
+          // --bucket diveday-backups --prefix dumps/` is the honest check;
+          // `aws s3 ls` stops showing them at 35 and they are still there.
+          //
+          // When that comes back empty, delete this rule -- and note that the
+          // uploader grant below stays prefix-scoped either way.
+          id: "drain-legacy-database-dumps",
           enabled: true,
           prefix: DUMP_PREFIX,
           expiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
@@ -925,6 +946,79 @@ exports.handler = async (event) => {
           // billing duration, so aging an object that expires before then costs
           // *more* than leaving it standard.
           noncurrentVersionExpiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
+        },
+      ],
+    });
+
+    // The dump's own bucket, and the reason for it is the whole of ADR
+    // 20260812-platform-database-dump's 2026-08-15 amendment. In short: the two
+    // artifacts have almost nothing in common.
+    //
+    //                  exports/                    this bucket
+    //   Writer         IAM user, key lives in      CodeBuild role that never
+    //                  VERCEL                      leaves AWS
+    //   Contents       per-shop bundles, no        the whole cluster: every
+    //                  credentials by design       password hash, every
+    //                                              medical answer
+    //   Retention      never expires (H-02 makes   35 days, then gone
+    //                  it a legal call)
+    //   Restores a     no                          YES -- it is the only thing
+    //   login                                      that does
+    //
+    // They shared a bucket until 2026-08-15, which made "remember to
+    // prefix-scope this grant" the invariant holding the design up. Two of the
+    // three grants remembered. The one that did not was the uploader's
+    // arnForObjects("*") -- the one whose access key ships to a third party --
+    // so a leaked Vercel environment could overwrite the one artifact that
+    // restores a login, and S19 would have read the overwrite as a fresh dump.
+    // That grant was narrowed on 2026-08-15; this bucket is the other half,
+    // which makes the same mistake unrepresentable rather than merely reviewed:
+    // no principal holding Vercel-resident credentials has any grant here at
+    // all, so there is no prefix to remember.
+    const databaseDumpBucketName =
+      this.node.tryGetContext("dumpBucketName") || "diveday-database-dumps";
+
+    const databaseDumpBucket = new s3.Bucket(this, "DatabaseDumpBucket", {
+      bucketName: databaseDumpBucketName,
+      // NOT versioned, and this is the one property that differs from the
+      // bundle bucket for a reason other than blast radius.
+      //
+      // On a versioned bucket a lifecycle expiration deletes nothing: it writes
+      // a delete marker and the bytes survive as a non-current version until
+      // noncurrentVersionExpiration. "Kept 35 days, then deleted" was therefore
+      // up to 70 days of every password hash in the platform -- exactly the
+      // liability DUMP_RETENTION_DAYS is short in order to avoid, doubled by a
+      // property nobody chose for this artifact. Unversioned, 35 days means 35
+      // days, and the prefix drains on the day the runbook says it does.
+      //
+      // What versioning was buying here is gone with the shared bucket. It
+      // insured against an overwrite of a good object by a bad one, and the
+      // overwriter it was insuring against was a principal that should never
+      // have been able to write a dump. The writer that remains holds no
+      // DeleteObject and writes a date-stamped key, so the worst it can do is
+      // replace TODAY's dump; last week's is a different key and untouched.
+      versioned: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      // RETAIN for the bundle bucket's reason, only more so: this is the layer
+      // that can restore a login, and a `cdk destroy` must not be able to take
+      // it. See the backup-bucket-readoption manual action in S17, which now
+      // covers both buckets.
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          // Deliberately unprefixed, unlike the drain rule above: this bucket
+          // holds dumps and nothing else, so everything in it expires. A future
+          // artifact parked here outside `dumps/` should be caught by the
+          // 35-day sweep rather than quietly outlive it.
+          id: "expire-database-dumps",
+          enabled: true,
+          expiration: cdk.Duration.days(DUMP_RETENTION_DAYS),
+          // Never transitioned to a colder class first: IA has a 30-day minimum
+          // billing duration, so aging an object that expires before then costs
+          // *more* than leaving it standard.
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
       ],
@@ -945,7 +1039,13 @@ exports.handler = async (event) => {
     // It could never read one, which is the property this whole design rests
     // on and which is unchanged; but S19's checkDump only asks whether a dated
     // prefix exists and is recent, so an overwritten dump read as a fresh one.
-    // The dump has its own writer, already scoped to its own prefix, in S20.
+    //
+    // The dump moved out of this bucket the same day, so this scoping is no
+    // longer what stands between this credential and a dump. It is still what
+    // stands between it and the OLD dumps draining under dumps/ here, which is
+    // a real window measured in weeks, and it stays afterwards on the same
+    // grounds a write-only credential has no business reaching anything it was
+    // not built to write.
     const backupUploaderUser = new iam.User(this, "BackupUploaderUser", {
       userName: BACKUP_UPLOADER_USER_NAME,
     });
@@ -962,6 +1062,12 @@ exports.handler = async (event) => {
       value: backupBucket.bucketName,
       description:
         "Destination bucket for scheduled logical export bundles. Versioned, private, RETAIN -- see docs/engineering/backup-and-restore-runbook.md.",
+    });
+
+    new cdk.CfnOutput(this, "DatabaseDumpBucketName", {
+      value: databaseDumpBucket.bucketName,
+      description:
+        "Destination bucket for the weekly full-cluster pg_dump (S20), separate from the export bundles since 2026-08-15 so that nothing holding Vercel-resident credentials has a grant on it. Unversioned, private, RETAIN, everything in it expires after 35 days -- see docs/engineering/backup-and-restore-runbook.md section 2c.",
     });
 
     // This credential now has a home: Vercel, read by the weekly
@@ -1794,14 +1900,14 @@ exports.handler = async (event) => {
           "aws codebuild start-build --project-name diveday-database-dump",
         ],
         produces:
-          "A weekly full-cluster pg_dump at s3://<backup bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days.",
+          "A weekly full-cluster pg_dump at s3://<dump bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days. The DatabaseDumpBucketName output names the bucket; it is not the export bundles' bucket (ADR 20260812-platform-database-dump, 2026-08-15).",
         store:
           "AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.",
         verify: [
           "aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'",
-          "AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive",
+          "AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive",
         ],
-        note: "A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why its prefix expires after 35 days while the export bundles never do, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.",
+        note: "A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.",
       },
       {
         id: "usage-guardrail-tokens",
@@ -1923,19 +2029,20 @@ exports.handler = async (event) => {
       },
       {
         id: "backup-bucket-readoption",
-        title: "Re-adopt the retained backup bucket",
+        title: "Re-adopt the retained backup buckets",
         category: "AWS account",
         when: "only after a cdk destroy, and only if you then redeploy",
-        why: "The backup bucket (infra-stack.ts S11) carries RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create a bucket whose name is already taken and the deploy fails.",
+        why: "Both backup buckets (infra-stack.ts S11 -- the export bundles' and the database dumps') carry RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create buckets whose names are already taken and the deploy fails.",
         run: [
-          "Import the existing bucket into the stack, or deploy with --context backupBucketName=<a new name>.",
+          "Import the existing buckets into the stack, or deploy with --context backupBucketName=<a new name> --context dumpBucketName=<a new name>.",
         ],
         produces:
-          "A deploy that gets past the BucketAlreadyOwnedByYou failure without losing the bundles.",
+          "A deploy that gets past the BucketAlreadyOwnedByYou failure without losing the bundles or the dumps.",
         verify: [
           "aws s3 ls s3://diveday-backups/exports/ -- the existing bundles are still listed.",
+          "aws s3 ls s3://diveday-database-dumps/dumps/ -- the existing dumps are still listed.",
         ],
-        note: "Deleting the bucket to make a deploy go green deletes production backups. That is the trade RETAIN exists to force; do not take it by reflex.",
+        note: "Deleting a bucket to make a deploy go green deletes production backups. That is the trade RETAIN exists to force; do not take it by reflex. The dump bucket is the one that can restore a login, so it is the worse of the two to lose.",
       },
       {
         id: "verify-webhook-subscriptions",
@@ -2318,6 +2425,12 @@ exports.handler = async (event) => {
       logGroup: backupFreshnessLogs,
       environment: {
         BUCKET: backupBucket.bucketName,
+        // A second bucket to read, still one function to run. The dump left the
+        // bundles' bucket on 2026-08-15 (S11) and this is the whole cost of
+        // that on this side: one more environment value and one more
+        // ListBucket. Splitting the watchdog too would have been the expensive
+        // way to pay for it -- see the note above checkDump.
+        DUMP_BUCKET: databaseDumpBucket.bucketName,
         TOPIC_ARN: observabilityAlarms.topicArn,
         MAX_AGE_DAYS: String(backupMaxAgeDays),
         DUMP_PREFIX,
@@ -2352,8 +2465,14 @@ async function alarm(subject, message) {
 // The dump (S20) is the layer that can restore a *login*, and it has exactly the
 // same blind spot as the bundles: its writer is write-only, so nothing on the
 // writing side can tell that the object arrived. Checked here rather than in a
-// second watchdog -- it is one more ListObjectsV2 over one more prefix, and two
-// alarms with the same trigger and the same reader is one too many.
+// second watchdog -- it is one more ListObjectsV2, now against one more BUCKET,
+// and two alarms with the same trigger and the same reader is one too many.
+//
+// That the dump moved to its own bucket on 2026-08-15 changed the argument by
+// exactly one word: "one more prefix" became "one more bucket", which is one
+// more ListBucket grant on the role below and nothing else. A second function
+// would have been a second schedule, a second log group, a second retry policy
+// and a second thing to remember exists -- for one ListObjectsV2 call.
 //
 // Checked *before* the bundle logic below, because that logic returns early on
 // each of its own failures: a week where both layers broke has to raise both
@@ -2383,7 +2502,9 @@ async function checkDump(bucket, maxAgeDays) {
       "(user_accounts, account_tokens and calendar_feeds are excluded by design), so without a " +
       "dump the only recovery for those is Neon PITR. Check the diveday-database-dump CodeBuild " +
       "project's most recent build, and that the diveday/database-url-unpooled secret is filled " +
-      "in. See docs/engineering/backup-and-restore-runbook.md section 2c."
+      "in. Dumps written before the 2026-08-15 bucket split are in the export bucket under the " +
+      "same prefix and are not read by this check. " +
+      "See docs/engineering/backup-and-restore-runbook.md section 2c."
     );
     return { newestDump: latest, dumpAgeDays: ageDays, dumpBytes: null };
   }
@@ -2409,10 +2530,11 @@ async function checkDump(bucket, maxAgeDays) {
       "The dump under " + prefix + latest + "/ in " + bucket + " totals " + bytes +
       " bytes, below the " + minBytes + " byte floor. A dump of DiveDay's schema is far larger " +
       "than this even with no rows in it, so the object is truncated, empty or overwritten -- " +
-      "treat the login-restoring layer as absent for this week. The bucket is versioned: the " +
-      "previous good object should still be there as a non-current version. Check the " +
-      "diveday-database-dump CodeBuild project's most recent build first, then who else holds " +
-      "s3:PutObject on this prefix. See docs/engineering/backup-and-restore-runbook.md section 2c."
+      "treat the login-restoring layer as absent for this week. This bucket is NOT versioned, so " +
+      "there is no non-current version to fall back on: the newest usable dump is the previous " +
+      "run's date prefix, which is a different key and untouched. Check the diveday-database-dump " +
+      "CodeBuild project's most recent build first; it is the only writer this bucket has. " +
+      "See docs/engineering/backup-and-restore-runbook.md section 2c."
     );
   }
   return { newestDump: latest, dumpAgeDays: ageDays, dumpBytes: bytes };
@@ -2422,7 +2544,8 @@ exports.handler = async () => {
   const bucket = process.env.BUCKET;
   const maxAgeDays = Number(process.env.MAX_AGE_DAYS);
 
-  const dump = await checkDump(bucket, maxAgeDays);
+  // Two buckets, one pass. The dump's is read first for the reason above.
+  const dump = await checkDump(process.env.DUMP_BUCKET, maxAgeDays);
 
   const runs = await s3.send(new ListObjectsV2Command({
     Bucket: bucket,
@@ -2634,15 +2757,27 @@ exports.handler = async () => {
 `),
     });
 
-    // Read-only, and only this bucket. The watchdog answers "is it there", never
-    // "what is in it": no GetObject, so the function that runs unattended every
-    // week cannot read a shop's exported waivers even if its code were changed
-    // to try.
+    // Read-only, and only these two buckets. The watchdog answers "is it
+    // there", never "what is in it": no GetObject, so the function that runs
+    // unattended every week cannot read a shop's exported waivers -- or a dump,
+    // which is worse -- even if its code were changed to try.
+    //
+    // Two statements rather than one over both ARNs: each names the bucket it
+    // is for, so the console and `iam simulate-principal-policy` both answer
+    // "which of the two can it see" without reading a list. This is the entire
+    // IAM cost of the 2026-08-15 split.
     backupFreshnessCheck.addToRolePolicy(
       new iam.PolicyStatement({
         sid: "ListBackupBundlesOnly",
         actions: ["s3:ListBucket"],
         resources: [backupBucket.bucketArn],
+      }),
+    );
+    backupFreshnessCheck.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "ListDatabaseDumpsOnly",
+        actions: ["s3:ListBucket"],
+        resources: [databaseDumpBucket.bucketArn],
       }),
     );
     observabilityAlarms.grantPublish(backupFreshnessCheck);
@@ -2684,8 +2819,8 @@ exports.handler = async () => {
     });
 
     // 20. The full-cluster dump -- the layer that can restore a login. See ADR
-    // 20260812-platform-database-dump, and S11 for the bucket and the lifecycle
-    // rule that expires this prefix.
+    // 20260812-platform-database-dump, and S11 for DatabaseDumpBucket: its own
+    // bucket since 2026-08-15, unversioned, everything in it gone at 35 days.
     //
     // The per-shop bundles in S2 of the runbook are built from the *export* seam,
     // which exists so a shop can leave. Its NOT_INCLUDED list deliberately
@@ -2725,31 +2860,39 @@ exports.handler = async () => {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Write-only into one prefix, and read of one secret. The same posture as the
-    // uploader user in S11 and for the same reason: the principal that runs
-    // unattended every week must not be able to read a dump back out, because a
-    // dump is the most sensitive object in this account. Restoring one is a human
-    // act with the admin profile.
+    // Write-only into one prefix of one bucket, and read of one secret. The same
+    // posture as the uploader user in S11 and for the same reason: the principal
+    // that runs unattended every week must not be able to read a dump back out,
+    // because a dump is the most sensitive object in this account. Restoring one
+    // is a human act with the admin profile.
+    //
+    // Still prefix-scoped after the 2026-08-15 split, when the prefix stopped
+    // being the boundary. It costs nothing, it keeps this grant honest about
+    // what the job writes, and the alternative -- widening it to the bucket
+    // because the bucket is now dedicated -- is how a dedicated bucket stops
+    // being dedicated.
     const dumpRole = new iam.Role(this, "DatabaseDumpRole", {
       assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
-      description: "Runs the weekly full-cluster pg_dump (S20). Write-only into the dumps/ prefix.",
+      description:
+        "Runs the weekly full-cluster pg_dump (S20). Write-only into the dump bucket's dumps/ prefix.",
     });
     dumpRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "WriteDatabaseDumpsOnly",
         actions: ["s3:PutObject", "s3:AbortMultipartUpload"],
-        resources: [backupBucket.arnForObjects(`${DUMP_PREFIX}*`)],
+        resources: [databaseDumpBucket.arnForObjects(`${DUMP_PREFIX}*`)],
       }),
     );
     dumpRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "ConfirmDatabaseDumpLanded",
         // The size read-back at the end of the buildspec. `s3:GetObject` is
-        // needed for HeadObject, so it is scoped to the prefix this job wrote and
-        // nothing else -- it cannot reach a shop's exported waivers under
-        // `exports/`.
+        // needed for HeadObject, so it is scoped to the prefix this job wrote in
+        // the bucket it wrote it to -- it has no grant of any kind on the bundle
+        // bucket, so a shop's exported waivers under `exports/` are not merely
+        // out of scope, they are out of reach.
         actions: ["s3:GetObject"],
-        resources: [backupBucket.arnForObjects(`${DUMP_PREFIX}*`)],
+        resources: [databaseDumpBucket.arnForObjects(`${DUMP_PREFIX}*`)],
       }),
     );
     dumpConnectionSecret.grantRead(dumpRole);
@@ -2763,7 +2906,7 @@ exports.handler = async () => {
     const dumpProject = new codebuild.CfnProject(this, "DatabaseDumpProject", {
       name: "diveday-database-dump",
       description:
-        "Weekly full-cluster pg_dump to the backup bucket's dumps/ prefix. See docs/engineering/backup-and-restore-runbook.md section 2c.",
+        "Weekly full-cluster pg_dump to the dump bucket's dumps/ prefix. See docs/engineering/backup-and-restore-runbook.md section 2c.",
       serviceRole: dumpRole.roleArn,
       artifacts: { type: "NO_ARTIFACTS" },
       // 30 minutes is far more than a dump of this database needs and costs
@@ -2778,7 +2921,7 @@ exports.handler = async () => {
         image: `public.ecr.aws/docker/library/postgres:${DUMP_POSTGRES_MAJOR}-alpine`,
         imagePullCredentialsType: "CODEBUILD",
         environmentVariables: [
-          { name: "BUCKET", value: backupBucket.bucketName },
+          { name: "BUCKET", value: databaseDumpBucket.bucketName },
           { name: "PREFIX", value: DUMP_PREFIX },
           { name: "CONNECTION_SECRET", value: dumpConnectionSecret.secretName },
         ],
@@ -2794,8 +2937,9 @@ exports.handler = async () => {
         // The dump is *streamed*: pg_dump writes its custom-format output to
         // stdout, gzip compresses it, and `aws s3 cp -` multipart-uploads it. No
         // temporary file, so the job needs no disk headroom and a failure part-way
-        // leaves an aborted multipart upload (expired after a day by S11's
-        // lifecycle rule) rather than a half-written object that looks complete.
+        // leaves an aborted multipart upload (expired after a day by the dump
+        // bucket's lifecycle rule, S11) rather than a half-written object that
+        // looks complete.
         //
         // `set -o pipefail` is what makes that safe. Without it the exit status is
         // the *last* command's -- the upload -- so a pg_dump that died mid-stream
@@ -2865,7 +3009,7 @@ exports.handler = async () => {
     new scheduler.CfnSchedule(this, "DatabaseDumpSchedule", {
       name: "diveday-database-dump",
       description:
-        "Weekly full-cluster pg_dump into the backup bucket's dumps/ prefix (S20). The layer that can restore a login.",
+        "Weekly full-cluster pg_dump into the dump bucket's dumps/ prefix (S20). The layer that can restore a login.",
       flexibleTimeWindow: { mode: "OFF" },
       scheduleExpression: "cron(30 5 ? * MON *)",
       scheduleExpressionTimezone: "Etc/UTC",

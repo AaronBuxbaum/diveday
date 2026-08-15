@@ -44,6 +44,13 @@ export type TripDiveDraft = {
   title?: string | null;
   diveSiteId?: string | null;
   description?: string | null;
+  /**
+   * How long the boat runs to reach this dive's site — from the dock for dive
+   * one, from the previous dive's site after that. Null (or absent) leaves the
+   * leg on the shop's own `boat_ride_minutes`
+   * (ADR 20260815-per-leg-travel-minutes).
+   */
+  travelMinutes?: number | null;
 };
 
 const MAX_TRIP_DIVES = 4;
@@ -61,6 +68,9 @@ export function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft
       title: draft?.title?.trim() || null,
       diveSiteId: draft?.diveSiteId || null,
       description: draft?.description?.trim() || null,
+      // `?? null`, never `|| null`: 0 is a leg a shop can mean — the same site
+      // twice, or a walk-in entry — and is not the same answer as "unset".
+      travelMinutes: draft?.travelMinutes ?? null,
     };
   });
 }

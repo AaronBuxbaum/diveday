@@ -1025,6 +1025,268 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(await screen.findByText(/1 waiting to send/)).toBeInTheDocument();
   });
 
+  /*
+   * ADR 20260815-offline-can-unsay-a-missing-diver. Two rules on the one row
+   * that can silence an alarm, and they pull in opposite directions on
+   * purpose: putting somebody back aboard over a stated "not back aboard" is
+   * the only two-tap act on this surface, and taking the mark off is still one
+   * tap — and is now recorded as a retraction rather than as a sighting nobody
+   * made.
+   */
+  describe("a missing diver can be unsaid, and asserting them aboard cannot be a slip", () => {
+    /** Priya, recorded not back aboard after dive 1 on this device. */
+    function missingAfterDive() {
+      return richEnvelope(
+        "trip-1",
+        {},
+        {
+          events: [
+            {
+              clientEventId: "evt-missing",
+              snapshotId: "snap-trip-1",
+              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+              tripId: "trip-1",
+              bookingId: "diver-priya",
+              checkpoint: "after_dive_1",
+              status: "not_boarded",
+              note: null,
+              occurredAt: new Date(FROZEN_MS).toISOString(),
+              syncStatus: "pending",
+            },
+          ],
+        },
+      );
+    }
+
+    it("takes two taps to claim a missing diver is aboard, and names her on the second", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = missingAfterDive();
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Mark boarded" }));
+      // Nothing queued yet: the first tap only arms the confirmation.
+      expect(appendOfflineRollCall).not.toHaveBeenCalled();
+      const confirm = await screen.findByRole("button", { name: "Confirm Priya Shah is aboard" });
+
+      fireEvent.click(confirm);
+      await waitFor(() =>
+        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+        }),
+      );
+    });
+
+    it("lets the crew back out of that confirmation without touching the mark", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Mark boarded" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Keep “not back aboard”" }));
+      expect(await screen.findByRole("button", { name: "Mark boarded" })).toBeInTheDocument();
+      expect(appendOfflineRollCall).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Not back aboard" })).toBeInTheDocument();
+    });
+
+    it("takes the mark back off in one tap, as a retraction rather than a sighting", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = missingAfterDive();
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      expect(screen.getByText("Tap “Not back aboard” again to undo.")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Not back aboard" }));
+      await waitFor(() =>
+        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "cleared",
+          note: null,
+        }),
+      );
+    });
+
+    // A retraction only ever undoes what **this device** queued. A missing-diver
+    // mark that came off the snapshot was recorded somewhere else — on the live
+    // manifest, or on another device — and a `cleared` aimed at it is a blind
+    // newest-wins write on the strength of a copy up to a fortnight old
+    // (security review, 2026-08-15). So the row says where to undo it instead.
+    it("offers no retraction for a mark this device did not make", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = richEnvelope("trip-1");
+      const afterDive = saved.snapshot.manifests.find(
+        (manifest) => manifest.checkpoint === "after_dive_1",
+      );
+      const priya = afterDive?.divers.find((diver) => diver.bookingId === "diver-priya");
+      if (!priya) throw new Error("Priya missing from the fixture");
+      priya.rollCall = {
+        state: "not_boarded",
+        occurredAt: new Date(FROZEN_MS).toISOString(),
+        recordedByName: "Dana Divemaster",
+        note: null,
+      };
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      expect(
+        screen.getByText(/Recorded on another device or on the live manifest/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/again to undo/)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Not back aboard" }));
+      await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
+      expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+        bookingId: "diver-priya",
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: null,
+      });
+    });
+
+    // The same undo grammar the live manifest has always had on the settled
+    // aboard control: re-tapping it retracts the sighting rather than restating
+    // it. Same scoping — only a sighting this device recorded.
+    it("retracts a boarded mark this device made, rather than restating it", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = richEnvelope(
+        "trip-1",
+        {},
+        {
+          events: [
+            {
+              clientEventId: "evt-aboard",
+              snapshotId: "snap-trip-1",
+              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+              tripId: "trip-1",
+              bookingId: "diver-priya",
+              checkpoint: "after_dive_1",
+              status: "boarded",
+              note: null,
+              occurredAt: new Date(FROZEN_MS).toISOString(),
+              syncStatus: "pending",
+            },
+          ],
+        },
+      );
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      fireEvent.click(screen.getByRole("button", { name: "Boarded ☑️" }));
+      await waitFor(() =>
+        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "cleared",
+          note: null,
+        }),
+      );
+    });
+
+    // The crew half of the two-tap gate — the people most reliably in the water.
+    it("takes two taps to claim a missing crew member is aboard", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = richEnvelope(
+        "trip-1",
+        { crewCalled: true },
+        {
+          events: [
+            {
+              clientEventId: "evt-crew-missing",
+              snapshotId: "snap-trip-1",
+              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+              tripId: "trip-1",
+              crewPersonId: "crew-dana",
+              checkpoint: "after_dive_1",
+              status: "not_boarded",
+              note: null,
+              occurredAt: new Date(FROZEN_MS).toISOString(),
+              syncStatus: "pending",
+            },
+          ],
+        },
+      );
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      const crewList = document.getElementById("offline-crew-roll-call");
+      if (!crewList) throw new Error("crew list missing");
+      const crew = within(crewList);
+
+      fireEvent.click(crew.getByRole("button", { name: "Mark aboard" }));
+      expect(appendOfflineRollCall).not.toHaveBeenCalled();
+      fireEvent.click(await crew.findByRole("button", { name: /Confirm .* is aboard/ }));
+      await waitFor(() =>
+        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          crewPersonId: "crew-dana",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+        }),
+      );
+    });
+
+    // The device half of ADR 20260815-roll-call-order-is-a-property-of-the-data:
+    // a diver marked ashore at the dock with no signal reads "carried" after a
+    // dive, so nobody reaches for "Mark not back aboard" to tidy the count and
+    // reports a missing diver who is in the car park.
+    it("carries an offline dock not-boarded forward instead of reading awaiting", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(
+        richEnvelope(
+          "trip-1",
+          {},
+          {
+            events: [
+              {
+                clientEventId: "evt-dock",
+                snapshotId: "snap-trip-1",
+                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                tripId: "trip-1",
+                bookingId: "diver-priya",
+                checkpoint: "departure",
+                status: "not_boarded",
+                note: null,
+                occurredAt: new Date(FROZEN_MS).toISOString(),
+                syncStatus: "pending",
+              },
+            ],
+          },
+        ),
+      );
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      const row = document.getElementById("offline-roll-call-diver-priya");
+      if (!row) throw new Error("Priya's row missing");
+      expect(within(row).getByText(/Not boarded · carried/)).toBeInTheDocument();
+    });
+  });
+
   it("task 73: clears a typed note after a successful record so it doesn't ride along on the next tap", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1" });
     const saved = richEnvelope("trip-1");

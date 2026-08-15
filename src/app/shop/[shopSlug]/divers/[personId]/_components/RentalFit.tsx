@@ -204,7 +204,7 @@ function StaffFitFallback({
           {canResolve ? (
             <SubmitButton
               pendingLabel={t("divers.rentalFit.clearing")}
-              className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
+              className={buttonClass({ variant: "secondary", className: "mt-4" })}
             >
               {t("divers.rentalFit.fitResolved")}
             </SubmitButton>
@@ -230,7 +230,7 @@ function StaffFitFallback({
             <input type="hidden" name="needed" value="on" />
             <SubmitButton
               pendingLabel={t("divers.rentalFit.flagging")}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("divers.rentalFit.flagForStaffFit")}
             </SubmitButton>

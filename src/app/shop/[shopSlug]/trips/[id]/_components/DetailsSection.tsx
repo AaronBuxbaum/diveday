@@ -122,6 +122,7 @@ export function DetailsSection({
               title: dive.title,
               diveSiteId: dive.diveSiteId,
               description: dive.description,
+              travelMinutes: dive.travelMinutes,
             }))}
             copy={{
               heading: t("shared.tripDiveFields.heading"),
@@ -138,6 +139,9 @@ export function DetailsSection({
               namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
               diveSiteLabel: t("shared.tripDiveFields.diveSiteLabel"),
               noSiteChosen: t("shared.tripDiveFields.noSiteChosen"),
+              travelLabelFirst: t("shared.tripDiveFields.travelLabelFirst"),
+              travelLabelOther: t("shared.tripDiveFields.travelLabelOther"),
+              travelHint: t("shared.tripDiveFields.travelHint"),
               diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
               detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
               footerNote: t("shared.tripDiveFields.footerNote"),

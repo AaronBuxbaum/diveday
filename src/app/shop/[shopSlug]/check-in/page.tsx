@@ -55,16 +55,16 @@ const noticeCopy: Record<
   // at the top of the page would say the same fact a screen away (design
   // principle 9; docs/design/forms-and-controls.md). Every remaining code is a
   // refusal or a walk-in/waiver outcome with no row state to land on.
-  not_ready: { tone: "warning", key: "checkIn.notice.notReady" },
-  not_bookable: { tone: "danger", key: "checkIn.notice.notBookable" },
-  not_found: { tone: "danger", key: "checkIn.notice.notFound" },
-  staff_not_found: { tone: "danger", key: "checkIn.notice.staffNotFound" },
+  "not-ready": { tone: "warning", key: "checkIn.notice.notReady" },
+  "not-bookable": { tone: "danger", key: "checkIn.notice.notBookable" },
+  "not-found": { tone: "danger", key: "checkIn.notice.notFound" },
+  "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
-  walkin_added: { tone: "success", key: "checkIn.notice.walkinAdded" },
+  "walkin-added": { tone: "success", key: "checkIn.notice.walkinAdded" },
   // The counter's *ordinary* outcome, not an edge case: a walk-in added on a
   // name alone has no address to mail a waiver to, so the notice has to say
   // the link is still owed rather than let "Added" imply it went out.
-  walkin_added_waiver_undelivered: {
+  "walkin-added-waiver-undelivered": {
     tone: "warning",
     key: "checkIn.notice.walkinAddedWaiverUndelivered",
   },
@@ -73,15 +73,15 @@ const noticeCopy: Record<
   // the queue only ever carries the two outcomes above. The refusal codes stay
   // mapped here because a link with one on it — a bookmark, a back-navigation
   // to an older URL — should still say something true rather than nothing.
-  walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
-  walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
-  walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
-  walkin_invalid: { tone: "danger", key: "checkIn.notice.walkinInvalid" },
+  "walkin-full": { tone: "danger", key: "checkIn.notice.walkinFull" },
+  "walkin-already": { tone: "neutral", key: "checkIn.notice.walkinAlready" },
+  "walkin-unavailable": { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
+  "walkin-invalid": { tone: "danger", key: "checkIn.notice.walkinInvalid" },
   // No `waiver_in_person` either, for the same reason: the diver's row loses
   // its waiver blocker and starts offering check-in, right where the paper
   // control was.
-  waiver_medical_attestation: { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
-  waiver_error: { tone: "danger", key: "checkIn.notice.waiverError" },
+  "waiver-medical-attestation": { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
+  "waiver-error": { tone: "danger", key: "checkIn.notice.waiverError" },
 };
 
 export default async function CheckInPage({

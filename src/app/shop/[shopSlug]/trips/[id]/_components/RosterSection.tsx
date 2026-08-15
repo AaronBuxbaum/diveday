@@ -94,13 +94,13 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   },
   complete: {
     labelKey: "trips.roster.waiverSigned",
-    tone: "bg-success/10 text-success",
+    tone: "bg-success/10 text-success-strong",
     action: null,
     confirm: false,
   },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
-    tone: "bg-warning/10 text-warning",
+    tone: "bg-warning/10 text-warning-strong",
     action: null,
     confirm: false,
   },
@@ -583,7 +583,7 @@ export function RosterSection({
                     goes deeper than their training, which the instructor may
                     already be planning around (H-08). */}
                 {depth?.status === "exceeds" ? (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                     <span aria-hidden="true">▲</span>
                     <span>{depthWarningText(t, depth)}</span>
                   </p>
@@ -664,7 +664,7 @@ export function RosterSection({
                     something up without naming the state the diver is in
                     (caught by waivers.spec.ts). */}
                 {waiverStatus === "medical_review" ? (
-                  <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                  <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                     <p className="font-semibold">{waiverControl.label}</p>
                     <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
                     {flaggedPrompts.length > 0 ? (

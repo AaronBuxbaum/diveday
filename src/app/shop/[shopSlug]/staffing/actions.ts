@@ -8,6 +8,7 @@ import { getShopById } from "@/db/shops";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const shiftSchema = z.object({
@@ -25,19 +26,19 @@ async function requireStaffingManager() {
     session.user.shopId,
     session.user.personId,
   );
-  if (!allowed) redirect(`/shop/${session.user.shopSlug}/staffing?notice=not-authorized`);
+  if (!allowed) redirect(noticeUrl(shopPath(session.user.shopSlug, "staffing"), "not-authorized"));
   return session;
 }
 
 export async function createShiftAction(formData: FormData) {
   const session = await requireStaffingManager();
-  const path = `/shop/${session.user.shopSlug}/staffing`;
+  const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = shiftSchema.safeParse(Object.fromEntries(formData));
   const shop = await getShopById(await getDb(), session.user.shopId);
-  if (!parsed.success || !shop) redirect(`${path}?notice=invalid`);
+  if (!parsed.success || !shop) redirect(noticeUrl(path, "invalid"));
   const starts = parseWallTime(parsed.data.date, parsed.data.startTime);
   const ends = parseWallTime(parsed.data.date, parsed.data.endTime);
-  if (!starts || !ends) redirect(`${path}?notice=invalid`);
+  if (!starts || !ends) redirect(noticeUrl(path, "invalid"));
   const result = await createStaffShift(await getDb(), {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
@@ -46,15 +47,18 @@ export async function createShiftAction(formData: FormData) {
     note: parsed.data.note,
     createdByPersonId: session.user.personId,
   });
+  // `result.reason` is a domain code in the domain's own casing (`staff_not_found`);
+  // `noticeUrl` encodes it and normalises it to the one spelling the page's
+  // notice map holds, so it is no longer interpolated raw.
   const notice = result.ok ? "shift-saved" : result.reason;
-  revalidateAndRedirect(path, `${path}?notice=${notice}`);
+  revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
 export async function deleteShiftAction(formData: FormData) {
   const session = await requireStaffingManager();
-  const path = `/shop/${session.user.shopSlug}/staffing`;
+  const path = shopPath(session.user.shopSlug, "staffing");
   const shiftId = String(formData.get("shiftId") ?? "");
-  if (!z.string().uuid().safeParse(shiftId).success) redirect(`${path}?notice=invalid`);
+  if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid"));
   const deleted = await deleteStaffShift(await getDb(), session.user.shopId, shiftId);
-  revalidateAndRedirect(path, `${path}?notice=${deleted ? "shift-deleted" : "invalid"}`);
+  revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid"));
 }

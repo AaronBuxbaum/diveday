@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
 import {
   FEED_FUTURE_DAYS,
   FEED_PAST_DAYS,
@@ -12,7 +9,7 @@ import {
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
 
@@ -32,12 +29,15 @@ export const instant = true;
  */
 export const metadata: Metadata = { title: "Calendar subscriptions — DiveDay" };
 
-export default async function CalendarSubscriptionsPage() {
-  const session = await requireStaffSession();
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  // Matches the sibling settings pages: a blank 200 tells the reader nothing.
-  if (!shop) redirect("/");
+export default async function CalendarSubscriptionsPage({
+  params,
+}: {
+  params: Promise<{ shopSlug: string }>;
+}) {
+  const { shopSlug } = await params;
+  // No `allow` gate, deliberately, and the one settings route without one: a
+  // staff calendar subscription is a personal feed, not shop policy.
+  const { session, db, shop } = await requireShopSurface(shopSlug);
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

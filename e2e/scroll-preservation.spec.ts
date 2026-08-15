@@ -1,4 +1,8 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: the only submit is the orders filter band, which is a GET form.
+ */
 
 /**
  * Applying a filter must not move the reader.
@@ -19,7 +23,9 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 test.describe("staying put", () => {
   signedInAsOwner();
 
-  test("applying an orders filter leaves the reader where they were", async ({ page }) => {
+  test("applying an orders filter leaves the reader where they were", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/shop/blue-mantis/orders");
     await expect(page.getByRole("button", { name: "Apply filters" })).toBeVisible();

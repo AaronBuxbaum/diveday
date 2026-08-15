@@ -1,5 +1,10 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { type ButtonSize, buttonClass } from "./button";
+
+const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const SIZES = ["sm", "md", "lg", "cta", "boat", "icon"] as const satisfies readonly ButtonSize[];
 
@@ -146,6 +151,88 @@ describe("buttonClass", () => {
           }
         }
       }
+    });
+  });
+
+  /**
+   * The colour half of the same trap, policed across the tree rather than in
+   * one assertion — because the failure is *silent*. Thirty-one call sites had
+   * written `className: "text-foreground"` against the `secondary` variant's
+   * own `text-primary`, and every one of them rendered primary: two utilities
+   * for one property resolve by stylesheet order, and Tailwind v4 emits colour
+   * utilities alphabetically by token name, so `.text-primary` lands after both
+   * `.text-foreground` and `.text-muted`. Nothing errors, nothing looks broken,
+   * and the class string reads as though someone already fixed it.
+   *
+   * `check-tokens.mjs` polices raw hex the same way; this is the equivalent for
+   * "a colour a button will never wear". The answer to a button that needs a
+   * label colour no variant offers is a **new variant**, the same answer
+   * `flush` gave for padding — never Tailwind's `!` suffix, which papers over
+   * one instance and leaves the next override just as inert.
+   */
+  describe("no call site passes a colour through className", () => {
+    /**
+     * Every `text-<token>` that names a colour, read off the `@theme` block in
+     * `globals.css` rather than hard-coded here — so a token added tomorrow is
+     * covered without anyone remembering this file. Sizes (`text-sm`),
+     * alignment (`text-center`) and wrapping (`text-balance`) are not in that
+     * block and are therefore not matched.
+     */
+    const colourTokens = () => {
+      const css = readFileSync(join(SRC_DIR, "app", "globals.css"), "utf8");
+      const theme = css.slice(css.indexOf("@theme inline"));
+      return new Set(
+        [...theme.matchAll(/--color-([a-z0-9-]+):/g)].map((match) => `text-${match[1]}`),
+      );
+    };
+
+    const sourceFiles = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) return sourceFiles(full);
+        return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+      });
+
+    /**
+     * The text of every `buttonClass(...)` argument list in a file, found by
+     * balancing parentheses rather than by a regex — the argument may be a
+     * ternary, a spread, or a nested call, and a regex that stops at the first
+     * `)` reads none of those.
+     */
+    function buttonClassArgs(source: string): string[] {
+      const found: string[] = [];
+      const call = "buttonClass(";
+      for (let at = source.indexOf(call); at !== -1; at = source.indexOf(call, at + 1)) {
+        let cursor = at + call.length;
+        let depth = 1;
+        while (cursor < source.length && depth > 0) {
+          if (source[cursor] === "(") depth += 1;
+          else if (source[cursor] === ")") depth -= 1;
+          cursor += 1;
+        }
+        found.push(source.slice(at + call.length, cursor - 1));
+      }
+      return found;
+    }
+
+    it("hands no `text-<color>` token to buttonClass", () => {
+      const colours = colourTokens();
+      expect(colours.size, "globals.css @theme colours were not found").toBeGreaterThan(5);
+
+      const offenders: string[] = [];
+      for (const file of sourceFiles(SRC_DIR)) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("buttonClass(")) continue;
+        for (const args of buttonClassArgs(source)) {
+          for (const token of args.match(/text-[a-z0-9-]+/g) ?? []) {
+            if (colours.has(token)) offenders.push(`${relative(SRC_DIR, file)}: ${token}`);
+          }
+        }
+      }
+
+      // Listed, not counted: the message has to name the file, because the
+      // whole point is that nothing on screen will.
+      expect(offenders).toEqual([]);
     });
   });
 });

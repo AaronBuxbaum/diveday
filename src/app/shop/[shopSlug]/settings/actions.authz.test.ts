@@ -120,7 +120,7 @@ describe("saving the shop's units", () => {
 
     const to = await redirectedTo(() => saveUnitsAction(unitsForm({})));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
   });
 
@@ -130,7 +130,7 @@ describe("saving the shop's units", () => {
 
     const to = await redirectedTo(() => saveUnitsAction(unitsForm({ currency: "eur" })));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units_saved&saved=units`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units-saved&saved=units`);
     expect(await unitsOf(db, shop.id)).toMatchObject({
       depthUnit: "feet",
       temperatureUnit: "fahrenheit",
@@ -145,7 +145,7 @@ describe("saving the shop's units", () => {
 
     const to = await redirectedTo(() => saveUnitsAction(unitsForm({ currency: "xyz" })));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units_invalid&saved=units`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units-invalid&saved=units`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
   });
 
@@ -156,7 +156,7 @@ describe("saving the shop's units", () => {
 
     const to = await redirectedTo(() => saveUnitsAction(unitsForm({ depthUnit: "fathoms" })));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units_invalid&saved=units`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units-invalid&saved=units`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
   });
 });
@@ -180,7 +180,7 @@ describe("every settings mutation refuses the daily crew", () => {
     form.set("timezone", "Pacific/Auckland");
     const to = await redirectedTo(() => saveTimezoneAction(form));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect((await getShopById(db, shop.id))?.timezone).toBe(before?.timezone);
   });
 
@@ -200,7 +200,7 @@ describe("every settings mutation refuses the daily crew", () => {
     }
     const to = await redirectedTo(() => saveAddressAction(form));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect((await getShopById(db, shop.id))?.addressStreet).not.toBe("somewhere else");
   });
 
@@ -212,11 +212,11 @@ describe("every settings mutation refuses the daily crew", () => {
     const packing = new FormData();
     packing.set("packingList", "towel\nsunscreen");
     expect(await redirectedTo(() => savePackingAction(packing))).toBe(
-      `/shop/${shop.slug}/settings?notice=not_authorized`,
+      `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
     expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
-      `/shop/${shop.slug}/settings?notice=not_authorized`,
+      `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
     const after = await getShopById(db, shop.id);
@@ -229,7 +229,7 @@ describe("every settings mutation refuses the daily crew", () => {
     signIn(shop, owner);
 
     expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
-      `/shop/${shop.slug}/settings?notice=dock_saved&saved=dockCall`,
+      `/shop/${shop.slug}/settings?notice=dock-saved&saved=dockCall`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
   });

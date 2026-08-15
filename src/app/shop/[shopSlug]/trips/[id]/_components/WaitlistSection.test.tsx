@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DeclaredDiveProfile } from "@/db/self-declared-cards";
+import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { Waitlist } from "./types";
 import { WaitlistSection } from "./WaitlistSection";
 
@@ -22,7 +22,7 @@ function entry(id: string, fullName: string, createdAt: Date): Waitlist[number] 
 
 function renderSection(
   waitlist: Waitlist,
-  diveProfiles: Map<string, DeclaredDiveProfile> = new Map(),
+  certificationSummaries: Map<string, CertificationSummary> = new Map(),
 ) {
   return render(
     <WaitlistSection
@@ -33,7 +33,7 @@ function renderSection(
       tripTitle="Wreck Trip"
       tripWhen="Sat 15 Aug"
       inviteAction={async () => "sent" as const}
-      diveProfiles={diveProfiles}
+      certificationSummaries={certificationSummaries}
       locale="en-US"
       timezone="America/New_York"
     />,
@@ -104,9 +104,10 @@ describe("WaitlistSection declared level", () => {
           {
             level: "open_water",
             levelSelfDeclared: true,
+            noCertificationDeclared: false,
             nitrox: false,
             nitroxSelfDeclared: false,
-          } satisfies DeclaredDiveProfile,
+          } satisfies CertificationSummary,
         ],
       ]),
     );
@@ -130,9 +131,10 @@ describe("WaitlistSection declared level", () => {
           {
             level: "advanced_open_water",
             levelSelfDeclared: false,
+            noCertificationDeclared: false,
             nitrox: true,
             nitroxSelfDeclared: true,
-          } satisfies DeclaredDiveProfile,
+          } satisfies CertificationSummary,
         ],
       ]),
     );
@@ -157,5 +159,36 @@ describe("WaitlistSection declared level", () => {
     // "Not said" is honest and common, not a warning: nobody claimed anything,
     // so there is no unchecked claim on the row to tone it.
     expect(line).toHaveClass("text-muted");
+  });
+
+  /**
+   * The answer these rows could not tell from silence until 2026-08-15. A
+   * wait-list invite is a staffer offering one named person a seat on one
+   * departure, so reading "Level not said" for somebody who has never breathed
+   * off a regulator is the same failure as the deal blast's, one diver at a
+   * time.
+   */
+  it("tells 'not certified yet' apart from a joiner who said nothing", () => {
+    renderSection(
+      waiting,
+      new Map([
+        [
+          "p-a",
+          {
+            level: null,
+            levelSelfDeclared: false,
+            noCertificationDeclared: true,
+            nitrox: false,
+            nitroxSelfDeclared: false,
+          } satisfies CertificationSummary,
+        ],
+      ]),
+    );
+
+    const line = screen.getByText(/Not certified yet — diver's word/);
+    expect(line).toBeVisible();
+    // Somebody's word, nobody's card — the same tone every unchecked claim on
+    // this row wears.
+    expect(line).toHaveClass("text-warning");
   });
 });

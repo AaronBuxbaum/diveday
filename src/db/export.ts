@@ -417,7 +417,10 @@ export async function loadShopExportBundleInput(
         .select()
         .from(rollCallEvents)
         .where(eq(rollCallEvents.shopId, shopId))
-        .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.id));
+        // `seq`, not `id`: the id is a random uuid, so two events sharing an
+        // `occurred_at` came out in a different order every export — of the one
+        // file a shop is meant to be able to diff against last week's.
+        .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq));
 
       // The crew half of the same head count. Same ordering rule as the events
       // above (oldest first), so a reader replaying the file in order ends on
@@ -434,7 +437,7 @@ export async function loadShopExportBundleInput(
         .select()
         .from(rollCallCrewEvents)
         .where(eq(rollCallCrewEvents.shopId, shopId))
-        .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.id));
+        .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.seq));
 
       // Buddy teams standing at export time — not a history: dissolving a team
       // deletes the rows, and the trail that outlives them (`buddy_team_events`)
@@ -690,6 +693,11 @@ export async function loadShopExportBundleInput(
             "emergency_contact_name",
             "emergency_contact_phone",
             "courtesy_email_opt_out_at",
+            // The diver's own "I'm not certified yet", which is a statement
+            // about them and not a card — it has no row in certifications.csv
+            // to travel in, so it travels here or not at all (ADR
+            // 20260814-self-declared-cards).
+            "no_certification_declared_at",
             "deleted_at",
             // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
             // Every identifying column above is already blank for such a row, so
@@ -711,6 +719,7 @@ export async function loadShopExportBundleInput(
             row.emergencyContactName,
             row.emergencyContactPhone,
             row.courtesyEmailOptOutAt,
+            row.noCertificationDeclaredAt,
             row.deletedAt,
             row.anonymizedAt,
             row.anonymizedByPersonId,
@@ -962,6 +971,11 @@ export async function loadShopExportBundleInput(
             "dive_site_id",
             "dive_site_name",
             "description",
+            // How long the boat runs to reach this dive's site — from the dock
+            // for dive one, from the previous dive's site after that. Empty
+            // means the leg reads the shop's own `boat_ride_minutes`
+            // (ADR 20260815-per-leg-travel-minutes).
+            "travel_minutes",
           ],
           rows: tripDiveRows.map((row) => [
             row.tripId,
@@ -971,6 +985,7 @@ export async function loadShopExportBundleInput(
             row.diveSiteId,
             row.diveSiteId ? siteName.get(row.diveSiteId) : null,
             row.description,
+            row.travelMinutes,
           ]),
           note: EXPORT_FILE_NOTES["trip_dives.csv"],
         },

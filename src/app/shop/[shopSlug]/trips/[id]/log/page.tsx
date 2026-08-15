@@ -30,6 +30,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -103,7 +104,7 @@ export default async function IncidentExportPage({
   // with a reason on it: a refusal that teleports you somewhere silently reads
   // as a broken button (task 82).
   if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
-    redirect(`/shop/${shopSlug}/close-out?notice=log_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug, "close-out"), "log-not-authorized"));
   }
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
@@ -157,7 +158,7 @@ export default async function IncidentExportPage({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
             <Link
-              href={`/shop/${shopSlug}/close-out`}
+              href={shopPath(shopSlug, "close-out")}
               className={buttonClass({ variant: "ghost" })}
             >
               {t("incidentExport.backToCloseOut")}

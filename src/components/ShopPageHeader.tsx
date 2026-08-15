@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { toneGlyph } from "@/components/ui/tone";
 
 const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
 
@@ -188,8 +189,14 @@ export function ShopStat({
   linkHref?: string;
   linkLabel?: string;
 }) {
-  // The -strong feedback tokens, not the raw hues: success/warning text on
-  // bg-surface measured just under AA (see ui/badge.tsx).
+  // The -strong feedback tokens, not the raw hues — because of `inset`, not
+  // because of `card`. On `bg-surface` the raw light-palette hues are fine
+  // (5.02:1); it is the sunken inset tile that drops them to 4.36:1, under AA.
+  // `-strong` clears both (5.54 / 4.82) and one tile cannot pick per variant
+  // without the figure changing hue when it moves inside a card. (An earlier
+  // version of this comment cited `bg-surface` as the sub-AA case, which is
+  // badge.tsx's *tinted fill* number misquoted; the table in
+  // docs/design/forms-and-controls.md is the one to read.)
   const toneClass =
     tone === "primary"
       ? "text-primary"
@@ -280,18 +287,6 @@ function statDetail({
   );
 }
 
-// Decorative, `aria-hidden` tone mark — the same reasoning, and the same
-// emoji, as `Badge`'s (see ui/badge.tsx): status here is hue plus reading the
-// words, which a colorblind scan can miss before it gets to the words at all,
-// and a text dingbat at this size reads as a font falling back rather than as
-// a status.
-const NOTICE_GLYPH: Record<"success" | "danger" | "warning" | "neutral", string | null> = {
-  success: "✅ ",
-  danger: "❌ ",
-  warning: "⚠️ ",
-  neutral: null,
-};
-
 export function ShopNotice({
   children,
   tone = "success",
@@ -303,6 +298,9 @@ export function ShopNotice({
   role?: "status" | "alert";
   className?: string;
 }) {
+  // `-strong` on the success tint: the raw hue on its own 10% fill is 4.39:1 in
+  // the light palette, under AA (docs/design/forms-and-controls.md). `danger`
+  // needs no nudge and `warning` already reads as body text on its tint.
   const toneClass =
     tone === "danger"
       ? "border-danger/20 bg-danger/10 text-danger"
@@ -310,15 +308,22 @@ export function ShopNotice({
         ? "border-warning/25 bg-warning/10 text-foreground"
         : tone === "neutral"
           ? "border-border bg-surface-sunken text-foreground"
-          : "border-success/20 bg-success/10 text-success";
-  const glyph = NOTICE_GLYPH[tone];
+          : "border-success/20 bg-success/10 text-success-strong";
+  const glyph = toneGlyph(tone);
 
   return (
     <div
       role={role}
       className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {glyph ? <span aria-hidden="true">{glyph}</span> : null}
+      {/* `mr-1` rather than a space baked into the glyph string: the mark is
+          one shared declaration (ui/tone.ts) and the gap belongs to whichever
+          surface is rendering it. */}
+      {glyph ? (
+        <span aria-hidden="true" className="mr-1">
+          {glyph}
+        </span>
+      ) : null}
       {children}
     </div>
   );

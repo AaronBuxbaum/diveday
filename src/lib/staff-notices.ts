@@ -24,6 +24,109 @@
 export type NoticeTone = "success" | "danger" | "warning" | "neutral";
 
 /**
+ * The one spelling a notice code is allowed to have: lower-case kebab.
+ *
+ * The vocabulary had forked. Three meanings existed in *both* casings at once
+ * — `not_authorized`/`not-authorized`, `payment_not_connected`/
+ * `payment-not-connected`, `demo_disabled`/`demo-disabled` — and
+ * `orders/new/page.tsx` emitted two casings of one concept on adjacent lines
+ * of a single ternary, because the two destination pages' notice maps had been
+ * written by different hands. The branch whose map had no matching key
+ * rendered no banner at all: the refusal was silent, which is the one outcome
+ * a refusal must never be.
+ *
+ * `scripts/check-notice-codes.mjs` (in `pnpm check:repo`) holds every *literal*
+ * code in the tree to this pattern so the fork cannot reopen; `noticeCode`
+ * below holds the *runtime* ones — a `result.reason` the domain layer spells
+ * `snake_case` — to it as well.
+ */
+export const NOTICE_CODE_PATTERN = /^[a-z0-9-]+$/;
+
+/**
+ * A notice code in its one canonical spelling.
+ *
+ * `src/lib` and `src/db` answer in codes, and they answer in the casing their
+ * own domain uses: `medical_attestation_required`, `not_found`, `trip_departed`.
+ * Half the emitters used to pipe those straight into a URL and the other half
+ * hand-translated them, which is precisely how the vocabulary forked. This is
+ * the single translation point — every code passing through `noticeUrl` comes
+ * out kebab, so a destination page's map only ever has to hold one spelling.
+ *
+ * Deliberately a normalisation and not a refusal: this runs inside a server
+ * action on the failure path, and throwing here would turn a refusal a staffer
+ * needs to read into a 500. Characters outside the pattern survive
+ * normalisation but are then percent-encoded by `noticeUrl` and simply fail to
+ * match any map key — an unrecognised code, which every page already handles.
+ */
+export function noticeCode(notice: string): string {
+  return notice.toLowerCase().replaceAll("_", "-");
+}
+
+/**
+ * A path under a shop's staff namespace, with every segment escaped.
+ *
+ * `shopSlug` reaches a server action as an ordinary argument — client-supplied,
+ * like any other, and several actions never compare it to the session. The
+ * `` `/shop/${shopSlug}/check-in` `` template it used to be interpolated into
+ * therefore gave a caller the rest of the URL, in two ways that matter:
+ *
+ * - **Path traversal, same-origin.** `../../admin` normalises away the
+ *   `/shop/` prefix entirely, so the refusal lands on a route nobody named.
+ * - **Query and fragment rewriting.** A segment carrying `?` or `#` turns the
+ *   rest of the path into a query of its own and detaches the `?notice=`
+ *   appended after it — the refusal renders nowhere, silently.
+ *
+ * Not an *off-site* redirect: the literal `/shop/` prefix keeps the origin, so
+ * `//host` yields `/shop///host/...` rather than a protocol-relative target.
+ * That distinction is worth stating, because the first version of this comment
+ * claimed the stronger threat, and a reviewer who tests a false claim concludes
+ * the whole guard is decoration. `staff-notices.test.ts` asserts the two real
+ * ones.
+ */
+export function shopPath(slug: string, ...segments: (string | number)[]): string {
+  return `/shop/${[slug, ...segments].map((segment) => encodeURIComponent(String(segment))).join("/")}`;
+}
+
+/**
+ * The write half of the `?notice=` pattern: the URL a surface redirects to in
+ * order to say what just happened.
+ *
+ * There were 216 hand-built versions of this line, and hand-building it went
+ * wrong in three ways that this fixes at the one door:
+ *
+ * - **The value went in raw.** `` `${back}?notice=${outcome.reason}` `` trusts
+ *   a domain code to be URL-safe. Every value here is percent-encoded.
+ * - **The casing forked.** See `noticeCode` above.
+ * - **Extra params were concatenated.** `&bid=`, `&count=`, `&form=`, `&undo=`
+ *   were appended by hand, each site re-deciding `?` versus `&`. Pass them as
+ *   `extra`; an `undefined` value drops out rather than rendering the string
+ *   `"undefined"` into the query.
+ *
+ * `path` may already carry a query (`?q=` a staffer was searching with) and may
+ * end in a `#fragment` — several refusals scroll to the row they are about.
+ * Both survive: the notice is merged into the query, ahead of the fragment.
+ */
+export function noticeUrl(
+  path: string,
+  notice: string,
+  extra?: Record<string, string | number | undefined>,
+): string {
+  const hashAt = path.indexOf("#");
+  const base = hashAt === -1 ? path : path.slice(0, hashAt);
+  const hash = hashAt === -1 ? "" : path.slice(hashAt);
+  const query = [
+    `notice=${encodeURIComponent(noticeCode(notice))}`,
+    ...Object.entries(extra ?? {})
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`),
+  ].join("&");
+  // A path that already ends in `?` or `&` needs neither separator; anything
+  // else with a `?` in it is mid-query and needs `&`.
+  const separator = /[?&]$/.test(base) ? "" : base.includes("?") ? "&" : "?";
+  return `${base}${separator}${query}${hash}`;
+}
+
+/**
  * `danger` notices are refusals a staff member needs to notice over anything
  * else on the page, so they get `role="alert"`; everything else is ambient
  * confirmation (`role="status"`). The one rule every full-shape migration

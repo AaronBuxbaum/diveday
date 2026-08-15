@@ -1,6 +1,11 @@
 # FU-20260814-vercel-analytics-url-override — Ask Vercel for a supported way to set a server event's page URL, then delete our shim
 
-- **Status:** Open
+- **Status:** Waiting
+- **Waiting on:** two things in order, and the first one is a person's, not an agent's — a human
+  sending the drafted request to `vercel/analytics` under their own account, and then a
+  `@vercel/analytics` release that adds a supported way for a caller to set a server event's page
+  URL (an override argument or a `beforeSend`). To check: the issue/PR thread once it exists, and
+  that package's CHANGELOG for "url" or "beforeSend" whenever it is bumped.
 - **Raised:** 2026-08-14 — fixing the capability-URL leak in `@vercel/analytics/server`
   (`src/lib/analytics-request-context.ts`). The leak is closed; this is the upstream half.
 - **Kind:** cleanup
@@ -107,7 +112,7 @@ vulnerability *in* the SDK, only a missing control that its callers need.
 Then hand the files to the human with a one-paragraph summary of what to check before sending.
 
 This entry stays open while the request is outstanding -- it is tracking somebody else's release,
-not our work. Delete docs/product/follow-ups/FU-20260814-vercel-analytics-url-override.md only when
+not our work. Delete docs/product/follow-ups/waiting/FU-20260814-vercel-analytics-url-override.md only when
 the outcome is final: either a released override has been adopted (bump the dependency, switch
 trackEvent to it, delete src/lib/analytics-request-context.ts and its test) or upstream has said no
 and that answer is recorded in src/lib/analytics-request-context.ts's docblock.

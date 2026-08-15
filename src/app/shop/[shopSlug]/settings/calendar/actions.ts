@@ -11,6 +11,7 @@ import {
   revokeCalendarFeeds,
 } from "@/features/calendar-sync";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import type { FeedIssueState } from "./feed-panel-types";
 
 function scopeFromFormData(formData: FormData): FeedScope | null {
@@ -59,7 +60,7 @@ export async function calendarFeedAction(
   if (!scope) return { status: "denied" };
 
   const db = await getDb();
-  const path = `/shop/${session.user.shopSlug}/settings/calendar`;
+  const path = shopPath(session.user.shopSlug, "settings", "calendar");
 
   if (formData.get("intent") === "revoke") {
     await revokeCalendarFeeds(db, {

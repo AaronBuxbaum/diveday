@@ -1,5 +1,11 @@
-import { expect, test } from "./fixtures";
+import { expect, READ_ONLY, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+
+/**
+ * READ_ONLY holds here: the language choice is the `diveday_locale` cookie
+ * (`setLocaleAction`, src/app/actions/set-locale.ts) — it writes no `people.locale`
+ * and touches no row at all.
+ */
 
 /**
  * A reader picks their own language (ADR 20260812-reader-chosen-language).
@@ -17,9 +23,9 @@ import { signInAsOwner } from "./helpers";
  * Spanish writes the language lowercase mid-sentence (src/i18n/language-labels.ts).
  */
 
-test("a diver switches a shop's public pages into Spanish, and it survives navigation", async ({
-  page,
-}) => {
+test("a diver switches a shop's public pages into Spanish, and it survives navigation", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   const header = page.getByRole("banner");
   // A picker, not a swap. The header used to render the alternatives alone —
@@ -61,9 +67,9 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
 });
 
 test.describe("staff", () => {
-  test("a staffer switches the back office from the shop's own name, and from Search", async ({
-    page,
-  }) => {
+  test("a staffer switches the back office from the shop's own name, and from Search", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/close-out");
 

@@ -13,7 +13,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
@@ -49,15 +49,15 @@ export const metadata: Metadata = {
  * banner can say which card is missing and what this diver actually holds.
  */
 const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessageKey }> = {
-  walkin_invalid: { tone: "danger", key: "checkIn.notice.walkinInvalid" },
-  walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
-  walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
-  walkin_course_unstaffed: { tone: "danger", key: "checkIn.notice.walkinCourseUnstaffed" },
-  walkin_course_prerequisite: { tone: "danger", key: "checkIn.notice.walkinCoursePrerequisite" },
-  walkin_course_ratio_full: { tone: "danger", key: "checkIn.notice.walkinCourseRatioFull" },
-  walkin_course_min_age: { tone: "danger", key: "checkIn.notice.walkinCourseMinAge" },
-  walkin_trip_prerequisite: { tone: "danger", key: "checkIn.notice.walkinTripPrerequisite" },
-  walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
+  "walkin-invalid": { tone: "danger", key: "checkIn.notice.walkinInvalid" },
+  "walkin-full": { tone: "danger", key: "checkIn.notice.walkinFull" },
+  "walkin-already": { tone: "neutral", key: "checkIn.notice.walkinAlready" },
+  "walkin-course-unstaffed": { tone: "danger", key: "checkIn.notice.walkinCourseUnstaffed" },
+  "walkin-course-prerequisite": { tone: "danger", key: "checkIn.notice.walkinCoursePrerequisite" },
+  "walkin-course-ratio-full": { tone: "danger", key: "checkIn.notice.walkinCourseRatioFull" },
+  "walkin-course-min-age": { tone: "danger", key: "checkIn.notice.walkinCourseMinAge" },
+  "walkin-trip-prerequisite": { tone: "danger", key: "checkIn.notice.walkinTripPrerequisite" },
+  "walkin-unavailable": { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
 };
 
 /**
@@ -107,10 +107,10 @@ export default async function WalkInDiverPage({
   const candidates = await listBookableDivers(db, shop.id, trip.id, { query });
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   const gateRefusal =
-    notice === "walkin_trip_prerequisite"
+    notice === "walkin-trip-prerequisite"
       ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
       : null;
-  const picker = `/shop/${shopSlug}/check-in/walk-in`;
+  const picker = shopPath(shopSlug, "check-in", "walk-in");
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">

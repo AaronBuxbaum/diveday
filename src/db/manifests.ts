@@ -206,7 +206,11 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
     .from(rollCallCrewEvents)
     .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
     .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-    .orderBy(desc(rollCallCrewEvents.occurredAt), desc(rollCallCrewEvents.createdAt));
+    .orderBy(
+      desc(rollCallCrewEvents.occurredAt),
+      desc(rollCallCrewEvents.createdAt),
+      desc(rollCallCrewEvents.seq),
+    );
   const latest = new Map<string, RollCallRecord>();
   const seen = new Set<string>();
   for (const { event, recorder } of rows) {
@@ -241,7 +245,11 @@ async function listLatestRollCallByBooking(
         eq(rollCallEvents.checkpoint, checkpoint),
       ),
     )
-    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt));
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
   const latest = new Map<
     string,
     {
@@ -318,7 +326,11 @@ export async function listDepartureBoardedByTrip(
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt));
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
   // Newest first, so the first row seen per booking is its latest event.
   const seen = new Set<string>();
   for (const row of rows) {
@@ -660,7 +672,11 @@ export async function recordRollCall(
             eq(rollCallEvents.checkpoint, checkpoint),
           ),
         )
-        .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt))
+        .orderBy(
+          desc(rollCallEvents.occurredAt),
+          desc(rollCallEvents.createdAt),
+          desc(rollCallEvents.seq),
+        )
         .limit(1);
       if (newest && newest.occurredAt > occurredAt) {
         return { ok: false, reason: "newer_event_exists" };
@@ -856,7 +872,11 @@ export async function recordCrewRollCall(
             eq(rollCallCrewEvents.checkpoint, checkpoint),
           ),
         )
-        .orderBy(desc(rollCallCrewEvents.occurredAt), desc(rollCallCrewEvents.createdAt))
+        .orderBy(
+          desc(rollCallCrewEvents.occurredAt),
+          desc(rollCallCrewEvents.createdAt),
+          desc(rollCallCrewEvents.seq),
+        )
         .limit(1);
       if (newest && newest.occurredAt > occurredAt) {
         return { ok: false, reason: "newer_event_exists" };
@@ -1032,7 +1052,11 @@ export async function updateLatestRollCallNote(
         eq(rollCallEvents.checkpoint, input.checkpoint),
       ),
     )
-    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    )
     .limit(1);
   if (!latest || latest.status === "cleared") return false;
   await db

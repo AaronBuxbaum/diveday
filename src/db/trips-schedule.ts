@@ -302,6 +302,9 @@ export async function duplicateTrip(
         title: dive.title,
         diveSiteId: dive.diveSiteId,
         description: dive.description,
+        // The same sites in the same order is the same run out and back, so a
+        // copied departure keeps its legs (ADR 20260815-per-leg-travel-minutes).
+        travelMinutes: dive.travelMinutes,
       })),
       scheduleDays: days.map((day) => ({
         dayNumber: day.dayNumber,

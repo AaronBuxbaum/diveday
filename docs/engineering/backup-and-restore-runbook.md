@@ -10,10 +10,12 @@ How DiveDay's production data is protected and how it comes back. Three DiveDay-
    `src/lib/export.ts`) written to the private, versioned `DatabaseBackupBucket` in
    `infra/lib/infra-stack.ts` §11. §2. The reasoning for both of the above is
    [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
-3. **A weekly full-cluster `pg_dump`** into the same bucket under `dumps/`, shipped 2026-08-12
+3. **A weekly full-cluster `pg_dump`** into its own bucket (`diveday-database-dumps`) under `dumps/`,
+   shipped 2026-08-12
    ([ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md)).
    §2c. It exists because the export bundles cannot carry credentials, so layer 2 alone restores a
-   platform nobody can sign in to.
+   platform nobody can sign in to. It shared layer 2's bucket until 2026-08-15 — §2c's transition
+   window says where to look for a dump written before then.
 
 A third, complementary layer shipped 2026-08-04 (§2's own scheduler followed on 2026-08-12): the
 **shop-owned weekly backup** (§2b below) — the same export bundle, delivered by cron to a bucket
@@ -31,7 +33,7 @@ history we cannot produce.
 
 | Store | What's in it | Primary recovery | Secondary copy |
 | --- | --- | --- | --- |
-| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump under `dumps/` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles under `exports/` |
+| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
 | Vercel Blob (`*.public.blob.vercel-storage.com`) | Certification card photos, recap photos, course/dive-site media, imported waiver source documents | None built in — Vercel Blob has no PITR and no versioning | The `photos/` directory inside each export bundle (see the gap below) |
 | Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/AWS SES/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
 
@@ -135,10 +137,10 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 
 | Thing | Value |
 | --- | --- |
-| Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §11), default name `diveday-backups`, override with `--context backupBucketName=...` |
+| Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §11), default name `diveday-backups`, override with `--context backupBucketName=...`. **Bundles only.** The full-cluster dump moved to its own bucket on 2026-08-15 (§2c) |
 | Properties | Versioned, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, `RemovalPolicy.RETAIN` |
-| Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days |
-| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list — and scoped to `exports/*`, so it cannot reach the dumps under `dumps/` |
+| Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. Plus one rule that is on its way out: `drain-legacy-database-dumps` expires the `dumps/` prefix this bucket held until 2026-08-15 — see §2c's transition window before deleting it |
+| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list — and scoped to `exports/*`, so it cannot reach the dumps still draining under `dumps/` and has no grant at all on the bucket the new ones go to |
 | Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
 
 The uploader's access key is minted by `cdk deploy` and delivered in the credentials secret
@@ -154,7 +156,7 @@ download of every shop's exported waivers. That is also why the freshness check 
 somewhere else.
 
 The prefix half of that scoping was missing until 2026-08-15: the grant said `arnForObjects("*")`,
-which is the *whole* bucket, and the bucket also holds `dumps/`. So a leaked Vercel environment could
+which is the *whole* bucket, and the bucket also held `dumps/`. So a leaked Vercel environment could
 overwrite the weekly `pg_dump` — the one artifact that restores a login, since the bundles exclude
 `user_accounts`, `account_tokens` and `calendar_feeds` by design. It could never *read* one, which is
 the property the whole design rests on and which was never at risk. Versioning meant the real dump
@@ -162,6 +164,15 @@ survived as a non-current version, so this was a risk rather than an incident, b
 said so: the freshness check only asked whether a dated prefix under `dumps/` was recent. It now also
 checks that what is there is big enough to be a dump (§2c), which catches an accidental truncation as
 well as a deliberate overwrite.
+
+Three things came out of that finding and it is worth knowing which is which, because only the last
+one is a guardrail. The grant was narrowed to `exports/*` (a fix). The freshness check gained a size
+floor (a detector). And the dump moved to a **bucket of its own** the same day, so that no principal
+holding Vercel-resident credentials has any grant on it at all — which is what makes the finding
+structurally impossible rather than merely corrected, and is why this bucket's remaining scoping is a
+habit rather than the thing holding the design up. The reasoning is the 2026-08-15 amendment in
+[ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md),
+and it is written for whoever next adds something that can write here.
 
 ```bash
 AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
@@ -301,12 +312,13 @@ portability feature it was built as.
 | What it is | `pg_dump --format=custom --no-owner --no-privileges` over the whole cluster, gzipped. Covers `user_accounts`, `account_tokens` and `calendar_feeds` — and everything else — in one file |
 | Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), image `public.ecr.aws/docker/library/postgres:17-alpine`. Pinned to the Postgres **major** version: `pg_dump` may be newer than its server, never older, so `DUMP_POSTGRES_MAJOR` is a floor to raise when Neon upgrades |
 | Cadence | Weekly, **Mondays 05:30 UTC**, EventBridge Scheduler → `codebuild:StartBuild`. Half an hour after the export pass, a day before the watchdog, so one week's dump and one week's bundles share a run date |
-| Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in the same `DatabaseBackupBucket` |
-| Retention | **35 days, then deleted** — its own lifecycle rule, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
+| Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in `DatabaseDumpBucket`, default name `diveday-database-dumps`, override with `--context dumpBucketName=...`. **Not** the bundles' bucket, since 2026-08-15 — see the transition window below |
+| Retention | **35 days, then deleted** — a lifecycle rule over the whole bucket, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
+| Versioning | **Off, on purpose.** On a versioned bucket a lifecycle expiration writes a delete marker and keeps the bytes as a non-current version, so "35 days" would mean the file exists for up to 70. Unversioned, the number in the row above is the real one. The trade — no non-current copy to fall back on after a bad overwrite — costs nothing here: the only writer holds no `DeleteObject` and writes a date-stamped key, so the worst it can touch is *today's* dump |
 | Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). Deploys holding the literal `unset`; a build refuses with a named message until a human fills it in |
-| Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` — it cannot reach the shop bundles under `exports/`, and it cannot delete. Reading a dump back needs the admin profile |
+| Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` **in this bucket only** — it has no grant of any kind on the bundles' bucket, and it cannot delete. The uploader credential that lives in Vercel has no grant here. Reading a dump back needs the admin profile |
 | Streaming | `pg_dump \| gzip \| aws s3 cp -` under `set -o pipefail`. No temp file. **`pipefail` is load-bearing**: without it the build's status is the upload's, so a `pg_dump` that died mid-stream would store a truncated dump and report success |
-| Monitors | The same weekly `diveday-backup-freshness-check` — it lists `dumps/` too and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms. Since 2026-08-15 it also alarms when the newest dump is **under 4 KiB**, which is far below any real dump (DiveDay's schema alone gzips to more than that with no rows in it): a date proves a run started, not that it left a restorable file. That catches a `pg_dump` truncated despite `pipefail`, an empty object, and an overwrite. One alarm per broken week — a dump stale enough to alarm on its age does not also alarm on its size |
+| Monitors | The same weekly `diveday-backup-freshness-check`, still **one** function after the bucket split — it lists this bucket too (one extra `s3:ListBucket`, no second watchdog) and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms. Since 2026-08-15 it also alarms when the newest dump is **under 4 KiB**, which is far below any real dump (DiveDay's schema alone gzips to more than that with no rows in it): a date proves a run started, not that it left a restorable file. That catches a `pg_dump` truncated despite `pipefail`, an empty object, and an overwrite. One alarm per broken week — a dump stale enough to alarm on its age does not also alarm on its size |
 
 Set it up (once), and run one by hand:
 
@@ -316,8 +328,67 @@ AWS_PROFILE=diveday-admin aws secretsmanager put-secret-value \
   --secret-id diveday/database-url-unpooled --secret-string '<DATABASE_URL_UNPOOLED>'
 
 AWS_PROFILE=diveday-admin aws codebuild start-build --project-name diveday-database-dump
-AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive
+AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
 ```
+
+### The transition window — where a dump written before 2026-08-15 lives
+
+The dump shared `diveday-backups` with the export bundles until 2026-08-15, when it moved to
+`diveday-database-dumps` so that nothing holding Vercel-resident credentials has a grant on it (the
+reasoning is the ADR amendment; this is the operational half). The old bucket is `RETAIN` with a live
+weekly writer and this runbook's restore procedure pointing at it, so the move is a **migration with
+a window**, not a cutover. Read this before trusting either bucket to be complete.
+
+**The sequence, in order. Steps 1–3 are one sitting.**
+
+1. **Deploy.** `pnpm infra:deploy` creates `diveday-database-dumps`, repoints the CodeBuild project's
+   `BUCKET` at it, and gives the freshness check its second `ListBucket`. One CloudFormation update;
+   nothing is copied and nothing is deleted.
+2. **Start one dump by hand, the same day.** It proves the new grant and the new destination in the
+   one command that also fills the new bucket:
+
+   ```bash
+   AWS_PROFILE=diveday-admin aws codebuild start-build --project-name diveday-database-dump
+   AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
+   ```
+
+   **Do not skip this.** The new bucket is empty until a dump runs into it, and the watchdog reads
+   only the new bucket. A deploy that lands between a Monday 05:30 dump and the Tuesday 06:00 check
+   otherwise raises `no database dump in ever` on a healthy system — a false alarm, and a false alarm
+   on this signal is the expensive kind.
+3. **Confirm the watchdog agrees**, without waiting for Tuesday:
+
+   ```bash
+   AWS_PROFILE=diveday-admin aws lambda invoke \
+     --function-name diveday-backup-freshness-check /dev/stdout
+   ```
+
+   `newestDump` should be today and `dumpBytes` a plausible size.
+4. **For the next 35 days, a restore looks in both buckets.** The old dumps are deliberately **not
+   copied** — a copy re-dates the objects and restarts their expiry clock, which would extend the life
+   of files whose whole retention argument is that they should not have one. They stay readable where
+   they are until the `drain-legacy-database-dumps` rule expires them:
+
+   ```bash
+   AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive   # after the split
+   AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive          # before it
+   ```
+
+   Newest wins, wherever it is. Within a week or two of the deploy the new bucket holds everything a
+   restore needs and the old prefix is history.
+5. **Delete the drain rule once the old prefix is empty of *versions*** — and note that "empty" is not
+   what `aws s3 ls` shows you. The old bucket is versioned, so the drain rule's expiry writes a delete
+   marker at 35 days and the bytes survive as non-current versions for another 35. Roughly 70 days
+   after the deploy:
+
+   ```bash
+   AWS_PROFILE=diveday-admin aws s3api list-object-versions \
+     --bucket diveday-backups --prefix dumps/ --query 'length(Versions)'
+   ```
+
+   When that answers `null` or `0`, remove the `drain-legacy-database-dumps` lifecycle rule from §11.
+   Until then **leave it**: deleting it strands real dumps, with real password hashes in them, in a
+   bucket whose other prefix never expires. That is the migration's one irreversible mistake.
 
 ### Restore procedure — accounts and everything else
 
@@ -331,8 +402,11 @@ bundles are what happened after it.
 
    ```bash
    AWS_PROFILE=diveday-admin aws s3 cp \
-     s3://diveday-backups/dumps/<YYYY-MM-DD>/diveday.dump.gz . && ls -l diveday.dump.gz
+     s3://diveday-database-dumps/dumps/<YYYY-MM-DD>/diveday.dump.gz . && ls -l diveday.dump.gz
    ```
+
+   Dumps written before 2026-08-15 are in `s3://diveday-backups/dumps/` instead, for as long as the
+   drain rule leaves them there — see the transition window above.
 3. **Restore it.** `--no-owner --no-privileges` again on the way in, because the target's roles are not
    the source cluster's:
 
@@ -369,8 +443,9 @@ provider failure does not lose track of an object. That is a consistency mechani
 A backup nobody has restored is a hypothesis. Run this once a quarter and record the result in the
 log below. It should take under an hour.
 
-1. **Pick a target** — a timestamp roughly 24 hours ago, one shop's most recent export bundle, and the
-   most recent dump under `dumps/`.
+1. **Pick a target** — a timestamp roughly 24 hours ago, one shop's most recent export bundle from
+   `s3://diveday-backups/exports/`, and the most recent dump from `s3://diveday-database-dumps/dumps/`
+   (two buckets since 2026-08-15, §2c).
 2. **Branch the database.** Neon console → new branch from the production branch at that timestamp.
    Note how long the branch takes to become available; that number is your real RTO.
 3. **Connect and verify.** Point a local `DATABASE_URL`/`DATABASE_URL_UNPOOLED` at the branch and
@@ -431,10 +506,10 @@ log below. It should take under an hour.
 | --- | --- |
 | The branch you need is older than Neon will go | The PITR window at the top of this file — if it is unrecorded, that is the finding. Fall back to the newest export bundle in S3 and accept its gaps (no credentials, possibly missing photos) |
 | Restored app boots but nobody can sign in | Expected when restoring from export bundles alone: `user_accounts`/`account_tokens` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Restore the newest dump under `dumps/` first (§2c) and layer the bundles on top; re-inviting staff and forcing password resets is now the fallback for when no dump is available, not the standard procedure |
-| No dump under `dumps/` at all | The `diveday/database-url-unpooled` secret was never filled in, so every build refused (§2c). The weekly watchdog alarms on exactly this. Check the `diveday-database-dump` project's last build log for the named refusal |
+| No dump in `diveday-database-dumps` at all | Either the `diveday/database-url-unpooled` secret was never filled in, so every build refused (§2c, and the weekly watchdog alarms on exactly this — check the `diveday-database-dump` project's last build log for the named refusal), or no dump has run since the 2026-08-15 bucket split and the ones you want are still in `s3://diveday-backups/dumps/` |
 | `pg_restore` fails on ownership or grants | The dump is taken `--no-owner --no-privileges`; pass both on the way in too — the target branch's roles are not the source cluster's |
 | A waiver renders but its integrity hash does not verify | Compare `waiver_templates.csv`'s `body` for that `template_version` against what the app is rendering — a restore that mixed a current template with an old record is the usual cause |
 | `photos/` is short of what the CSVs reference | `fetchExportPhotos` dropped them silently (`src/lib/export.ts`). Check whether the blob objects still exist; if they do, re-run the export for that shop, if they do not, the document is gone and the incident is a data-loss incident |
 | Export bundle is missing a table you expected | The table was never added to `src/db/export.ts`. Confirm against `EXPORT_FILE_NOTES` in `src/lib/export.ts` — a table absent there is absent from every historical bundle too |
 | App still points at the old database after a cutover | `DATABASE_URL`/`DATABASE_URL_UNPOOLED` are read at boot in `src/db/client.ts`; changing them in Vercel requires a redeploy, not just a save |
-| `cdk destroy` ran and you need the backups | They are still there — `RemovalPolicy.RETAIN` leaves `DatabaseBackupBucket` behind on purpose. Re-adopt it by name or read it directly from the console |
+| `cdk destroy` ran and you need the backups | They are still there — `RemovalPolicy.RETAIN` leaves **both** `DatabaseBackupBucket` and `DatabaseDumpBucket` behind on purpose. Re-adopt them by name (`backup-bucket-readoption` in [manual-actions.md](manual-actions.md)) or read them directly from the console |

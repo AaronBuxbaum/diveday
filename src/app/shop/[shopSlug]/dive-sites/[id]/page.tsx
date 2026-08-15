@@ -28,7 +28,7 @@ import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/li
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
@@ -83,7 +83,7 @@ export default async function EditDiveSitePage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
   const { notice, error } = await searchParams;
-  const back = `/shop/${shopSlug}/dive-sites`;
+  const back = shopPath(shopSlug, "dive-sites");
   const db = await getDb();
   const [site, shop] = await Promise.all([
     getDiveSite(db, session.user.shopId, id),
@@ -197,7 +197,7 @@ export default async function EditDiveSitePage({
         url,
       });
     }
-    revalidateAndRedirect(`${back}/${id}`, `${back}/${id}?notice=saved`);
+    revalidateAndRedirect(`${back}/${id}`, noticeUrl(`${back}/${id}`, "saved"));
   }
 
   async function copyAction() {
@@ -212,7 +212,7 @@ export default async function EditDiveSitePage({
     while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
     const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
     if (!copy) notFound();
-    revalidateAndRedirect(back, `${back}/${copy.id}?notice=copied`);
+    revalidateAndRedirect(back, noticeUrl(`${back}/${copy.id}`, "copied"));
   }
 
   async function deleteAction() {
@@ -221,7 +221,7 @@ export default async function EditDiveSitePage({
     const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
     revalidateAndRedirect(
       back,
-      deleted ? `${back}?notice=archived` : `${back}/${id}?error=invalid`,
+      deleted ? noticeUrl(back, "archived") : `${back}/${id}?error=invalid`,
     );
   }
 
@@ -244,7 +244,7 @@ export default async function EditDiveSitePage({
               <form action={copyAction}>
                 <SubmitButton
                   pendingLabel={t("diveSites.edit.copying")}
-                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+                  className={buttonClass({ variant: "secondary" })}
                 >
                   {t("diveSites.edit.copyAndTailor")}
                 </SubmitButton>
@@ -297,7 +297,7 @@ export default async function EditDiveSitePage({
       {notice === "copied" && noticeKey ? (
         <p
           role="status"
-          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
         >
           {t(noticeKey)}
         </p>

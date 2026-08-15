@@ -80,7 +80,7 @@ describe("backup settings authorization", () => {
     signIn(shop, captain);
 
     const to = await redirectedTo(() => saveBackupDestinationAction(destinationForm()));
-    expect(to).toBe(`/shop/${shop.slug}?notice=backup_not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}?notice=backup-not-authorized`);
 
     const row = await getShopBackupDestination(db, shop.id);
     expect(row?.bucket).not.toBe("captains-own-bucket");
@@ -92,10 +92,10 @@ describe("backup settings authorization", () => {
     signIn(shop, captain);
 
     await expect(redirectedTo(() => testBackupAction())).resolves.toBe(
-      `/shop/${shop.slug}?notice=backup_not_authorized`,
+      `/shop/${shop.slug}?notice=backup-not-authorized`,
     );
     await expect(redirectedTo(() => disconnectBackupAction())).resolves.toBe(
-      `/shop/${shop.slug}?notice=backup_not_authorized`,
+      `/shop/${shop.slug}?notice=backup-not-authorized`,
     );
   });
 
@@ -121,7 +121,7 @@ describe("backup settings authorization", () => {
     const form = destinationForm();
     form.set("endpoint", "https://169.254.169.254");
     const to = await redirectedTo(() => saveBackupDestinationAction(form));
-    expect(to).toBe(`/shop/${shop.slug}/settings/export?notice=endpoint_private_host`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/export?notice=endpoint-private-host`);
     expect((await getShopBackupDestination(db, shop.id))?.endpoint).toBe(before);
   });
 });

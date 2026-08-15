@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { eventSource, guideSource, scheduleAttributionHref, trialHref } from "./funnel";
+import {
+  eventSource,
+  guideSource,
+  scheduleAttributionHref,
+  switchingHref,
+  trialHref,
+} from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 
 describe("eventSource", () => {
@@ -58,6 +64,23 @@ describe("trialHref", () => {
 
   it("round-trips: every href it builds survives eventSource", () => {
     expect(eventSource(trialHref("nav").split("=")[1])).toBe("nav");
+  });
+});
+
+describe("switchingHref", () => {
+  it("keeps the records band's two doors apart", () => {
+    // The question the second door was added to answer (2026-08-15) is which
+    // one a spreadsheet shop takes: the hub, which forks, or the guide direct.
+    // One tag across both would answer it with a number that cannot be split.
+    expect(switchingHref("/switching", "home-records")).toBe("/switching?from=home-records");
+    expect(switchingHref("/switching/spreadsheet", "home-records-arriving")).toBe(
+      "/switching/spreadsheet?from=home-records-arriving",
+    );
+  });
+
+  it("round-trips: every href it builds survives eventSource", () => {
+    const href = switchingHref("/switching/spreadsheet", "home-records-arriving");
+    expect(eventSource(href.split("=")[1])).toBe("home-records-arriving");
   });
 });
 

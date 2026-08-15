@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
 
-import { DIRECTORY, findEntryProblems } from "./check-follow-ups.mjs";
+import { DIRECTORY, findEntryProblems, WAITING_DIRECTORY } from "./check-follow-ups.mjs";
 
 const FILENAME = "FU-20260808-example-entry.md";
 
@@ -187,15 +187,60 @@ describe("the prompt", () => {
   });
 });
 
+describe("the waiting room", () => {
+  // An entry in `waiting/` is blocked on somebody outside this repo. It is not a
+  // triage state, so it swaps the status vocabulary rather than joining it — and
+  // it owes the reader a way to check whether the block has lifted, without which
+  // it is indistinguishable from an entry nobody got round to.
+  const waiting = valid
+    .replace("**Status:** Open", "**Status:** Waiting")
+    .replace(`${DIRECTORY}/${FILENAME}`, `${WAITING_DIRECTORY}/${FILENAME}`);
+  const waitingOn =
+    "- **Waiting on:** an upstream release that fixes the merge order; check that package's" +
+    ' CHANGELOG for "endpoint" whenever it is bumped\n';
+  const complete = waiting.replace("- **Kind:**", `${waitingOn}- **Kind:**`);
+  const waitingProblems = (contents) =>
+    findEntryProblems(FILENAME, contents, { waiting: true }).problems;
+
+  it("passes when it names the event and how to check it", () => {
+    expect(waitingProblems(complete)).toEqual([]);
+  });
+
+  it("requires a Waiting on line", () => {
+    expect(waitingProblems(waiting).join()).toMatch(/needs a \*\*Waiting on:\*\* line/);
+  });
+
+  it("refuses a Waiting on line too short to check cold", () => {
+    const vague = waiting.replace("- **Kind:**", "- **Waiting on:** upstream\n- **Kind:**");
+    expect(waitingProblems(vague).join()).toMatch(/too short to check cold/);
+  });
+
+  it("refuses an inbox status down here, and a Waiting status up there", () => {
+    expect(waitingProblems(valid).join()).toMatch(/must say \*\*Status:\*\* Waiting/);
+    expect(problemsFor(complete.replace(`${WAITING_DIRECTORY}/`, `${DIRECTORY}/`)).join()).toMatch(
+      /Status/,
+    );
+  });
+
+  it("expects the prompt to delete the file at its waiting-room path", () => {
+    // The prompt carries a literal path, so moving a file between rooms without
+    // fixing it points a cold reader at a file that is not there.
+    const stale = complete.replace(`${WAITING_DIRECTORY}/${FILENAME}`, `${DIRECTORY}/${FILENAME}`);
+    expect(waitingProblems(stale).join()).toMatch(/must tell the session to delete/);
+  });
+});
+
 describe("the register on disk", () => {
-  it("has no invalid entries", async () => {
-    const directory = path.join(process.cwd(), DIRECTORY);
-    const files = (await readdir(directory)).filter(
+  it.each([
+    [DIRECTORY, false],
+    [WAITING_DIRECTORY, true],
+  ])("has no invalid entries in %s", async (directory, waiting) => {
+    const files = (await readdir(path.join(process.cwd(), directory))).filter(
       (name) => name.startsWith("FU-") && name.endsWith(".md"),
     );
     for (const filename of files) {
-      const contents = await readFile(path.join(directory, filename), "utf8");
-      expect(findEntryProblems(filename, contents).problems).toEqual([]);
+      const contents = await readFile(path.join(process.cwd(), directory, filename), "utf8");
+      expect(findEntryProblems(filename, contents, { waiting }).problems).toEqual([]);
     }
   });
 });

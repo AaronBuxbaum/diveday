@@ -242,6 +242,37 @@ export const people = pgTable(
      */
     diveInsurance: text("dive_insurance"),
     /**
+     * **When this person said, on a public opt-in, that they hold no
+     * certification at all** — Discover Scuba and Try Scuba customers,
+     * snorkellers, the non-diving half of a couple, somebody booked onto a
+     * course they have not started. Null means they never said it.
+     *
+     * It is a column on the *person* and deliberately **not** a row in
+     * `certifications`, which is the whole point of it (ADR
+     * 20260814-self-declared-cards, amendment 2026-08-15). A Discover Scuba
+     * experience is not a certification, every other row in that table asserts
+     * that a card exists, and a row asserting the opposite would have to be
+     * special-cased by readiness, admission, the CSV export, the incident
+     * document and the importer — five readers, of which the one that misses it
+     * turns "no card" into a card. For the same reason there is no `none` rung
+     * on `certification_level`: that enum is a ladder `certificationRank`
+     * orders, and a rank-0 member would eventually be compared as a level.
+     *
+     * Three things hang off it, and none of them is a gate:
+     *
+     * - It is written only by `recordSelfDeclaredCards`, under the same
+     *   anti-displacement rule a declared *level* gets: if this person holds any
+     *   live card that is not itself a still-unsighted claim, nothing is written
+     *   at all. The forms are unauthenticated.
+     * - It is **ignored, not deleted**, once a level lands beside it — where a
+     *   record began is history, exactly as `certifications.self_declared_at`
+     *   is kept after a sighting.
+     * - It renders in the one staff phrase a level renders in ("Not certified
+     *   yet — diver's word"), so a staffer scanning a send list can tell this
+     *   answer from the silence of somebody who skipped the question.
+     */
+    noCertificationDeclaredAt: timestamp("no_certification_declared_at", { withTimezone: true }),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
@@ -1357,11 +1388,36 @@ export const tripDives = pgTable(
     title: text("title"),
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     description: text("description"),
+    /**
+     * **This leg of the day, in minutes**: how long the boat runs to reach this
+     * dive's site — from the dock for dive one, from the previous dive's site
+     * after that.
+     *
+     * It lives here rather than on `trips` because a departure is not one ride.
+     * A two-tank morning is dock -> A -> B -> dock, each leg its own duration,
+     * and the durations are order-dependent: A->B is not B->A when the two sites
+     * sit on different parts of the reef line. One number per trip cannot say
+     * "10 minutes out to the house reef, 25 across to the wall"
+     * (ADR 20260815-per-leg-travel-minutes).
+     *
+     * Null means "the shop's own `boat_ride_minutes` is right for this leg",
+     * which is what every existing row reads as. `0` is a real answer — the same
+     * site twice, or a shore entry — so the resolver honours it rather than
+     * treating it as absent.
+     */
+    travelMinutes: integer("travel_minutes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
     index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+    // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide
+    // figure this falls back to (src/lib/diver-planning.ts), so an import or a
+    // hand-written fix cannot write a leg the form would have refused.
+    check(
+      "trip_dives_travel_minutes_range",
+      sql`${table.travelMinutes} is null or (${table.travelMinutes} >= 0 and ${table.travelMinutes} <= 480)`,
+    ),
   ],
 );
 
@@ -3645,6 +3701,35 @@ export const rollCallEvents = pgTable(
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The order these were written in — **the final tiebreak on every
+     * roll-call read**, and the only column here that records what actually
+     * came first (ADR 20260815-roll-call-order-is-a-property-of-the-data).
+     *
+     * Reads used to order by `desc(occurred_at), desc(created_at)` and nothing
+     * else. `occurred_at` ties constantly — the e2e clock is frozen outright,
+     * and an offline batch is applied with the timestamps the device recorded
+     * — and `created_at` is `defaultNow()`, which in Postgres is **transaction
+     * time**: two events applied inside one transaction share it exactly. With
+     * both tied, Postgres returns whatever the heap hands back, which changes
+     * the moment anything moves rows (a `VACUUM` does). The read-back order
+     * that the offline device's own tie-break was pinned against would then
+     * silently stop holding, with every test still green — the same failure
+     * mode as the bug that prompted this, one layer down.
+     *
+     * `id` cannot stand in for it: `defaultRandom()` is as arbitrary as the
+     * heap, merely arbitrary consistently. `activity_events.seq` is the same
+     * column for the same reason.
+     *
+     * **Never serialise it.** The sequence is database-global, not per shop, so
+     * a value reaching a response body, an export file or a client component
+     * would publish a monotonic counter every tenant shares — one shop able to
+     * read another's roll-call volume from two samples (security review,
+     * 2026-08-15). Two readers here select the whole row
+     * (`select({ event: rollCallEvents, … })`); they reduce it to named fields,
+     * and a `...event` spread would quietly undo that.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx").on(
@@ -3788,6 +3873,14 @@ export const rollCallCrewEvents = pgTable(
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The same final tiebreak the diver table carries, and it has to be the
+     * same one: the two halves of a head count are read minutes apart on one
+     * screen, and a crew member's result ordering differently from a diver's
+     * is how the device and the server come to disagree about who is still in
+     * the water. See `rollCallEvents.seq`.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(

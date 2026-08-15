@@ -27,7 +27,7 @@ import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   createPromoAction,
   deletePromoAction,
@@ -57,15 +57,15 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   disabled: { tone: "success", key: "promos.notice.disabled" },
   deleted: { tone: "success", key: "promos.notice.deleted" },
   invalid: { tone: "danger", key: "promos.notice.invalid" },
-  invalid_code: { tone: "danger", key: "promos.notice.invalidCode" },
-  invalid_discount: { tone: "danger", key: "promos.notice.invalidDiscount" },
-  invalid_window: { tone: "danger", key: "promos.notice.invalidWindow" },
+  "invalid-code": { tone: "danger", key: "promos.notice.invalidCode" },
+  "invalid-discount": { tone: "danger", key: "promos.notice.invalidDiscount" },
+  "invalid-window": { tone: "danger", key: "promos.notice.invalidWindow" },
   duplicate: { tone: "danger", key: "promos.notice.duplicate" },
-  not_connected: { tone: "warning", key: "promos.notice.notConnected" },
-  stripe_failed: { tone: "danger", key: "promos.notice.stripeFailed" },
-  not_authorized: { tone: "danger", key: "promos.notice.notAuthorized" },
+  "not-connected": { tone: "warning", key: "promos.notice.notConnected" },
+  "stripe-failed": { tone: "danger", key: "promos.notice.stripeFailed" },
+  "not-authorized": { tone: "danger", key: "promos.notice.notAuthorized" },
   restored: { tone: "success", key: "promos.notice.restored" },
-  restore_failed: { tone: "danger", key: "promos.notice.restoreFailed" },
+  "restore-failed": { tone: "danger", key: "promos.notice.restoreFailed" },
 };
 
 /**
@@ -76,10 +76,10 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  * discount box* rather than four fields above it.
  */
 const NOTICE_FIELD: Record<string, "code" | "discountPercent" | "startsAt"> = {
-  invalid_code: "code",
+  "invalid-code": "code",
   duplicate: "code",
-  invalid_discount: "discountPercent",
-  invalid_window: "startsAt",
+  "invalid-discount": "discountPercent",
+  "invalid-window": "startsAt",
 };
 
 /**
@@ -87,7 +87,7 @@ const NOTICE_FIELD: Record<string, "code" | "discountPercent" | "startsAt"> = {
  * `NOTICE_FIELD` is about the *list* below the form — a code enabled, deleted,
  * restored — and keeps the page-level banner.
  */
-const CREATE_FORM_NOTICES = new Set(["created", "invalid", "not_connected", "stripe_failed"]);
+const CREATE_FORM_NOTICES = new Set(["created", "invalid", "not-connected", "stripe-failed"]);
 
 const SCOPE_KEYS: Record<"all" | "trips" | "courses", StaffMessageKey> = {
   all: "promos.scope.all",
@@ -140,7 +140,7 @@ export default async function PromosPage({
   // that could explain it; Settings is owner/manager work now and takes the
   // same gate this one just failed, so that landing became a second bounce
   // that dropped the reason on the floor.
-  if (!allowed) redirect(`/shop/${shopSlug}?notice=promos_not_authorized`);
+  if (!allowed) redirect(noticeUrl(shopPath(shopSlug), "promos-not-authorized"));
 
   const now = nowDate();
   const [shop, promoPage, stripeAccount, dealPage] = await Promise.all([
@@ -156,7 +156,7 @@ export default async function PromosPage({
   ]);
   const { promos } = promoPage;
   const { deals: tripDeals } = dealPage;
-  const base = `/shop/${shopSlug}/promos`;
+  const base = shopPath(shopSlug, "promos");
   // The two lists page independently, so moving one must carry the other's
   // page along rather than resetting it back to its own first page.
   const pairedHref = (own: "page" | "dealsPage", target: number) => {
@@ -430,9 +430,7 @@ export default async function PromosPage({
                     <SubmitButton
                       pendingLabel={t("promos.saving")}
                       className={buttonClass(
-                        promo.status === "active"
-                          ? { variant: "secondary", className: "text-foreground" }
-                          : {},
+                        promo.status === "active" ? { variant: "secondary" } : {},
                       )}
                     >
                       {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
@@ -448,7 +446,6 @@ export default async function PromosPage({
                           pendingLabel={t("promos.retrying")}
                           className={buttonClass({
                             variant: "secondary",
-                            className: "text-foreground",
                           })}
                         >
                           {t("promos.retry")}

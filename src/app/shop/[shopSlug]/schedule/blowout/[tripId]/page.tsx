@@ -19,7 +19,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { callBlowoutAction, resumeBlowoutAction } from "./actions";
 
@@ -98,7 +98,7 @@ export default async function BlowoutPage({
   if (!trip) notFound();
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, NOTICES);
-  const tripPath = `/shop/${shopSlug}/trips/${tripId}`;
+  const tripPath = shopPath(shopSlug, "trips", tripId);
 
   const header = (
     <ShopPageHeader
@@ -250,7 +250,7 @@ export default async function BlowoutPage({
                 <tr key={diver.id}>
                   <Td>
                     <Link
-                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      href={shopPath(shopSlug, "divers", diver.personId)}
                       className="font-medium text-foreground hover:text-primary hover:underline"
                     >
                       {diver.fullName}

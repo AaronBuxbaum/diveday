@@ -1,3 +1,5 @@
+import { toneGlyph } from "./tone";
+
 /**
  * Canonical status pill. Every hand-rolled "rounded-full bg-X/10 text-X" span
  * across the staff app was a slightly different copy of this shape — this is
@@ -7,9 +9,14 @@
 
 const toneClass = {
   primary: "bg-primary/10 text-primary",
-  // text-success/warning on their own tinted fill measured just under AA at
-  // badge text sizes (docs/design/forms-and-controls.md) — -strong is the
-  // same hue, nudged dark enough to clear 4.5:1.
+  // `-strong`, not the raw hue: in the light palette `text-success`/
+  // `text-warning` on their own 10% fill over `bg-surface` measure 4.39:1 and
+  // 4.38:1, just under AA's 4.5. `-strong` is the same hue with 6% black mixed
+  // in, which lands them at 4.84:1. Contrast is size-independent — the pill's
+  // 12/14px text is not "large text", so 4.5 is the bar at either size.
+  // `danger` needs no nudge (5.46:1 on its own fill). The full table, including
+  // the dark palette and the case this does NOT rescue (a tint nested on
+  // `bg-surface-sunken`), is in docs/design/forms-and-controls.md.
   success: "bg-success/10 text-success-strong",
   warning: "bg-warning/10 text-warning-strong",
   danger: "bg-danger/10 text-danger",
@@ -17,27 +24,6 @@ const toneClass = {
 } as const;
 
 export type BadgeTone = keyof typeof toneClass;
-
-/**
- * A decorative, `aria-hidden` mark before the badge's own words — status here
- * is otherwise hue + reading the words, which a colorblind scan can miss
- * before it even gets to the words. Only for the three tones that mean a
- * pass/fail/caution status; `primary`/`neutral` badges are counts and labels,
- * not a status to disambiguate.
- *
- * Emoji, not the dingbats (`✓ ▲ ✕`) this shipped with. Those are *text*
- * codepoints: they take the surrounding font and colour, so at badge sizes
- * they render as thin monochrome marks that read as a font falling back
- * rather than as a status — the danger one, sitting on the Today tab's blocked
- * count, was reported as a stray glyph in the copy. An emoji carries its own
- * two-colour artwork at any size and cannot be mistaken for broken text.
- * No trailing space: the badge adds `gap-1` when a mark is present.
- */
-const toneGlyph: Partial<Record<BadgeTone, string>> = {
-  success: "✅",
-  warning: "⚠️",
-  danger: "❌",
-};
 
 /**
  * The same mark, for a status that is **not** wearing a pill.
@@ -49,9 +35,12 @@ const toneGlyph: Partial<Record<BadgeTone, string>> = {
  * "Delete". There the status belongs against the card it is about, and the
  * mark alone carries it. Returns `undefined` for the two tones that are labels
  * rather than statuses, so a caller cannot mark a count.
+ *
+ * The marks themselves, and the argument for emoji over text dingbats, live in
+ * `./tone` — one declaration shared with `FormStatus` and `ShopNotice`.
  */
 export function badgeToneGlyph(tone: BadgeTone): string | undefined {
-  return toneGlyph[tone];
+  return toneGlyph(tone);
 }
 
 const sizeClass = {
@@ -87,7 +76,7 @@ export function Badge({
   className?: string;
   children: React.ReactNode;
 }) {
-  const glyph = toneMark ? toneGlyph[tone] : undefined;
+  const glyph = toneMark ? toneGlyph(tone) : undefined;
   return (
     <span
       className={`inline-flex items-center rounded-full font-medium ${

@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
-import type { DeclaredDiveProfile } from "@/db/self-declared-cards";
-import { declaredDiveProfileText, declaredDiveProfileUnchecked } from "@/i18n/readiness-labels";
+import type { CertificationSummary } from "@/db/self-declared-cards";
+import { certificationSummaryText, certificationSummaryUnchecked } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
@@ -15,7 +15,7 @@ export function WaitlistSection({
   tripTitle,
   tripWhen,
   inviteAction,
-  diveProfiles,
+  certificationSummaries,
   locale,
   timezone,
 }: {
@@ -28,13 +28,13 @@ export function WaitlistSection({
   inviteAction: (entryId: string) => Promise<"sent" | "fallback">;
   /**
    * What each waiting diver can dive, by person id
-   * (`listDeclaredDiveProfiles`). A joiner may name their own level on the
+   * (`listCertificationSummaries`). A joiner may name their own level on the
    * public form, and this is where the staffer sees it — marked self-declared —
    * before they pick who to invite onto a gated departure. It informs the
    * choice; it never orders or filters this list, which is a set of leads and
    * not a queue (ADR 20260813-wait-list-is-a-lead-list).
    */
-  diveProfiles: Map<string, DeclaredDiveProfile>;
+  certificationSummaries: Map<string, CertificationSummary>;
   locale: string;
   timezone: string;
 }) {
@@ -101,12 +101,16 @@ export function WaitlistSection({
                     exactly what truncates on a phone. */}
                 <p
                   className={
-                    declaredDiveProfileUnchecked(diveProfiles.get(person.id) ?? null)
+                    certificationSummaryUnchecked(certificationSummaries.get(person.id) ?? null)
                       ? "text-warning"
                       : "text-muted"
                   }
                 >
-                  {declaredDiveProfileText(t, diveProfiles.get(person.id) ?? null, locale)}
+                  {certificationSummaryText(
+                    t,
+                    certificationSummaries.get(person.id) ?? null,
+                    locale,
+                  )}
                 </p>
               </div>
               <WaitlistInvite

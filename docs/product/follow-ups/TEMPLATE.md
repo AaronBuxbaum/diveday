@@ -1,5 +1,9 @@
 # FU-YYYYMMDD-short-slug — One line, imperative: what should happen
 
+<!-- Status is Open in this folder. An entry blocked on somebody OUTSIDE this repo — an upstream
+     release, a third party's answer, numbers that need traffic — belongs in waiting/ instead, as
+     `Status: Waiting` with a `**Waiting on:**` line. Read waiting/README.md before moving one. -->
+
 - **Status:** Open
 - **Raised:** YYYY-MM-DD — what change surfaced it (PR number, branch, or task)
 - **Kind:** question | improvement | risk | cleanup | half-done

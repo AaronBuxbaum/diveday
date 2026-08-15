@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { saveWaiverTemplate } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 const templateSchema = z.object({
@@ -28,17 +29,15 @@ export async function saveWaiverAction(formData: FormData) {
   const staff = await requireStaffSession();
   const editor = await getDb();
   if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-    redirect(`/shop/${staff.user.shopSlug}?notice=waivers_not_authorized`);
+    redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
+  const waivers = shopPath(staff.user.shopSlug, "waivers");
   const parsed = templateSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
+  if (!parsed.success) redirect(noticeUrl(waivers, "invalid"));
   await saveWaiverTemplate(editor, {
     shopId: staff.user.shopId,
     title: DEFAULT_WAIVER_TITLE,
     body: parsed.data.body,
   });
-  revalidateAndRedirect(
-    `/shop/${staff.user.shopSlug}/waivers`,
-    `/shop/${staff.user.shopSlug}/waivers?notice=saved`,
-  );
+  revalidateAndRedirect(waivers, noticeUrl(waivers, "saved"));
 }

@@ -5,11 +5,12 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { TripLastMinutePromo } from "@/db/schema";
-import type { DeclaredDiveProfile } from "@/db/self-declared-cards";
+import type { CertificationSummary } from "@/db/self-declared-cards";
 import {
   CERTIFICATION_LEVEL_KEYS,
-  declaredDiveProfileText,
-  declaredDiveProfileUnchecked,
+  certificationSummaryBelowRequirementText,
+  certificationSummaryText,
+  certificationSummaryUnchecked,
   SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -50,7 +51,7 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
 export type LastMinuteDealRecipient = {
   personId: string;
   fullName: string;
-  profile: DeclaredDiveProfile | null;
+  certification: CertificationSummary | null;
 };
 
 export function LastMinuteDealSection({
@@ -118,7 +119,10 @@ export function LastMinuteDealSection({
   const requiredLevel = requirement?.minimumCertificationLevel ?? null;
   // Risky names first, capped, with the two counts the sentence below is made
   // of. The send itself is untouched — `eligibleCount` above is still everyone.
-  const review = reviewLastMinuteRecipients(recipients, requiredLevel);
+  // The whole requirement goes in, not just the rung: a joiner who said they
+  // hold no card is below a Deep-and-nitrox charter too, and that departure has
+  // no minimum level for anyone to be compared against.
+  const review = reviewLastMinuteRecipients(recipients, requirement);
   /**
    * The gate in the trip's own words, reusing the requirements panel's phrases
    * so one departure does not describe itself two ways on two screens.
@@ -142,20 +146,43 @@ export function LastMinuteDealSection({
    * which takes a scroll; this answers "is there anything wrong with this
    * send", which is the question being asked at the button.
    *
-   * Three shapes, and none of them is a zero: "0 said a level below" is a
+   * Four shapes, and none of them is a zero: "0 said a level below" is a
    * statistic a reader has to interpret, while "nobody did" is an answer. A
    * departure that asks for no level says that instead, because there is
    * nothing for a level to be below.
+   *
+   * The fourth shape is the honest one, and it was missing. **Only the ladder
+   * orders**, so a departure gated on a Deep card and nitrox rather than a
+   * level has `requiredLevel === null` — and the no-requirement sentence then
+   * read as an all-clear on a send where `decideTripAdmission` will refuse
+   * every recipient at checkout. Now it names what it cannot speak to. Marking
+   * the missing specialty per row would be better still and is a bigger change
+   * than this one; saying so is the floor.
+   *
+   * The count comes first when there is one, because on a card-gated departure
+   * both can be true at once: the fold *can* place the joiner who says they
+   * hold no card, and cannot place anybody else. Saying only the second would
+   * bury the one name it can name; saying only the first would read as an
+   * all-clear over the rest of the list.
    */
+  const cardsCaveat =
+    requiredLevel === null && requirementParts.length > 0
+      ? t("trips.lastMinute.recipientsSummaryNoLevelButCards", {
+          list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+            requirementParts,
+          ),
+        })
+      : null;
   const summary =
-    requiredLevel === null
-      ? t("trips.lastMinute.recipientsSummaryNoRequirement")
-      : review.below === 0
-        ? t("trips.lastMinute.recipientsSummaryNoneBelow")
-        : t("trips.lastMinute.recipientsSummaryBelow", {
-            count: review.below,
-            total: review.total,
-          });
+    review.below > 0
+      ? `${t("trips.lastMinute.recipientsSummaryBelow", {
+          count: review.below,
+          total: review.total,
+        })}${cardsCaveat ? ` ${cardsCaveat}` : ""}`
+      : (cardsCaveat ??
+        (requiredLevel === null
+          ? t("trips.lastMinute.recipientsSummaryNoRequirement")
+          : t("trips.lastMinute.recipientsSummaryNoneBelow")));
   return (
     // No top margin of its own: this renders inside a disclosure panel that
     // owns its inset. `scroll-mt-6` stays — the send action redirects to this
@@ -204,23 +231,34 @@ export function LastMinuteDealSection({
                 The cap is only safe because the ordering puts anyone below the
                 requirement first — see `reviewLastMinuteRecipients`. */}
             <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface-sunken">
-              {review.shown.map((recipient) => (
+              {review.shown.map(({ recipient, belowRequirement }) => (
                 <li
                   key={recipient.personId}
                   className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-sm"
                 >
                   <span className="font-medium">{recipient.fullName}</span>
-                  {/* Warning-toned when it is only the diver's word — see
-                      `declaredDiveProfileUnchecked`. This is the line the
-                      staffer scans before pressing send. */}
+                  {/* Two facts, deliberately carried by two different things.
+                      The **tone** answers "has anybody seen this card?" and
+                      nothing else — that is the whole argument for it in ADR
+                      20260814-self-declared-cards, and a second reason to turn
+                      a row warm would make the mark mean "unverified, or
+                      under-certified, or both". So "below this departure's
+                      level" is a **word** on the row instead: it has to reach
+                      the verified Open Water diver on an Advanced charter, who
+                      is calm muted text and was the quietest thing on this
+                      screen until it did. Colour is never the only carrier
+                      (design/principles.md #6). Neither one filters, reorders
+                      or disables the send. */}
                   <span
                     className={
-                      declaredDiveProfileUnchecked(recipient.profile)
+                      certificationSummaryUnchecked(recipient.certification)
                         ? "text-warning"
                         : "text-muted"
                     }
                   >
-                    {declaredDiveProfileText(t, recipient.profile, locale)}
+                    {belowRequirement
+                      ? certificationSummaryBelowRequirementText(t, recipient.certification, locale)
+                      : certificationSummaryText(t, recipient.certification, locale)}
                   </span>
                 </li>
               ))}

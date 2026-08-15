@@ -10,7 +10,7 @@ import {
   unsubscribeLastMinuteListEntryByToken,
 } from "./last-minute-list";
 import { lastMinuteListUnsubscribeTokens, shops } from "./schema";
-import { listDeclaredDiveProfiles } from "./self-declared-cards";
+import { listCertificationSummaries } from "./self-declared-cards";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
@@ -90,17 +90,17 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
     await joinLastMinuteList(db, {
       shopId: shop.id,
       ...visitor,
-      declaration: { level: "open_water", nitrox: false },
+      declaration: { level: "open_water", noCertification: false, nitrox: false },
     });
 
     await joinLastMinuteList(db, {
       shopId: shop.id,
       email: visitor.email,
       fullName: "Someone Else Entirely",
-      declaration: { level: "instructor", nitrox: true },
+      declaration: { level: "instructor", noCertification: false, nitrox: true },
     });
 
-    const profiles = await listDeclaredDiveProfiles(db, shop.id, [
+    const profiles = await listCertificationSummaries(db, shop.id, [
       (await listLastMinuteList(db, shop.id))[0]?.person.id ?? "",
     ]);
     const profile = [...profiles.values()][0];
@@ -119,7 +119,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
       email: visitor.email,
       fullName: "Someone Else Entirely",
       availableFrom: "2026-09-01",
-      declaration: { level: "instructor", nitrox: true },
+      declaration: { level: "instructor", noCertification: false, nitrox: true },
     });
 
     // Joining a marketing list under a borrowed address is behaviour that
@@ -128,7 +128,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
     const list = await listLastMinuteList(db, shop.id);
     expect(list).toHaveLength(1);
     expect(list[0]?.entry.availableFrom).toBe("2026-09-01");
-    expect(await listDeclaredDiveProfiles(db, shop.id, [list[0]?.person.id ?? ""])).toEqual(
+    expect(await listCertificationSummaries(db, shop.id, [list[0]?.person.id ?? ""])).toEqual(
       new Map(),
     );
   });

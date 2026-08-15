@@ -15,7 +15,7 @@ import { listLastMinuteList } from "@/db/last-minute-list";
 import { listBookingNotes, listTripActivity } from "@/db/operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
-import { listDeclaredDiveProfiles } from "@/db/self-declared-cards";
+import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
@@ -29,7 +29,7 @@ import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate, orderLastMinuteRecipients } from "@/lib/last-minute-list";
 import { combineCertRequirements } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
-import { noticeForForm } from "@/lib/staff-notices";
+import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -236,7 +236,7 @@ async function TripGuestsBody({
   // anybody here knows. A joiner may have named their own level on the public
   // form, and it renders marked self-declared — the fact that stops a shop
   // mailing an Open Water diver a discount on a deep wreck (FU-20260813).
-  const diveProfiles = await listDeclaredDiveProfiles(db, shop.id, [
+  const certificationSummaries = await listCertificationSummaries(db, shop.id, [
     ...new Set([
       ...lastMinuteRecipients.map(({ person }) => person.id),
       ...waitlist.map(({ person }) => person.id),
@@ -358,7 +358,7 @@ async function TripGuestsBody({
               the answer a shop reaches for is a second boat on the same day,
               not a blank date box. */}
           <Link
-            href={`/shop/${shopSlug}/schedule/board?add=1&date=${toDateInputValue(
+            href={`${shopPath(shopSlug, "schedule", "board")}?add=1&date=${toDateInputValue(
               utcToWallTime(trip.startsAt, shop.timezone),
             )}`}
             className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
@@ -416,7 +416,7 @@ async function TripGuestsBody({
           tripTitle={trip.title}
           tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
-          diveProfiles={diveProfiles}
+          certificationSummaries={certificationSummaries}
           locale={locale}
           timezone={shop.timezone}
         />
@@ -541,7 +541,7 @@ async function TripGuestsBody({
               recipients={lastMinuteRecipients.map(({ person }) => ({
                 personId: person.id,
                 fullName: person.fullName,
-                profile: diveProfiles.get(person.id) ?? null,
+                certification: certificationSummaries.get(person.id) ?? null,
               }))}
               requirement={dealRequirement}
               openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}

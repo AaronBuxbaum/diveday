@@ -52,7 +52,9 @@ function ChecklistStep({
         <span
           aria-hidden="true"
           className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            done ? "bg-success/15 text-success" : "border-2 border-dashed border-border-strong"
+            done
+              ? "bg-success/15 text-success-strong"
+              : "border-2 border-dashed border-border-strong"
           }`}
         >
           {done ? "✓" : ""}

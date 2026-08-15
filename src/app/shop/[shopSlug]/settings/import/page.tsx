@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
@@ -13,6 +14,7 @@ import {
   type ImportScopeRowId,
 } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
@@ -251,7 +253,7 @@ function scopeChip(
   return {
     included: {
       label: t("settings.import.scopeChip.included"),
-      className: "bg-success/10 text-success",
+      className: "bg-success/10 text-success-strong",
     },
     "stays-behind": {
       label: t("settings.import.scopeChip.staysBehind"),
@@ -282,7 +284,7 @@ export default async function ImportContactsPage({
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
     // Settings, not Today — Import is a Settings sub-page, and its parent is
     // where the refusal is legible. Same pattern as promos/WhatsApp/team.
-    redirect(`/shop/${shopSlug}?notice=import_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug), "import-not-authorized"));
   }
 
   const shop = await getShopById(db, session.user.shopId);
@@ -318,32 +320,37 @@ export default async function ImportContactsPage({
         })}
       </p>
 
-      <section className="rounded-2xl border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold">{t("settings.import.comesAcross.heading")}</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("settings.import.comesAcross.description")}
-        </p>
-        <ul className="mt-4 space-y-2">
-          {IMPORT_HONESTY_TABLE.map((row) => (
-            <li
-              key={row.id}
-              className="grid gap-1 rounded-xl bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
-            >
-              <span className="font-medium text-foreground">{t(SCOPE_ROW_KEYS[row.id].what)}</span>
-              <span>
-                <span
-                  className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${chips[row.scope].className}`}
-                >
-                  {chips[row.scope].label}
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any card
+          (docs/design/forms-and-controls.md). */}
+      <div className="space-y-10">
+        <SectionCard
+          padding="lg"
+          title={t("settings.import.comesAcross.heading")}
+          description={t("settings.import.comesAcross.description")}
+        >
+          <ul className="space-y-2">
+            {IMPORT_HONESTY_TABLE.map((row) => (
+              <li
+                key={row.id}
+                className="grid gap-1 rounded-xl bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
+              >
+                <span className="font-medium text-foreground">
+                  {t(SCOPE_ROW_KEYS[row.id].what)}
                 </span>
-              </span>
-              <span className="text-sm text-muted">{t(SCOPE_ROW_KEYS[row.id].detail)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+                <span>
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${chips[row.scope].className}`}
+                  >
+                    {chips[row.scope].label}
+                  </span>
+                </span>
+                <span className="text-sm text-muted">{t(SCOPE_ROW_KEYS[row.id].detail)}</span>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
 
-      <div className="mt-6">
         <ImportWizard
           diversHref={`/shop/${shopSlug}/divers`}
           intro={t.rich("settings.import.wizard.intro", {

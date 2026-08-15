@@ -25,6 +25,7 @@ import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { UUID_SOURCE } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
@@ -74,7 +75,7 @@ export type ManifestTripContext = Omit<ManifestActionContext, "checkpoint">;
  * `revalidatePath` still names the route without its query.
  */
 function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
-  return `/shop/${shopSlug}/trips/${tripId}/manifest`;
+  return shopPath(shopSlug, "trips", tripId, "manifest");
 }
 
 /**
@@ -90,7 +91,10 @@ function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
  * to arrive with it open.
  */
 function manifestBack(ctx: ManifestActionContext): string {
-  return `${manifestPath(ctx)}?checkpoint=${ctx.checkpoint}&buddies=open`;
+  // `checkpoint` is escaped rather than interpolated raw: it reaches these
+  // actions as a bound argument like the slug, and one carrying `&` would
+  // append query params of its own to the URL a notice is then added to.
+  return `${manifestPath(ctx)}?checkpoint=${encodeURIComponent(ctx.checkpoint)}&buddies=open`;
 }
 
 /**

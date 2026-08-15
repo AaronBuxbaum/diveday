@@ -186,6 +186,28 @@ describe("redactCapabilityUrl", () => {
   it("leaves a schedule page with no booking token untouched", () => {
     expect(redactCapabilityUrl("/s/blue-hole/trips/trip-123")).toBe("/s/blue-hole/trips/trip-123");
   });
+
+  /**
+   * Not a bearer token — the `?gate=` signature unlocks a sentence, not a
+   * resource. Redacted for what it *says*: on the diver-record refusal the URL
+   * pairs a person id in the path with the certification level that person
+   * actually holds, and that pair has no business in Analytics or a Sentry
+   * breadcrumb (security review of the 2026-08-15 `noticeUrl` change).
+   */
+  it("redacts the trip-admission ?gate=, which pairs a person id with their cert level", () => {
+    const redacted = redactCapabilityUrl(
+      "/shop/blue-hole/divers/person-1?notice=trip-prerequisite&gate=~~deep~0.sig",
+    );
+    expect(redacted).toContain("gate=%5Btoken%5D");
+    expect(redacted).toContain("notice=trip-prerequisite");
+    expect(redacted).not.toContain("deep");
+  });
+
+  it("leaves a refusal carrying no gate untouched", () => {
+    expect(redactCapabilityUrl("/shop/blue-hole/divers/person-1?notice=trip-full")).toBe(
+      "/shop/blue-hole/divers/person-1?notice=trip-full",
+    );
+  });
 });
 
 describe("redactEvent", () => {

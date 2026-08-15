@@ -4,9 +4,14 @@ import { decideTripAdmission } from "@/lib/trip-admission";
 import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import { findOrCreatePerson } from "./people";
-import { archiveCertification, createCertification, reviewCertification } from "./readiness";
-import { certifications, nitroxCertifications } from "./schema";
-import { listDeclaredDiveProfiles, recordSelfDeclaredCards } from "./self-declared-cards";
+import {
+  archiveCertification,
+  createCertification,
+  createSpecialtyCertification,
+  reviewCertification,
+} from "./readiness";
+import { certifications, nitroxCertifications, people, shops } from "./schema";
+import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
 
 /**
  * The writer behind both public "tell me when something comes up" join forms
@@ -43,7 +48,11 @@ describe("recordSelfDeclaredCards", () => {
       nitrox: true,
     });
 
-    expect(outcome).toEqual({ level: "recorded", nitrox: "recorded" });
+    expect(outcome).toEqual({
+      level: "recorded",
+      noCertification: "not_said",
+      nitrox: "recorded",
+    });
     const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
     expect(card?.level).toBe("advanced_open_water");
     // Pending, never verified: nobody has seen anything.
@@ -70,7 +79,11 @@ describe("recordSelfDeclaredCards", () => {
 
     const outcome = await recordSelfDeclaredCards(db, { shopId: shop.id, personId: person.id });
 
-    expect(outcome).toEqual({ level: "not_said", nitrox: "not_said" });
+    expect(outcome).toEqual({
+      level: "not_said",
+      noCertification: "not_said",
+      nitrox: "not_said",
+    });
     expect((await liveCards(db, shop.id)).filter((row) => row.personId === person.id)).toEqual([]);
   });
 
@@ -115,6 +128,440 @@ describe("recordSelfDeclaredCards", () => {
     const mine = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
     expect(mine).toHaveLength(1);
     expect(mine[0]?.level).toBe("rescue");
+  });
+
+  /**
+   * **"I'm not certified yet" — the answer that is not a card.**
+   *
+   * A large share of the people joining these lists at a Florida or Caribbean
+   * shop hold none: Discover Scuba and Try Scuba customers, snorkellers, the
+   * non-diving half of a couple. Until this answer existed their only honest
+   * option was "Rather not say", which reads to staff exactly like a certified
+   * regular who skipped the question — so the shop mailed them a certified
+   * two-tank charter (ADR 20260814-self-declared-cards, amendment 2026-08-15).
+   */
+  describe("a joiner who says they hold no card", () => {
+    async function stamp(
+      db: Awaited<ReturnType<typeof joiner>>["db"],
+      shopId: string,
+      personId: string,
+    ) {
+      const [row] = await db
+        .select({ at: people.noCertificationDeclaredAt })
+        .from(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId)));
+      return row?.at ?? null;
+    }
+
+    /**
+     * The assertion this whole design exists for. A Discover Scuba experience
+     * is not a certification, and "DSD certification" is the phrase that costs
+     * a dive business its credibility with an instructor — but the structural
+     * reason is stronger than the words: every row in `certifications` asserts
+     * that a card exists, and a row asserting the opposite would have to be
+     * special-cased by readiness, admission, the CSV export, the incident
+     * document and the importer. The one reader that missed it would turn "no
+     * card" into a card.
+     */
+    it("writes a stamp on the person and no certification row at all", async () => {
+      const { db, shop, person } = await joiner();
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome).toEqual({
+        level: "not_said",
+        noCertification: "recorded",
+        nitrox: "not_said",
+      });
+      expect(await stamp(db, shop.id, person.id)).not.toBeNull();
+      // Not a live row, and not a soft-deleted one either: nothing was written
+      // to this table on this path, ever.
+      const anyRow = await db
+        .select()
+        .from(certifications)
+        .where(eq(certifications.personId, person.id));
+      expect(anyRow).toEqual([]);
+      const anyNitrox = await db
+        .select()
+        .from(nitroxCertifications)
+        .where(eq(nitroxCertifications.personId, person.id));
+      expect(anyNitrox).toEqual([]);
+    });
+
+    it("refuses to record a level and a 'no card at all' from the same submission", async () => {
+      const { db, shop, person } = await joiner();
+
+      // One `<select>` cannot post both, so a caller sending both is
+      // contradicting itself — and two claims on a safety record is the worse
+      // outcome of the two. The statement that there is nothing wins.
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+        level: "instructor",
+        nitrox: true,
+      });
+
+      expect(outcome.noCertification).toBe("recorded");
+      expect(outcome.level).toBe("not_said");
+      expect(outcome.nitrox).toBe("not_said");
+      expect(
+        await db.select().from(certifications).where(eq(certifications.personId, person.id)),
+      ).toEqual([]);
+      expect(
+        await db
+          .select()
+          .from(nitroxCertifications)
+          .where(eq(nitroxCertifications.personId, person.id)),
+      ).toEqual([]);
+    });
+
+    /**
+     * The anti-displacement rule, widened to both tables because the claim
+     * here is "there is no card" and *any* card the shop holds refutes it. The
+     * forms are unauthenticated: anybody who knows a diver's name and email
+     * address reaches that diver's real record.
+     */
+    it("writes nothing when the shop holds a real level card", async () => {
+      const { db, shop, person } = await joiner();
+      const card = await createCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "R-3131",
+      });
+      if (!card) throw new Error("setup: card not created");
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome.noCertification).toBe("card_on_file");
+      expect(await stamp(db, shop.id, person.id)).toBeNull();
+      const mine = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(mine).toHaveLength(1);
+      expect(mine[0]?.level).toBe("rescue");
+    });
+
+    it("writes nothing when the shop holds a specialty card and nothing else", async () => {
+      const { db, shop, person } = await joiner();
+      await createSpecialtyCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        specialty: "deep",
+        identifier: "DEEP-4004",
+      });
+
+      // `specialty_certifications` has no `self_declared_at` — these forms
+      // cannot write there, so a row's existence is the whole answer, and a
+      // diver holding a Deep card is not a diver with no card.
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome.noCertification).toBe("card_on_file");
+      expect(await stamp(db, shop.id, person.id)).toBeNull();
+    });
+
+    it("writes nothing when the shop holds a real nitrox card and no level card", async () => {
+      const { db, shop, person } = await joiner();
+      await createNitroxCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        identifier: "NX-808",
+      });
+
+      // A nitrox card is a card, and nobody holds one without a level behind
+      // it. Stamping "not certified" over the top would be an anonymous post
+      // contradicting the shop's own evidence.
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome.noCertification).toBe("card_on_file");
+      expect(await stamp(db, shop.id, person.id)).toBeNull();
+      const rows = await db
+        .select()
+        .from(nitroxCertifications)
+        .where(eq(nitroxCertifications.personId, person.id));
+      expect(rows[0]?.deletedAt).toBeNull();
+    });
+
+    it("writes nothing when the shop has since sighted the card behind an earlier claim", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      });
+      const [claim] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      if (!claim) throw new Error("setup: declaration not recorded");
+      const sighted = await reviewCertification(db, {
+        shopId: shop.id,
+        certificationId: claim.id,
+        status: "verified",
+        sighting: { agency: "padi", identifier: "OW-1212", level: "open_water" },
+      });
+      expect(sighted.ok).toBe(true);
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      // The sighted row keeps its `selfDeclaredAt` forever, so the guard has to
+      // be `isUnsightedSelfDeclaration` and never "was this self-declared" —
+      // the same one-line hole that let an anonymous post re-grade a verified
+      // card to Instructor.
+      expect(outcome.noCertification).toBe("card_on_file");
+      expect(await stamp(db, shop.id, person.id)).toBeNull();
+      const mine = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(mine).toHaveLength(1);
+      expect(mine[0]?.status).toBe("verified");
+    });
+
+    /**
+     * A diver who declared "Instructor" and later says "I'm not certified yet"
+     * has corrected themselves **downward**, which is the direction that
+     * matters. Leaving the higher claim live would let it outlive its own
+     * retraction on every panel that reads it.
+     */
+    it("retracts the joiner's own earlier claims rather than sitting beside them", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "instructor",
+        nitrox: true,
+      });
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome.noCertification).toBe("recorded");
+      expect((await liveCards(db, shop.id)).filter((row) => row.personId === person.id)).toEqual(
+        [],
+      );
+      // Archived, not destroyed: the row and its provenance survive for anyone
+      // reconstructing what was said and when (ADR 20260719-crud-archive-semantics).
+      const archived = await db
+        .select()
+        .from(certifications)
+        .where(eq(certifications.personId, person.id));
+      expect(archived).toHaveLength(1);
+      expect(archived[0]?.deletedAt).not.toBeNull();
+      expect(archived[0]?.selfDeclaredAt).not.toBeNull();
+      const nitrox = await db
+        .select()
+        .from(nitroxCertifications)
+        .where(eq(nitroxCertifications.personId, person.id));
+      expect(nitrox[0]?.deletedAt).not.toBeNull();
+    });
+
+    /**
+     * The stamp is **ignored, not deleted**, once a card arrives — where a
+     * record began is history, exactly as `self_declared_at` is kept after a
+     * sighting. The precedence lives in one place, the phrase that renders
+     * them, and `listCertificationSummaries` reports both facts raw.
+     */
+    it("keeps the stamp when a real card later arrives, and the summary reads the card", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+      const card = await createCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: "OW-6161",
+      });
+      if (!card) throw new Error("setup: card not created");
+
+      // The column keeps it — where a record began is history, and nothing
+      // clears it but erasure. The *reader* is where it stops being repeated.
+      expect(await stamp(db, shop.id, person.id)).not.toBeNull();
+      expect((await listCertificationSummaries(db, shop.id, [person.id])).get(person.id)).toEqual({
+        level: "open_water",
+        levelSelfDeclared: false,
+        noCertificationDeclared: false,
+        nitrox: false,
+        nitroxSelfDeclared: false,
+      });
+    });
+
+    /**
+     * A claim is not a card, so it does not refute the stamp — but it is the
+     * later and more specific statement, so the phrase draws it. Both flags
+     * ride out of the reader and `certificationSummaryText` settles which one a
+     * staffer sees.
+     */
+    it("keeps the stamp beside a level the diver later claimed, and the phrase draws the claim", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      });
+
+      expect((await listCertificationSummaries(db, shop.id, [person.id])).get(person.id)).toEqual({
+        level: "open_water",
+        levelSelfDeclared: true,
+        noCertificationDeclared: true,
+        nitrox: false,
+        nitroxSelfDeclared: false,
+      });
+    });
+
+    /**
+     * **The reader ignores the stamp on the same test the writer refuses to
+     * write against.** A `dive-domain-expert` review found the two disagreeing:
+     * the writer was refuted by all three card tables, the reader only by a
+     * level — so a diver whose shop holds a verified *nitrox* card and no level
+     * card read as "Not certified yet — diver's word, Nitrox", warning-toned,
+     * and was lifted to the top of the send list. Nobody holds enriched air
+     * without a level behind it; that is a sentence no instructor would write.
+     */
+    it("stops reporting the stamp once the shop holds a nitrox card and no level card", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+      await createNitroxCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        identifier: "NX-2020",
+      });
+
+      const summary = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
+
+      // The column keeps the answer — provenance is history — and the reader
+      // stops repeating it in front of evidence.
+      expect(await stamp(db, shop.id, person.id)).not.toBeNull();
+      expect(summary?.noCertificationDeclared).toBe(false);
+      expect(summary?.nitrox).toBe(true);
+      expect(summary?.nitroxSelfDeclared).toBe(false);
+    });
+
+    it("stops reporting the stamp once the shop holds a specialty card", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+      await createSpecialtyCertification(db, {
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        specialty: "deep",
+        identifier: "DEEP-7",
+      });
+
+      const summary = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
+
+      // A specialty never joins the phrase — it is not a rung — but it is a
+      // card, and "this diver has no card at all" is false in front of one.
+      expect(summary?.noCertificationDeclared).toBe(false);
+    });
+
+    it("keeps reporting the stamp when the only thing beside it is another claim", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+      // A later join, ticking nitrox only. Nothing here is evidence, so nothing
+      // here refutes the earlier answer.
+      await recordSelfDeclaredCards(db, { shopId: shop.id, personId: person.id, nitrox: true });
+
+      const summary = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
+
+      expect(summary?.noCertificationDeclared).toBe(true);
+      expect(summary?.nitroxSelfDeclared).toBe(true);
+    });
+
+    it("never reaches a person at another shop", async () => {
+      const { db, shop, person } = await joiner();
+      const [rival] = await db
+        .insert(shops)
+        .values({ name: "Rival Reef", slug: "rival-reef", timezone: "America/New_York" })
+        .returning();
+      if (!rival) throw new Error("setup: rival shop not created");
+
+      // The public forms resolve a shop from a slug in the URL and a person
+      // from an email; a caller holding one shop's id and another shop's person
+      // must come away with nothing written and nothing considered.
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: rival.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      expect(outcome.noCertification).toBe("not_said");
+      expect(await stamp(db, shop.id, person.id)).toBeNull();
+    });
+
+    /**
+     * The gate has never read a claim and does not start now. A person with no
+     * evidence at all is admitted — absence of evidence is not a refusal — and
+     * saying "I'm not certified yet" must not become the one way a diver talks
+     * themselves *out* of a seat a staffer could have cleared them for.
+     */
+    it("does not refuse a booking the shop would otherwise have allowed", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        noCertification: true,
+      });
+
+      const decision = decideTripAdmission({
+        requirement: {
+          minimumCertificationLevel: "open_water",
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        },
+        siteRequirement: null,
+        evidence: {
+          certifications: (await liveCards(db, shop.id)).filter(
+            (row) => row.personId === person.id,
+          ),
+          specialtyCertifications: [],
+          nitroxCertifications: [],
+        },
+      });
+
+      expect(decision.admitted).toBe(true);
+    });
   });
 
   /**
@@ -568,7 +1015,7 @@ describe("reviewCertification on a self-declared card", () => {
   });
 });
 
-describe("listDeclaredDiveProfiles", () => {
+describe("listCertificationSummaries", () => {
   it("marks a claim and leaves a real card unmarked", async () => {
     const { db, shop, person } = await joiner();
     const other = await findOrCreatePerson(db, {
@@ -591,17 +1038,19 @@ describe("listDeclaredDiveProfiles", () => {
     });
     if (!carded) throw new Error("setup: card not created");
 
-    const profiles = await listDeclaredDiveProfiles(db, shop.id, [person.id, other.person.id]);
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id, other.person.id]);
 
     expect(profiles.get(person.id)).toEqual({
       level: "open_water",
       levelSelfDeclared: true,
+      noCertificationDeclared: false,
       nitrox: true,
       nitroxSelfDeclared: true,
     });
     expect(profiles.get(other.person.id)).toEqual({
       level: "divemaster",
       levelSelfDeclared: false,
+      noCertificationDeclared: false,
       nitrox: false,
       nitroxSelfDeclared: false,
     });
@@ -610,8 +1059,32 @@ describe("listDeclaredDiveProfiles", () => {
   it("has nothing to say about a joiner who said nothing", async () => {
     const { db, shop, person } = await joiner();
 
-    const profiles = await listDeclaredDiveProfiles(db, shop.id, [person.id]);
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
 
     expect(profiles.get(person.id)).toBeUndefined();
+  });
+
+  /**
+   * The one summary with no card behind it at all. It has to exist — the
+   * alternative is that the most safety-relevant answer on the form is the one
+   * that renders as an empty row, which is where this started.
+   */
+  it("reports a joiner whose only answer was that they hold no card", async () => {
+    const { db, shop, person } = await joiner();
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: person.id,
+      noCertification: true,
+    });
+
+    const profiles = await listCertificationSummaries(db, shop.id, [person.id]);
+
+    expect(profiles.get(person.id)).toEqual({
+      level: null,
+      levelSelfDeclared: false,
+      noCertificationDeclared: true,
+      nitrox: false,
+      nitroxSelfDeclared: false,
+    });
   });
 });

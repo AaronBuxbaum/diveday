@@ -39,6 +39,7 @@ const checks = [
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],
+  ["notice-codes", "check-notice-codes.mjs"],
   ["text", "check-source-text.mjs"],
   ["infra-ascii", "check-infra-ascii.mjs"],
   ["locale", "check-locale.mjs"],

@@ -351,6 +351,15 @@ consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign)
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
 accumulated still reads.
 
+**Not every tagged door is a conversion.** Two links carry a tag without firing either event: the
+diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and the two
+switching doors in the homepage records band (`switchingHref` — `home-records` to the hub,
+`home-records-arriving` to the spreadsheet guide, added 2026-08-15). Both build a `?from=` the
+Vercel `<Analytics />` page view already carries, so they need no companion event; a switching page
+retags its own demo and trial CTAs with its own source, which is exactly why the hop *into* it has
+to be attributed on the way in. Read them as reach, not as conversion — they say which door a
+reader chose, and the guide's own `switching-*` pair says what happened next.
+
 ## Product visuals
 
 The public pages ship deterministic illustrated mockups as the design — not captured screenshots.
@@ -409,6 +418,49 @@ standard as arriving", and the export card's own "In the export" eyebrow retired
 stacked under "Going out". The inventory also lost its card border and became a hairline manifest:
 a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
 picture and a list.
+
+**The band carries two links, and they are not the same door twice.** The 2026-08-13 redesign merged
+two stacked link CTAs under the section copy — one to `/switching`, one straight to
+`/switching/spreadsheet` — into a single hub link, on the reasoning that the hub already forks and
+two stacked links to one destination-shaped surface were one door pretending to be two. That
+reasoning holds for the *stack*, and the stack is not coming back. What it cost was the direct one:
+`/switching/spreadsheet` — the guide aimed at what this file calls the largest under-served pool of
+dive shops — lost its only inbound link from the highest-traffic page on the site, and a reader who
+self-identifies as "coming off a spreadsheet" landed instead on a hub whose every card above the
+fold names a competitor they have never used. On 2026-08-15 the direct door came back **inside the
+"Coming in" column, under the import-preview mockup** (`marketing.home.spreadsheetLink`): the mockup
+is the importer reading a sheet, so the reader who recognizes their own sheet in it is already
+looking there, and the link belongs to the arriving half specifically while the hub link still
+closes the whole band. Restoring it as a second link *under the section copy* would be re-adding the
+shape the redesign removed; this is a different position with a different owner, and the two read as
+one door per scope rather than two doors per destination.
+
+Three details make that hold, and each was one conversion review away from being lost:
+
+- **The closing link now sits under a full-width rule** (`mt-12 border-t border-border pt-6`). The
+  arriving column is the taller half — a mockup against a four-row list — so the section's own
+  closing link lands at the same left margin as the column's, a short gap below it, and the two scan
+  as a stacked pair unless a line says otherwise. The band is hairlines throughout (marker rules, the
+  column divider, the inventory's `divide-y`), so the rule reads as its footer: this link closes both
+  columns.
+- **The column link is a label, not a fourth sentence.** "Your spreadsheet, column by column →" —
+  declarative, so it does not rhyme question-then-arrow with the closing link, and short enough to
+  read as a caption on the mockup above it. The paragraph beside it has already asked this reader for
+  their sheet ("send us the sheet and we'll bring your divers in with you, free"), so a link opening
+  "Running the day on a spreadsheet?" would re-qualify an audience the copy just addressed and
+  restate a promise made 40px earlier.
+- **The hub link kept a catch-all.** It now reads "Switching from {competitors} — or something else?
+  Read the guides →". Dropping its old "Coming off a spreadsheet?" clause was right — with a direct
+  door in the column, that clause hailed one audience twice in one band — but deleting it outright
+  left a pure vendor-name filter, and a shop on Peek, an Access database or a paper book reads a list
+  it is not on and takes the band's terminal action to mean "not for me". The replacement clause is
+  not a new claim: the hub's own last row is `switching.hub.dontSeeSystem`, "Something else, or
+  nothing at all?"
+
+Both are now tagged (`home-records` on the hub link, `home-records-arriving` on the spreadsheet
+one), which the pre-2026-08-13 pair never was. That is the point of splitting them: the follow-up
+that re-opened this question could not be settled from the numbers, because the click-through it
+needed had never been counted. It can be next time.
 
 **The homepage's four-card breadth band is deliberately still four assertions.** It renders
 `FeatureGroupsGrid` — four cards, one summary paragraph each — under the whiteboard/clipboard

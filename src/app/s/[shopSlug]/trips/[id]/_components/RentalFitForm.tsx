@@ -174,7 +174,7 @@ export function RentalFitForm({
       {saved ? (
         <p
           role="status"
-          className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+          className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
         >
           {t("rental.savedNote")}
         </p>
@@ -296,7 +296,7 @@ export function RentalFitForm({
               nitroxCardVerified ? (
                 <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
               ) : (
-                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                   {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
                   {t("rental.nitroxNeedsVerification")}
                 </p>
@@ -381,7 +381,7 @@ export function RentalFitForm({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "px-4 text-foreground",
+              className: "px-4",
             })}
           >
             {t("rental.saveFit")}

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
@@ -19,7 +20,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   inviteStaffAction,
   removeStaffAction,
@@ -45,15 +46,15 @@ export const metadata: Metadata = { title: "Team — DiveDay" };
 
 /** Refusals about the address typed into the invite form's Email box. */
 const INVITE_EMAIL_NOTICES = new Set([
-  "invite_already_on_team",
-  "invite_email_taken",
-  "invite_email_reserved",
+  "invite-already-on-team",
+  "invite-email-taken",
+  "invite-email-reserved",
 ]);
 
 /** The rest of what the invite form itself can say, refusals and confirmation alike. */
-const INVITE_FORM_NOTICES = new Set(["invited", "invite_invalid"]);
+const INVITE_FORM_NOTICES = new Set(["invited", "invite-invalid"]);
 /** Outcomes of one staff card's emergency-contact form, shown on that card. */
-const CONTACT_FORM_NOTICES = new Set(["contact_saved", "half_filled"]);
+const CONTACT_FORM_NOTICES = new Set(["contact-saved", "half-filled"]);
 
 /** One resolved `?notice=`: the tone it carries and the words for it. */
 type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
@@ -66,29 +67,29 @@ type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
 function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
   return {
     invited: { tone: "success", text: t("settings.team.notice.invited") },
-    invite_resent: { tone: "success", text: t("settings.team.notice.inviteResent") },
-    changes_saved: { tone: "success", text: t("settings.team.notice.changesSaved") },
+    "invite-resent": { tone: "success", text: t("settings.team.notice.inviteResent") },
+    "changes-saved": { tone: "success", text: t("settings.team.notice.changesSaved") },
     reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
     disabled: { tone: "success", text: t("settings.team.notice.disabled") },
     removed: { tone: "success", text: t("settings.team.notice.removed") },
     restored: { tone: "success", text: t("settings.team.notice.restored") },
-    restore_failed: { tone: "danger", text: t("settings.team.notice.restoreFailed") },
-    invite_invalid: { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
-    roles_invalid: { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
-    invite_already_on_team: {
+    "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
+    "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
+    "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
+    "invite-already-on-team": {
       tone: "danger",
       text: t("settings.team.notice.inviteAlreadyOnTeam"),
     },
-    invite_email_taken: { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
-    invite_email_reserved: {
+    "invite-email-taken": { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
+    "invite-email-reserved": {
       tone: "danger",
       text: t("settings.team.notice.inviteEmailReserved"),
     },
-    contact_saved: { tone: "success", text: t("settings.team.notice.contactSaved") },
-    half_filled: { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
-    last_owner: { tone: "danger", text: t("settings.team.notice.lastOwner") },
-    not_found: { tone: "danger", text: t("settings.team.notice.notFound") },
-    not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+    "contact-saved": { tone: "success", text: t("settings.team.notice.contactSaved") },
+    "half-filled": { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
+    "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
+    "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
+    "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
   };
 }
 
@@ -170,7 +171,10 @@ function StaffRow({
   const status = statusBadge(t)[member.accountStatus];
   const isDisabled = member.accountStatus === "disabled";
   return (
-    <li id={`staff-${member.personId}`} className="rounded-lg border border-border bg-surface p-4">
+    // A person's row on the roster is the same card as everything else on the
+    // page — one radius, one elevation — so the list reads as a list of cards
+    // rather than a second, flatter kind of box.
+    <SectionCard as="li" id={`staff-${member.personId}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="font-medium">{member.fullName}</p>
@@ -250,7 +254,7 @@ function StaffRow({
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
-                  className: "w-full text-foreground sm:w-auto",
+                  className: "w-full sm:w-auto",
                 })}
               >
                 {t("settings.team.staffRow.resendInvite")}
@@ -314,7 +318,7 @@ function StaffRow({
           </div>
         ) : null}
       </div>
-    </li>
+    </SectionCard>
   );
 }
 
@@ -347,7 +351,7 @@ export default async function TeamSettingsPage({
   // surface is where a refusal explains itself best (the same landing the
   // promos and WhatsApp gates already use). A code the destination handles,
   // never a silent teleport (task 82).
-  if (!canManage) redirect(`/shop/${shopSlug}?notice=team_not_authorized`);
+  if (!canManage) redirect(noticeUrl(shopPath(shopSlug), "team-not-authorized"));
 
   const staff = await listShopStaff(db, session.user.shopId);
   const shop = await getShopById(db, session.user.shopId);
@@ -403,92 +407,106 @@ export default async function TeamSettingsPage({
         <StaffNoticeBanner tone={pageBanner.tone}>{pageBanner.text}</StaffNoticeBanner>
       ) : null}
 
-      {/* The anchor the roster's empty state jumps to. */}
-      <section id="invite" className="scroll-mt-24 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">{t("settings.team.invite.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("settings.team.invite.description")}</p>
-        <FieldGrid as="form" action={inviteStaffAction} columns={2} className="mt-4">
-          <Field label={t("settings.team.invite.fullNameLabel")}>
-            <input
-              name="fullName"
-              type="text"
-              required
-              maxLength={120}
-              autoComplete="name"
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
-            <input
-              name="email"
-              type="email"
-              required
-              maxLength={150}
-              autoComplete="email"
-              className={controlClass}
-            />
-          </Field>
-          <div className="sm:col-span-2">
-            <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
-          </div>
-          <FieldActions>
-            <SubmitButton
-              pendingLabel={t("settings.team.invite.submitting")}
-              className={buttonClass()}
-            >
-              {t("settings.team.invite.submit")}
-            </SubmitButton>
-            <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
-          </FieldActions>
-          <FieldErrorFocus key={notice} scope="invite" />
-        </FieldGrid>
-      </section>
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any card
+          (docs/design/forms-and-controls.md). */}
+      <div className="space-y-10">
+        {/* The anchor the roster's empty state jumps to. */}
+        <SectionCard
+          id="invite"
+          padding="lg"
+          className="scroll-mt-24"
+          title={t("settings.team.invite.heading")}
+          description={t("settings.team.invite.description")}
+        >
+          <FieldGrid as="form" action={inviteStaffAction} columns={2}>
+            <Field label={t("settings.team.invite.fullNameLabel")}>
+              <input
+                name="fullName"
+                type="text"
+                required
+                maxLength={120}
+                autoComplete="name"
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
+              <input
+                name="email"
+                type="email"
+                required
+                maxLength={150}
+                autoComplete="email"
+                className={controlClass}
+              />
+            </Field>
+            <div className="sm:col-span-2">
+              <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
+            </div>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.team.invite.submitting")}
+                className={buttonClass()}
+              >
+                {t("settings.team.invite.submit")}
+              </SubmitButton>
+              <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
+            </FieldActions>
+            <FieldErrorFocus key={notice} scope="invite" />
+          </FieldGrid>
+        </SectionCard>
 
-      <section className="mt-6">
-        <h2 className="font-medium">{t("settings.team.current.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("settings.team.current.description")}</p>
-        {staff.length === 0 ? (
-          <EmptyState className="mt-2">
-            <p className="mx-auto max-w-md text-sm text-muted">
-              {t("settings.team.current.empty")}
-            </p>
-            {/* Reaching this page at all took the manage-staff gate, so anyone
+        <section>
+          {/* Not a card — a heading over a list of them. It wears the same
+              heading spelling `SectionCard` uses so the two sections on this
+              page read at one level. */}
+          <h2 className="text-lg font-semibold">{t("settings.team.current.heading")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            {t("settings.team.current.description")}
+          </p>
+          {staff.length === 0 ? (
+            <EmptyState className="mt-4">
+              <p className="mx-auto max-w-md text-sm text-muted">
+                {t("settings.team.current.empty")}
+              </p>
+              {/* Reaching this page at all took the manage-staff gate, so anyone
                 reading this may send the invite — no second check needed. */}
-            <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
-              {t("settings.team.current.emptyAction")}
-            </a>
-          </EmptyState>
-        ) : (
-          <>
-            <ul className="mt-3 flex flex-col gap-3">
-              {staff.map((member) => (
-                <StaffRow
-                  key={member.personId}
-                  member={member}
-                  contactStatus={contactFor === member.personId ? contactStatus : undefined}
-                  t={t}
-                />
-              ))}
-            </ul>
-            {/* Every card's role checkboxes are associated to this form via the
+              <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
+                {t("settings.team.current.emptyAction")}
+              </a>
+            </EmptyState>
+          ) : (
+            <>
+              <ul className="mt-4 flex flex-col gap-3">
+                {staff.map((member) => (
+                  <StaffRow
+                    key={member.personId}
+                    member={member}
+                    contactStatus={contactFor === member.personId ? contactStatus : undefined}
+                    t={t}
+                  />
+                ))}
+              </ul>
+              {/* Every card's role checkboxes are associated to this form via the
                 HTML `form` attribute (see RoleCheckboxes), not DOM nesting — so
                 this can sit at the bottom of the page while each row keeps its
                 own separate, immediate Enable/Disable/Delete forms. */}
-            <form
-              id={ROLES_FORM_ID}
-              action={saveAllStaffRolesAction}
-              className="mt-4 flex justify-end"
-            >
-              <SubmitButton
-                pendingLabel={t("settings.team.current.saving")}
-                className={buttonClass({ variant: "primary" })}
+              <form
+                id={ROLES_FORM_ID}
+                action={saveAllStaffRolesAction}
+                className="mt-4 flex justify-end"
               >
-                {t("settings.team.current.save")}
-              </SubmitButton>
-            </form>
-          </>
-        )}
-      </section>
+                <SubmitButton
+                  pendingLabel={t("settings.team.current.saving")}
+                  className={buttonClass({ variant: "primary" })}
+                >
+                  {t("settings.team.current.save")}
+                </SubmitButton>
+              </form>
+            </>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

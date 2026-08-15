@@ -3,6 +3,7 @@ import { diverTranslator } from "@/i18n/messages";
 import {
   dockDayTimeline,
   exposureSuitFor,
+  type LegTravelTimes,
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
@@ -40,6 +41,7 @@ export function PackingSection({
   day,
   multiDay,
   siteBottomTimes,
+  legTravelTimes,
   temperatureStatedAbove,
   locale,
 }: {
@@ -64,6 +66,12 @@ export function PackingSection({
    * `SiteBottomTimes`.
    */
   siteBottomTimes?: SiteBottomTimes;
+  /**
+   * Each leg of this departure's run, dive 1 first: dock to the first site,
+   * then site to site. Absent entries stay on the shop's own ride-out figure —
+   * see `LegTravelTimes`.
+   */
+  legTravelTimes?: LegTravelTimes;
   /**
    * Whether a conditions card above this one already states the water
    * temperature — and with it the suit most divers want (`ForecastSection`).
@@ -150,6 +158,7 @@ export function PackingSection({
           window.endsAt,
           trip.plannedDives,
           siteBottomTimes,
+          legTravelTimes,
         ).map((entry) => (
           <li key={`${entry.step}-${entry.number ?? 0}`} className="flex gap-4">
             <span className="w-24 shrink-0 font-medium tabular-nums">

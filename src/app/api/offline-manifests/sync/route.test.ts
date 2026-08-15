@@ -230,6 +230,39 @@ describe("POST /api/offline-manifests/sync", () => {
   });
 
   /**
+   * The retraction (ADR 20260815-offline-can-unsay-a-missing-diver). Before it,
+   * the only way to take back a mis-tapped "not back aboard" with no signal was
+   * to tap "Mark aboard" — a positive claim that this person is back on the
+   * boat — so the trail held a sighting nobody made. `cleared` arrives through
+   * this same route, under the same gate, and reads back as awaiting.
+   */
+  it("applies an offline retraction and returns the diver to awaiting", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const now = nowDate().toISOString();
+    const event = (status: "not_boarded" | "cleared") => ({
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      bookingId: booking.id,
+      tripId: trip.id,
+      checkpoint: "departure" as const,
+      status,
+      note: null,
+      occurredAt: now,
+    });
+    const response = await POST(postRequest({ events: [event("not_boarded"), event("cleared")] }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { results: Array<{ status: string }> };
+    expect(body.results.map((result) => result.status)).toEqual(["applied", "applied"]);
+    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
+    expect(
+      manifest?.divers.find((entry) => entry.bookingId === booking.id)?.rollCall,
+    ).toBeUndefined();
+  });
+
+  /**
    * The batch half of the equal-timestamp tie rule.
    *
    * The device breaks a tie by queue position (`latestQueuedAttempt` in

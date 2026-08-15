@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-12
+- **Amended:** 2026-08-15 — the dump moved out of the export bundles' bucket into one of its own. See
+  the amendment at the end of *Decision*; it is the part to read before adding any principal that can
+  write to either bucket.
 - **Supersedes:** nothing. Extends
   [20260802-backup-and-restore-posture](20260802-backup-and-restore-posture.md) and
   [20260812-platform-backup-runner](20260812-platform-backup-runner.md).
@@ -36,8 +39,10 @@ answerable:
 
 ## Decision
 
-**A weekly CodeBuild project, `diveday-database-dump`, streaming a `pg_dump` into the existing
-backup bucket under its own `dumps/` prefix.** `infra/lib/infra-stack.ts` §20.
+**A weekly CodeBuild project, `diveday-database-dump`, streaming a `pg_dump` into S3 under a
+`dumps/` prefix.** `infra/lib/infra-stack.ts` §20. It shared the export bundles' bucket until
+2026-08-15; see the amendment at the end of this section for why it now has one of its own, which is
+the part to read before adding anything that can write to either.
 
 - **Host: AWS CodeBuild**, `BUILD_GENERAL1_SMALL`, image
   `public.ecr.aws/docker/library/postgres:17-alpine` (AWS's ECR Public mirror of the official image,
@@ -65,10 +70,10 @@ backup bucket under its own `dumps/` prefix.** `infra/lib/infra-stack.ts` §20.
   first build with a named message rather than storing a zero-byte object every week.
 - **Write-only, into one prefix.** The job's role holds `s3:PutObject`/`AbortMultipartUpload` and
   (for the size read-back) `GetObject`, all scoped to `dumps/*`. It cannot reach the shop bundles
-  under `exports/`, and it cannot delete anything. Restoring a dump is a deliberate human act with the
-  admin profile.
-- **Kept 35 days, then deleted.** Its own lifecycle rule on the `dumps/` prefix, and deliberately the
-  opposite of the bundles' "current versions never expire". A bundle is a portability artifact with no
+  under `exports/` — since the 2026-08-15 amendment below it holds no grant on their bucket at all —
+  and it cannot delete anything. Restoring a dump is a deliberate human act with the admin profile.
+- **Kept 35 days, then deleted.** Its own lifecycle rule, and deliberately the opposite of the
+  bundles' "current versions never expire". A bundle is a portability artifact with no
   credentials in it and waiver rows H-02 makes indefinite. A dump answers "the Neon project is gone and
   PITR cannot reach back far enough" — a question asked within days of the loss, never months. Holding
   a file of every password hash and every medical answer for longer than it can plausibly be used is a
@@ -80,6 +85,66 @@ backup bucket under its own `dumps/` prefix.** `infra/lib/infra-stack.ts` §20.
   one more `ListObjectsV2` over `dumps/` and alarms when the newest dump is missing or older than the
   same 8-day threshold. It runs that check **before** the bundle logic, because that logic returns
   early on each of its own failures and a week where both layers broke has to raise both alarms.
+
+### Amendment (2026-08-15): the dump gets its own bucket
+
+**`DatabaseDumpBucket` (`diveday-database-dumps`), separate from `DatabaseBackupBucket`.** Everything
+above stands; only the destination moves. This is the amendment written for whoever next adds a
+principal that can write to either bucket, so it is stated as reasoning rather than as a diff.
+
+The two artifacts share almost nothing:
+
+| | `exports/` (the bundle bucket) | the dump bucket |
+| --- | --- | --- |
+| Writer | IAM user whose access key lives in **Vercel** | CodeBuild role that never leaves AWS |
+| Contents | Per-shop bundles, deliberately excluding `user_accounts`, `account_tokens`, `calendar_feeds` | The full cluster: every password hash and every medical answer |
+| Retention | Current versions never expire (H-02 makes it a legal call) | 35 days, then deleted |
+| Restores a login | No | **Yes — it is the only thing that does** |
+
+Colocating them meant every grant on that bucket had to be **remembered** to be prefix-scoped. Two of
+the three were. The one that was not — the uploader's `arnForObjects("*")`, narrowed on 2026-08-15 —
+was the one whose credential ships to a third party, so a leaked Vercel environment could overwrite
+the one artifact that restores a login, and the freshness check would have read the overwrite as a
+fresh dump. That specific hole was closed by narrowing the grant. This is the other half: a separate
+bucket makes the class of mistake **unrepresentable rather than reviewable**, which is the difference
+between a rule and a guardrail. No principal holding Vercel-resident credentials has any grant on the
+dump bucket at all, so there is no prefix to remember.
+
+What that cost, and what it bought:
+
+- **The watchdog is still one function.** This was the constraint that made the decision non-obvious:
+  §19 checks the dump and the bundles in one pass on the stated reasoning that *two alarms with the
+  same trigger and the same reader is one too many*. The split changed that argument by one word —
+  "one more prefix" became "one more bucket" — which is one more `s3:ListBucket` statement
+  (`ListDatabaseDumpsOnly`) and one more environment value (`DUMP_BUCKET`). A second watchdog would
+  have been a second schedule, a second log group, a second retry policy and a second thing to
+  remember exists, for one `ListObjectsV2` call. `infra/lib/backup-freshness.test.ts` asserts there
+  is exactly one.
+- **The dump bucket is unversioned, and that is a fix rather than a downgrade.** On a *versioned*
+  bucket a lifecycle expiration deletes nothing: it writes a delete marker and the bytes survive as a
+  non-current version until `noncurrentVersionExpiration`. "Kept 35 days" therefore meant the file
+  existed for up to **70** days — twice the window chosen for an artifact whose entire retention
+  argument is that holding it longer is a liability, doubled by a bucket property picked for the
+  bundles. Unversioned, 35 days means 35 days. What versioning was buying here went with the shared
+  bucket: it insured against an overwrite of a good object by a bad one, and the overwriter it
+  insured against was a principal that should never have been able to write a dump. The writer that
+  remains holds no `DeleteObject` and writes a date-stamped key, so the worst it can do is replace
+  *today's* dump; last week's is a different key and untouched. The bundle bucket keeps versioning —
+  its overwrite story and its indefinite retention are both unchanged.
+- **The `dumps/` prefix stays, and so does the prefix-scoped grant.** The prefix keeps every
+  documented path, the watchdog's date-folder listing and a one-line `aws s3 sync` between the two
+  buckets exactly as they were. Keeping the grant scoped to it after it stopped being the boundary
+  costs nothing, and widening it *because* the bucket is now dedicated is precisely how a dedicated
+  bucket stops being dedicated.
+- **The bundle bucket's `dumps/` prefix keeps its expiry rule**, renamed `drain-legacy-database-dumps`
+  so its status is legible. Nothing writes it any more, but the dumps already there are real dumps;
+  deleting the rule would strand them in a bucket whose other prefix never expires. It goes when the
+  prefix is empty of *versions* (roughly 70 days after the deploy, per the paragraph above —
+  `aws s3api list-object-versions`, not `aws s3 ls`). Until then the uploader's `exports/*` scoping is
+  still load-bearing, not merely tidy.
+
+**Not done: moving `exports/` instead.** The bundles are what the app writes constantly and the dump
+is the rarer, more dangerous artifact. If one moves behind a stricter boundary it is the dump.
 
 ## Alternatives considered
 
@@ -100,6 +165,19 @@ backup bucket under its own `dumps/` prefix.** `infra/lib/infra-stack.ts` §20.
 - **Keep dumps forever, like the bundles.** Rejected on the content, not the cost: an indefinite
   archive of every password hash in the platform is a bigger risk than the recovery it buys, and PITR
   plus a five-week dump window plus indefinite bundles already covers every realistic timeline.
+- **Leave the dump in the bundles' bucket and write down that colocation is deliberate**
+  (the alternative weighed on 2026-08-15, raised by
+  `FU-20260815-dumps-and-exports-share-one-bucket`). It is the cheap option and it is honest as long
+  as the invariant it depends on — *every* grant on that bucket is prefix-scoped — really is enforced
+  for every principal, which the tests did cover. Rejected because that invariant is a rule an author
+  has to remember, and the one time it was not remembered it shipped a credential with reach over the
+  dump to a third party. The bucket boundary needs remembering by nobody. The stated cost of splitting
+  — the freshness check needing a second grant, or worse becoming two functions — turned out to be one
+  `ListBucket` statement.
+- **S3 Object Lock on the dump bucket** (WORM, so not even an admin can delete a dump inside its
+  window). Rejected: Object Lock requires versioning, which is the property this bucket deliberately
+  drops so that "35 days" is a real 35 days, and a compliance-mode lock on a file of every password
+  hash in the platform makes the retention decision *harder* to honour rather than easier.
 
 ## Consequences
 
@@ -113,9 +191,22 @@ backup bucket under its own `dumps/` prefix.** `infra/lib/infra-stack.ts` §20.
   $30 budget that is noise; §16's "one secret, not eight" argument is about the *hand-off document*
   having one reader, and this is not that document.
 - **A dump is the most sensitive object in the account.** Nothing reachable from the application can
-  read it, its prefix expires, and the job that writes it cannot read the bundles beside it — but the
-  file exists, and anyone with account admin can read it. That is the same posture as the bundles and
-  it is worth stating rather than implying.
+  read it, its bucket expires everything in it, and the job that writes it has no grant on the bundle
+  bucket — but the file exists, and anyone with account admin can read it. That is the same posture as
+  the bundles and it is worth stating rather than implying.
+- **The 2026-08-15 split is a migration, not a rename** — the old bucket is `RemovalPolicy.RETAIN`
+  with a live weekly writer and a restore procedure pointing at it. The sequence, and the transition
+  window it opens, are §2c of
+  [the backup and restore runbook](../../engineering/backup-and-restore-runbook.md); the two facts
+  that make it one rather than a cutover are that **old dumps are not copied** (they stay readable in
+  the bundle bucket for the rest of their 35-day window rather than being re-dated by a copy, which
+  would restart their expiry clock) and that **the new bucket is empty until a dump runs into it**, so
+  a deploy that lands between a Monday dump and the Tuesday watchdog raises one honest false alarm
+  unless a build is started by hand. Starting one is the same command the setup step already
+  documents, and it doubles as proof the new grant works.
+- **Two buckets to re-adopt after a `cdk destroy`, not one.** The `backup-bucket-readoption` manual
+  action (§17) now names both, and `--context dumpBucketName=` is the escape hatch beside
+  `--context backupBucketName=`.
 - **Escape hatch:** if the Neon PITR window is later lengthened to something comfortable, this layer
   narrows from day-to-day recovery to vendor-independence insurance, and the schedule could drop to
   monthly by changing one cron expression. Nothing else keys on the cadence.

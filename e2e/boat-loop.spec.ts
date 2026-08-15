@@ -1,8 +1,13 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: both tests only walk the trip sub-nav and read the clipboard.
+ * Nothing is submitted; "View booking page" and "Copy link" are a link and a copy.
+ */
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
+test("the trip sub-nav reaches all four surfaces", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // Today's departure card drops staff straight onto the manifest's boarding pass.
@@ -37,10 +42,9 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
 });
 
-test("staff can view or copy a trip's public booking page from its overview", async ({
-  page,
-  context,
-}) => {
+test("staff can view or copy a trip's public booking page from its overview", {
+  tag: READ_ONLY,
+}, async ({ page, context }) => {
   await context.grantPermissions(["clipboard-write", "clipboard-read"]);
   await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: "Board divers" }).first().click();

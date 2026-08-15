@@ -31,7 +31,18 @@ const eventSchema = z
     crewPersonId: z.string().uuid().optional(),
     tripId: z.string().uuid(),
     checkpoint: z.union([z.literal("departure"), z.string().regex(/^after_dive_[1-6]$/)]),
-    status: z.enum(["boarded", "not_boarded"]),
+    /**
+     * `cleared` is the retraction — "take that mark off, nobody said it" —
+     * and it joined the offline vocabulary on 2026-08-15 (ADR
+     * 20260815-offline-can-unsay-a-missing-diver). It grants a device no new
+     * authority: `recordRollCall`/`recordCrewRollCall` have accepted it from
+     * the live manifest since roll call had an undo, and an offline `cleared`
+     * goes through the identical gauntlet every other offline status does —
+     * dedup on `clientEventId`, the staleness bound, and the newest-wins
+     * refusal, which is what stops a device that has been in a dry bag for an
+     * hour erasing a mark another device recorded since.
+     */
+    status: z.enum(["boarded", "not_boarded", "cleared"]),
     note: z.string().trim().max(300).nullable(),
     occurredAt: z.iso.datetime(),
   })

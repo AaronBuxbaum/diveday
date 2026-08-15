@@ -17,7 +17,7 @@ import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { createOrderAction } from "./actions";
 import { LINE_ITEM_ROWS } from "./order-form";
@@ -50,8 +50,8 @@ type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
 const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   invalid: "orders.new.notice.invalid",
-  not_connected: "orders.new.notice.notConnected",
-  stripe_failed: "orders.new.notice.stripeFailed",
+  "not-connected": "orders.new.notice.notConnected",
+  "stripe-failed": "orders.new.notice.stripeFailed",
 };
 
 export default async function NewOrderPage({
@@ -84,7 +84,7 @@ export default async function NewOrderPage({
   // Today, because a captain can still *read* orders: the door is closed, not the
   // room. `createOrderAction` re-checks; this only saves a wasted round trip.
   if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${shopSlug}/orders?notice=not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug, "orders"), "not-authorized"));
   }
 
   // The gate, not a courtesy: the entry links hide themselves when the shop
@@ -94,12 +94,22 @@ export default async function NewOrderPage({
   // (task 82). With a diver in hand we go back to their record; without one,
   // the Orders index, which is the surface this door belongs to. Never
   // `/divers`, which has nothing to say about payments.
+  //
+  // One code, `payment-not-connected`, on both branches. These two lines used
+  // to spell it two different ways — kebab for the diver record, snake for the
+  // Orders index — because the two destination maps had been written by
+  // different hands, so the `/orders` branch landed on a page whose map had no
+  // matching key and rendered no banner at all (src/lib/staff-notices.ts's
+  // `NOTICE_CODE_PATTERN`, enforced by scripts/check-notice-codes.mjs).
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (!canAcceptPayments(account)) {
     redirect(
-      prefillPersonId
-        ? `/shop/${shopSlug}/divers/${prefillPersonId}?notice=payment-not-connected`
-        : `/shop/${shopSlug}/orders?notice=payment_not_connected`,
+      noticeUrl(
+        prefillPersonId
+          ? shopPath(shopSlug, "divers", prefillPersonId)
+          : shopPath(shopSlug, "orders"),
+        "payment-not-connected",
+      ),
     );
   }
 
@@ -155,7 +165,7 @@ export default async function NewOrderPage({
                 ? `/shop/${shopSlug}/divers/${prefillPersonId}`
                 : `/shop/${shopSlug}/divers`
             }
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("orders.new.cancel")}
           </Link>

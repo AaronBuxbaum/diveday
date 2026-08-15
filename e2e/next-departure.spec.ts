@@ -1,9 +1,10 @@
-// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
-import { expect, readOnlyTest as test } from "./fixtures";
+// READ_ONLY holds here: this opens the public schedule and follows one link to a
+// booking page. It fills nothing and submits nothing.
+import { expect, READ_ONLY, test } from "./fixtures";
 
-test("the agenda's first row is the next departure, stated once — no pinned duplicate", async ({
-  page,
-}) => {
+test("the agenda's first row is the next departure, stated once — no pinned duplicate", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   // In the seeded demo the soonest departure has room, so the agenda's own
   // first row already answers "when can I go?" and the "Next boat out" pin

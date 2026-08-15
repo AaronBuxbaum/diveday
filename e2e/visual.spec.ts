@@ -2185,7 +2185,11 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText("2 of 3 said a level below this departure's requirement.").waitFor();
+        // Not "said a level below": the summary dropped that word on
+        // 2026-08-15, when "not certified yet" became an answer a diver can
+        // give. One of the counted may hold no certification at all, so there
+        // is no level for the sentence to name.
+        await page.getByText("2 of 3 are below this departure's requirement.").waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 

@@ -251,7 +251,6 @@ export function RequirementsSection({
                   pendingLabel={t("trips.requirements.saving")}
                   className={buttonClass({
                     variant: "secondary",
-                    className: "text-foreground",
                   })}
                 >
                   {t("trips.requirements.save")}

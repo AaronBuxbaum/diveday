@@ -631,7 +631,16 @@ function AddPanel({
             name: site.title,
           }))}
           initialCount={diveSeed.count}
-          initialDives={[{ title: null, diveSiteId: diveSeed.siteId || null, description: null }]}
+          initialDives={[
+            {
+              title: null,
+              diveSiteId: diveSeed.siteId || null,
+              description: null,
+              // A brand-new departure states no legs, so every one of them
+              // reads the shop's own ride out until somebody types otherwise.
+              travelMinutes: null,
+            },
+          ]}
           disabled={!expanded}
           onCountChange={setPlannedDives}
           onFirstDiveSiteChange={setDiveSiteId}

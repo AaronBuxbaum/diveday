@@ -15,6 +15,31 @@
  * baked in here. Keeping exactly one of each means nothing has to fight.
  */
 /**
+ * **Label colour lives on the variants, for the same reason, and a `text-<color>`
+ * passed through `className` is silently inert.**
+ *
+ * This one had actually happened: thirty-one call sites passed a
+ * `text-foreground` through `className` to the `secondary` variant, plainly
+ * meaning "a bordered surface button whose label is body text, not link blue",
+ * and every one of them rendered primary anyway. Two `text-<color>` utilities
+ * are two declarations of one property, so the winner is whichever Tailwind
+ * emitted last — and **Tailwind v4 emits colour utilities in alphabetical order
+ * by token name**, independent of the order the tokens are declared in
+ * `@theme`. Verified by compiling `src/app/globals.css` through this repo's own
+ * `@tailwindcss/postcss` and reading the byte offsets of the emitted rules:
+ * `.text-danger` < `.text-foreground` < `.text-info` < `.text-muted` <
+ * `.text-primary` < `.text-success`. So `text-primary` beats both
+ * `text-foreground` and `text-muted`, and reordering `@theme` would not change
+ * it — the only fix is not to have two.
+ *
+ * The resolution: `secondary` now *is* `text-foreground` (see the variant), and
+ * `button.test.ts` fails the build if any `text-<color>` reappears in a
+ * `className` handed to `buttonClass`. If a button needs a label colour no
+ * variant offers, add a variant — the same answer `flush` gave for padding.
+ * Never Tailwind's `!` suffix: that papers over one instance of a rule this file
+ * solves structurally, and leaves the next override just as silently inert.
+ */
+/**
  * `cursor-pointer` is on the base, not on call sites. Tailwind v4's Preflight
  * dropped the v3 rule that gave `button` a pointer cursor, so every
  * `<button>` in the app has been rendering the default arrow — invisible in a
@@ -49,7 +74,22 @@ const DISABLED = {
 
 const variants = {
   primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
-  secondary: "border border-border bg-surface text-primary hover:bg-surface-sunken",
+  /**
+   * The demoted-but-real action: a bordered surface box whose label is **body
+   * text**, not link blue.
+   *
+   * It carried `text-primary` until thirty-one call sites had each written
+   * `className: "text-foreground"` to cancel it — inertly, see the note above.
+   * By this file's own rule ("if you find yourself cancelling a variant's own
+   * styles, the variant is wrong"), thirty-one cancellations is the variant
+   * being wrong, not thirty-one mistakes. It is also what
+   * docs/design/forms-and-controls.md already asks of `secondary`: a settings
+   * hub's nine Saves demote to it "without the shout", and a teal label is part
+   * of the shout. `link` remains the primary-toned text affordance, so the two
+   * variants no longer say the same thing in colour. Contrast improves either
+   * way (light 5.36 -> 15.02, dark 9.05 -> 14.48 on `bg-surface`).
+   */
+  secondary: "border border-border bg-surface text-foreground hover:bg-surface-sunken",
   ghost: "text-muted hover:bg-surface-sunken hover:text-foreground",
   danger: "border border-danger/40 text-danger hover:bg-danger/10",
   /**

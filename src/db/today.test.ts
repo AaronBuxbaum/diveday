@@ -1074,6 +1074,87 @@ describe("unclosed roll call (DOM-H3)", () => {
       // less settleable on the dock.
       expect(row?.kind).toBe("roll_call_missing_diver");
     });
+
+    /**
+     * The two surfaces must not disagree about who is still in the water, and
+     * until 2026-08-15 nothing made that a property of the data. Both readers
+     * order by `occurred_at` then `created_at` and keep the last row; both of
+     * those tie exactly when two events are written inside one transaction
+     * (`created_at` is `defaultNow()` — *transaction* time), so the winner was
+     * whatever order the heap handed back, and it was free to differ between
+     * two queries in one request.
+     *
+     * That is not hypothetical here: an offline batch syncs a device's queued
+     * events together, carrying the device's own timestamps.
+     *
+     * This constructs the tie rather than trusting the clock's resolution to
+     * avoid it — a correction from `boarded` to `not_boarded` appended second,
+     * on one booking at one checkpoint. `seq` is the only key that separates
+     * them, so if either reader loses it, one of these two assertions fails.
+     */
+    it("agrees with the manifest when two events tie on both timestamps", async () => {
+      const { db, shop } = await seededShopContext();
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: -1,
+        divers: 1,
+        plannedDives: 1,
+      });
+      const bookingId = bookingIds[0];
+      if (!bookingId) throw new Error("fixture produced no booking");
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+
+      const occurredAt = new Date(nowMs() - 30 * 60 * 1000);
+      await db.transaction(async (tx) => {
+        await tx.insert(rollCallEventsTable).values([
+          {
+            shopId: shop.id,
+            tripId: trip.id,
+            bookingId,
+            recordedByPersonId: staffId,
+            status: "boarded" as const,
+            checkpoint: "after_dive_1",
+            source: "live" as const,
+            occurredAt,
+          },
+          {
+            shopId: shop.id,
+            tripId: trip.id,
+            bookingId,
+            recordedByPersonId: staffId,
+            status: "not_boarded" as const,
+            checkpoint: "after_dive_1",
+            source: "live" as const,
+            occurredAt,
+          },
+        ]);
+      });
+
+      // The tie is real, not assumed: assert both old keys are equal before
+      // asserting anything about who wins. Without this the test could pass
+      // because the clock happened to separate them.
+      const written = await db
+        .select({ createdAt: rollCallEventsTable.createdAt, seq: rollCallEventsTable.seq })
+        .from(rollCallEventsTable)
+        .where(
+          and(
+            eq(rollCallEventsTable.bookingId, bookingId),
+            eq(rollCallEventsTable.checkpoint, "after_dive_1"),
+          ),
+        );
+      expect(written).toHaveLength(2);
+      const [first, second] = written;
+      if (!first || !second) throw new Error("expected both events");
+      expect(first.createdAt.getTime()).toBe(second.createdAt.getTime());
+      expect(new Set(written.map((row) => row.seq)).size).toBe(2);
+
+      const manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+      expect(manifest?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall?.state).toBe(
+        "not_boarded",
+      );
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(work, trip.id, "missing_diver")).toBeDefined();
+    });
   });
 
   /**

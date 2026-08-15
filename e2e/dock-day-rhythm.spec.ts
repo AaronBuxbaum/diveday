@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
+import { daysFromNow, openSettingsRow, seededTripId } from "./helpers";
 
 /**
  * The dock-day rhythm, end to end: six numbers a shop types in Settings, and
@@ -83,4 +83,64 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // not run — the two used to sit three inches apart and disagree.
   const provided = page.getByRole("list").filter({ hasText: "Tanks and weights" }).last();
   await expect(provided).not.toContainText("Crew briefing");
+});
+
+/**
+ * The other half of the same join, one leg down: a departure's own run between
+ * sites (ADR 20260815-per-leg-travel-minutes).
+ *
+ * A real two-tank shape rather than a unit fixture, because what the unit suite
+ * cannot see is whether the number a staffer types into the dive plan ever
+ * reaches the timeline a diver reads — which is the exact shape of the bug the
+ * rhythm itself had before it was configurable.
+ *
+ * The shop is untouched: every number below comes off the trip. That is the
+ * point of the fallback, so the assertions are worth reading against the
+ * default rhythm (30 / 0 / 15 / 20 / 45 / 60) rather than against anything this
+ * test set up.
+ */
+test("a departure's own legs are the day the diver reads", async ({ page, privateShop }) => {
+  // A mint, a live sign-in, a trip creation, and two page loads.
+  test.setTimeout(60_000);
+  const SHOP = privateShop.slug;
+  const TITLE = "Wall run — two tanks";
+
+  // The one place a trip is created (ADR 20260806-one-trip-create-form), at the
+  // depth where the per-dive plan is disclosed.
+  await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+  await page.getByLabel("What is it").fill(TITLE);
+  await page.getByLabel("Date").fill(daysFromNow(9));
+  await page.getByLabel("Departs").fill("08:00");
+  await page.getByLabel("Returns").fill("15:00");
+  await page.getByLabel("Number of dives").selectOption("2");
+  // Ten minutes out to the house reef, then a long run across to the wall —
+  // the pair one `trips.boat_ride_minutes` could never have expressed, and the
+  // reason the second leg is longer than the surface interval it displaces.
+  await page.locator('input[name="dive-1-travelMinutes"]').fill("10");
+  await page.locator('input[name="dive-2-travelMinutes"]').fill("150");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(TITLE);
+
+  // Reached by id rather than by clicking the public schedule. That list is a
+  // keyset-paged stream (ADR 20260803-one-pagination-model's one exception),
+  // and a freshly minted private shop seeds enough departures that its first
+  // page ends before this trip's date — so clicking through it made the test a
+  // hostage to how densely the fixture seeds, which is not what it is testing.
+  // `seededTripId` walks the staff board's own pages to find the departure.
+  const tripId = await seededTripId(page, SHOP, TITLE);
+  await page.goto(`/s/${SHOP}/trips/${tripId}`);
+  await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+
+  const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
+  // Dive one at the trip's own ten minutes, not the shop's twenty: 8:00 + 0:10.
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 1" })).toContainText("8:10 AM");
+  // ...and dive two 45 under plus a 150-minute run, rather than the 60-minute
+  // surface interval it would have read at the shop's numbers alone (10:05 AM).
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 2" })).toContainText(
+    "11:25 AM",
+  );
+  // The run is what constrains that window, so it is what the diver is told —
+  // and it says "next site", because a ride out is a thing that happens once.
+  await expect(rhythm).toContainText("Ride to the next site");
+  await expect(rhythm).not.toContainText("Surface interval");
 });

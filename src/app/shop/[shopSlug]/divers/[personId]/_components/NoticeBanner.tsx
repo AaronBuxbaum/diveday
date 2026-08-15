@@ -129,30 +129,30 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "divers.notices.bookedWaiverUndelivered",
   },
-  trip_full: { form: "book-activity", tone: "danger", key: "divers.notices.tripFull" },
-  already_booked: { form: "book-activity", tone: "danger", key: "divers.notices.alreadyBooked" },
-  course_unstaffed: {
+  "trip-full": { form: "book-activity", tone: "danger", key: "divers.notices.tripFull" },
+  "already-booked": { form: "book-activity", tone: "danger", key: "divers.notices.alreadyBooked" },
+  "course-unstaffed": {
     form: "book-activity",
     tone: "danger",
     key: "divers.notices.courseUnstaffed",
   },
-  course_prerequisite: {
+  "course-prerequisite": {
     form: "book-activity",
     tone: "danger",
     key: "divers.notices.coursePrerequisite",
   },
-  course_ratio_full: {
+  "course-ratio-full": {
     form: "book-activity",
     tone: "danger",
     key: "divers.notices.courseRatioFull",
   },
-  course_min_age: { form: "book-activity", tone: "danger", key: "divers.notices.courseMinAge" },
-  trip_prerequisite: {
+  "course-min-age": { form: "book-activity", tone: "danger", key: "divers.notices.courseMinAge" },
+  "trip-prerequisite": {
     form: "book-activity",
     tone: "danger",
     key: "divers.notices.tripPrerequisite",
   },
-  trip_unavailable: {
+  "trip-unavailable": {
     form: "book-activity",
     tone: "danger",
     key: "divers.notices.tripUnavailable",
@@ -261,7 +261,7 @@ export function resolveDiverNotice({
    */
   form?: string;
   /**
-   * The signed `TripAdmissionRefusal` behind `trip_prerequisite` — the trip's
+   * The signed `TripAdmissionRefusal` behind `trip-prerequisite` — the trip's
    * unmet cert requirement and the diver's highest card
    * (src/lib/trip-admission-gate.ts). This is the surface the old copy sent
    * staff to ("Add the missing card above"), so it is the one that most needed
@@ -283,7 +283,7 @@ export function resolveDiverNotice({
   if (!banner) return undefined;
   const t = staffTranslator(locale);
   const refusal =
-    notice === "trip_prerequisite"
+    notice === "trip-prerequisite"
       ? verifyTripAdmissionGate(gate, { kind: "diver", id: personId })
       : null;
   return {

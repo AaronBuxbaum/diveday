@@ -18,6 +18,7 @@ import {
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 
@@ -72,16 +73,17 @@ async function uploadImage(file: FormDataEntryValue | null) {
 }
 
 export async function saveCourseContentAction(shopSlug: string, slug: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/courses/${slug}/edit`;
+  const base = shopPath(shopSlug, "courses", slug, "edit");
+  const courses = shopPath(shopSlug, "courses");
   const staff = await requireStaffSession();
 
   const db = await getDb();
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
-  if (!course) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
+  if (!course) redirect(noticeUrl(courses, "invalid"));
   // Loaded before parsing, not after: the shop's own currency is what decides
   // both what the numbers in the price boxes mean and how large one may be.
   const shop = await getShopById(db, staff.user.shopId);
-  if (!shop) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
+  if (!shop) redirect(noticeUrl(courses, "invalid"));
   const currency = toShopCurrency(shop.currency);
 
   const parsed = contentSchemaFor(currency).safeParse(Object.fromEntries(formData));
@@ -218,5 +220,5 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
   revalidatePath(`/shop/${shopSlug}/courses/${slug}`);
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "saved" : "invalid"}`);
+  revalidateAndRedirect(base, noticeUrl(base, saved ? "saved" : "invalid"));
 }

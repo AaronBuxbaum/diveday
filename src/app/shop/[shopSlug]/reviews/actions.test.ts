@@ -66,14 +66,14 @@ describe("publishReviewsAction", () => {
     vi.mocked(setReviewsPublished).mockResolvedValue(2);
 
     expect(await redirectedTo(selection(REVIEW_A, REVIEW_B))).toBe(
-      "/shop/blue-mantis/reviews?notice=published_many&published=2",
+      "/shop/blue-mantis/reviews?notice=published-many&published=2",
     );
     // The shop comes from the session, never from the form.
     expect(setReviewsPublished).toHaveBeenCalledWith({}, SHOP_ID, [REVIEW_A, REVIEW_B], STAFF_ID);
   });
 
   it("refuses an empty selection without touching the database", async () => {
-    expect(await redirectedTo(selection())).toBe("/shop/blue-mantis/reviews?notice=none_selected");
+    expect(await redirectedTo(selection())).toBe("/shop/blue-mantis/reviews?notice=none-selected");
     expect(setReviewsPublished).not.toHaveBeenCalled();
   });
 

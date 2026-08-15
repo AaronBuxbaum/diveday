@@ -6,6 +6,7 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { demoTodayDepartureStart } from "./seed-clock";
+import { seedRecentRecaps } from "./seed-recent-recaps";
 import { upcomingScheduleRange } from "./trips";
 
 /**
@@ -27,9 +28,9 @@ import { upcomingScheduleRange } from "./trips";
  * 20260724-per-visitor-demo-shops); only the canonical fixture ages, and it is
  * the one a marketing page points the public at.
  *
- * Two passes keep that promise true, and they are deliberately different sizes
- * because a diver and a staffer read different halves of the demo. See ADR
- * 20260812-demo-schedule-keeper.
+ * Three passes keep that promise true, and they are deliberately different sizes
+ * because a diver, a staffer and an owner read different halves of the demo. See
+ * ADR 20260812-demo-schedule-keeper.
  *
  * 1. **The restore.** When the board has run down to less than
  *    {@link DEMO_SCHEDULE_MIN_RUNWAY_DAYS} of departures, rebuild the whole demo
@@ -39,6 +40,12 @@ import { upcomingScheduleRange } from "./trips";
  *    satisfies a diver and still leaves the staff surfaces looking at an empty
  *    day, because "today" is what staff read. When nothing sails today, move the
  *    nearest upcoming departure onto today's slot — one row, no wipe.
+ * 3. **The month's recaps** (`seedRecentRecaps`, `src/db/seed-recent-recaps.ts`).
+ *    An owner reads the month just gone, and every tip and review the demo owns
+ *    is dated relative to the seed instant — so between restores the current
+ *    month carries none of either and "How's your month" reads "Tips $0" beside
+ *    a full trips table. Writes them onto the departures that have already
+ *    sailed this month, and only when the month has none.
  *
  * It is deliberately **not** re-exported from `@/db/seed` the way the demo
  * lifecycle helpers are: it imports `resetDemoSchedule` from there, and
@@ -125,12 +132,19 @@ export async function refreshCanonicalDemoSchedule(
     return { found: true, runwayDays, refreshed: true, today: "restored" };
   }
 
-  return {
-    found: true,
-    runwayDays,
-    refreshed: false,
-    today: await ensureDemoSailsToday(db, shop.id, shop.timezone, now),
-  };
+  const today = await ensureDemoSailsToday(db, shop.id, shop.timezone, now);
+  // The third pass, and the same gap in a different column: a diver looks at
+  // what is coming up, staff look at today, and an *owner* looks at the month
+  // just gone. Every tip and every review the demo owns is dated relative to the
+  // seed instant, so between restores the current month has none of either and
+  // "How's your month" reads "Tips $0" beside a full trips table. Writes at most
+  // a few dozen rows, and only into a month that carries no recap at all
+  // (`seedRecentRecaps`). Deliberately not part of the restore branch above: a
+  // restore re-seeds the trailing quarter against today's clock, so the month it
+  // leaves behind is already recapped.
+  await seedRecentRecaps(db, shop.id, { now });
+
+  return { found: true, runwayDays, refreshed: false, today };
 }
 
 /**

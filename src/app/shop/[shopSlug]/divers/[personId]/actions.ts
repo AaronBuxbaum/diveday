@@ -39,28 +39,28 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency } from "@/db/schema";
+import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
 // form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
 // here while the database was ready for them (DOM-L1).
 const agencySchema = z.enum(certificationAgency.enumValues);
-const levelSchema = z.enum([
-  "open_water",
-  "advanced_open_water",
-  "rescue",
-  "divemaster",
-  "instructor",
-]);
+// Same rule, and it matters more since the card sighting started parsing the
+// level: a hand-written copy that falls behind the enum makes a legitimate
+// submit fail *silently* (`levelSightingFromForm` returns undefined), which
+// reads to the staffer as "you did not fill the form in".
+const levelSchema = z.enum(certificationLevel.enumValues);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
 // Regex shape alone would accept a normalized impossible date like
 // "2026-02-31" (CR-009); isValidCalendarDate rejects those explicitly.
@@ -97,26 +97,41 @@ const personSchema = z.object({
       .refine((value) => isPlausibleDateOfBirth(value), "not a plausible date of birth"),
   ]),
 });
+// The card number, on every form on this page that takes one. It is the same
+// bound everywhere **on purpose**: capturing a card and sighting one are
+// different acts (see `sightingSchema`) but they reach the identical `verified`
+// state, so a stricter check on only one of them is a speed bump with a door
+// beside it — delete the claim, capture the same "xx", tap Mark certified, and
+// the `self_declared_at` provenance is gone with it.
+const cardNumberSchema = z.string().trim().max(120).refine(isPlausibleCardNumber);
 const certificationSchema = z.object({
   agency: agencySchema,
   level: levelSchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
   expiresOn: dateSchema,
 });
 const specialtyCertificationSchema = z.object({
   agency: agencySchema,
   specialty: specialtySchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
   expiresOn: dateSchema,
 });
 /**
  * The card a staffer says they are holding, when the row they are verifying is
- * still only a diver's word (`certifications.selfDeclaredAt`). Same bounds as
- * capturing a card, because it is the same act.
+ * still only a diver's word (`certifications.selfDeclaredAt`).
+ *
+ * This is the act the number check above exists for. Capturing a card is a
+ * staffer entering a card the shop is looking at; a *sighting* is the single
+ * moment a stranger's typing becomes `verified` — the state readiness, trip
+ * admission, every course prerequisite and the nitrox fill gate read. It
+ * inherited the capture form's 2–120 characters, so **"xx" certified a
+ * self-declared "Instructor"**: a required box with no shape is a box a hurried
+ * person fills with anything. The check itself stays loose on purpose — see
+ * `isPlausibleCardNumber`.
  */
 const sightingSchema = z.object({
   agency: agencySchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
 });
 /**
  * A **level** card's sighting names the rung too. The diver's claim is what the
@@ -175,12 +190,13 @@ const FORM_ANCHORS: Record<string, string> = {
  * to (`resolveDiverNotice`), and the anchor that puts that form on screen.
  */
 function backTo(base: string, notice: string, form?: string) {
-  const query = form ? `?notice=${notice}&form=${form}` : `?notice=${notice}`;
-  return `${base}${query}${form ? (FORM_ANCHORS[form] ?? "") : ""}`;
+  // The anchor rides on the path so `noticeUrl` keeps the query ahead of it;
+  // `form` drops out of the query entirely when there is none.
+  return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form });
 }
 
 export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const parsed = personSchema.safeParse(Object.fromEntries(formData));
   // `&form=` is how a code half a dozen actions emit finds its way back to the
@@ -211,7 +227,7 @@ export async function addCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
@@ -233,7 +249,7 @@ export async function addCertificationAction(
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "specialty-cards"));
@@ -274,7 +290,7 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
  * typed "Instructor" would verify the one field nobody looked at.
  */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   // Present only on the sighting form; absent on the one-tap button, where a
@@ -340,7 +356,7 @@ export async function reviewSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   // One tap, the same as the level card beside it. The imported-card
@@ -375,7 +391,7 @@ export async function deleteCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   const deleted = certificationId
@@ -386,7 +402,7 @@ export async function deleteCertificationAction(
   revalidateAndRedirect(
     base,
     deleted
-      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=level`
+      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType: "level" })
       : backTo(base, "invalid", "cards"),
   );
 }
@@ -397,7 +413,7 @@ export async function deleteSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   const db = await getDb();
@@ -410,7 +426,7 @@ export async function deleteSpecialtyAction(
   revalidateAndRedirect(
     base,
     deleted
-      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=${cardType}`
+      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType })
       : backTo(base, "invalid", "specialty-cards"),
   );
 }
@@ -424,7 +440,7 @@ const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
  * being clobbered (readiness.ts).
  */
 export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
   const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
@@ -447,7 +463,7 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // The gate is on *overriding* a stated request, not on writing the record
@@ -503,7 +519,7 @@ export async function setNeedsStaffFitAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // Re-read live roles like every other mutation on this page. Even the open
@@ -556,7 +572,7 @@ export async function markWaiverInPersonAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: staff.user.shopId,
@@ -579,7 +595,7 @@ export async function markWaiverInPersonAction(
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
@@ -620,7 +636,7 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // Soft-deleting a person frees their email and pulls them from shop work —
@@ -630,11 +646,12 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
     return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
+  const roster = shopPath(staff.user.shopSlug, "divers");
   revalidateAndRedirect(
-    `/shop/${staff.user.shopSlug}/divers`,
-    deleted
-      ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
-      : base,
+    roster,
+    // No hand-rolled `encodeURIComponent` any more — `noticeUrl` escapes every
+    // value it merges.
+    deleted ? noticeUrl(roster, "deleted", { deleted: personId }) : base,
   );
 }
 
@@ -652,7 +669,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
  * both land here as `restore-refused`, which says what to do about it.
  */
 export async function restorePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
@@ -683,7 +700,7 @@ export async function restorePersonAction(shopSlug: string, personId: string, _f
  * a hidden field the form could have carried unchanged.
  */
 export async function erasePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
@@ -710,10 +727,9 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   // reports page; this notice is what sends someone to look.
   const erasedNotice =
     result.ok && result.owedProcessorErasures > 0 ? "erased-processor-owed" : "erased";
+  const roster = shopPath(staff.user.shopSlug, "divers");
   revalidateAndRedirect(
-    `/shop/${staff.user.shopSlug}/divers`,
-    result.ok
-      ? `/shop/${staff.user.shopSlug}/divers?notice=${erasedNotice}`
-      : backTo(base, "erase-refused", "erase"),
+    roster,
+    result.ok ? noticeUrl(roster, erasedNotice) : backTo(base, "erase-refused", "erase"),
   );
 }

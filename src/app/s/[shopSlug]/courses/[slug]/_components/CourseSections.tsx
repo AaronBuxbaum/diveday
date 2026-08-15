@@ -504,7 +504,6 @@ export function CourseSessions({
                     className={buttonClass({
                       variant: full ? "secondary" : "primary",
                       size: "cta",
-                      className: full ? "text-foreground" : "",
                     })}
                   >
                     {full ? t("course.joinWaitList") : t("course.bookThisDate")}
@@ -537,7 +536,6 @@ export function CourseSessions({
                           className={buttonClass({
                             variant: "secondary",
                             size: "sm",
-                            className: full ? "text-foreground" : "",
                           })}
                         >
                           {full ? t("course.joinWaitList") : t("course.bookThisDate")}

@@ -12,10 +12,12 @@
     "phone": "Teléfono",
     "saving": "Guardando…",
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
-    "diveProfile": {
+    "certification": {
       "level": "Nivel de certificación",
       "levelUnsaid": "Prefiero no decirlo",
-      "levelDescription": "Ayuda al centro a elegir de qué salidas avisarte. Aquí no se comprueba nada: verán tu tarjeta antes de que bucees.",
+      "levelNone": "Todavía no tengo certificación",
+      "levelDescription": "Ayuda al centro a elegir de qué salidas avisarte. Aquí no se verifica nada: confirmarán qué puedes bucear antes de que entres al agua.",
+      "levelHint": "¿Tienes la tarjeta de otra agencia? Elige la más parecida: CMAS 1★, RAID Open Water 20 y BSAC Ocean Diver equivalen a Open Water; CMAS 2★, RAID Advanced 35 y BSAC Sports Diver, a Advanced Open Water; CMAS 3★ y BSAC Dive Leader, a Divemaster. Las tarjetas de GUE no encajan en esta lista, así que para una de ellas “Prefiero no decirlo” es la respuesta correcta.",
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {
@@ -163,7 +165,7 @@
       "gearSetup": "Monta tu equipo",
       "briefing": "Briefing de la tripulación",
       "departure": "Salida",
-      "boatRide": "Trayecto hasta el punto",
+      "boatRide": "{number, plural, =1 {Trayecto hasta el sitio} other {Trayecto al siguiente sitio}}",
       "dive": "Inmersión {number}",
       "surfaceInterval": "Intervalo de superficie",
       "return": "Regreso previsto"
@@ -2074,13 +2076,14 @@
       "arrivingLabel": "Al entrar",
       "exportDescription1": "Un archivo, no un proyecto: el importador muestra exactamente qué se transfiere —y qué no— antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
       "importMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
+      "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
       "leavingLabel": "Al salir",
       "exportDescription2": "Un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
       "exportItem1": "Archivos CSV documentados, uno por tipo de registro",
       "exportItem2": "Buceadores, reservas, registros de exención y historial de pagos",
       "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
       "exportItem4": "Una guía en lenguaje claro de cada archivo — sin proyecto de descifrado después",
-      "guidesLink": "¿Cambias desde {competitors}? ¿Vienes de una hoja de cálculo? Lee las guías →",
+      "guidesLink": "¿Vienes de {competitors} — o de otra cosa? Lee las guías →",
       "tryTitle": "Mira cómo se siente cuando todo el centro está en la misma página.",
       "tryDescription": "Los centros que se unen ahora lo moldean — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
       "priceLine": "Un precio único — {price} {cadence}, congelado dos años para los centros fundadores.",

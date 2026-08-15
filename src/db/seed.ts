@@ -130,8 +130,20 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
- * | `./seed-reviews.ts` | verified diver reviews and the post-trip tips the recap collects |
  * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
+ *
+ * There is no `seed-reviews.ts`, though this table claimed one until 2026-08-15:
+ * verified diver reviews and the post-trip tips the recap collects are written by
+ * `./seed-history.ts` (`reviewRows` and `tipRows`, at the end of the file), because
+ * both hang off a booking on a departure that has already sailed. A row here
+ * naming a file that does not exist is worse than no row — it sent a session
+ * looking for the demo's missing tips in a module nobody ever wrote.
+ *
+ * `./seed-recent-recaps.ts` is deliberately **not** in this table and is not
+ * called from the orchestrator below. It is a keeper, run by the daily
+ * demo-refresh pass (`src/db/demo-refresh.ts`), for the tips and reviews that go
+ * missing as the demo ages past the instant this seed ran — read its docstring
+ * before assuming it belongs here.
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.

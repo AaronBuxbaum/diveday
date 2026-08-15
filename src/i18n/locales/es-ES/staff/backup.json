@@ -4,17 +4,17 @@
   "notice": {
     "saved": "Destino de respaldo guardado. Ejecuta una entrega de prueba para verificar que funciona.",
     "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
-    "endpoint_invalid": "Ese endpoint no se lee como una dirección HTTPS simple. Usa el origen de la API S3 de tu proveedor, sin consulta, ruta ni credenciales.",
-    "endpoint_not_https": "El endpoint debe empezar con https:// — los respaldos nunca viajan sin cifrar.",
-    "endpoint_private_host": "Ese endpoint apunta a una dirección privada o local, a la que los servidores de DiveDay no pueden entregar. Usa el endpoint público de tu proveedor de almacenamiento.",
-    "secret_required": "Ingresa la clave de acceso secreta para conectar este destino.",
-    "encryption_key_unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
-    "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
+    "endpoint-invalid": "Ese endpoint no se lee como una dirección HTTPS simple. Usa el origen de la API S3 de tu proveedor, sin consulta, ruta ni credenciales.",
+    "endpoint-not-https": "El endpoint debe empezar con https:// — los respaldos nunca viajan sin cifrar.",
+    "endpoint-private-host": "Ese endpoint apunta a una dirección privada o local, a la que los servidores de DiveDay no pueden entregar. Usa el endpoint público de tu proveedor de almacenamiento.",
+    "secret-required": "Ingresa la clave de acceso secreta para conectar este destino.",
+    "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
+    "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
     "disconnected": "Destino de respaldo eliminado. El historial de entregas de abajo se conserva.",
-    "test_delivered": "La entrega de prueba llegó a tu bucket. Los respaldos semanales están verificados.",
-    "test_failed": "La entrega de prueba no llegó. {reason}",
-    "no_destination": "Guarda primero un destino y luego ejecuta una entrega de prueba.",
-    "not_authorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo."
+    "test-delivered": "La entrega de prueba llegó a tu bucket. Los respaldos semanales están verificados.",
+    "test-failed": "La entrega de prueba no llegó. {reason}",
+    "no-destination": "Guarda primero un destino y luego ejecuta una entrega de prueba.",
+    "not-authorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo."
   },
   "status": {
     "configuredHeading": "Los respaldos están configurados",

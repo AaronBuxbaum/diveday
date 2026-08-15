@@ -19,13 +19,31 @@ import process from "node:process";
  * Deliberately not enforced: how many entries exist (an inbox may be full), or
  * how old they are (aging is the human's business, not a build failure) — both
  * are reported, neither fails.
+ *
+ * The register has two rooms, and the difference is who owes the next move.
+ * `docs/product/follow-ups/` is the inbox: every entry there is waiting on a
+ * human's judgment, and reading one costs the reader a triage decision. The
+ * `waiting/` subfolder is for entries where nobody in this repo owes anything
+ * — the next move belongs to an upstream release, a third party's answer, or a
+ * measurement that needs traffic we do not have yet. Re-triaging one of those
+ * every week is pure noise, and the noise is what makes a reader stop opening
+ * the folder at all. So a waiting entry says `**Status:** Waiting` and carries
+ * a `**Waiting on:**` line naming the event and *how you would check* whether
+ * it has happened — without that line the entry is indistinguishable from an
+ * item nobody got round to, which is the thing this split exists to prevent.
  */
 
 export const DIRECTORY = "docs/product/follow-ups";
+/** The waiting room, relative to the repo root. Kept inside DIRECTORY on purpose:
+ *  one register, two rooms, so nothing has to be linked from two places. */
+export const WAITING_DIRECTORY = `${DIRECTORY}/waiting`;
 const SKIP_FILES = new Set(["README.md", "TEMPLATE.md"]);
+/** Subdirectories of DIRECTORY that hold entries rather than stray files. */
+const SKIP_DIRECTORIES = new Set(["waiting"]);
 
 const ENTRY_FILENAME = /^FU-(\d{8})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const VALID_STATUSES = new Set(["Open", "Parked"]);
+const WAITING_STATUS = "Waiting";
 const VALID_KINDS = new Set(["question", "improvement", "risk", "cleanup", "half-done"]);
 const VALID_EFFORTS = new Set(["S", "M", "L"]);
 const REQUIRED_SECTIONS = [
@@ -85,12 +103,16 @@ function fencedBlocks(body) {
 /**
  * @param filename entry filename, e.g. `FU-20260808-something.md`
  * @param contents the file's markdown
+ * @param options `waiting: true` for an entry in the `waiting/` room, which
+ *   swaps the status vocabulary, demands a **Waiting on:** line, and expects
+ *   the prompt to name the file at its waiting-room path
  * @returns `problems` (human-readable; empty means valid) and the `touched`
  *   paths the caller checks against disk
  */
-export function findEntryProblems(filename, contents) {
+export function findEntryProblems(filename, contents, { waiting = false } = {}) {
   const problems = [];
   const say = (message) => problems.push(`${filename}: ${message}`);
+  const directory = waiting ? WAITING_DIRECTORY : DIRECTORY;
 
   const nameMatch = ENTRY_FILENAME.exec(filename);
   if (!nameMatch) {
@@ -108,9 +130,28 @@ export function findEntryProblems(filename, contents) {
   }
 
   const status = metadata(contents, "Status");
-  if (!status || !VALID_STATUSES.has(status)) {
+  if (waiting) {
+    if (status !== WAITING_STATUS) {
+      say(
+        `an entry in ${WAITING_DIRECTORY}/ must say **Status:** ${WAITING_STATUS} — move it back up a folder the moment somebody here owes the next move`,
+      );
+    }
+    // The whole point of the waiting room is that a reader can confirm in
+    // seconds whether the block has lifted. Without a named event and a way to
+    // check it, an entry in here is just an entry nobody has looked at.
+    const waitingOn = metadata(contents, "Waiting on");
+    if (!waitingOn) {
+      say(
+        "a Waiting entry needs a **Waiting on:** line naming the event that unblocks it and how to check whether it has happened",
+      );
+    } else if (words(waitingOn) < 8) {
+      say(
+        "**Waiting on:** is too short to check cold — name the event *and* where a reader would look for it (a changelog, an issue, a dashboard)",
+      );
+    }
+  } else if (!status || !VALID_STATUSES.has(status)) {
     say(
-      `**Status:** must be one of ${[...VALID_STATUSES].join(", ")} (close an entry by deleting the file)`,
+      `**Status:** must be one of ${[...VALID_STATUSES].join(", ")} (close an entry by deleting the file; an entry blocked on somebody else's release or answer belongs in ${WAITING_DIRECTORY}/)`,
     );
   } else if (status === "Parked" && !metadata(contents, "Parked")) {
     say("a Parked entry needs a **Parked:** line saying what would un-park it");
@@ -166,9 +207,9 @@ export function findEntryProblems(filename, contents) {
       if (!REPO_PATH.test(prompt)) {
         say("the prompt names no repo path — say which files to read and change");
       }
-      if (!prompt.includes(`${DIRECTORY}/${filename}`)) {
+      if (!prompt.includes(`${directory}/${filename}`)) {
         say(
-          `the prompt must tell the session to delete ${DIRECTORY}/${filename} when the work lands`,
+          `the prompt must tell the session to delete ${directory}/${filename} when the work lands`,
         );
       }
     }
@@ -181,17 +222,25 @@ export function findEntryProblems(filename, contents) {
   return { problems, touched };
 }
 
-async function main() {
-  const root = process.cwd();
-  const directory = path.join(root, DIRECTORY);
-  const files = (await readdir(directory))
-    .filter((name) => name.endsWith(".md") && !SKIP_FILES.has(name))
+/** Entry filenames in one room, sorted; `[]` when the folder is absent. */
+async function entryFilenames(root, directory) {
+  let names;
+  try {
+    names = await readdir(path.join(root, directory));
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => name.endsWith(".md") && !SKIP_FILES.has(name) && !SKIP_DIRECTORIES.has(name))
     .sort();
+}
 
+/** Every problem in one room, including **Touches:** paths that are not on disk. */
+async function roomProblems(root, directory, filenames, options) {
   const problems = [];
-  for (const filename of files) {
-    const contents = await readFile(path.join(directory, filename), "utf8");
-    const result = findEntryProblems(filename, contents);
+  for (const filename of filenames) {
+    const contents = await readFile(path.join(root, directory, filename), "utf8");
+    const result = findEntryProblems(filename, contents, options);
     problems.push(...result.problems);
     for (const touched of result.touched) {
       try {
@@ -203,6 +252,26 @@ async function main() {
       }
     }
   }
+  return problems;
+}
+
+/** `, oldest raised YYYY-MM-DD` for a sorted entry list, or "" when it is empty. */
+function oldestSuffix(filenames) {
+  const oldest = filenames.at(0)?.slice(3, 11);
+  return oldest
+    ? `, oldest raised ${oldest.slice(0, 4)}-${oldest.slice(4, 6)}-${oldest.slice(6, 8)}`
+    : "";
+}
+
+async function main() {
+  const root = process.cwd();
+  const open = await entryFilenames(root, DIRECTORY);
+  const waiting = await entryFilenames(root, WAITING_DIRECTORY);
+
+  const problems = [
+    ...(await roomProblems(root, DIRECTORY, open, { waiting: false })),
+    ...(await roomProblems(root, WAITING_DIRECTORY, waiting, { waiting: true })),
+  ];
 
   if (problems.length > 0) {
     console.error(`Follow-up register:\n${problems.map((item) => `- ${item}`).join("\n")}`);
@@ -212,11 +281,13 @@ async function main() {
     process.exit(1);
   }
 
-  const oldest = files.at(0)?.slice(3, 11);
-  const age = oldest
-    ? `, oldest raised ${oldest.slice(0, 4)}-${oldest.slice(4, 6)}-${oldest.slice(6, 8)}`
-    : "";
-  console.log(`follow-ups: ${files.length} open${age}`);
+  // Counted separately because they cost a reader different things: an open
+  // entry owes them a triage decision, a waiting one owes them a glance at
+  // somebody else's changelog.
+  console.log(
+    `follow-ups: ${open.length} open${oldestSuffix(open)}; ` +
+      `${waiting.length} waiting on somebody else${oldestSuffix(waiting)}`,
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();
