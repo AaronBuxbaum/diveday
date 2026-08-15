@@ -32,15 +32,27 @@ export function makeActivitySafe(page: Page): Page {
   return page;
 }
 
+/** A shop minted for one test alone — see the `privateShop` fixture below. */
+export type PrivateShop = {
+  /** The minted shop's slug, for every `/shop/<slug>/…` and `/s/<slug>/…` path. */
+  slug: string;
+  /** The owner `page` is signed in as. */
+  ownerEmail: string;
+};
+
 /**
  * Each Playwright worker owns a private Next server + in-memory database (see
  * playwright.config.ts). A worker's base URL is derived from its parallel
  * index so its page and request fixtures always talk to that worker's own
  * server — this is what lets the suite run `fullyParallel` without one test's
  * mutation leaking into another's assertions.
+ *
+ * Within a worker, `demoReset` restores the shared blue-mantis fixture's
+ * *schedule* before every test; a test that writes the shop's **settings**
+ * takes a whole shop of its own through `privateShop` below.
  */
 export const test = base.extend<
-  { demoReset: undefined },
+  { demoReset: undefined; privateShop: PrivateShop },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
@@ -80,6 +92,55 @@ export const test = base.extend<
     },
     { auto: true },
   ],
+
+  // A whole seeded shop of this test's own, with `page` signed in as its
+  // owner. Ask for it when the test writes **shop-wide** state — anything the
+  // per-test reset above does not restore, and so anything that would change
+  // the premise of whichever spec Playwright's sharding runs next in this
+  // worker (ADR 20260815-per-test-private-shops).
+  //
+  // The reset restores blue-mantis's *schedule*: trips, bookings, waivers, the
+  // roster, the catalog, the promo codes, three `shops` columns. It does not
+  // restore the shop's backup destination or its delivery history, its
+  // WhatsApp sender, its media-deletion attempts, any other `shops` column, or
+  // the shifts and calendar feeds of the four permanent staff. A test writing
+  // one of those takes a shop of its own instead.
+  //
+  // Lazy, like every Playwright fixture: only a test that destructures
+  // `privateShop` pays the mint (~1.5s) and the sign-in (~1.5s) — budget for
+  // both with `test.setTimeout`, since test-scoped fixture setup is inside the
+  // test's own timeout. Teardown drops the shop again, so the cascade delete
+  // is charged to the test that asked for it rather than landing inside the
+  // *next* test's 15-second budget; `demoReset`'s `purgeMintedDemoShops` is
+  // still the safety net when a run dies before teardown.
+  //
+  // A file using this must **not** also call `signedInAsOwner()`: that seeds a
+  // blue-mantis session into the same context, and the two would race for the
+  // cookie.
+  privateShop: async ({ demoReset, request, page }, use) => {
+    // Named only for ordering: the reset purges the *previous* test's minted
+    // shop, and it has to have run before this one mints its replacement.
+    void demoReset;
+    const response = await request.post("/api/test/seed-private-shop");
+    if (!response.ok()) {
+      throw new Error(
+        `private shop mint failed: POST /api/test/seed-private-shop returned ` +
+          `${response.status()}. Body: ${await response.text()}`,
+      );
+    }
+    const minted = (await response.json()) as {
+      slug: string;
+      ownerEmail: string;
+      password: string;
+    };
+    await signInAs(page, { email: minted.ownerEmail, password: minted.password });
+    await use({ slug: minted.slug, ownerEmail: minted.ownerEmail });
+    // Best-effort: a teardown failure must not turn a passing test red, and
+    // the next reset would clear the shop regardless.
+    await request
+      .delete(`/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`)
+      .catch(() => {});
+  },
 
   // Pin the browser clock to the same instant the server is frozen at
   // (DIVEDAY_CLOCK, see src/lib/clock.ts) at context creation, so the override

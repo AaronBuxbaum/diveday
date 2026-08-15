@@ -2,19 +2,24 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 const CALENDAR_SETTINGS = "/shop/blue-mantis/settings/calendar";
+const calendarSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/calendar`;
 const MY_DEPARTURES = "My departures";
 
 /**
- * The suite runs `fullyParallel`, and each worker has its own server with its
- * own in-memory database — so tests on *different* workers are isolated, but
- * two of these landing on the same worker share one shop. A subscription is
- * per-person shop state that survives between them.
+ * A subscription is per-person shop state, and `calendar_feeds` is one of the
+ * tables `resetDemoSchedule` deliberately leaves standing — it clears a feed
+ * only when it purges the person who owns it, so the four permanent staff keep
+ * theirs across the reset by design. Every test here that mints, rotates or
+ * turns off a link therefore takes a shop of its own (`privateShop`, ADR
+ * 20260815-per-test-private-shops) and signs in as that shop's owner.
  *
- * Two consequences shape every test here. Locators are scoped to one panel by
- * its heading (a bare `.first()` on "Create subscription link" silently jumps
- * to the *other* scope's panel once this one is subscribed), and each test
- * normalises the subscription before asserting rather than assuming a clean
- * slate.
+ * Before that, whatever state the last of them reached was what the rest of the
+ * worker read — and two `e2e/visual.spec.ts` captures wait on "Create
+ * subscription link", i.e. assume the owner has no live subscription at all.
+ *
+ * Locators are still scoped to one panel by its heading: an owner sees two
+ * ("My departures" and "All shop departures"), so a bare `.first()` on a
+ * control silently answers from the wrong one.
  */
 function panelFor(page: Page, heading: string): Locator {
   return page
@@ -30,17 +35,12 @@ function mintedUrl(panel: Locator): Locator {
   return panel.locator("p.font-mono").nth(1);
 }
 
-/** Leaves the panel with no live subscription, whatever state it started in. */
-async function clearSubscription(panel: Locator) {
-  const turnOff = panel.getByRole("button", { name: "Turn off" });
-  if ((await turnOff.count()) > 0) {
-    await turnOff.click();
-    await panel.getByRole("button", { name: "Yes, turn it off" }).click();
-    await expect(panel.getByRole("button", { name: "Create subscription link" })).toBeVisible();
-  }
-}
-
-/** Mints a link from either state and returns its fetchable URL. */
+/**
+ * Mints a link and returns its fetchable URL. A shop of the test's own starts
+ * with nothing subscribed, so the first call takes the "Create subscription
+ * link" path and a second call in the same test takes "Replace link" — which
+ * is the state the rotation test is actually about.
+ */
 async function mintLink(panel: Locator): Promise<string> {
   const create = panel.getByRole("button", { name: "Create subscription link" });
   const replace = panel.getByRole("button", { name: "Replace link" });
@@ -81,18 +81,39 @@ test.describe("staff calendar subscriptions", () => {
     ).toBeVisible();
   });
 
+  test("an unknown feed token is a plain 404, never an existence oracle", async ({ request }) => {
+    for (const path of [
+      "/calendar/not-a-real-token.ics",
+      "/calendar/not-a-real-token",
+      `/calendar/${"a".repeat(43)}.ics`,
+    ]) {
+      expect((await request.get(path, { headers: { cookie: "" } })).status()).toBe(404);
+    }
+  });
+});
+
+/**
+ * The half that writes a `calendar_feeds` row — each on a shop of its own, so
+ * the subscription it leaves behind belongs to a shop nothing else reads. No
+ * `signedInAsOwner()`: the fixture signs in as the minted shop's own owner.
+ */
+test.describe("staff calendar subscriptions, on a shop of the test's own", () => {
   test("an owner mints a feed and the URL serves their departures with no session", async ({
     page,
     request,
+    privateShop,
   }) => {
-    await page.goto(CALENDAR_SETTINGS);
+    // The mint and the live sign-in the fixture pays for come out of this
+    // test's own budget.
+    test.setTimeout(60_000);
+    await page.goto(calendarSettingsFor(privateShop.slug));
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
     ).toBeVisible();
 
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel);
-    // With nothing subscribed there is no link on screen to leak.
+    // A shop of the test's own has never subscribed, so there is no link on
+    // screen to leak — and no normalisation step to perform first.
     await expect(panel.getByText("Not subscribed yet.")).toBeVisible();
 
     const url = await mintLink(panel);
@@ -113,10 +134,10 @@ test.describe("staff calendar subscriptions", () => {
     expect(body.trimEnd()).toMatch(/END:VCALENDAR$/);
   });
 
-  test("rotating a link kills the old URL immediately", async ({ page, request }) => {
-    await page.goto(CALENDAR_SETTINGS);
+  test("rotating a link kills the old URL immediately", async ({ page, request, privateShop }) => {
+    test.setTimeout(60_000);
+    await page.goto(calendarSettingsFor(privateShop.slug));
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel);
 
     const firstUrl = await mintLink(panel);
     expect((await request.get(firstUrl, { headers: { cookie: "" } })).status()).toBe(200);
@@ -131,10 +152,10 @@ test.describe("staff calendar subscriptions", () => {
     expect((await request.get(secondUrl, { headers: { cookie: "" } })).status()).toBe(200);
   });
 
-  test("turning a subscription off stops the feed", async ({ page, request }) => {
-    await page.goto(CALENDAR_SETTINGS);
+  test("turning a subscription off stops the feed", async ({ page, request, privateShop }) => {
+    test.setTimeout(60_000);
+    await page.goto(calendarSettingsFor(privateShop.slug));
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel);
 
     const url = await mintLink(panel);
     expect((await request.get(url, { headers: { cookie: "" } })).status()).toBe(200);
@@ -144,16 +165,6 @@ test.describe("staff calendar subscriptions", () => {
     await expect(panel.getByRole("button", { name: "Create subscription link" })).toBeVisible();
 
     expect((await request.get(url, { headers: { cookie: "" } })).status()).toBe(404);
-  });
-
-  test("an unknown feed token is a plain 404, never an existence oracle", async ({ request }) => {
-    for (const path of [
-      "/calendar/not-a-real-token.ics",
-      "/calendar/not-a-real-token",
-      `/calendar/${"a".repeat(43)}.ics`,
-    ]) {
-      expect((await request.get(path, { headers: { cookie: "" } })).status()).toBe(404);
-    }
   });
 });
 

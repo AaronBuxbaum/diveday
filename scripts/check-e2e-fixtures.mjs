@@ -26,7 +26,9 @@ import process from "node:process";
  *    routes exist only so the Playwright fleet can reset and seed state, and
  *    they do things no deployment may ever expose: `seed-account-token` mints
  *    a valid password-reset/invite token for any account by email, `reset`
- *    wipes and reseeds. All five call the guard today; nothing made the next
+ *    wipes and reseeds, and `seed-private-shop` mints a whole tenant whose
+ *    staff sign in with a published password. All six call the guard today;
+ *    nothing made the next
  *    one do so, and a missed guard plus one misconfigured deployment is
  *    account takeover (the finding behind the guard —
  *    docs/product/archive/specialist-optimization-audit-20260731.md §5).

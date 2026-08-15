@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
@@ -9,6 +10,7 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
  */
 const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export#backups";
 const OLD_BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
+const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/export#backups`;
 
 /**
  * The shop-owned backup settings surface (docs ADR
@@ -17,14 +19,22 @@ const OLD_BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
  *
  * The seed ships blue-mantis already configured with six weekly deliveries
  * (one failed) and a manual proof run, so the read-only assertions run against
- * that. The mutating tests save their own destination first — each Playwright
- * worker owns an isolated database, and `fullyParallel` means no test may
- * depend on another's writes. The destination endpoint used here is a
+ * that. The destination endpoint used by the mutating tests is a
  * reserved-TLD host that can never resolve, so a triggered delivery fails
  * fast with a *recorded* failure row — which is exactly the failure-path
  * behavior under test; the upload happy path is pinned by unit tests against
  * an injected fetch (src/features/backup-export/run-backup.test.ts), since
  * the fleet blocks external HTTP on purpose.
+ *
+ * **The mutating tests take a shop of their own** (`privateShop`, ADR
+ * 20260815-per-test-private-shops), because a destination and its deliveries
+ * are the two clearest members of the reset's leak set: `resetDemoSchedule`
+ * restores blue-mantis's schedule but never its `shop_backup_destinations` /
+ * `shop_backup_deliveries` rows, which are seeded by the *stable* half
+ * (`seedBackup`). Writing them here used to overwrite the seeded destination
+ * for the rest of the worker — poisoning this file's own "shows the seeded
+ * destination" test, and hitting `e2e/visual.spec.ts`'s data-export capture
+ * with a strict-mode violation on two "Failed" cells where the seed ships one.
  */
 
 const DESTINATION = {
@@ -36,8 +46,8 @@ const DESTINATION = {
   secret: "e2e-secret-access-key-value",
 };
 
-async function saveDestination(page: import("@playwright/test").Page) {
-  await page.goto(BACKUP_SETTINGS);
+async function saveDestination(page: Page, shopSlug: string) {
+  await page.goto(backupSettingsFor(shopSlug));
   await page.getByRole("textbox", { name: "Endpoint" }).fill(DESTINATION.endpoint);
   await page.getByRole("textbox", { name: "Region" }).fill(DESTINATION.region);
   await page.getByRole("textbox", { name: "Bucket", exact: true }).fill(DESTINATION.bucket);
@@ -116,8 +126,41 @@ test.describe("backup settings", () => {
     ).toBeVisible();
   });
 
-  test("saving a destination never echoes the secret back", async ({ page }) => {
-    await saveDestination(page);
+  test("refuses a destination pointing at a private address, with the reason", async ({ page }) => {
+    await page.goto(BACKUP_SETTINGS);
+    await page.getByRole("textbox", { name: "Endpoint" }).fill("https://169.254.169.254");
+    await page.getByRole("textbox", { name: "Region" }).fill("auto");
+    await page.getByRole("textbox", { name: "Bucket", exact: true }).fill("bucket");
+    await page.getByRole("textbox", { name: "Access key ID" }).fill("AKIA");
+    await page.getByLabel("Secret access key").fill("secret");
+    await page.getByRole("button", { name: "Save destination" }).click();
+
+    await expect(
+      page.getByText("That endpoint points at a private or local address", { exact: false }),
+    ).toBeVisible();
+  });
+});
+
+/**
+ * The half that writes. Each of these takes its own freshly seeded shop
+ * (`privateShop`) rather than blue-mantis, so the destination it saves and the
+ * failed deliveries it records belong to a shop nothing else will ever read.
+ *
+ * A minted shop starts with no destination at all — `seedBackup` runs only for
+ * the canonical demo — which is exactly the state each of these tests wants:
+ * they save their own first thing.
+ *
+ * No `signedInAsOwner()` here on purpose: the fixture signs the page in as the
+ * minted shop's own owner, and a blue-mantis session in the same context would
+ * race it for the cookie.
+ */
+test.describe("backup settings, writing to a shop of the test's own", () => {
+  test("saving a destination never echoes the secret back", async ({ page, privateShop }) => {
+    // The mint and the live sign-in the fixture pays for are inside this
+    // test's own budget, so the default 15s no longer covers the flow after
+    // them. Same aggregate-cost reasoning as every other multi-leg spec here.
+    test.setTimeout(60_000);
+    await saveDestination(page, privateShop.slug);
 
     // The form is back, pointed at the new destination — with the secret
     // field empty and the plaintext nowhere in the served document.
@@ -136,8 +179,10 @@ test.describe("backup settings", () => {
 
   test("a test delivery that cannot reach the bucket becomes a recorded failure row", async ({
     page,
+    privateShop,
   }) => {
-    await saveDestination(page);
+    test.setTimeout(60_000);
+    await saveDestination(page, privateShop.slug);
 
     await page.getByRole("button", { name: "Run a test delivery now" }).click();
 
@@ -153,8 +198,10 @@ test.describe("backup settings", () => {
 
   test("leaving the secret blank keeps the stored credential instead of erasing it", async ({
     page,
+    privateShop,
   }) => {
-    await saveDestination(page);
+    test.setTimeout(60_000);
+    await saveDestination(page, privateShop.slug);
 
     // Re-save with a changed bucket and no secret.
     await page.getByRole("textbox", { name: "Bucket", exact: true }).fill("renamed-bucket");
@@ -170,20 +217,6 @@ test.describe("backup settings", () => {
     await page.getByRole("button", { name: "Run a test delivery now" }).click();
     await expect(
       page.getByText("The test delivery didn't land. The endpoint couldn't be reached."),
-    ).toBeVisible();
-  });
-
-  test("refuses a destination pointing at a private address, with the reason", async ({ page }) => {
-    await page.goto(BACKUP_SETTINGS);
-    await page.getByRole("textbox", { name: "Endpoint" }).fill("https://169.254.169.254");
-    await page.getByRole("textbox", { name: "Region" }).fill("auto");
-    await page.getByRole("textbox", { name: "Bucket", exact: true }).fill("bucket");
-    await page.getByRole("textbox", { name: "Access key ID" }).fill("AKIA");
-    await page.getByLabel("Secret access key").fill("secret");
-    await page.getByRole("button", { name: "Save destination" }).click();
-
-    await expect(
-      page.getByText("That endpoint points at a private or local address", { exact: false }),
     ).toBeVisible();
   });
 });

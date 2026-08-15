@@ -33,75 +33,88 @@ function staffCard(page: Page, name: string) {
   return page.locator("article").filter({ hasText: name }).filter({ visible: true });
 }
 
+/**
+ * The one test here that writes a shift takes a shop of its own (`privateShop`,
+ * ADR 20260815-per-test-private-shops). `staff_shifts` is one of the tables the
+ * per-test reset deliberately leaves standing for the permanent staff — it
+ * clears a shift only when it purges the person who owns it — so a shift added
+ * to blue-mantis survives into every later spec in the same worker whenever
+ * this test fails before reaching its own Remove step.
+ *
+ * A minted shop carries the same seeded "Demo schedule" shift for every member
+ * of the cast (`seedStaffShifts`, src/db/seed.ts), which is what the
+ * before-and-after assertions below read.
+ */
+test("an owner schedules a shift, narrows the window past it, and takes it back off", async ({
+  page,
+  privateShop,
+}) => {
+  // The mint and the live sign-in the fixture pays for, then a create, a
+  // window submit, and a delete — three full server round trips plus their
+  // re-renders, all inside this test's own budget.
+  test.setTimeout(60_000);
+  const shiftDay = daysFromNow(2);
+  // Unique so the assertions target this test's own shift rather than the
+  // seeded "Demo schedule" one.
+  const note = `Boat 2 ${e2eNow().getTime()}`;
+
+  await page.goto(`/shop/${privateShop.slug}/staffing`);
+  await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+
+  const keiko = staffCard(page, "Keiko Tanaka");
+  // The seeded shift is today, so it is inside the default window.
+  await expect(keiko.getByText("Demo schedule")).toBeVisible();
+
+  await page.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await page.getByLabel("Date").fill(shiftDay);
+  await page.getByLabel("Starts").fill("06:30");
+  await page.getByLabel("Ends").fill("14:45");
+  await page.getByLabel("Note").fill(note);
+  await page.getByRole("button", { name: "Add shift" }).click();
+
+  await expect(page.getByText("Shift saved.")).toBeVisible();
+  // The stored range read back through the shop's own timezone
+  // (`formatTimeRangeTz`, which labels the end) — not the raw wall time the
+  // form was typed in, so this fails if the shift is written in the wrong zone.
+  const newShift = keiko.getByRole("listitem").filter({ hasText: note });
+  await expect(newShift).toHaveCount(1);
+  await expect(newShift.getByText("6:30 AM – 2:45 PM EDT")).toBeVisible();
+
+  // Narrow the window past both shifts. Nothing on this page filters in the
+  // browser: this is a GET submit and a fresh server render.
+  await page.getByLabel("From").fill(daysFromNow(4));
+  await page.getByLabel("Through").fill(daysFromNow(5));
+  await page.getByRole("button", { name: "Show window" }).click();
+
+  await expect(keiko.getByText("Not scheduled in this window.")).toBeVisible();
+  await expect(keiko.getByText(note)).toHaveCount(0);
+  await expect(keiko.getByText("Demo schedule")).toHaveCount(0);
+
+  // Back to the shift's own day, where it is visible again, and take it off.
+  await page.getByLabel("From").fill(shiftDay);
+  await page.getByLabel("Through").fill(shiftDay);
+  await page.getByRole("button", { name: "Show window" }).click();
+  await expect(keiko.getByText(note)).toBeVisible();
+
+  await keiko
+    .getByRole("listitem")
+    .filter({ hasText: note })
+    .getByRole("button", { name: "Remove" })
+    .click();
+  // The delete redirects to the page's own default window (it carries only
+  // `?notice=`, not the from/to the removal was performed in), so this lands
+  // back on today's week: the seeded shift is there, this test's is gone.
+  // The banner is the only observable here — see the file header on why the
+  // URL is not assertable. Adding `toHaveURL(/notice=shift-deleted/)` in
+  // front of this looks like it would pin down a CI flake and instead fails
+  // every run, because FlashParams has already stripped the param.
+  await expect(page.getByText("Shift removed.")).toBeVisible();
+  await expect(keiko.getByText(note)).toHaveCount(0);
+  await expect(keiko.getByText("Demo schedule")).toBeVisible();
+});
+
 test.describe("staffing", () => {
   signedInAsOwner();
-
-  test("an owner schedules a shift, narrows the window past it, and takes it back off", async ({
-    page,
-  }) => {
-    // A create, a window submit, and a delete — three full server round trips
-    // plus their re-renders, past the suite's 15s single-flow default.
-    test.setTimeout(30_000);
-    const shiftDay = daysFromNow(2);
-    // Unique so the assertions target this spec's own shift rather than the
-    // seeded "Demo schedule" one. (Isolation itself comes from the per-test
-    // demo reset in fixtures.ts.)
-    const note = `Boat 2 ${e2eNow().getTime()}`;
-
-    await page.goto(STAFFING);
-    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
-
-    const keiko = staffCard(page, "Keiko Tanaka");
-    // The seeded shift is today, so it is inside the default window.
-    await expect(keiko.getByText("Demo schedule")).toBeVisible();
-
-    await page.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-    await page.getByLabel("Date").fill(shiftDay);
-    await page.getByLabel("Starts").fill("06:30");
-    await page.getByLabel("Ends").fill("14:45");
-    await page.getByLabel("Note").fill(note);
-    await page.getByRole("button", { name: "Add shift" }).click();
-
-    await expect(page.getByText("Shift saved.")).toBeVisible();
-    // The stored range read back through the shop's own timezone
-    // (`formatTimeRangeTz`, which labels the end) — not the raw wall time the
-    // form was typed in, so this fails if the shift is written in the wrong zone.
-    const newShift = keiko.getByRole("listitem").filter({ hasText: note });
-    await expect(newShift).toHaveCount(1);
-    await expect(newShift.getByText("6:30 AM – 2:45 PM EDT")).toBeVisible();
-
-    // Narrow the window past both shifts. Nothing on this page filters in the
-    // browser: this is a GET submit and a fresh server render.
-    await page.getByLabel("From").fill(daysFromNow(4));
-    await page.getByLabel("Through").fill(daysFromNow(5));
-    await page.getByRole("button", { name: "Show window" }).click();
-
-    await expect(keiko.getByText("Not scheduled in this window.")).toBeVisible();
-    await expect(keiko.getByText(note)).toHaveCount(0);
-    await expect(keiko.getByText("Demo schedule")).toHaveCount(0);
-
-    // Back to the shift's own day, where it is visible again, and take it off.
-    await page.getByLabel("From").fill(shiftDay);
-    await page.getByLabel("Through").fill(shiftDay);
-    await page.getByRole("button", { name: "Show window" }).click();
-    await expect(keiko.getByText(note)).toBeVisible();
-
-    await keiko
-      .getByRole("listitem")
-      .filter({ hasText: note })
-      .getByRole("button", { name: "Remove" })
-      .click();
-    // The delete redirects to the page's own default window (it carries only
-    // `?notice=`, not the from/to the removal was performed in), so this lands
-    // back on today's week: the seeded shift is there, this spec's is gone.
-    // The banner is the only observable here — see the file header on why the
-    // URL is not assertable. Adding `toHaveURL(/notice=shift-deleted/)` in
-    // front of this looks like it would pin down a CI flake and instead fails
-    // every run, because FlashParams has already stripped the param.
-    await expect(page.getByText("Shift removed.")).toBeVisible();
-    await expect(keiko.getByText(note)).toHaveCount(0);
-    await expect(keiko.getByText("Demo schedule")).toBeVisible();
-  });
 
   test("an uncrewed departure is counted in one line, and nothing more", async ({ page }) => {
     // Create the departure, then read it back off the roster — two navigations

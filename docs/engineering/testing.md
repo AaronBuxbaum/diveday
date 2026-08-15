@@ -278,9 +278,21 @@ the full suite locally with identical pass counts across repeated runs.
   first-hit compile; the isolated per-worker databases let specs run `fullyParallel`. Every spec
   imports `test`/`expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — the fixtures
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
-  before each test, so mutations in one spec can't change what another asserts on. Iterating on a
+  before each test. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
+- **The reset restores the shop's schedule, not its settings — and a spec that writes settings takes
+  a shop of its own.** `resetDemoSchedule` puts back trips, bookings, waivers, roll call, the roster,
+  the catalog and the promo codes, so a spec that cancels a departure or fills a boat leaves nothing
+  behind. It deliberately does not put back the shop's configuration: four shop-scoped tables
+  (`shop_backup_destinations`, `shop_backup_deliveries`, `shop_whatsapp_accounts`,
+  `media_deletion_attempts`), every `shops` column but three, and the shifts and calendar feeds of
+  the permanent staff. The list is `RESET_KEEPS` in `src/db/delete-path-coverage.test.ts`, and it
+  fails when a new shop-scoped table joins it without a written reason. A test writing any of those
+  asks for the `privateShop` fixture (`e2e/fixtures.ts`), which mints a whole seeded shop for that
+  one test and signs in as its owner; the next test's reset purges it. See ADR
+  20260815-per-test-private-shops for why this is per test rather than per file, and why a
+  `finally` that restores the setting is not the answer.
 - **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
   (`reset` plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
   hands back a valid password-reset or invite token for any account by email — so each handler must

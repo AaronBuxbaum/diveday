@@ -99,6 +99,15 @@ async function recordDeletedTables(
  * a *schedule* reset, not a shop delete: the shop and the things that make it
  * itself survive, so a demo session stays signed in and a re-seed lands on the
  * same shop.
+ *
+ * **This list is also the e2e suite's leak set**, and adding to it says so out
+ * loud. Every Playwright spec shares one `blue-mantis` fixture restored by this
+ * reset before each test, so a table named here is a table whose writes survive
+ * into whatever spec Playwright's sharding runs next in that worker. A spec
+ * that writes one takes a shop of its own — the `privateShop` fixture in
+ * `e2e/fixtures.ts` (ADR 20260815-per-test-private-shops). The `shops` entry
+ * below carries the same warning for its columns: the reset restores three of
+ * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
   shops: "the shop itself survives a schedule reset — that is the whole point",
