@@ -146,9 +146,19 @@ describe("the @vercel/analytics contract this depends on", () => {
 
   it("still reads the page URL from the request-context global", () => {
     expect(sdk).toContain('Symbol.for("@vercel/request-context")');
-    // The line that composes the event's page URL, `o`. If this stops matching,
-    // read `track` in that file before assuming the redaction still holds.
-    expect(sdk).toMatch(/o:\s*\(?\s*requestContext[\s\S]{0,60}?\.url/);
+    // Where the event's page URL comes from. If this stops matching, read
+    // `track` in that file before assuming the redaction still holds.
+    //
+    // Matched loosely, on the *derivation* rather than on the `o:` property it
+    // used to be written inline against. vercel/analytics#208 hoists the same
+    // expression into a `pageUrl` local so a `beforeSend` hook can edit it
+    // before the body is built -- after which `o: pageUrl` no longer names
+    // `requestContext` at all, though the SDK reads it exactly as before and
+    // the shim keeps working. Pinned to the old shape this would have gone red
+    // on that release saying the redaction contract had broken, which is both
+    // false and the opposite of the actual news. The arrival of a supported
+    // API is the `beforeSend` assertion's job to report, and only its job.
+    expect(sdk).toMatch(/requestContext[\s\S]{0,40}?\.url/);
   });
 
   it("still offers no way for a caller to supply that URL itself", () => {
