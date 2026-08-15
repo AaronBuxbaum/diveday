@@ -630,6 +630,44 @@ export function canRecordOfflineCrewStatus(
     ?.crew.some((member) => member.id === crewPersonId);
 }
 
+/**
+ * The single latest of a subject's queued attempts, newest `occurredAt` first
+ * and **ties broken by queue position** — the later-queued event wins.
+ *
+ * The tie is not exotic. `occurredAt` is millisecond-resolution, so two
+ * deliberate taps sharing one is close to unreachable in production; but the
+ * e2e fleet freezes the clock so visual baselines stay pixel-stable, which
+ * makes every offline event for one subject share a timestamp and the tie the
+ * normal case. A stable `.sort()` returning 0 for every pair used to leave the
+ * *first-pushed* event at `[0]` — the older tap — so a captain who marked the
+ * wrong row and immediately corrected it kept reading the mistake.
+ *
+ * Later-queued wins because that is what the server already does. `events` is
+ * append-only, and `recordRollCall`/`recordCrewRollCall` (src/db/manifests.ts)
+ * refuse an offline event only when `newest.occurredAt > occurredAt` — so an
+ * equal timestamp is accepted and, read back with
+ * `orderBy(desc(occurredAt), desc(createdAt))`, the later-appended row wins.
+ * Before this the device and the server broke the same tie in opposite
+ * directions, and the screen a captain was holding disagreed with what the
+ * server would say about the very same two events once they synced.
+ *
+ * Shared by both readers rather than written twice, so the two halves of one
+ * head count cannot drift apart on the ordering question.
+ */
+function latestQueuedAttempt(
+  events: readonly OfflineRollCallEvent[],
+  matches: (event: OfflineRollCallEvent) => boolean,
+): OfflineRollCallEvent | undefined {
+  let latest: OfflineRollCallEvent | undefined;
+  for (const event of events) {
+    if (!matches(event)) continue;
+    // `>= 0`, not `> 0`: reaching an equal timestamp later in append order means
+    // this is the newer tap, so it supersedes what is held.
+    if (!latest || event.occurredAt.localeCompare(latest.occurredAt) >= 0) latest = event;
+  }
+  return latest;
+}
+
 export function latestOfflineRollCall(
   snapshot: OfflineManifestSnapshot,
   events: readonly OfflineRollCallEvent[],
@@ -647,9 +685,10 @@ export function latestOfflineRollCall(
   // e.g. a correction from "boarded" to "not_boarded" gets rejected, and the
   // diver keeps reading "Boarded" on the captain's screen. See the regression
   // test in offline-manifests.test.ts.
-  const latestAttempt = events
-    .filter((event) => event.bookingId === bookingId && event.checkpoint === checkpoint)
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
+  const latestAttempt = latestQueuedAttempt(
+    events,
+    (event) => event.bookingId === bookingId && event.checkpoint === checkpoint,
+  );
   if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
     // A result recorded on this device at this checkpoint is always explicit.
     return {
@@ -694,9 +733,10 @@ export function latestOfflineCrewRollCall(
 ):
   | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
   | undefined {
-  const latestAttempt = events
-    .filter((event) => event.crewPersonId === crewPersonId && event.checkpoint === checkpoint)
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
+  const latestAttempt = latestQueuedAttempt(
+    events,
+    (event) => event.crewPersonId === crewPersonId && event.checkpoint === checkpoint,
+  );
   if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
     return {
       state: latestAttempt.status,

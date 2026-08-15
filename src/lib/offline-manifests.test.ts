@@ -723,6 +723,111 @@ describe("offline crew roll call", () => {
     });
   });
 
+  /*
+   * Two taps at one timestamp, on both halves of one head count.
+   *
+   * `occurredAt` is millisecond-resolution, so in production two deliberate taps
+   * landing on the same value is close to unreachable. In the e2e fleet it is
+   * the *normal* case: the clock is frozen so visual baselines stay pixel-stable
+   * (AGENTS.md's clock rule), which means every offline event for one subject in
+   * every test shares one timestamp. That is how this surfaced.
+   *
+   * The rule these pin is insertion order — the later-queued event wins —
+   * because that is what the SERVER already does with an equal timestamp:
+   * `recordRollCall`/`recordCrewRollCall` refuse an offline event only when
+   * `newest.occurredAt > occurredAt`, so an equal one is accepted, and the read
+   * back orders by `desc(occurredAt), desc(createdAt)`. A device that kept the
+   * older tap disagreed with the server about the same two events.
+   */
+  it("keeps the later-queued result when two crew taps share a timestamp", () => {
+    const saved = crewSnapshot();
+    const base = {
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      crewPersonId: "crew-dana",
+      checkpoint: "after_dive_1" as const,
+      note: null,
+      // The correction and the mistake are indistinguishable by time.
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "pending" as const,
+    };
+    // A captain marks the wrong row, sees it, and fixes it in the same
+    // millisecond. The screen must show the fix, not the mistake.
+    const events = [
+      { ...base, clientEventId: "event-mistake", status: "not_boarded" as const },
+      { ...base, clientEventId: "event-correction", status: "boarded" as const },
+    ];
+
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")?.state).toBe(
+      "boarded",
+    );
+    // ...and it is the ORDER that decides, not the status: the same two events
+    // queued the other way round read the other way round.
+    expect(
+      latestOfflineCrewRollCall(saved, [events[1], events[0]], "crew-dana", "after_dive_1")?.state,
+    ).toBe("not_boarded");
+  });
+
+  it("keeps the later-queued result when two diver taps share a timestamp", () => {
+    const saved = crewSnapshot();
+    const base = {
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      bookingId: "ready",
+      checkpoint: "after_dive_1" as const,
+      note: null,
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "pending" as const,
+    };
+    const events = [
+      { ...base, clientEventId: "event-mistake", status: "not_boarded" as const },
+      { ...base, clientEventId: "event-correction", status: "boarded" as const },
+    ];
+
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")?.state).toBe("boarded");
+    expect(
+      latestOfflineRollCall(saved, [events[1], events[0]], "ready", "after_dive_1")?.state,
+    ).toBe("not_boarded");
+  });
+
+  it("still prefers a genuinely newer timestamp over queue position", () => {
+    const saved = crewSnapshot();
+    const base = {
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      crewPersonId: "crew-dana",
+      checkpoint: "after_dive_1" as const,
+      note: null,
+      syncStatus: "pending" as const,
+    };
+    // Queued newest-first, which a resync or a merge can produce. Time still
+    // wins; insertion order only breaks a tie.
+    const events = [
+      {
+        ...base,
+        clientEventId: "event-newer",
+        status: "boarded" as const,
+        occurredAt: "2026-07-20T14:09:00.000Z",
+      },
+      {
+        ...base,
+        clientEventId: "event-older",
+        status: "not_boarded" as const,
+        occurredAt: "2026-07-20T14:05:00.000Z",
+      },
+    ];
+
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toEqual({
+      state: "boarded",
+      occurredAt: "2026-07-20T14:09:00.000Z",
+      pending: true,
+      implied: false,
+    });
+  });
+
   it("attributes an event to exactly one subject, and refuses to guess", () => {
     expect(offlineRollCallSubject({ bookingId: "booking-1" })).toEqual({
       kind: "diver",

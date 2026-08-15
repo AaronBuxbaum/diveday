@@ -103,6 +103,15 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "invalid_events" }, { status: 400 });
 
+  // Oldest first, and `sort` is stable — so two events sharing one `occurredAt`
+  // keep the order the device queued them in and the later tap is applied last,
+  // taking the later `created_at` that `desc(occurredAt), desc(createdAt)` reads
+  // back first. That is the same tie-break `latestQueuedAttempt`
+  // (src/lib/offline-manifests.ts) applies on the device, and the two have to
+  // agree: a captain who marks the wrong row and corrects it within the same
+  // millisecond must not watch the screen change back after a sync. Replacing
+  // this with an unstable ordering, or sorting the payload anywhere else, breaks
+  // that quietly.
   const sorted = [...parsed.data.events].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   const results = [];
   for (const event of sorted) {
