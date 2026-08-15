@@ -27,10 +27,15 @@ test.describe("full-shop data export", () => {
     // opening it is what the promise "one CSV per record type" is read from.
     const bundle = page.getByRole("group").filter({ hasText: "What's in the bundle" });
     await expect(bundle.getByText(/\d+ files, with a row count for each/)).toBeVisible();
-    await expect(page.getByText("people.csv")).toBeHidden();
+    // `exact` because a file's *note* may name another file: `contacts.csv`'s
+    // now ends "people.csv carries the raw stamp and its clearance separately",
+    // which is a cross-reference worth having and made the loose locator match
+    // two elements. The assertion here is about the bundle listing the file, so
+    // it wants the file-name line and not any prose mentioning it.
+    await expect(page.getByText("people.csv", { exact: true })).toBeHidden();
     await bundle.getByText("What's in the bundle").click();
-    await expect(page.getByText("people.csv")).toBeVisible();
-    await expect(page.getByText("waiver_records.csv")).toBeVisible();
+    await expect(page.getByText("people.csv", { exact: true })).toBeVisible();
+    await expect(page.getByText("waiver_records.csv", { exact: true })).toBeVisible();
 
     // The button is a real download, named for the shop and the day.
     const downloadPromise = page.waitForEvent("download");
