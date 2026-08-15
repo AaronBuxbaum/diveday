@@ -44,6 +44,32 @@ import { createScanner, LanguageVariant, SyntaxKind } from "typescript/unstable/
  * whatever a regex guessed. A nested closure inside a transaction-taking
  * function inherits the rule, because closing over `tx` is exactly the shape
  * that reintroduced this.
+ *
+ * ## If a TypeScript upgrade just broke this
+ *
+ * The scanner comes from `typescript/unstable/ast`, and the package means the
+ * word: TypeScript 7 is free to move that entry point in a major, so a bump can
+ * take `pnpm check:repo` with it. That was weighed and accepted on 2026-08-15 —
+ * see the amendment on `docs/architecture/decisions/20260718-typescript7-next-preview.md`
+ * — because the failure is loud. The check throws, or the twelve cases in
+ * `check-db-concurrency.test.mjs` go red; what it can never do is quietly stop
+ * catching the fan-out it exists to catch. So this is the expected failure and
+ * the decision is already made: the risk was accepted, not designed around.
+ *
+ * Two names have already moved from what an older TypeScript offered, and both
+ * are load-bearing below. The end-of-file token is `SyntaxKind.EndOfFile`, not
+ * the classic `EndOfFileToken` — reading the old name yields `undefined`, and a
+ * `while (token !== undefined)` loop then spins forever rather than failing, so
+ * the symptom is a hang rather than an error. And the scanner emits trivia
+ * tokens rather than skipping them. The classic `ts.createSourceFile` /
+ * `ts.forEachChild` AST API is gone from the package's exports altogether.
+ *
+ * The supported replacement, and the migration target when this does break, is
+ * `typescript/unstable/sync`'s `Program`/`Project`. Measure before porting: it
+ * wants a real project setup rather than the one string of source this file's
+ * tests hand it, and it builds a program per run while this check reads every
+ * file under `src/db` and `src/features`. If a program build over those two
+ * directories comes in under a second, take it and this stops being a question.
  */
 
 const ROOT = process.cwd();

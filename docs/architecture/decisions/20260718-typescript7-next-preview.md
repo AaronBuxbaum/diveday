@@ -1,6 +1,7 @@
 # 20260718-typescript7-next-preview — Adopt TypeScript 7 with the Next.js 16.3 preview
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-15** (a repository check imports `typescript/unstable/ast` —
+  see the [Amendment](#amendment-2026-08-15--one-repository-check-rides-an-unstable-typescript-entry-point))
 - **Date:** 2026-07-18
 
 ## Context
@@ -36,3 +37,40 @@ experimental and may be renamed. Escape hatch: revert to stable Next 16.2.10 wit
 `typescript.ignoreBuildErrors: true` (keeps TS 7) or pin `typescript` to `^5` — both are one-line
 changes and were verified to build. Revisit when Next 16.3 goes GA (drop the experimental flag if it
 becomes default) or if the preview proves unstable.
+
+## Amendment 2026-08-15 — one repository check rides an unstable TypeScript entry point
+
+TypeScript is no longer only a compiler we run; one repository check now *imports* it.
+`scripts/check-db-concurrency.mjs` (added 2026-08-14, run by `pnpm check:repo`) refuses a
+`Promise.all` inside a function that can receive a drizzle transaction, and to do that it has to know
+where a function *body* begins and ends — so that a `Promise.all` in a comment, in a string, or in a
+sibling function is not a match. It gets that from TypeScript's own lexer:
+
+```js
+import { createScanner, LanguageVariant, SyntaxKind } from "typescript/unstable/ast";
+```
+
+That entry point is named `unstable` by the package and TypeScript 7 means it, so a TypeScript major
+upgrade may remove or reshape it and take `pnpm check` with it. **If you are reading this mid-upgrade
+because that just happened: this is the expected failure, and the decision was already made to accept
+it rather than design around it.** The reason is that it breaks *loudly* — the check throws, or the
+twelve cases in `scripts/check-db-concurrency.test.mjs` go red — so the rule can never silently stop
+catching the fan-out it exists to catch, which is the only failure that would actually cost anything.
+The alternatives were weighed and cost more than the risk: hand-rolling a string/template/comment-aware
+brace matcher is about sixty lines of exactly the code TypeScript already ships correctly, and it
+becomes *our* bug when it is wrong; `@babel/parser` sits in `node_modules` only transitively, so using
+it means declaring a new runtime dependency and writing its own ADR.
+
+Two names have already moved from what an older TypeScript offered, and both are worth knowing before
+you edit that file. The end-of-file token is `SyntaxKind.EndOfFile`, not the classic `EndOfFileToken` —
+reading the old name yields `undefined`, and a `while (token !== undefined)` loop then spins forever
+rather than failing, so the symptom is a hang rather than an error. And the scanner emits trivia tokens
+rather than skipping them. The classic `ts.createSourceFile` / `ts.forEachChild` AST API is gone from
+the package's exports altogether.
+
+The supported replacement, and the migration target when this does break, is
+`typescript/unstable/sync`'s `Program`/`Project`. Measure before porting rather than assuming: it wants
+a real project setup rather than the one string of source that check's tests hand it, and it builds a
+program per run while the check reads every file under `src/db` and `src/features`. If a program build
+over those two directories comes in under a second, take it — that is the stable answer and this stops
+being a question.
