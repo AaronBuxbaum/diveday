@@ -92,7 +92,11 @@ function humanElapsed(seconds) {
 
 /** Every process, as `{ pid, ppid, elapsedSeconds, rssMb, command }`. */
 function snapshotProcesses() {
-  const raw = readBounded("ps", ["-axo", "pid=,ppid=,etime=,rss=,command="], {
+  // `-eo`, not the BSD `-axo`: this hook runs wherever the repo runs, and that
+  // includes Claude Cloud's Linux runners. `-e` and `-o` are POSIX and behave
+  // identically under macOS's BSD ps and Linux procps; `-axo` is BSD spelling
+  // that procps only tolerates by accident.
+  const raw = readBounded("ps", ["-eo", "pid=,ppid=,etime=,rss=,command="], {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
     timeoutMs: SUBPROCESS_TIMEOUTS.processTable,

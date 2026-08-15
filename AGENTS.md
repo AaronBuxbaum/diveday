@@ -163,6 +163,18 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 ## Hard rules
 
+- **A background job you start is yours to end, and `TaskList` is not how you check.** On
+  2026-08-15 a wait-loop ran for **nine hours** in this repo, and `TaskList` reported "No tasks
+  found" twice while that shell was alive — so an agent that dutifully reaps before ending its turn
+  still misses it. `node scripts/stray-processes.mjs --list` reads the process table, which is the
+  only honest answer; the `Stop` hook runs it for you and hands back what it finds. Three habits
+  that would each have prevented it, and none of which the hook can enforce: **never pipe a
+  long-running command through `tail`/`head`** — neither can flush, so a command that gets moved to
+  the background leaves an output file that stays empty rather than filling in as it runs (use
+  `grep --line-buffered`, or read the output file directly); **never write a wait whose only exit is
+  a success marker** — give it a timeout and a failure branch, or it spins forever the moment the
+  thing it watches dies; and **when you kill a producer, stop its watcher in the same breath**, since
+  a `pkill` that frees you is the same `pkill` that strands whatever was waiting on its output.
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
 - **A thought you don't act on goes in the register, not in your closing message.** Finishing a
