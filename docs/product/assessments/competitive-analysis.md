@@ -92,8 +92,11 @@ In rough order of how often it would kill the deal:
    export (attack lock-in fear head-on) and a founding-shop program that names real shops.
 
 Explicitly fine to *not* have, despite competitors: retail POS/barcode inventory (non-goal —
-DiveShop360 owns it), marketing campaigns/CRM blasts, channel-manager/OTA plumbing, staff payroll,
-multi-location (say "not yet" honestly, as the pricing FAQ already does).
+DiveShop360 owns it), work orders / repair-ticket tracking (parts, labor, tech notes — the same
+retail-service territory as POS/inventory, not a boat-day or training concern; raised directly by a
+DiveShop360-shop inquiry 2026-08-15 and declined for that reason), marketing campaigns/CRM blasts,
+channel-manager/OTA plumbing, staff payroll, multi-location (say "not yet" honestly, as the pricing
+FAQ already does).
 
 ## Pricing posture
 
