@@ -108,6 +108,37 @@ finished:
 - Add a `UNIQUE` or foreign-key constraint that existing rows might violate.
 - Remove an enum value.
 
+### Safe to land, unsafe to roll back into
+
+A third category the two lists above have no slot for, because the hazard does not arrive at
+migration time — it arrives days later, at the moment you press Instant Rollback.
+
+- **Drop `NOT NULL` from an existing column.**
+
+Landing it breaks nothing: every row that exists still has a value, so the live old code reads
+exactly what it always read. The trap springs when the *new* code writes its first null and you then
+roll the code back — the old deployment is now reading `null` out of a column its types say is a
+`string`, and it does whatever an unguarded `.toLowerCase()` or `.trim()` does. Instant Rollback
+does not touch the schema, so there is nothing to undo and no error to see coming; the previous
+release simply starts throwing on rows it has never met.
+
+The live instance of this: `20260815001735_gray_human_torch` drops `NOT NULL` from
+`certifications.identifier` and `nitrox_certifications.identifier`, so a self-declared card can
+exist without inventing a card number. Forward is provably safe — every writer in the *previous*
+release sets a non-null identifier, so nothing it does can violate the new `CHECK`. Backward is not:
+`src/db/import.ts` builds its dedupe map by calling `.toLowerCase()` on every live card's
+identifier, so the first CSV import after a rollback 500s for the owner.
+
+**Before Instant Rollback, ask whether the target release predates a nullability widening whose
+nulls now exist.** If it does, the code rollback alone is not the safe path — you are in the
+forward-migration or restore path below.
+
+**Today there is a cheaper answer, and it has an expiry date.** DiveDay is pre-pilot with no real
+users, so a database that has gone wrong can simply be reset and re-seeded rather than reconciled
+(**H-47**). That makes this whole class of hazard a nuisance instead of an incident. It stops being
+true the moment the first pilot shop has real divers in the system — at which point this section is
+the plan, and the escape hatch is gone. Do not let that transition happen silently.
+
 ### The guard that enforces it
 
 `scripts/check-migrations.mjs` reads the SQL of every migration newer than the previous release and
@@ -176,12 +207,20 @@ and a NOT NULL tightening (backfill, add `CHECK ... NOT VALID`, validate, then s
 There are no down migrations. Rollback means one of two things, and choosing between them is the
 first decision in any bad-deploy incident.
 
-**Roll the code back, leave the schema.** Correct whenever the migration was expand-only — which,
-if the rule above was followed, is every migration. Vercel dashboard → the project → **Deployments**
-→ the last known-good deployment → **Instant Rollback**. It repoints the production alias at an
-already-built deployment; it does not rebuild, and it therefore **does not run migrations of any
-kind, forward or backward**. The database keeps the new column; the old code ignores it. This is why
-expand-only migrations are the whole game — they are what makes the rollback button actually work.
+**Roll the code back, leave the schema.** Correct whenever the migration was expand-only *and* the
+old code can read every row the new code has written since. Vercel dashboard → the project →
+**Deployments** → the last known-good deployment → **Instant Rollback**. It repoints the production
+alias at an already-built deployment; it does not rebuild, and it therefore **does not run
+migrations of any kind, forward or backward**. The database keeps the new column; the old code
+ignores it. This is why expand-only migrations are the whole game — they are what makes the rollback
+button actually work.
+
+The second half of that condition is the one that bites, because the schema alone will not tell you
+it is false: a migration that only *widened* something is still expand-only, yet the rows the new
+code wrote through that widening can be unreadable to the old code. See
+[Safe to land, unsafe to roll back into](#safe-to-land-unsafe-to-roll-back-into) before choosing
+this path — and note the pre-pilot escape hatch recorded there (**H-47**), which is why this is
+currently a nuisance rather than an incident.
 
 **Write a forward migration that undoes it.** The only option when the bad migration was
 contracting, or when it wrote wrong data. Generate a new migration that restores the shape, get it

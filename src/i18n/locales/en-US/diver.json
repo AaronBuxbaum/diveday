@@ -2160,7 +2160,7 @@
         "title": "The dive day",
         "item1": "One trip page: the dive, roster, prep list, and manifest",
         "item2": "Per-dive roll call with an append-only boarding history",
-        "item3": "An encrypted offline manifest, reconciled when signal returns",
+        "item3": "A head count with no signal, matching the counter's once you're back",
         "item4": "A print view of the manifest and prep list",
         "item5": "A rental prep list built from the sizes divers gave you",
         "item6": "Site briefings: routes, landmarks, field guide, diver moments",
@@ -2777,7 +2777,9 @@
         "paymentsTerm": "Payments",
         "paymentsBody": "DiveDay never sees a card number. Cards are entered directly with Stripe on the shop's own connected account. We keep the amount, the state and Stripe's identifiers, so a shop can reconcile a refund without us holding anything worth stealing.",
         "trailsTerm": "Operational trails",
-        "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop's own tenant."
+        "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop's own tenant.",
+        "devicesTerm": "The copy on a boat phone",
+        "devicesBody": "so a head count still works with no signal, a crew phone holds its own copy of the next two days of manifests: the roster, emergency contacts, and whether each diver is cleared to board. It is stored encrypted on that phone, under a key the browser will not hand back out, so it cannot be read off the device's storage — though anyone holding the unlocked phone can open it, the same as the paper manifest it replaces. It is removed when a different shop signs in on that phone, and it deletes itself at the earlier of fourteen days after it was saved or seven days after the trip ended."
       },
       "where": {
         "heading": "Where it is processed",

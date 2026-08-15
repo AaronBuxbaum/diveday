@@ -163,7 +163,9 @@ Copy rules:
 - Use real dive terms correctly; see [product/glossary.md](../product/glossary.md).
 - Keep implementation language out of customer-facing copy. Say “saved on this phone” instead of
   “encrypted local snapshot,” and “checked again when you're back in service” instead of
-  “reconciled.”
+  “reconciled.” The one page that may name the protection is `/privacy`, where what guards a
+  shop's divers' data is the reader's own question rather than a capability being sold — see
+  [principles.md](principles.md) §4.
 - Never invent proof, customer counts, testimonials, certifications, or superlatives.
 
 ### Before / after examples

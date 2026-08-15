@@ -2160,7 +2160,7 @@
         "title": "El día de buceo",
         "item1": "Una página de salida: inmersión, participantes, preparación y listado",
         "item2": "Pases de lista por inmersión con historial de embarque de solo añadir",
-        "item3": "Un listado sin conexión cifrado, reconciliado cuando vuelve la señal",
+        "item3": "Un recuento sin señal, que coincide con el del mostrador cuando vuelves",
         "item4": "Una vista de impresión del listado y la lista de preparación",
         "item5": "Una lista de preparación hecha con las tallas que te dieron",
         "item6": "Briefings de sitio: rutas, referencias, guía de campo y momentos",
@@ -2777,7 +2777,9 @@
         "paymentsTerm": "Pagos",
         "paymentsBody": "DiveDay nunca ve un número de tarjeta. Las tarjetas se introducen directamente en Stripe, en la cuenta conectada del propio centro. Guardamos el importe, el estado y los identificadores de Stripe, para que un centro pueda cuadrar un reembolso sin que tengamos nada que valga la pena robar.",
         "trailsTerm": "Historiales operativos",
-        "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro."
+        "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
+        "devicesTerm": "La copia en un teléfono del barco",
+        "devicesBody": "para que el recuento siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días: los participantes, los contactos de emergencia y si cada buceador puede embarcar. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo — aunque quien tenga el teléfono desbloqueado puede abrirla, igual que con la tablilla de papel a la que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
       "where": {
         "heading": "Dónde se procesa",

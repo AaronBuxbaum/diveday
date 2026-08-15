@@ -141,7 +141,12 @@ chosen battlegrounds — and re-read it before changing the spine.
   while online, with a manual "Refresh now" for right before losing signal; it never transfers
   between devices or guarantees stale readiness is live. Captain's words ("this phone stays
   ready", "checked again when service returns") — the machinery (encryption, reconciliation) stays
-  in ADRs, never in copy ([design/principles.md](../design/principles.md) §4).
+  in ADRs, never in copy ([design/principles.md](../design/principles.md) §4). **`/privacy` is the
+  single exception**, and only for encryption: on the page about who can read a shop's divers'
+  data, what protects the copy on a crew phone is the reader's actual question, so it is named
+  there — with the limits of that protection named alongside it. Nowhere else. The capability
+  index on `/product` sells the outcome ("a head count with no signal, matching the counter's once
+  you're back"), never the snapshot.
 - **Safety-adjacent copy** (readiness, manifests, medical, cert gating, nitrox) gets
   `dive-domain-expert` review before merge, same as safety-critical code.
 - Multi-location operation and unconfigured provider integrations are out of scope and must not be
