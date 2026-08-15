@@ -42,6 +42,7 @@ adapters and must not introduce unique requirements.
 | `pnpm check:architecture` | layer boundaries (now including `src/components`/`src/i18n`) and feature-module contracts; pre-existing debt is ratcheted in `scripts/architecture-baseline.json`, same `--write` / `--absorb` as `check:copy` |
 | `pnpm check:timezone` | every `Intl.DateTimeFormat`/`toLocale*String` under `src/app`, `src/components`, `src/lib`, `src/db`, `src/features` names a `timeZone`. Omitting it renders in the **host** zone — UTC on every server and CI box — so a 7:30 AM departure silently reads 11:30 AM and no test on a UTC machine can tell. The `src/lib/format.ts` formatters take `timeZone` as a **required** parameter, so calls through them are already proven by `pnpm typecheck`; this covers code reaching for `Intl` directly. A deliberate `timeZone: "UTC"` passes — the rule is *name* a zone, not name the shop's, because a date-only value or a wall-clock time of day genuinely has no instant in it |
 | `pnpm check:route-coverage` | every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json` with the `e2e/` specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason for having neither. The coverage lists are hand-maintained (a spec usually *clicks* its way to a route, which no grep can see); `--write` regenerates only the mechanical facts and refuses to add an exemption or drop coverage, `--absorb` records a merge-in loss, `--report` prints the per-route table |
+| `node scripts/stray-processes.mjs` | report (never a gate, never in `check`) — background shells a Claude session spawned that are still alive after 10 minutes, plus dev/test processes reparented to init that nobody will ever reap. Wired as a **`Stop` hook** in `.claude/settings.json`, so it runs when an agent finishes a turn and hands what it finds back to that agent; `--kill` reaps, `--list` reports without the non-zero exit. It exists because a wait-loop ran for **nine hours** on 2026-08-15: a `pnpm test` piped through `tail` (which cannot flush, so its output file stayed empty) was backgrounded, a second task waited on that file for a success marker with no timeout and no failure branch, and the producer was then killed — leaving a condition that could never be satisfied. The rule against exactly that loop was already written and was followed anyway, and **`TaskList` reported "No tasks found" while the shell was alive**, so the process table is the only honest check |
 | `pnpm gates` | report (never a gate, never in `check`): days since each `docs/product/human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days". Ages derived from dated outcomes in the rows and `git blame`, printed as `≥ N` when a shallow clone can only bound them. It also ages the `docs/product/follow-ups/` register — id, status, kind, effort, days since the date in the id, oldest first — since that inbox rots the same way and `pnpm check:follow-ups` only counts it. Nothing it reports is an agent's to close |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
@@ -162,6 +163,18 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 
 ## Hard rules
 
+- **A background job you start is yours to end, and `TaskList` is not how you check.** On
+  2026-08-15 a wait-loop ran for **nine hours** in this repo, and `TaskList` reported "No tasks
+  found" twice while that shell was alive — so an agent that dutifully reaps before ending its turn
+  still misses it. `node scripts/stray-processes.mjs --list` reads the process table, which is the
+  only honest answer; the `Stop` hook runs it for you and hands back what it finds. Three habits
+  that would each have prevented it, and none of which the hook can enforce: **never pipe a
+  long-running command through `tail`/`head`** — neither can flush, so a command that gets moved to
+  the background leaves an output file that stays empty rather than filling in as it runs (use
+  `grep --line-buffered`, or read the output file directly); **never write a wait whose only exit is
+  a success marker** — give it a timeout and a failure branch, or it spins forever the moment the
+  thing it watches dies; and **when you kill a producer, stop its watcher in the same breath**, since
+  a `pkill` that frees you is the same `pkill` that strands whatever was waiting on its output.
 - **Verify before commit** — `pnpm check` green minimum; e2e when flows changed; *look at* UI
   you changed (screenshots, light + dark). Never report unverified work as done.
 - **A thought you don't act on goes in the register, not in your closing message.** Finishing a

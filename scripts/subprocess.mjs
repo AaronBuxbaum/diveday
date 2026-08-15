@@ -48,6 +48,13 @@ export const TIMEOUT_EXIT_CODE = 124;
 export const SUBPROCESS_TIMEOUTS = {
   /** One local `git` read (`rev-parse`, `log`, `blame`, `archive`). No network. */
   git: 60_000,
+  /**
+   * One `ps` read of the whole process table. Purely local and normally a few
+   * milliseconds; the ceiling is here because the one caller
+   * (`stray-processes.mjs`) runs as a `Stop` hook on every turn, and a hook
+   * that can hang is the exact failure it was written to report.
+   */
+  processTable: 10_000,
   /** One AWS CLI API call: `sts`, `ssm`, `secretsmanager`, `s3control`. */
   awsApi: 60_000,
   /**
