@@ -115,6 +115,99 @@ describe("calculateReadiness", () => {
     );
   });
 
+  /**
+   * **A claim is not a card in a staffer's hand, and the diver must be told so.**
+   *
+   * A self-declaration is `pending`, so it fell into the `certification_pending`
+   * branch — which tells the diver on `/ready` *"your certification card is with
+   * the shop for verification"* about a card the shop has never seen, and (via
+   * `CERT_ENTRY_CODES`, which excludes `pending` to avoid a duplicate the unique
+   * index would refuse) simultaneously withdrew the form that was their only way
+   * to send one. There is no number on a self-declared row, so there was never a
+   * duplicate to avoid. A diver who ticked a dropdown was left with no move and
+   * arrived at the dock without a card.
+   *
+   * The gate itself never moved — both codes are blockers — which is exactly why
+   * this had to be tested rather than noticed.
+   */
+  it("does not tell a diver their self-declared level is a card awaiting verification", () => {
+    const blockers = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [
+        certification({
+          status: "pending",
+          level: "instructor",
+          selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z"),
+        }),
+      ],
+      now,
+      timezone: "UTC",
+    }).blockers;
+
+    expect(blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_self_declared" }),
+    );
+    expect(blockers).not.toContainEqual(expect.objectContaining({ code: "certification_pending" }));
+  });
+
+  it("still says 'with the shop' once a real card is captured beside the claim", () => {
+    const blockers = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [
+        certification({
+          status: "pending",
+          level: "instructor",
+          selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z"),
+        }),
+        certification({ status: "pending", level: "advanced_open_water" }),
+      ],
+      now,
+      timezone: "UTC",
+    }).blockers;
+
+    // The staff-captured row is the stronger fact and wins the sentence.
+    expect(blockers).toContainEqual(expect.objectContaining({ code: "certification_pending" }));
+  });
+
+  it("prefers the level the shop has evidence for over a claim", () => {
+    const blockers = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [
+        certification({ level: "open_water" }),
+        certification({
+          status: "pending",
+          level: "instructor",
+          selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z"),
+        }),
+      ],
+      now,
+      timezone: "UTC",
+    }).blockers;
+
+    expect(blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+  });
+
+  it("does not tell a diver their nitrox tick is a card awaiting verification", () => {
+    const blockers = calculateReadiness({
+      requirement: nitroxRequirement,
+      waiver: signedWaiver,
+      certifications: [certification()],
+      nitroxCertifications: [
+        nitroxCard({ status: "pending", selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z") }),
+      ],
+      now,
+      timezone: "UTC",
+    }).blockers;
+
+    expect(blockers).toContainEqual(expect.objectContaining({ code: "nitrox_self_declared" }));
+    expect(blockers).not.toContainEqual(expect.objectContaining({ code: "nitrox_pending" }));
+  });
+
   it("is ready only with completed waiver and a verified sufficient unexpired card", () => {
     expect(
       calculateReadiness({

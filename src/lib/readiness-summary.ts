@@ -98,6 +98,10 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   medical_review: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
+  // "action", not "waiting": the diver said a level and nobody has seen a card,
+  // so there is nothing on the shop's end to wait for — the card-entry form on
+  // this very page is the whole fix, and it is offered for this code.
+  certification_self_declared: "action",
   certification_expired: "action",
   certification_insufficient: "action",
   specialty_missing: "action",
@@ -108,6 +112,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   specialty_import_unconfirmed: "waiting",
   nitrox_missing: "action",
   nitrox_pending: "waiting",
+  nitrox_self_declared: "action",
   payment_due: "action",
   payment_refunded: "action",
 };

@@ -736,6 +736,12 @@ export async function loadShopExportBundleInput(
             // carded on sight" marker, permanent even after a staff confirm.
             "imported_at",
             "imported_from_label",
+            // The weaker sibling of imported_at, and it travels for the same
+            // reason: a non-null self_declared_at means the level came off a
+            // public opt-in the diver filled in themselves, with no card
+            // sighted. Dropping it from the export would launder a claim into
+            // an ordinary card the moment the file is read back.
+            "self_declared_at",
             "deleted_at",
             "created_at",
           ],
@@ -752,6 +758,7 @@ export async function loadShopExportBundleInput(
             row.reviewedAt,
             row.importedAt,
             row.importedFromLabel,
+            row.selfDeclaredAt,
             row.deletedAt,
             row.createdAt,
           ]),
@@ -802,6 +809,8 @@ export async function loadShopExportBundleInput(
             "reviewed_at",
             "imported_at",
             "imported_from_label",
+            // Same reason as the level card's — see certifications.csv above.
+            "self_declared_at",
             "deleted_at",
             "created_at",
           ],
@@ -816,6 +825,7 @@ export async function loadShopExportBundleInput(
             row.reviewedAt,
             row.importedAt,
             row.importedFromLabel,
+            row.selfDeclaredAt,
             row.deletedAt,
             row.createdAt,
           ]),

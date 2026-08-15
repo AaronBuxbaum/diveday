@@ -26,6 +26,11 @@ import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import {
+  diveDeclarationInput,
+  diveDeclarationSchema,
+  toDiveDeclaration,
+} from "@/lib/dive-declaration";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import {
@@ -679,6 +684,11 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     email: formData.get("email-0"),
     phone: formData.get("phone") || undefined,
   });
+  // The optional "what can you dive?" pair, parsed apart from the identity
+  // fields on purpose: it is not the diver's fault if a level code arrives
+  // malformed, and a wait-list join must not be refused over an answer the form
+  // said was optional. A declaration that fails validation is simply not said.
+  const declaration = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
   if (!parsed.success) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
   }
@@ -693,6 +703,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone || undefined,
+    declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "diver" });

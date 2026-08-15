@@ -2,12 +2,25 @@ import { describe, expect, it } from "vitest";
 import {
   generateLastMinutePromoCode,
   isValidLastMinuteDiscountPercent,
+  LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
+  reviewLastMinuteRecipients,
 } from "./last-minute-list";
+import type { CertificationLevel } from "./readiness";
 
 function match(personId: string) {
   return { person: { id: personId } };
+}
+
+function recipient(name: string, level: CertificationLevel | null | "unknown") {
+  return {
+    name,
+    // "unknown" is the person nothing at all is on file for — a distinct case
+    // from a profile that exists and holds no level, and both must count as
+    // "said nothing".
+    profile: level === "unknown" ? null : { level },
+  };
 }
 
 describe("lastMinuteEntryMatchesTripDate", () => {
@@ -96,6 +109,124 @@ describe("orderLastMinuteRecipients", () => {
       match("b"),
       match("d"),
     ]);
+  });
+});
+
+/**
+ * The arithmetic behind the one sentence a staffer reads at the send button,
+ * and the ordering that makes capping the list safe. Nothing here filters or
+ * gates the blast (ADR 20260814-self-declared-cards) — it only decides what
+ * gets said and what gets drawn first.
+ */
+describe("reviewLastMinuteRecipients", () => {
+  it("counts who is below the trip's bar and who said nothing", () => {
+    const review = reviewLastMinuteRecipients(
+      [
+        recipient("Ravi", "open_water"),
+        recipient("Hana", "advanced_open_water"),
+        recipient("Amara", null),
+        recipient("Felix", "unknown"),
+        recipient("Petra", "rescue"),
+      ],
+      "advanced_open_water",
+    );
+
+    expect(review.total).toBe(5);
+    expect(review.below).toBe(1);
+    expect(review.notSaid).toBe(2);
+  });
+
+  it("counts a diver at the bar as meeting it, never below it", () => {
+    const review = reviewLastMinuteRecipients(
+      [recipient("Hana", "advanced_open_water")],
+      "advanced_open_water",
+    );
+
+    expect(review.below).toBe(0);
+  });
+
+  it("puts nobody below a trip that asks for no level, however junior the list", () => {
+    const review = reviewLastMinuteRecipients(
+      [recipient("Ravi", "open_water"), recipient("Amara", null)],
+      null,
+    );
+
+    // The summary's own no-requirement branch reads off this: a departure with
+    // no bar has nothing for a level to be under, and "0 below" would invite
+    // the reader to imagine a bar that isn't there.
+    expect(review.below).toBe(0);
+    expect(review.notSaid).toBe(1);
+    expect(review.total).toBe(2);
+  });
+
+  it("reports nobody below when the whole list clears the bar", () => {
+    const review = reviewLastMinuteRecipients(
+      [recipient("Hana", "advanced_open_water"), recipient("Petra", "instructor")],
+      "advanced_open_water",
+    );
+
+    expect(review.below).toBe(0);
+    expect(review.notSaid).toBe(0);
+    expect(review.hidden).toBe(0);
+  });
+
+  it("lifts everyone below the bar to the top, keeping send order inside each group", () => {
+    const review = reviewLastMinuteRecipients(
+      [
+        recipient("Hana", "advanced_open_water"),
+        recipient("Ravi", "open_water"),
+        recipient("Amara", null),
+        recipient("Naledi", "open_water"),
+        recipient("Petra", "instructor"),
+      ],
+      "advanced_open_water",
+    );
+
+    // Ravi before Naledi (their send order), both before everyone else; the
+    // rest keep theirs too. A "said nothing" recipient is *not* lifted — the
+    // summary states that count in words, and lifting it would push the names
+    // a staffer can actually act on down the page.
+    expect(review.shown.map((r) => r.name)).toEqual(["Ravi", "Naledi", "Hana", "Amara", "Petra"]);
+  });
+
+  it("caps the drawn list and counts the remainder", () => {
+    const many = Array.from({ length: 14 }, (_, index) =>
+      recipient(`diver-${index}`, "advanced_open_water"),
+    );
+
+    const review = reviewLastMinuteRecipients(many, "open_water", 4);
+
+    expect(review.shown).toHaveLength(4);
+    expect(review.hidden).toBe(10);
+    expect(review.total).toBe(14);
+  });
+
+  it("never lets the cap hide someone below the bar behind someone who clears it", () => {
+    // The whole reason a default range is allowed here instead of a `Pager`.
+    // The one Open Water diver joined last and would be recipient 12 of 12 in
+    // send order; a naive `slice(0, 2)` would draw two Instructors and leave a
+    // shop looking at a clean list.
+    const many = [
+      ...Array.from({ length: 11 }, (_, index) => recipient(`instructor-${index}`, "instructor")),
+      recipient("Ravi", "open_water"),
+    ];
+
+    const review = reviewLastMinuteRecipients(many, "rescue", 2);
+
+    expect(review.shown.map((r) => r.name)).toEqual(["Ravi", "instructor-0"]);
+    expect(review.hidden).toBe(10);
+    expect(review.below).toBe(1);
+  });
+
+  it("draws everyone when the list is shorter than the default range", () => {
+    const many = Array.from({ length: LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT }, (_, index) =>
+      recipient(`diver-${index}`, "open_water"),
+    );
+
+    const review = reviewLastMinuteRecipients(many, "open_water");
+
+    expect(review.shown).toHaveLength(LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT);
+    expect(review.hidden).toBe(0);
   });
 });
 

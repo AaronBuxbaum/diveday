@@ -728,7 +728,10 @@ export default async function SchedulePage({
         <DiverIntlProvider
           locale={locale}
           timeZone={tz}
-          namespaces={["lastMinute", "inquiry", "common"]}
+          // `course` is where the diver-facing certification-level words live
+          // (`DIVER_CERTIFICATION_LEVEL_KEYS`), shared with the public course
+          // pages — `DiveDeclarationFields` inside the deal-list form reads them.
+          namespaces={["lastMinute", "inquiry", "common", "course"]}
         >
           <LastMinuteListForm shopSlug={shopSlug} />
           {shop.contactEmail ? (

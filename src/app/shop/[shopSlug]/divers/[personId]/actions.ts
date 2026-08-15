@@ -28,8 +28,11 @@ import { refundOrder } from "@/db/orders";
 import {
   archiveCertification,
   archiveSpecialtyCertification,
+  type CardSighting,
+  type CertificationReviewRefusal,
   createCertification,
   createSpecialtyCertification,
+  type LevelCardSighting,
   restoreCertification,
   restoreSpecialtyCertification,
   reviewCertification,
@@ -106,6 +109,22 @@ const specialtyCertificationSchema = z.object({
   identifier: z.string().trim().min(2).max(120),
   expiresOn: dateSchema,
 });
+/**
+ * The card a staffer says they are holding, when the row they are verifying is
+ * still only a diver's word (`certifications.selfDeclaredAt`). Same bounds as
+ * capturing a card, because it is the same act.
+ */
+const sightingSchema = z.object({
+  agency: agencySchema,
+  identifier: z.string().trim().min(2).max(120),
+});
+/**
+ * A **level** card's sighting names the rung too. The diver's claim is what the
+ * select is prefilled with, so the common submit carries it back unchanged —
+ * but it arrives as a posted field that is validated against the closed ladder
+ * like any other, never trusted from the row it is about to overwrite.
+ */
+const levelSightingSchema = sightingSchema.extend({ level: levelSchema });
 const needsStaffFitSchema = z.object({
   needed: z.string().optional(),
   needsStaffFitNote: z.string().trim().max(200).optional(),
@@ -238,19 +257,82 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
   revalidateAndRedirect(base, backTo(base, notice, "specialty-cards"));
 }
 
-/** The only review outcome is "certified" — a bad card is deleted, not marked for correction. */
+/**
+ * The only review outcome is "certified" — a bad card is deleted, not marked
+ * for correction.
+ *
+ * One tap for every card a staffer captured themselves. A **self-declared**
+ * card (a diver named their own level on a public opt-in) is the exception: it
+ * carries no number, and this form asks for the agency, the number **and the
+ * level** off the card in the staffer's hand before it will certify anything.
+ * That is the same act as capturing a card, and `reviewCertification` refuses
+ * without it — as does the database, whose check constraint will not let a
+ * numberless row reach `verified`.
+ *
+ * The level is there because the likeliest wrong claim is an overstated one:
+ * transcribing the number off a real Open Water card while keeping the diver's
+ * typed "Instructor" would verify the one field nobody looked at.
+ */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const certificationId = String(formData.get("certificationId") ?? "");
-  const updated = certificationId
+  // Present only on the sighting form; absent on the one-tap button, where a
+  // blank parse must not turn into an empty-string "sighting".
+  const sighting = levelSightingFromForm(formData);
+  const outcome = certificationId
     ? await reviewCertification(await getDb(), {
         shopId: staff.user.shopId,
         certificationId,
         status: "verified",
+        sighting,
       })
-    : null;
-  revalidateAndRedirect(base, backTo(base, updated ? "verified" : "invalid", "cards"));
+    : ({ ok: false, reason: "not_found" } as const);
+  revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "cards"));
+}
+
+/**
+ * The card the staffer says they are looking at, or undefined when this submit
+ * carried none. Undefined and "they typed nothing" are the same outcome —
+ * `reviewCertification` refuses either way on a row that needs a sighting — but
+ * they are kept distinct here so a malformed agency is a refusal rather than a
+ * silent fall-through to the shop's first enum member.
+ */
+function sightingFromForm(formData: FormData): CardSighting | undefined {
+  if (!formData.has("sightedIdentifier")) return undefined;
+  const parsed = sightingSchema.safeParse({
+    agency: formData.get("sightedAgency"),
+    identifier: formData.get("sightedIdentifier"),
+  });
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * {@link sightingFromForm} plus the rung the staffer read off the card.
+ *
+ * A submit missing or malforming the level is `undefined` — the same outcome as
+ * a missing number, so `reviewCertification` refuses with
+ * `card_sighting_required` rather than certifying a level nobody stated. That
+ * is the point of parsing it here: the alternative, falling back to the level
+ * already on the row, is precisely the diver's own claim being promoted.
+ */
+function levelSightingFromForm(formData: FormData): LevelCardSighting | undefined {
+  if (!formData.has("sightedIdentifier")) return undefined;
+  const parsed = levelSightingSchema.safeParse({
+    agency: formData.get("sightedAgency"),
+    identifier: formData.get("sightedIdentifier"),
+    level: formData.get("sightedLevel"),
+  });
+  return parsed.success ? parsed.data : undefined;
+}
+
+function reviewNotice(
+  outcome: { ok: true } | { ok: false; reason: CertificationReviewRefusal },
+): string {
+  if (outcome.ok) return "verified";
+  if (outcome.reason === "card_sighting_required") return "card-sighting-required";
+  if (outcome.reason === "duplicate_card") return "duplicate-card";
+  return "invalid";
 }
 
 export async function reviewSpecialtyAction(
@@ -263,24 +345,24 @@ export async function reviewSpecialtyAction(
   const certificationId = String(formData.get("certificationId") ?? "");
   // One tap, the same as the level card beside it. The imported-card
   // attestation this used to forward is gone
-  // (ADR 20260814-one-tap-imported-card-confirm).
+  // (ADR 20260814-one-tap-imported-card-confirm). A self-declared nitrox card
+  // still asks for the card in the staffer's hand — this tap authorizes a gas
+  // fill, and nobody has seen anything yet.
   const outcome = certificationId
     ? formData.get("cardType") === "nitrox"
       ? await reviewNitroxCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          sighting: sightingFromForm(formData),
         })
       : await reviewSpecialtyCertification(await getDb(), {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
         })
-    : null;
-  revalidateAndRedirect(
-    base,
-    backTo(base, outcome?.ok ? "verified" : "invalid", "specialty-cards"),
-  );
+    : ({ ok: false, reason: "not_found" } as const);
+  revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "specialty-cards"));
 }
 
 /**

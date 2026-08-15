@@ -50,6 +50,16 @@ const NOTICE_KEYS: Record<
   // The card-removal toast is handled by the page itself (`UndoToast`); this
   // entry is the fallback for a `?notice=card-deleted` with no id to undo.
   "card-deleted": { form: "cards", tone: "success", key: "divers.notices.cardDeleted" },
+  // A self-declared card cannot be certified on the bare tap every other
+  // pending card gets — see `reviewCertification`. Reachable by hand-editing
+  // the URL or by submitting the sighting form empty; either way the answer is
+  // the same instruction.
+  "card-sighting-required": {
+    form: "cards",
+    tone: "danger",
+    key: "divers.notices.cardSightingRequired",
+  },
+  "duplicate-card": { form: "cards", tone: "danger", key: "divers.notices.duplicateCard" },
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },

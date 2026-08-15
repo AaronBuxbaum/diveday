@@ -9,6 +9,7 @@ import {
   type CertRequirementSource,
   certificationRank,
   combineCertRequirements,
+  isUnsightedSelfDeclaration,
   type SiteCertRequirement,
 } from "./readiness";
 
@@ -47,22 +48,30 @@ import {
  * they hold a specialty card at all.
  *
  * **Why ignoring `status` is safe, and what would make it unsafe.** A `pending`
- * card is not a self-assertion: **divers cannot write cards.** The only callers
- * of `createCertification` / `createSpecialtyCertification` /
- * `createNitroxCertification` are the authenticated staff surface
- * `src/app/shop/[shopSlug]/divers/[personId]/actions.ts` and the staff-run
- * contact importer, so every row this function reads is a staffer's
- * transcription of something they were handed. `pending` means "a staffer typed
- * it, nobody has looked the number up with the agency yet" — a queue state, not
- * a claim by the person taking the seat. Readiness is what waits for the
- * lookup.
+ * card is *almost* never a self-assertion: with one stamped exception, divers
+ * cannot write cards. The callers of `createCertification` /
+ * `createSpecialtyCertification` / `createNitroxCertification` are the
+ * authenticated staff surface `src/app/shop/[shopSlug]/divers/[personId]/actions.ts`
+ * and the staff-run contact importer, so those rows are a staffer's
+ * transcription of something they were handed. `pending` there means "a staffer
+ * typed it, nobody has looked the number up with the agency yet" — a queue
+ * state, not a claim by the person taking the seat. Readiness is what waits for
+ * the lookup.
  *
- * That is load-bearing. **A diver-facing "add your card" form would turn this
- * gate into self-attestation**: a refused diver could type the level the boat
- * demands and be admitted on the next attempt, having asserted nothing — the
- * leak H-24 exists to prevent. If a card ever becomes diver-writable, this
- * function must start reading `status` (or the origin of the row) in the same
- * change.
+ * **The exception, and the filter it forced.** Since FU-20260813 a diver may
+ * name their own level on the two public "tell me when something comes up"
+ * opt-ins, which writes a `pending` card stamped `selfDeclaredAt`
+ * (src/db/self-declared-cards.ts). This paragraph used to read: *"a
+ * diver-facing 'add your card' form would turn this gate into self-attestation
+ * — a refused diver could type the level the boat demands and be admitted on
+ * the next attempt, having asserted nothing. If a card ever becomes
+ * diver-writable, this function must start reading `status` (or the origin of
+ * the row) in the same change."* That is precisely what happened, and this is
+ * that change: every read below drops rows `isUnsightedSelfDeclaration` matches,
+ * so a self-declared "Instructor" lifts nothing, a self-declared nitrox tick
+ * clears nothing, and the leak H-24 exists to prevent stays shut. The moment a
+ * staffer enters the agency and number off the card in their hand, the row
+ * stops matching and counts like any other.
  */
 
 /** The diver's certification evidence at this shop, as the db layer hands it up. */
@@ -207,7 +216,25 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   }
 
   if (input.identityUnconfirmed) return ADMITTED;
-  const { certifications, specialtyCertifications, nitroxCertifications } = input.evidence;
+
+  // **Claims are not evidence.** A still-unsighted self-declaration is dropped
+  // before anything below looks at the record, rather than at each of the three
+  // reads — one filter is one thing to get right, and it is the whole reason
+  // this gate survived cards becoming diver-writable (see the module docstring).
+  // Note that a shop with *only* self-declared rows on file now reads as never
+  // having adjudicated this diver, which admits them: an unknown diver has
+  // always been admitted here, and a stranger's typing must not turn "unknown"
+  // into "known".
+  const evidence = input.evidence;
+  const certifications = evidence.certifications.filter(
+    (card) => !isUnsightedSelfDeclaration(card),
+  );
+  const specialtyCertifications = evidence.specialtyCertifications.filter(
+    (card) => !isUnsightedSelfDeclaration(card),
+  );
+  const nitroxCertifications = evidence.nitroxCertifications.filter(
+    (card) => !isUnsightedSelfDeclaration(card),
+  );
   if (!shopHasAdjudicated(certifications)) return ADMITTED;
 
   const heldLevel = highestLevelOnFile(certifications);

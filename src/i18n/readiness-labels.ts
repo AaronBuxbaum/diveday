@@ -76,6 +76,80 @@ export const DIVER_CERTIFICATION_LEVEL_KEYS: Record<CertificationLevel, DiverMes
   instructor: "course.certificationLevels.instructor",
 };
 
+/**
+ * **What a list joiner can dive, in one staff-facing phrase** — for the
+ * last-minute-deal recipient preview and the wait-list rows, where a staffer
+ * decides who to mail.
+ *
+ * Three shapes, and the differences between them are the feature:
+ *
+ * - Nothing on file → *"Level not said"*. Stated, never a blank: a gap on a row
+ *   reads as a rendering bug, and "we don't know" is the honest and common
+ *   answer on a marketing opt-in that asks optionally.
+ * - A card the shop holds → the level, plainly.
+ * - A claim nobody has checked → the level, **marked self-declared**. This is
+ *   the string that stops the bad email (FU-20260813). It never gates anything;
+ *   a shop that can see it simply does not send an Open Water diver a deep
+ *   wreck deal.
+ *
+ * Nitrox rides in the same phrase and carries its own mark, because the two can
+ * differ — a diver whose level card the shop verified may still only have
+ * *claimed* enriched air.
+ */
+export type DeclaredDiveProfileShape = {
+  level: CertificationLevel | null;
+  levelSelfDeclared: boolean;
+  nitrox: boolean;
+  nitroxSelfDeclared: boolean;
+};
+
+/**
+ * **Whether the phrase above is carrying somebody's word for it**, so the row
+ * rendering it can wear the tone that says so.
+ *
+ * The mark used to be the only difference between a claim and a card the shop
+ * holds, and it sat in muted text at the *end* of the line — which on a
+ * phone-width row is the first thing to truncate. The product's own precedent
+ * for "on file, but the gate is not open" is the imported specialty card's
+ * warning-toned badge (`heldCardStatusTone`), and this is a weaker fact than
+ * that one: nobody has seen anything at all.
+ */
+export function declaredDiveProfileUnchecked(profile: DeclaredDiveProfileShape | null): boolean {
+  if (!profile) return false;
+  return (
+    (profile.level !== null && profile.levelSelfDeclared) ||
+    (profile.nitrox && profile.nitroxSelfDeclared)
+  );
+}
+
+export function declaredDiveProfileText(
+  t: StaffTranslator,
+  profile: DeclaredDiveProfileShape | null,
+  locale: string,
+): string {
+  const parts: string[] = [];
+  if (!profile?.level) {
+    parts.push(t("shared.declaredProfile.levelNotSaid"));
+  } else {
+    const level = t(CERTIFICATION_LEVEL_KEYS[profile.level]);
+    parts.push(
+      profile.levelSelfDeclared
+        ? t("shared.declaredProfile.selfDeclared", { value: level })
+        : level,
+    );
+  }
+  if (profile?.nitrox) {
+    const nitrox = t("shared.declaredProfile.nitrox");
+    parts.push(
+      profile.nitroxSelfDeclared
+        ? t("shared.declaredProfile.selfDeclared", { value: nitrox })
+        : nitrox,
+    );
+  }
+  // A locale-appropriate "X and Y", never an English comma join.
+  return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
+}
+
 export const SPECIALTY_KEYS: Record<DiveSpecialty, StaffMessageKey> = {
   deep: "shared.readiness.specialties.deep",
   wreck: "shared.readiness.specialties.wreck",
@@ -142,6 +216,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   medical_review: "shared.readiness.blockers.medicalReview",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
+  certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
   certification_expired: "shared.readiness.blockers.certificationExpired",
   certification_insufficient: "shared.readiness.blockers.certificationInsufficient",
   specialty_missing: "shared.readiness.blockers.specialtyMissing",
@@ -150,6 +225,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   specialty_import_unconfirmed: "shared.readiness.blockers.specialtyImportUnconfirmed",
   nitrox_missing: "shared.readiness.blockers.nitroxMissing",
   nitrox_pending: "shared.readiness.blockers.nitroxPending",
+  nitrox_self_declared: "shared.readiness.blockers.nitroxSelfDeclared",
   under_minimum_age: "shared.readiness.blockers.underMinimumAge",
   payment_due: "shared.readiness.blockers.paymentDue",
   payment_refunded: "shared.readiness.blockers.paymentRefunded",

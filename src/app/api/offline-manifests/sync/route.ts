@@ -1,22 +1,45 @@
 import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { recordRollCall } from "@/db/manifests";
+import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 
-const eventSchema = z.object({
-  clientEventId: z.string().uuid(),
-  snapshotId: z.string().uuid(),
-  snapshotSavedAt: z.iso.datetime(),
-  bookingId: z.string().uuid(),
-  tripId: z.string().uuid(),
-  checkpoint: z.union([z.literal("departure"), z.string().regex(/^after_dive_[1-6]$/)]),
-  status: z.enum(["boarded", "not_boarded"]),
-  note: z.string().trim().max(300).nullable(),
-  occurredAt: z.iso.datetime(),
-});
+/**
+ * One event carries **exactly one** subject: a `bookingId` (a diver's paid
+ * seat) or a `crewPersonId` (a rostered crew member's `people.id`). Both are
+ * optional in the object and the pair is constrained by the refinement below,
+ * rather than being a discriminated union on some `subject` tag — events
+ * already sitting in a captain's IndexedDB were written with `bookingId` and
+ * nothing else, and those are the ones that must still parse when they finally
+ * reach signal. An unsynced event is a person somebody counted with no radio.
+ *
+ * Neither-or-both is refused rather than guessed at. A body naming no subject
+ * is a claim about nobody, and one naming two is a claim the recorders cannot
+ * both honour — either way there is no safe reading, and the batch is refused
+ * as a whole (400) so its events stay `pending` on the device instead of being
+ * marked settled and losing their hold against the next purge, exactly as the
+ * auth gate below does for an unauthorized caller.
+ */
+const eventSchema = z
+  .object({
+    clientEventId: z.string().uuid(),
+    snapshotId: z.string().uuid(),
+    snapshotSavedAt: z.iso.datetime(),
+    bookingId: z.string().uuid().optional(),
+    crewPersonId: z.string().uuid().optional(),
+    tripId: z.string().uuid(),
+    checkpoint: z.union([z.literal("departure"), z.string().regex(/^after_dive_[1-6]$/)]),
+    status: z.enum(["boarded", "not_boarded"]),
+    note: z.string().trim().max(300).nullable(),
+    occurredAt: z.iso.datetime(),
+  })
+  // No `message`: nothing here reaches a person. A failure of this refinement
+  // is answered as the batch-level `{ error: "invalid_events" }` below, in the
+  // same words a malformed body has always produced — a caller learns that the
+  // batch was refused and nothing about which event or why.
+  .refine((event) => (event.bookingId === undefined) !== (event.crewPersonId === undefined));
 
 const bodySchema = z.object({ events: z.array(eventSchema).min(1).max(200) });
 
@@ -83,19 +106,35 @@ export async function POST(request: Request) {
   const sorted = [...parsed.data.events].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   const results = [];
   for (const event of sorted) {
-    const outcome = await recordRollCall(db, {
+    // Everything except the subject column is identical, and both recorders
+    // apply the same offline contract (dedup on `clientEventId`, the shared
+    // staleness bound, newest-wins) — so the dispatch is the only thing that
+    // branches here. `shopId` still comes straight off the session on both
+    // paths; a crew event's `crewPersonId` is proven to be on *this* trip's
+    // roster inside `recordCrewRollCall`'s own transaction.
+    const common = {
       shopId: session.user.shopId,
       tripId: event.tripId,
-      bookingId: event.bookingId,
       recordedByPersonId: session.user.personId,
       status: event.status,
       checkpoint: event.checkpoint as RollCallCheckpoint,
-      source: "offline",
+      source: "offline" as const,
       clientEventId: event.clientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
       occurredAt: new Date(event.occurredAt),
       note: event.note ?? undefined,
-    });
+    };
+    const outcome = event.crewPersonId
+      ? await recordCrewRollCall(db, { ...common, personId: event.crewPersonId })
+      : event.bookingId
+        ? await recordRollCall(db, { ...common, bookingId: event.bookingId })
+        : // Unreachable: `eventSchema`'s refinement already refused an event
+          // naming no subject. Written as a refusal rather than a cast or a
+          // throw so that a future loosening of that refinement costs one
+          // rejected event, not a 500 that takes the whole batch's evidence
+          // with it — and never a `""` handed to a uuid comparison, which
+          // Postgres raises on rather than coercing.
+          { ok: false as const, reason: "invalid_subject" as const };
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",

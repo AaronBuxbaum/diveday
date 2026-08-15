@@ -142,11 +142,19 @@ function Notice({ title, text }: { title: string; text: string }) {
  *
  * `certification_pending` is deliberately absent: that card is already on file
  * and waiting on a staff review, so offering the form again would only invite a
- * duplicate the unique index refuses. The three here all mean the shop is
+ * duplicate the unique index refuses. The four here all mean the shop is
  * holding nothing usable.
+ *
+ * `certification_self_declared` belongs in that group and not with `pending`,
+ * which is the whole reason it is its own code. A diver who picked a level on a
+ * public opt-in has a `pending` row with **no card number in it** — there is
+ * nothing for a unique index to collide with, nothing for a staffer to look up,
+ * and if this form were withheld the diver would be told their card was being
+ * verified while holding the only copy of it (ADR 20260814-self-declared-cards).
  */
 const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
   "certification_missing",
+  "certification_self_declared",
   "certification_expired",
   "certification_insufficient",
 ]);

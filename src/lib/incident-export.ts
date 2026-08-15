@@ -11,6 +11,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "./manifests";
+import { isUnsightedSelfDeclaration } from "./readiness";
 import { type WaiverState, waiverState } from "./waivers";
 
 /**
@@ -49,8 +50,12 @@ export type IncidentCertificationEvidence = {
   level: string | null;
   /** Specialty code for `kind: "specialty"`, null otherwise. */
   specialty: string | null;
-  /** The card number as the shop holds it. */
-  identifier: string;
+  /**
+   * The card number as the shop holds it. Null on a self-declared card, which
+   * has none — the diver named a level on a public opt-in and nobody has seen
+   * anything (`selfDeclared` below).
+   */
+  identifier: string | null;
   /** Stored card status verbatim (`pending` | `verified`) — never upgraded. */
   status: string;
   /** When staff last reviewed/confirmed the card, if they have. */
@@ -63,6 +68,15 @@ export type IncidentCertificationEvidence = {
    * is a prior system's evidence, not a card this shop checked.
    */
   imported: boolean;
+  /**
+   * **The diver said so; nobody checked.** The card came from one of the two
+   * public "tell me when something comes up" opt-ins, where a joiner may name
+   * their own level (FU-20260813). It is the weakest thing in this file and has
+   * to read that way — an investigator must never mistake it for a card the
+   * shop sighted. True only while it is still unsighted: a self-declaration a
+   * staffer later verified off the real card is a sighting, and reads as one.
+   */
+  selfDeclared: boolean;
 };
 
 export type IncidentWaiverStatus = {
@@ -361,6 +375,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       reviewedAt: iso(card.reviewedAt),
       expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
+      selfDeclared: isUnsightedSelfDeclaration(card),
     })),
     ...input.specialtyCertifications.map((card) => ({
       kind: "specialty" as const,
@@ -372,6 +387,8 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       reviewedAt: iso(card.reviewedAt),
       expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
+      // A specialty card is never self-declared: neither public form asks.
+      selfDeclared: false,
     })),
     ...input.nitroxCertifications.map((card) => ({
       kind: "nitrox" as const,
@@ -383,6 +400,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       reviewedAt: iso(card.reviewedAt),
       expiresAt: null,
       imported: card.importedAt !== null,
+      selfDeclared: isUnsightedSelfDeclaration(card),
     })),
   ];
 }

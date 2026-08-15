@@ -163,3 +163,34 @@ which mechanism) is unaffected — both mechanisms now exist, so HD-7 becomes a 
 one is *required* rather than which one to build. Revisit the offline decision when a shop reports a
 real out-of-signal checkpoint it could not close; the migration cost is a subject kind on the
 offline event and its unique key, which is a record-version bump and therefore a purge.
+
+## Amendment (2026-08-14) — the offline half was built; the record-version bump was not needed
+
+Point 1's "No `source` / `client_event_id` columns, because crew roll call is not recordable
+offline" no longer describes the schema, and the consequence above beginning "A boat with no signal
+still cannot close a checkpoint" no longer describes the product. Both columns exist on
+`roll_call_crew_events`, with the same partial unique index on `(shop_id, client_event_id)` the
+diver table carries, and `recordCrewRollCall` mirrors `recordRollCall`'s `source === "offline"`
+branch: dedup on the client event id, the shared `snapshot_invalid` staleness bound, newest-wins.
+The migration is additive — no drop, no rename.
+
+Nothing else in this ADR is superseded. The table is still its own, each subject column is still
+`notNull`, only an assigned crew member is still a subject, and there is still no readiness gate.
+
+**The cost estimate above was wrong in the direction that mattered.** It assumed the change required
+"a subject kind on the offline event and its unique key, which is a record-version bump and
+therefore a purge". It did not. `OfflineRollCallEvent` was widened *additively* — `bookingId`
+became optional and `crewPersonId` was added beside it, read through one `offlineRollCallSubject`
+— rather than restructured into a discriminated union, so events already sitting in a captain's
+IndexedDB still parse. `OfflineManifestSnapshot.crew[].id` is optional for the same reason, and its
+absence fails closed: a copy saved before this change has crew with no id, those crew stay
+unrecordable on that copy, and the checkpoint stays open there exactly as it did. No
+`OFFLINE_MANIFEST_RECORD_VERSION` bump, and therefore no purge of a fortnight of dock copies and
+the unsynced roll call riding on them.
+
+Why now: four shipped diver-facing strings already said roll call works offline, and a checkpoint
+needs both halves — so an after-dive checkpoint, the one where a person may still be in the water,
+could not be closed at sea. The owner chose to build the half rather than narrow the copy. The data
+question this asks — crew **person ids** inside the encrypted snapshot retained on crew devices —
+is settled by **H-46** (`docs/product/human-decisions.md`), which adds one field to that payload's
+allow-list deliberately.

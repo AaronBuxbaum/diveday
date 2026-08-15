@@ -44,6 +44,7 @@ import {
 import {
   fetchOfflineManifestShopSlug,
   isOfflineManifestExpired,
+  latestOfflineCrewRollCall,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
   offlineManifestFreshness,
@@ -780,52 +781,68 @@ export function OfflineManifestView() {
   // online disagreeing about whether everyone is out of the water is worse than
   // either being wrong on its own, so both read the same predicate (DOM-H3).
   const notBackAboard = localStates.filter((state) => isNotBackAboard(checkpoint, state)).length;
-  // The same definition the live manifest uses — divers *and* crew (DOM-H1,
-  // ADRs 20260802-crew-roll-call-attestation and
-  // 20260803-per-person-crew-roll-call). Recomputed here rather than read off
-  // the snapshot because `awaiting` comes from events on this device, not from
-  // what the server knew at save time. The crew half does not: neither the
-  // attestation nor a per-person crew result is recordable offline in this
-  // slice, so the snapshot is the only crew evidence a dock copy has, and both
-  // read fail-closed — absence is "nobody has said", never "accounted for". A
-  // checkpoint with every diver counted and the crew uncounted therefore reads
-  // *open* here exactly as it does online; never "complete" offline and "not
-  // complete" online, which would be worse than the bug this closes.
+  // Both halves now come from this device's own events, read through the two
+  // sibling functions in `offline-manifests.ts`: a crew member's result is
+  // local-first with the snapshot's saved result behind it, exactly as a
+  // diver's is. Before H-46 the crew half could only ever be the save-time
+  // answer, because there was no id on this copy to write an event against —
+  // which is still the case for a copy saved before that change, and is why
+  // this falls back to `member.rollCall` rather than assuming an id.
+  //
+  // Absence is "nobody has said", never "accounted for", on both routes. A
+  // checkpoint with every diver counted and a crew member uncalled reads *open*
+  // here exactly as it does online; never "complete" offline and "not complete"
+  // online, which is the one direction that matters — a head count that looks
+  // finished while somebody is still in the water.
   const crewAssigned = manifest.crew.length;
+  const crewWithState = manifest.crew.map((member) => {
+    const saved = member.rollCall;
+    const state = member.id
+      ? latestOfflineCrewRollCall(envelope.snapshot, envelope.events, member.id, checkpoint)
+      : saved
+        ? {
+            state: saved.state,
+            occurredAt: saved.occurredAt,
+            pending: false,
+            implied: saved.implied ?? false,
+          }
+        : undefined;
+    return { ...member, state };
+  });
   const completeness = rollCallCompleteness({
     checkpoint,
     totalDivers: manifest.summary.totalDivers,
     awaiting,
     notBackAboard,
-    crew: manifest.crew,
+    crew: crewWithState.map((member) => ({ rollCall: member.state })),
   });
   const crewCounts = completeness.crewCounts;
-  // The dock copy deliberately carries **no person ids**
-  // (src/lib/offline-manifests.ts), so its crew list has no `id` to key on the
-  // way the live manifest does. `fullName-roles` was the key, and it collides
-  // for two crew who share both — exactly what `ManifestCrewMember.id` prevents
-  // online (review 20260803, D6). Disambiguating by how many identical entries
-  // came before gives each namesake a distinct identity that survives
-  // re-rendering, without shipping an id to the device.
+  // `id` is the list key now that the dock copy carries one (H-46) — the same
+  // stable identity the live manifest uses, and what keeps two crew who share
+  // a name *and* a role apart (review 20260803, D6). A copy saved before that
+  // change has no ids, so the old namesake-disambiguating key stays behind it:
+  // those rows still have to render.
   const crewSeen = new Map<string, number>();
-  const crewWithKeys = manifest.crew.map((member) => {
+  const crewWithKeys = crewWithState.map((member) => {
     const base = `${member.fullName}\u0000${member.roles.join(",")}`;
     const nth = crewSeen.get(base) ?? 0;
     crewSeen.set(base, nth + 1);
-    return { ...member, key: `${base}\u0000${nth}` };
+    return { ...member, key: member.id ?? `${base}\u0000${nth}` };
   });
   // Two different facts, and a crew reading warning-yellow on every single dive
   // stops reading it at all (review 20260803, D6):
   //
   // - somebody **is unaccounted for**: a named crew member was recorded not back
   //   aboard. That is an emergency and reads as danger, wherever the divers are.
-  // - the crew half **is not recordable here**: neither the attestation nor a
-  //   per-person crew result can be written without signal in this slice, so on
-  //   an out-of-signal trip every checkpoint is open for a reason nobody aboard
-  //   can act on. It stays fail-closed — the checkpoint does *not* read complete
-  //   — but it is stated as a limitation of the dock copy, not as an alarm.
+  // - part of the crew half **cannot be recorded on this copy**: a snapshot
+  //   saved before crew ids rode along (H-46) carries crew with no subject to
+  //   write an event against, so those people stay uncountable until this
+  //   device sees a newer copy. It is fail-closed — the checkpoint does *not*
+  //   read complete — and it is stated as a limitation of this saved copy, not
+  //   as an alarm. On a current copy it is not stated at all, because there is
+  //   no longer anything to apologise for.
   const crewMissing = completeness.crewReason === "crew_not_back_aboard";
-  const crewUnrecordableHere = completeness.crewReason !== null && !crewMissing;
+  const crewWithoutId = crewWithKeys.filter((member) => !member.id).length;
   const rollCallComplete = completeness.complete;
   // The actual roster rendered on this device, not the (possibly stale,
   // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
@@ -848,15 +865,32 @@ export function OfflineManifestView() {
     manifest.divers.some((diver) => (diver.buddyTeamNames ?? []).length > 0) ||
     manifest.crew.some((member) => (member.buddyTeamNames ?? []).length > 0);
 
-  async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
+  /**
+   * Queue one result on this device, for a diver or a crew member. One
+   * function, because everything a captain relies on here — the expiry stop
+   * rule, the refusal wording, the immediate reconcile attempt — is the same
+   * act on the same screen; only the subject differs, and it is passed
+   * straight through to `appendOfflineRollCall`, which reads it exactly once
+   * (`offlineRollCallSubject`).
+   *
+   * The busy key is whichever id was named: booking ids and person ids are
+   * both uuids from disjoint tables, so one map of "which row is saving" is
+   * unambiguous.
+   */
+  async function record(
+    subject: { bookingId: string } | { crewPersonId: string },
+    status: "boarded" | "not_boarded",
+    note = "",
+  ) {
     if (expired) {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
     }
-    setBusyBooking(bookingId);
+    const bookingId = "bookingId" in subject ? subject.bookingId : undefined;
+    setBusyBooking("bookingId" in subject ? subject.bookingId : subject.crewPersonId);
     try {
       const next = await appendOfflineRollCall(tripId, {
-        bookingId,
+        ...subject,
         checkpoint,
         status,
         note: note.trim() || null,
@@ -865,13 +899,16 @@ export function OfflineManifestView() {
       setMessage(t("shared.offlineManifest.single.record.saved"));
       // Task 73: a typed note must not silently ride along on the next tap
       // for this diver (e.g. tapping "Not boarded" again later re-sends a
-      // stale note nobody re-typed).
-      setNoteByBooking((current) => {
-        if (!(bookingId in current)) return current;
-        const next = { ...current };
-        delete next[bookingId];
-        return next;
-      });
+      // stale note nobody re-typed). Crew rows carry no note field, here or on
+      // the live manifest, so there is nothing to clear for them.
+      if (bookingId !== undefined) {
+        setNoteByBooking((current) => {
+          if (!(bookingId in current)) return current;
+          const next = { ...current };
+          delete next[bookingId];
+          return next;
+        });
+      }
       if (navigator.onLine) await reconcile();
     } catch (error) {
       if (error instanceof OfflineManifestError) {
@@ -1015,10 +1052,17 @@ export function OfflineManifestView() {
           </p>
         ) : null}
         {/*
-         * The crew half of the head count, read-only on the dock (DOM-H1).
-         * Divers can be counted with the radio off; crew cannot, in this
-         * slice — so this states plainly why the checkpoint is still open
-         * rather than letting the device call it done.
+         * The crew half of the head count — **recordable here**, since H-46.
+         * Divers could always be counted with the radio off and crew could
+         * not, which meant an after-dive checkpoint could never be closed at
+         * sea: `rollCallCompleteness` needs both halves, and the after-dive
+         * checkpoint is the one where a person may still be in the water.
+         *
+         * The only copy that still cannot record it is one saved before crew
+         * ids rode along, whose crew have no subject to write an event
+         * against. That says so in as many words below, and stays fail-closed
+         * either way: the checkpoint reads open here exactly as it does
+         * online, never the reverse.
          */}
         <div
           className={
@@ -1049,58 +1093,145 @@ export function OfflineManifestView() {
                         assigned: crewAssigned,
                       })}
           </p>
-          {/* Says plainly that this half of the count belongs to the live
-              manifest, so the state above reads as "not recordable here"
-              rather than as one more thing the boat has failed to do. */}
-          {crewUnrecordableHere ? (
+          {/* The one remaining limitation, and it belongs to the *copy*, not
+              to the feature: a snapshot older than H-46 has crew with no id,
+              so there is nobody for a tap to be about. Named with a count, so
+              a captain can tell whether it is the whole crew or one late
+              addition, and pointed at the two things that fix it. Absent
+              entirely on a current copy. */}
+          {crewWithoutId > 0 ? (
             <p className="mt-1 text-sm font-semibold text-muted">
-              {t("shared.offlineManifest.single.crewReadOnlyHere")}
+              {t("shared.offlineManifest.single.crewOlderCopy", { count: crewWithoutId })}
             </p>
           ) : null}
-          {/* Who, not just how many. A crew member's saved result is read-only
-              here — recording one needs signal — but naming the person nobody
-              has counted is the whole point of the per-person model. */}
+          {/* Who, not just how many — and now with the controls to answer for
+              each one, the same two the diver rows carry. Crew take no note
+              field, here or on the live manifest. */}
           {crewAssigned > 0 ? (
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {crewWithKeys.map((member) => (
-                <li
-                  key={member.key}
-                  // One colour vocabulary with the live manifest's rows
-                  // (`ROLL_CALL_ROW_TONE`), because both are read on the same
-                  // deck and often on two devices at once: aboard green, left
-                  // ashore amber, nothing said yet slate, did-not-come-back
-                  // red and alone in carrying weight. This used to invert two
-                  // of them — amber for "still to call" and slate for "ashore"
-                  // — so the same crew member read as a warning on the phone
-                  // and as settled on the tablet (dive-domain review 20260804).
-                  className={
-                    isNotBackAboard(checkpoint, member.rollCall)
-                      ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
-                      : member.rollCall?.state === "boarded"
-                        ? "rounded-full bg-success/20 px-3 py-1 text-sm"
-                        : member.rollCall
-                          ? "rounded-full bg-warning/15 px-3 py-1 text-sm"
-                          : "rounded-full bg-surface-sunken px-3 py-1 text-sm"
-                  }
-                >
-                  {member.fullName} ·{" "}
-                  {rollCallLabelText(t, rollCallLabel(checkpoint, member.rollCall))}
-                  {/* The groups this crew member is on, saved as names. Same
-                      display-only rule as a diver's — a divemaster leading
-                      three groups needs the dock copy to say which bodies
-                      they are responsible for. */}
-                  {(member.buddyTeamNames ?? []).length > 0 ? (
-                    <span className="ms-1 font-normal">
-                      ·{" "}
-                      {t("shared.buddyTeam.with", {
-                        names: cachedListFormat(locale, { type: "conjunction" }).format(
-                          member.buddyTeamNames ?? [],
-                        ),
-                      })}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
+            // Ided like the diver list below it, and for the same reason: both
+            // are now lists of rows with roll-call controls on them, so
+            // anything reaching for "the first Mark aboard button" has to be
+            // able to say which list it means.
+            <ul id="offline-crew-roll-call" className="mt-2 space-y-2">
+              {crewWithKeys.map((member) => {
+                // Hoisted so the guard below narrows it for both handlers: a
+                // crew member with no id has no subject to record against.
+                const crewPersonId = member.id;
+                const missingCrew = isNotBackAboard(checkpoint, member.state);
+                const crewRecordedNotBoarded =
+                  member.state?.state === "not_boarded" && member.state.implied !== true;
+                return (
+                  <li
+                    key={member.key}
+                    // One colour vocabulary with the live manifest's rows
+                    // (`ROLL_CALL_ROW_TONE`), because both are read on the same
+                    // deck and often on two devices at once: aboard green, left
+                    // ashore amber, nothing said yet slate, did-not-come-back
+                    // red and alone in carrying weight. This used to invert two
+                    // of them — amber for "still to call" and slate for "ashore"
+                    // — so the same crew member read as a warning on the phone
+                    // and as settled on the tablet (dive-domain review 20260804).
+                    className={
+                      missingCrew
+                        ? "rounded-xl bg-danger/15 px-3 py-2 text-sm font-bold text-danger"
+                        : member.state?.state === "boarded"
+                          ? "rounded-xl bg-success/20 px-3 py-2 text-sm"
+                          : member.state
+                            ? "rounded-xl bg-warning/15 px-3 py-2 text-sm"
+                            : // Raised, not sunken: these used to be small
+                              // chips, where `bg-surface-sunken` read as a
+                              // chip against the panel. As full-width rows
+                              // with controls on them the same fill is the
+                              // panel's own background, and an uncalled crew
+                              // member had no edge at all — the one row a
+                              // captain is looking for.
+                              "rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    }
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p>
+                        {member.fullName} ·{" "}
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, member.state))}
+                        {member.state?.pending
+                          ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                          : ""}
+                        {/* The groups this crew member is on, saved as names.
+                            Same display-only rule as a diver's — a divemaster
+                            leading three groups needs the dock copy to say
+                            which bodies they are responsible for. */}
+                        {(member.buddyTeamNames ?? []).length > 0 ? (
+                          <span className="ms-1 font-normal">
+                            ·{" "}
+                            {t("shared.buddyTeam.with", {
+                              names: cachedListFormat(locale, { type: "conjunction" }).format(
+                                member.buddyTeamNames ?? [],
+                              ),
+                            })}
+                          </span>
+                        ) : null}
+                      </p>
+                      {/* No controls on an expired copy (the H-05 stop rule,
+                          stated once in the banner above and enforced in
+                          `record`), and none for a crew member this copy has
+                          no id for. Otherwise both, always: crew carry no
+                          readiness, so unlike a diver at the dock there is
+                          nothing that can withhold the aboard control. */}
+                      {expired || !crewPersonId ? null : (
+                        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+                          <button
+                            type="button"
+                            disabled={busyBooking === crewPersonId}
+                            onClick={() => record({ crewPersonId }, "boarded")}
+                            aria-busy={busyBooking === crewPersonId}
+                            className={`${OFFLINE_BOAT_TARGET_CLASS} ${
+                              member.state?.state === "boarded"
+                                ? "border border-success bg-success/15 text-success"
+                                : "bg-primary text-primary-foreground"
+                            }`}
+                          >
+                            {busyBooking === crewPersonId
+                              ? t("shared.offlineManifest.single.saving")
+                              : member.state?.state === "boarded"
+                                ? t("manifest.crewAboardCheck")
+                                : t("manifest.crewMarkAboard")}
+                          </button>
+                          {/* The exception control, at the live page's weights
+                              and by the live page's rules — and never a
+                              done-check after a dive, because "Not aboard ☑️"
+                              beside a divemaster still in the water is the
+                              string every one of these rules exists to
+                              delete (DOM-H3). */}
+                          <button
+                            type="button"
+                            disabled={busyBooking === crewPersonId}
+                            onClick={() => record({ crewPersonId }, "not_boarded")}
+                            aria-busy={busyBooking === crewPersonId}
+                            className={
+                              missingCrew
+                                ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
+                                : crewRecordedNotBoarded
+                                  ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
+                                  : isDeparture
+                                    ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger/10`
+                            }
+                          >
+                            {busyBooking === crewPersonId
+                              ? t("shared.offlineManifest.single.saving")
+                              : crewRecordedNotBoarded
+                                ? isDeparture
+                                  ? t("manifest.crewNotAboardCheck")
+                                  : t("manifest.crewNotBackAboardActive")
+                                : isDeparture
+                                  ? t("manifest.crewMarkNotAboard")
+                                  : t("manifest.crewMarkNotBackAboard")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>
@@ -1297,7 +1428,11 @@ export function OfflineManifestView() {
                             type="button"
                             disabled={busyBooking === diver.bookingId}
                             onClick={() =>
-                              record(diver.bookingId, "boarded", noteByBooking[diver.bookingId])
+                              record(
+                                { bookingId: diver.bookingId },
+                                "boarded",
+                                noteByBooking[diver.bookingId],
+                              )
                             }
                             aria-busy={busyBooking === diver.bookingId}
                             // Settles into the live page's success outline once
@@ -1321,7 +1456,11 @@ export function OfflineManifestView() {
                           type="button"
                           disabled={busyBooking === diver.bookingId}
                           onClick={() =>
-                            record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
+                            record(
+                              { bookingId: diver.bookingId },
+                              "not_boarded",
+                              noteByBooking[diver.bookingId],
+                            )
                           }
                           aria-busy={busyBooking === diver.bookingId}
                           // The exception control, at the live page's weights

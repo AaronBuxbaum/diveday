@@ -65,6 +65,11 @@
     "confirming": "Confirmando…",
     "markingCertified": "Marcando certificado…",
     "confirmCard": "Confirmar tarjeta",
+    "selfDeclaredLabel": "Autodeclarado — aún sin número de tarjeta",
+    "sightCard": "Certificar con la tarjeta",
+    "sightCardHint": "El buzo nos indicó este nivel. Escribe lo que dice la tarjeta que tienes en la mano.",
+    "sightCardLevel": "Nivel que figura en la tarjeta",
+    "sightCardLevelHint": "Viene rellenado con lo que dijo el buzo. Cámbialo para que coincida con la tarjeta que tienes en la mano.",
     "markCertified": "Marcar certificado",
     "deleting": "Eliminando…",
     "delete": "Eliminar"
@@ -238,7 +243,8 @@
     "nitroxOption": "Nitrox",
     "captureForReview": "Capturar especialidad para revisión",
     "emptyState": "Aún no hay tarjetas de especialidad o nitrox — añade una arriba cuando la obtengan.",
-    "nitroxAgencyLine": "{agency} · Nitrox"
+    "nitroxAgencyLine": "{agency} · Nitrox",
+    "nitroxLine": "Nitrox"
   },
   "stats": {
     "cards": "Tarjetas",
@@ -301,6 +307,8 @@
     "cardRemovedToast": "Tarjeta eliminada.",
     "waiverPaperRecorded": "Liberación en papel registrada — firmada y archivada.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una liberación en papel — o envía el enlace digital para que el buceador lo responda.",
-    "waiverError": "No se pudo registrar esa liberación en papel. Abre la próxima salida del buceador para ver el motivo."
+    "waiverError": "No se pudo registrar esa liberación en papel. Abre la próxima salida del buceador para ver el motivo.",
+    "cardSightingRequired": "Esta tarjeta es solo lo que nos dijo el buzo. Escribe la agencia y el número de la tarjeta que tienes delante para certificarla.",
+    "duplicateCard": "Otra tarjeta activa de este centro ya tiene ese número. Revisa el número o elimina la tarjeta que lo tiene."
   }
 }

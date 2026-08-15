@@ -125,7 +125,16 @@ Two statements above are narrowed by the follow-on rather than contradicted:
   count-level attestation in this ADR still raises no Today row**, deliberately: it is a form most
   shops have never filled in, so it would fire on nearly every trip and bury the rows that mean a
   person is in the water.
-- **"Offline: read-only in this slice, and it fails closed"** is unchanged and now covers both
-  halves. Neither the attestation nor the per-person roll call is recordable offline; the offline
-  crew panel distinguishes that limitation from an alarm by tone, and a checkpoint still cannot
-  close out of signal.
+- **"Offline: read-only in this slice, and it fails closed"** was unchanged by the follow-on and
+  covered both halves: neither the attestation nor the per-person roll call was recordable offline,
+  and a checkpoint could not close out of signal.
+
+  **Superseded 2026-08-14 for the per-person half** (H-46; see
+  [20260803's amendment](20260803-per-person-crew-roll-call.md#amendment-2026-08-14--the-offline-half-was-built-the-record-version-bump-was-not-needed)).
+  A rostered crew member can now be recorded aboard or not back aboard from a saved copy with no
+  signal, so an after-dive checkpoint closes at sea. The **count-level attestation in this ADR is
+  still not recordable offline, and nothing calls it at all** (ADR
+  20260804-crew-roll-call-is-per-person) — so this is not a reopening of the attestation, and the
+  fail-closed rule is untouched: a copy saved before crew ids rode along still cannot record its
+  crew, absence is still "nobody has said", and the dock copy still never reads complete while the
+  live page says the checkpoint is open.

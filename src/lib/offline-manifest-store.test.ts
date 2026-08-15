@@ -53,7 +53,15 @@ const payload: OfflineManifestPayload = {
         plannedDives: 2,
       },
       checkpoint: "departure",
-      crew: [{ fullName: "Sal Moretti", roles: ["captain"] }],
+      crew: [
+        {
+          // A copy saved since H-46 carries the crew member's person id, which
+          // is what makes the crew half of the head count recordable here.
+          id: "33333333-3333-3333-3333-333333333333",
+          fullName: "Sal Moretti",
+          roles: ["captain"],
+        },
+      ],
       divers: [
         {
           bookingId: "22222222-2222-2222-2222-222222222222",
@@ -603,6 +611,87 @@ describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
 });
 
 describe("appendOfflineRollCall", () => {
+  // H-46. The crew half goes through the same door as the diver half — same
+  // lock, same expiry stop rule, same store — and differs only in which
+  // subject field the event carries.
+  it("queues a crew result under its person id, with no booking id anywhere on it", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+
+    const envelope = await appendOfflineRollCall(tripId, {
+      crewPersonId: payload.manifests[0].crew[0].id,
+      checkpoint: "departure",
+      status: "boarded",
+      note: null,
+    });
+
+    expect(envelope.events).toHaveLength(1);
+    expect(envelope.events[0]).toMatchObject({
+      crewPersonId: "33333333-3333-3333-3333-333333333333",
+      status: "boarded",
+      syncStatus: "pending",
+    });
+    expect(envelope.events[0].bookingId).toBeUndefined();
+    // And it survives the encrypt/decrypt round trip, which is the only form
+    // the sync route will ever see it in.
+    const reloaded = await loadOfflineManifest(tripId);
+    expect(reloaded?.events[0].crewPersonId).toBe("33333333-3333-3333-3333-333333333333");
+  });
+
+  // An event nobody can attribute is worse than no event: it persists, it
+  // syncs, and it is a claim about the one thing this surface exists to
+  // record. `offlineRollCallSubject` answers null for both shapes and this
+  // refuses rather than writing one.
+  it("refuses an event that names neither subject, or both", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+
+    await expect(
+      appendOfflineRollCall(tripId, { checkpoint: "departure", status: "boarded", note: null }),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+    await expect(
+      appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        crewPersonId: payload.manifests[0].crew[0].id,
+        checkpoint: "departure",
+        status: "boarded",
+        note: null,
+      }),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+
+    expect((await loadOfflineManifest(tripId))?.events).toEqual([]);
+  });
+
+  // Invariant I2, at the store rather than at the screen: a copy saved before
+  // crew ids rode along has no subject to record against, so the crew member
+  // stays uncounted and the checkpoint stays open. Fail closed, and never the
+  // other way — a checkpoint that reads finished while somebody is still down.
+  it("refuses a crew member on a copy saved before crew ids, in both directions", async () => {
+    const olderCopy: OfflineManifestPayload = {
+      ...payload,
+      manifests: [
+        {
+          ...payload.manifests[0],
+          crew: [{ fullName: "Sal Moretti", roles: ["captain"] }],
+        },
+      ],
+    };
+    const tripId = olderCopy.manifests[0].trip.id;
+    await saveOfflineManifest(olderCopy);
+
+    for (const status of ["boarded", "not_boarded"] as const) {
+      await expect(
+        appendOfflineRollCall(tripId, {
+          crewPersonId: "33333333-3333-3333-3333-333333333333",
+          checkpoint: "departure",
+          status,
+          note: null,
+        }),
+      ).rejects.toMatchObject({ code: "not_allowed" });
+    }
+    expect((await loadOfflineManifest(tripId))?.events).toEqual([]);
+  });
+
   it("refuses to record a new roll call against a snapshot kept alive past its expiry", async () => {
     // A record preserved past retention (because it still has an unsynced
     // event) is not a boarding source — the H-05 stop rule treats expired the

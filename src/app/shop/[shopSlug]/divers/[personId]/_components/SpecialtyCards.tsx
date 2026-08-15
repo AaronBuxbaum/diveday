@@ -6,7 +6,9 @@ import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
+import { CardSightingForm } from "./CardSightingForm";
 import { CardStatusMark } from "./CardStatusMark";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
@@ -192,6 +194,10 @@ export function SpecialtyCards({
           })}
           {diver.nitroxCertifications.map((card) => {
             const display = heldCardDisplayStatus(card, todayLocal);
+            // A nitrox tick from one of the public opt-in forms: no agency, no
+            // number, and nobody has seen a card. This tap authorizes a gas
+            // fill, so it asks for the card in the staffer's hand.
+            const selfDeclared = isUnsightedSelfDeclaration(card);
             return (
               <li key={card.id} className="px-4 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -202,13 +208,17 @@ export function SpecialtyCards({
                         label={t(HELD_CARD_STATUS_KEYS[display])}
                       />
                       <span>
-                        {t("divers.specialty.nitroxAgencyLine", {
-                          agency: t(AGENCY_KEYS[card.agency]),
-                        })}
+                        {selfDeclared
+                          ? t("divers.specialty.nitroxLine")
+                          : t("divers.specialty.nitroxAgencyLine", {
+                              agency: t(AGENCY_KEYS[card.agency]),
+                            })}
                       </span>
                     </p>
                     <p className="mt-1 break-all text-sm text-muted">
-                      {card.identifier}
+                      {selfDeclared
+                        ? t("divers.certifications.selfDeclaredLabel")
+                        : card.identifier}
                       {isImportedCard(card) ? (
                         <span>
                           {" · "}
@@ -222,7 +232,14 @@ export function SpecialtyCards({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {card.status === "pending" || needsImportConfirm(card) ? (
+                    {selfDeclared ? (
+                      <CardSightingForm
+                        t={t}
+                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                        certificationId={card.id}
+                        cardType="nitrox"
+                      />
+                    ) : card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="cardType" value="nitrox" />

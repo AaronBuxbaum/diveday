@@ -406,7 +406,18 @@ export default async function TripDetailPage({
       timeZone={shop.timezone}
       // `bookingGear` is BookingGearFields' own namespace; without it every
       // string in the checkout gear picker rendered as its raw key.
-      namespaces={["booking", "bookingGear", "common", "fallback", "party", "rental", "trip"]}
+      // `course` carries the certification-level words `DiveDeclarationFields`
+      // renders in the wait-list form's optional "what can you dive?" select.
+      namespaces={[
+        "booking",
+        "bookingGear",
+        "common",
+        "course",
+        "fallback",
+        "party",
+        "rental",
+        "trip",
+      ]}
     >
       <main
         className={

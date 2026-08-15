@@ -523,6 +523,45 @@ export async function getTripManifest(
   return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
 }
 
+/**
+ * How far an offline event's own timestamps may sit outside the order they
+ * logically have to fall in — snapshot saved, then result recorded, then
+ * synced — before the server refuses it. A boat tablet's clock is not the
+ * server's, so a few minutes either way is ordinary; a snapshot that claims to
+ * postdate the result recorded from it, or a result recorded in the future, is
+ * not skew but a broken or forged event.
+ */
+const OFFLINE_EVENT_SKEW_MS = 5 * 60 * 1000;
+
+/**
+ * The `snapshot_invalid` staleness bound, shared by **both** offline recorders
+ * (`recordRollCall` for a diver, `recordCrewRollCall` for a crew member).
+ *
+ * One function rather than the same four clauses written twice, because the
+ * two halves of a head count disagreeing about what makes an offline event
+ * stale is exactly the class of bug that outlives the week somebody re-reads
+ * only one of them (the follow-up's invariant I4). Mirroring makes them
+ * diffable; sharing makes them unable to differ.
+ *
+ * A missing `clientEventId` is out of bounds on purpose: without it the write
+ * is not idempotent, so a retried sync would double-record who came back from
+ * a dive.
+ */
+function offlineEventOutOfBounds(input: {
+  clientEventId: string | undefined;
+  offlineSnapshotSavedAt: Date | undefined;
+  occurredAt: Date;
+  now: Date;
+}): boolean {
+  const savedAt = input.offlineSnapshotSavedAt;
+  return (
+    !input.clientEventId ||
+    !savedAt ||
+    savedAt.getTime() > input.occurredAt.getTime() + OFFLINE_EVENT_SKEW_MS ||
+    input.occurredAt.getTime() > input.now.getTime() + OFFLINE_EVENT_SKEW_MS
+  );
+}
+
 export type RecordRollCallOutcome =
   | { ok: true; eventId: string; duplicate?: boolean }
   | {
@@ -600,13 +639,13 @@ export async function recordRollCall(
     }
 
     if (source === "offline") {
-      const savedAt = input.offlineSnapshotSavedAt;
-      const now = nowDate();
       if (
-        !input.clientEventId ||
-        !savedAt ||
-        savedAt.getTime() > occurredAt.getTime() + 5 * 60 * 1000 ||
-        occurredAt.getTime() > now.getTime() + 5 * 60 * 1000
+        offlineEventOutOfBounds({
+          clientEventId: input.clientEventId,
+          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+          occurredAt,
+          now: nowDate(),
+        })
       ) {
         return { ok: false, reason: "snapshot_invalid" };
       }
@@ -666,10 +705,16 @@ export async function recordRollCall(
 }
 
 export type RecordCrewRollCallOutcome =
-  | { ok: true; eventId: string }
+  | { ok: true; eventId: string; duplicate?: boolean }
   | {
       ok: false;
-      reason: "trip_unavailable" | "staff_not_found" | "crew_not_assigned" | "invalid_checkpoint";
+      reason:
+        | "trip_unavailable"
+        | "staff_not_found"
+        | "crew_not_assigned"
+        | "invalid_checkpoint"
+        | "newer_event_exists"
+        | "snapshot_invalid";
     };
 
 /**
@@ -688,6 +733,15 @@ export type RecordCrewRollCallOutcome =
  * No readiness gate: crew hold no booking and therefore no readiness. What
  * gates a diver at departure — waiver, payment, certification — is not a
  * question anyone asks of the divemaster.
+ *
+ * **The `source === "offline"` branch is `recordRollCall`'s, mirrored.** Read
+ * the two side by side: dedup on `clientEventId` before any other work, the
+ * shared `offlineEventOutOfBounds` staleness bound, then newest-wins against
+ * this subject's own history at this checkpoint. They agree because a
+ * crew-specific interpretation of any of the three is how a device retry
+ * double-writes, or an out-of-order one overwrites, the record of who came back
+ * from a dive — and this half exists so a captain offshore can close an
+ * after-dive checkpoint at all (H-46).
  */
 export async function recordCrewRollCall(
   db: AppDb,
@@ -698,16 +752,39 @@ export async function recordCrewRollCall(
     recordedByPersonId: string;
     status: "boarded" | "not_boarded" | "cleared";
     checkpoint?: RollCallCheckpoint;
+    source?: "live" | "offline";
+    clientEventId?: string;
+    offlineSnapshotSavedAt?: Date;
     note?: string;
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
   const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
+    const source = input.source ?? "live";
     const occurredAt = input.occurredAt ?? nowDate();
 
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
+
+    // Idempotency first, exactly as the diver path does it: a sync the device
+    // retried (the response never arrived, the tab was closed mid-flight) must
+    // not append a second row, and answering `duplicate` before any subject
+    // lookup means a replay costs nothing and cannot be refused by a roster
+    // that has changed since.
+    if (source === "offline" && input.clientEventId) {
+      const [existing] = await tx
+        .select({ id: rollCallCrewEvents.id })
+        .from(rollCallCrewEvents)
+        .where(
+          and(
+            eq(rollCallCrewEvents.shopId, input.shopId),
+            eq(rollCallCrewEvents.clientEventId, input.clientEventId),
+          ),
+        )
+        .limit(1);
+      if (existing) return { ok: true, eventId: existing.id, duplicate: true };
+    }
 
     // Same tenancy and trip-status gate the other two writers apply.
     const [trip] = await tx
@@ -757,6 +834,35 @@ export async function recordCrewRollCall(
       .limit(1);
     if (!assigned) return { ok: false, reason: "crew_not_assigned" };
 
+    if (source === "offline") {
+      if (
+        offlineEventOutOfBounds({
+          clientEventId: input.clientEventId,
+          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+          occurredAt,
+          now: nowDate(),
+        })
+      ) {
+        return { ok: false, reason: "snapshot_invalid" };
+      }
+      const [newest] = await tx
+        .select({ occurredAt: rollCallCrewEvents.occurredAt })
+        .from(rollCallCrewEvents)
+        .where(
+          and(
+            eq(rollCallCrewEvents.shopId, input.shopId),
+            eq(rollCallCrewEvents.tripId, input.tripId),
+            eq(rollCallCrewEvents.personId, assigned.personId),
+            eq(rollCallCrewEvents.checkpoint, checkpoint),
+          ),
+        )
+        .orderBy(desc(rollCallCrewEvents.occurredAt), desc(rollCallCrewEvents.createdAt))
+        .limit(1);
+      if (newest && newest.occurredAt > occurredAt) {
+        return { ok: false, reason: "newer_event_exists" };
+      }
+    }
+
     const [event] = await tx
       .insert(rollCallCrewEvents)
       .values({
@@ -766,6 +872,12 @@ export async function recordCrewRollCall(
         recordedByPersonId: staffId,
         status: input.status,
         checkpoint,
+        source,
+        clientEventId: source === "offline" ? input.clientEventId : null,
+        // No `offlineSnapshotSavedAt` counterpart: the diver row keeps it as
+        // evidence of which snapshot supplied the *readiness* it boarded on,
+        // and a crew member has no readiness to evidence. It is still an input
+        // above, where the staleness bound is computed from it.
         note: input.note?.trim() || null,
         occurredAt,
       })
@@ -774,8 +886,12 @@ export async function recordCrewRollCall(
     return { ok: true, eventId: event.id };
   });
   // Same push signal the other head-count writes raise: this changes whether
-  // the checkpoint reads complete on every device holding the manifest open.
-  if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
+  // the checkpoint reads complete on every device holding the manifest open —
+  // and, as on the diver path, a duplicate offline replay changed nothing, so
+  // it raises none.
+  if (outcome.ok && !outcome.duplicate) {
+    await publishManifestEvent(db, input.shopId, input.tripId);
+  }
   return outcome;
 }
 

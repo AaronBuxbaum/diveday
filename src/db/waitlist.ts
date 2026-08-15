@@ -1,5 +1,6 @@
 import { and, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import type { DiveDeclaration } from "@/lib/dive-declaration";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { publicTripPath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
@@ -7,6 +8,7 @@ import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
+import { recordSelfDeclaredCards } from "./self-declared-cards";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -119,6 +121,14 @@ export type WaitlistRequest = {
   fullName: string;
   email: string;
   phone?: string;
+  /**
+   * What the joiner optionally said they can dive, recorded on the **person**
+   * as a self-declared pending card (`recordSelfDeclaredCards`). It is shown to
+   * the staffer working this list and never gates the join — a wait list is a
+   * set of leads, and refusing one on an unverified claim would be a gate built
+   * out of somebody's typing (ADR 20260813-wait-list-is-a-lead-list).
+   */
+  declaration?: DiveDeclaration;
 };
 
 export type WaitlistOutcome =
@@ -161,7 +171,7 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
     if ((capacity?.booked ?? 0) < trip.capacity) return { ok: false, reason: "trip_available" };
 
-    const { person } = await findOrCreatePerson(tx, {
+    const { person, nameMatches } = await findOrCreatePerson(tx, {
       shopId: req.shopId,
       fullName,
       email,
@@ -180,6 +190,28 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       )
       .limit(1);
     if (booking) return { ok: false, reason: "already_booked" };
+
+    // After the refusals, before the entry: a diver who is told "you already
+    // have a seat" is not joining a list, and a declaration recorded off a
+    // submission the product turned away would be data collected from a
+    // conversation that did not happen. A repeat joiner (`already_waitlisted`
+    // below) *does* land here, which is right — re-submitting is how they
+    // update what they said.
+    //
+    // Gated on `nameMatches` for the same reason the last-minute list is: this
+    // form is unauthenticated, and an email that matches an existing diver
+    // under a different name may be a second human (H-13). Certification data
+    // is a fact about a body, and writing it onto a record that might not be
+    // theirs is the one thing every other write on this fork already refuses.
+    // The wait-list entry itself is unaffected.
+    if (nameMatches) {
+      await recordSelfDeclaredCards(tx, {
+        shopId: req.shopId,
+        personId: person.id,
+        level: req.declaration?.level,
+        nitrox: req.declaration?.nitrox,
+      });
+    }
 
     const [existing] = await tx
       .select()
