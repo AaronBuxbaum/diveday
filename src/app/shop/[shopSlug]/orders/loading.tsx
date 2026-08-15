@@ -1,8 +1,13 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the Orders index (design principle 1) — the
  * filtered, paginated invoice list has no loading state to show meanwhile.
+ *
+ * Both shells come from `sectionCardClass()`, the same place the filter panel
+ * and the `<Table>` take theirs, so the skeleton cannot drift squarer or
+ * flatter than what replaces it.
  */
 export default function OrdersIndexLoading() {
   return (
@@ -10,9 +15,9 @@ export default function OrdersIndexLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
 
-        <div className="mt-8 h-24 rounded-lg border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-8 h-24" })} />
 
-        <div className="mt-6 h-72 rounded-2xl border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-6 h-72" })} />
       </div>
     </main>
   );

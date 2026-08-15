@@ -10,6 +10,7 @@ import { getShopCurrency } from "@/db/stripe-accounts";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { LINE_ITEM_ROWS } from "./order-form";
 
 // Bounds match the house convention for a bounded dollar-to-cents amount
@@ -41,7 +42,11 @@ const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
 export async function createOrderAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
-  const orders = `/shop/${session.user.shopSlug}/orders`;
+  // `shopPath`, not a template: the slug rides in on the session but is still
+  // an ordinary string being spliced into a redirect target, and every segment
+  // it builds is escaped (src/lib/staff-notices.ts).
+  const orders = shopPath(session.user.shopSlug, "orders");
+  const newOrder = shopPath(session.user.shopSlug, "orders", "new");
   // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization):
   // an invoice goes out with the shop's name on it, on the shop's own connected
   // Stripe account, and lands in the shop's books. Re-checked against live roles
@@ -51,7 +56,7 @@ export async function createOrderAction(formData: FormData) {
   // uses: a captain can still read orders, so bouncing them to Today would be
   // further than the refusal warrants.
   if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
-    revalidateAndRedirect(orders, `${orders}?notice=not_authorized`);
+    revalidateAndRedirect(orders, noticeUrl(orders, "not-authorized"));
   }
 
   const parsedPersonId = personIdSchema.safeParse(String(formData.get("personId") ?? ""));
@@ -62,7 +67,7 @@ export async function createOrderAction(formData: FormData) {
     String(formData.get("description") ?? ""),
   );
   if (!parsedPersonId.success || !parsedBookingId.success || !parsedDescription.success) {
-    redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
+    redirect(noticeUrl(newOrder, "invalid"));
   }
   const personId = parsedPersonId.data;
   const bookingId = parsedBookingId.data;
@@ -87,7 +92,7 @@ export async function createOrderAction(formData: FormData) {
     // rather than silently dropping the row — a staff member who typed four
     // line items should never end up with a three-line invoice unexplained.
     if (!itemDescription.success || !kind.success || !quantity.success || !dollars.success) {
-      redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
+      redirect(noticeUrl(newOrder, "invalid"));
     }
     lineItems.push({
       kind: kind.data,
@@ -98,7 +103,7 @@ export async function createOrderAction(formData: FormData) {
   }
 
   if (!personId || lineItems.length === 0) {
-    redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
+    redirect(noticeUrl(newOrder, "invalid"));
   }
 
   const result = await createOrder(db, {
@@ -116,7 +121,12 @@ export async function createOrderAction(formData: FormData) {
     // a submission the gate above admitted (roles changed mid-flight): the page
     // that form lives on runs the same check on render, so it re-lands them on
     // Orders with the explanation. No special case needed here.
-    redirect(`/shop/${session.user.shopSlug}/orders/new?notice=${result.reason}`);
+    //
+    // `createOrder` answers in its own domain casing (`not_authorized`,
+    // `not_connected`, `stripe_failed`); `noticeUrl` normalises that to the one
+    // kebab spelling the page's `NOTICE_KEYS` holds, so this passes the reason
+    // straight through rather than hand-translating it.
+    redirect(noticeUrl(newOrder, result.reason));
   }
   revalidateAndRedirect(orders, `${orders}/${result.order.id}`);
 }

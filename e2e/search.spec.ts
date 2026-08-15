@@ -1,10 +1,15 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: the command palette navigates, and the divers list filters from
+ * the URL. Typing into either writes nothing.
+ */
 
 signedInAsOwner();
 
-test("the command palette finds a diver by name and ⌘K jumps to a page shortcut", async ({
-  page,
-}) => {
+test("the command palette finds a diver by name and ⌘K jumps to a page shortcut", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // The nav Search button opens the palette (phone users have no ⌘K).
@@ -33,9 +38,9 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   await expect(page).toHaveURL(/\?view=departures$/);
 });
 
-test("the command palette also finds dive sites, courses, and every gated nav destination", async ({
-  page,
-}) => {
+test("the command palette also finds dive sites, courses, and every gated nav destination", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/shop/blue-mantis");
   await page.getByRole("button", { name: "Search" }).click();
   const box = page.getByRole("combobox", { name: /Search divers/ });
@@ -84,7 +89,9 @@ test("the command palette also finds dive sites, courses, and every gated nav de
   }
 });
 
-test("the divers list filters live as you type, no submit", async ({ page }) => {
+test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, async ({
+  page,
+}) => {
   await page.goto("/shop/blue-mantis/divers");
   const search = page.getByRole("searchbox", { name: "Search divers" });
   // The extended roster is well past one default page, sorted alphabetically —

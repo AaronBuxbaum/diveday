@@ -2,6 +2,18 @@ import { MINUTE_MS } from "@/lib/clock";
 import { nowDate } from "./clock";
 import type { TripManifest } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+// The roll-call rules come from `./roll-call`, never from `./manifests`: this
+// module is compiled into the service worker, and a *value* import from
+// `manifests.ts` pulls `readiness.ts` → `waivers.ts` → `node:crypto` into that
+// bundle and fails `scripts/build-service-worker.mjs` outright, with
+// `pnpm typecheck` none the wiser. See the head of `./roll-call`.
+import type { RollCallRecord } from "./roll-call";
+import {
+  carryForwardNotBoarded,
+  isNotBackAboard,
+  RETRACTION_SUPERSEDED,
+  rollCallCheckpoints,
+} from "./roll-call";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -237,7 +249,54 @@ export type OfflineRollCallEvent = {
   /** A rostered crew member's `people.id`. Absent on a diver event. */
   crewPersonId?: string;
   checkpoint: TripManifest["checkpoint"];
-  status: "boarded" | "not_boarded";
+  /**
+   * **`cleared` is the retraction**, and it joined this vocabulary on
+   * 2026-08-15 (ADR 20260815-offline-can-unsay-a-missing-diver). Before it,
+   * the only way to take back a mis-tapped "not back aboard" offline was to
+   * tap "Mark aboard" — a positive claim that this person is back on the boat,
+   * from a full-width button directly beneath the one that raised the alarm.
+   * "I didn't mean to say she's missing" and "I have eyes on her, she's
+   * aboard" are different statements, and the device could only make the
+   * second: the trail then held a sighting nobody made, and the live manifest
+   * (which has always emitted `cleared`) and this copy degraded differently on
+   * the same mis-tap.
+   *
+   * **Additive, and deliberately no `OFFLINE_MANIFEST_RECORD_VERSION` bump**
+   * (see that constant: a bump is a *purge* of every roll call a captain has
+   * queued and not synced). Nothing about the encrypted snapshot payload
+   * changes — this widens only the events written beside it, the server writer
+   * has accepted `cleared` since the live manifest's first undo, and a
+   * device holding older events keeps parsing them unchanged.
+   */
+  status: "boarded" | "not_boarded" | "cleared";
+  /**
+   * What a `cleared` is taking back: the `clientEventId` of the statement this
+   * device was looking at when somebody tapped undo (ADR
+   * 20260815-an-offline-retraction-names-its-target). Absent on every other
+   * status, and on a retraction queued by a build that predates the field.
+   *
+   * It is what makes the retraction a **compare-and-set** rather than a blind
+   * newest-wins write: `recordRollCall`/`recordCrewRollCall` apply it only while
+   * that event is still the newest one standing at this subject and checkpoint,
+   * so a device holding a copy up to a fortnight old cannot unsay a *different*
+   * device's "did not come back from the dive". Before this the only guard was
+   * `newest.occurredAt > occurredAt`, and a retraction is stamped at tap time —
+   * so one tapped now beat everything recorded before now.
+   *
+   * **The target's own client event id, not a row id or a `seq`.** This device
+   * mints it locally, at queue time, which is the only identity an event has
+   * while it is still sitting in this queue unsynced — and retracting a mark
+   * that has not reached DiveDay yet is the ordinary case, not the exotic one.
+   * A status-and-timestamp pair would not do: two taps share a millisecond
+   * under a coarse or frozen clock, which is the very tie `latestQueuedAttempt`
+   * exists to break.
+   *
+   * **Additive, and no `OFFLINE_MANIFEST_RECORD_VERSION` bump** — the same
+   * reasoning as `cleared` itself, one field later. The snapshot payload is
+   * untouched, older events parse with this undefined, and undefined means
+   * "took the pre-change path", which the server still accepts.
+   */
+  retractsClientEventId?: string;
   note: string | null;
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
@@ -570,7 +629,14 @@ export function canRecordOfflineStatus(
   // sentence this product could show at that moment (dive-domain-expert review,
   // 2026-08-06). The server re-validates checkpoint, tenant, staff and booking
   // on reconcile, so the worst case is an event it rejects, not a bad write.
-  if (status === "not_boarded") return true;
+  //
+  // **A retraction is refused on exactly the same terms — never** (ADR
+  // 20260815-offline-can-unsay-a-missing-diver). `cleared` returns a row to
+  // awaiting; it puts nobody on a boat and closes no checkpoint, so there is
+  // nothing here for it to fail closed *against*. A crew that cannot unsay a
+  // mis-tap is a crew that stops tapping the control at all, and the loudest
+  // row the product has becomes the one nobody dares raise.
+  if (status === "not_boarded" || status === "cleared") return true;
 
   // Boarding, by contrast, is answered only from the checkpoint's own manifest,
   // and having no manifest for it refuses — fail closed in the direction that
@@ -620,7 +686,9 @@ export function canRecordOfflineCrewStatus(
   );
   if (!known) return false;
 
-  if (status === "not_boarded") return true;
+  // Same two always-recordable statements the diver path allows, for the same
+  // reasons: the alarm, and taking the alarm back.
+  if (status === "not_boarded" || status === "cleared") return true;
 
   // Aboard is answered from the checkpoint's own manifest, and having no
   // manifest for it refuses — the same DOM-L4 rule the diver path follows,
@@ -653,11 +721,18 @@ export function canRecordOfflineCrewStatus(
  *
  * Shared by both readers rather than written twice, so the two halves of one
  * head count cannot drift apart on the ordering question.
+ *
+ * `accepts` narrows which attempts are eligible. It exists for exactly one
+ * caller — the rejected-attempt rescue in {@link explicitResultAt}, which has
+ * to ask "what did this device last say that the server did *not* refuse?" —
+ * and it defaults to every attempt, so the ordering rule above is the same one
+ * in both passes.
  */
 function latestQueuedAttempt(
   events: readonly OfflineRollCallEvent[],
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
   matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
+  accepts: (event: OfflineRollCallEvent) => boolean = () => true,
 ): OfflineRollCallEvent | undefined {
   let latest: OfflineRollCallEvent | undefined;
   for (const event of events) {
@@ -670,7 +745,7 @@ function latestQueuedAttempt(
     // counted by *both* readers: one tap, two people marked, on the one screen
     // that says who came back from a dive.
     const subject = offlineRollCallSubject(event);
-    if (!subject || !matches(subject)) continue;
+    if (!subject || !matches(subject) || !accepts(event)) continue;
     // `>=`, not `>`: reaching an equal timestamp later in append order means
     // this is the newer tap, so it supersedes what is held. Plain string
     // comparison because these are fixed-width `toISOString()` values, where
@@ -680,58 +755,345 @@ function latestQueuedAttempt(
   return latest;
 }
 
+/**
+ * One person's result at one checkpoint, as this device reads it: the device's
+ * own queued events first, the saved snapshot behind them, and the
+ * carried-forward dock default behind that.
+ *
+ * `occurredAt` is an ISO string rather than a `Date` (this comes off storage),
+ * and `pending` says the statement has not reached DiveDay yet — the two
+ * fields that make it *not* a {@link RollCallRecord}. Everything that decides
+ * meaning is shared with the live manifest: `state` and `implied` go through
+ * `rollCallLabel`/`isNotBackAboard`/`rollCallRowState` exactly as a server
+ * record does.
+ */
+export type OfflineRollCallResult = {
+  state: "boarded" | "not_boarded";
+  occurredAt: string;
+  pending: boolean;
+  implied: boolean;
+  /**
+   * This reading comes from an event **this device queued**, rather than from
+   * the saved snapshot — i.e. somebody tapped it here.
+   *
+   * It is what scopes the retraction (ADR 20260815-offline-can-unsay-a-missing-diver,
+   * amended after the 2026-08-15 security review). A retraction aimed at a
+   * *snapshot* result — a copy up to fourteen days old, which a live write or
+   * another device may have superseded since — is a claim about a statement this
+   * device never saw made; one aimed at this device's own queued statement undoes
+   * the tap the crew member just made, which is the case the control exists for.
+   *
+   * The **first** of the two guards on that write, and still load-bearing. The
+   * second is `clientEventId` below: the server now compares the named event
+   * against the newest one standing before applying a retraction (ADR
+   * 20260815-an-offline-retraction-names-its-target), which catches the case this
+   * flag cannot — a mark this device queued, synced, and retracts an hour later,
+   * by which time a second device has changed the row. Belt and braces, not one
+   * guard written twice: this one keeps the control honest about *whose*
+   * statement it offers to undo, and a snapshot reading has no id to name anyway.
+   *
+   * A carried-forward value inherits it from the departure result it came from,
+   * so undoing a dock no-show is offered exactly where the dock no-show was
+   * recorded here.
+   */
+  local: boolean;
+  /**
+   * The queued event this reading came from, when it came from one — the id a
+   * retraction of it must name (ADR 20260815-an-offline-retraction-names-its-target).
+   *
+   * Undefined for a snapshot reading, which is not a coincidence but the same
+   * fact `local: false` states: a result off the saved copy has no client event
+   * id here to name, and the control refuses to aim a retraction at it anyway.
+   * A carried-forward value inherits the departure event's id along with
+   * `local`, which is inert — `rollCallRowState`'s `recordedNotBoarded` is false
+   * for a carried result, so no control offers a retraction there, and the
+   * server's compare-and-set would refuse one aimed at a checkpoint the named
+   * event was not recorded at.
+   */
+  clientEventId?: string;
+};
+
+/**
+ * What one queued event states.
+ *
+ * A result, or **`null` for a retraction** — "nothing stands here", the same
+ * collapse the server does (`listLatestRollCallByBooking` marks the subject
+ * seen and leaves it out of the map). `null` rather than `undefined` because
+ * the difference is load-bearing one layer up: "this device said to take the
+ * mark off" must not fall through to the snapshot's own stale result, which
+ * would make the undo a no-op and hand the crew back the mark they just
+ * removed, while "this device has said nothing" must.
+ *
+ * Always explicit: a device records at the checkpoint it is looking at.
+ */
+function recordedResult(event: OfflineRollCallEvent): OfflineRollCallResult | null {
+  if (event.status === "cleared") return null;
+  return {
+    state: event.status,
+    occurredAt: event.occurredAt,
+    pending: event.syncStatus === "pending",
+    implied: false,
+    local: true,
+    // Carried so a retraction of this reading can name the statement it undoes.
+    // Set here, in the one function both readers build a local result through,
+    // for the same reason the tie-break is: the diver and crew halves of one
+    // head count must not disagree about which event a row is showing.
+    clientEventId: event.clientEventId,
+  };
+}
+
+/**
+ * How loudly a result speaks, for the one comparison that needs an order: a
+ * stated "did not come back" outranks any settled result, which outranks
+ * nothing at all.
+ *
+ * Read through `isNotBackAboard`, not through a checkpoint test of its own,
+ * which is what confines the rescue below to after a numbered dive without a
+ * second rule to keep in sync: at `departure` a `not_boarded` means "never got
+ * on the boat", and that is a benign, accounted-for state, so it scores the
+ * same as any other settled result there.
+ */
+function resultStrength(
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  result: OfflineRollCallResult | undefined,
+): number {
+  if (!result) return 0;
+  return isNotBackAboard(checkpoint, result) ? 2 : 1;
+}
+
+/**
+ * What was **recorded at this checkpoint** for one subject — the device's own
+ * queued statement, else the snapshot's own explicit result. Never a
+ * carried-forward value: those are rebuilt from this by the chain below, so a
+ * `implied` the snapshot baked in can be *broken* by something this device
+ * recorded since.
+ *
+ * The rejected-attempt rule and its one asymmetry live here (ADR
+ * 20260815-a-rejected-correction-may-not-silence-a-missing-diver):
+ *
+ * - A rejection means the server has authoritative information this device
+ *   does not (another device wrote first, the booking became unavailable,
+ *   readiness changed), so the *default* is the snapshot — falling through to
+ *   an older local event would re-assert exactly the stale optimism
+ *   reconciliation exists to overrule (a "boarded" corrected to "not_boarded",
+ *   the correction rejected, and the diver still reading Boarded).
+ * - But that rule used to be applied symmetrically to two directions that are
+ *   not equally dangerous. Crew mark a diver **not back aboard** after dive 1;
+ *   they queue a correction to boarded; the server rejects it; the snapshot
+ *   holds nothing for that diver at an after-dive checkpoint, so the row read
+ *   **awaiting** — demoting the loudest row the product has to a clerical gap,
+ *   on the device the crew is holding, at the moment it matters most.
+ *
+ * So on a rejection: the snapshot stands, **unless** a non-rejected local
+ * event states a "not back aboard" that the snapshot does not — the one
+ * direction that can only ever raise an alarm the server has not seen. A local
+ * `boarded`, or a local retraction, never survives a rejection; it is the
+ * optimism the server refused.
+ *
+ * One rejection carries more information than "the server knows something",
+ * and it is spent here rather than thrown away: `retraction_superseded` (ADR
+ * 20260815-an-offline-retraction-names-its-target) says precisely *the newest
+ * statement at this subject and checkpoint is not the one you named*. Two
+ * consequences, both below — the value that would otherwise stand is read down
+ * to awaiting unless it is an alarm, and a rescued alarm stops presenting
+ * itself as this device's own statement to undo.
+ */
+function explicitResultAt(
+  events: readonly OfflineRollCallEvent[],
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
+  saved: OfflineRollCallResult | undefined,
+): OfflineRollCallResult | null | undefined {
+  const latestAttempt = latestQueuedAttempt(events, checkpoint, matches);
+  if (!latestAttempt) return saved;
+  if (latestAttempt.syncStatus !== "rejected") return recordedResult(latestAttempt);
+  const rescued = latestQueuedAttempt(
+    events,
+    checkpoint,
+    matches,
+    (event) => event.syncStatus !== "rejected",
+  );
+  const local = rescued ? recordedResult(rescued) : null;
+  // Only the alarm is eligible, which is what keeps this from resurrecting a
+  // superseded "boarded" — `resultStrength` alone would rank one above the
+  // snapshot's silence.
+  //
+  // **And only while the snapshot has not already answered it.** A stated
+  // "did not come back" outranks a *silence*, never a later sighting: on a
+  // two-device boat the second crew member records the diver back aboard on
+  // the live manifest, this device's next auto-save brings that home, and a
+  // rejection here must not re-raise an alarm two newer server statements
+  // have settled (dive-domain review, 2026-08-15). Plain string comparison
+  // because both are fixed-width `toISOString()` values, the same reason
+  // `latestQueuedAttempt` compares them that way.
+  const alarm =
+    local && isNotBackAboard(checkpoint, local) && (!saved || local.occurredAt >= saved.occurredAt)
+      ? local
+      : undefined;
+  // A `retraction_superseded` refusal is the one rejection that says something
+  // *specific*, and both branches below spend it.
+  const superseded =
+    latestAttempt.status === "cleared" && latestAttempt.rejectionReason === RETRACTION_SUPERSEDED;
+  // `alarm &&` is redundant to the comparison — an absent alarm scores 0 and
+  // can never outrank anything — and is written for the type narrowing alone.
+  if (alarm && resultStrength(checkpoint, alarm) > resultStrength(checkpoint, saved)) {
+    // The alarm stands — but it is no longer *this device's* statement to take
+    // back, and the row must stop saying it is. Left `local`, the hint under it
+    // keeps reading "tap again to undo" and every tap queues another retraction
+    // the server refuses identically: an undo that can never succeed, under copy
+    // promising it will (dive-domain review, 2026-08-15). Dropping `local` and
+    // the id switches the line to "Recorded on another device or on the live
+    // manifest — undo it there, not here", which is exactly what the refusal
+    // just told us.
+    return superseded ? { ...alarm, local: false, clientEventId: undefined } : alarm;
+  }
+  // What the refusal means, spelled out: *the server holds a statement newer
+  // than anything this device can see*. So the value that would otherwise stand
+  // here is known-stale, and this copy has no current answer — which is
+  // `awaiting`, and `null` rather than `undefined` because the chain above must
+  // not then fall through to the snapshot the retraction was aimed at.
+  //
+  // **It matters most at `departure`, which is why refusing is not enough on its
+  // own.** After a dive, leaving a mark standing holds a count open. At the dock
+  // `not_boarded` means *never left* — an accounted-for state that carries
+  // forward — so leaving it standing does not hold one count open, it closes
+  // every later one: the crew's own dock mark, superseded by a desk that boarded
+  // the diver after all, would read "not boarded · carried" after dive 1 and
+  // print roll call complete about somebody in the water (dive-domain review,
+  // 2026-08-15). Awaiting is the fail-open answer, the same call ADR
+  // 20260815-a-rejected-correction-may-not-silence-a-missing-diver made one door
+  // along.
+  //
+  // Never over an alarm, though, whoever recorded it: a stated "did not come
+  // back" is the one value where silence *is* the failure, so it outranks this
+  // whole rule.
+  if (superseded && !isNotBackAboard(checkpoint, saved)) return null;
+  return saved;
+}
+
+/**
+ * The checkpoints this copy's trip has, in departure→last order — the order
+ * `carryForwardNotBoarded` requires.
+ *
+ * Derived from the trip's own planned-dive count rather than from the saved
+ * `manifests` array, so it is the identical list the server carried forward
+ * over (`getTripManifests`) even if a manifest is missing from the copy.
+ */
+function offlineCheckpointOrder(
+  snapshot: OfflineManifestSnapshot,
+): OfflineManifestSnapshot["manifests"][number]["checkpoint"][] {
+  const plannedDives = snapshot.manifests[0]?.trip.plannedDives;
+  return plannedDives === undefined ? [] : rollCallCheckpoints(plannedDives);
+}
+
+/**
+ * One subject's effective result at one checkpoint — the whole reading, shared
+ * by both readers below so the two halves of one head count cannot answer it
+ * differently.
+ *
+ * The carry-forward step is the device's half of ADR
+ * 20260815-roll-call-order-is-a-property-of-the-data: `carryForwardNotBoarded`
+ * ran only when the *server* assembled a manifest, so a diver marked not
+ * boarded offline **at the dock** read "awaiting" at every later checkpoint on
+ * that device, where online they read "not boarded · carried". The trap was
+ * the wording, not the count: the only offline control that will take a result
+ * for that person after a dive is "Mark not back aboard", which there means
+ * *did not return from a dive* — so a crew member tidying the count writes a
+ * genuine missing-diver event about somebody in the marina car park, and it
+ * does not even close the checkpoint.
+ *
+ * Explicit results feed the chain and carried ones are recomputed, which is
+ * what makes the interaction with the snapshot's own baked-in `implied` values
+ * come out right in **both** directions: a dock result this device recorded
+ * carries forward even though the snapshot predates it, and an explicit
+ * `boarded` this device recorded at the dock *breaks* a chain the server had
+ * carried, reopening the later checkpoints rather than leaving them reading
+ * "ashore, accounted for" about somebody who is now in the water.
+ */
+function offlineRollCallAt(
+  snapshot: OfflineManifestSnapshot,
+  events: readonly OfflineRollCallEvent[],
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
+  savedAt: (
+    checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  ) => OfflineRollCallResult | undefined,
+): OfflineRollCallResult | undefined {
+  // Only a result recorded *here* feeds the chain: an `implied` value the
+  // snapshot carries is the server's own carry-forward, and re-deriving it is
+  // the point.
+  const explicitAt = (at: OfflineManifestSnapshot["manifests"][number]["checkpoint"]) => {
+    const saved = savedAt(at);
+    return explicitResultAt(events, at, matches, saved?.implied ? undefined : saved);
+  };
+  const order = offlineCheckpointOrder(snapshot);
+  const index = order.indexOf(checkpoint);
+  // A checkpoint this copy's trip does not have (a hand-edited URL, a trip
+  // whose dive count shrank since it was saved): answer for it alone. There is
+  // no chain to place it in, and inventing one would be guessing.
+  if (index < 0) {
+    const only = explicitAt(checkpoint);
+    return only === null ? undefined : (only ?? savedAt(checkpoint));
+  }
+  const stated = order.map(explicitAt);
+  const carried = carryForwardNotBoarded(stated.map((result) => result ?? undefined));
+  const here = carried[index];
+  if (here) return here;
+  // Nothing carries, so this checkpoint is awaiting — as long as somebody has
+  // *said* so. Three ways to get here, and only the last one may read the
+  // snapshot:
+  //
+  // - this device retracted here (`null`): the undo stands, and a fallback
+  //   would hand the mark straight back;
+  // - the dock's own result is known and does not carry (this device recorded
+  //   the diver aboard after all, breaking a chain the server had carried);
+  // - nothing explicit exists anywhere on this copy, in which case whatever
+  //   the snapshot holds here is the only statement there is — including a
+  //   carried `implied` value from a departure manifest this copy is missing.
+  if (stated[index] === null || stated[0] === null) return undefined;
+  return carried[0] === undefined ? savedAt(checkpoint) : undefined;
+}
+
+/** The saved result a snapshot holds for one subject at one checkpoint, or nothing. */
+function savedResult(
+  saved: { state: "boarded" | "not_boarded"; occurredAt: string; implied?: boolean } | undefined,
+): OfflineRollCallResult | undefined {
+  return saved
+    ? {
+        state: saved.state,
+        occurredAt: saved.occurredAt,
+        pending: false,
+        implied: saved.implied ?? false,
+        local: false,
+      }
+    : undefined;
+}
+
 export function latestOfflineRollCall(
   snapshot: OfflineManifestSnapshot,
   events: readonly OfflineRollCallEvent[],
   bookingId: string,
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
-):
-  | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
-  | undefined {
-  // The single latest attempt for this booking+checkpoint, across every sync
-  // status — not "the latest non-rejected one." A rejection means the server
-  // has authoritative information this device doesn't (another device's write
-  // landed first, the booking became unavailable, readiness changed): falling
-  // through to an *older*, superseded local event on rejection would silently
-  // re-assert exactly the stale optimism reconciliation exists to overrule —
-  // e.g. a correction from "boarded" to "not_boarded" gets rejected, and the
-  // diver keeps reading "Boarded" on the captain's screen. See the regression
-  // test in offline-manifests.test.ts.
-  const latestAttempt = latestQueuedAttempt(
+): OfflineRollCallResult | undefined {
+  return offlineRollCallAt(
+    snapshot,
     events,
     checkpoint,
     (subject) => subject.kind === "diver" && subject.bookingId === bookingId,
+    (at) =>
+      savedResult(
+        snapshot.manifests
+          .find((manifest) => manifest.checkpoint === at)
+          ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall,
+      ),
   );
-  if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
-    // A result recorded on this device at this checkpoint is always explicit.
-    return {
-      state: latestAttempt.status,
-      occurredAt: latestAttempt.occurredAt,
-      pending: latestAttempt.syncStatus === "pending",
-      implied: false,
-    };
-  }
-  const server = snapshot.manifests
-    .find((manifest) => manifest.checkpoint === checkpoint)
-    ?.divers.find((entry) => entry.bookingId === bookingId)?.rollCall;
-  return server
-    ? {
-        state: server.state,
-        occurredAt: server.occurredAt,
-        pending: false,
-        implied: server.implied ?? false,
-      }
-    : undefined;
 }
 
 /**
- * The crew sibling of {@link latestOfflineRollCall} — again a separate
- * function, and again reading the single latest attempt across every sync
- * status rather than the latest non-rejected one. A rejection means the server
- * knows something this device does not (another device wrote first, the person
- * came off the roster, a newer event won), so falling through to an older local
- * event on rejection would re-assert exactly the stale optimism reconciliation
- * exists to overrule.
+ * The crew sibling of {@link latestOfflineRollCall}. Still a separate exported
+ * function — the subject spaces must not leak into one another — but every
+ * rule below the surface is now literally the same code: the tie-break, the
+ * rejected-attempt asymmetry, the retraction, and the dock carry-forward.
  *
  * `crewPersonId` is required, so a crew member an older snapshot carries with
  * no id never reaches this: the caller reads that member's saved result
@@ -743,31 +1105,17 @@ export function latestOfflineCrewRollCall(
   events: readonly OfflineRollCallEvent[],
   crewPersonId: string,
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
-):
-  | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
-  | undefined {
-  const latestAttempt = latestQueuedAttempt(
+): OfflineRollCallResult | undefined {
+  return offlineRollCallAt(
+    snapshot,
     events,
     checkpoint,
     (subject) => subject.kind === "crew" && subject.crewPersonId === crewPersonId,
+    (at) =>
+      savedResult(
+        snapshot.manifests
+          .find((manifest) => manifest.checkpoint === at)
+          ?.crew.find((member) => member.id === crewPersonId)?.rollCall,
+      ),
   );
-  if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
-    return {
-      state: latestAttempt.status,
-      occurredAt: latestAttempt.occurredAt,
-      pending: latestAttempt.syncStatus === "pending",
-      implied: false,
-    };
-  }
-  const server = snapshot.manifests
-    .find((manifest) => manifest.checkpoint === checkpoint)
-    ?.crew.find((member) => member.id === crewPersonId)?.rollCall;
-  return server
-    ? {
-        state: server.state,
-        occurredAt: server.occurredAt,
-        pending: false,
-        implied: server.implied ?? false,
-      }
-    : undefined;
 }

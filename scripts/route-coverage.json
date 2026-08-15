@@ -397,7 +397,8 @@
       "trip-guests-identity",
       "trip-guests-note-undo",
       "trip-guests-refusal-card",
-      "trip-guests-refusal-level"
+      "trip-guests-refusal-level",
+      "trip-guests-waitlist"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/log": {

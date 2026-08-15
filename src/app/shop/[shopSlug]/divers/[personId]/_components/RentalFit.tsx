@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { rentableItemLabel, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -68,7 +69,9 @@ export function RentalFit({
           as="form"
           action={saveProfileAction.bind(null, shopSlug, personId)}
           columns={2}
-          className="mt-4 rounded-lg border border-border bg-surface p-5"
+          // `padding="lg"`: a card someone works *inside*, and the same shell
+          // the fallback form below it wears.
+          className={sectionCardClass({ padding: "lg", className: "mt-4" })}
         >
           {offered.length > 0 ? (
             <fieldset className="sm:col-span-2">
@@ -188,7 +191,14 @@ function StaffFitFallback({
   return (
     <form
       action={setNeedsStaffFitAction.bind(null, shopSlug, personId)}
-      className={`mt-4 rounded-lg border p-5 ${flagged ? "border-warning/40 bg-warning/5" : "border-border bg-surface"}`}
+      // Flagged is a *tone* variant, not a second card: it keeps the canonical
+      // geometry (radius, `padding="lg"`, elevation) and changes only the
+      // border and fill, so raising the flag never restyles the box's shape.
+      className={
+        flagged
+          ? "mt-4 rounded-2xl border border-warning/40 bg-warning/5 p-5 shadow-sm sm:p-6"
+          : sectionCardClass({ padding: "lg", className: "mt-4" })
+      }
     >
       <h3 className="text-sm font-medium">
         {flagged ? t("divers.rentalFit.flaggedHeading") : t("divers.rentalFit.cantFillHeading")}
@@ -204,7 +214,7 @@ function StaffFitFallback({
           {canResolve ? (
             <SubmitButton
               pendingLabel={t("divers.rentalFit.clearing")}
-              className={buttonClass({ variant: "secondary", className: "mt-4 text-foreground" })}
+              className={buttonClass({ variant: "secondary", className: "mt-4" })}
             >
               {t("divers.rentalFit.fitResolved")}
             </SubmitButton>
@@ -230,7 +240,7 @@ function StaffFitFallback({
             <input type="hidden" name="needed" value="on" />
             <SubmitButton
               pendingLabel={t("divers.rentalFit.flagging")}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("divers.rentalFit.flagForStaffFit")}
             </SubmitButton>

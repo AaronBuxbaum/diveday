@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { people, shops } from "./schema";
-import { listDeclaredDiveProfiles } from "./self-declared-cards";
+import { listCertificationSummaries } from "./self-declared-cards";
 import {
   getTripRoster,
   getTripWaitlist,
@@ -65,7 +65,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
-      declaration: { level: "open_water", nitrox: false },
+      declaration: { level: "open_water", noCertification: false, nitrox: false },
     });
     const [person] = await db.select().from(people).where(eq(people.email, visitor.email));
     if (!person) throw new Error("setup: joiner not created");
@@ -75,13 +75,13 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
       tripId: fullTrip.id,
       email: visitor.email,
       fullName: "Someone Else Entirely",
-      declaration: { level: "instructor", nitrox: true },
+      declaration: { level: "instructor", noCertification: false, nitrox: true },
     });
 
     // The entry side is unchanged — a second submission on an existing entry is
     // `already_waitlisted` either way. Only the evidence write is gated.
     expect(again).toMatchObject({ ok: false, reason: "already_waitlisted" });
-    const profile = (await listDeclaredDiveProfiles(db, shop.id, [person.id])).get(person.id);
+    const profile = (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id);
     expect(profile?.level).toBe("open_water");
     expect(profile?.nitrox).toBe(false);
   });

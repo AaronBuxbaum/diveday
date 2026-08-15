@@ -27,8 +27,9 @@ import {
   weekdaySetFrom,
 } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
-import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /* -------------------------------------------------------------------------- *
@@ -47,7 +48,12 @@ import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
  * page. Creating is one place; editing is the other.
  * -------------------------------------------------------------------------- */
 
-const boardPath = (shopSlug: string) => `/shop/${shopSlug}/schedule/board`;
+// `shopPath`, not a template literal. Every exported action in this file takes
+// `shopSlug` as its first argument — client-supplied — and `requireBoardAuthor`
+// authorizes against `session.user.shopId` without ever comparing the two, so
+// an unescaped slug traverses out of the `/shop/` namespace, and one carrying a
+// `?` swallows the `?builder=` code appended after it (src/lib/staff-notices.ts).
+const boardPath = (shopSlug: string) => shopPath(shopSlug, "schedule", "board");
 
 /**
  * Trip definition is owner/manager/instructor work (H-14, ADR
@@ -244,11 +250,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   // read means they were never on screen — fall back to the quick row's single
   // dive-site select rather than writing four empty dives over it.
   const diveDrafts = tripDiveDraftsFromForm(formData, plannedDives);
-  const plannedDiveCards = diveDrafts.some(
-    (draft) => draft.title || draft.diveSiteId || draft.description,
-  )
-    ? diveDrafts
-    : undefined;
+  const plannedDiveCards = hasTripDiveContent(diveDrafts) ? diveDrafts : undefined;
 
   // The shop's currency decides the multiplier: 5000 in a JPY shop's price box
   // is ¥5,000 and stores 5000, not a hundredfold ¥500,000. Same ceiling every

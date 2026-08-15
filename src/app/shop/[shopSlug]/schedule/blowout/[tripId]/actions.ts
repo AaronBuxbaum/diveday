@@ -7,9 +7,15 @@ import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { trackEvent } from "@/lib/analytics";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
+// `shopPath`, not a template literal: `shopSlug` is a server-action argument and
+// therefore client-supplied, and interpolating it raw let a slug traverse out of
+// the `/shop/` namespace, or carry a `?`/`#` that swallowed the `?notice=`
+// appended after it (see src/lib/staff-notices.ts). Each segment is escaped
+// instead.
 const blowoutPath = (shopSlug: string, tripId: string) =>
-  `/shop/${shopSlug}/schedule/blowout/${tripId}`;
+  shopPath(shopSlug, "schedule", "blowout", tripId);
 
 /**
  * The one-tap blow-out (docs ADR 20260804-blowout-cascade). Open to all staff,
@@ -31,7 +37,7 @@ export async function callBlowoutAction(shopSlug: string, tripId: string) {
     calledByPersonId: s.user.personId,
   });
   if (!outcome.ok) {
-    redirect(`${back}?notice=${outcome.reason === "trip_departed" ? "departed" : "error"}`);
+    redirect(noticeUrl(back, outcome.reason === "trip_departed" ? "departed" : "error"));
   }
   await trackEvent({
     name: "blowout_called",
@@ -50,7 +56,7 @@ export async function callBlowoutAction(shopSlug: string, tripId: string) {
     });
   }
   refreshBlowoutSurfaces(shopSlug, tripId);
-  redirect(`${back}?notice=${outcome.resumed ? "resumed" : "called"}`);
+  redirect(noticeUrl(back, outcome.resumed ? "resumed" : "called"));
 }
 
 /**
@@ -66,7 +72,7 @@ export async function resumeBlowoutAction(shopSlug: string, tripId: string) {
     tripId,
     calledByPersonId: s.user.personId,
   });
-  if (!outcome.ok) redirect(`${back}?notice=error`);
+  if (!outcome.ok) redirect(noticeUrl(back, "error"));
   await trackEvent({
     name: "blowout_resumed",
     total: outcome.total,
@@ -74,13 +80,13 @@ export async function resumeBlowoutAction(shopSlug: string, tripId: string) {
     failed: outcome.failed,
   });
   refreshBlowoutSurfaces(shopSlug, tripId);
-  redirect(`${back}?notice=resumed`);
+  redirect(noticeUrl(back, "resumed"));
 }
 
 /** The surfaces a blow-out changes: this page, the trip, the board, Today. */
 function refreshBlowoutSurfaces(shopSlug: string, tripId: string) {
   revalidatePath(blowoutPath(shopSlug, tripId));
-  revalidatePath(`/shop/${shopSlug}/trips/${tripId}`);
-  revalidatePath(`/shop/${shopSlug}/schedule/board`);
-  revalidatePath(`/shop/${shopSlug}`);
+  revalidatePath(shopPath(shopSlug, "trips", tripId));
+  revalidatePath(shopPath(shopSlug, "schedule", "board"));
+  revalidatePath(shopPath(shopSlug));
 }

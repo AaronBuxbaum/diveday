@@ -83,7 +83,10 @@ describe("EmbedSettingsPage attribution", () => {
     // vitest worker's NODE_ENV isn't "production", so this resolves.
     process.env.APP_HOST = "http://localhost:3000";
     try {
-      const element = await EmbedSettingsPage();
+      // The page takes its slug from the route and `requireShopSurface`
+      // refuses one that disagrees with the session, so this passes the
+      // seeded shop's own.
+      const element = await EmbedSettingsPage({ params: Promise.resolve({ shopSlug: shop.slug }) });
       const snippetFields = findElements<{ label: string; snippet: string }>(element, SnippetField);
       const iframeField = snippetFields.find((field) => field.props.snippet.includes("<iframe"));
       expect(iframeField).toBeDefined();

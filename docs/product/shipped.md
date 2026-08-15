@@ -717,10 +717,13 @@ the owner can retract. The assessment was pruned again the same day.
   [20260803-per-person-crew-roll-call](../architecture/decisions/20260803-per-person-crew-roll-call.md),
   which extends
   [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)
-  — that ADR named this work as its own follow-on and is **not superseded**: the attestation stays
-  as the count-level record, and its
+  — that ADR named this work as its own follow-on, and its
   [2026-08-03 amendment](../architecture/decisions/20260802-crew-roll-call-attestation.md#amendment-2026-08-03--the-follow-on-landed-this-adr-is-not-superseded)
-  records which of its statements the follow-on narrows and which are unchanged.
+  records which of its statements the follow-on narrows and which are unchanged. It was superseded
+  the next day, and on **2026-08-15 its `roll_call_crew_attestations` table was dropped outright**
+  (H-49, pre-pilot with no users; the writer had no production caller). The per-person crew roll
+  call is the whole crew half of a head count, and `roll_call_crew_attestations.csv` is no longer
+  part of the shop export.
 
 **What did NOT ship, deliberately.** Each is stated in the ADR that created it, not left to be
 rediscovered:
@@ -748,7 +751,8 @@ rediscovered:
   monotonicity test meanwhile.
 - **The count-level crew attestation deliberately raises no Today row.** Most shops have never
   filled it in, so it would fire on nearly every trip and bury the rows that mean a person is in the
-  water. Only the per-person gaps escalate.
+  water. Only the per-person gaps escalate. (*Moot since 2026-08-15*: the attestation table is
+  deleted, so there is no count-level record left to escalate or suppress.)
 - **Erasure cannot reach the PII Stripe snapshots onto an invoice at finalization.** There is no API
   behind it; that obligation is **never auto-retried** and closes only when an owner attests they
   filed Stripe's data-deletion request. An erasure with an undischarged obligation is genuinely

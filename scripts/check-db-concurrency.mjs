@@ -131,9 +131,48 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
   // formatter to break it, and a state machine that treated whitespace as an
   // intervening token would quietly stop matching the wrapped ones.
   const tokens = [];
+  /**
+   * Brace depth, and the depths at which an unfinished template substitution is
+   * waiting for its `}`.
+   *
+   * A bare `scan()` loop does **not** get template literals right, and the way
+   * it fails is quiet enough to have shipped: after `` `a ${x}` `` the scanner
+   * hands back `TemplateHead`, the expression, then a plain `}` — and the
+   * closing backtick then opens what it reads as a *new* template, which
+   * swallows everything up to the next backtick anywhere in the file. In
+   * `src/db/seed-trip-legs.ts` the next backtick was in a comment reading
+   * "Sequential, never `Promise.all`", so this guard reported a violation
+   * against a comment saying the opposite — with its own docblock promising
+   * that a match inside a comment is impossible.
+   *
+   * The false positive is the visible half. The dangerous half is that every
+   * brace after such a template is misattributed, so `inTransaction()` can be
+   * wrong in *either* direction and a real fan-out can go unreported.
+   *
+   * `reScanTemplateToken(false)` is how TypeScript's own parser continues a
+   * template: at the `}` that closes a substitution, re-read it as a
+   * `TemplateMiddle` (another `${` follows) or a `TemplateTail` (the template
+   * ends). Both are dropped from the token list, exactly like the head.
+   */
+  let braceDepth = 0;
+  const templateBraces = [];
   // `SyntaxKind.EndOfFile`, not the classic `EndOfFileToken` — that name reads
   // `undefined` in TypeScript 7, and a loop testing against it never ends.
   for (let kind = scanner.scan(); kind !== SyntaxKind.EndOfFile; kind = scanner.scan()) {
+    if (kind === SyntaxKind.OpenBraceToken) {
+      braceDepth += 1;
+    } else if (kind === SyntaxKind.CloseBraceToken) {
+      if (templateBraces[templateBraces.length - 1] === braceDepth) {
+        kind = scanner.reScanTemplateToken(false);
+        if (kind === SyntaxKind.TemplateTail) templateBraces.pop();
+        continue;
+      }
+      braceDepth -= 1;
+    }
+    if (kind === SyntaxKind.TemplateHead) {
+      templateBraces.push(braceDepth);
+      continue;
+    }
     if (kind >= SyntaxKind.FirstTriviaToken && kind <= SyntaxKind.LastTriviaToken) continue;
     tokens.push({ kind, text: scanner.getTokenText(), start: scanner.getTokenStart() });
   }
@@ -156,6 +195,25 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
   const parenGroups = [];
   /** Set when a transaction-taking parameter list just closed, so the body brace can claim it. */
   let armed = false;
+  /**
+   * Depth of `<…>` seen since the parameter list closed — i.e. inside the
+   * return-type annotation.
+   *
+   * Without this, a `{` in the return type disarms the function before its
+   * body ever opens, so the whole body is exempt. `createDemoShop(db:
+   * DbExecutor): Promise<{ slug: string; ownerEmail: string }>` in
+   * `src/db/seed.ts` was exempt exactly this way, and it is the common shape:
+   * every async reader in `src/db` that returns an object is
+   * `Promise<{ … }>`. The sibling with a `Promise<void>` return was caught,
+   * which is what made the hole look like correct behaviour.
+   *
+   * A bare type-literal return (`): { a: string } {`) is still missed — telling
+   * that `{` from a body `{` needs a real parser rather than a token stream.
+   * Every function in the guarded roots returning an object is async and so
+   * wraps it in `Promise<…>`, so the residue is narrow; it is written down in
+   * the guard's tests rather than left as a surprise.
+   */
+  let returnTypeAngles = 0;
   /** Brace frames, outermost first. The file itself is not a transaction. */
   const frames = [false];
   const inTransaction = () => frames[frames.length - 1];
@@ -167,9 +225,24 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
         parenGroups.push(false);
         break;
       case SyntaxKind.CloseParenToken:
-        if (parenGroups.pop()) armed = true;
+        if (parenGroups.pop()) {
+          armed = true;
+          returnTypeAngles = 0;
+        }
+        break;
+      case SyntaxKind.LessThanToken:
+        if (armed) returnTypeAngles += 1;
+        break;
+      case SyntaxKind.GreaterThanToken:
+        if (armed && returnTypeAngles > 0) returnTypeAngles -= 1;
         break;
       case SyntaxKind.OpenBraceToken:
+        // A `{` inside the return type's `<…>` is a type literal, not the body:
+        // it must not spend `armed`, or the function it belongs to goes unchecked.
+        if (armed && returnTypeAngles > 0) {
+          frames.push(inTransaction());
+          break;
+        }
         frames.push(armed || inTransaction());
         armed = false;
         break;
@@ -177,11 +250,17 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
         if (frames.length > 1) frames.pop();
         // A `}` also ends a type alias or an interface body, the other way a
         // transaction type reaches a parameter list with no function under it.
-        armed = false;
+        // Not while still inside the return type's angle brackets, though —
+        // there the `}` is closing a type literal the body has not opened yet.
+        if (!(armed && returnTypeAngles > 0)) armed = false;
         break;
       case SyntaxKind.SemicolonToken:
         // An overload signature or an interface method: annotated, bodyless.
-        armed = false;
+        // Except inside the return type's `<…>`, where a `;` separates the
+        // members of a type literal — `Promise<{ slug: string; count: number }>`
+        // would otherwise disarm on its first member boundary, which is the
+        // same hole the type literal's braces opened.
+        if (!(armed && returnTypeAngles > 0)) armed = false;
         break;
       default:
         break;

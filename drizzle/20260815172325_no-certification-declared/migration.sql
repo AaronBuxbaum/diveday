@@ -1,0 +1,1 @@
+ALTER TABLE "people" ADD COLUMN "no_certification_declared_at" timestamp with time zone;

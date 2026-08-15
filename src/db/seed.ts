@@ -43,7 +43,6 @@ import {
   recapPhotos,
   rentalFitProfiles,
   reviewModerationEvents,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
@@ -93,6 +92,8 @@ import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
 import { seedPromos } from "./seed-promos";
 import { seedRentalFit } from "./seed-rental-fit";
+import { seedSelfDeclaredJoiners } from "./seed-self-declared";
+import { seedTripLegs } from "./seed-trip-legs";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
@@ -130,8 +131,22 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
- * | `./seed-reviews.ts` | verified diver reviews and the post-trip tips the recap collects |
+ * | `./seed-self-declared.ts` | the two list joiners who said what they can dive, so the marks a staffer reads before a blast are ever rendered |
+ * | `./seed-trip-legs.ts` | how far the boat really runs on the three departures where it is not the shop's usual twenty minutes |
  * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
+ *
+ * There is no `seed-reviews.ts`, though this table claimed one until 2026-08-15:
+ * verified diver reviews and the post-trip tips the recap collects are written by
+ * `./seed-history.ts` (`reviewRows` and `tipRows`, at the end of the file), because
+ * both hang off a booking on a departure that has already sailed. A row here
+ * naming a file that does not exist is worse than no row — it sent a session
+ * looking for the demo's missing tips in a module nobody ever wrote.
+ *
+ * `./seed-recent-recaps.ts` is deliberately **not** in this table and is not
+ * called from the orchestrator below. It is a keeper, run by the daily
+ * demo-refresh pass (`src/db/demo-refresh.ts`), for the tips and reviews that go
+ * missing as the demo ages past the instant this seed ran — read its docstring
+ * before assuming it belongs here.
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.
@@ -267,19 +282,20 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // authenticates these accounts. Cost 4 keeps seeding fast in tests; real
   // account creation flows must use a production-grade cost.
   const logins = Object.values(DEV_STAFF_LOGINS);
-  await db.insert(userAccounts).values(
-    await Promise.all(
-      logins.map(async (login) => {
-        const person = staff.find((p) => p.email === login.email);
-        if (!person) throw new Error(`seed: no staff person for ${login.email}`);
-        return {
-          personId: person.id,
-          email: login.email,
-          hashedPassword: await hash(crypto.randomUUID(), 4),
-        };
-      }),
-    ),
-  );
+  const accountRows = logins.map(async (login) => {
+    const person = staff.find((p) => p.email === login.email);
+    if (!person) throw new Error(`seed: no staff person for ${login.email}`);
+    return {
+      personId: person.id,
+      email: login.email,
+      hashedPassword: await hash(crypto.randomUUID(), 4),
+    };
+  });
+  // Hoisted so the acknowledgement below fits on the line the check reads. The
+  // fan-out is over bcrypt, not over queries: it awaits `hash()` for a handful
+  // of logins and hands one array to one `.values()`.
+  const accounts = await Promise.all(accountRows); // diveday:allow-db-concurrency: bcrypt, not queries
+  await db.insert(userAccounts).values(accounts);
 
   await seedStaffShifts(
     db,
@@ -435,15 +451,14 @@ export async function createDemoShop(
 
   // Placeholder hashes: every demo sign-in uses the isDemo bypass token, so these
   // accounts never need a password that matches.
-  await db.insert(userAccounts).values(
-    await Promise.all(
-      staff.map(async (person, i) => ({
-        personId: person.id,
-        email: identity.emailFor(staffDefs[i].local),
-        hashedPassword: await hash(crypto.randomUUID(), 4),
-      })),
-    ),
-  );
+  const accountRows = staff.map(async (person, i) => ({
+    personId: person.id,
+    email: identity.emailFor(staffDefs[i].local),
+    hashedPassword: await hash(crypto.randomUUID(), 4),
+  }));
+  // Same shape as `seedDemo`'s above, and the same acknowledgement.
+  const accounts = await Promise.all(accountRows); // diveday:allow-db-concurrency: bcrypt, not queries
+  await db.insert(userAccounts).values(accounts);
 
   // The same day on the roster the canonical demo gets. Without it a minted
   // demo's rostering surface was empty — the cast was there, nobody was ever
@@ -655,6 +670,23 @@ export async function seedDemoSchedule(
   // ahead). See src/db/seed-minimum-seats.ts.
   await seedMinimumSeats(db, shopId, { siteByName, captainId, divemasterId });
 
+  // Adds-only and late for the same reasons as the three above: two people who
+  // are on the shop-wide last-minute list and nothing else, one claiming Open
+  // Water and one saying they hold no card at all, so the marks a staffer reads
+  // before a discount blast are actually rendered somewhere
+  // (src/db/seed-self-declared.ts). Neither holds a seat, so no readiness count,
+  // roster or head count moves. Rides the history flag like the list itself.
+  await seedSelfDeclaredJoiners(db, shopId, opts.history !== false);
+
+  // Updates-only, and the only step here that writes no rows at all: how far the
+  // boat runs on the three departures where the answer is not the shop's usual
+  // twenty minutes (src/db/seed-trip-legs.ts). After every scenario that creates
+  // a departure, since it sets a column on their dives; before the waiver seal
+  // below, which nothing may write after. Canonical demo only — a stated leg
+  // beats the shop's own ride-out figure, which is exactly what a spec taking a
+  // shop of its own is usually testing.
+  await seedTripLegs(db, shopId, opts.history !== false);
+
   // A synthetic, status-only medical-review hold on a future departure gives
   // the demo and staff training a real fail-closed waiver path without storing
   // any health answers. It remains unresolved every time the demo resets; the
@@ -696,7 +728,6 @@ export async function resetDemoSchedule(
   // child here surfaces as an FK-violation mid-run — e.g. a waitlist entry or
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
-  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does

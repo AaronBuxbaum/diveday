@@ -1,4 +1,9 @@
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: the monthly report is a read of trips that already sailed, and
+ * the month picker is a GET form. Nothing on this surface writes.
+ */
 
 // Owner reporting (ADR 20260723-owner-reporting): "how's my month" over data the
 // shop already has — bookings, revenue, seat fill, waiver completion — anchored
@@ -7,7 +12,9 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 test.describe("owner", () => {
   signedInAsOwner();
 
-  test("shows this month's headline numbers and a per-trip breakdown", async ({ page }) => {
+  test("shows this month's headline numbers and a per-trip breakdown", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/reports");
 
     await expect(page.getByRole("heading", { level: 1, name: "How's your month" })).toBeVisible();
@@ -23,7 +30,7 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
 
-  test("pages back to a fully-realized prior month", async ({ page }) => {
+  test("pages back to a fully-realized prior month", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports");
     await page.getByRole("link", { name: "Previous month" }).click();
     await expect(page).toHaveURL(/reports\?month=\d{4}-\d{2}/);
@@ -32,7 +39,7 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
 
-  test("the month picker jumps straight to a far month", async ({ page }) => {
+  test("the month picker jumps straight to a far month", { tag: READ_ONLY }, async ({ page }) => {
     // The arrows are one month per click, so reaching last spring used to be a
     // dozen page loads. One GET form, one month.
     await page.goto("/shop/blue-mantis/reports");
@@ -44,9 +51,9 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "This month's numbers" })).toBeVisible();
   });
 
-  test("a month before the shop's first departure is clamped, not rendered as the year 1", async ({
-    page,
-  }) => {
+  test("a month before the shop's first departure is clamped, not rendered as the year 1", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     // `?month=` is hand-editable and bookmarkable. The page clamps to the same
     // floor the picker's `min` offers, so a nonsense month lands somewhere real.
     await page.goto("/shop/blue-mantis/reports?month=0001-01");
@@ -56,7 +63,9 @@ test.describe("owner", () => {
     await expect(page.getByRole("link", { name: "Previous month" })).toHaveCount(0);
   });
 
-  test("the month and its numbers lead the page, above the per-trip table", async ({ page }) => {
+  test("the month and its numbers lead the page, above the per-trip table", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     // The page reads top-down as the question it answers: which month, then how
     // it went, then the trips behind those figures. The compliance panels that
     // used to sit above all three now come last — not asserted here, because
@@ -81,7 +90,9 @@ test.describe("owner", () => {
 test.describe("as captain", () => {
   signedInAs("captain");
 
-  test("reports are gated to the owner or manager, not the daily crew", async ({ page }) => {
+  test("reports are gated to the owner or manager, not the daily crew", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/reports");
     // The captain has no use for revenue, so the surface doesn't exist for
     // them — bounced to Today rather than shown a read-only/explained page.

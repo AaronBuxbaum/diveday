@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
@@ -188,12 +189,12 @@ export function CrewSection({
       </div>
 
       {crewGapCode === "no_instructor" ? (
-        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.overRatioWarning}
         </p>
       ) : null}
@@ -252,7 +253,9 @@ export function CrewSection({
               <p className="text-sm text-muted">{copy.notAssignedYet}</p>
             </EmptyState>
           ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+            <ul
+              className={sectionCardClass({ padding: "none", className: "divide-y divide-border" })}
+            >
               {localCrew.map((entry) => (
                 <li
                   key={entry.id}

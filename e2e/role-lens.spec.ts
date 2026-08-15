@@ -1,4 +1,8 @@
-import { expect, signedInAs, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: all three tests land on Today and read what the lens leads with.
+ */
 
 // The role lens (20260721-role-aware-landing): the same Today, led by the
 // signed-in person's work. Each role gets its own cached session
@@ -8,7 +12,7 @@ import { expect, signedInAs, test } from "./fixtures";
 test.describe("as captain", () => {
   signedInAs("captain");
 
-  test("a captain's Today leads with the boat they crew", async ({ page }) => {
+  test("a captain's Today leads with the boat they crew", { tag: READ_ONLY }, async ({ page }) => {
     // The cached session (signedInAs) carries cookies but never navigates —
     // land on Today ourselves, same as the live sign-in flow used to.
     await page.goto("/shop/blue-mantis");
@@ -22,9 +26,9 @@ test.describe("as captain", () => {
 test.describe("as instructor", () => {
   signedInAs("instructor");
 
-  test("an instructor's Today leads with their sessions and student readiness", async ({
-    page,
-  }) => {
+  test("an instructor's Today leads with their sessions and student readiness", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("heading", { name: "Your sessions" })).toBeVisible();
     const firstSession = page
@@ -38,7 +42,7 @@ test.describe("as instructor", () => {
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("an owner keeps the whole-shop Today, no lens", async ({ page }) => {
+  test("an owner keeps the whole-shop Today, no lens", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       /Good (morning|afternoon|evening|night), Dana/,

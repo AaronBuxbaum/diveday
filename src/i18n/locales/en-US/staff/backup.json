@@ -4,17 +4,17 @@
   "notice": {
     "saved": "Backup destination saved. Run a test delivery to prove it works.",
     "invalid": "Check the destination details and try again.",
-    "endpoint_invalid": "That endpoint doesn't read as a plain HTTPS address. Use your provider's bare S3 API origin, with no query, path, or credentials in it.",
-    "endpoint_not_https": "The endpoint must start with https:// — backups never travel unencrypted.",
-    "endpoint_private_host": "That endpoint points at a private or local address, which DiveDay's servers can't deliver to. Use your storage provider's public endpoint.",
-    "secret_required": "Enter the secret access key to connect this destination.",
-    "encryption_key_unset": "This DiveDay instance isn't set up to hold credentials safely yet, so nothing was saved.",
-    "encryption_key_invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
+    "endpoint-invalid": "That endpoint doesn't read as a plain HTTPS address. Use your provider's bare S3 API origin, with no query, path, or credentials in it.",
+    "endpoint-not-https": "The endpoint must start with https:// — backups never travel unencrypted.",
+    "endpoint-private-host": "That endpoint points at a private or local address, which DiveDay's servers can't deliver to. Use your storage provider's public endpoint.",
+    "secret-required": "Enter the secret access key to connect this destination.",
+    "encryption-key-unset": "This DiveDay instance isn't set up to hold credentials safely yet, so nothing was saved.",
+    "encryption-key-invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
     "disconnected": "Backup destination removed. The delivery history below stays.",
-    "test_delivered": "Test delivery landed in your bucket. Weekly backups are proven to work.",
-    "test_failed": "The test delivery didn't land. {reason}",
-    "no_destination": "Save a destination first, then run a test delivery.",
-    "not_authorized": "Only an owner or manager can change backup settings."
+    "test-delivered": "Test delivery landed in your bucket. Weekly backups are proven to work.",
+    "test-failed": "The test delivery didn't land. {reason}",
+    "no-destination": "Save a destination first, then run a test delivery.",
+    "not-authorized": "Only an owner or manager can change backup settings."
   },
   "status": {
     "configuredHeading": "Backups are set up",

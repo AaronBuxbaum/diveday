@@ -128,7 +128,6 @@ function baseInput(overrides: Partial<IncidentExportInput> = {}): IncidentExport
         createdAt: new Date("2026-08-04T12:45:00.000Z"),
       },
     ],
-    crewCounts: [],
     generatedAt: GENERATED_AT,
     generatedByName: "Rae Owner",
     ...overrides,
@@ -206,7 +205,6 @@ describe("buildIncidentExport", () => {
       baseInput({
         manifests: manifestsFor([diver("b1", "Ana Diaz"), diver("b2", "Ben Cho")]),
         events: [],
-        crewCounts: [],
       }),
     );
 
@@ -332,32 +330,8 @@ describe("buildIncidentExport", () => {
       checkpoint: "after_dive_1",
       label: "not_back_aboard",
     });
-    expect(doc.timeline.map((entry) => ("action" in entry ? entry.action : entry.kind))).toEqual([
-      "cleared",
-      "not_boarded",
-    ]);
+    expect(doc.timeline.map((entry) => entry.action)).toEqual(["cleared", "not_boarded"]);
     expect(doc.timeline[1]).toMatchObject({ source: "offline", note: "Not at the ladder count" });
-  });
-
-  it("interleaves crew counts into the timeline in time order", () => {
-    const doc = buildIncidentExport(
-      baseInput({
-        crewCounts: [
-          {
-            checkpoint: "departure",
-            crewAboard: 2,
-            crewAssigned: 2,
-            attestedByName: "Rae Owner",
-            note: null,
-            occurredAt: new Date("2026-08-04T12:40:00.000Z"),
-            createdAt: new Date("2026-08-04T12:40:00.000Z"),
-          },
-        ],
-      }),
-    );
-
-    expect(doc.timeline.map((entry) => entry.kind)).toEqual(["crew_count", "diver"]);
-    expect(doc.timeline[0]).toMatchObject({ crewAboard: 2, crewAssigned: 2 });
   });
 
   it("marks imported cards and nitrox evidence distinctly", () => {
@@ -474,7 +448,6 @@ describe("buildIncidentExport", () => {
           diver("b3", "Cleo Vance"),
         ]),
         events: [],
-        crewCounts: [],
         buddyTeams: [teamOf("t1", [diverMember("b1", "Ana Diaz"), diverMember("b2", "Ben Cho")])],
         ...overrides,
       });
@@ -659,7 +632,6 @@ describe("buildIncidentExport", () => {
             diver("b3", "Cleo Vance"),
           ]),
           events: [],
-          crewCounts: [],
         }),
       );
       // Who dived with whom is a printed fact, so a printout claiming a
@@ -726,12 +698,14 @@ describe("buildIncidentExport", () => {
             createdAt: PAIRED_AT,
           },
         ],
-        crewCounts: [
+        events: [
           {
+            subjectKind: "crew",
+            subjectName: "Sol Marin",
             checkpoint: "departure",
-            crewAboard: 2,
-            crewAssigned: 2,
-            attestedByName: "Captain Sol",
+            status: "boarded",
+            source: "live",
+            recordedByName: "Captain Sol",
             note: null,
             occurredAt: new Date("2026-08-04T08:00:00.000Z"),
             createdAt: new Date("2026-08-04T08:00:00.000Z"),
@@ -739,9 +713,9 @@ describe("buildIncidentExport", () => {
         ],
       });
       const doc = buildIncidentExport(withTrail);
-      // Oldest first, whatever kind: the crew count at 08:00 precedes the
+      // Oldest first, whatever kind: the crew boarding at 08:00 precedes the
       // pairing at 08:12, which is the comparison an investigator makes.
-      expect(doc.timeline.map((entry) => entry.kind)).toEqual(["crew_count", "buddy_team"]);
+      expect(doc.timeline.map((entry) => entry.kind)).toEqual(["crew", "buddy_team"]);
       // Erasing the trail from an otherwise identical export changes the code.
       expect(doc.contentHash).not.toBe(
         buildIncidentExport({ ...withTrail, buddyTeamEvents: [] }).contentHash,
@@ -788,7 +762,6 @@ describe("buildIncidentExport", () => {
         baseInput({
           manifests,
           events: [],
-          crewCounts: [],
           buddyTeams: [teamOf("t1", [diverMember("b1", "Ana Diaz"), diverMember("b2", "Ben Cho")])],
         }),
       );

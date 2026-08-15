@@ -5,6 +5,7 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import { PrintButton } from "@/components/PrintButton";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -30,6 +31,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -103,7 +105,7 @@ export default async function IncidentExportPage({
   // with a reason on it: a refusal that teleports you somewhere silently reads
   // as a broken button (task 82).
   if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
-    redirect(`/shop/${shopSlug}/close-out?notice=log_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug, "close-out"), "log-not-authorized"));
   }
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
@@ -157,7 +159,7 @@ export default async function IncidentExportPage({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
             <Link
-              href={`/shop/${shopSlug}/close-out`}
+              href={shopPath(shopSlug, "close-out")}
               className={buttonClass({ variant: "ghost" })}
             >
               {t("incidentExport.backToCloseOut")}
@@ -325,7 +327,12 @@ export default async function IncidentExportPage({
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("incidentExport.evidenceDescription")}
         </p>
-        <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+        <ul
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-3 divide-y divide-border",
+          })}
+        >
           {doc.roster.map((diver) => (
             <li key={diver.bookingId} className="break-inside-avoid px-4 py-3">
               <p className="font-semibold">{diver.fullName}</p>
@@ -369,7 +376,12 @@ export default async function IncidentExportPage({
         {doc.timeline.length === 0 ? (
           <p className="mt-3 text-sm font-semibold">{t("incidentExport.timelineEmpty")}</p>
         ) : (
-          <ol className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ol
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-3 divide-y divide-border",
+            })}
+          >
             {doc.timeline.map((entry, index) => (
               <li
                 // Append-only history has no natural key; index order is the record.
@@ -389,13 +401,6 @@ export default async function IncidentExportPage({
                       ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
                       : t("incidentExport.buddyTeamUnnumbered")}{" "}
                     — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
-                  </span>
-                ) : entry.kind === "crew_count" ? (
-                  <span className="font-semibold">
-                    {t("incidentExport.crewCountLine", {
-                      aboard: entry.crewAboard,
-                      assigned: entry.crewAssigned,
-                    })}
                   </span>
                 ) : (
                   <span className="font-semibold">

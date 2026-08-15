@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Checklist-shaped skeleton for trip prep — renders as the trip layout's
@@ -15,7 +16,7 @@ export default function TripPrepLoading() {
       />
       <div className="mt-8 flex flex-col gap-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-40 rounded-xl border border-border bg-surface" />
+          <div key={i} className={sectionCardClass({ padding: "none", className: "h-40" })} />
         ))}
       </div>
     </div>

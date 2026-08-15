@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -40,6 +41,11 @@ export function SpecialtyCards({
 }) {
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+  // A refused card *number* goes on the box it names — see CertificationCards.
+  // Here it can only have come from the nitrox sighting form, the one control
+  // on this section that asks for a number a staffer reads off a card.
+  const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
+  const sectionStatus = numberError ? undefined : status;
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -50,7 +56,7 @@ export function SpecialtyCards({
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
         {/* Opened by its own outcome — see CertificationCards for why. */}
-        <details open={Boolean(status)}>
+        <details open={Boolean(sectionStatus)}>
           {/* Through the wrapper — see CertificationCards for why. */}
           <summary
             className={buttonClass({
@@ -69,7 +75,9 @@ export function SpecialtyCards({
             as="form"
             action={addSpecialtyAction.bind(null, shopSlug, personId)}
             columns={2}
-            className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
+            className={sectionCardClass({
+              className: "mt-3 gap-y-3 sm:w-[32rem]",
+            })}
           >
             <Field label={t("divers.certifications.agency")}>
               <select name="agency" className={controlClass}>
@@ -108,7 +116,7 @@ export function SpecialtyCards({
               >
                 {t("divers.specialty.captureForReview")}
               </SubmitButton>
-              <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+              <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
             </FieldActions>
           </FieldGrid>
         </details>
@@ -118,7 +126,12 @@ export function SpecialtyCards({
           <p className="text-sm text-muted">{t("divers.specialty.emptyState")}</p>
         </EmptyState>
       ) : (
-        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+        <ul
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-4 divide-y divide-border",
+          })}
+        >
           {diver.specialtyCertifications.map((card) => {
             const display = heldCardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
@@ -243,6 +256,7 @@ export function SpecialtyCards({
                         action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                         certificationId={card.id}
                         cardType="nitrox"
+                        numberError={numberError}
                       />
                     ) : card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>

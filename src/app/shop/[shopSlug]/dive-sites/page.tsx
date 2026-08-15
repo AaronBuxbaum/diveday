@@ -10,6 +10,7 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { getDb } from "@/db/client";
@@ -33,7 +34,7 @@ import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -194,7 +195,10 @@ export default async function DiveSitesPage({
       {stats.total > 0 ? (
         <QueryForm
           aria-label={t("diveSites.list.searchAriaLabel")}
-          className="mb-6 rounded-lg border border-border bg-surface p-4"
+          // The card's chrome without its anatomy: `QueryForm` is a `<form>`,
+          // which `SectionCard`'s closed element set deliberately excludes, and
+          // the band has no heading of its own.
+          className={sectionCardClass({ className: "mb-6" })}
         >
           <FieldGrid columns={2}>
             <Field label={t("diveSites.list.searchLabel")}>
@@ -219,7 +223,6 @@ export default async function DiveSitesPage({
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
-                    className: "text-foreground",
                   })}
                 >
                   {t("diveSites.list.searchClear")}
@@ -271,7 +274,12 @@ export default async function DiveSitesPage({
             <li key={site.id}>
               <Link
                 href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                className="group block h-full rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-sunken"
+                // A whole-card link, so the shell comes as a class string; the
+                // hover/lift behaviour is this list's own and rides on top.
+                className={sectionCardClass({
+                  className:
+                    "group block h-full transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-sunken",
+                })}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="font-semibold group-hover:text-primary">{site.name}</h2>
@@ -360,7 +368,7 @@ async function CatalogView({
   /** A template to open in full before deciding — `?view=catalog&template=<slug>`. */
   slug?: string;
 }) {
-  const back = `/shop/${shopSlug}/dive-sites`;
+  const back = shopPath(shopSlug, "dive-sites");
   const catalogHref = `${back}?view=catalog`;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
@@ -374,7 +382,7 @@ async function CatalogView({
     const id = String(formData.get("templateId") ?? "");
     const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
     if (!site) revalidateAndRedirect(back);
-    revalidateAndRedirect(back, `${back}/${site.id}?notice=imported`);
+    revalidateAndRedirect(back, noticeUrl(`${back}/${site.id}`, "imported"));
   }
 
   // Reading a template before taking it. Importing was a one-tap commitment
@@ -409,7 +417,10 @@ async function CatalogView({
       </div>
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {catalog.templates.map(({ template, version }) => (
-          <li key={template.id} className="rounded-lg border border-border bg-surface p-5">
+          // No `title`: the version line is an eyebrow *above* the name, and
+          // `SectionCard`'s header puts the heading first — so the card is
+          // taken as a shell and the catalog entry keeps its own reading order.
+          <SectionCard as="li" key={template.id}>
             <p className="text-sm font-medium text-primary">
               {t("diveSites.catalog.templateVersion", { version: version.version })}
             </p>
@@ -438,14 +449,13 @@ async function CatalogView({
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
-                    className: "text-foreground",
                   })}
                 >
                   {t("diveSites.catalog.importToLibrary")}
                 </SubmitButton>
               </form>
             </div>
-          </li>
+          </SectionCard>
         ))}
       </ul>
       <Pager
@@ -539,7 +549,11 @@ function TemplatePreview({
       <p className="mt-2 text-sm text-muted">{t("diveSites.catalog.previewNote")}</p>
 
       {facts.length > 0 ? (
-        <dl className="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
+        <dl
+          className={sectionCardClass({
+            className: "mt-6 grid gap-4 sm:grid-cols-2",
+          })}
+        >
           {facts.map((fact) => (
             <div key={fact.label}>
               <dt className="text-xs font-medium tracking-widest text-muted uppercase">
@@ -554,7 +568,12 @@ function TemplatePreview({
       {briefing.minimumCertificationLevel ||
       briefing.requiresNitrox ||
       (briefing.requiredSpecialties?.length ?? 0) > 0 ? (
-        <section className="mt-6">
+        // Framed like the facts panel above it, and for a reason worth stating:
+        // those are prose a shop can rewrite, these are the gates that decide
+        // who may board. On the one screen answering "what am I adopting", the
+        // gates may not read quieter than the description — which is what
+        // happened the moment the facts list became a raised card.
+        <section className={sectionCardClass({ className: "mt-6" })}>
           <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
             {t("diveSites.catalog.preview_requirements")}
           </h2>
@@ -608,7 +627,12 @@ function TemplatePreview({
           <h2 className="text-sm font-medium tracking-widest text-muted uppercase">
             {t("diveSites.catalog.preview_landmarks")}
           </h2>
-          <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-2 divide-y divide-border overflow-hidden",
+            })}
+          >
             {(briefing.landmarks ?? []).map((landmark) => (
               <li key={landmark.name} className="px-4 py-3">
                 <p className="font-medium">{landmark.name}</p>

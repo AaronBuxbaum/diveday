@@ -13,6 +13,7 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Promo codes discount real money on the shop's own Stripe account, so they
@@ -27,7 +28,10 @@ async function requirePromoManager() {
     session.user.shopId,
     session.user.personId,
   );
-  return { session, allowed, promos: `/shop/${session.user.shopSlug}/promos` };
+  // `shopPath`, not a template: the slug rides in on the session but is still
+  // an ordinary string being spliced into a redirect target, and every segment
+  // it builds is escaped (src/lib/staff-notices.ts).
+  return { session, allowed, promos: shopPath(session.user.shopSlug, "promos") };
 }
 
 /** A local date-time from the form to a `Date`, or null for an empty box. */
@@ -48,14 +52,14 @@ const promoFormSchema = z.object({
 
 export async function createPromoAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const startsAt = parseInstant(formData.get("startsAt"));
   const expiresAt = parseInstant(formData.get("expiresAt"));
   if (startsAt === undefined || expiresAt === undefined) {
-    revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+    revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   }
 
   const outcome = await createShopPromoCode(await getDb(), {
@@ -69,34 +73,37 @@ export async function createPromoAction(formData: FormData) {
     maxRedemptions: parsed.data.maxRedemptions === "" ? null : parsed.data.maxRedemptions,
     createdByPersonId: session.user.personId,
   });
-  revalidateAndRedirect(promos, `${promos}?notice=${outcome.ok ? "created" : outcome.reason}`);
+  revalidateAndRedirect(promos, noticeUrl(promos, outcome.ok ? "created" : outcome.reason));
 }
 
 export async function setPromoEnabledAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
 
   const promoId = String(formData.get("promoId") ?? "");
   const enable = formData.get("enable") === "true";
-  if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const changed = await setShopPromoEnabled(await getDb(), session.user.shopId, promoId, enable);
   revalidateAndRedirect(
     promos,
-    `${promos}?notice=${changed ? (enable ? "enabled" : "disabled") : "invalid"}`,
+    noticeUrl(promos, changed ? (enable ? "enabled" : "disabled") : "invalid"),
   );
 }
 
 /** Re-run Stripe creation for a `failed` code, unchanged from how it was entered. */
 export async function retryPromoAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
 
   const promoId = String(formData.get("promoId") ?? "");
-  if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const outcome = await retryShopPromoCode(await getDb(), session.user.shopId, promoId);
   revalidateAndRedirect(
     promos,
-    `${promos}?notice=${outcome.ok ? "created" : outcome.reason === "not_found" ? "invalid" : outcome.reason}`,
+    noticeUrl(
+      promos,
+      outcome.ok ? "created" : outcome.reason === "not_found" ? "invalid" : outcome.reason,
+    ),
   );
 }
 
@@ -112,30 +119,33 @@ export async function retryPromoAction(formData: FormData) {
  */
 export async function deletePromoAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
 
   const promoId = String(formData.get("promoId") ?? "");
-  if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const db = await getDb();
   const existing = await getShopPromoCodeById(db, session.user.shopId, promoId);
   const deleted = await deleteShopPromoCode(db, session.user.shopId, promoId);
   if (!deleted || !existing) {
-    revalidateAndRedirect(promos, `${promos}?notice=${deleted ? "deleted" : "invalid"}`);
+    revalidateAndRedirect(promos, noticeUrl(promos, deleted ? "deleted" : "invalid"));
   }
 
-  const undoParams = new URLSearchParams({
-    notice: "deleted",
-    undoCode: existing.code,
-    undoDiscountPercent: String(existing.discountPercent),
-    undoScope: existing.scope,
-  });
-  if (existing.description) undoParams.set("undoDescription", existing.description);
-  if (existing.startsAt) undoParams.set("undoStartsAt", existing.startsAt.toISOString());
-  if (existing.expiresAt) undoParams.set("undoExpiresAt", existing.expiresAt.toISOString());
-  if (existing.maxRedemptions !== null) {
-    undoParams.set("undoMaxRedemptions", String(existing.maxRedemptions));
-  }
-  revalidateAndRedirect(promos, `${promos}?${undoParams.toString()}`);
+  // The row's fields ride back as `noticeUrl`'s `extra` rather than a
+  // hand-assembled `URLSearchParams`: an `undefined` value drops out of the
+  // query on its own, which is what the four conditional `.set()` calls this
+  // replaced were for.
+  revalidateAndRedirect(
+    promos,
+    noticeUrl(promos, "deleted", {
+      undoCode: existing.code,
+      undoDiscountPercent: existing.discountPercent,
+      undoScope: existing.scope,
+      undoDescription: existing.description || undefined,
+      undoStartsAt: existing.startsAt?.toISOString(),
+      undoExpiresAt: existing.expiresAt?.toISOString(),
+      undoMaxRedemptions: existing.maxRedemptions === null ? undefined : existing.maxRedemptions,
+    }),
+  );
 }
 
 /**
@@ -148,14 +158,14 @@ export async function deletePromoAction(formData: FormData) {
  */
 export async function restorePromoAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(promos, `${promos}?notice=restore_failed`);
+  if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
   const startsAt = parseInstant(formData.get("startsAt"));
   const expiresAt = parseInstant(formData.get("expiresAt"));
   if (startsAt === undefined || expiresAt === undefined) {
-    revalidateAndRedirect(promos, `${promos}?notice=restore_failed`);
+    revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
   }
 
   const outcome = await createShopPromoCode(await getDb(), {
@@ -169,5 +179,5 @@ export async function restorePromoAction(formData: FormData) {
     maxRedemptions: parsed.data.maxRedemptions === "" ? null : parsed.data.maxRedemptions,
     createdByPersonId: session.user.personId,
   });
-  revalidateAndRedirect(promos, `${promos}?notice=${outcome.ok ? "restored" : "restore_failed"}`);
+  revalidateAndRedirect(promos, noticeUrl(promos, outcome.ok ? "restored" : "restore-failed"));
 }

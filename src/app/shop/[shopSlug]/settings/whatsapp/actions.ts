@@ -8,6 +8,7 @@ import {
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
   markShopWhatsAppVerified,
+  type WhatsAppKeyRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
 import { diverTranslator } from "@/i18n/messages";
@@ -25,6 +26,7 @@ import {
   whatsAppSignupConfigFromEnvironment,
 } from "@/lib/notifications/whatsapp-signup";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Connect, test, and disconnect a shop's own WhatsApp Business sender (docs ADR
@@ -37,22 +39,28 @@ import { requireStaffSession } from "@/lib/session";
  * back out to a response, a redirect parameter, or a log line.
  */
 
-/** Notices are codes; `page.tsx` picks the words (ADR 20260731-domain-layer-copy-leaks). */
+/**
+ * Notices are codes; `page.tsx` picks the words (ADR 20260731-domain-layer-copy-leaks).
+ *
+ * Spelled lower-case kebab, because on this page the code *is* the message-bundle
+ * key — the banner renders `whatsapp.notice.<code>` — so a fork between the two
+ * spellings shows a staffer nothing at all (src/lib/staff-notices.ts).
+ */
 type Notice =
   | "connected"
-  | "signup_unavailable"
-  | "signup_failed_exchange"
-  | "signup_failed_register"
-  | "signup_failed_subscribe"
-  | "signup_failed_template"
+  | "signup-unavailable"
+  | "signup-failed-exchange"
+  | "signup-failed-register"
+  | "signup-failed-subscribe"
+  | "signup-failed-template"
   | "disconnected"
   | "tested"
-  | "test_failed"
+  | "test-failed"
   | "invalid"
-  | "not_authorized"
-  | "no_account"
-  | "encryption_key_unset"
-  | "encryption_key_invalid";
+  | "not-authorized"
+  | "no-account"
+  | "encryption-key-unset"
+  | "encryption-key-invalid";
 
 /**
  * What Meta's Embedded Signup popup hands back. All three are opaque ids from
@@ -80,12 +88,17 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
   return {
     shopId: session.user.shopId,
     personId: session.user.personId,
-    path: `/shop/${session.user.shopSlug}/settings/whatsapp`,
+    path: shopPath(session.user.shopSlug, "settings", "whatsapp"),
   };
 }
 
-function done(path: string, notice: Notice): never {
-  revalidateAndRedirect(path, `${path}?notice=${notice}`);
+/**
+ * `WhatsAppKeyRefusal` rides along beside `Notice` because `src/db` answers in
+ * its own snake_case domain spelling; `noticeUrl` normalises it to the kebab the
+ * bundle key uses, so the refusal arrives worded rather than silent.
+ */
+function done(path: string, notice: Notice | WhatsAppKeyRefusal): never {
+  revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
 /**
@@ -101,11 +114,11 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   const { shopId, personId, path } = await settingsPath();
   const db = await getDb();
   if (!(await canPersonManageMessagingSettings(db, shopId, personId))) {
-    done(path, "not_authorized");
+    done(path, "not-authorized");
   }
 
   const config = whatsAppSignupConfigFromEnvironment();
-  if (!config) done(path, "signup_unavailable");
+  if (!config) done(path, "signup-unavailable");
 
   const parsed = signupSchema.safeParse({
     code: formData.get("code") ?? "",
@@ -144,7 +157,7 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
     },
     config,
   );
-  if (result.status === "failed") done(path, `signup_failed_${result.step}` as Notice);
+  if (result.status === "failed") done(path, `signup-failed-${result.step}` as Notice);
 
   const stored = await connectShopWhatsAppAccount(db, {
     shopId,
@@ -173,7 +186,7 @@ export async function testWhatsAppAction(formData: FormData): Promise<void> {
   const { shopId, personId, path } = await settingsPath();
   const db = await getDb();
   if (!(await canPersonManageMessagingSettings(db, shopId, personId))) {
-    done(path, "not_authorized");
+    done(path, "not-authorized");
   }
 
   const parsed = testSchema.safeParse({ testPhone: formData.get("testPhone") ?? "" });
@@ -183,9 +196,9 @@ export async function testWhatsAppAction(formData: FormData): Promise<void> {
   if (!whatsAppRecipient(parsed.data.testPhone)) done(path, "invalid");
 
   const account = await getShopWhatsAppAccount(db, shopId);
-  if (!account) done(path, "no_account");
+  if (!account) done(path, "no-account");
   const provider = whatsAppProviderForAccount(account);
-  if (!provider) done(path, "encryption_key_unset");
+  if (!provider) done(path, "encryption-key-unset");
 
   const shop = await getShopById(db, shopId);
   // A real diver would read this if it were a live send, so like the template
@@ -201,7 +214,7 @@ export async function testWhatsAppAction(formData: FormData): Promise<void> {
     // parameter sanitising that a live reminder will use.
     body: testBody,
   });
-  if (delivery.status !== "sent") done(path, "test_failed");
+  if (delivery.status !== "sent") done(path, "test-failed");
 
   await markShopWhatsAppVerified(db, shopId, nowDate());
   done(path, "tested");
@@ -211,8 +224,8 @@ export async function disconnectWhatsAppAction(): Promise<void> {
   const { shopId, personId, path } = await settingsPath();
   const db = await getDb();
   if (!(await canPersonManageMessagingSettings(db, shopId, personId))) {
-    done(path, "not_authorized");
+    done(path, "not-authorized");
   }
   const removed = await disconnectShopWhatsAppAccount(db, shopId);
-  done(path, removed ? "disconnected" : "no_account");
+  done(path, removed ? "disconnected" : "no-account");
 }

@@ -131,7 +131,7 @@
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
-      "certificationSelfDeclared": "El buzo indicó su nivel por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
+      "certificationSelfDeclared": "El buceador indicó su nivel por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
       "certificationExpired": "La certificación registrada ha superado su fecha de actualización.",
       "certificationInsufficient": "Se requiere {level} o superior para esta salida.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay tarjeta registrada.",
@@ -140,7 +140,7 @@
       "specialtyImportUnconfirmed": "La tarjeta de especialidad {specialty} llegó en una importación — un miembro del personal debe confirmarla antes de esta inmersión.",
       "nitroxMissing": "Se requiere certificación de nitrox; no hay tarjeta registrada.",
       "nitroxPending": "La tarjeta de nitrox espera verificación del personal.",
-      "nitroxSelfDeclared": "El buzo marcó nitrox por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
+      "nitroxSelfDeclared": "El buceador marcó nitrox por su cuenta. Nadie ha visto la tarjeta: pídesela y certifica desde la tarjeta.",
       "underMinimumAge": "Por debajo de la edad mínima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
       "paymentDue": "Hay un pago pendiente para esta salida.",
       "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
@@ -456,6 +456,9 @@
     "namePlaceholderOther": "Segundo tanque · sitio por definir",
     "diveSiteLabel": "Sitio de buceo",
     "noSiteChosen": "Sin sitio elegido todavía",
+    "travelLabelFirst": "Minutos desde el muelle",
+    "travelLabelOther": "Minutos desde el sitio anterior",
+    "travelHint": "(en blanco usa tu trayecto habitual)",
     "diverFacingDetailsLabel": "Detalles para los buceadores",
     "detailsPlaceholder": "Lo que los buceadores deben saber sobre esta parte de la salida.",
     "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, referencias, guía de campo — al briefing de esa inmersión. Deja el sitio en blanco cuando la tripulación lo elija en el muelle."
@@ -541,6 +544,10 @@
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",
+      "confirmAboard": "Confirmar que {name} está a bordo",
+      "confirmAboardHint": "Toca de nuevo para registrar que ves a {name} y que ya está de vuelta en el barco.",
+      "confirmAboardCancel": "Mantener “sin regresar a bordo”",
+      "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo — deshazlo allí, no aquí.",
       "openLiveManifest": "Abrir manifiesto en vivo",
       "record": {
         "expiredCannotRecord": "Esta copia guardada ha caducado — abre el manifiesto en vivo para registrar el pase de lista.",
@@ -618,9 +625,11 @@
     "expired": "Hay que firmarlo de nuevo",
     "medicalReview": "Revisión médica"
   },
-  "declaredProfile": {
-    "selfDeclared": "{value} — dicho por el buzo, sin tarjeta",
+  "certificationSummary": {
+    "selfDeclared": "{value} — dicho por el buceador, sin tarjeta",
     "levelNotSaid": "Nivel no indicado",
-    "nitrox": "Nitrox"
+    "notCertified": "Todavía sin certificación — dicho por el buceador",
+    "nitrox": "Nitrox",
+    "belowRequirement": "{value} · por debajo del mínimo de esta salida"
   }
 }

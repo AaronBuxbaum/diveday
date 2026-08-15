@@ -11,6 +11,7 @@ import {
   stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * Stripe's one fixed OAuth redirect target. The signed-in staff session and
@@ -18,7 +19,7 @@ import { requireStaffSession } from "@/lib/session";
  */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
-  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings`, request.url);
+  const settingsUrl = new URL(shopPath(session.user.shopSlug, "settings"), request.url);
   const url = new URL(request.url);
 
   const cookieStore = await cookies();
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
     session.user.personId,
   );
   if (!canPayments) {
-    settingsUrl.searchParams.set("notice", "not_authorized");
+    settingsUrl.searchParams.set("notice", "not-authorized");
     return NextResponse.redirect(settingsUrl);
   }
 
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
   // shop remains demo (src/db/orders.ts, orders/[id]/page.tsx).
   const shop = await getShopById(dbForShop, session.user.shopId);
   if (shop?.isDemo) {
-    settingsUrl.searchParams.set("notice", "connect_failed");
+    settingsUrl.searchParams.set("notice", "connect-failed");
     return NextResponse.redirect(settingsUrl);
   }
 
@@ -56,20 +57,20 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   if (error || !code || !state || !expectedState || state !== expectedState) {
-    settingsUrl.searchParams.set("notice", "connect_failed");
+    settingsUrl.searchParams.set("notice", "connect-failed");
     return NextResponse.redirect(settingsUrl);
   }
 
   const appHost = publicAppUrl();
   if (!appHost) {
-    settingsUrl.searchParams.set("notice", "not_configured");
+    settingsUrl.searchParams.set("notice", "not-configured");
     return NextResponse.redirect(settingsUrl);
   }
 
   const provider = connectProviderFromEnvironment();
   const result = await provider.exchangeCode(code, stripeConnectCallbackUrl(appHost));
   if (result.status !== "connected") {
-    settingsUrl.searchParams.set("notice", "connect_failed");
+    settingsUrl.searchParams.set("notice", "connect-failed");
     return NextResponse.redirect(settingsUrl);
   }
 

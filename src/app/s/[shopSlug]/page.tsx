@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { type AppDb, getDb } from "@/db/client";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
@@ -854,7 +855,7 @@ function ScheduleReviewsSkeleton() {
       <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="h-28 rounded-2xl border border-border bg-surface" />
+          <div key={i} className={sectionCardClass({ padding: "none", className: "h-28" })} />
         ))}
       </div>
     </section>

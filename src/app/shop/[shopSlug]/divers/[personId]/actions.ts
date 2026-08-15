@@ -10,7 +10,7 @@ import {
   canPersonRefund,
   loadActiveStaffRoles,
 } from "@/db/authz";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import {
   deleteDiver,
   getDiverProfile,
@@ -39,28 +39,30 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency } from "@/db/schema";
+import { certificationAgency, certificationLevel } from "@/db/schema";
+import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
 // form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
 // here while the database was ready for them (DOM-L1).
 const agencySchema = z.enum(certificationAgency.enumValues);
-const levelSchema = z.enum([
-  "open_water",
-  "advanced_open_water",
-  "rescue",
-  "divemaster",
-  "instructor",
-]);
+// Same rule, and it matters more since the card sighting started parsing the
+// level: a hand-written copy that falls behind the enum makes a legitimate
+// submit fail *silently* (`levelSightingFromForm` returns undefined), which
+// reads to the staffer as "you did not fill the form in".
+const levelSchema = z.enum(certificationLevel.enumValues);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
 // Regex shape alone would accept a normalized impossible date like
 // "2026-02-31" (CR-009); isValidCalendarDate rejects those explicitly.
@@ -97,26 +99,41 @@ const personSchema = z.object({
       .refine((value) => isPlausibleDateOfBirth(value), "not a plausible date of birth"),
   ]),
 });
+// The card number, on every form on this page that takes one. It is the same
+// bound everywhere **on purpose**: capturing a card and sighting one are
+// different acts (see `sightingSchema`) but they reach the identical `verified`
+// state, so a stricter check on only one of them is a speed bump with a door
+// beside it — delete the claim, capture the same "xx", tap Mark certified, and
+// the `self_declared_at` provenance is gone with it.
+const cardNumberSchema = z.string().trim().max(120).refine(isPlausibleCardNumber);
 const certificationSchema = z.object({
   agency: agencySchema,
   level: levelSchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
   expiresOn: dateSchema,
 });
 const specialtyCertificationSchema = z.object({
   agency: agencySchema,
   specialty: specialtySchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
   expiresOn: dateSchema,
 });
 /**
  * The card a staffer says they are holding, when the row they are verifying is
- * still only a diver's word (`certifications.selfDeclaredAt`). Same bounds as
- * capturing a card, because it is the same act.
+ * still only a diver's word (`certifications.selfDeclaredAt`).
+ *
+ * This is the act the number check above exists for. Capturing a card is a
+ * staffer entering a card the shop is looking at; a *sighting* is the single
+ * moment a stranger's typing becomes `verified` — the state readiness, trip
+ * admission, every course prerequisite and the nitrox fill gate read. It
+ * inherited the capture form's 2–120 characters, so **"xx" certified a
+ * self-declared "Instructor"**: a required box with no shape is a box a hurried
+ * person fills with anything. The check itself stays loose on purpose — see
+ * `isPlausibleCardNumber`.
  */
 const sightingSchema = z.object({
   agency: agencySchema,
-  identifier: z.string().trim().min(2).max(120),
+  identifier: cardNumberSchema,
 });
 /**
  * A **level** card's sighting names the rung too. The diver's claim is what the
@@ -175,12 +192,88 @@ const FORM_ANCHORS: Record<string, string> = {
  * to (`resolveDiverNotice`), and the anchor that puts that form on screen.
  */
 function backTo(base: string, notice: string, form?: string) {
-  const query = form ? `?notice=${notice}&form=${form}` : `?notice=${notice}`;
-  return `${base}${query}${form ? (FORM_ANCHORS[form] ?? "") : ""}`;
+  // The anchor rides on the path so `noticeUrl` keeps the query ahead of it;
+  // `form` drops out of the query entirely when there is none.
+  return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form });
+}
+
+/**
+ * The card a submit names, narrowed to something a `uuid` column can actually
+ * be compared against — or `undefined`, which every caller below already
+ * handles as "no card named" and answers with its own refusal.
+ *
+ * Five actions took this straight off the form and put it in
+ * `eq(certifications.id, …)`. **Postgres does not coerce a malformed uuid
+ * literal — it raises**, so a signed-in staffer editing the posted value turned
+ * a delete, a restore or a review into a **500** where that action's own
+ * "invalid" belongs one line later. Tenant isolation was never the exposure
+ * (every one of those queries is narrowed by `shopId` either way); a staff
+ * surface answering a typo with a stack trace instead of a sentence is.
+ *
+ * It is the same rule and the same helper `pnpm check:repo` already enforces on
+ * dynamic route segments (`scripts/check-uuid-segments.mjs`); that script can
+ * only see paths, and an id posted in a hidden field reaches the identical
+ * query.
+ */
+function cardIdFromForm(formData: FormData): string | undefined {
+  return uuidParam(String(formData.get("certificationId") ?? ""));
+}
+
+/**
+ * Whether this submit carried a card sighting whose **number** is the thing
+ * that was wrong.
+ *
+ * The distinction is the whole point. A failed `sightingSchema` parse collapses
+ * to `undefined`, which is exactly what a submit carrying *no* sighting
+ * returns — so a staffer who typed "xx" got `card_sighting_required`: *"Enter
+ * the agency and number from the card in front of you to certify it."* They
+ * had. At a busy dock that person retypes it once, gets the same sentence, and
+ * then goes **around** the form: delete the claim, capture the same "xx" by
+ * hand, tap Mark certified. That reaches the identical `verified` state while
+ * throwing away `self_declared_at` — the stamp the incident export, the
+ * "diver's word" mark and every provenance read depend on. A refusal that will
+ * not say what is wrong is how a safety-critical form teaches people to route
+ * around it.
+ *
+ * Checked on the number alone rather than the whole shape, because it is the
+ * only field a staffer types free-hand; a malformed agency or level can only
+ * come from a hand-built post and keeps the generic refusal.
+ */
+function sightedNumberRefused(formData: FormData): boolean {
+  return (
+    formData.has("sightedIdentifier") &&
+    !cardNumberSchema.safeParse(formData.get("sightedIdentifier")).success
+  );
+}
+
+/**
+ * **Is this token still somebody's job?** — the liveness gate every card action
+ * on this page passes before it writes.
+ *
+ * Deliberately **not** a role predicate. `isStaff` asks "are you staff at this
+ * shop at all", which every crew role answers yes to, so capturing, reviewing,
+ * deleting and restoring a card stay exactly as open as they have always been
+ * and H-48 — the open product-owner question about *which* roles may sight a
+ * card — is untouched. What it adds is the one thing a JWT cannot tell you: an
+ * account since demoted, removed or disabled still holds a valid token until it
+ * expires, and `requireStaffSession` will hand it back.
+ *
+ * It matters most on the strongest acts, which is where it was missing longest.
+ * `reviewCertification` and `reviewNitroxCertification` are the single moment a
+ * stranger's typing becomes `verified` — the state readiness,
+ * `decideTripAdmission`, every course prerequisite, the depth advisory and the
+ * nitrox fill gate all read — and `createCertification` mints that state
+ * outright. A revoked account could do both (`security-reviewer`, 2026-08-15).
+ * One helper rather than a copy per action, so the next card action added here
+ * cannot quietly ship without it.
+ */
+async function isLiveStaff(db: AppDb, shopId: string, personId: string): Promise<boolean> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  return Boolean(roles && isStaff(roles));
 }
 
 export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const parsed = personSchema.safeParse(Object.fromEntries(formData));
   // `&form=` is how a code half a dozen actions emit finds its way back to the
@@ -211,8 +304,15 @@ export async function addCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
   // No card photo, anywhere in the model: a shop verifies a card by looking its
@@ -220,7 +320,7 @@ export async function addCertificationAction(
   // to. The upload only ever added a second, unverified artefact to hold
   // (ADR 20260804-card-evidence-is-the-number), and the column that held it is
   // gone too (ADR 20260811-retire-the-digital-card).
-  const saved = await createCertification(await getDb(), {
+  const saved = await createCertification(db, {
     shopId: staff.user.shopId,
     personId,
     agency: parsed.data.agency,
@@ -233,19 +333,26 @@ export async function addCertificationAction(
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "specialty-cards"));
   const saved =
     parsed.data.specialty === "nitrox"
-      ? await createNitroxCertification(await getDb(), {
+      ? await createNitroxCertification(db, {
           shopId: staff.user.shopId,
           personId,
           agency: parsed.data.agency,
           identifier: parsed.data.identifier,
         })
-      : await createSpecialtyCertification(await getDb(), {
+      : await createSpecialtyCertification(db, {
           shopId: staff.user.shopId,
           personId,
           agency: parsed.data.agency,
@@ -266,22 +373,35 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
  * carries no number, and this form asks for the agency, the number **and the
  * level** off the card in the staffer's hand before it will certify anything.
  * That is the same act as capturing a card, and `reviewCertification` refuses
- * without it — as does the database, whose check constraint will not let a
- * numberless row reach `verified`.
+ * without it — as does the database, whose check constraint will not let a row
+ * with a blank or absent number reach `verified`. (It read `identifier is not
+ * null` until 2026-08-15, which `''` satisfies, so this sentence was true of
+ * NULL and enforced by the application alone for the empty string.)
  *
  * The level is there because the likeliest wrong claim is an overstated one:
  * transcribing the number off a real Open Water card while keeping the diver's
  * typed "Instructor" would verify the one field nobody looked at.
  */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  // Before anything is read: a number that is not a number gets its own answer,
+  // on its own box. Without this the refusal below is the one that fires, and
+  // it tells the staffer to do what they just did (`sightedNumberRefused`).
+  if (sightedNumberRefused(formData)) redirect(backTo(base, "card-number-implausible", "cards"));
+  const certificationId = cardIdFromForm(formData);
   // Present only on the sighting form; absent on the one-tap button, where a
   // blank parse must not turn into an empty-string "sighting".
   const sighting = levelSightingFromForm(formData);
   const outcome = certificationId
-    ? await reviewCertification(await getDb(), {
+    ? await reviewCertification(db, {
         shopId: staff.user.shopId,
         certificationId,
         status: "verified",
@@ -340,9 +460,21 @@ export async function reviewSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  // The nitrox twin of the level sighting's own refusal, and it matters at
+  // least as much here: this tap authorizes a gas fill.
+  if (sightedNumberRefused(formData)) {
+    redirect(backTo(base, "card-number-implausible", "specialty-cards"));
+  }
+  const certificationId = cardIdFromForm(formData);
   // One tap, the same as the level card beside it. The imported-card
   // attestation this used to forward is gone
   // (ADR 20260814-one-tap-imported-card-confirm). A self-declared nitrox card
@@ -350,19 +482,85 @@ export async function reviewSpecialtyAction(
   // fill, and nobody has seen anything yet.
   const outcome = certificationId
     ? formData.get("cardType") === "nitrox"
-      ? await reviewNitroxCertification(await getDb(), {
+      ? await reviewNitroxCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
           sighting: sightingFromForm(formData),
         })
-      : await reviewSpecialtyCertification(await getDb(), {
+      : await reviewSpecialtyCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
         })
     : ({ ok: false, reason: "not_found" } as const);
   revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "specialty-cards"));
+}
+
+/**
+ * **"This diver never told us that"** — the eraser for a *"Not certified yet —
+ * diver's word"* stamp somebody else left on their record.
+ *
+ * `people.no_certification_declared_at` is written by two **unauthenticated**
+ * forms (the shop-wide last-minute-deal join, a full trip's wait-list join),
+ * both of which resolve a person by shop + email. For a diver the shop holds no
+ * card for — the ordinary case for anyone whose card was never captured —
+ * anybody holding a name and an email address off any boat's manifest can mark
+ * them, permanently, on the staff send lists and in every CSV the shop exports
+ * from then on. Until this action the only thing that cleared it was owner-only
+ * erasure, which destroys the whole record.
+ *
+ * **It cannot be a second way to launder a claim into evidence.** Its only
+ * effect is to move this person from a *stated* absence of a card to *no
+ * statement at all* — the silence of somebody nobody asked. Evidence lives in
+ * the three card tables and `clearNoCertificationDeclaration` touches none of
+ * them: nothing here raises a level, adds a card, or moves a row toward
+ * `verified`. That direction is also what makes the gate right — a staff
+ * session and no role predicate, exactly as capturing a card has always been,
+ * since this is a weaker act than a capture. H-48 is the open product-owner
+ * question about who may *sight* a card, and this deliberately does not
+ * pre-empt it by inventing a narrower rule for a smaller thing.
+ *
+ * The correction is not itself invisible: it is stamped on the row with the
+ * staff member who made it (`people.no_certification_cleared_by_person_id`),
+ * which outlives the retention window an `activity_events` line would be pruned
+ * on, and travels in the export beside the statement it corrects.
+ */
+export async function clearNoCertificationAction(
+  shopSlug: string,
+  personId: string,
+  _formData: FormData,
+) {
+  const base = shopPath(shopSlug, "divers", personId);
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  const cleared = await clearNoCertificationDeclaration(db, {
+    shopId: staff.user.shopId,
+    personId,
+    byPersonId: staff.user.personId,
+  });
+  // Both outcomes are page-level, deliberately, and this is the one place on
+  // this record where that is the *right* answer rather than a shortcut: the
+  // panel holding this control renders only while the stamp is set, so on
+  // success it is gone, and on the no-op it was never there. A notice has to
+  // land somewhere that survives the state change it reports.
+  //
+  // The no-op gets its own code rather than the generic `invalid`. A replayed
+  // submit or a double tap **succeeded** — the record already says what the
+  // staffer wanted it to say — and answering *"Check the details and try
+  // again"* in a danger tone tells them their correction failed when it did
+  // not. Reporting it as a fresh success would be the opposite lie, putting
+  // their name on an act that did not happen.
+  revalidateAndRedirect(
+    base,
+    backTo(base, cleared ? "no-certification-cleared" : "no-certification-nothing-to-clear"),
+  );
 }
 
 /**
@@ -375,18 +573,25 @@ export async function deleteCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  const certificationId = cardIdFromForm(formData);
   const deleted = certificationId
-    ? await archiveCertification(await getDb(), { shopId: staff.user.shopId, certificationId })
+    ? await archiveCertification(db, { shopId: staff.user.shopId, certificationId })
     : false;
   // Land-then-undo: the delete happens now, and the toast on the next render
   // carries the id + type so a single tap restores it (no confirm dialog).
   revalidateAndRedirect(
     base,
     deleted
-      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=level`
+      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType: "level" })
       : backTo(base, "invalid", "cards"),
   );
 }
@@ -397,10 +602,16 @@ export async function deleteSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
   const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  const certificationId = cardIdFromForm(formData);
   const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
     ? cardType === "nitrox"
@@ -410,7 +621,7 @@ export async function deleteSpecialtyAction(
   revalidateAndRedirect(
     base,
     deleted
-      ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=${cardType}`
+      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType })
       : backTo(base, "invalid", "specialty-cards"),
   );
 }
@@ -424,12 +635,18 @@ const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
  * being clobbered (readiness.ts).
  */
 export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
-  const certificationId = String(formData.get("certificationId") ?? "");
+  const db = await getDb();
+  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
+  // action can emit this, so it has no one form to sit beside.
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
+    return;
+  }
+  const certificationId = cardIdFromForm(formData);
   const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
   if (!certificationId || !cardType.success) redirect(base);
-  const db = await getDb();
   const input = { shopId: staff.user.shopId, certificationId };
   const restored =
     cardType.data === "level"
@@ -447,7 +664,7 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // The gate is on *overriding* a stated request, not on writing the record
@@ -503,7 +720,7 @@ export async function setNeedsStaffFitAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // Re-read live roles like every other mutation on this page. Even the open
@@ -556,7 +773,7 @@ export async function markWaiverInPersonAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const outcome = await recordInPersonWaiver(await getDb(), {
     shopId: staff.user.shopId,
@@ -579,7 +796,7 @@ export async function markWaiverInPersonAction(
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
@@ -620,7 +837,7 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   // Soft-deleting a person frees their email and pulls them from shop work —
@@ -630,11 +847,12 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
     return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
+  const roster = shopPath(staff.user.shopSlug, "divers");
   revalidateAndRedirect(
-    `/shop/${staff.user.shopSlug}/divers`,
-    deleted
-      ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
-      : base,
+    roster,
+    // No hand-rolled `encodeURIComponent` any more — `noticeUrl` escapes every
+    // value it merges.
+    deleted ? noticeUrl(roster, "deleted", { deleted: personId }) : base,
   );
 }
 
@@ -652,7 +870,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
  * both land here as `restore-refused`, which says what to do about it.
  */
 export async function restorePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
@@ -683,7 +901,7 @@ export async function restorePersonAction(shopSlug: string, personId: string, _f
  * a hidden field the form could have carried unchanged.
  */
 export async function erasePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const base = shopPath(shopSlug, "divers", personId);
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
@@ -710,10 +928,9 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   // reports page; this notice is what sends someone to look.
   const erasedNotice =
     result.ok && result.owedProcessorErasures > 0 ? "erased-processor-owed" : "erased";
+  const roster = shopPath(staff.user.shopSlug, "divers");
   revalidateAndRedirect(
-    `/shop/${staff.user.shopSlug}/divers`,
-    result.ok
-      ? `/shop/${staff.user.shopSlug}/divers?notice=${erasedNotice}`
-      : backTo(base, "erase-refused", "erase"),
+    roster,
+    result.ok ? noticeUrl(roster, erasedNotice) : backTo(base, "erase-refused", "erase"),
   );
 }

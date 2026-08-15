@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
@@ -130,16 +131,31 @@ export function RentalFitForm({
     plannedDives,
   });
   return (
-    <section className="mt-5 rounded-xl border border-border bg-surface/70 p-4 text-left">
-      <h3 className="font-medium">{t("rental.heading")}</h3>
-      <p className="mt-1 text-sm text-muted">{t("rental.introBody")}</p>
-
+    // `titleAs="h3"`: this form is rendered under a heading that already owns
+    // the `h2` on both surfaces it appears on — the booking confirmation and
+    // /ready's "Gear and setup" section.
+    //
+    // `elevated={false}` for the same reason, and it is not a preference: a
+    // rental fit reserves nothing (docs/product/glossary.md — DiveDay tracks no
+    // equipment inventory, so a fit is never evidence and never replaces the
+    // dock-side check), while the cards it sits beside carry things that
+    // actually gate a diver — /ready's readiness checklist above it, and the
+    // payment and waiver steps on the confirmation. Raised, this panel read as
+    // their peer, which put a green "sizes recorded" light at the same volume
+    // as a medical referral rendered one row above it in muted grey.
+    <SectionCard
+      className="mt-5 text-left"
+      titleAs="h3"
+      elevated={false}
+      title={t("rental.heading")}
+      description={t("rental.introBody")}
+    >
       {/* Gear-Status Light-up Indicator */}
       <div
         data-testid="gear-status-indicator"
         role="status"
         aria-live="polite"
-        className={`mt-4 flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
+        className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
           isConfirmed
             ? "border-success/30 bg-success/5 shadow-sm"
             : "border-border bg-surface-sunken/40"
@@ -174,7 +190,7 @@ export function RentalFitForm({
       {saved ? (
         <p
           role="status"
-          className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+          className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
         >
           {t("rental.savedNote")}
         </p>
@@ -232,7 +248,11 @@ export function RentalFitForm({
               <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
             )}
             {showPricing && quote.subtotalCents > 0 ? (
-              <p className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+              // Sunken, not `bg-surface`: this note is nested *inside* the
+              // card, which is `bg-surface` itself now that the panel comes
+              // from the shared component — surface on surface would leave the
+              // estimate legible only by its hairline.
+              <p className="mt-3 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm">
                 <RentalQuoteAmount
                   totalLabel={
                     quote.unpricedKinds.length > 0
@@ -296,7 +316,7 @@ export function RentalFitForm({
               nitroxCardVerified ? (
                 <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
               ) : (
-                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                   {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
                   {t("rental.nitroxNeedsVerification")}
                 </p>
@@ -381,14 +401,14 @@ export function RentalFitForm({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "px-4 text-foreground",
+              className: "px-4",
             })}
           >
             {t("rental.saveFit")}
           </SubmitButton>
         </div>
       </form>
-    </section>
+    </SectionCard>
   );
 }
 

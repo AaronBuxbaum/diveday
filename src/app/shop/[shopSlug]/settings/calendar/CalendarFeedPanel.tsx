@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { calendarFeedAction } from "./actions";
 import {
@@ -78,13 +79,12 @@ export function CalendarFeedPanel({
   const live = scoped ? state.status === "issued" : subscribed;
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold">{view.name}</h2>
-          <p className="mt-1 max-w-xl text-sm text-muted">{view.detail}</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+    <SectionCard
+      padding="lg"
+      title={view.name}
+      description={view.detail}
+      actions={
+        <>
           <form action={formAction}>
             <input type="hidden" name="intent" value="issue" />
             <input type="hidden" name="scope" value={view.scope} />
@@ -120,15 +120,15 @@ export function CalendarFeedPanel({
               />
             </form>
           ) : null}
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {/* Suppressed while the freshly-minted link is on screen: `view` was
           rendered before the action ran, so it would read "not subscribed yet"
           directly above the subscription it just created. */}
       {issued ? null : (
         <>
-          <p className="mt-4 text-sm text-muted">
+          <p className="text-sm text-muted">
             {live ? (view.subscribedLabel ?? copy.statusNone) : copy.statusNone}
           </p>
           {live ? (
@@ -144,7 +144,7 @@ export function CalendarFeedPanel({
       ) : null}
 
       {issued ? (
-        <div className="mt-5 rounded-xl border border-primary/25 bg-primary/5 p-4">
+        <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
           <h3 className="text-sm font-semibold text-foreground">{copy.newLinkHeading}</h3>
           <p className="mt-1 text-sm text-foreground">{copy.shownOnce}</p>
           <div className="mt-3 grid gap-2">
@@ -169,6 +169,6 @@ export function CalendarFeedPanel({
           {issued.rotated ? <p className="mt-1 text-xs text-muted">{copy.rotateWarning}</p> : null}
         </div>
       ) : null}
-    </section>
+    </SectionCard>
   );
 }

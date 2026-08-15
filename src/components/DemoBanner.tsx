@@ -128,7 +128,7 @@ export function DemoBanner({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "shrink-0 text-foreground",
+              className: "shrink-0",
             })}
           >
             {copy.switchRole} {isExpanded ? "▲" : "▼"}

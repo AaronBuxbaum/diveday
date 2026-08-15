@@ -15,13 +15,16 @@ import { InfraStack } from "./infra-stack";
  * whole design rests on, both of which are easy to break in a way nothing else
  * would notice:
  *
- *  1. It can *list* the backup bucket and nothing more. The reason the uploader
- *     credential is safe to keep in Vercel is that no principal reachable from
- *     the app can read a bundle back; a `s3:GetObject` quietly added here would
- *     undo that for a function that runs unattended every week.
+ *  1. It can *list* the two backup buckets and nothing more. The reason the
+ *     uploader credential is safe to keep in Vercel is that no principal
+ *     reachable from the app can read a bundle back; a `s3:GetObject` quietly
+ *     added here would undo that for a function that runs unattended every week.
  *  2. It is scheduled by AWS, not by Vercel. A watchdog that shares fate with
  *     the thing it watches cannot report the failure that matters most -- the
  *     pass never running at all.
+ *  3. It is still ONE function. The dump moved into its own bucket on
+ *     2026-08-15 and this check followed it there rather than being cloned:
+ *     two alarms with the same trigger and the same reader is one too many.
  */
 function template() {
   const app = new cdk.App();
@@ -50,28 +53,64 @@ describe("backup freshness watchdog", () => {
     });
   });
 
-  it("can list the backup bucket", () => {
-    template().hasResourceProperties("AWS::IAM::Policy", {
-      PolicyDocument: Match.objectLike({
-        Statement: Match.arrayWith([
-          Match.objectLike({ Sid: "ListBackupBundlesOnly", Action: "s3:ListBucket" }),
-        ]),
-      }),
-    });
+  it("can list both backup buckets", () => {
+    const rendered = template();
+    for (const sid of ["ListBackupBundlesOnly", "ListDatabaseDumpsOnly"]) {
+      rendered.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([Match.objectLike({ Sid: sid, Action: "s3:ListBucket" })]),
+        }),
+      });
+    }
+  });
+
+  /*
+   * ONE function over two buckets, which is the whole shape of the 2026-08-15
+   * split on this side. The dump moved out of the bundles' bucket so that no
+   * principal holding Vercel-resident credentials has a grant on it -- and the
+   * stated reason this check covers both layers ("two alarms with the same
+   * trigger and the same reader is one too many") had to survive that. It costs
+   * one more ListBucket, asserted above, and a second watchdog would be the
+   * regression: a second schedule, a second log group, a second thing to
+   * remember exists, for one ListObjectsV2 call.
+   */
+  it("is one watchdog, not one per bucket", () => {
+    const functions = template().findResources("AWS::Lambda::Function") as Record<
+      string,
+      { Properties?: { Code?: { ZipFile?: string } } }
+    >;
+    const watchdogs = Object.values(functions).filter((fn) =>
+      (fn.Properties?.Code?.ZipFile ?? "").includes("backup_freshness."),
+    );
+
+    expect(watchdogs).toHaveLength(1);
+
+    const schedules = template().findResources("AWS::Scheduler::Schedule") as Record<
+      string,
+      { Properties?: { Name?: string } }
+    >;
+    const freshness = Object.values(schedules).filter((schedule) =>
+      (schedule.Properties?.Name ?? "").includes("freshness"),
+    );
+    expect(freshness).toHaveLength(1);
   });
 
   // The one that matters: a watchdog that could read a bundle would defeat the
-  // write-only posture the uploader credential depends on.
-  it("can never read, write or delete an object", () => {
+  // write-only posture the uploader credential depends on. Worse for the dump
+  // bucket, whose objects are every password hash in the platform.
+  it("can never read, write or delete an object in either bucket", () => {
     const policies = template().findResources("AWS::IAM::Policy") as Record<
       string,
       { Properties?: { PolicyDocument?: { Statement?: { Sid?: string; Action?: unknown }[] } } }
     >;
     const listing = Object.values(policies)
       .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? [])
-      .filter((statement) => statement.Sid === "ListBackupBundlesOnly");
+      .filter(
+        (statement) =>
+          statement.Sid === "ListBackupBundlesOnly" || statement.Sid === "ListDatabaseDumpsOnly",
+      );
 
-    expect(listing).toHaveLength(1);
+    expect(listing).toHaveLength(2);
     for (const statement of listing) {
       const actions = [statement.Action].flat();
       expect(actions).toEqual(["s3:ListBucket"]);
@@ -157,6 +196,13 @@ describe("the platform backup uploader credential", () => {
    * restores a login. S19's freshness check would not notice, because it asks
    * whether a dated prefix is recent and never what is in it.
    *
+   * The dump left this bucket later the same day, which is what makes that
+   * class of mistake unrepresentable rather than merely fixed. This assertion
+   * outlives the move anyway: a credential that ships to a third party has no
+   * business reaching anything it was not built to write, and the abandoned
+   * pre-split dumps still sitting under `dumps/` stay out of its reach for
+   * free.
+   *
    * Asserted against the app's own key builders rather than against the string
    * "exports/", because the failure this guards is the two drifting apart. A
    * grant narrower than the keys fails as a backup that silently stops landing.
@@ -202,7 +248,10 @@ describe("the dump watchdog, executed", () => {
     CommonPrefixes?: { Prefix?: string }[];
     Contents?: { Key?: string; Size?: number; LastModified?: Date }[];
   };
-  type ListInput = { Bucket?: string; Prefix?: string; Delimiter?: string };
+  // `Bucket` is unknown rather than string because the environment these run
+  // against comes off the synthesized template, where a bucket name is a
+  // CloudFormation reference object and not yet a name.
+  type ListInput = { Bucket?: unknown; Prefix?: string; Delimiter?: string };
 
   /** `YYYY-MM-DD`, `daysAgo` days before now, in UTC as the watchdog reads it. */
   function runDate(daysAgo: number): string {
@@ -210,7 +259,7 @@ describe("the dump watchdog, executed", () => {
   }
 
   /** The watchdog's deployed source and environment, straight off the template. */
-  function deployedWatchdog(): { source: string; env: Record<string, string> } {
+  function deployedWatchdog(): { source: string; env: Record<string, unknown> } {
     const functions = template().findResources("AWS::Lambda::Function") as Record<
       string,
       {
@@ -234,12 +283,17 @@ describe("the dump watchdog, executed", () => {
    * published. The environment comes off the synthesized template rather than
    * being invented here, so the floor under test is the floor that ships.
    */
-  async function runWatchdog(listings: (input: ListInput) => Listing): Promise<string[]> {
+  async function runWatchdog(
+    listings: (input: ListInput) => Listing,
+    onList: (input: ListInput) => void = () => {},
+  ): Promise<string[]> {
     const { source, env } = deployedWatchdog();
     const alarms: string[] = [];
 
     class ListObjectsV2Command {
-      constructor(readonly input: ListInput) {}
+      constructor(readonly input: ListInput) {
+        onList(input);
+      }
     }
     class PublishCommand {
       constructor(readonly input: { Subject?: string; Message?: string }) {}
@@ -353,6 +407,31 @@ describe("the dump watchdog, executed", () => {
 
   it("floors the size at the value the stack actually deploys", () => {
     expect(deployedWatchdog().env.MIN_DUMP_BYTES).toBe("4096");
+  });
+
+  /*
+   * The 2026-08-15 split, from the watchdog's side. The dump is no longer a
+   * prefix in the bundles' bucket, so a function that kept reading `dumps/` in
+   * `BUCKET` would find nothing and alarm every week -- or, worse, find the
+   * abandoned legacy prefix and report a months-old dump as this week's. Each
+   * listing has to go to the bucket that artifact now lives in, and nothing
+   * else in this file would notice if it did not.
+   */
+  it("reads the dump from its own bucket and the bundles from theirs", async () => {
+    const seen: ListInput[] = [];
+    await runWatchdog(bucketWithDump(1, 40 * 1024 * 1024), (input) => seen.push(input));
+    const { env } = deployedWatchdog();
+
+    const dumpCalls = seen.filter((input) => (input.Prefix ?? "").startsWith("dumps/"));
+    const bundleCalls = seen.filter((input) => (input.Prefix ?? "").startsWith("exports/"));
+    expect(dumpCalls.length).toBeGreaterThan(0);
+    expect(bundleCalls.length).toBeGreaterThan(0);
+    expect(dumpCalls.length + bundleCalls.length).toBe(seen.length);
+
+    for (const call of dumpCalls) expect(call.Bucket).toEqual(env.DUMP_BUCKET);
+    for (const call of bundleCalls) expect(call.Bucket).toEqual(env.BUCKET);
+    // And they really are two buckets, which is the point of the whole change.
+    expect(JSON.stringify(env.DUMP_BUCKET)).not.toBe(JSON.stringify(env.BUCKET));
   });
 });
 

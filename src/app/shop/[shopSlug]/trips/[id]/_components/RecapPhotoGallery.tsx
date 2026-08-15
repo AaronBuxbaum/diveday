@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffRecapPhoto } from "@/db/recap";
@@ -38,7 +39,10 @@ export function RecapPhotoGallery({
       </FormStatus>
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {photos.map((photo) => (
-          <li key={photo.id} className="overflow-hidden rounded-lg border border-border bg-surface">
+          <li
+            key={photo.id}
+            className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
+          >
             <div className="relative aspect-square w-full">
               {/* Diver photos always come from the blob store (storeRecapImage), so the
                   remotePatterns entry in next.config.ts covers every url here. */}

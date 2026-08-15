@@ -1,6 +1,7 @@
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
@@ -55,7 +56,9 @@ export function BookActivity({
       </div>
       <form
         action={seatExistingDiverAction.bind(null, "diver-record", shopSlug)}
-        className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
+        className={sectionCardClass({
+          className: "mt-4 flex flex-col gap-3 sm:flex-row sm:items-end",
+        })}
       >
         <input type="hidden" name="personId" value={personId} />
         <FieldGrid columns={1} className="flex-1">

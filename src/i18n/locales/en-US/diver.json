@@ -12,10 +12,12 @@
     "phone": "Phone",
     "saving": "Saving…",
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
-    "diveProfile": {
+    "certification": {
       "level": "Certification level",
       "levelUnsaid": "Rather not say",
-      "levelDescription": "Helps the shop pick which trips to tell you about. Nothing here is checked — they'll look at your card before you dive.",
+      "levelNone": "I'm not certified yet",
+      "levelDescription": "Helps the shop pick which trips to tell you about. Nothing here is checked — they'll confirm what you can dive before you get in the water.",
+      "levelHint": "Holding another agency's card? Pick the closest — CMAS 1★, RAID Open Water 20 and BSAC Ocean Diver line up with Open Water; CMAS 2★, RAID Advanced 35 and BSAC Sports Diver with Advanced Open Water; CMAS 3★ and BSAC Dive Leader with Divemaster. GUE cards don't fit this list, so “Rather not say” is the right answer for one.",
       "nitrox": "I'm certified for nitrox (enriched air)"
     },
     "units": {
@@ -163,7 +165,7 @@
       "gearSetup": "Set up your gear",
       "briefing": "Crew briefing",
       "departure": "Departure",
-      "boatRide": "Ride out to the site",
+      "boatRide": "{number, plural, =1 {Ride out to the site} other {Ride to the next site}}",
       "dive": "Dive {number}",
       "surfaceInterval": "Surface interval",
       "return": "Expected return"
@@ -2074,13 +2076,14 @@
       "arrivingLabel": "Coming in",
       "exportDescription1": "A file, not a project: the importer shows exactly what comes across — and what doesn't — before a single row saves. Or send us the sheet and we'll bring your divers in with you, free.",
       "importMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
+      "spreadsheetLink": "Your spreadsheet, column by column →",
       "leavingLabel": "Going out",
       "exportDescription2": "One ZIP of your shop's records, downloaded from Settings any day you choose. {terms}",
       "exportItem1": "Documented CSV files, one per kind of record",
       "exportItem2": "Divers, bookings, waiver records, and payment history",
       "exportItem3": "A contacts file shaped for another system's import wizard",
       "exportItem4": "A plain-language guide to every file — no decoding project later",
-      "guidesLink": "Switching from {competitors}? Coming off a spreadsheet? Read the guides →",
+      "guidesLink": "Switching from {competitors} — or something else? Read the guides →",
       "tryTitle": "See how it feels when the whole shop is on the same page.",
       "tryDescription": "The shops that join now shape it — what your crew runs into this season is what gets attention next.",
       "priceLine": "One flat price — {price} {cadence}, locked for two years for founding shops.",

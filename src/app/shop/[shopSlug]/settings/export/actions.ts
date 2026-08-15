@@ -8,6 +8,7 @@ import { getShopById } from "@/db/shops";
 import {
   disconnectShopBackupDestination,
   runShopBackup,
+  type SaveBackupDestinationRefusal,
   saveShopBackupDestination,
 } from "@/features/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
@@ -15,6 +16,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Configure, test, and disconnect a shop's backup destination (docs ADR
@@ -34,20 +36,26 @@ import { requireStaffSession } from "@/lib/session";
  * parameter, or a log line.
  */
 
-/** Notices are codes; `page.tsx` picks the words (ADR 20260731-domain-layer-copy-leaks). */
+/**
+ * Notices are codes; `page.tsx` picks the words (ADR 20260731-domain-layer-copy-leaks).
+ *
+ * Spelled lower-case kebab, because on this page the code *is* the message-bundle
+ * key — the banner renders `backup.notice.<code>` — so a fork between the two
+ * spellings shows a staffer nothing at all (src/lib/staff-notices.ts).
+ */
 type Notice =
   | "saved"
   | "invalid"
-  | "endpoint_invalid"
-  | "endpoint_not_https"
-  | "endpoint_private_host"
-  | "secret_required"
-  | "encryption_key_unset"
-  | "encryption_key_invalid"
+  | "endpoint-invalid"
+  | "endpoint-not-https"
+  | "endpoint-private-host"
+  | "secret-required"
+  | "encryption-key-unset"
+  | "encryption-key-invalid"
   | "disconnected"
-  | "test_delivered"
-  | "test_failed"
-  | "no_destination";
+  | "test-delivered"
+  | "test-failed"
+  | "no-destination";
 
 const destinationSchema = z.object({
   endpoint: z.string().trim().min(1).max(500),
@@ -71,19 +79,26 @@ async function backupContext(): Promise<{
     shopId: session.user.shopId,
     personId: session.user.personId,
     shopSlug: session.user.shopSlug,
-    path: `/shop/${session.user.shopSlug}/settings/export`,
+    path: shopPath(session.user.shopSlug, "settings", "export"),
   };
 }
 
-function done(path: string, notice: Notice, reason?: string): never {
-  revalidateAndRedirect(path, `${path}?notice=${notice}${reason ? `&reason=${reason}` : ""}`);
+/**
+ * `SaveBackupDestinationRefusal` rides along beside `Notice` because the feature
+ * module answers in its own snake_case domain spelling; `noticeUrl` normalises
+ * it to the kebab the bundle key uses, so the refusal arrives worded rather than
+ * silent. `reason` is a delivery error code, not a notice — it keeps its own
+ * spelling (`backup.deliveryError.<code>`) and simply drops out when absent.
+ */
+function done(path: string, notice: Notice | SaveBackupDestinationRefusal, reason?: string): never {
+  revalidateAndRedirect(path, noticeUrl(path, notice, { reason }));
 }
 
 export async function saveBackupDestinationAction(formData: FormData): Promise<void> {
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
   }
 
   const parsed = destinationSchema.safeParse({
@@ -111,7 +126,7 @@ export async function testBackupAction(): Promise<void> {
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
   }
 
   const shop = await getShopById(db, shopId);
@@ -132,16 +147,16 @@ export async function testBackupAction(): Promise<void> {
     },
   });
 
-  if (result.status === "delivered") done(path, "test_delivered");
-  if (result.status === "failed") done(path, "test_failed", result.errorCode);
-  done(path, "no_destination");
+  if (result.status === "delivered") done(path, "test-delivered");
+  if (result.status === "failed") done(path, "test-failed", result.errorCode);
+  done(path, "no-destination");
 }
 
 export async function disconnectBackupAction(): Promise<void> {
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
+    redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
   }
   await disconnectShopBackupDestination(db, shopId);
   done(path, "disconnected");

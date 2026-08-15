@@ -11,6 +11,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
@@ -588,7 +589,7 @@ export default async function WaiverPage({
       ) : saved ? (
         <p
           role="status"
-          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success-strong"
         >
           {t("waiver.progressSaved")}
         </p>
@@ -623,7 +624,7 @@ export default async function WaiverPage({
           // Attached to the document it is about — the reader meets the "this
           // text is English-only" warning at the top of the English text, not
           // as a third bar stacked under the page title.
-          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-strong">
             {t("waiver.englishOnlyNotice")}
           </p>
         ) : null}
@@ -729,8 +730,12 @@ export default async function WaiverPage({
             the end of a paper release gets the same visual weight here. The
             link's own expiry sits in its fine print, next to "Save and finish
             later", because "can I come back to this?" is asked at the moment of
-            signing, not while reading the page title. */}
-        <section className="rounded-xl border border-border bg-surface p-5">
+            signing, not while reading the page title.
+            No `title` prop: the heading is a numbered `StepHeading`, and the
+            three steps have to announce themselves identically whether or not
+            the step happens to be boxed. `padding="lg"` is the card someone
+            works *inside*, and on a phone it is the `p-5` this already had. */}
+        <SectionCard padding="lg">
           <StepHeading number={3}>{t("waiver.signature")}</StepHeading>
           <FieldGrid columns={1} className="mt-4">
             <Field
@@ -824,7 +829,7 @@ export default async function WaiverPage({
               date: formatDateTimeTz(record.expiresAt, locale, shop.timezone),
             })}
           </p>
-        </section>
+        </SectionCard>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
         {shop.contactEmail || shop.contactPhone
@@ -873,7 +878,7 @@ const RESCUE_NOTICES: Record<
 };
 
 const NOTICE_TONE: Record<"success" | "danger" | "neutral", string> = {
-  success: "bg-success/10 text-success",
+  success: "bg-success/10 text-success-strong",
   danger: "bg-danger/10 text-danger",
   neutral: "bg-surface-sunken text-muted",
 };

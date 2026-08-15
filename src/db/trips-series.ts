@@ -70,6 +70,7 @@ type InstanceTemplate = {
     title: string | null;
     diveSiteId: string | null;
     description: string | null;
+    travelMinutes: number | null;
   }>;
 };
 
@@ -154,6 +155,9 @@ async function loadTemplate(
       title: dive.title,
       diveSiteId: dive.diveSiteId,
       description: dive.description,
+      // Every Saturday runs the same route, so every instance inherits the same
+      // legs (ADR 20260815-per-leg-travel-minutes).
+      travelMinutes: dive.travelMinutes,
     })),
   };
 }
@@ -929,6 +933,7 @@ export async function applyDetailsToFutureSeries(
       title: dive.title,
       diveSiteId: dive.diveSiteId,
       description: dive.description,
+      travelMinutes: dive.travelMinutes,
     }));
 
     const siblings = await tx

@@ -104,7 +104,7 @@ It is offered on **every** departure row, not only the ones that are back. The m
 needs a departure's recorded facts is while the departure is still happening, and the document has
 always reported what is on record *so far* rather than claiming a day is finished.
 
-The refusal moved with it: a non-owner reaching the route lands on `close-out?notice=log_not_authorized`
+The refusal moved with it: a non-owner reaching the route lands on `close-out?notice=log-not-authorized`
 rather than on the manifest, for the same "land somewhere with a reason" rule as before.
 
 Internal module names (`src/lib/incident-export.ts`, `src/db/incident-export.ts`,

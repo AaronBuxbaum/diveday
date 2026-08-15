@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DeclaredDiveProfile } from "@/db/self-declared-cards";
+import type { CertificationSummary } from "@/db/self-declared-cards";
+import type { CertificationLevel } from "@/lib/readiness";
 import type { Waitlist } from "./types";
 import { WaitlistSection } from "./WaitlistSection";
 
@@ -22,10 +23,12 @@ function entry(id: string, fullName: string, createdAt: Date): Waitlist[number] 
 
 function renderSection(
   waitlist: Waitlist,
-  diveProfiles: Map<string, DeclaredDiveProfile> = new Map(),
+  certificationSummaries: Map<string, CertificationSummary> = new Map(),
+  minimumCertificationLevel: CertificationLevel | null = null,
 ) {
   return render(
     <WaitlistSection
+      minimumCertificationLevel={minimumCertificationLevel}
       waitlist={waitlist}
       shopSlug="blue-mantis"
       tripId="trip-1"
@@ -33,7 +36,7 @@ function renderSection(
       tripTitle="Wreck Trip"
       tripWhen="Sat 15 Aug"
       inviteAction={async () => "sent" as const}
-      diveProfiles={diveProfiles}
+      certificationSummaries={certificationSummaries}
       locale="en-US"
       timezone="America/New_York"
     />,
@@ -104,9 +107,10 @@ describe("WaitlistSection declared level", () => {
           {
             level: "open_water",
             levelSelfDeclared: true,
+            noCertificationDeclared: false,
             nitrox: false,
             nitroxSelfDeclared: false,
-          } satisfies DeclaredDiveProfile,
+          } satisfies CertificationSummary,
         ],
       ]),
     );
@@ -130,9 +134,10 @@ describe("WaitlistSection declared level", () => {
           {
             level: "advanced_open_water",
             levelSelfDeclared: false,
+            noCertificationDeclared: false,
             nitrox: true,
             nitroxSelfDeclared: true,
-          } satisfies DeclaredDiveProfile,
+          } satisfies CertificationSummary,
         ],
       ]),
     );
@@ -157,5 +162,134 @@ describe("WaitlistSection declared level", () => {
     // "Not said" is honest and common, not a warning: nobody claimed anything,
     // so there is no unchecked claim on the row to tone it.
     expect(line).toHaveClass("text-muted");
+  });
+
+  /**
+   * The answer these rows could not tell from silence until 2026-08-15. A
+   * wait-list invite is a staffer offering one named person a seat on one
+   * departure, so reading "Level not said" for somebody who has never breathed
+   * off a regulator is the same failure as the deal blast's, one diver at a
+   * time.
+   */
+  it("tells 'not certified yet' apart from a joiner who said nothing", () => {
+    renderSection(
+      waiting,
+      new Map([
+        [
+          "p-a",
+          {
+            level: null,
+            levelSelfDeclared: false,
+            noCertificationDeclared: true,
+            nitrox: false,
+            nitroxSelfDeclared: false,
+          } satisfies CertificationSummary,
+        ],
+      ]),
+    );
+
+    const line = screen.getByText(/Not certified yet — diver's word/);
+    expect(line).toBeVisible();
+    // Somebody's word, nobody's card — the same tone every unchecked claim on
+    // this row wears.
+    expect(line).toHaveClass("text-warning");
+  });
+});
+
+/**
+ * **The mark without the ordering** (ADR 20260814-self-declared-cards, the
+ * 2026-08-15 amendment).
+ *
+ * A wait list is per-trip, so the departure's own bar is in hand on this page —
+ * and the invite beside each name is a staffer offering *this* seat to *this*
+ * diver, one at a time. So the row says when the diver ranks under it. What it
+ * must never do is what the deal list does with the same fact: lift, hide, or
+ * gate. The order here is who asked first (ADR 20260813-wait-list-is-a-lead-list).
+ */
+describe("WaitlistSection below the departure's bar", () => {
+  const waiting = [entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))];
+  const card = (over: Partial<CertificationSummary> = {}): CertificationSummary => ({
+    level: "open_water",
+    levelSelfDeclared: false,
+    noCertificationDeclared: false,
+    nitrox: false,
+    nitroxSelfDeclared: false,
+    ...over,
+  });
+  const summaries = (over?: Partial<CertificationSummary>) => new Map([["p-a", card(over)]]);
+
+  it("says a carded diver ranks below this departure's minimum", () => {
+    renderSection(waiting, summaries(), "advanced_open_water");
+
+    const line = screen.getByText("Open Water · below this departure's minimum");
+    expect(line).toBeVisible();
+    // The tone is untouched: it answers "has anybody seen this card?" and only
+    // that. This card the shop holds, so the row stays calm and says the rest
+    // in words (design/principles.md #6).
+    expect(line).toHaveClass("text-muted");
+  });
+
+  it("keeps both marks when the level is also only the diver's word", () => {
+    renderSection(waiting, summaries({ levelSelfDeclared: true }), "advanced_open_water");
+
+    const line = screen.getByText(
+      "Open Water — diver's word, no card · below this departure's minimum",
+    );
+    expect(line).toBeVisible();
+    // Two facts, two carriers: unchecked tones the row, under the bar is words.
+    expect(line).toHaveClass("text-warning");
+  });
+
+  it("says nothing of the sort about a diver at or above the bar", () => {
+    renderSection(waiting, summaries({ level: "advanced_open_water" }), "advanced_open_water");
+
+    const line = screen.getByText("Advanced Open Water");
+    expect(line).toBeVisible();
+    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+  });
+
+  it("says nothing when the departure asks for no level at all", () => {
+    renderSection(waiting, summaries(), null);
+
+    expect(screen.getByText("Open Water")).toBeVisible();
+    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+  });
+
+  it("does not rank a diver who is not on the ladder", () => {
+    // Silence, and a stated "I hold no card", are both un-rankable: only a
+    // caller comparing two rungs can honestly say "below". The deal panel lifts
+    // "not certified yet" because it is capped and has to; this row states the
+    // answer it has and claims no comparison it cannot make.
+    renderSection(
+      waiting,
+      new Map([["p-a", card({ level: null, noCertificationDeclared: true })]]),
+      "advanced_open_water",
+    );
+
+    expect(screen.getByText(/Not certified yet — diver's word/)).toBeVisible();
+    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+  });
+
+  it("leaves the order alone: the mark lifts nobody", () => {
+    renderSection(
+      [
+        entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z")),
+        entry("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
+      ],
+      new Map([
+        // Rafa asked second and is the one under the bar. He stays second.
+        ["p-a", card({ level: "instructor" })],
+        ["p-b", card()],
+      ]),
+      "advanced_open_water",
+    );
+
+    const names = [...document.querySelectorAll("li p.font-medium")].map((node) =>
+      node.textContent?.trim(),
+    );
+    expect(names).toEqual(["Nora Quinn", "Rafa Ortiz"]);
+    // And the invite is still offered to him, unchanged: this informs, it never
+    // gates (ADR 20260814-self-declared-cards decision 4).
+    expect(screen.getByRole("button", { name: /Email Rafa an invite/ })).toBeEnabled();
   });
 });

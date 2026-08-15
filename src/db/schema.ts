@@ -242,6 +242,84 @@ export const people = pgTable(
      */
     diveInsurance: text("dive_insurance"),
     /**
+     * **When this person said, on a public opt-in, that they hold no
+     * certification at all** — Discover Scuba and Try Scuba customers,
+     * snorkellers, the non-diving half of a couple, somebody booked onto a
+     * course they have not started. Null means they never said it.
+     *
+     * It is a column on the *person* and deliberately **not** a row in
+     * `certifications`, which is the whole point of it (ADR
+     * 20260814-self-declared-cards, amendment 2026-08-15). A Discover Scuba
+     * experience is not a certification, every other row in that table asserts
+     * that a card exists, and a row asserting the opposite would have to be
+     * special-cased by readiness, admission, the CSV export, the incident
+     * document and the importer — five readers, of which the one that misses it
+     * turns "no card" into a card. For the same reason there is no `none` rung
+     * on `certification_level`: that enum is a ladder `certificationRank`
+     * orders, and a rank-0 member would eventually be compared as a level.
+     *
+     * Three things hang off it, and none of them is a gate:
+     *
+     * - It is written only by `recordSelfDeclaredCards`, under the same
+     *   anti-displacement rule a declared *level* gets: if this person holds any
+     *   live card that is not itself a still-unsighted claim, nothing is written
+     *   at all. The forms are unauthenticated.
+     * - It is **ignored, not deleted**, once a level lands beside it — where a
+     *   record began is history, exactly as `certifications.self_declared_at`
+     *   is kept after a sighting.
+     * - It renders in the one staff phrase a level renders in ("Not certified
+     *   yet — diver's word"), so a staffer scanning a send list can tell this
+     *   answer from the silence of somebody who skipped the question.
+     */
+    noCertificationDeclaredAt: timestamp("no_certification_declared_at", { withTimezone: true }),
+    /**
+     * **When a staffer said this diver never gave that answer** — the eraser
+     * for a stamp above that a stranger typed.
+     *
+     * The forms that write `no_certification_declared_at` are unauthenticated
+     * and resolve a person by shop + email, so for a diver the shop holds no
+     * card for, anybody who knows a name and an email address can mark them
+     * *"Not certified yet — diver's word"* on the send lists and in every CSV
+     * the shop exports from then on. Until this column there was exactly one
+     * way back, and it was owner-only erasure of the whole record.
+     *
+     * **A second column rather than nulling the first**, for the reason the ADR
+     * gives about `self_declared_at`: where a record began is history, and an
+     * eraser that removed the evidence of its own subject would leave a shop
+     * unable to answer "did this diver ever tell us that?". Set, the stamp is
+     * *superseded* — every reader treats the person as having said nothing,
+     * which is the silence of somebody nobody asked, never a card.
+     *
+     * That direction is the whole safety argument: this control can only move a
+     * record from a stated absence to no statement at all. Evidence lives in
+     * the three card tables and nothing here touches them, so clearing can
+     * never turn a claim into a card (ADR 20260814-self-declared-cards).
+     *
+     * A later public declaration clears this again (`recordSelfDeclaredCards`)
+     * — otherwise one correction would silently swallow every answer the diver
+     * gave afterwards, which is a gate nobody chose. Structural rather than a
+     * comparison of the two timestamps, because the e2e fleet freezes the clock
+     * outright and two instants recorded under it are equal.
+     */
+    noCertificationClearedAt: timestamp("no_certification_cleared_at", { withTimezone: true }),
+    /**
+     * Which staff member cleared it. Not a typed FK: the reference is to this
+     * same table, and a self-referencing `references()` trips drizzle's type
+     * inference the way `bookings.party_lead_booking_id` documents. A
+     * correction to somebody else's safety-adjacent record is the kind of act
+     * that has to name its author, so this is the row's own trail rather than
+     * an `activity_events` line — that table is trip-scoped everywhere it is
+     * read and is pruned on a retention window, and this fact outlives both.
+     *
+     * **It survives a later public declaration, and the column beside it does
+     * not.** The writer of that declaration is an unauthenticated form; letting
+     * it null this would let an anonymous post erase the shop's audit of its own
+     * correction, and let a griefer loop the stamp back on with nothing left
+     * saying a staffer had ever disagreed. So set-with-a-null-`cleared_at` is a
+     * real state and reads as *corrected once, and stated again since*.
+     */
+    noCertificationClearedByPersonId: uuid("no_certification_cleared_by_person_id"),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
@@ -1357,11 +1435,36 @@ export const tripDives = pgTable(
     title: text("title"),
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     description: text("description"),
+    /**
+     * **This leg of the day, in minutes**: how long the boat runs to reach this
+     * dive's site — from the dock for dive one, from the previous dive's site
+     * after that.
+     *
+     * It lives here rather than on `trips` because a departure is not one ride.
+     * A two-tank morning is dock -> A -> B -> dock, each leg its own duration,
+     * and the durations are order-dependent: A->B is not B->A when the two sites
+     * sit on different parts of the reef line. One number per trip cannot say
+     * "10 minutes out to the house reef, 25 across to the wall"
+     * (ADR 20260815-per-leg-travel-minutes).
+     *
+     * Null means "the shop's own `boat_ride_minutes` is right for this leg",
+     * which is what every existing row reads as. `0` is a real answer — the same
+     * site twice, or a shore entry — so the resolver honours it rather than
+     * treating it as absent.
+     */
+    travelMinutes: integer("travel_minutes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
     index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+    // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide
+    // figure this falls back to (src/lib/diver-planning.ts), so an import or a
+    // hand-written fix cannot write a leg the form would have refused.
+    check(
+      "trip_dives_travel_minutes_range",
+      sql`${table.travelMinutes} is null or (${table.travelMinutes} >= 0 and ${table.travelMinutes} <= 480)`,
+    ),
   ],
 );
 
@@ -3299,9 +3402,40 @@ export const certifications = pgTable(
     // carry a number, and a self-declared row cannot reach `verified` without
     // one, so the review gate is enforced by the database and not only by the
     // action that calls it.
+    //
+    // **Blank, not merely NULL.** It read `identifier is not null` until
+    // 2026-08-15, and `''` satisfies that — so three comments and the ADR that
+    // credited the database with "a numberless row cannot reach `verified`"
+    // were true of NULL and enforced by the application for the empty string.
+    // No writer could produce `''`, which is exactly why it was worth closing
+    // rather than living with: the claim was load-bearing in four places and
+    // only the application was holding it up.
+    //
+    // Deliberately *blank* and not `length(...) >= 3`, which the follow-up
+    // proposed. Three characters is `isPlausibleCardNumber` — a **typo filter,
+    // not proof**, whose documented virtue is being wrong in the permissive
+    // direction because refusing a real card is the expensive failure. Written
+    // into the schema it stops being a filter and becomes a structural
+    // invariant that would refuse a genuine short member number at import time,
+    // with no way past it. What the comments claimed was "a number", and this
+    // is what "a number" means.
+    //
+    // Bare `btrim()` strips spaces and nothing else, so a lone tab satisfied it.
+    // Unreachable from the app — `cardNumberSchema` trims in JS and
+    // `isPlausibleCardNumber` demands a digit — but this is the *backstop*, and
+    // a backstop that only holds when the layer above it already did is not one.
+    //
+    // **`is not null` stays, and dropping it was a real bug for an afternoon.**
+    // A CHECK passes when its expression is TRUE *or NULL*, and
+    // `length(btrim(NULL)) > 0` is NULL — so a predicate that led with the
+    // length test alone evaluated to `NULL OR FALSE` = NULL on a numberless
+    // `verified` row and **accepted** it, which is weaker than the constraint it
+    // was tightening (caught by a `dive-domain-expert` pass, 2026-08-15). Both
+    // conjuncts are load-bearing and neither is redundant: the first rules out
+    // NULL, the second rules out blank.
     check(
       "certifications_identifier_present_unless_self_declared",
-      sql`${table.identifier} is not null or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );
@@ -3596,10 +3730,12 @@ export const nitroxCertifications = pgTable(
     uniqueIndex("nitrox_certifications_shop_agency_identifier_unique")
       .on(table.shopId, table.agency, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
-    // Same rule as `certifications_identifier_present_unless_self_declared`.
+    // Same rule as `certifications_identifier_present_unless_self_declared`,
+    // both conjuncts included — read that one for why neither is redundant and
+    // why leading with the length test alone silently accepts a NULL.
     check(
       "nitrox_certifications_identifier_present_unless_self_declared",
-      sql`${table.identifier} is not null or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );
@@ -3645,6 +3781,35 @@ export const rollCallEvents = pgTable(
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The order these were written in — **the final tiebreak on every
+     * roll-call read**, and the only column here that records what actually
+     * came first (ADR 20260815-roll-call-order-is-a-property-of-the-data).
+     *
+     * Reads used to order by `desc(occurred_at), desc(created_at)` and nothing
+     * else. `occurred_at` ties constantly — the e2e clock is frozen outright,
+     * and an offline batch is applied with the timestamps the device recorded
+     * — and `created_at` is `defaultNow()`, which in Postgres is **transaction
+     * time**: two events applied inside one transaction share it exactly. With
+     * both tied, Postgres returns whatever the heap hands back, which changes
+     * the moment anything moves rows (a `VACUUM` does). The read-back order
+     * that the offline device's own tie-break was pinned against would then
+     * silently stop holding, with every test still green — the same failure
+     * mode as the bug that prompted this, one layer down.
+     *
+     * `id` cannot stand in for it: `defaultRandom()` is as arbitrary as the
+     * heap, merely arbitrary consistently. `activity_events.seq` is the same
+     * column for the same reason.
+     *
+     * **Never serialise it.** The sequence is database-global, not per shop, so
+     * a value reaching a response body, an export file or a client component
+     * would publish a monotonic counter every tenant shares — one shop able to
+     * read another's roll-call volume from two samples (security review,
+     * 2026-08-15). Two readers here select the whole row
+     * (`select({ event: rollCallEvents, … })`); they reduce it to named fields,
+     * and a `...event` spread would quietly undo that.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx").on(
@@ -3659,79 +3824,23 @@ export const rollCallEvents = pgTable(
 );
 
 /**
- * The crew half of a checkpoint's head count: how many crew a staff member
- * says are aboard, out of how many the trip has assigned. Append-only, exactly
- * like `rollCallEvents` — a later attestation supersedes an earlier one without
- * rewriting it, so what the boat believed at each point stays readable.
+ * The crew half of the head count: one staff member said one **assigned crew
+ * member** is aboard, not aboard, or cleared, at one checkpoint. Append-only
+ * history, exactly like `rollCallEvents` — the newest row per person per
+ * checkpoint is the current answer and nothing is rewritten (ADR
+ * 20260803-per-person-crew-roll-call).
  *
- * Its own table rather than a widened `rollCallEvents` deliberately (ADR
- * 20260802-crew-roll-call-attestation). `rollCallEvents.bookingId` is
- * `notNull` and is the only subject column there; crew hold no booking, so
- * carrying them would have meant making that column nullable — weakening a NOT
- * NULL invariant on the safety spine so that a *diver* event could also be
- * written with no subject at all. The subject shapes differ (one booking vs. a
- * count over a trip's assignments), so they are separate rows.
+ * This is the *whole* crew half. A count-level `roll_call_crew_attestations`
+ * table ("how many crew are aboard", ADR 20260802-crew-roll-call-attestation)
+ * preceded it and was retired by ADR 20260804-crew-roll-call-is-per-person;
+ * the table itself was dropped on 2026-08-15 under H-49, having had no
+ * production writer since.
  *
- * It stays the **count-level** record now that `rollCallCrewEvents` below adds
- * the per-person one (ADR 20260803-per-person-crew-roll-call, the follow-on
- * 20260802 anticipated). The two answer different questions and a checkpoint
- * needs both: the events say every *named* crew member is accounted for, and
- * the attestation is the only thing that can speak for a hand nobody rostered
- * — or for a trip with an empty assignment list, where "0 of 0" is still a
- * sentence a human has to say out loud.
- */
-export const rollCallCrewAttestations = pgTable(
-  "roll_call_crew_attestations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tripId: uuid("trip_id")
-      .notNull()
-      .references(() => trips.id),
-    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
-    checkpoint: text("checkpoint").notNull(),
-    /** Bodies counted on the boat. Typed by a human, never derived from the assignment list. */
-    crewAboard: integer("crew_aboard").notNull(),
-    /**
-     * How many crew the trip had assigned when this was attested — evidence of
-     * what the denominator was at the time. Completeness compares against the
-     * *current* assignment count, so assigning another crew member re-opens the
-     * checkpoint rather than riding on a stale attestation.
-     */
-    crewAssigned: integer("crew_assigned").notNull(),
-    /** Who counted. A head count is never anonymous, same as a roll-call event. */
-    attestedByPersonId: uuid("attested_by_person_id")
-      .notNull()
-      .references(() => people.id),
-    note: text("note"),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("roll_call_crew_attestations_shop_trip_checkpoint_occurred_idx").on(
-      table.shopId,
-      table.tripId,
-      table.checkpoint,
-      table.occurredAt,
-    ),
-  ],
-);
-
-/**
- * The per-person half of the crew head count: one staff member said one
- * **assigned crew member** is aboard, not aboard, or cleared, at one
- * checkpoint. Append-only history, exactly like `rollCallEvents` — the newest
- * row per person per checkpoint is the current answer and nothing is rewritten
- * (ADR 20260803-per-person-crew-roll-call).
- *
- * Its own table rather than a widened `rollCallEvents`, for the same reason
- * `rollCallCrewAttestations` is (ADR 20260802): carrying crew there would have
- * meant making `booking_id` nullable, weakening a NOT NULL invariant on the
- * safety spine so a *diver* event could be written with no subject at all. The
- * subjects genuinely differ — a booking is a paid seat, an assignment is a
- * roster line — so they are separate rows, and each table's subject column
+ * Its own table rather than a widened `rollCallEvents`: carrying crew there
+ * would have meant making `booking_id` nullable, weakening a NOT NULL invariant
+ * on the safety spine so a *diver* event could be written with no subject at
+ * all. The subjects genuinely differ — a booking is a paid seat, an assignment
+ * is a roster line — so they are separate rows, and each table's subject column
  * stays `notNull`.
  *
  * `person_id` is the subject; `recorded_by_person_id` is who said so. They are
@@ -3788,6 +3897,14 @@ export const rollCallCrewEvents = pgTable(
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The same final tiebreak the diver table carries, and it has to be the
+     * same one: the two halves of a head count are read minutes apart on one
+     * screen, and a crew member's result ordering differently from a diver's
+     * is how the device and the server come to disagree about who is still in
+     * the water. See `rollCallEvents.seq`.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(

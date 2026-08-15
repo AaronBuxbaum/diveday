@@ -587,6 +587,144 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).toMatchObject({ state: "boarded" });
   });
 
+  /**
+   * The compare-and-set (ADR 20260815-an-offline-retraction-names-its-target).
+   *
+   * `newest.occurredAt > occurredAt` is a timestamp comparison, and a retraction
+   * is stamped at tap time — so a `cleared` tapped *now* on a device holding a
+   * stale copy beat everything recorded before now, including another device's
+   * "did not come back from the dive". Naming the event being undone turns the
+   * write into a compare-and-set: it applies only while the statement it is
+   * about is still the one standing.
+   *
+   * Both halves of the assertion matter and they are opposite failures. Drop the
+   * refusal and a stale phone erases somebody's missing-diver mark; over-tighten
+   * it and the ordinary case — undo the tap I just made — stops working, which
+   * is how a crew learns not to raise the alarm at all.
+   */
+  it("refuses an offline retraction another device has superseded, and applies one that still stands", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const now = nowMs();
+    const base = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1" as const,
+      source: "offline" as const,
+      offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+    };
+    const mine = "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa";
+
+    // 09:50 — this device marks the diver not back aboard, and syncs it.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "not_boarded",
+        clientEventId: mine,
+        occurredAt: new Date(now - 70 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // 09:55 — a second device records its own "not back aboard" on the live
+    // manifest. Nothing about that is visible to the first device.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: new Date(now - 65 * 60 * 1000),
+    });
+
+    // 10:00 — the first device retracts *its own* mark. Under the old rule this
+    // applied (10:00 is not older than 09:55) and took the second device's alarm
+    // off the boat with it.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        clientEventId: "bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+        retractsClientEventId: mine,
+        occurredAt: new Date(now - 60 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    // The alarm stands, which is the whole point of refusing.
+    expect(
+      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      )?.rollCall,
+    ).toMatchObject({ state: "not_boarded" });
+
+    // And the ordinary case: retracting the statement that *is* still standing.
+    const standing = "cccccccc-3333-4333-8333-cccccccccccc";
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "not_boarded",
+        clientEventId: standing,
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        clientEventId: "dddddddd-4444-4444-8444-dddddddddddd",
+        retractsClientEventId: standing,
+        occurredAt: new Date(now - 49 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(
+      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      )?.rollCall,
+    ).toBeUndefined();
+  });
+
+  /**
+   * The transition window, and the reason there isn't one.
+   *
+   * A retraction naming nothing is a retraction queued by a device that has not
+   * had this deploy — a phone in a dry bag on a boat, which is the case the
+   * whole feature exists for. Refusing it would discard a statement a crew
+   * member actually made and mark it `rejected` on their screen, to enforce a
+   * rule their build predates. So an absent `retractsClientEventId` keeps
+   * exactly the behaviour it had before the field existed (newest-wins on
+   * timestamp, scoped on the device to this device's own statement), and the
+   * compare-and-set is a strict tightening of the events that do carry it.
+   */
+  it("still applies an offline retraction that names nothing, for a device queued before the field existed", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const now = nowMs();
+    const base = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1" as const,
+      source: "offline" as const,
+      offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+    };
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "not_boarded",
+        clientEventId: "eeeeeeee-5555-4555-8555-eeeeeeeeeeee",
+        occurredAt: new Date(now - 70 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        clientEventId: "ffffffff-6666-4666-8666-ffffffffffff",
+        occurredAt: new Date(now - 60 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
   it("raises the manifest-events push signal for a genuine write but not a duplicate replay", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {
@@ -664,6 +802,104 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         occurredAt: new Date("2099-01-01T00:01:00.000Z"),
       }),
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
+  });
+
+  /*
+   * The read-back's final tiebreak is a property of the data, not of the
+   * clock's resolution (ADR 20260815-roll-call-order-is-a-property-of-the-data).
+   *
+   * `occurred_at` ties routinely — the e2e clock is frozen, and an offline
+   * batch is applied with whatever timestamps the device recorded — and
+   * `created_at` is `defaultNow()`, which in Postgres is **transaction time**:
+   * two rows written inside one transaction share it to the microsecond. Both
+   * tied, the order was whatever the heap handed back, and the device/server
+   * agreement this repo pinned would have stopped holding silently, with every
+   * test green. `seq` is what makes "the later-appended row wins" true of the
+   * rows themselves.
+   */
+  it("resolves a same-transaction, same-timestamp pair to the later-appended event", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const occurredAt = new Date("2026-07-20T14:00:00.000Z");
+    await db.transaction(async (tx) => {
+      await tx.insert(rollCallEvents).values([
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: booking.booking.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: booking.booking.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+      ]);
+    });
+    const written = await db
+      .select({
+        status: rollCallEvents.status,
+        createdAt: rollCallEvents.createdAt,
+        seq: rollCallEvents.seq,
+      })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.tripId, reef.id),
+          eq(rollCallEvents.bookingId, booking.booking.id),
+          eq(rollCallEvents.checkpoint, "departure"),
+        ),
+      );
+    expect(written).toHaveLength(2);
+    // The tie is real: both halves of the old ordering key are equal here.
+    const [one, two] = written;
+    if (!one || !two) throw new Error("expected both events");
+    expect(one.createdAt.getTime()).toBe(two.createdAt.getTime());
+    expect(new Set(written.map((row) => row.seq)).size).toBe(2);
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("not_boarded");
+  });
+
+  it("resolves a same-transaction crew pair the same way", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const occurredAt = new Date("2026-07-20T14:00:00.000Z");
+    await db.transaction(async (tx) => {
+      await tx.insert(rollCallCrewEvents).values([
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: staff.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: staff.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "departure",
+          occurredAt,
+        },
+      ]);
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    expect(manifest?.crew.find((member) => member.id === staff.id)?.rollCall?.state).toBe(
+      "boarded",
+    );
   });
 });
 
@@ -1253,6 +1489,90 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       expect(reread?.crew.find((entry) => entry.id === member.id)?.rollCall).toMatchObject({
         state: "not_boarded",
       });
+    });
+
+    /**
+     * The crew half of the compare-and-set, asserted here rather than assumed
+     * from the diver half (ADR 20260815-an-offline-retraction-names-its-target).
+     * Both writers reach the same shared predicate, and the two halves of one
+     * head count disagreeing about when a retraction applies is the class of bug
+     * that survives whichever of the two somebody re-reads — crew are also the
+     * people most reliably still in the water.
+     */
+    it("refuses an offline crew retraction another device has superseded, and applies one that still stands", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const member = crew[0];
+      if (!member) throw new Error("crew missing");
+      const now = nowMs();
+      const base = {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        checkpoint: "after_dive_1" as const,
+        source: "offline" as const,
+        offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+      };
+      const mine = "a1a1a1a1-1111-4111-8111-a1a1a1a1a1a1";
+
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          status: "not_boarded",
+          clientEventId: mine,
+          occurredAt: new Date(now - 70 * 60 * 1000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      // A second device, on the live manifest, says the same thing again.
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        occurredAt: new Date(now - 65 * 60 * 1000),
+      });
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          status: "cleared",
+          clientEventId: "b2b2b2b2-2222-4222-8222-b2b2b2b2b2b2",
+          retractsClientEventId: mine,
+          occurredAt: new Date(now - 60 * 60 * 1000),
+        }),
+      ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.find(
+          (entry) => entry.id === member.id,
+        )?.rollCall,
+      ).toMatchObject({ state: "not_boarded" });
+
+      // The tap this control exists for: undoing the statement still standing.
+      const standing = "c3c3c3c3-3333-4333-8333-c3c3c3c3c3c3";
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          status: "not_boarded",
+          clientEventId: standing,
+          occurredAt: new Date(now - 50 * 60 * 1000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          status: "cleared",
+          clientEventId: "d4d4d4d4-4444-4444-8444-d4d4d4d4d4d4",
+          retractsClientEventId: standing,
+          occurredAt: new Date(now - 49 * 60 * 1000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.find(
+          (entry) => entry.id === member.id,
+        )?.rollCall,
+      ).toBeUndefined();
     });
 
     it("refuses an offline crew event whose snapshot bounds do not hold", async () => {

@@ -1,4 +1,5 @@
 import type { SeatDiverEntry, SeatDiverRefusal, SeatDiverRefusalDetail } from "@/db/seat-diver";
+import { shopPath } from "@/lib/staff-notices";
 import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
 
 /**
@@ -76,19 +77,20 @@ export type SeatSurface = {
 };
 
 /**
- * Every id that reaches a path template goes through this first.
+ * Every path below is built with `shopPath`, which escapes each segment.
  *
  * A `SeatLanding` is built from raw form fields precisely when zod *failed* —
  * the staffer must still land back on the page they submitted from — so the
- * segments below are, on that path, unvalidated submitted values. No template
- * here can become an open redirect (each starts with a literal `/shop/`), but
- * an id carrying `?`, `#`, or a slash would still rewrite the query the notice
- * is appended to, or point at a different route than the one named.
+ * segments here are, on that path, unvalidated submitted values. No path here
+ * can become an open redirect (each starts with a literal `/shop/`), but an id
+ * carrying `?`, `#`, or a slash would still rewrite the query the notice is
+ * appended to, or point at a different route than the one named. This used to
+ * be a local `segment()` helper doing the same job; it is `shopPath`'s job now
+ * (src/lib/staff-notices.ts), so every staff URL in the app escapes the same
+ * way.
  */
-const segment = (value: string) => encodeURIComponent(value);
-
 const guestsPath = ({ shopSlug, tripId }: SeatLanding) =>
-  `/shop/${segment(shopSlug)}/trips/${segment(tripId)}/guests`;
+  shopPath(shopSlug, "trips", tripId, "guests");
 
 /** The trip page's vocabulary — one distinct notice per gate. */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
@@ -141,32 +143,32 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "walk_in",
     refusals: "specific",
     email: "optional",
-    seatedPath: ({ shopSlug }) => `/shop/${segment(shopSlug)}/check-in`,
+    seatedPath: ({ shopSlug }) => shopPath(shopSlug, "check-in"),
     refusedPath: ({ shopSlug, tripId }) =>
       tripId
-        ? `/shop/${segment(shopSlug)}/check-in/walk-in/${segment(tripId)}`
-        : `/shop/${segment(shopSlug)}/check-in/walk-in`,
+        ? shopPath(shopSlug, "check-in", "walk-in", tripId)
+        : shopPath(shopSlug, "check-in", "walk-in"),
     // The departure is a path segment on that landing route, which is what lets
     // the signature bind to something its reader can re-derive without trusting
     // the query — and what lets a refusal add only its own `?notice=` to a
     // query-less URL (see `SEAT_SURFACES["new-booking"]` for what appending to
     // an already-queried one did instead).
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
-    seatedNotice: "walkin_added",
-    seatedWaiverUndeliveredNotice: "walkin_added_waiver_undelivered",
+    seatedNotice: "walkin-added",
+    seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
     carriesBookingId: true,
-    invalidNotice: "walkin_invalid",
+    invalidNotice: "walkin-invalid",
     refusalNotice: {
-      trip_full: "walkin_full",
-      already_booked: "walkin_already",
-      course_unstaffed: "walkin_course_unstaffed",
-      course_prerequisite: "walkin_course_prerequisite",
-      course_ratio_full: "walkin_course_ratio_full",
-      course_min_age: "walkin_course_min_age",
-      trip_prerequisite: "walkin_trip_prerequisite",
-      trip_unavailable: "walkin_unavailable",
-      person_not_found: "walkin_unavailable",
-      unavailable: "walkin_unavailable",
+      trip_full: "walkin-full",
+      already_booked: "walkin-already",
+      course_unstaffed: "walkin-course-unstaffed",
+      course_prerequisite: "walkin-course-prerequisite",
+      course_ratio_full: "walkin-course-ratio-full",
+      course_min_age: "walkin-course-min-age",
+      trip_prerequisite: "walkin-trip-prerequisite",
+      trip_unavailable: "walkin-unavailable",
+      person_not_found: "walkin-unavailable",
+      unavailable: "walkin-unavailable",
     },
   },
   /**
@@ -177,10 +179,8 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "roster",
     refusals: "specific",
     email: "optional",
-    seatedPath: ({ shopSlug, personId }) =>
-      `/shop/${segment(shopSlug)}/divers/${segment(personId)}`,
-    refusedPath: ({ shopSlug, personId }) =>
-      `/shop/${segment(shopSlug)}/divers/${segment(personId)}`,
+    seatedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
+    refusedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
     // The one surface with no departure in its landing URL: it binds the
     // signature to the diver whose record is about to render the sentence.
     gateScope: ({ personId }) => ({ kind: "diver", id: personId }),
@@ -189,16 +189,16 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     carriesBookingId: false,
     invalidNotice: "booking-invalid",
     refusalNotice: {
-      trip_full: "trip_full",
-      already_booked: "already_booked",
-      course_unstaffed: "course_unstaffed",
-      course_prerequisite: "course_prerequisite",
-      course_ratio_full: "course_ratio_full",
-      course_min_age: "course_min_age",
-      trip_prerequisite: "trip_prerequisite",
-      trip_unavailable: "trip_unavailable",
+      trip_full: "trip-full",
+      already_booked: "already-booked",
+      course_unstaffed: "course-unstaffed",
+      course_prerequisite: "course-prerequisite",
+      course_ratio_full: "course-ratio-full",
+      course_min_age: "course-min-age",
+      trip_prerequisite: "trip-prerequisite",
+      trip_unavailable: "trip-unavailable",
       person_not_found: "booking-invalid",
-      unavailable: "trip_unavailable",
+      unavailable: "trip-unavailable",
     },
   },
   /**
@@ -220,8 +220,8 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedPath: guestsPath,
     refusedPath: ({ shopSlug, tripId }) =>
       tripId
-        ? `/shop/${segment(shopSlug)}/bookings/new/${segment(tripId)}`
-        : `/shop/${segment(shopSlug)}/bookings/new`,
+        ? shopPath(shopSlug, "bookings", "new", tripId)
+        : shopPath(shopSlug, "bookings", "new"),
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",

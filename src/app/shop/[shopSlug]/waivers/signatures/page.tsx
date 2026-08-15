@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
+import type { getShopById } from "@/db/shops";
 import { getSignedWaiverRecordForShop, listWaiverIntegrityAudit } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -138,9 +136,10 @@ function SignedRecordRow({
  * Security-sensitive: this is staff read access to signed medical-adjacent
  * records. The gate below is the exact same `canPersonManageWaiverTemplates`
  * check the template editor uses (`../page.tsx`) — never a looser one — and
- * every query is scoped to `session.user.shopId`, never the `shopSlug` route
- * param, so visiting another shop's slug while signed in here cannot surface
- * another shop's records (`shop` itself is looked up *by* `session.user.shopId`),
+ * every query is scoped to the shop `requireShopSurface` resolved from the
+ * session, never the `shopSlug` route param — which that helper additionally
+ * refuses outright when it disagrees with the session — so visiting another
+ * shop's slug while signed in here cannot surface another shop's records,
  * and a `record` id copied from another shop resolves to nothing
  * (`getSignedWaiverRecordForShop` also filters on `shopId`).
  */
@@ -151,7 +150,6 @@ export default async function WaiverSignaturesPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ page?: string; record?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { page, record: recordParam } = await searchParams;
   // `waiver_records.id` is a `uuid` column, so a truncated or hand-edited
@@ -159,17 +157,14 @@ export default async function WaiverSignaturesPage({
   // for type uuid` and 500s this page. A malformed id is simply no highlight:
   // the log itself still renders, which is the page the staffer came for.
   const record = uuidParam(recordParam);
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  const locale = await requestLocale(shop?.defaultLocale);
-  if (!shop) return null;
+  // The exact same gate as the template editor beside it — never a looser one,
+  // since this is read access to signed medical records.
+  const { db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageWaiverTemplates,
+    refusal: { notice: "waivers-not-authorized" },
+  });
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const canManage = await canPersonManageWaiverTemplates(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
-  if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
 
   const highlighted = record ? await getSignedWaiverRecordForShop(db, shop.id, record) : null;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into

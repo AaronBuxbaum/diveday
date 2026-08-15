@@ -97,7 +97,7 @@ describe("turning a discount code on or off", () => {
       setPromoEnabledAction(withPromo(promo.id, { enable: "false" })),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not-authorized`);
     // The refusal is only worth anything if the row survived it.
     expect((await promoById(db, promo.id))?.status).toBe(promo.status);
   });
@@ -122,7 +122,7 @@ describe("deleting a discount code", () => {
 
     const to = await redirectedTo(() => deletePromoAction(withPromo(promo.id)));
 
-    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not-authorized`);
     expect(await promoById(db, promo.id)).not.toBeNull();
   });
 });
@@ -148,7 +148,7 @@ describe("the roles the gate trusts", () => {
       setPromoEnabledAction(withPromo(promo.id, { enable: "false" })),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/promos?notice=not-authorized`);
     expect((await promoById(db, promo.id))?.status).toBe(promo.status);
   });
 });

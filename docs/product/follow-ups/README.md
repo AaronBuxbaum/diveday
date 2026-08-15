@@ -8,6 +8,15 @@ Before this folder existed those thoughts lived in a session's closing message o
 read once, then gone. This is the permanent place. Aaron triages it; agents file into it and never
 grade their own homework by silently doing the work instead.
 
+**Two rooms.** This folder is the inbox: every entry in it is waiting on Aaron's judgment, so
+reading one costs him a decision. [`waiting/`](waiting/README.md) is for the entries where nobody
+here can move — an upstream release, a third party's answer, a measurement that needs traffic we do
+not have yet — because three entries that cannot move for six months, sitting among the ones that
+can, teach a reader that most of the folder is noise. Those carry `**Status:** Waiting` and a
+`**Waiting on:**` line naming the event *and how to check it*; see that folder's README before
+moving anything into it. An entry blocked on a call **Aaron** owns is not waiting, it is triage:
+it stays here as `Parked`.
+
 ## For agents: file a follow-up
 
 **When.** You are finishing a change and you have any of these:
@@ -54,6 +63,11 @@ An entry has exactly two ends, and neither is "mark it done here":
 `**Parked:**` line saying what would un-park it, so the next reader does not re-triage it from
 scratch.
 
+There is a fourth end that is not a triage outcome at all: if the entry cannot move because someone
+*outside this repo* owes the next step, `git mv` it into [`waiting/`](waiting/README.md) and give it
+a `**Waiting on:**` line. That is not a decision about the idea — it is a statement that re-reading
+it every week is wasted, and it keeps this folder to things you can actually act on today.
+
 This folder is an inbox, not a backlog. It holds items awaiting your judgment — once you have
 judged, the item belongs in the file that carries committed work, per
 [features/README.md](../features/README.md)'s single-home rule.
@@ -63,6 +77,9 @@ judged, the item belongs in the file that carries committed work, per
 - **One file per item**, named `FU-YYYYMMDD-short-slug.md`, id matching the `#` heading.
 - **Every section filled**, including a runnable prompt that names real paths.
 - **Close by deleting**, never by writing "done" — same rule as the roadmap and the assessments.
+- **An entry blocked on somebody outside this repo lives in [`waiting/`](waiting/README.md)**, with
+  a `**Waiting on:**` line naming the event and how to check it. Not "blocked on Aaron" — that is
+  what this folder already is.
 - **Never file instead of doing the work you were asked to do.** This folder is for what is
   genuinely outside the scope you were given, not a place to defer the task.
 - **Never act on an entry as a drive-by.** If you want to do one, that is its own change with its

@@ -4,6 +4,100 @@ Two alignment bugs kept coming back, because both are invisible in a diff and ob
 Both are now solved in one place. **Use the wrappers — don't hand-roll the class strings.** If a
 surface looks wrong, the fix belongs in the wrapper, not at the call site.
 
+## Cards: `SectionCard`
+
+The bordered panel a staff page is mostly made of. It had no component until 2026-08-15, so every
+page retyped it — **209 times across 153 files**, at four radii (`rounded-2xl`, `rounded-lg`,
+`rounded-xl`, `rounded-3xl`) and six paddings, with `shadow-sm` on only 26 of them. Sibling settings
+routes one tap apart rendered the same panel at two different corner radii, and identically-shaped
+cards sat at two elevations on one page.
+
+One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
+`rounded-2xl border border-border bg-surface shadow-sm` — so **a card, a stat tile and a table
+shell read as the same object**.
+
+```tsx
+import { SectionCard } from "@/components/ui/card";
+
+<SectionCard
+  padding="lg"
+  title={t("backup.form.heading")}
+  description={t("backup.form.description")}
+  actions={<Badge tone="success">{t("backup.status.verified")}</Badge>}
+>
+  <FieldGrid as="form" action={saveBackupDestinationAction} columns={2}>…</FieldGrid>
+</SectionCard>
+```
+
+- **There is no `radius` prop, and there will not be one.** A prop that lets every call site keep
+  the radius it happens to have today preserves the drift behind an abstraction and calls it a
+  design system. A card that looks wrong is fixed in the component — the same rule `buttonClass()`
+  and `SegmentedControl` keep.
+- **`padding`** is `md` (`p-4 sm:p-5`, the default and the `ShopStat`/`Table` spelling), `lg`
+  (`p-5 sm:p-6`) for a card someone works *inside* — a form, a wizard step, a set of snippets — or
+  `none` for a card that is a **shell**: a divided row list, a `<details>`, anything whose own parts
+  pad themselves.
+- **`elevated`** follows containment, the rule `Table`'s `flush` and `ShopStat`'s `inset` already
+  keep: a card on the page is raised; a card that has to sit inside another one drops its shadow so
+  surface never stacks on surface.
+- **The heading is folded in.** Pass `title`; never spell `<h2 className="text-lg font-semibold">`
+  at a call site. `titleAs="h3"` steps a card down one level when it sits under a group that
+  already owns the `h2` (the export page's Backups half) — the element *and* its size, so a group
+  and the five cards under it never shout at the same volume.
+- **`description` and `actions`** are the rest of the header row: one quiet line under the heading,
+  and whatever belongs to its right (a `Badge`, the section's buttons), wrapping below it on a
+  phone. The card owns the gap between that header and the body, so **a call site never opens its
+  body with `mt-4`** — which is how four spacings for one relationship got into the settings routes.
+- **`as`** is the element the card *is*: `section` by default, `li` for a person on a roster,
+  `details` for a disclosure, `div` for a shell.
+
+### Section rhythm: `space-y-10`, never `mt-*`
+
+`SectionCard` carries **no outer margin at all**. A page stacks its sections in one `space-y-10`
+on the wrapper. Hanging a margin off each section is how `<section className="mt-N">` grew nine
+different values across the app (`mt-10` ×23, `mt-6` ×17, `mt-8` ×14, `mt-12` ×9, and one or two
+each of `mt-7`, `mt-3`, `mt-9`, `mt-5`, `mt-4`) — nobody chose those; each was copied from
+whichever neighbour was open at the time.
+
+Two things are deliberately *not* on that rhythm:
+
+- **A list of like cards** — two calendar feeds, a roster of eleven people — keeps its own tighter
+  gap (`gap-3`/`gap-4`). That is a list, not a run of sections.
+- **A stack of cards inside one section** — the five Backups panels under their group heading —
+  uses `space-y-6`, so the group still reads as their parent.
+
+### A route's `loading.tsx` takes the shell from the same place
+
+A skeleton narrower, squarer or flatter than what replaces it is a layout jump on every navigation
+into the route. `sectionCardClass({ padding, elevated, className })` is the card's chrome as a
+class string, for exactly that — the skeleton and the page can no longer drift apart.
+
+```tsx
+import { sectionCardClass } from "@/components/ui/card";
+
+<div className="mt-8 space-y-10">
+  <div className={sectionCardClass({ padding: "none", className: "h-44" })} />
+  <div className={sectionCardClass({ padding: "none", className: "h-40" })} />
+</div>
+```
+
+**Where this has landed so far:** 88 files, converted cluster by cluster on 2026-08-15 — all of
+`src/app/shop/[shopSlug]/settings/**`, then `trips/**`, `divers/**`, `orders/**`, the shared
+`src/components/**`, the diver-facing `src/app/s/[shopSlug]/**`, the bearer-token pages,
+`dive-sites/**`, and the marketing routes.
+
+About 85 files still carry a hand-typed `border border-border bg-surface` — but that count is no
+longer a to-do list, and reading it as one is the mistake to avoid. Each cluster's pass sorted the
+remainder into things that are genuinely **not** section cards, and left the reason at the site:
+sunken insets (`bg-surface-sunken`), overlays carrying `shadow-lg`/`shadow-2xl`, tone-carrying
+panels, `<fieldset>`s whose `<legend>` is a control's accessible name, and the marketing pages'
+`bg-background` cards, which are that colour precisely because the band behind them is
+`bg-surface`. See the "What is *not* a section card" section of
+[`src/components/ui/card.tsx`](../../src/components/ui/card.tsx), which records the three widening
+props that were asked for and refused.
+
+New code uses `SectionCard` from the start; a migrated route never goes back.
+
 ## Fields: `FieldGrid` + `Field`
 
 Multi-column forms used to give every field its own `flex flex-col` stack. That looks fine until a
@@ -139,6 +233,67 @@ view, focuses it, and rings it briefly. Given no `field` it takes the first
 `[aria-invalid="true"]` inside its `scope`, which is exactly what `Field`'s `error` marks — so a
 surface that renders per-field errors gets the focus move for free. `key` it on the submission
 (the notice code, an attempt counter) when the same refusal can happen twice in a row.
+
+### Which tone token: `text-success` or `text-success-strong`
+
+Settled by measurement, so nobody has to re-derive it. Ratios computed from the token values in
+`src/app/globals.css`, sRGB compositing for the `/10` fills, WCAG 2.x relative luminance. AA for
+normal text is **4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face
+the same bar, because none of this is "large text" (18pt / 14pt bold).
+
+The `-strong` tokens are `color-mix(in srgb, black 6%, var(--success|--warning))`.
+
+**Light palette** (`--surface` `#ffffff`, `--background` `#faf9f6`, `--surface-sunken` `#f1efe9`):
+
+| text | on `bg-surface` | on `bg-surface` + own `/10` fill | on `bg-surface-sunken` | on sunken + own `/10` fill |
+| --- | --- | --- | --- | --- |
+| `text-success` | 5.02 | **4.39** | **4.36** | **3.84** |
+| `text-success-strong` | 5.54 | 4.84 | 4.82 | **4.24** |
+| `text-warning` | 5.02 | **4.38** | **4.37** | **3.84** |
+| `text-warning-strong` | 5.55 | 4.84 | 4.82 | **4.24** |
+| `text-danger` | 6.47 | 5.46 | 5.63 | 4.78 |
+
+**Dark palette** (`--surface` `#0d222d`, `--surface-sunken` `#051118`):
+
+| text | on `bg-surface` | on `bg-surface` + own `/10` fill | on `bg-surface-sunken` | on sunken + own `/10` fill |
+| --- | --- | --- | --- | --- |
+| `text-success` | 9.39 | 7.60 | 10.96 | 9.20 |
+| `text-success-strong` | 8.27 | 6.70 | 9.65 | 8.11 |
+| `text-warning` | 9.80 | 8.04 | 11.44 | 9.66 |
+| `text-warning-strong` | 8.63 | 7.08 | 10.07 | 8.51 |
+| `text-danger` | 5.91 | 5.21 | 6.90 | 6.18 |
+
+Bold is under AA. Read off it:
+
+- **Light is the binding scheme.** Every dark-palette combination clears AA by a wide margin.
+  Mixing black into an already-light-on-dark hue *lowers* contrast, so `-strong` is a light-mode fix
+  that costs a little in dark and never rescues anything there. It is still safe everywhere, which
+  is why one token can serve both schemes.
+- **On a tinted fill of its own hue, success/warning text is `-strong`.** The raw hue lands at
+  4.38–4.39, just under. `danger` needs no `-strong` and has none.
+- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.82).
+  This is why `StatTile`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
+- **On plain `bg-surface`, the raw hue is fine** (5.02) — which is what `KindChip` relies on, and
+  why it names `bg-surface` on the chip itself rather than inheriting whatever it landed in.
+- **A tinted status fill does not go inside a sunken panel.** That is the one combination `-strong`
+  does not save (4.24). If a tinted pill has to live in a sunken container, drop the tint and give
+  it a border instead, the way `KindChip` does.
+- **Boat mode is exempt from all of it.** `.boat-mode` retunes the feedback hues for a deck in
+  sun; its worst tinted-fill combination measures 5.40:1 in light and 5.32:1 in dark, so the
+  roll-call fills that use the raw token there are compliant and stay as they are.
+
+`FormStatus` uses `-strong` unconditionally for those two tones. It is mounted in whatever container
+its form is in — a card footer, a disclosed settings row, a sunken inset panel — and it is the
+component that tells a staffer a save was refused, so it does not get to be the one that guessed.
+
+### The tone marks (✅ ⚠️ ❌)
+
+One declaration, `src/components/ui/tone.ts`, shared by `Badge`, `FormStatus`, and `ShopNotice`.
+Only the three pass/fail/caution tones get a mark; `primary`/`neutral` are counts and labels, so
+`toneGlyph()` returns `undefined` for them and a caller cannot mark a count. They are **emoji, not
+text dingbats** (`✓ ▲ ✕`) — a text codepoint takes the surrounding font and colour and reads at
+badge size as a font falling back rather than as a status, which was reported from the field. Don't
+tidy them back. The strings carry no trailing space; the gap belongs to the consumer's layout.
 
 ### Lint note: icon-only controls
 

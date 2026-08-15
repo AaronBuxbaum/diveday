@@ -129,7 +129,7 @@ export default async function CoursesPage({
           // course's own editor, whose header names its live URL.
           <Link
             href={publicCoursesPath(shop.slug)}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {st("courses.list.viewPublicPage")}
           </Link>

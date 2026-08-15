@@ -113,7 +113,7 @@ describe("editing the team's roles", () => {
 
     const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await rolesOf(db, captain)).toEqual(["captain"]);
   });
 
@@ -124,7 +124,7 @@ describe("editing the team's roles", () => {
 
     const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await rolesOf(db, owner)).toEqual(["manager", "owner"]);
   });
 
@@ -135,7 +135,7 @@ describe("editing the team's roles", () => {
 
     const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=changes_saved`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=changes-saved`);
     expect(await rolesOf(db, captain)).toEqual(["captain", "divemaster"]);
   });
 });
@@ -154,7 +154,7 @@ describe("disabling and removing a teammate's access", () => {
 
     const to = await redirectedTo(() => setStaffStatusAction(formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await accountStatusOf(db, owner)).toBe("active");
   });
 
@@ -171,7 +171,7 @@ describe("disabling and removing a teammate's access", () => {
 
     const to = await redirectedTo(() => removeStaffAction(formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await rolesOf(db, owner)).toEqual(["manager", "owner"]);
     expect(await accountStatusOf(db, owner)).toBe("active");
   });
@@ -230,7 +230,7 @@ describe("editing a teammate's emergency contact", () => {
       saveStaffEmergencyContactAction(contactForm(owner, "Mallory", "+1-305-555-0000")),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await contactOf(db, owner)).toEqual(before);
   });
 
@@ -245,7 +245,7 @@ describe("editing a teammate's emergency contact", () => {
       saveStaffEmergencyContactAction(contactForm(captain, "Marta", "+1-305-555-0114")),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await contactOf(db, captain)).toEqual(before);
   });
 
@@ -260,7 +260,7 @@ describe("editing a teammate's emergency contact", () => {
     // `contactFor` is what puts the outcome in that card's own action row
     // instead of a banner above a roster of eleven people.
     expect(to).toBe(
-      `/shop/${shop.slug}/settings/team?notice=contact_saved&contactFor=${captain}#staff-${captain}`,
+      `/shop/${shop.slug}/settings/team?notice=contact-saved&contactFor=${captain}#staff-${captain}`,
     );
     expect(await contactOf(db, captain)).toMatchObject({
       name: "Marta Okonkwo",
@@ -278,7 +278,7 @@ describe("editing a teammate's emergency contact", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/settings/team?notice=half_filled&contactFor=${captain}#staff-${captain}`,
+      `/shop/${shop.slug}/settings/team?notice=half-filled&contactFor=${captain}#staff-${captain}`,
     );
     // Nothing written, not even the half that was supplied — a refused save
     // must not leave the row holding a name whose number it just dropped.

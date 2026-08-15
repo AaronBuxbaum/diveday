@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SectionCard } from "@/components/ui/card";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { SnippetField } from "./SnippetField";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -30,20 +28,24 @@ export const metadata: Metadata = { title: "Website embed — DiveDay" };
  * Only the schedule/trip pages carry the framing exception src/proxy.ts grants
  * (`isEmbeddableShopRoute`), so every snippet here targets exactly those URLs.
  */
-export default async function EmbedSettingsPage() {
-  const session = await requireStaffSession();
-  const db = await getDb();
+export default async function EmbedSettingsPage({
+  params,
+}: {
+  params: Promise<{ shopSlug: string }>;
+}) {
+  const { shopSlug } = await params;
   // The snippet publishes the shop's schedule on the shop's own website — shop
   // configuration, so the same owner/manager gate as the settings page that
   // links here (src/lib/authz.ts — canManageShopSettings).
-  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${session.user.shopSlug}?notice=settings_not_authorized`);
-  }
-  // Built from the staff member's own authorized shop, never the route's
-  // shopSlug param — a stale or mismatched URL segment must never generate
-  // a snippet that labels one shop's name on another shop's calendar.
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect("/");
+  //
+  // The shop is built from the staff member's own session, never the route's
+  // `shopSlug` param — a stale or mismatched URL segment must never generate a
+  // snippet that labels one shop's name on another shop's calendar, and
+  // `requireShopSurface` additionally 404s the two the moment they disagree.
+  const { session, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageShopSettings,
+    refusal: { notice: "settings-not-authorized" },
+  });
 
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
 
@@ -58,7 +60,7 @@ export default async function EmbedSettingsPage() {
           eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
           title={t("settings.embed.title")}
         />
-        <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+        <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
         </p>
       </main>
@@ -104,28 +106,33 @@ export default async function EmbedSettingsPage() {
         description={t("settings.embed.description")}
       />
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">{t("settings.embed.calendarEmbed.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("settings.embed.calendarEmbed.description")}</p>
-        <p className="mt-1 text-sm text-muted">
-          {t("settings.embed.calendarEmbed.attributionNote")}
-        </p>
-        <div className="mt-4">
-          <SnippetField
-            label={t("settings.embed.calendarEmbed.fieldLabel")}
-            rows={4}
-            snippet={iframeSnippet}
-            copyLabel={t("settings.embed.snippetField.copy")}
-            copiedLabel={t("settings.embed.snippetField.copied")}
-            failedLabel={t("settings.embed.snippetField.failed")}
-          />
-        </div>
-      </section>
+      {/* Section rhythm belongs to the page, not to each section: one
+          `space-y-10` here, and no `mt-*` on any card
+          (docs/design/forms-and-controls.md). */}
+      <div className="space-y-10">
+        <SectionCard
+          padding="lg"
+          title={t("settings.embed.calendarEmbed.heading")}
+          description={t("settings.embed.calendarEmbed.description")}
+        >
+          <p className="text-sm text-muted">{t("settings.embed.calendarEmbed.attributionNote")}</p>
+          <div className="mt-4">
+            <SnippetField
+              label={t("settings.embed.calendarEmbed.fieldLabel")}
+              rows={4}
+              snippet={iframeSnippet}
+              copyLabel={t("settings.embed.snippetField.copy")}
+              copiedLabel={t("settings.embed.snippetField.copied")}
+              failedLabel={t("settings.embed.snippetField.failed")}
+            />
+          </div>
+        </SectionCard>
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">{t("settings.embed.bookButton.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("settings.embed.bookButton.description")}</p>
-        <div className="mt-4">
+        <SectionCard
+          padding="lg"
+          title={t("settings.embed.bookButton.heading")}
+          description={t("settings.embed.bookButton.description")}
+        >
           <SnippetField
             label={t("settings.embed.bookButton.fieldLabel")}
             rows={2}
@@ -134,8 +141,8 @@ export default async function EmbedSettingsPage() {
             copiedLabel={t("settings.embed.snippetField.copied")}
             failedLabel={t("settings.embed.snippetField.failed")}
           />
-        </div>
-      </section>
+        </SectionCard>
+      </div>
 
       <p className="mt-6 text-sm text-muted">
         {t.rich("settings.embed.footer", {

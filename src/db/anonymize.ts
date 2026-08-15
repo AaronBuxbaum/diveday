@@ -149,6 +149,16 @@ const ERASED_PERSON_COLUMNS = {
   diveInsurance: null,
   locale: null,
   courtesyEmailOptOutAt: null,
+  // A statement this person made about their own diving, and the erasure takes
+  // it with the certifications it stands in for — leaving it would keep saying
+  // something about a body whose record is supposed to be gone.
+  noCertificationDeclaredAt: null,
+  // Its eraser goes with it, both halves. The clear is only meaningful as a
+  // correction *of* the stamp above, so keeping it would leave this record
+  // asserting that a named staff member corrected a statement that is no longer
+  // there — an assertion about a body whose record is supposed to be gone.
+  noCertificationClearedAt: null,
+  noCertificationClearedByPersonId: null,
 } as const;
 
 /**

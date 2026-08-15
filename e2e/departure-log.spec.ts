@@ -161,7 +161,7 @@ test.describe("the log is the owner's to produce", () => {
     // deep link, or a role that changed under them. It lands back on close-out
     // saying why, never silently.
     await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/log`);
-    await page.waitForURL(/\/close-out\?notice=log_not_authorized$/);
+    await page.waitForURL(/\/close-out\?notice=log-not-authorized$/);
     await expect(page.getByText(/[Oo]nly an owner can generate/)).toBeVisible();
     // Not one fact of the document travels with the refusal.
     await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);

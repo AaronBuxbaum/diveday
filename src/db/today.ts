@@ -324,13 +324,6 @@ function inAfterDivePopulation(states: readonly ("boarded" | "not_boarded" | und
  * water (review 20260803, D1). Crew rows are built by the same rules, in the
  * same pass, and age on the same schedule; only the words differ.
  *
- * The count-level `crew attestation` deliberately does **not** raise a row of
- * its own. It is a per-checkpoint form on the live manifest that most shops
- * have never filled in, so it would fire on essentially every trip ever run,
- * and a danger-toned row that fires on every trip is what stops the row that
- * means a person is in the water from being read. The manifest states it; Today
- * chases only what somebody actually recorded.
- *
  * "Not closed" is defined the same way the manifest defines it, except for the
  * `not_boarded` split above:
  *
@@ -403,7 +396,15 @@ export async function listRollCallGaps(
         and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
       )
       .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
-      .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt)),
+      // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
+      // `created_at` is transaction time, so a batched write inside one
+      // transaction leaves the order arbitrary — and Today's missing-diver row
+      // and the manifest must never disagree about who is still in the water.
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      ),
     db
       .select({
         tripId: rollCallCrewEvents.tripId,
@@ -428,7 +429,11 @@ export async function listRollCallGaps(
       .where(
         and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
       )
-      .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.createdAt)),
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
   ]);
 
   const rosterByTrip = new Map<string, string[]>();

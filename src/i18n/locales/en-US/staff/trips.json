@@ -289,9 +289,10 @@
     "recipientsHeading": "Who this goes to",
     "recipientsNote": "Nothing here is filtered before sending. A self-declared level is what the diver typed about themselves — nobody has seen their card.",
     "recipientsRequirement": "This departure requires {list}.",
-    "recipientsSummaryBelow": "{count, plural, one {# of {total} said a level below this departure's requirement.} other {# of {total} said a level below this departure's requirement.}}",
-    "recipientsSummaryNoneBelow": "Nobody on this list said a level below this departure's requirement.",
+    "recipientsSummaryBelow": "{count, plural, one {# of {total} is below this departure's requirement.} other {# of {total} are below this departure's requirement.}}",
+    "recipientsSummaryNoneBelow": "Nobody on this list is below this departure's requirement.",
     "recipientsSummaryNoRequirement": "This departure asks for no certification level, so nobody on this list is below it.",
+    "recipientsSummaryNoLevelButCards": "This departure asks for {list} rather than a certification level, and this list can't tell you who holds those cards.",
     "recipientsSummaryNotSaid": "{count, plural, one {# said nothing about their level.} other {# said nothing about their level.}}",
     "recipientsMore": "{count, plural, one {# more isn't shown — anyone below the requirement is listed first.} other {# more aren't shown — anyone below the requirement is listed first.}}",
     "recipientsMoreNoRequirement": "{count, plural, one {# more isn't shown.} other {# more aren't shown.}}"

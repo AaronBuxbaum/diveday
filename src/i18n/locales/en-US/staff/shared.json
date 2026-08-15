@@ -456,6 +456,9 @@
     "namePlaceholderOther": "Second tank · site TBD",
     "diveSiteLabel": "Dive site",
     "noSiteChosen": "No site chosen yet",
+    "travelLabelFirst": "Minutes out from the dock",
+    "travelLabelOther": "Minutes from the previous site",
+    "travelHint": "(blank uses your usual ride out)",
     "diverFacingDetailsLabel": "Diver-facing details",
     "detailsPlaceholder": "What divers should know about this part of the trip.",
     "footerNote": "Choosing a site brings its saved notes — map, landmarks, field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock."
@@ -541,6 +544,10 @@
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",
+      "confirmAboard": "Confirm {name} is aboard",
+      "confirmAboardHint": "Tap again to record that you can see {name} and they are back on the boat.",
+      "confirmAboardCancel": "Keep “not back aboard”",
+      "markedElsewhere": "Recorded on another device or on the live manifest — undo it there, not here.",
       "openLiveManifest": "Open live manifest",
       "record": {
         "expiredCannotRecord": "This saved copy has expired — open the live manifest to record roll call.",
@@ -618,9 +625,11 @@
     "expired": "Needs signing again",
     "medicalReview": "Medical review"
   },
-  "declaredProfile": {
+  "certificationSummary": {
     "selfDeclared": "{value} — diver's word, no card",
     "levelNotSaid": "Level not said",
-    "nitrox": "Nitrox"
+    "notCertified": "Not certified yet — diver's word",
+    "nitrox": "Nitrox",
+    "belowRequirement": "{value} · below this departure's minimum"
   }
 }

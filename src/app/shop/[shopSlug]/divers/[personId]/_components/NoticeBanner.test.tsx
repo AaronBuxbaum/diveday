@@ -91,7 +91,7 @@ describe("NoticeBanner", () => {
    * signed must degrade to the generic sentence, and never to the specific one
    * or to nothing at all.
    */
-  describe("trip_prerequisite's structured detail", () => {
+  describe("trip-prerequisite's structured detail", () => {
     const deepCardRefusal = {
       requiredLevel: null,
       heldLevel: null,
@@ -101,7 +101,7 @@ describe("NoticeBanner", () => {
 
     it("says which card is missing when the gate is signed for this diver", () => {
       renderBanner(
-        "trip_prerequisite",
+        "trip-prerequisite",
         signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: PERSON }),
       );
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -112,7 +112,7 @@ describe("NoticeBanner", () => {
     it("falls back to the generic sentence on a hand-written gate", () => {
       // The exact forgery from the review: well-formed to the codec, signed by
       // nobody.
-      renderBanner("trip_prerequisite", "~~deep~0");
+      renderBanner("trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
         "This diver's cards on file don't reach what that trip and its dive sites require",
@@ -122,21 +122,21 @@ describe("NoticeBanner", () => {
 
     it("falls back to the generic sentence on another diver's genuine gate", () => {
       renderBanner(
-        "trip_prerequisite",
+        "trip-prerequisite",
         signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: OTHER_PERSON }),
       );
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
     });
 
     it("still renders — never blank — when the gate is absent", () => {
-      renderBanner("trip_prerequisite");
+      renderBanner("trip-prerequisite");
       expect(screen.getByRole("alert")).toHaveTextContent(
         "This diver's cards on file don't reach what that trip and its dive sites require",
       );
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {
-      expect(() => renderBanner("trip_prerequisite", ["~~deep~0", "~~wreck~0"])).not.toThrow();
+      expect(() => renderBanner("trip-prerequisite", ["~~deep~0", "~~wreck~0"])).not.toThrow();
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
     });
 
@@ -147,7 +147,7 @@ describe("NoticeBanner", () => {
      * trip.
      */
     it("belongs to the booking form, not to the page", () => {
-      expect(resolve("trip_prerequisite")?.form).toBe("book-activity");
+      expect(resolve("trip-prerequisite")?.form).toBe("book-activity");
     });
   });
 
@@ -201,7 +201,7 @@ describe("resolveDiverNotice", () => {
     expect(resolve("refund-in-progress")?.form).toBe("payments");
     expect(resolve("refund-in-progress")?.tone).toBe("warning");
     expect(resolve("booked")?.form).toBe("book-activity");
-    expect(resolve("course_min_age")?.form).toBe("book-activity");
+    expect(resolve("course-min-age")?.form).toBe("book-activity");
     expect(resolve("not-authorized-delete")?.form).toBe("remove");
     // A successful restore unmounts the restore card — the diver stops being
     // removed — so its confirmation has to live on the page or nobody sees it.

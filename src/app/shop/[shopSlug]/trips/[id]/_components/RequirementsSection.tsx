@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -173,7 +174,10 @@ export function RequirementsSection({
             label={t("trips.requirements.edit")}
             open={Boolean(status) || requirement === null}
           >
-            <form action={action} className="mt-2 rounded-lg border border-border bg-surface p-5">
+            <form
+              action={action}
+              className={sectionCardClass({ padding: "lg", className: "mt-2" })}
+            >
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
                 <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
                   <input
@@ -251,7 +255,6 @@ export function RequirementsSection({
                   pendingLabel={t("trips.requirements.saving")}
                   className={buttonClass({
                     variant: "secondary",
-                    className: "text-foreground",
                   })}
                 >
                   {t("trips.requirements.save")}

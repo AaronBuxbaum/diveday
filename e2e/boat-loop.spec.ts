@@ -1,5 +1,18 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 
+/**
+ * Not READ_ONLY, despite neither test submitting anything: both start by
+ * clicking "Board divers" off Today's queue, which only renders while
+ * blue-mantis has a departure scheduled today. That's a claim about seeded
+ * *state*, not about writes, and READ_ONLY only ever promises the latter — a
+ * read-only test skips its own reset and inherits whatever the previous
+ * same-worker test left behind, so a sibling spec that cancels or moves
+ * today's only departure leaves this one staring at "No boats out today"
+ * with nothing to click (observed on CI: run 31913664714, shard 1/4, the
+ * page snapshot at timeout showed exactly that empty state). Paying the
+ * reset restores the invariant these tests actually depend on.
+ */
+
 signedInAsOwner();
 
 test("the trip sub-nav reaches all four surfaces", async ({ page }) => {

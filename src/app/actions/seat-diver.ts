@@ -6,6 +6,7 @@ import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import {
@@ -54,13 +55,6 @@ function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
   return SEAT_SURFACES[surfaceId];
 }
 
-/** Appends a `?notice=` (or `&notice=`) without clobbering a path's own query. */
-function withNotice(path: string, notice: string, bookingId?: string): string {
-  const separator = path.includes("?") ? "&" : "?";
-  const suffix = bookingId ? `&bid=${bookingId}` : "";
-  return `${path}${separator}notice=${notice}${suffix}`;
-}
-
 /**
  * Land back on the door that submitted, saying why nothing happened.
  *
@@ -95,9 +89,15 @@ function refuse(
 ): never {
   const back = surface.refusedPath(landing);
   const scope = gate ? surface.gateScope(landing) : null;
-  const detail =
-    gate && scope ? `&gate=${encodeURIComponent(signTripAdmissionGate(gate, scope))}` : "";
-  return revalidateAndRedirect(back, `${withNotice(back, notice)}${detail}`);
+  return revalidateAndRedirect(
+    back,
+    // `gate` drops out of the query entirely when there is no signature to
+    // carry — `noticeUrl` omits an `undefined` extra rather than writing the
+    // word, which is what the `? … : ""` concatenation here used to guard.
+    noticeUrl(back, notice, {
+      gate: gate && scope ? signTripAdmissionGate(gate, scope) : undefined,
+    }),
+  );
 }
 
 /** Everything after "who and which trip" — identical for every door. */
@@ -130,7 +130,9 @@ async function seat(
       : surface.seatedNotice;
   revalidateAndRedirect(
     path,
-    withNotice(path, notice, surface.carriesBookingId ? result.bookingId : undefined),
+    noticeUrl(path, notice, {
+      bid: surface.carriesBookingId ? result.bookingId : undefined,
+    }),
   );
 }
 

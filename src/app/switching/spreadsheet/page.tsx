@@ -206,7 +206,14 @@ async function SpreadsheetBody({
       {/* The whole mechanical path, as one rail: ready your own sheet → the
           importer's own scope table, verbatim → the importer. */}
       <MovePath locale={locale}>
+        {/* `id="columns"`: the homepage's records band links straight here
+            ("Your spreadsheet, column by column"), and the column table is why
+            that door is worth having — a reader who has just looked at an
+            import preview is the one reader who wants this list. Without the
+            anchor the link lands on the hero, three blocks above what its words
+            promise. Pinned in e2e/marketing.spec.ts. */}
         <MovePhase
+          id="columns"
           number={1}
           title={t("switching.spreadsheet.columnsTitle")}
           intro={t("switching.spreadsheet.columnsIntro")}

@@ -87,7 +87,7 @@ describe("publishing a waiver template", () => {
 
     // Bounced to Today, not to a read-only copy of the release: the surface
     // doesn't exist for this role at all.
-    expect(to).toBe(`/shop/${shop.slug}?notice=waivers_not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}?notice=waivers-not-authorized`);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
@@ -108,7 +108,7 @@ describe("publishing a waiver template", () => {
 
     const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY)));
 
-    expect(to).toBe(`/shop/${shop.slug}?notice=waivers_not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}?notice=waivers-not-authorized`);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 

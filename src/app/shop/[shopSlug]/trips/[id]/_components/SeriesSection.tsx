@@ -1,6 +1,7 @@
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -144,17 +145,25 @@ export function SeriesSection({
     recurrenceSummary({ intervalWeeks, weekdays, endsOn }),
   );
   return (
-    <section className="mt-12 rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-base font-semibold">{t("tripSeries.panel.heading")}</h2>
-      <p className="mt-1 text-sm text-muted">
-        {hasFuture
+    // `padding="lg"`: a card a person works inside — apply, stop repeating,
+    // and the cadence editor all live in it. The heading was `text-base` and
+    // is now the one `h2` size every other section on this page already used;
+    // the card owns the gap under the header, so nothing here opens with a
+    // `mt-*` of its own.
+    <SectionCard
+      padding="lg"
+      // `mt-10`, the gap every other section on this page already uses. The
+      // `mt-12` this carried was one of the nine drifted values, not a choice;
+      // the destructive lifecycle tail below keeps its wider one on purpose.
+      className="mt-10"
+      title={t("tripSeries.panel.heading")}
+      description={
+        hasFuture
           ? t("tripSeries.panel.summaryWithFuture", { summary, count: futureScheduledCount })
-          : t("tripSeries.panel.summaryAllDone", { summary })}
-      </p>
-
-      <FormStatus tone={status?.tone} className="mt-2">
-        {status?.text}
-      </FormStatus>
+          : t("tripSeries.panel.summaryAllDone", { summary })
+      }
+    >
+      <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
 
       <div className="mt-4 flex flex-col gap-4">
         {hasOtherFuture ? (
@@ -218,7 +227,12 @@ export function SeriesSection({
             <DisclosureCaret className="text-muted group-open/cadence:rotate-90" />
             {t("tripSeries.panel.editCadence")}
           </summary>
-          <form action={cadenceAction} className="mt-2 rounded-lg border border-border p-4">
+          {/* Nested inside the series card, so it drops its shadow — surface
+              never stacks on surface. */}
+          <form
+            action={cadenceAction}
+            className={sectionCardClass({ elevated: false, className: "mt-2" })}
+          >
             <p className="max-w-prose text-sm text-muted">
               {t("tripSeries.panel.editCadenceDescription")}
             </p>
@@ -282,6 +296,6 @@ export function SeriesSection({
           </form>
         ) : null}
       </div>
-    </section>
+    </SectionCard>
   );
 }

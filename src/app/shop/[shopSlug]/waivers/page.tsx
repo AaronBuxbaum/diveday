@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
 import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import type { NoticeTone } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { saveWaiverAction } from "./actions";
@@ -37,31 +34,26 @@ export default async function WaiverTemplatesPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  // Staff read dates in the language their own device asks for, same
-  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
-  if (!shop) return null;
-  const t = staffTranslator(locale);
   // The waiver is the shop's legal instrument; editing it (and the medical
   // jurisdiction it presents) is owner/manager work (H-14, ADR
   // 20260724-role-authorization). Other roles have no use for it, so the
   // surface doesn't exist for them rather than showing a read-only copy.
   // The Signatures tab (`./signatures/page.tsx`) runs the exact same gate —
   // never a looser one, since it's read access to signed medical records.
-  const canManage = await canPersonManageWaiverTemplates(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
-  // Bounced to Today, same as every other H-14 refusal — but with an
-  // explanatory notice rather than teleporting silently (task 82, UX persona
-  // 11 "Kai"): Today already renders `shopHome.notice.*` codes.
-  if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
+  //
+  // Refused staff are bounced to Today with an explanatory notice rather than
+  // teleported silently (task 82, UX persona 11 "Kai"): Today already renders
+  // `shopHome.notice.*` codes.
+  const { db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageWaiverTemplates,
+    refusal: { notice: "waivers-not-authorized" },
+  });
+  // Staff read dates in the language their own device asks for, same
+  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   const current = await getCurrentWaiverTemplate(db, shop.id);
 
   const banner =

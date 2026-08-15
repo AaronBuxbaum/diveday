@@ -39,7 +39,8 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
-      "mcp__github"
+      "mcp__github",
+      "Bash(node scripts/unfinished-promises.mjs:*)"
     ]
   },
   "hooks": {
@@ -49,6 +50,10 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/stray-processes.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/unfinished-promises.mjs\""
           }
         ]
       }

@@ -1,3 +1,5 @@
+import { sectionCardClass } from "@/components/ui/card";
+
 /**
  * Body-shaped skeleton for /ready (design principle 1) — the token lookup and
  * readiness summary have no loading state to show meanwhile, and this is a
@@ -14,7 +16,9 @@ export default function ReadyLoading() {
         <div className="mt-3 h-9 w-72 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-5 w-56 max-w-full rounded bg-surface-sunken" />
         <div className="mt-2 h-5 w-64 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-8 rounded-2xl border border-border bg-surface">
+        {/* Both blocks take the card's shell from the same place the page's own
+            cards do, so the skeleton cannot drift from what replaces it. */}
+        <div className={sectionCardClass({ padding: "none", className: "mt-8 overflow-hidden" })}>
           <div className="p-5 sm:p-6">
             <div className="h-6 w-48 rounded bg-surface-sunken" />
             <div className="mt-3 h-5 w-full rounded bg-surface-sunken" />
@@ -33,7 +37,9 @@ export default function ReadyLoading() {
           </div>
         </div>
         <div className="mt-10 h-6 w-40 rounded bg-surface-sunken" />
-        <div className="mt-4 h-40 rounded-lg border border-border bg-surface" />
+        {/* The gear-and-setup card (`RentalFitForm`), which sits `mt-5` under
+            that heading rather than the `mt-4` this skeleton used to guess. */}
+        <div className={sectionCardClass({ padding: "none", className: "mt-5 h-40" })} />
       </div>
     </main>
   );

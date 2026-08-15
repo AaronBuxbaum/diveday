@@ -6,7 +6,7 @@ import {
   isUnsightedSelfDeclaration,
 } from "@/lib/readiness";
 import type { DbExecutor } from "./client";
-import { certifications, nitroxCertifications, people } from "./schema";
+import { certifications, nitroxCertifications, people, specialtyCertifications } from "./schema";
 
 /**
  * **What a diver said about themselves on a public opt-in, written down as
@@ -26,6 +26,14 @@ import { certifications, nitroxCertifications, people } from "./schema";
  * from being mistaken for evidence — see that column in schema.ts for the three
  * things that hang off the stamp, and `decideTripAdmission` for the gate that
  * ignores it.
+ *
+ * **The third answer is "I'm not certified yet", and it is not a card.** A
+ * large share of joiners at a Florida or Caribbean shop hold none — Discover
+ * Scuba customers, snorkellers, the non-diving half of a couple — and it lands
+ * on `people.no_certification_declared_at` rather than in `certifications`,
+ * because a Discover Scuba experience is not a certification and every row in
+ * that table asserts a card exists (`recordNoCertification` below, ADR
+ * 20260814-self-declared-cards).
  *
  * **This is informing, never gating.** Nothing written here filters a blast or
  * a wait-list invite. The change that stops the bad email is a staffer seeing
@@ -65,6 +73,13 @@ export type RecordSelfDeclaredCardsInput = {
   personId: string;
   /** Absent/null means the joiner skipped the question. */
   level?: CertificationLevel | null;
+  /**
+   * The joiner answered "I'm not certified yet" — a statement that there is no
+   * card, which is why it can never be a `level`. It lands as its own stamp on
+   * the person (`people.no_certification_declared_at`) and never as a
+   * `certifications` row: a Discover Scuba experience is not a certification.
+   */
+  noCertification?: boolean;
   /** False and undefined are the same thing here: an unticked box says nothing. */
   nitrox?: boolean;
   now?: Date;
@@ -72,6 +87,7 @@ export type RecordSelfDeclaredCardsInput = {
 
 export type RecordSelfDeclaredCardsOutcome = {
   level: SelfDeclarationOutcome;
+  noCertification: SelfDeclarationOutcome;
   nitrox: SelfDeclarationOutcome;
 };
 
@@ -110,11 +126,226 @@ export async function recordSelfDeclaredCards(
   // narrowed by `shopId` as well, so this is a second door on the same rule —
   // but returning here keeps a caller holding a foreign id from getting an
   // outcome that reads like something was considered.
-  if (!locked) return { level: "not_said", nitrox: "not_said" };
+  if (!locked) return { level: "not_said", noCertification: "not_said", nitrox: "not_said" };
+
+  // **"Not certified yet" is answered first, and it answers for the others.**
+  // One `<select>` cannot post a rung *and* "I hold no card", so a caller
+  // sending both is contradicting itself — and the app must not turn one
+  // contradiction into two claims sitting on a safety record. The statement
+  // that there is nothing wins, in both directions: no level row is written,
+  // and no nitrox row either, because "I have no card at all" plainly covers
+  // the enriched-air one. Refusing to record a capability is always the
+  // conservative direction.
+  const noCertification = await recordNoCertification(tx, input, now);
+  if (noCertification !== "not_said") {
+    return { level: "not_said", noCertification, nitrox: "not_said" };
+  }
   return {
     level: await recordLevel(tx, input, now),
+    noCertification,
     nitrox: await recordNitrox(tx, input, now),
   };
+}
+
+/**
+ * **The joiner's own word that they hold no card**, written as a stamp on the
+ * person and never as a certification.
+ *
+ * The three rules it inherits, and the one it adds:
+ *
+ * - **Anti-displacement, unchanged and widened to all three card tables.** The
+ *   claim here is "there is no card", so *any* live card the shop actually
+ *   holds refutes it — a level card, a nitrox card or a specialty card,
+ *   `pending` or `verified`, captured or imported, or a claim this shop has
+ *   since sighted. Any of those and nothing is written at all. The forms are
+ *   unauthenticated: anybody who knows a diver's name and email address reaches
+ *   that diver's real record.
+ * - **It retracts the joiner's own earlier claims, and only those.** A diver
+ *   who declared "Instructor" last month and says "I'm not certified yet" today
+ *   has corrected themselves *downward*, which is the direction that matters:
+ *   leaving the higher claim live would let it outlive its own retraction on
+ *   every panel that reads it. So their still-unsighted self-declared rows are
+ *   archived (`deleted_at`, the repo's archive-not-delete semantics — the rows
+ *   and their provenance survive), and the guard above means the only rows this
+ *   can ever reach are rows an anonymous post could have written in the first
+ *   place. Nothing a staffer captured or sighted is touchable here.
+ * - **It gates nothing.** No blast is filtered, no mail reordered, no button
+ *   disabled (ADR 20260814-self-declared-cards, decision 4). All it does is let
+ *   a staffer tell this answer apart from the silence of somebody who skipped
+ *   the question — which is the whole reason it exists, since today both read
+ *   as "Level not said" and the shop mails a Discover Scuba customer a
+ *   certified two-tank charter.
+ */
+async function recordNoCertification(
+  tx: DbExecutor,
+  input: RecordSelfDeclaredCardsInput,
+  now: Date,
+): Promise<SelfDeclarationOutcome> {
+  if (!input.noCertification) return "not_said";
+
+  const liveLevels = await tx
+    .select({
+      id: certifications.id,
+      status: certifications.status,
+      selfDeclaredAt: certifications.selfDeclaredAt,
+    })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, input.shopId),
+        eq(certifications.personId, input.personId),
+        isNull(certifications.deletedAt),
+      ),
+    );
+  if (liveLevels.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
+
+  // Sequential, never `Promise.all`: this runs inside the join's transaction,
+  // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
+  const liveNitrox = await tx
+    .select({
+      id: nitroxCertifications.id,
+      status: nitroxCertifications.status,
+      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+    })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.shopId, input.shopId),
+        eq(nitroxCertifications.personId, input.personId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    );
+  if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
+
+  // The third table, and the only one where a row's mere existence settles it.
+  // `specialty_certifications` has no `self_declared_at` at all — these forms
+  // cannot write there, so every row is a card a staffer captured or a CSV
+  // brought in, and a diver holding a Deep card is not a diver with no card.
+  const [liveSpecialty] = await tx
+    .select({ id: specialtyCertifications.id })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.shopId, input.shopId),
+        eq(specialtyCertifications.personId, input.personId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (liveSpecialty) return "card_on_file";
+
+  for (const claim of liveLevels) {
+    await tx
+      .update(certifications)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          eq(certifications.id, claim.id),
+          eq(certifications.shopId, input.shopId),
+          // Defence in depth, the same shape the level writer uses: the read
+          // above already proved every one of these is a still-unsighted claim,
+          // and re-stating it in the writing statement means no later refactor
+          // of the read can archive a card a staffer holds.
+          eq(certifications.status, "pending"),
+          isNotNull(certifications.selfDeclaredAt),
+          isNull(certifications.deletedAt),
+        ),
+      );
+  }
+  for (const claim of liveNitrox) {
+    await tx
+      .update(nitroxCertifications)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          eq(nitroxCertifications.id, claim.id),
+          eq(nitroxCertifications.shopId, input.shopId),
+          eq(nitroxCertifications.status, "pending"),
+          isNotNull(nitroxCertifications.selfDeclaredAt),
+          isNull(nitroxCertifications.deletedAt),
+        ),
+      );
+  }
+
+  await tx
+    .update(people)
+    .set({
+      noCertificationDeclaredAt: now,
+      // **A fresh answer un-clears an old correction — but only the half that
+      // is current state.** Without this, one `clearNoCertificationDeclaration`
+      // would silently swallow every "I'm not certified yet" the diver gave
+      // afterwards: a permanent, invisible gate on one answer of one form,
+      // chosen by nobody. Nulling it is also what lets every reader below test
+      // `clearedAt IS NULL` and nothing else — the frozen e2e clock makes two
+      // timestamps genuinely incomparable, so "which statement is later" has to
+      // be structural rather than chronological.
+      noCertificationClearedAt: null,
+      // **`clearedByPersonId` deliberately survives.** This function is reached
+      // from an *unauthenticated* form, and the row it is writing carries a fact
+      // a member of staff authored. Clearing that too would let an anonymous
+      // post erase the shop's own audit of its own correction — the same shape
+      // as the 2026-08-14 bug this ADR records, one column over — and would let
+      // a griefer loop the stamp back on with nothing left saying a staffer had
+      // ever disagreed (`security-reviewer`/`dive-domain-expert`, 2026-08-15).
+      // A set `clearedByPersonId` with a null `clearedAt` is a real and
+      // readable state: *corrected once, and stated again since*.
+    })
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)));
+  return "recorded";
+}
+
+/**
+ * **A staffer saying this diver never told us that** — the eraser for a stamp
+ * `recordNoCertification` wrote on an unauthenticated form.
+ *
+ * Those forms resolve a person by shop + email, so for a diver the shop holds
+ * no card for, anybody holding a name and an email address off any manifest can
+ * mark them *"Not certified yet — diver's word"* on the send lists and in every
+ * CSV the shop exports from then on. Until this existed the only thing that
+ * cleared it was owner-only erasure of the whole record.
+ *
+ * **It supersedes rather than deletes** (`people.no_certification_cleared_at`),
+ * for the reason the ADR gives about `self_declared_at`: where a record began is
+ * history, and an eraser that destroyed the evidence of its own subject leaves a
+ * shop unable to answer whether the diver ever said it.
+ *
+ * **It cannot launder a claim into evidence, structurally.** Its only effect is
+ * to move this person from a *stated* absence of a card to *no statement at
+ * all* — the silence of somebody nobody asked. Evidence lives in
+ * `certifications`, `nitrox_certifications` and `specialty_certifications`, and
+ * this function touches none of them; nothing it writes can raise a level, add
+ * a card, or move a row toward `verified`. That is the whole reason it is safe
+ * to open to every staff role, which is what capturing a card already is —
+ * H-48 is the open question about who may *sight* one, and this deliberately
+ * does not pre-empt it by inventing a narrower gate for a weaker act.
+ *
+ * Shop-scoped like every writer here, so a staffer holding a foreign person id
+ * still reaches nothing. Returns false when there was no stamp to clear, so the
+ * surface can tell "corrected" from "nothing to correct" rather than reporting
+ * a no-op as an act.
+ */
+export async function clearNoCertificationDeclaration(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; byPersonId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [cleared] = await db
+    .update(people)
+    .set({ noCertificationClearedAt: now, noCertificationClearedByPersonId: input.byPersonId })
+    .where(
+      and(
+        eq(people.id, input.personId),
+        eq(people.shopId, input.shopId),
+        isNotNull(people.noCertificationDeclaredAt),
+        // Idempotent: a second submit of the same form (a double tap, a
+        // back-button replay) must not rewrite the timestamp or the name on a
+        // correction that already happened, which would make the trail lie
+        // about when — and by whom — the record was actually corrected.
+        isNull(people.noCertificationClearedAt),
+      ),
+    )
+    .returning({ id: people.id });
+  return Boolean(cleared);
 }
 
 async function recordLevel(
@@ -207,11 +438,41 @@ async function recordLevel(
  *
  * `null` for a person nothing is known about, which the panels state as "not
  * said" rather than leaving blank.
+ *
+ * **Named for what it is, after one rename.** It was `DeclaredDiveProfile`
+ * until 2026-08-15, and to a diver a *dive profile* is the depth/time curve of
+ * a dive that already happened — the opposite end of the sport from "what may
+ * this person dive". Nothing user-visible ever carried the phrase, so this is
+ * naming rather than copy; it is corrected because the next careless heading
+ * would have made it a real credibility error in front of an instructor.
  */
-export type DeclaredDiveProfile = {
+export type CertificationSummary = {
   level: CertificationLevel | null;
   /** True when `level` is a still-unsighted self-declaration. */
   levelSelfDeclared: boolean;
+  /**
+   * True when this person said on a public opt-in that they hold no card at all
+   * (`people.no_certification_declared_at`) **and nothing the shop holds
+   * contradicts it**.
+   *
+   * The stamp is ignored rather than deleted (ADR 20260814-self-declared-cards),
+   * and *ignored* is decided here, on the same three-table test the writer
+   * applies: any live card that is not itself a still-unsighted claim — a
+   * level, a nitrox card, or a specialty — supersedes it. A reader that
+   * suppressed the stamp on a *level* alone would put "Not certified yet —
+   * diver's word" beside a verified nitrox card, which is a sentence no
+   * instructor would write and which the writer's own guard already refuses to
+   * create (found in the 2026-08-15 `dive-domain-expert` review).
+   *
+   * A *claim* does not supersede it: a person who declared "no card" and later
+   * declared a rung keeps both flags, and the phrase renders the rung — the
+   * later, more specific statement.
+   *
+   * False too once a staffer has cleared it
+   * (`clearNoCertificationDeclaration`): that is not a fact this reader is
+   * choosing to ignore, it is a fact the shop has said was never stated.
+   */
+  noCertificationDeclared: boolean;
   nitrox: boolean;
   /** True when the nitrox card behind `nitrox` is a still-unsighted claim. */
   nitroxSelfDeclared: boolean;
@@ -222,18 +483,48 @@ export type DeclaredDiveProfile = {
  * id. Empty input short-circuits — an empty `inArray` is a query that cannot
  * match and should not be sent.
  *
- * Two reads rather than one join: level and nitrox live in separate tables by
- * design (a specialty is not a ladder rung), and a join across them would
- * multiply rows for a diver holding several of each. Sequential, never
- * `Promise.all` — this can be handed a transaction.
+ * Separate reads rather than one join: level, nitrox, specialty and "no card at
+ * all" live in four places by design (a specialty is not a ladder rung, and the
+ * absence of a card is not a card), and a join across them would multiply rows
+ * for a diver holding several of each. Sequential, never `Promise.all` — this
+ * can be handed a transaction.
  */
-export async function listDeclaredDiveProfiles(
+export async function listCertificationSummaries(
   db: DbExecutor,
   shopId: string,
   personIds: readonly string[],
-): Promise<Map<string, DeclaredDiveProfile>> {
-  const profiles = new Map<string, DeclaredDiveProfile>();
-  if (personIds.length === 0) return profiles;
+): Promise<Map<string, CertificationSummary>> {
+  const summaries = new Map<string, CertificationSummary>();
+  if (personIds.length === 0) return summaries;
+
+  // The stamp on the person, first, so a joiner whose only answer was "I'm not
+  // certified yet" still gets a summary — the alternative is that the most
+  // safety-relevant answer on the form is the one that renders as silence. It
+  // is provisional until the card reads below have had their say: anything the
+  // shop actually holds supersedes it.
+  //
+  // A stamp a staffer has **cleared** is out here rather than suppressed at the
+  // end beside `carded`, and the difference matters: a cleared stamp is not a
+  // statement this reader is choosing to ignore, it is a statement the shop has
+  // said was never made. There is no pair of timestamps to compare because
+  // `recordNoCertification` nulls the clear whenever a fresh answer arrives.
+  const declaredRows = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        inArray(people.id, [...personIds]),
+        isNotNull(people.noCertificationDeclaredAt),
+        isNull(people.noCertificationClearedAt),
+      ),
+    );
+  const declared = new Set(declaredRows.map((row) => row.id));
+  /** People a real card refutes — the stamp comes off their summary at the end. */
+  const carded = new Set<string>();
+  for (const id of declared) {
+    summaries.set(id, { ...blankSummary(), noCertificationDeclared: true });
+  }
 
   const levelRows = await db
     .select({
@@ -253,7 +544,8 @@ export async function listDeclaredDiveProfiles(
 
   for (const row of levelRows) {
     const selfDeclared = isUnsightedSelfDeclaration(row);
-    const current = profiles.get(row.personId) ?? blankProfile();
+    if (!selfDeclared) carded.add(row.personId);
+    const current = summaries.get(row.personId) ?? blankSummary();
     // A card the shop actually holds beats a claim outright, whatever the
     // rungs say; between two of the same kind, the higher rung wins.
     const better =
@@ -261,7 +553,7 @@ export async function listDeclaredDiveProfiles(
       (current.levelSelfDeclared && !selfDeclared) ||
       (current.levelSelfDeclared === selfDeclared &&
         certificationRank(row.level) > certificationRank(current.level));
-    profiles.set(row.personId, {
+    summaries.set(row.personId, {
       ...current,
       ...(better ? { level: row.level, levelSelfDeclared: selfDeclared } : undefined),
     });
@@ -284,8 +576,9 @@ export async function listDeclaredDiveProfiles(
 
   for (const row of nitroxRows) {
     const selfDeclared = isUnsightedSelfDeclaration(row);
-    const current = profiles.get(row.personId) ?? blankProfile();
-    profiles.set(row.personId, {
+    if (!selfDeclared) carded.add(row.personId);
+    const current = summaries.get(row.personId) ?? blankSummary();
+    summaries.set(row.personId, {
       ...current,
       nitrox: true,
       // One real card among the claims settles it: the mark says "nothing here
@@ -296,11 +589,49 @@ export async function listDeclaredDiveProfiles(
     });
   }
 
-  return profiles;
+  // **Only for the stamp**, and only when there is a stamp to refute. A
+  // specialty card says nothing about a rung, so it never joins the phrase —
+  // but it is a card the shop holds, and "this diver has no card at all" is
+  // false in front of one. `specialty_certifications` has no `self_declared_at`
+  // at all, so a live row is always evidence.
+  const unrefuted = [...declared].filter((id) => !carded.has(id));
+  if (unrefuted.length > 0) {
+    const specialtyRows = await db
+      .select({ personId: specialtyCertifications.personId })
+      .from(specialtyCertifications)
+      .where(
+        and(
+          eq(specialtyCertifications.shopId, shopId),
+          inArray(specialtyCertifications.personId, unrefuted),
+          isNull(specialtyCertifications.deletedAt),
+        ),
+      );
+    for (const row of specialtyRows) carded.add(row.personId);
+  }
+
+  // The stamp is *ignored*, never deleted — and this is where ignoring happens,
+  // on the same test the writer refuses to write against. Without it a diver
+  // whose shop holds a verified nitrox card, or a Deep card, and no level card
+  // reads as "Not certified yet — diver's word", warning-toned, and is lifted
+  // to the top of the send list over the departure's real risks.
+  for (const id of carded) {
+    const current = summaries.get(id);
+    if (current?.noCertificationDeclared) {
+      summaries.set(id, { ...current, noCertificationDeclared: false });
+    }
+  }
+
+  return summaries;
 }
 
-function blankProfile(): DeclaredDiveProfile {
-  return { level: null, levelSelfDeclared: false, nitrox: false, nitroxSelfDeclared: false };
+function blankSummary(): CertificationSummary {
+  return {
+    level: null,
+    levelSelfDeclared: false,
+    noCertificationDeclared: false,
+    nitrox: false,
+    nitroxSelfDeclared: false,
+  };
 }
 
 async function recordNitrox(

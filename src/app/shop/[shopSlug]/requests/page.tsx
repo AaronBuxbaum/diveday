@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { getDb } from "@/db/client";
 import { type DateRequestRow, listDateRequestsForStaff } from "@/db/course-inquiries";
 import { canPersonViewShopReports } from "@/db/reporting";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type DateRequestMatch, groupDateRequests } from "@/lib/date-requests";
 import { formatShortDate } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -148,28 +145,27 @@ export default async function RequestsPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { page } = await searchParams;
-  const db = await getDb();
   // Checked against the database, not the JWT, so a demoted manager loses the
   // contact details on this page immediately — the same live check Reports
   // makes, and for the same reason (canPersonViewShopReports).
-  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
-    // The nav already hides this destination from everyone but owners and
-    // managers (ADR 20260724-role-gated-surfaces-hide-not-explain); this
-    // landing is for a bookmark, a deep link, or a role that changed under
-    // someone — and it says why rather than teleporting them silently.
-    redirect(`/shop/${shopSlug}?notice=requests_not_authorized`);
-  }
-  const shop = await getShopById(db, session.user.shopId);
-  const locale = await requestLocale(shop?.defaultLocale);
-  const timezone = shop?.timezone ?? "UTC";
+  //
+  // The nav already hides this destination from everyone but owners and
+  // managers (ADR 20260724-role-gated-surfaces-hide-not-explain); the refusal
+  // landing is for a bookmark, a deep link, or a role that changed under
+  // someone — and it says why rather than teleporting them silently.
+  const { db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonViewShopReports,
+    refusal: { notice: "requests-not-authorized" },
+  });
+  const locale = await requestLocale(shop.defaultLocale);
+  const timezone = shop.timezone;
   const t = staffTranslator(locale);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
-  const requestPage = await listDateRequestsForStaff(db, session.user.shopId, {
+  const requestPage = await listDateRequestsForStaff(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
@@ -211,7 +207,6 @@ export default async function RequestsPage({
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
-                    className: "text-foreground",
                   })}
                 >
                   {t("requests.addDeparture")}

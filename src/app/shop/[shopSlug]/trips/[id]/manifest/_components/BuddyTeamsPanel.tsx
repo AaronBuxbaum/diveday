@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
@@ -110,7 +111,12 @@ export function BuddyTeamsPanel({
           // Bounded, because each row pushes "Dissolve team" to its far edge:
           // full-bleed on a desktop manifest that put a destructive button a
           // thousand pixels from the team it dissolves, aligned to nothing.
-          <ul className="mt-3 max-w-4xl divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-3 max-w-4xl divide-y divide-border",
+            })}
+          >
             {buddyTeamsList.map((team, index) => {
               // Members of *this* team can't join another, and neither can a
               // diver already on one — so the "add" picker offers whoever is
@@ -294,7 +300,7 @@ export function BuddyTeamsPanel({
               {t("manifest.buddyNewTeamHeading")}
             </summary>
             <form action={formBuddyTeamAction} className="mt-2 max-w-4xl">
-              <fieldset className="rounded-lg border border-border bg-surface p-4">
+              <fieldset className={sectionCardClass()}>
                 <p className="max-w-prose text-sm text-muted">{t("manifest.buddyNewTeamHint")}</p>
                 {/* The same checkboxes, in the same form — plus drag-one-onto-another
                 for the two-person case, which is what a phone at the dock wants

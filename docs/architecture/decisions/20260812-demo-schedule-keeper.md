@@ -84,6 +84,33 @@ it, so today's board shows a departure whose story was written for a different d
 of not wiping the shop, and it is cheap against an empty day — a demo with a full boat on it teaches
 what DiveDay does, and one with nothing on it teaches nothing.
 
+### 2026-08-15 amendment — a third pass for the *month*
+
+The same gap again, one column over. A diver reads what is coming up, staff read today, and an **owner**
+reads the month just gone. Every tip and every review the demo owns is written by `seedHistory`, onto
+trips dated `daysAgo: 1 … 270` relative to the seed instant — so the moment the calendar turns, the whole
+recap corpus falls behind the reporting window, and the departures now filling the current month are
+board trips that were *upcoming* when the seed ran and therefore carry neither. Measured on a demo seeded
+2026-07-21 and read twenty days later, `/shop/blue-mantis/reports` showed 26 trips, 107 bookings, a real
+revenue figure and a real waiver percentage beside **"Tips $0 · No tips left on this month's trips"**,
+with the Reviews page's "this month" line at zero. That reads as unseeded data and was reported as such
+(FU-20260813-reviews-and-tips-look-unseeded); nothing is unseeded, it has aged out of the window.
+
+So `seedRecentRecaps` (`src/db/seed-recent-recaps.ts`) runs on the same tick, behind the same `isDemo`
+guard: settled tips and published bare ratings onto the bookings of departures that have **already
+sailed** this calendar month in the shop's own timezone. Never a departure that has not left — a tip on
+a boat still at the dock is not a thin demo, it is a wrong one.
+
+Two limits make it safe to run daily. It fires **only on a month that carries none** — one settled tip
+already in the window and it writes nothing, so a freshly seeded demo, every e2e run and every visual
+baseline are left exactly as `seedHistory` wrote them. And it writes **bare ratings only**: words are
+what the staff moderation queue holds, and how much work the demo appears to owe is a seeded,
+exactly-one thing that no keeper gets to change.
+
+Deliberately not a scenario module called from `seed.ts`'s orchestrator. A seed cannot write a row for a
+boat that has not sailed yet, and that is precisely the row that goes missing later — this is a keeper,
+like the today nudge, not a gap in the seed.
+
 ## Alternatives considered
 
 - **Point the homepage link at a freshly minted demo instead** (reuse `enterDemoAction`'s
@@ -122,3 +149,8 @@ what DiveDay does, and one with nothing on it teaches nothing.
   `cron_demo_refresh.pass_complete` line — no second cron, and no second Sentry monitor. A run of
   `no_candidate` there means the board is healthy but every upcoming departure is a series instance the
   nudge refuses to move.
+- The canonical demo's **owner** surfaces are kept current from the 2026-08-15 amendment, at a cost of at
+  most a few dozen `tips`/`trip_reviews` rows on the day the month turns and nothing at all on every
+  other day. It is deliberately not reported on the `pass_complete` line: unlike a moved departure, a
+  recap row changes nothing a person could be surprised by later, and `DemoScheduleRefresh` stays the
+  shape its callers already assert.

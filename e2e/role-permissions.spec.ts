@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { expect, signedInAs, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
 
 /**
@@ -14,6 +14,11 @@ import { openSettingsRow } from "./helpers";
  * (`signedInAs`, e2e/fixtures.ts) rather than walking the sign-in form live in
  * every test — a traced CI failure on the captain test found that live sign-in
  * plus this test's own 8 navigations summed past the default 15s test budget.
+ *
+ * READ_ONLY holds here: every mutation path in this file is asserted *absent* or
+ * refused. The owner test opens the "What we rent" settings row and the trip's
+ * "Edit details" disclosure and never saves either; the calendar tests read the
+ * feed page without issuing a feed.
  */
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -44,9 +49,9 @@ test.describe("H-14 role permissions", () => {
   test.describe("captain", () => {
     signedInAs("captain");
 
-    test("the daily crew (captain) is denied money, legal, deletion, and trip config", async ({
-      page,
-    }) => {
+    test("the daily crew (captain) is denied money, legal, deletion, and trip config", {
+      tag: READ_ONLY,
+    }, async ({ page }) => {
       // This test does the most sequential full-page navigation of the three
       // in this file — 5 denied-surface checks (2 of them redirects) before
       // ever reaching the shared trip-manage assertions, against 3 for the
@@ -128,7 +133,9 @@ test.describe("H-14 role permissions", () => {
      * recognized — a code the destination does not handle renders nothing and
      * fails here.
      */
-    test("a refused surface lands somewhere that says why", async ({ page }) => {
+    test("a refused surface lands somewhere that says why", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
       // Four sequential refusal round trips now, not three; the suite default
       // is sized for a single flow.
       test.setTimeout(40_000);
@@ -166,7 +173,9 @@ test.describe("H-14 role permissions", () => {
   test.describe("instructor", () => {
     signedInAs("instructor");
 
-    test("an instructor may configure trips but not money or legal", async ({ page }) => {
+    test("an instructor may configure trips but not money or legal", { tag: READ_ONLY }, async ({
+      page,
+    }) => {
       // Trip configuration is instructor work — the form is present.
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
@@ -191,7 +200,7 @@ test.describe("H-14 role permissions", () => {
   test.describe("owner", () => {
     signedInAs("owner");
 
-    test("the owner reaches every gated surface", async ({ page }) => {
+    test("the owner reaches every gated surface", { tag: READ_ONLY }, async ({ page }) => {
       await page.goto(`/shop/${SHOP}/waivers`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
@@ -220,7 +229,9 @@ test.describe("H-14 role permissions", () => {
     });
 
     /** The other half of the refusal test above: the owner is never bounced. */
-    test("the owner reaches reports, team, and import without a refusal", async ({ page }) => {
+    test("the owner reaches reports, team, and import without a refusal", {
+      tag: READ_ONLY,
+    }, async ({ page }) => {
       await page.goto(`/shop/${SHOP}/reports`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/reports`));
 
@@ -242,16 +253,18 @@ test.describe("H-14 role permissions", () => {
 test.describe("the calendar subscription survives the settings gate", () => {
   signedInAs("captain");
 
-  test("a captain can still set up their own calendar feed", async ({ page }) => {
+  test("a captain can still set up their own calendar feed", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     await page.goto(`/shop/${SHOP}/settings/calendar`);
     // Not bounced: the page renders for them.
     await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/calendar`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("and can find it without going through Settings, which they cannot open", async ({
-    page,
-  }) => {
+  test("and can find it without going through Settings, which they cannot open", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto(`/shop/${SHOP}`);
     await page.getByRole("button", { name: "Search" }).click();
     // Named, like e2e/search.spec.ts does it: the page carries more than one

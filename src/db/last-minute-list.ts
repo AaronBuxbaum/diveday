@@ -81,6 +81,7 @@ export async function joinLastMinuteList(
         shopId: input.shopId,
         personId: person.id,
         level: input.declaration?.level,
+        noCertification: input.declaration?.noCertification,
         nitrox: input.declaration?.nitrox,
       });
     }

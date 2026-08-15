@@ -69,7 +69,24 @@ export const CAPABILITY_ROUTE_PREFIXES = [
  * checked independently of them so it still catches the token even on a path
  * that isn't itself capability-prefixed.
  */
-const CAPABILITY_QUERY_PARAMS = ["booking"] as const;
+const CAPABILITY_QUERY_PARAMS = [
+  "booking",
+  /**
+   * `?gate=` is not a bearer token — the signature (`signTripAdmissionGate`,
+   * src/lib/trip-admission-gate.ts) unlocks a *sentence*, not a resource, and
+   * verification is bound to an id already in the path. It is redacted anyway,
+   * for what the value says rather than what it opens: on the diver-record
+   * refusal the URL is `/shop/<slug>/divers/<personId>?notice=trip-prerequisite
+   * &gate=<requiredLevel>~<heldLevel>~<specialties>~<nitrox>.<hmac>` — a person
+   * id sitting next to the certification level that person actually holds.
+   * Forwarding that pair to Analytics and Sentry breadcrumbs is a data-
+   * minimisation failure whatever the signature does, and the redaction costs
+   * nothing (found by the security review of the 2026-08-15 `noticeUrl` change,
+   * which routed this param through a shared builder and so made it worth
+   * asking where it ends up).
+   */
+  "gate",
+] as const;
 
 function decodeSegment(segment: string): string {
   try {

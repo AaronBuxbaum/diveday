@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
@@ -28,7 +29,7 @@ import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/li
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
@@ -83,7 +84,7 @@ export default async function EditDiveSitePage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
   const { notice, error } = await searchParams;
-  const back = `/shop/${shopSlug}/dive-sites`;
+  const back = shopPath(shopSlug, "dive-sites");
   const db = await getDb();
   const [site, shop] = await Promise.all([
     getDiveSite(db, session.user.shopId, id),
@@ -197,7 +198,7 @@ export default async function EditDiveSitePage({
         url,
       });
     }
-    revalidateAndRedirect(`${back}/${id}`, `${back}/${id}?notice=saved`);
+    revalidateAndRedirect(`${back}/${id}`, noticeUrl(`${back}/${id}`, "saved"));
   }
 
   async function copyAction() {
@@ -212,7 +213,7 @@ export default async function EditDiveSitePage({
     while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
     const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
     if (!copy) notFound();
-    revalidateAndRedirect(back, `${back}/${copy.id}?notice=copied`);
+    revalidateAndRedirect(back, noticeUrl(`${back}/${copy.id}`, "copied"));
   }
 
   async function deleteAction() {
@@ -221,7 +222,7 @@ export default async function EditDiveSitePage({
     const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
     revalidateAndRedirect(
       back,
-      deleted ? `${back}?notice=archived` : `${back}/${id}?error=invalid`,
+      deleted ? noticeUrl(back, "archived") : `${back}/${id}?error=invalid`,
     );
   }
 
@@ -244,7 +245,7 @@ export default async function EditDiveSitePage({
               <form action={copyAction}>
                 <SubmitButton
                   pendingLabel={t("diveSites.edit.copying")}
-                  className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+                  className={buttonClass({ variant: "secondary" })}
                 >
                   {t("diveSites.edit.copyAndTailor")}
                 </SubmitButton>
@@ -297,17 +298,18 @@ export default async function EditDiveSitePage({
       {notice === "copied" && noticeKey ? (
         <p
           role="status"
-          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
+          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
         >
           {t(noticeKey)}
         </p>
       ) : null}
       {upcomingTrips.length > 0 ? (
-        <section aria-labelledby="upcoming-dives-heading" className="mt-8">
-          <h2 id="upcoming-dives-heading" className="text-lg font-semibold">
-            {t("diveSites.edit.upcomingHeading")}
-          </h2>
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+        <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
+          {/* Full-bleed rows inside the card rather than a second bordered box
+              inside it: each row pads itself and its hover fill has to reach
+              the card's own edge, so the list undoes the card's padding and
+              `overflow-hidden` clips that fill to the corner radius. */}
+          <ul className="-mx-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
             {upcomingTrips.map((trip) => (
               <li key={trip.tripId}>
                 <Link
@@ -322,7 +324,7 @@ export default async function EditDiveSitePage({
               </li>
             ))}
           </ul>
-        </section>
+        </SectionCard>
       ) : null}
       <SiteFormShell
         action={saveAction}

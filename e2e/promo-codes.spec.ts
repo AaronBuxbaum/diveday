@@ -29,7 +29,7 @@ test.describe("as captain", () => {
     // gate this captain just failed, so it bounced them again and the
     // promo-specific reason was lost on the way.
     await page.goto("/shop/blue-mantis/promos");
-    // Not a URL assertion alone: FlashParams strips `?notice=promos_not_authorized`
+    // Not a URL assertion alone: FlashParams strips `?notice=promos-not-authorized`
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);

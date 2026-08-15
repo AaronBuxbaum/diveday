@@ -1237,6 +1237,44 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "site-briefing-requirements", scheme);
       });
 
+      /**
+       * **A dock day the departure's own legs lay out** (ADR
+       * 20260815-per-leg-travel-minutes).
+       *
+       * `site-briefing` above photographs the reef morning, where the legs are
+       * short and the day therefore reads exactly as it did on the shop's single
+       * ride-out figure — which is the correct outcome there and proves nothing
+       * about the column. The seeded long-range run is the only departure in the
+       * demo whose *second* leg is longer than the shop's surface interval, and
+       * that is the one shape that changes which beat a diver reads: the gap
+       * between two dives is `max(surfaceInterval, travel)`, so at 75 minutes
+       * the window is named "Ride to the next site" instead of "Surface
+       * interval". Until this capture, no baseline had ever rendered that beat.
+       *
+       * Its id comes off the staff board on a disposable context, the same
+       * CR-019 pattern as the requirement note above, so `page` stays the
+       * unauthenticated visitor whose page is being photographed.
+       */
+      test(`the public trip page lays the day out from its own legs (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await tripIdWithoutSigningIn(
+          browser,
+          await staffStorageState("owner"),
+          MINIMUM_SEATS_TRIP,
+        );
+        await page.goto(`/s/blue-mantis/trips/${tripId}`);
+        await page.getByRole("heading", { name: "Your dock-day rhythm" }).waitFor();
+        // The beat only a stated leg can produce, and the reason this capture
+        // exists — waiting on it means the shot can never be of a day that
+        // quietly fell back to the shop's twenty minutes.
+        await page.getByText("Ride to the next site").waitFor();
+        await capture(page, "dock-day-legs", scheme);
+      });
+
       // "Upcoming dates" is the last section the public course page streams, so
       // it is the signal that the whole document has landed — without it this
       // capture also shot a viewport-tall blank page on some runs.
@@ -2185,8 +2223,90 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText("2 of 3 said a level below this departure's requirement.").waitFor();
+        // Not "said a level below": the summary dropped that word on
+        // 2026-08-15, when "not certified yet" became an answer a diver can
+        // give. One of the counted may hold no certification at all, so there
+        // is no level for the sentence to name.
+        await page.getByText("2 of 3 are below this departure's requirement.").waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
+      });
+
+      /**
+       * **The same panel with nobody's help — the demo shop exactly as it is
+       * seeded** (FU-20260815-no-seeded-diver-ever-declared-anything).
+       *
+       * The two captures above each drive the public form first, so what they
+       * photograph is a claim this test just made. Until 2026-08-15 that was the
+       * *only* way any of these marks had ever been rendered outside jsdom: no
+       * seeded diver had declared anything, so every name on blue-mantis's
+       * last-minute list read "Level not said" — the one branch that carries no
+       * mark and no tone — and a shop clicking through the demo saw a clean list
+       * where a real one has two rows worth pausing over.
+       *
+       * `src/db/seed-self-declared.ts` puts them there, and this is the baseline
+       * that proves they arrive: one claim marked warning-toned on both halves
+       * (Rowan Feld, level and enriched air, each carrying its own mark), and one
+       * "Not certified yet — diver's word" lifted above the rest because it is
+       * below every bar there is (Selah Mbeki). Ten recipients, none hidden, so
+       * the cap's own boundary is on a baseline too.
+       *
+       * The night charter rather than the reef morning, deliberately: the two
+       * seeded joiners state a window that starts tomorrow, precisely so today's
+       * reef departure — the fixture the two captures above are pinned to —
+       * keeps the recipient list it had.
+       */
+      test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        // The seeded row that is both unchecked *and* under the bar — the one
+        // state this whole panel exists to put in front of a staffer.
+        await page
+          .getByText("Not certified yet — diver's word · below this departure's minimum")
+          .waitFor();
+        await capture(page, "trip-guests-deal-seeded", scheme);
+      });
+
+      /**
+       * **The other list on the same page, and the first baseline it has ever
+       * had** (ADR 20260814-self-declared-cards, the 2026-08-15 amendment).
+       *
+       * The wait list renders only when somebody is on it, so `trip-guests`
+       * above — pinned to the reef morning — can never show it. The seeded
+       * wait-lister is on the Pickles Reef charter and holds a **verified** Open
+       * Water card, which is exactly the row worth photographing once the
+       * departure is raised to Advanced Open Water: calm, muted, nobody's claim
+       * in doubt, and under the bar. The tone is the deal panel's answer to "has
+       * anybody seen this card?" and must stay that; if it ever warms here, this
+       * is the baseline that catches it.
+       *
+       * The Invite button beside the name is in the frame deliberately. Nothing
+       * about this mark filters the list, reorders it, or disables the invite —
+       * a wait list is leads in the order they asked (ADR
+       * 20260813-wait-list-is-a-lead-list) and informing the staffer is the whole
+       * design.
+       */
+      test(`the wait list weighs a lead against the bar (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Pickles Reef");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page.getByText("Edit requirements", { exact: true }).click();
+        await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
+        await page.getByRole("button", { name: "Save requirements" }).click();
+        // Raising the bar on a seated charter answers with the warning variant
+        // ("… booked divers no longer meet them"); matching the stem keeps this
+        // test about the wait list.
+        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#waitlist`);
+        // Scoped to the wait list: the deal panel further down the same page
+        // renders the identical phrase for its own recipients, and this test is
+        // about the list that was still silent until now.
+        await page
+          .locator("#waitlist")
+          .getByText("Open Water · below this departure's minimum")
+          .waitFor();
+        await capture(page, "trip-guests-waitlist", scheme);
       });
 
       test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {

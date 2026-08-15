@@ -25,8 +25,17 @@ import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
-const TEAM_PATH_SUFFIX = "/settings/team";
+/**
+ * This page's own path, with the slug escaped. It arrives on the session, but
+ * every action here is a POST endpoint whose id ships to the browser, so the
+ * path is built rather than interpolated — see `shopPath` in
+ * src/lib/staff-notices.ts.
+ */
+function teamPath(shopSlug: string): string {
+  return shopPath(shopSlug, "settings", "team");
+}
 
 /** Returns the redirect target when the actor lacks the team gate, or null to proceed. */
 async function teamManagementBlock(session: {
@@ -37,7 +46,7 @@ async function teamManagementBlock(session: {
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}?notice=not_authorized`;
+  return allowed ? null : noticeUrl(teamPath(session.user.shopSlug), "not-authorized");
 }
 
 function rolesFromFormData(formData: FormData): Role[] {
@@ -48,7 +57,7 @@ function rolesFromFormData(formData: FormData): Role[] {
 // typed the schema happened to speak, and `pnpm check:copy` cannot see a string
 // literal passed as a validator argument — so one lands in the UI untranslated
 // the first time a caller renders `error.issues[].message`. This schema fails
-// with issue codes; the page turns a refusal into a `?notice=invite_invalid`
+// with issue codes; the page turns a refusal into a `?notice=invite-invalid`
 // and the staff bundle picks the words.
 const inviteSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -100,14 +109,14 @@ async function sendInviteEmail(input: {
 
 export async function inviteStaffAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
   const parsed = inviteSchema.safeParse(Object.fromEntries(formData));
   const roles = rolesFromFormData(formData);
   if (!parsed.success || roles.length === 0) {
-    redirect(`${path}?notice=invite_invalid`);
+    redirect(noticeUrl(path, "invite-invalid"));
   }
 
   const db = await getDb();
@@ -125,12 +134,12 @@ export async function inviteStaffAction(formData: FormData) {
     // Exhaustive by construction: a new refusal code cannot reach the page
     // wordless (the same discipline `SEAT_SURFACES.refusalNotice` uses).
     const notice = {
-      already_on_team: "invite_already_on_team",
-      email_registered_elsewhere: "invite_email_taken",
+      already_on_team: "invite-already-on-team",
+      email_registered_elsewhere: "invite-email-taken",
       // The reserved demo namespace (ADR 20260803-demo-bypass-containment).
-      email_reserved: "invite_email_reserved",
+      email_reserved: "invite-email-reserved",
     }[result.reason];
-    redirect(`${path}?notice=${notice}`);
+    redirect(noticeUrl(path, notice));
   }
 
   await sendInviteEmail({
@@ -145,7 +154,7 @@ export async function inviteStaffAction(formData: FormData) {
     timezone: shop.timezone,
   });
 
-  revalidateAndRedirect(path, `${path}?notice=invited`);
+  revalidateAndRedirect(path, noticeUrl(path, "invited"));
 }
 
 async function findTeamMember(shopId: string, userAccountId: string) {
@@ -155,7 +164,7 @@ async function findTeamMember(shopId: string, userAccountId: string) {
 
 export async function resendInviteAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -179,7 +188,7 @@ export async function resendInviteAction(formData: FormData) {
     timezone: shop.timezone,
   });
 
-  revalidateAndRedirect(path, `${path}?notice=invite_resent`);
+  revalidateAndRedirect(path, noticeUrl(path, "invite-resent"));
 }
 
 /**
@@ -193,7 +202,7 @@ export async function resendInviteAction(formData: FormData) {
  */
 export async function saveAllStaffRolesAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -208,7 +217,7 @@ export async function saveAllStaffRolesAction(formData: FormData) {
     roles: STAFF_ROLES.filter((role) => formData.get(`role_${member.personId}_${role}`) === "on"),
   }));
   if (memberRoles.some(({ roles }) => roles.length === 0)) {
-    redirect(`${path}?notice=roles_invalid`);
+    redirect(noticeUrl(path, "roles-invalid"));
   }
 
   let failureReason: Extract<StaffMutationResult, { ok: false }>["reason"] | null = null;
@@ -221,7 +230,7 @@ export async function saveAllStaffRolesAction(formData: FormData) {
     if (!result.ok) failureReason = result.reason;
   }
 
-  revalidateAndRedirect(path, `${path}?notice=${failureReason ?? "changes_saved"}`);
+  revalidateAndRedirect(path, noticeUrl(path, failureReason ?? "changes-saved"));
 }
 
 /**
@@ -234,7 +243,7 @@ export async function saveAllStaffRolesAction(formData: FormData) {
  */
 export async function saveStaffEmergencyContactAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -251,13 +260,16 @@ export async function saveStaffEmergencyContactAction(formData: FormData) {
   // that card's own action row rather than as a banner at the top of a page of
   // staff — the same routing the invite form's refusals already get, and what
   // docs/design/forms-and-controls.md asks of a form-level result.
-  const notice = result.ok ? "contact_saved" : result.reason;
-  revalidateAndRedirect(path, `${path}?notice=${notice}&contactFor=${personId}#staff-${personId}`);
+  const notice = result.ok ? "contact-saved" : result.reason;
+  revalidateAndRedirect(
+    path,
+    noticeUrl(`${path}#staff-${personId}`, notice, { contactFor: personId }),
+  );
 }
 
 export async function setStaffStatusAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -273,12 +285,12 @@ export async function setStaffStatusAction(formData: FormData) {
     status,
   });
   const notice = result.ok ? (status === "active" ? "reactivated" : "disabled") : result.reason;
-  revalidateAndRedirect(path, `${path}?notice=${notice}`);
+  revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
 export async function removeStaffAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -299,7 +311,7 @@ export async function removeStaffAction(formData: FormData) {
     userAccountId,
   });
   if (!result.ok) {
-    revalidateAndRedirect(path, `${path}?notice=${result.reason}`);
+    revalidateAndRedirect(path, noticeUrl(path, result.reason));
     return;
   }
   // Their calendar subscription dies on its next fetch regardless —
@@ -313,19 +325,20 @@ export async function removeStaffAction(formData: FormData) {
   // not import a feature module (ADR 20260730-feature-module-contracts), so
   // the composition layer is where two features meet.
   await revokeFeedsForFormerStaff(db, { shopId: session.user.shopId });
-  const undoParams = new URLSearchParams({
-    notice: "removed",
-    undoPersonId: personId,
-    undoUserAccountId: userAccountId,
-    undoRoles: roles.join(","),
-    undoName: fullName,
-  });
-  revalidateAndRedirect(path, `${path}?${undoParams.toString()}`);
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, "removed", {
+      undoPersonId: personId,
+      undoUserAccountId: userAccountId,
+      undoRoles: roles.join(","),
+      undoName: fullName,
+    }),
+  );
 }
 
 export async function restoreStaffAction(formData: FormData) {
   const session = await requireStaffSession();
-  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const path = teamPath(session.user.shopSlug);
   const blocked = await teamManagementBlock(session);
   if (blocked) redirect(blocked);
 
@@ -344,6 +357,6 @@ export async function restoreStaffAction(formData: FormData) {
     userAccountId,
     status: "active",
   });
-  const notice = rolesResult.ok && statusResult.ok ? "restored" : "restore_failed";
-  revalidateAndRedirect(path, `${path}?notice=${notice}`);
+  const notice = rolesResult.ok && statusResult.ok ? "restored" : "restore-failed";
+  revalidateAndRedirect(path, noticeUrl(path, notice));
 }

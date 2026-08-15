@@ -243,8 +243,8 @@ is the ADR's own "silent refresh" row and stops the device doing roll call from 
 ### Which writes announce a manifest change — trip-scoped writers, not person-scoped
 
 Before this, the eight publishers were all things a captain does **on the manifest page itself**
-(`recordRollCall`, `recordCrewRollCall`, `recordCrewAttestation`, `updateLatestRollCallNote`, and the
-four buddy-team writers). So push told a captain about their own edits and nothing else — silent on
+(`recordRollCall`, `recordCrewRollCall`, the since-deleted `recordCrewAttestation`,
+`updateLatestRollCallNote`, and the four buddy-team writers). So push told a captain about their own edits and nothing else — silent on
 precisely the shore-side changes it exists to carry.
 
 The criterion chosen is **whether the writer already knows its trip**, because that is what separates

@@ -31,7 +31,52 @@ const eventSchema = z
     crewPersonId: z.string().uuid().optional(),
     tripId: z.string().uuid(),
     checkpoint: z.union([z.literal("departure"), z.string().regex(/^after_dive_[1-6]$/)]),
-    status: z.enum(["boarded", "not_boarded"]),
+    /**
+     * `cleared` is the retraction — "take that mark off, nobody said it" —
+     * and it joined the offline vocabulary on 2026-08-15 (ADR
+     * 20260815-offline-can-unsay-a-missing-diver). It grants a device no new
+     * authority: `recordRollCall`/`recordCrewRollCall` have accepted it from
+     * the live manifest since roll call had an undo, and an offline `cleared`
+     * goes through the identical gauntlet every other offline status does —
+     * dedup on `clientEventId`, the staleness bound, and the newest-wins
+     * refusal, which is what stops a device that has been in a dry bag for an
+     * hour erasing a mark another device recorded since.
+     */
+    status: z.enum(["boarded", "not_boarded", "cleared"]),
+    /**
+     * Which statement a `cleared` takes back — the `clientEventId` of the event
+     * the device was actually looking at when somebody tapped undo (ADR
+     * 20260815-an-offline-retraction-names-its-target). The writers apply the
+     * retraction only while that event is still the newest one standing at this
+     * subject and checkpoint, which is what stops an *honest, updated* device
+     * holding a stale copy from unsaying a different device's "did not come back
+     * from the dive".
+     *
+     * Honest and updated, and that is the whole of it: because the field is
+     * optional (below), a caller that simply omits it still gets the old
+     * newest-wins write. This is a correctness guard against staleness, **not an
+     * authorization boundary**, and nothing downstream may treat it as one
+     * (security review, 2026-08-15). Nobody gains anything by omitting it — the
+     * caller is already live staff of this shop, who can issue the identical
+     * `cleared` from the live manifest one tab away.
+     *
+     * **Optional, and its absence is not a loosening to be tidied up later.**
+     * An event with no `retractsClientEventId` was queued by a build that
+     * predates the field — a phone in a dry bag on a boat, which is the whole
+     * reason this route exists — and it takes exactly the path it took before,
+     * scoped on the device to that device's own statement
+     * (`OfflineRollCallResult.local`). Refusing those would throw away roll call
+     * a crew member really recorded, which is the one thing this route is built
+     * never to do.
+     *
+     * A uuid because the device mints it with `crypto.randomUUID()`. Unlike
+     * `clientEventId` above it never reaches Postgres — it is compared in
+     * JavaScript, case-folded, against the newest row's `client_event_id`
+     * (`offlineRetractionSuperseded`, src/db/manifests.ts) — so this rule is
+     * shape validation and nothing more. Say so plainly, because the hazard
+     * inverts if the comparison ever moves into SQL.
+     */
+    retractsClientEventId: z.string().uuid().optional(),
     note: z.string().trim().max(300).nullable(),
     occurredAt: z.iso.datetime(),
   })
@@ -129,6 +174,7 @@ export async function POST(request: Request) {
       checkpoint: event.checkpoint as RollCallCheckpoint,
       source: "offline" as const,
       clientEventId: event.clientEventId,
+      retractsClientEventId: event.retractsClientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
       occurredAt: new Date(event.occurredAt),
       note: event.note ?? undefined,

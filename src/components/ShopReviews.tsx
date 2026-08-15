@@ -1,4 +1,5 @@
 import { StarRating } from "@/components/StarRating";
+import { SectionCard } from "@/components/ui/card";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
@@ -50,9 +51,11 @@ export function ShopReviews({
       </div>
       <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
       {reviews.length > 0 ? (
+        // A list of like cards, so it keeps its own `gap-3` rather than the
+        // page's section rhythm — see docs/design/forms-and-controls.md.
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {reviews.map((review) => (
-            <li key={review.id} className="rounded-2xl border border-border bg-surface p-5">
+            <SectionCard as="li" key={review.id}>
               <StarRating
                 rating={review.rating}
                 label={t("reviews.ratingOption", { rating: review.rating })}
@@ -65,7 +68,7 @@ export function ShopReviews({
                 {review.reviewer || t("reviews.anonymousReviewer")} · {review.tripTitle} ·{" "}
                 {formatShortDate(review.divedAt, locale, timezone)}
               </p>
-            </li>
+            </SectionCard>
           ))}
         </ul>
       ) : null}

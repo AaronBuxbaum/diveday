@@ -77,7 +77,7 @@ export function PaymentStatusControl({
       </span>
       <SubmitButton
         pendingLabel={copy.updating}
-        className={buttonClass({ variant: "secondary", size: "sm", className: "text-foreground" })}
+        className={buttonClass({ variant: "secondary", size: "sm" })}
       >
         {copy.update}
       </SubmitButton>

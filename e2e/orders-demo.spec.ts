@@ -1,4 +1,10 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+/**
+ * READ_ONLY holds here: every one of these reads the orders index, its filters and its
+ * pager, or a refusal page. The Stripe-calling controls are asserted *disabled*, and
+ * "Apply filters" is a GET form — a navigation, not a write.
+ */
 
 // The seeded demo carries a billing history whose orders have fabricated Stripe
 // ids (the demo never connects an account). The Stripe-calling controls —
@@ -9,7 +15,9 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 test.describe("demo billing history", () => {
   signedInAsOwner();
 
-  test("a paid demo order's refund control is disabled with a reason", async ({ page }) => {
+  test("a paid demo order's refund control is disabled with a reason", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     // A seeded historical diver with a paid order on file. The extended
     // roster is well past one default page, sorted alphabetically — search
     // for her rather than assume she's on the unfiltered first page.
@@ -36,9 +44,9 @@ test.describe("demo billing history", () => {
     await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
   });
 
-  test("an order opened from the index says when it was raised and offers both ways back", async ({
-    page,
-  }) => {
+  test("an order opened from the index says when it was raised and offers both ways back", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     // Arriving from the index (not from a diver) used to leave browser-back as
     // the only exit, and the date the index column showed disappeared on the
     // way in — on the one screen a refund argument turns on.
@@ -65,7 +73,9 @@ test.describe("demo billing history", () => {
    * queried and painted on every visit, for a screen nobody reads past the
    * first few rows of.
    */
-  test("the order index pages instead of rendering every order", async ({ page }) => {
+  test("the order index pages instead of rendering every order", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
@@ -105,9 +115,9 @@ test.describe("demo billing history", () => {
    * has a door out of it, right where a staffer hunting an older order will
    * look for one.
    */
-  test("the index opens on a stated window with an explicit way to see everything", async ({
-    page,
-  }) => {
+  test("the index opens on a stated window with an explicit way to see everything", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
     await expect(page.getByText(/Showing the last 90 days/)).toBeVisible();
@@ -137,9 +147,9 @@ test.describe("demo billing history", () => {
    * `personId`, so submitting it dropped the very filter the page was
    * explaining in the line above the table.
    */
-  test("a diver filter survives applying another filter, and says whose orders these are", async ({
-    page,
-  }) => {
+  test("a diver filter survives applying another filter, and says whose orders these are", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
     await page
@@ -166,7 +176,7 @@ test.describe("demo billing history", () => {
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */
-  test("paging keeps the active filter", async ({ page }) => {
+  test("paging keeps the active filter", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=paid");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
     const pager = page.getByRole("navigation", { name: "Pages" });
@@ -204,9 +214,9 @@ test.describe("demo billing history", () => {
 test.describe("no connected payment account", () => {
   signedInAsOwner();
 
-  test("the orders index offers connecting payments instead of a dead New order", async ({
-    page,
-  }) => {
+  test("the orders index offers connecting payments instead of a dead New order", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
@@ -217,20 +227,22 @@ test.describe("no connected payment account", () => {
     );
   });
 
-  test("reaching orders/new anyway lands back on Orders with a reason", async ({ page }) => {
+  test("reaching orders/new anyway lands back on Orders with a reason", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
     // Hiding the link is a courtesy; the page itself is the gate. A bookmark,
     // a deep link, or a shop that disconnected mid-session still gets here.
     await page.goto("/shop/blue-mantis/orders/new");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
-    // Not a URL assertion: FlashParams strips `?notice=payment_not_connected`
+    // Not a URL assertion: FlashParams strips `?notice=payment-not-connected`
     // on mount, so the rendered banner is what proves the code was handled —
     // an unhandled code renders nothing and fails here.
     await expect(page.getByText(/Payments aren't connected yet/i).first()).toBeVisible();
   });
 
-  test("reaching it with a diver in hand lands back on that diver with a reason", async ({
-    page,
-  }) => {
+  test("reaching it with a diver in hand lands back on that diver with a reason", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
     await page

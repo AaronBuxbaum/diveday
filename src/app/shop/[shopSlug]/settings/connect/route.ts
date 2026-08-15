@@ -9,6 +9,7 @@ import {
   stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * Kicks off Standard Stripe Connect OAuth: a random state nonce goes into a
@@ -17,7 +18,7 @@ import { requireStaffSession } from "@/lib/session";
  */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
-  const settingsUrl = new URL(`/shop/${session.user.shopSlug}/settings`, request.url);
+  const settingsUrl = new URL(shopPath(session.user.shopSlug, "settings"), request.url);
 
   // Connecting the shop's Stripe account is a payment setting — owner/manager
   // only (H-14, ADR 20260724-role-authorization), re-checked against live roles.
@@ -27,13 +28,13 @@ export async function GET(request: Request) {
     session.user.personId,
   );
   if (!canPayments) {
-    settingsUrl.searchParams.set("notice", "not_authorized");
+    settingsUrl.searchParams.set("notice", "not-authorized");
     return NextResponse.redirect(settingsUrl);
   }
 
   const appHost = publicAppUrl();
   if (!appHost) {
-    settingsUrl.searchParams.set("notice", "not_configured");
+    settingsUrl.searchParams.set("notice", "not-configured");
     return NextResponse.redirect(settingsUrl);
   }
 
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
   const state = crypto.randomUUID();
   const authorizeUrl = provider.authorizeUrl({ redirectUri, state });
   if (!authorizeUrl) {
-    settingsUrl.searchParams.set("notice", "not_configured");
+    settingsUrl.searchParams.set("notice", "not-configured");
     return NextResponse.redirect(settingsUrl);
   }
 

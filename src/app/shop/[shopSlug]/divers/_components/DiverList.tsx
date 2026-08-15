@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -399,7 +400,10 @@ export function DiverList({
               <li key={diver.person.id}>
                 <Link
                   href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                  className="block rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken"
+                  className={sectionCardClass({
+                    className:
+                      "block transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken",
+                  })}
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <span

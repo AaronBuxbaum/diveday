@@ -1,9 +1,13 @@
-// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
-import { expect, readOnlyTest as test } from "./fixtures";
+import { expect, READ_ONLY, test } from "./fixtures";
 
-test("the schedule's trip-type and has-space filters narrow the list, server-rendered", async ({
-  page,
-}) => {
+/**
+ * READ_ONLY holds here: the trip-type, has-space, paging and month controls all read
+ * back out of the URL. Nothing on the public schedule writes.
+ */
+
+test("the schedule's trip-type and has-space filters narrow the list, server-rendered", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   // The filter <form> is immediately followed by the trip <ul> whenever there
   // are trips to show — scoping to that keeps this locator off the calendar's
@@ -47,7 +51,9 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   await expect(page).toHaveURL(/hasSpace=1/);
 });
 
-test("no control comes or goes from the filter row while it hydrates", async ({ page }) => {
+test("no control comes or goes from the filter row while it hydrates", { tag: READ_ONLY }, async ({
+  page,
+}) => {
   // The property, stated as a diver experiences it: the filter row a diver sees
   // on paint is the filter row they still see once it goes live. Nothing
   // appears, nothing disappears under a thumb already moving toward "Has
@@ -118,7 +124,9 @@ test("no control comes or goes from the filter row while it hydrates", async ({ 
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
 });
 
-test("paging and month arrows keep the filters a diver applied", async ({ page }) => {
+test("paging and month arrows keep the filters a diver applied", { tag: READ_ONLY }, async ({
+  page,
+}) => {
   // Regression: the pager and month-arrow links rebuilt their query from
   // scratch and dropped `hasSpace`/`tripType`, so tapping "Show later" handed
   // back the full unfiltered list with the checkbox silently reset.

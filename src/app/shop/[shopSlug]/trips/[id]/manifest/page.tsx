@@ -10,6 +10,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
+import { sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
@@ -399,7 +400,10 @@ export default async function TripManifestPage({
           mechanism exists to prevent. */}
       <section
         aria-labelledby="on-this-phone-heading"
-        className="mt-8 rounded-xl border border-border bg-surface p-4 print:hidden"
+        // The `<h2 id>` stays spelled out rather than folding into
+        // `SectionCard`'s `title`: `aria-labelledby` needs that id, and this
+        // heading is a deliberate eyebrow rather than a section heading.
+        className={sectionCardClass({ className: "mt-8 print:hidden" })}
       >
         <h2
           id="on-this-phone-heading"

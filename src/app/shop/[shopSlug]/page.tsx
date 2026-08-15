@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { DepartureBoard } from "@/app/shop/[shopSlug]/_components/today/DepartureBoard";
@@ -66,22 +67,22 @@ export const instant = true;
 // the app that redirect a non-owner/manager back to Today (task 82, UX
 // persona 11 "Kai") rather than teleporting silently.
 const AUTH_NOTICES: Record<string, StaffMessageKey> = {
-  waivers_not_authorized: "shopHome.notice.waiversNotAuthorized",
-  export_not_authorized: "shopHome.notice.exportNotAuthorized",
-  reports_not_authorized: "shopHome.notice.reportsNotAuthorized",
-  requests_not_authorized: "shopHome.notice.requestsNotAuthorized",
-  settings_not_authorized: "shopHome.notice.settingsNotAuthorized",
+  "waivers-not-authorized": "shopHome.notice.waiversNotAuthorized",
+  "export-not-authorized": "shopHome.notice.exportNotAuthorized",
+  "reports-not-authorized": "shopHome.notice.reportsNotAuthorized",
+  "requests-not-authorized": "shopHome.notice.requestsNotAuthorized",
+  "settings-not-authorized": "shopHome.notice.settingsNotAuthorized",
   // These four used to land on Settings, which was the nearest parent that
   // could explain them. Settings is owner/manager work now, and every one of
   // these gates is the *same* owner/manager gate — so a staffer refused there
   // is refused from Settings too, and landing them on it meant a second bounce
   // that dropped their reason on the floor. They land here instead, where the
   // reason survives.
-  team_not_authorized: "shopHome.notice.teamNotAuthorized",
-  import_not_authorized: "shopHome.notice.importNotAuthorized",
-  backup_not_authorized: "shopHome.notice.backupNotAuthorized",
-  whatsapp_not_authorized: "shopHome.notice.whatsappNotAuthorized",
-  promos_not_authorized: "shopHome.notice.promosNotAuthorized",
+  "team-not-authorized": "shopHome.notice.teamNotAuthorized",
+  "import-not-authorized": "shopHome.notice.importNotAuthorized",
+  "backup-not-authorized": "shopHome.notice.backupNotAuthorized",
+  "whatsapp-not-authorized": "shopHome.notice.whatsappNotAuthorized",
+  "promos-not-authorized": "shopHome.notice.promosNotAuthorized",
 };
 
 export const metadata: Metadata = {
@@ -189,7 +190,13 @@ async function TodayBody({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
-  if (!shop) return null;
+  // A session pointing at a shop row that is gone is a page that does not
+  // exist, not a blank 200: `return null` here rendered an empty document with
+  // no 404 and nothing to read. Settled on `notFound()` app-wide alongside
+  // `requireShopSurface` (src/lib/session.ts); this body cannot use that helper
+  // itself because it runs inside the page's `<Suspense>` boundary, with the
+  // session already resolved above it.
+  if (!shop) notFound();
   const t = staffTranslator(locale);
   // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
   // query param, and a bare lookup resolves `?notice=constructor` off the

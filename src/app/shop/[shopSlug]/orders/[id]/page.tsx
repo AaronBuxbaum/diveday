@@ -7,6 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -18,7 +19,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -68,13 +69,13 @@ async function refreshAction(formData: FormData) {
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
-  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
-    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(back, `${back}?notice=${updated ? "refreshed" : "refresh_failed"}`);
+  revalidateAndRedirect(back, noticeUrl(back, updated ? "refreshed" : "refresh-failed"));
 }
 
 async function voidAction(formData: FormData) {
@@ -82,13 +83,13 @@ async function voidAction(formData: FormData) {
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
-  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
-    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
   const updated = orderId ? await voidOrder(db, session.user.shopId, orderId) : null;
-  revalidateAndRedirect(back, `${back}?notice=${updated ? "voided" : "void_failed"}`);
+  revalidateAndRedirect(back, noticeUrl(back, updated ? "voided" : "void-failed"));
 }
 
 async function refundAction(formData: FormData) {
@@ -96,15 +97,15 @@ async function refundAction(formData: FormData) {
   const session = await requireStaffSession();
   const orderId = String(formData.get("orderId") ?? "");
   const db = await getDb();
-  const back = `/shop/${session.user.shopSlug}/orders/${orderId}`;
+  const back = shopPath(session.user.shopSlug, "orders", orderId);
   // Money leaving the account is owner/manager work, re-checked against live
   // roles (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonRefund(db, session.user.shopId, session.user.personId))) {
-    revalidateAndRedirect(back, `${back}?notice=not_authorized`);
+    revalidateAndRedirect(back, noticeUrl(back, "not-authorized"));
     return;
   }
   if (await isDemoShop(db, session.user.shopId)) {
-    revalidateAndRedirect(back, `${back}?notice=demo_disabled`);
+    revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
   // A code, never a sentence — `refundOrder` says *why* it did not move money
@@ -119,23 +120,23 @@ async function refundAction(formData: FormData) {
     outcome.status === "refunded"
       ? "refunded"
       : outcome.status === "in_progress"
-        ? "refund_in_progress"
-        : "refund_failed";
-  revalidateAndRedirect(back, `${back}?notice=${notice}`);
+        ? "refund-in-progress"
+        : "refund-failed";
+  revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
-  refresh_failed: { tone: "danger", key: "orders.detail.notice.refreshFailed" },
+  "refresh-failed": { tone: "danger", key: "orders.detail.notice.refreshFailed" },
   voided: { tone: "success", key: "orders.detail.notice.voided" },
-  void_failed: { tone: "danger", key: "orders.detail.notice.voidFailed" },
+  "void-failed": { tone: "danger", key: "orders.detail.notice.voidFailed" },
   refunded: { tone: "success", key: "orders.detail.notice.refunded" },
-  refund_failed: { tone: "danger", key: "orders.detail.notice.refundFailed" },
-  refund_in_progress: { tone: "warning", key: "orders.detail.notice.refundInProgress" },
-  not_authorized: { tone: "danger", key: "orders.detail.notice.notAuthorized" },
-  demo_disabled: { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
+  "refund-failed": { tone: "danger", key: "orders.detail.notice.refundFailed" },
+  "refund-in-progress": { tone: "warning", key: "orders.detail.notice.refundInProgress" },
+  "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
+  "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };
 
 /** A greyed-out stand-in for a Stripe action a demo shop can't perform. */
@@ -156,7 +157,7 @@ function DisabledDemoButton({
       title={hint}
       className={buttonClass({
         variant,
-        className: `cursor-not-allowed opacity-50${variant === "secondary" ? " text-foreground" : ""}`,
+        className: "cursor-not-allowed opacity-50",
       })}
     >
       {label}
@@ -224,13 +225,13 @@ export default async function OrderDetailPage({
           <>
             <Link
               href={`/shop/${shopSlug}/orders`}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("orders.detail.backToOrders")}
             </Link>
             <Link
               href={`/shop/${shopSlug}/divers/${order.person.id}`}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("orders.detail.backToDiver")}
             </Link>
@@ -238,13 +239,17 @@ export default async function OrderDetailPage({
         }
       />
 
-      {notice === "not_authorized" && banner ? (
+      {notice === "not-authorized" && banner ? (
         // The one genuinely page-level code: a staffer without refund rights
         // never sees the button that would have answered it.
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
+      {/* `padding="lg"`: the receipt is a card someone works *inside* —
+          Refresh, Void and Refund all live in it. No `title`; the page header
+          above already names the order, and the status badge is the heading
+          row's whole content. */}
+      <SectionCard padding="lg">
         <div className="flex items-center justify-between gap-3">
           {/* This page is *about* one order, so every status earns its badge —
               including `paid`, which the index deliberately leaves off a
@@ -315,7 +320,7 @@ export default async function OrderDetailPage({
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton
                     pendingLabel={t("orders.detail.refreshing")}
-                    className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+                    className={buttonClass({ variant: "secondary" })}
                   >
                     {t("orders.detail.refreshStatus")}
                   </SubmitButton>
@@ -359,7 +364,7 @@ export default async function OrderDetailPage({
             hostile link must not be able to paint its own words into a
             success-green message (same rule as orders/new's fallback). */}
         <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2">
-          {notice && notice !== "not_authorized"
+          {notice && notice !== "not-authorized"
             ? banner
               ? t(banner.key)
               : t("orders.detail.notice.fallback")
@@ -368,7 +373,7 @@ export default async function OrderDetailPage({
         {demo && (order.order.status === "open" || order.order.status === "paid") ? (
           <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
         ) : null}
-      </section>
+      </SectionCard>
     </main>
   );
 }

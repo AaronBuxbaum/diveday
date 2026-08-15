@@ -8,6 +8,7 @@ import { DiveDeclarationFields } from "@/components/DiveDeclarationFields";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -59,7 +60,7 @@ export function WaitlistConfirmation({
     // same sunken material as the full-boat state it came from: a place in
     // line, not a seat on the boat. Only a real confirmed booking gets coral.
     <section className="rise-in mt-10 rounded-2xl bg-surface-sunken p-6">
-      <h2 className="text-xl font-semibold text-balance">
+      <h2 className="text-lg font-semibold text-balance">
         {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
       <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
@@ -81,7 +82,7 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
     // with no action gets no frame (design/principles.md #10, remove until it
     // breaks). The one link is the whole surface.
     <section className="mt-12">
-      <h2 className="text-xl font-semibold text-muted">{t("sailedHeading")}</h2>
+      <h2 className="text-lg font-semibold text-muted">{t("sailedHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
@@ -143,7 +144,7 @@ export function ConditionsHoldSection() {
     // back up at it. Two amber cards saying adjacent things was the page
     // warning the diver twice about one fact (design/principles.md #9).
     <section className="mt-10">
-      <h2 className="text-xl font-semibold">{t("holdHeading")}</h2>
+      <h2 className="text-lg font-semibold">{t("holdHeading")}</h2>
       <p className="mt-1 text-muted">{t("holdBody")}</p>
     </section>
   );
@@ -187,8 +188,14 @@ export function TripFullSection({
     // raised card, and a boat with no seats must not wear the same surface —
     // full *feels* like less is on offer before a word is read. The wait list
     // is still a real form, so it keeps the full form treatment inside.
+    //
+    // The heading is `text-lg`, the one size `SectionCard` renders, because
+    // this section and the open booking form are alternates in the same slot:
+    // when the open form moved onto the shared card, the four states that
+    // replace it were briefly a size louder — "This trip is full" shouting
+    // over "Grab a spot".
     <section id="book" className="mt-10 scroll-mt-4 rounded-2xl bg-surface-sunken p-5 sm:p-6">
-      <h2 className="text-xl font-semibold">{t("fullHeading")}</h2>
+      <h2 className="text-lg font-semibold">{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
         {t("fullBody", { capacity: trip.capacity })}{" "}
         <Link
@@ -351,135 +358,141 @@ export function BookSpotSection({
     // The page's one raised card: the booking form is what this page exists
     // for, so it is the only composition that gets border + shadow elevation.
     // Every other state and every supporting section sits flatter than this.
-    <section
+    <SectionCard
       id="book"
-      className="mt-10 scroll-mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xl font-semibold">{t("heading")}</h2>
+      // `padding="lg"` is `p-5 sm:p-6` — the exact spelling this card already
+      // carried by hand, so the one raised card on the page keeps its geometry
+      // and only its heading steps to the shared size.
+      padding="lg"
+      className="mt-10 scroll-mt-4"
+      title={t("heading")}
+      actions={
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
-      </div>
-      {payAtBooking && perDiverPriceCents ? (
-        <p className="mt-1 text-sm text-muted">
-          {t("paidSecurely", { price: money(perDiverPriceCents) })}
-        </p>
-      ) : null}
-      {requirementNote ? (
-        <div className="mt-3 rounded-lg border border-border bg-surface-sunken p-3 text-sm">
-          {requirementHeading ? (
-            <h3 className="font-semibold text-foreground">{requirementHeading}</h3>
-          ) : null}
-          <p className="mt-1 text-muted">{requirementNote}</p>
-        </div>
-      ) : null}
-      <form action={formAction} className="mt-4 flex flex-col gap-4">
-        <BookingPartyFields
-          maxPartySize={remaining}
-          leadPhone
-          fieldErrors={state.fieldErrors}
-          remember={!tripRef.embed}
-          onSizeChange={setPartySize}
-          contactEmail={contactEmail}
-          contactPhone={contactPhone}
-        />
-        {showGearFields
-          ? Array.from({ length: partySize }, (_, index) => (
-              <BookingGearFields
-                key={GEAR_SLOTS[index]}
-                index={index}
-                showDiverLabel={partySize > 1}
-                rentalItems={rentalItems}
-                course={trip.course}
-                pricing={rentalPricing}
-                plannedDives={trip.plannedDives}
-                currency={currency}
-                onSubtotalChange={onGearSubtotalChange}
-              />
-            ))
-          : null}
-        {perDiverPriceCents && gearTotalCents > 0 ? (
-          <p className="-mt-2 text-sm font-medium tabular-nums">
-            {t("totalDueAtCheckout", {
-              total: money(partySize * perDiverPriceCents + gearTotalCents),
-            })}
-          </p>
-        ) : partySize > 1 && perDiverPriceCents ? (
-          <p className="-mt-2 text-sm font-medium tabular-nums">
-            {t("partyTotal", {
-              count: partySize,
-              price: money(perDiverPriceCents),
-              total: money(partySize * perDiverPriceCents),
-            })}
-          </p>
+      }
+      description={
+        payAtBooking && perDiverPriceCents
+          ? t("paidSecurely", { price: money(perDiverPriceCents) })
+          : undefined
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {requirementNote ? (
+          <div className="rounded-lg border border-border bg-surface-sunken p-3 text-sm">
+            {requirementHeading ? (
+              <h3 className="font-semibold text-foreground">{requirementHeading}</h3>
+            ) : null}
+            <p className="mt-1 text-muted">{requirementNote}</p>
+          </div>
         ) : null}
-        {/* Self-declared only (task 23) — this checkbox is not persisted and
+        <form action={formAction} className="flex flex-col gap-4">
+          <BookingPartyFields
+            maxPartySize={remaining}
+            leadPhone
+            fieldErrors={state.fieldErrors}
+            remember={!tripRef.embed}
+            onSizeChange={setPartySize}
+            contactEmail={contactEmail}
+            contactPhone={contactPhone}
+          />
+          {showGearFields
+            ? Array.from({ length: partySize }, (_, index) => (
+                <BookingGearFields
+                  key={GEAR_SLOTS[index]}
+                  index={index}
+                  showDiverLabel={partySize > 1}
+                  rentalItems={rentalItems}
+                  course={trip.course}
+                  pricing={rentalPricing}
+                  plannedDives={trip.plannedDives}
+                  currency={currency}
+                  onSubtotalChange={onGearSubtotalChange}
+                />
+              ))
+            : null}
+          {perDiverPriceCents && gearTotalCents > 0 ? (
+            <p className="-mt-2 text-sm font-medium tabular-nums">
+              {t("totalDueAtCheckout", {
+                total: money(partySize * perDiverPriceCents + gearTotalCents),
+              })}
+            </p>
+          ) : partySize > 1 && perDiverPriceCents ? (
+            <p className="-mt-2 text-sm font-medium tabular-nums">
+              {t("partyTotal", {
+                count: partySize,
+                price: money(perDiverPriceCents),
+                total: money(partySize * perDiverPriceCents),
+              })}
+            </p>
+          ) : null}
+          {/* Self-declared only (task 23) — this checkbox is not persisted and
             does not gate the booking transaction; full enforcement (a birth
             date on file, a hard refusal) is deliberately out of scope, see
             docs/product/human-decisions.md H-08/H-22. */}
-        {trip.course?.minimumAge ? (
-          <label className="flex min-h-11 items-start gap-2 text-sm">
-            <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
-            {t("ageAttestation", { age: trip.course.minimumAge })}
-          </label>
-        ) : null}
-        <FieldGrid columns={1}>
-          <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
-            <textarea
-              name="groupPreference"
-              rows={2}
-              maxLength={300}
-              placeholder={t("preferencePlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        {payAtBooking ? (
-          <FieldGrid columns={1} className="max-w-64">
-            {/* A shop-wide code and a trip-scoped last-minute deal are typed
-                into the same box — the diver has no idea which kind they were
-                handed, and the server resolves both (docs ADR
-                20260729-shop-promo-codes). */}
-            <Field
-              label={t("promoLabel")}
-              hint={t("promoHint")}
-              description={
-                <FieldError id="promoCode-error" message={state.fieldErrors?.promoCode} />
-              }
-            >
-              <input
-                name="promoCode"
-                autoComplete="off"
-                maxLength={40}
-                aria-invalid={state.fieldErrors?.promoCode ? "true" : undefined}
-                aria-describedby={state.fieldErrors?.promoCode ? "promoCode-error" : undefined}
-                className={`${controlClass} uppercase`}
+          {trip.course?.minimumAge ? (
+            <label className="flex min-h-11 items-start gap-2 text-sm">
+              <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
+              {t("ageAttestation", { age: trip.course.minimumAge })}
+            </label>
+          ) : null}
+          <FieldGrid columns={1}>
+            <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
+              <textarea
+                name="groupPreference"
+                rows={2}
+                maxLength={300}
+                placeholder={t("preferencePlaceholder")}
+                className={controlClass}
               />
             </Field>
           </FieldGrid>
-        ) : null}
-        <div className="mt-1">
-          <SubmitButton
-            pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
-            className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
-          >
-            {bookLabel}
-          </SubmitButton>
-          {/* The scariest hop on hotel wifi (task 19) — said once, up front,
+          {payAtBooking ? (
+            <FieldGrid columns={1} className="max-w-64">
+              {/* A shop-wide code and a trip-scoped last-minute deal are typed
+                into the same box — the diver has no idea which kind they were
+                handed, and the server resolves both (docs ADR
+                20260729-shop-promo-codes). */}
+              <Field
+                label={t("promoLabel")}
+                hint={t("promoHint")}
+                description={
+                  <FieldError id="promoCode-error" message={state.fieldErrors?.promoCode} />
+                }
+              >
+                <input
+                  name="promoCode"
+                  autoComplete="off"
+                  maxLength={40}
+                  aria-invalid={state.fieldErrors?.promoCode ? "true" : undefined}
+                  aria-describedby={state.fieldErrors?.promoCode ? "promoCode-error" : undefined}
+                  className={`${controlClass} uppercase`}
+                />
+              </Field>
+            </FieldGrid>
+          ) : null}
+          <div className="mt-1">
+            <SubmitButton
+              pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
+              className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
+            >
+              {bookLabel}
+            </SubmitButton>
+            {/* The scariest hop on hotel wifi (task 19) — said once, up front,
               rather than only after the tap commits the diver to it. */}
-          {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
-          {/* The money fine print, right under the button it qualifies —
+            {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
+            {/* The money fine print, right under the button it qualifies —
               deposit split, cancellation window, course-fee breakdown. It
               lived in the masthead before, a whole page away from the tap it
               was written for. */}
-          {terms}
-          {/* The refusal used to render above the whole form — above the party
+            {terms}
+            {/* The refusal used to render above the whole form — above the party
               fields, the gear fields, and the promo box. On a phone that is
               several thumb-scrolls from the button the diver just tapped, so a
               refused booking read as a button that did nothing. */}
-          <ErrorNotice message={state.error ?? errorMessage} />
-        </div>
-        <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
-      </form>
-    </section>
+            <ErrorNotice message={state.error ?? errorMessage} />
+          </div>
+          <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
+        </form>
+      </div>
+    </SectionCard>
   );
 }

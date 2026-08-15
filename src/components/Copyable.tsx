@@ -68,11 +68,7 @@ export function Copyable({
     status === "copied" ? copiedLabel : status === "failed" ? failedLabel : copyLabel;
 
   const button = (
-    <button
-      type="button"
-      onClick={copy}
-      className={buttonClass({ variant: "ghost", size: "sm", className: "text-foreground" })}
-    >
+    <button type="button" onClick={copy} className={buttonClass({ variant: "ghost", size: "sm" })}>
       <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>
         {buttonText}
       </span>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
@@ -235,12 +236,17 @@ export function PaymentsSection({
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
 
       {orders.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
+        <p className={sectionCardClass({ padding: "lg", className: "mt-4 text-sm text-muted" })}>
           {t("divers.payments.noPaymentsYet")}
         </p>
       ) : (
         <>
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-4 divide-y divide-border",
+            })}
+          >
             {visible.map((entry) => (
               <OrderRow key={entry.order.id} entry={entry} {...rowProps} />
             ))}
@@ -250,7 +256,12 @@ export function PaymentsSection({
               <summary className="cursor-pointer text-sm text-primary hover:underline">
                 {t("divers.payments.showOlderPayments", { count: rest.length })}
               </summary>
-              <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+              <ul
+                className={sectionCardClass({
+                  padding: "none",
+                  className: "mt-3 divide-y divide-border",
+                })}
+              >
                 {rest.map((entry) => (
                   <OrderRow key={entry.order.id} entry={entry} {...rowProps} />
                 ))}

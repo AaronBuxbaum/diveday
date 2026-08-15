@@ -68,11 +68,18 @@
     "selfDeclaredLabel": "Self-declared — no card number yet",
     "sightCard": "Certify from card",
     "sightCardHint": "The diver told us this level. Type what the card in your hand says.",
+    "sightNitroxCardHint": "The diver told us they're nitrox certified. Type what the enriched-air card in your hand says. RAID and GUE don't issue one — their enriched air is inside the level card (RAID Open Water 20 or Advanced 35, GUE Fundamentals or Rec 1), so record that card. Every other agency issues a separate enriched-air card, and a level card from them is not nitrox evidence.",
     "sightCardLevel": "Level on the card",
     "sightCardLevelHint": "Prefilled with what the diver said. Change it to match the card in your hand.",
+    "cardNumberShapeHint": "At least three characters, including a digit — the number printed on the card.",
     "markCertified": "Mark certified",
     "deleting": "Deleting…",
-    "delete": "Delete"
+    "delete": "Delete",
+    "clearNoCertificationHint": "Someone said on a public form that this diver holds no card. Anyone who knows their name and email can leave that answer, so clear it if they didn't give it. Clearing records who corrected it and leaves the record saying nothing about a card — never that they're certified — and the deal and wait lists stop flagging them as uncertified.",
+    "clearNoCertification": "They didn't tell us that",
+    "clearingNoCertification": "Clearing…",
+    "noCertificationClearedNote": "A “not certified yet” answer was cleared from this record on {date}. Who cleared it travels in this shop’s data export.",
+    "noCertificationRestated": "Staff cleared this answer once before and it has been given again on a public form since. Anyone who knows this diver's name and email can leave it."
   },
   "page": {
     "eyebrow": "Front desk",
@@ -309,6 +316,10 @@
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
     "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why.",
     "cardSightingRequired": "This card is only what the diver told us. Enter the agency and number from the card in front of you to certify it.",
-    "duplicateCard": "Another live card at this shop already has that number. Check the number, or delete the card that holds it."
+    "cardNumberImplausible": "That doesn't look like a card number. Type the number printed on the card, digits included.",
+    "noCertificationCleared": "Cleared. This diver's record no longer says anything about a card — clearing never adds one.",
+    "duplicateCard": "Another live card at this shop already has that number. Check the number, or delete the card that holds it.",
+    "noCertificationNothingToClear": "Nothing to clear — this diver's record no longer says they hold no card.",
+    "notAuthorizedCards": "Your account can't change cards for this shop any more. Ask an owner or manager to check your access."
   }
 }

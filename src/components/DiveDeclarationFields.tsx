@@ -1,8 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 
 /**
  * **"What can you dive?", asked once, on both of the lists that ask a diver to
@@ -32,6 +34,16 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
  */
 export function DiveDeclarationFields() {
   const t = useTranslations();
+  // **What the diver picked, only so the form can stop contradicting itself.**
+  // A joiner who says "I'm not certified yet" and also ticks "I'm certified for
+  // nitrox" has said two incompatible things, and the writer resolves it by
+  // recording the *absence* — the conservative direction. Without this the
+  // diver walks away believing they told the shop they hold an enriched-air
+  // card, which is the same broken promise as asking a question and discarding
+  // the answer (ADR 20260814-self-declared-cards).
+  const [answer, setAnswer] = useState("");
+  const [nitrox, setNitrox] = useState(false);
+  const uncertified = answer === NO_CERTIFICATION_ANSWER;
   return (
     // A self-contained block with its own grid, dropped in *beside* each form's
     // existing `FieldGrid` rather than into it: a `Field` is a two-row subgrid
@@ -41,14 +53,45 @@ export function DiveDeclarationFields() {
     <div className="flex flex-col gap-3">
       <FieldGrid columns={2}>
         <Field
-          label={t("common.diveProfile.level")}
+          label={t("common.certification.level")}
           hint={t("common.optional")}
-          description={t("common.diveProfile.levelDescription")}
+          /* Two sentences, one `description`, so both are wired onto the select
+             by `aria-describedby` rather than only the first. The second is the
+             equivalence hint: the ladder is a five-rung PADI/SSI shape and most
+             of the world's cards are not on it (CMAS stars, BSAC's grades,
+             RAID's numbered levels), so a diver holding one of those had no
+             honest option and no way to know which rung was meant. Staff have
+             carried the same mapping on the capture form since it shipped
+             (`divers.certifications.levelMapping`) — here there is no staffer,
+             so the diver needs it. */
+          description={
+            <>
+              {t("common.certification.levelDescription")} {t("common.certification.levelHint")}
+            </>
+          }
         >
-          <select name="certificationLevel" defaultValue="" className={controlClass}>
+          <select
+            name="certificationLevel"
+            value={answer}
+            onChange={(event) => setAnswer(event.target.value)}
+            className={controlClass}
+          >
             {/* First and pre-selected: skipping is the default, not something
                 the diver has to go back and choose. */}
-            <option value="">{t("common.diveProfile.levelUnsaid")}</option>
+            <option value="">{t("common.certification.levelUnsaid")}</option>
+            {/* **An honest answer for the joiner who holds no card**, and the
+                one this list was missing: Discover Scuba and Try Scuba
+                customers, snorkellers, the non-diving half of a couple. Their
+                only option used to be "Rather not say", which reads to staff
+                exactly like a certified regular who skipped the question — so
+                the shop mailed them a certified two-tank charter.
+
+                Above the ladder rather than below it, so the whole select reads
+                in one direction: no card, then the rungs in order. Its value is
+                deliberately not a `CertificationLevel` — it lands as a stamp on
+                the person and never as a certification row, because a Discover
+                Scuba experience is not one (ADR 20260814-self-declared-cards). */}
+            <option value={NO_CERTIFICATION_ANSWER}>{t("common.certification.levelNone")}</option>
             {Object.entries(DIVER_CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
               <option key={value} value={value}>
                 {t(key)}
@@ -57,14 +100,21 @@ export function DiveDeclarationFields() {
           </select>
         </Field>
       </FieldGrid>
-      <label className="flex items-start gap-2 text-sm">
+      {/* Disabled rather than hidden when the diver says they hold no card: the
+          question stays where it was so nothing appears to vanish under them,
+          and a disabled control posts nothing — which is exactly what the
+          writer would have done with it anyway. */}
+      <label className={`flex items-start gap-2 text-sm${uncertified ? " text-muted" : ""}`}>
         <input
           type="checkbox"
           name="nitroxCertified"
           value="on"
-          className="mt-0.5 size-4 shrink-0 rounded border-border-strong"
+          disabled={uncertified}
+          checked={nitrox && !uncertified}
+          onChange={(event) => setNitrox(event.target.checked)}
+          className="mt-0.5 size-4 shrink-0 rounded border-border-strong disabled:opacity-50"
         />
-        <span>{t("common.diveProfile.nitrox")}</span>
+        <span>{t("common.certification.nitrox")}</span>
       </label>
     </div>
   );

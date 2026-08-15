@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a trip surface (design principle 1). It renders as
@@ -16,7 +17,7 @@ export default function TripSurfaceLoading() {
       />
       <div className="mt-8 flex flex-col gap-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 rounded-lg border border-border bg-surface" />
+          <div key={i} className={sectionCardClass({ padding: "none", className: "h-24" })} />
         ))}
       </div>
     </div>

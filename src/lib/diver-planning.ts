@@ -3,9 +3,11 @@ import type { RentableItemKind } from "@/lib/rentals";
 
 /**
  * The beats of a dock day; the component looks each one up in
- * `trip.timeline.*`. `dive` and `surfaceInterval` repeat, so both carry a
- * number — a two-tank morning has a Dive 1 and a Dive 2, and calling them the
- * same thing was how the old timeline got away with printing one of each.
+ * `trip.timeline.*`. `dive`, `surfaceInterval` and `boatRide` all repeat, so
+ * each carries a number — a two-tank morning has a Dive 1 and a Dive 2, and
+ * calling them the same thing was how the old timeline got away with printing
+ * one of each. A `boatRide`'s number is the dive it delivers to: leg 1 is the
+ * ride out from the dock, leg 2 the run across to the second site.
  */
 export type DockDayStep =
   | "arrive"
@@ -52,7 +54,11 @@ export type DockDayRhythm = {
   gearSetupMinutes: number;
   /** Minutes before departure the briefing starts; 0 — the shop doesn't brief at the dock. */
   briefingMinutes: number;
-  /** How long the ride out to the first site takes; 0 — a shore entry. */
+  /**
+   * How long a run out to a site takes; 0 — a shore entry. The shop's usual
+   * figure, and the fallback for any leg a departure has not stated its own
+   * minutes for (`LegTravelTimes`).
+   */
   boatRideMinutes: number;
   /** How long one dive spends in the water. */
   bottomTimeMinutes: number;
@@ -162,10 +168,41 @@ function bottomTimeForDive(
   return typeof override === "number" && override > 0 ? override : rhythm.bottomTimeMinutes;
 }
 
+/**
+ * How long the boat runs to reach each dive's site, dive 1 first — from the
+ * dock for dive one, from the previous dive's site after that
+ * (`trip_dives.travel_minutes`). A null, a short list, or none at all means
+ * "the shop's own ride-out figure is right for this leg".
+ *
+ * Per leg rather than per departure because a departure is not one ride: a
+ * two-tank morning is dock -> A -> B -> dock, and the legs are
+ * **order-dependent** — A->B is not B->A when the sites sit on different parts
+ * of the reef line. A single number per trip is wrong in a way that varies by
+ * departure, which reads more authoritative than the uniform wrongness of the
+ * shop-wide figure (ADR 20260815-per-leg-travel-minutes).
+ *
+ * `0` is a real answer here, unlike `SiteBottomTimes` — the same site twice, or
+ * a shore entry — so it is honoured rather than read as absent.
+ */
+export type LegTravelTimes = readonly (number | null | undefined)[];
+
+/** Leg `number`'s own minutes, or the shop's ride out when the trip names none. */
+function travelForLeg(
+  rhythm: DockDayRhythm,
+  legTravelTimes: LegTravelTimes | undefined,
+  number: number,
+): number {
+  const stated = legTravelTimes?.[number - 1];
+  return typeof stated === "number" && Number.isInteger(stated) && stated >= 0
+    ? stated
+    : rhythm.boatRideMinutes;
+}
+
 export function dockDayOffsets(
   rhythm: DockDayRhythm,
   plannedDives = 2,
   siteBottomTimes?: SiteBottomTimes,
+  legTravelTimes?: LegTravelTimes,
 ): DockDayOffset[] {
   const beforeDeparture: DockDayOffset[] = [
     { step: "arrive", minutesFromDeparture: -rhythm.dockCallMinutes },
@@ -186,19 +223,37 @@ export function dockDayOffsets(
 
   const afterDeparture: DockDayOffset[] = [];
   let cursor = 0;
-  if (rhythm.boatRideMinutes > 0) {
-    afterDeparture.push({ step: "boatRide", minutesFromDeparture: 0 });
-    cursor += rhythm.boatRideMinutes;
-  }
   const dives = Math.max(1, Math.trunc(plannedDives));
   for (let number = 1; number <= dives; number++) {
-    if (number > 1 && rhythm.surfaceIntervalMinutes > 0) {
-      afterDeparture.push({
-        step: "surfaceInterval",
-        number: number - 1,
-        minutesFromDeparture: cursor,
-      });
-      cursor += rhythm.surfaceIntervalMinutes;
+    const travel = travelForLeg(rhythm, legTravelTimes, number);
+    if (number === 1) {
+      // The ride out. Its own leg, so a departure that opens with the house
+      // reef ten minutes off the dock stops borrowing the shop's ninety.
+      if (travel > 0) {
+        afterDeparture.push({ step: "boatRide", number, minutesFromDeparture: cursor });
+        cursor += travel;
+      }
+    } else {
+      // **Between two dives, the run and the rest are the same window.** The
+      // boat moves to the next site while the divers sit their interval out, so
+      // the gap is the longer of the two rather than their sum — which is also
+      // what keeps a shop that has filled nothing in reading exactly the day it
+      // read before: the default ride (20) fits inside the default interval
+      // (60), so nothing moves until a leg is genuinely longer than the rest.
+      // Adding them instead would have pushed every existing two-tank day out
+      // by a ride it already had, far enough on a tight window to lose dive two
+      // to the published return time.
+      const gap = Math.max(rhythm.surfaceIntervalMinutes, travel);
+      if (gap > 0) {
+        // Whichever fact dominates the window gets to name it. A 90-minute run
+        // across the reef line under a 60-minute interval is a ride, not a rest.
+        afterDeparture.push(
+          travel > rhythm.surfaceIntervalMinutes
+            ? { step: "boatRide", number, minutesFromDeparture: cursor }
+            : { step: "surfaceInterval", number: number - 1, minutesFromDeparture: cursor },
+        );
+        cursor += gap;
+      }
     }
     afterDeparture.push({ step: "dive", number, minutesFromDeparture: cursor });
     cursor += bottomTimeForDive(rhythm, siteBottomTimes, number);
@@ -235,9 +290,10 @@ export function dockDayTimeline(
   endsAt?: Date,
   plannedDives = 2,
   siteBottomTimes?: SiteBottomTimes,
+  legTravelTimes?: LegTravelTimes,
 ): Array<{ step: DockDayStep; number?: number; at: Date }> {
   const beats: Array<{ step: DockDayStep; number?: number; at: Date }> = [];
-  for (const offset of dockDayOffsets(rhythm, plannedDives, siteBottomTimes)) {
+  for (const offset of dockDayOffsets(rhythm, plannedDives, siteBottomTimes, legTravelTimes)) {
     // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at
     // offset zero alongside the departure itself, and it is still a beat on the
     // water that only a stated return time can bound.

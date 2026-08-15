@@ -1,8 +1,11 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { CARD_NUMBER_INPUT_PATTERN } from "@/lib/card-number";
 import type { CertificationLevel } from "@/lib/readiness";
 import { AGENCY_KEYS } from "./shared";
 
@@ -23,7 +26,10 @@ import { AGENCY_KEYS } from "./shared";
  * number, **and say which rung the card shows**. That is the moment the diver's
  * claim stops being the evidence. It is enforced twice behind this form —
  * `reviewCertification` refuses without a number, and so does the database's own
- * `certifications_identifier_present_unless_self_declared`.
+ * `certifications_identifier_present_unless_self_declared`, which since
+ * 2026-08-15 refuses a blank one and not merely a NULL (it read
+ * `identifier is not null`, and `''` satisfies that, so this sentence used to
+ * overstate what the constraint held).
  *
  * The level select is the part that is easy to leave out and shouldn't be. A
  * diver who overstates their level is the *likely* wrong claim, not the exotic
@@ -43,6 +49,7 @@ export function CardSightingForm({
   certificationId,
   cardType,
   claimedLevel,
+  numberError,
 }: {
   t: StaffTranslator;
   action: (formData: FormData) => void;
@@ -55,9 +62,20 @@ export function CardSightingForm({
    * form as agency + number, exactly as it was.
    */
   claimedLevel?: CertificationLevel;
+  /**
+   * Why the number they typed was refused, in the shop's language — the
+   * `card-number-implausible` refusal, routed here rather than to the section's
+   * action row because it is about one box.
+   *
+   * Set, it also **opens the disclosure**. A refusal rendered inside a shut
+   * `<details>` is worse than the page-top banner it replaces: invisible rather
+   * than merely far away, which is the state that taught staff to go around
+   * this form instead of using it.
+   */
+  numberError?: string;
 }) {
   return (
-    <details className="min-w-0">
+    <details className="min-w-0" open={Boolean(numberError)}>
       <summary
         className={buttonClass({
           variant: "secondary",
@@ -71,13 +89,30 @@ export function CardSightingForm({
         as="form"
         action={action}
         columns={1}
-        className="mt-2 gap-y-3 rounded-lg border border-border bg-surface p-3 sm:w-72"
+        // `elevated={false}`: this disclosure opens inside a row of the cards
+        // list, which now wears the card shell itself — surface never stacks
+        // on surface.
+        className={sectionCardClass({
+          elevated: false,
+          className: "mt-2 gap-y-3 sm:w-72",
+        })}
       >
         <input type="hidden" name="certificationId" value={certificationId} />
         {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}
         <Field
           label={t("divers.certifications.agency")}
-          description={t("divers.certifications.sightCardHint")}
+          /* The nitrox twin needs its own sentence, not a shorter version of
+             this one. "Type what the card in your hand says" reads as *the
+             nitrox card* — and a RAID or GUE diver has no standalone enriched-
+             air card, because the gas is part of their level certification. A
+             staffer holding that diver's only card was being told, in effect,
+             that the right card did not exist, with a required number field
+             underneath. */
+          description={t(
+            cardType === "nitrox"
+              ? "divers.certifications.sightNitroxCardHint"
+              : "divers.certifications.sightCardHint",
+          )}
         >
           <select name="sightedAgency" className={controlClass}>
             {Object.entries(AGENCY_KEYS).map(([value, key]) => (
@@ -101,8 +136,29 @@ export function CardSightingForm({
             </select>
           </Field>
         ) : null}
-        <Field label={t("divers.certifications.cardNumber")}>
-          <input name="sightedIdentifier" required className={controlClass} />
+        <Field
+          label={t("divers.certifications.cardNumber")}
+          // Visible, not only the input's `title`. A tooltip does not exist on
+          // the phone or the wet tablet this form is actually used on, and the
+          // two fields above it already state their rules in the open — so the
+          // one field with a shape a submit can be refused for was the only one
+          // keeping its rule hidden (`dive-domain-expert`, 2026-08-15).
+          description={t("divers.certifications.cardNumberShapeHint")}
+          error={numberError}
+        >
+          {/* `pattern` is the same shape `isPlausibleCardNumber` asserts, so the
+              ordinary typo is refused in the box with every other value still
+              typed and nothing lost to a redirect. It is a courtesy, never the
+              gate — `sightedNumberRefused` in actions.ts is — and it is
+              deliberately the weaker of the two, so anything it refuses the
+              server refuses as well (src/lib/card-number.ts). */}
+          <input
+            name="sightedIdentifier"
+            required
+            pattern={CARD_NUMBER_INPUT_PATTERN}
+            title={t("divers.certifications.cardNumberShapeHint")}
+            className={controlClass}
+          />
         </Field>
         <SubmitButton
           pendingLabel={t("divers.certifications.markingCertified")}
@@ -110,6 +166,11 @@ export function CardSightingForm({
         >
           {t("divers.certifications.markCertified")}
         </SubmitButton>
+        {/* No `field` id: two sighting forms can in principle render at once and
+            a shared id would be a duplicate, so this takes `Field`'s own
+            `aria-invalid` marker instead. Keyed on the message so an identical
+            repeat refusal still re-fires. */}
+        {numberError ? <FieldErrorFocus key={numberError} /> : null}
       </FieldGrid>
     </details>
   );

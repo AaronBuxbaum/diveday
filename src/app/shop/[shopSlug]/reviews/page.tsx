@@ -29,7 +29,7 @@ import { formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   PublishSelectedButton,
@@ -69,9 +69,9 @@ const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   published: { tone: "success", key: "reviews.notice.published" },
   hidden: { tone: "success", key: "reviews.notice.hidden" },
-  none_selected: { tone: "danger", key: "reviews.notice.noneSelected" },
-  reason_required: { tone: "danger", key: "reviews.notice.reasonRequired" },
-  note_required: { tone: "danger", key: "reviews.notice.noteRequired" },
+  "none-selected": { tone: "danger", key: "reviews.notice.noneSelected" },
+  "reason-required": { tone: "danger", key: "reviews.notice.reasonRequired" },
+  "note-required": { tone: "danger", key: "reviews.notice.noteRequired" },
   error: { tone: "danger", key: "reviews.notice.error" },
 };
 
@@ -138,16 +138,16 @@ export default async function ReviewsPage({
   // it changed (see the header row below); the other two come from a
   // per-review toggle and keep the page banner.
   const bulkStatus =
-    notice === "published_many"
+    notice === "published-many"
       ? {
           tone: "success" as const,
           text: t("reviews.notice.publishedMany", { count: publishedCount(published) }),
         }
-      : (notice === "none_selected" || notice === "error") && banner
+      : (notice === "none-selected" || notice === "error") && banner
         ? { tone: banner.tone, text: t(banner.key) }
         : undefined;
   const pageBanner = bulkStatus ? undefined : banner;
-  const base = `/shop/${shopSlug}/reviews`;
+  const base = shopPath(shopSlug, "reviews");
   /** This page's URL with the tab kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const query = new URLSearchParams();
@@ -164,7 +164,7 @@ export default async function ReviewsPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      {/* `published` travels with `notice=published_many` and is stripped with
+      {/* `published` travels with `notice=published-many` and is stripped with
           it, so a reload never re-reads a count whose banner has already gone. */}
       <FlashParams params={["notice", "undo", "published"]} />
       <ShopPageHeader
@@ -176,7 +176,7 @@ export default async function ReviewsPage({
             href={publicSchedulePath(shopSlug)}
             target="_blank"
             rel="noreferrer"
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("reviews.viewPublicPage")}
           </Link>
@@ -287,7 +287,6 @@ export default async function ReviewsPage({
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
-                  className: "text-foreground",
                 })}
               />
             </div>
@@ -421,7 +420,6 @@ export default async function ReviewsPage({
                       <summary
                         className={`${buttonClass({
                           variant: "secondary",
-                          className: "text-foreground",
                         })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
                       >
                         {t("reviews.hide")}
@@ -463,7 +461,6 @@ export default async function ReviewsPage({
                           pendingLabel={t("reviews.saving")}
                           className={buttonClass({
                             variant: "secondary",
-                            className: "text-foreground",
                           })}
                         >
                           {t("reviews.hideConfirm")}

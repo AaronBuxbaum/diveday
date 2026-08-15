@@ -14,6 +14,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
@@ -51,6 +52,8 @@ import {
   latestOfflineCrewRollCall,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
+  type OfflineRollCallEvent,
+  type OfflineRollCallResult,
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
 
@@ -160,6 +163,55 @@ type SavedCopyState = {
   removedForOtherShop: boolean | null;
 };
 
+/**
+ * What one tap queues: a status, plus — on a retraction — the statement it takes
+ * back.
+ *
+ * The two travel together because they are one decision. A `cleared` that does
+ * not name its target is a blind newest-wins write against a row that may be
+ * "did this diver come back from the dive", and the pair being separable is how
+ * one of the four controls below would end up sending the retraction without it.
+ */
+type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsClientEventId">;
+
+/**
+ * What re-tapping a control that already carries its own state should queue: the
+ * **retraction**, naming the event being undone, or a fresh statement.
+ *
+ * One function for all four controls (diver and crew × aboard and not-aboard),
+ * so the rule cannot hold on three of them and lapse on the fourth. `active` is
+ * "this control is the one showing the current reading" — the caller's own
+ * question, since the aboard control asks about `state === "boarded"` and the
+ * exception control asks `rollCallRowState`'s `recordedNotBoarded`.
+ *
+ * Two conditions, and both are load-bearing:
+ *
+ * - `local` — the reading came from an event **this device queued** (ADR
+ *   20260815-offline-can-unsay-a-missing-diver). A snapshot reading is somebody
+ *   else's statement, and the row says where to undo it.
+ * - `clientEventId` — the id the server compares against before applying the
+ *   retraction (ADR 20260815-an-offline-retraction-names-its-target). The two
+ *   are dropped together when a retraction of this reading has already been
+ *   refused, so a row whose undo cannot succeed stops offering one.
+ *
+ * With neither, the tap falls through to `otherwise` — a **fresh statement**,
+ * not a retraction, and that is the right reading of the state it happens in: a
+ * row this device did not record, or one the server has told us belongs to
+ * somebody else now. Re-stating "not back aboard" there re-raises the same
+ * alarm and holds the count open; re-stating "boarded" is a new sighting by
+ * somebody who can see the person. Never a bare `cleared`, which the server
+ * would apply blind.
+ */
+function reTap(
+  state: OfflineRollCallResult | undefined,
+  active: boolean,
+  otherwise: "boarded" | "not_boarded",
+): OfflineStatement {
+  return active && state?.local && state.clientEventId
+    ? { status: "cleared", retractsClientEventId: state.clientEventId }
+    : { status: otherwise };
+}
+
 type SavedCopyAction =
   | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
   | { type: "gone"; tenant: string };
@@ -264,6 +316,21 @@ export function OfflineManifestView() {
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
+  /**
+   * The one row whose "aboard" control is currently asking to be confirmed —
+   * a booking id or a crew person id, never more than one at a time (ADR
+   * 20260815-offline-can-unsay-a-missing-diver).
+   *
+   * Only a row that reads **not back aboard** ever enters this state. Asserting
+   * somebody is back on the boat over a stated missing-diver mark is the one
+   * tap on this surface that turns the loudest row the product has into green,
+   * and the two controls stack full-width and adjacent on a phone held in a wet
+   * hand on a rolling deck. The second tap names the person — a generic "Are
+   * you sure?" is the dialog people learn to dismiss without reading — and
+   * everything else on this screen stays one tap, including taking the mark
+   * back off, which must never be the harder direction.
+   */
+  const [confirmAboardFor, setConfirmAboardFor] = useState<string | null>(null);
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
@@ -650,7 +717,12 @@ export function OfflineManifestView() {
           }
         />
         {savedTrips.length > 0 ? (
-          <ul className="mt-6 divide-y divide-border rounded-xl border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-6 divide-y divide-border",
+            })}
+          >
             {savedTrips.map((saved) => {
               const tripManifest = saved.snapshot.manifests[0];
               if (!tripManifest) return null;
@@ -816,6 +888,11 @@ export function OfflineManifestView() {
             occurredAt: saved.occurredAt,
             pending: false,
             implied: saved.implied ?? false,
+            // Straight off the snapshot — nobody recorded this here, so there
+            // is nothing on this copy to retract (see `OfflineRollCallResult.local`).
+            // A crew member with no id has no subject to write an event
+            // against anyway, which is why this branch exists at all.
+            local: false,
           }
         : undefined;
     return { ...member, state };
@@ -890,9 +967,13 @@ export function OfflineManifestView() {
    */
   async function record(
     subject: { bookingId: string } | { crewPersonId: string },
-    status: "boarded" | "not_boarded",
+    statement: OfflineStatement,
     note = "",
   ) {
+    // Whatever this tap turns out to be, no confirmation is left armed behind
+    // it — including the refusals below, which end the act just as finally as a
+    // write does.
+    setConfirmAboardFor(null);
     if (expired) {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
@@ -902,8 +983,8 @@ export function OfflineManifestView() {
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
+        ...statement,
         checkpoint,
-        status,
         note: note.trim() || null,
       });
       dispatchSaved({ type: "loaded", envelope: next });
@@ -1011,7 +1092,13 @@ export function OfflineManifestView() {
           <button
             key={value}
             type="button"
-            onClick={() => setCheckpoint(value)}
+            onClick={() => {
+              // A pending confirmation belongs to the row *and the checkpoint*
+              // it was raised on; carrying it across would leave a "Confirm
+              // Maya is aboard" armed on a different head count.
+              setConfirmAboardFor(null);
+              setCheckpoint(value);
+            }}
             className={buttonClass({
               variant: value === checkpoint ? "primary" : "secondary",
               size: "boat",
@@ -1176,30 +1263,67 @@ export function OfflineManifestView() {
                           <button
                             type="button"
                             disabled={busyBooking === crewPersonId}
-                            onClick={() => record({ crewPersonId }, "boarded")}
+                            onClick={() => {
+                              // Same two-tap gate the diver rows carry, with
+                              // the confirmation below rather than under the
+                              // thumb — and it applies to a divemaster for the
+                              // stronger reason: crew are the people most
+                              // reliably in the water.
+                              if (missingCrew && confirmAboardFor !== crewPersonId) {
+                                setConfirmAboardFor(crewPersonId);
+                                return;
+                              }
+                              if (missingCrew) {
+                                setConfirmAboardFor(null);
+                                return;
+                              }
+                              void record(
+                                { crewPersonId },
+                                reTap(member.state, member.state?.state === "boarded", "boarded"),
+                              );
+                            }}
                             aria-busy={busyBooking === crewPersonId}
                             className={`${OFFLINE_BOAT_TARGET_CLASS} ${
-                              member.state?.state === "boarded"
-                                ? "border border-success bg-success/15 text-success"
-                                : "bg-primary text-primary-foreground"
+                              missingCrew && confirmAboardFor === crewPersonId
+                                ? "border border-border-strong bg-surface-sunken"
+                                : member.state?.state === "boarded"
+                                  ? "border border-success bg-success/15 text-success"
+                                  : "bg-primary text-primary-foreground"
                             }`}
                           >
                             {busyBooking === crewPersonId
                               ? t("shared.offlineManifest.single.saving")
-                              : member.state?.state === "boarded"
-                                ? t("manifest.crewAboardCheck")
-                                : t("manifest.crewMarkAboard")}
+                              : missingCrew && confirmAboardFor === crewPersonId
+                                ? t("shared.offlineManifest.single.confirmAboardCancel")
+                                : member.state?.state === "boarded"
+                                  ? t("manifest.crewAboardCheck")
+                                  : t("manifest.crewMarkAboard")}
                           </button>
                           {/* The exception control, at the live page's weights
                               and by the live page's rules — and never a
                               done-check after a dive, because "Not aboard ☑️"
                               beside a divemaster still in the water is the
                               string every one of these rules exists to
-                              delete (DOM-H3). */}
+                              delete (DOM-H3).
+                              Re-tapping it once it carries the recorded state
+                              queues the **retraction** (`cleared`), the same
+                              undo the live control has always emitted — not a
+                              second copy of the mark, and never a trip through
+                              "Mark aboard", which would put a sighting nobody
+                              made into the departure log. */}
                           <button
                             type="button"
                             disabled={busyBooking === crewPersonId}
-                            onClick={() => record({ crewPersonId }, "not_boarded")}
+                            onClick={() =>
+                              record(
+                                { crewPersonId },
+                                // This device's own statement only, and named —
+                                // see the diver control below for why a
+                                // retraction is never aimed at a snapshot
+                                // result and never leaves its target unsaid.
+                                reTap(member.state, crewRecordedNotBoarded, "not_boarded"),
+                              )
+                            }
                             aria-busy={busyBooking === crewPersonId}
                             className={
                               missingCrew
@@ -1224,6 +1348,39 @@ export function OfflineManifestView() {
                         </div>
                       )}
                     </div>
+                    {/* One line under a not-back-aboard row, and only there:
+                        the mark that is loudest is also the one a crew member
+                        must be certain they can take straight back off, or
+                        they stop raising it (design/principles.md §7, and the
+                        live manifest's own `tapToUndoNotBackAboard`). While a
+                        confirmation is armed it says what the next tap will
+                        claim, and offers the way out. */}
+                    {crewRowState.recordedHere && missingCrew && !expired && crewPersonId ? (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <p className="text-sm text-muted">
+                          {confirmAboardFor === crewPersonId
+                            ? t("shared.offlineManifest.single.confirmAboardHint", {
+                                name: member.fullName,
+                              })
+                            : member.state?.local
+                              ? t("manifest.tapToUndoNotBackAboard")
+                              : t("shared.offlineManifest.single.markedElsewhere")}
+                        </p>
+                        {confirmAboardFor === crewPersonId ? (
+                          <button
+                            type="button"
+                            disabled={busyBooking === crewPersonId}
+                            onClick={() => record({ crewPersonId }, { status: "boarded" })}
+                            aria-busy={busyBooking === crewPersonId}
+                            className={`${OFFLINE_BOAT_TARGET_CLASS} border border-warning bg-warning/15 font-bold`}
+                          >
+                            {t("shared.offlineManifest.single.confirmAboard", {
+                              name: member.fullName,
+                            })}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}
@@ -1243,7 +1400,10 @@ export function OfflineManifestView() {
         <ul
           id="offline-roll-call"
           tabIndex={-1}
-          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface outline-none"
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-4 divide-y divide-border outline-none",
+          })}
         >
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
@@ -1436,29 +1596,61 @@ export function OfflineManifestView() {
                           <button
                             type="button"
                             disabled={busyBooking === diver.bookingId}
-                            onClick={() =>
-                              record(
+                            onClick={() => {
+                              // **The one act on this surface that takes two
+                              // taps, and the second one is somewhere else.**
+                              // Over a stated "not back aboard", "Mark aboard"
+                              // is a positive sighting — "I have eyes on her,
+                              // she's aboard" — and it turns the loudest row
+                              // the product has green from a full-width button
+                              // directly beneath the one that raised it. So the
+                              // first tap arms, and this control becomes the
+                              // *safe* choice while the confirmation waits
+                              // below, at different coordinates: a double-tap
+                              // or a bounce on a wet screen — the exact failure
+                              // this exists for — then lands on "keep the
+                              // mark", never on the claim (dive-domain review,
+                              // 2026-08-15).
+                              if (missing && confirmAboardFor !== diver.bookingId) {
+                                setConfirmAboardFor(diver.bookingId);
+                                return;
+                              }
+                              if (missing) {
+                                setConfirmAboardFor(null);
+                                return;
+                              }
+                              void record(
                                 { bookingId: diver.bookingId },
-                                "boarded",
+                                // Re-tapping a settled "Boarded ☑️" retracts
+                                // it, exactly as the live control does: a
+                                // sighting recorded against the wrong row is
+                                // taken back as a retraction, not restated as
+                                // its opposite. Only ever **this device's own**
+                                // statement — see `OfflineRollCallResult.local`.
+                                reTap(state, state?.state === "boarded", "boarded"),
                                 noteByBooking[diver.bookingId],
-                              )
-                            }
+                              );
+                            }}
                             aria-busy={busyBooking === diver.bookingId}
                             // Settles into the live page's success outline once
                             // recorded, rather than staying a solid primary fill
                             // that reads as "still to do" beside a label saying
                             // it is done (RollCallControls, same two states).
                             className={`${OFFLINE_BOAT_TARGET_CLASS} ${
-                              state?.state === "boarded"
-                                ? "border border-success bg-success/15 text-success"
-                                : "bg-primary text-primary-foreground"
+                              missing && confirmAboardFor === diver.bookingId
+                                ? "border border-border-strong bg-surface-sunken"
+                                : state?.state === "boarded"
+                                  ? "border border-success bg-success/15 text-success"
+                                  : "bg-primary text-primary-foreground"
                             }`}
                           >
                             {busyBooking === diver.bookingId
                               ? t("shared.offlineManifest.single.saving")
-                              : state?.state === "boarded"
-                                ? t("shared.offlineManifest.single.boardedDone")
-                                : t("shared.offlineManifest.single.markBoarded")}
+                              : missing && confirmAboardFor === diver.bookingId
+                                ? t("shared.offlineManifest.single.confirmAboardCancel")
+                                : state?.state === "boarded"
+                                  ? t("shared.offlineManifest.single.boardedDone")
+                                  : t("shared.offlineManifest.single.markBoarded")}
                           </button>
                         ) : null}
                         <button
@@ -1467,7 +1659,25 @@ export function OfflineManifestView() {
                           onClick={() =>
                             record(
                               { bookingId: diver.bookingId },
-                              "not_boarded",
+                              // Re-tap is the undo, the same as on the live
+                              // manifest: it queues a **retraction**, so a
+                              // mis-tapped "not back aboard" comes off as one
+                              // rather than through "Mark aboard", which would
+                              // write a sighting nobody made into a record an
+                              // insurer may one day read.
+                              //
+                              // Only over a statement **this device queued**
+                              // (`state.local`), and it says which one
+                              // (`state.clientEventId`). Aiming a retraction at
+                              // a snapshot result could take another crew
+                              // member's missing-diver mark off the boat on the
+                              // strength of a copy up to a fortnight old
+                              // (security review, 2026-08-15); naming the
+                              // target is what stops the same thing happening to
+                              // a statement of this device's own that a second
+                              // device has superseded since it synced (ADR
+                              // 20260815-an-offline-retraction-names-its-target).
+                              reTap(state, recordedNotBoarded, "not_boarded"),
                               noteByBooking[diver.bookingId],
                             )
                           }
@@ -1512,6 +1722,45 @@ export function OfflineManifestView() {
                                 ? t("shared.offlineManifest.single.markNotBoarded")
                                 : t("shared.offlineManifest.single.markNotBackAboard")}
                         </button>
+                        {/* Same one line the crew rows carry, on the same
+                            terms: the loudest mark on the page states how it
+                            comes back off, and while a confirmation is armed
+                            it states what the next tap would claim instead. */}
+                        {rowState.recordedHere && missing ? (
+                          <div className="flex w-full flex-col gap-2">
+                            <p className="text-sm text-muted">
+                              {confirmAboardFor === diver.bookingId
+                                ? t("shared.offlineManifest.single.confirmAboardHint", {
+                                    name: diver.fullName,
+                                  })
+                                : state?.local
+                                  ? t("manifest.tapToUndoNotBackAboard")
+                                  : t("shared.offlineManifest.single.markedElsewhere")}
+                            </p>
+                            {confirmAboardFor === diver.bookingId ? (
+                              <button
+                                type="button"
+                                disabled={busyBooking === diver.bookingId}
+                                onClick={() =>
+                                  record(
+                                    { bookingId: diver.bookingId },
+                                    // A positive sighting, never a retraction:
+                                    // this control asserts the diver is aboard
+                                    // over a stated "not back aboard".
+                                    { status: "boarded" },
+                                    noteByBooking[diver.bookingId],
+                                  )
+                                }
+                                aria-busy={busyBooking === diver.bookingId}
+                                className={`${OFFLINE_BOAT_TARGET_CLASS} border border-warning bg-warning/15 font-bold`}
+                              >
+                                {t("shared.offlineManifest.single.confirmAboard", {
+                                  name: diver.fullName,
+                                })}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </>
                     )}
                   </div>

@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
 import { listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam, noticeRole, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -24,6 +25,26 @@ export const instant = true;
 
 export const metadata: Metadata = {
   title: "Walk-in — DiveDay",
+};
+
+/**
+ * The one refusal that can land on this step rather than on `./[tripId]`.
+ *
+ * `SEAT_SURFACES["walk-in"].refusedPath` (src/app/actions/seat-diver-surfaces.ts)
+ * falls back here when the submission carried no departure at all — the only
+ * walk-in refusal that happens before a boat is known, and so the only one that
+ * cannot land on `./[tripId]`. Until 2026-08-15 this page read no `notice`,
+ * so that refusal arrived as a URL with a query nothing looked at: a staffer who
+ * submitted an unusable walk-in was bounced back to the boat picker with no idea
+ * why, which is indistinguishable from a dead link.
+ *
+ * Deliberately just the one code. Every *other* walk-in notice is about a
+ * specific departure and lands on `./[tripId]`, where the boat it is about is on
+ * screen; repeating "that boat is full" on a page with no boat chosen would say
+ * something true of nothing the reader can see.
+ */
+const NOTICE_KEYS: Record<string, { tone: "danger"; key: StaffMessageKey }> = {
+  "walkin-invalid": { tone: "danger", key: "checkIn.notice.walkinInvalid" },
 };
 
 /**
@@ -43,23 +64,45 @@ export default async function WalkInPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ tripId?: string }>;
+  /**
+   * `string | string[]`, because a repeated `?notice=a&notice=b` is what Next
+   * actually hands back and nothing stops a staffer's URL carrying one. Typed as
+   * a bare `string` it reached `noticeCode`'s `.toLowerCase()` as an array and
+   * 500'd the page — the same hazard `./[tripId]`'s `gate` param and
+   * `/sign-in`'s `callbackUrl` are already typed for (security review finding).
+   */
+  searchParams: Promise<{ tripId?: string | string[]; notice?: string | string[] }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { tripId } = await searchParams;
+  const query = await searchParams;
+  // A repeated param is malformed, not a second opinion — take the one value or
+  // nothing, rather than guessing which of two a staffer meant.
+  const one = (value: string | string[] | undefined) =>
+    typeof value === "string" ? value : undefined;
+  const tripId = one(query.tripId);
+  const notice = one(query.notice);
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
-  const self = `/shop/${shopSlug}/check-in/walk-in`;
+  // `shopPath(shop.slug, …)` — the database's slug, escaped segment by segment,
+  // rather than the URL's own spelling interpolated into a template.
+  const self = shopPath(shop.slug, "check-in", "walk-in");
   // The shape this page used to take. A bookmark, a chat message, or a browser
   // that remembered the old URL lands on the same screen it always did rather
-  // than on a trip picker with the choice silently dropped.
-  if (tripId) redirect(`${self}/${encodeURIComponent(tripId)}`);
+  // than on a trip picker with the choice silently dropped. The `?notice=` goes
+  // with it: `./[tripId]` speaks the same vocabulary, so forwarding costs
+  // nothing and dropping it would re-open the silent landing this page was just
+  // given a banner to close.
+  if (tripId) {
+    const step = shopPath(shop.slug, "check-in", "walk-in", tripId);
+    redirect(notice === undefined ? step : noticeUrl(step, notice));
+  }
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
   const trips = await listWalkInTrips(db, shop.id);
+  const banner = noticeFromParam(notice, NOTICE_KEYS);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
@@ -74,6 +117,12 @@ export default async function WalkInPage({
       >
         ← {t("checkIn.walkIn.backToQueue")}
       </Link>
+
+      {banner ? (
+        <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">
+          {t(banner.key)}
+        </ShopNotice>
+      ) : null}
 
       <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold">{t("checkIn.walkIn.tripLabel")}</h2>

@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
@@ -184,7 +185,10 @@ export default async function TripPrepPage({
           {showNitrox && checklist.nitroxBlockers.length > 0 ? (
             <section
               aria-labelledby="nitrox-blocked-heading"
-              className="mt-6 rounded-lg border border-warning/40 bg-warning/10 p-4"
+              // Warning tone, canonical geometry: this and its two neighbours
+              // below are the same card as everything else on the page, and
+              // only the border and fill say which of them is a problem.
+              className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 shadow-sm sm:p-5"
             >
               <h2 id="nitrox-blocked-heading" className="font-semibold">
                 {t("trips.prep.nitroxBlockedHeading")}
@@ -215,7 +219,9 @@ export default async function TripPrepPage({
           {checklist.diversWithIncompleteFit.length > 0 ? (
             <section
               aria-labelledby="missing-sizes-heading"
-              className="mt-6 rounded-lg border border-border bg-surface p-4"
+              // The `<h2 id>` stays spelled out rather than folding into
+              // `SectionCard`'s `title`: `aria-labelledby` needs that id.
+              className={sectionCardClass({ className: "mt-6" })}
             >
               <h2 id="missing-sizes-heading" className="font-semibold">
                 {t("trips.prep.missingSizesHeading")}
@@ -275,7 +281,7 @@ export default async function TripPrepPage({
           {checklist.diversNeedingStaffFit.length > 0 ? (
             <section
               aria-labelledby="staff-fit-heading"
-              className="mt-6 rounded-lg border border-warning/40 bg-warning/5 p-4"
+              className="mt-6 rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
             >
               <h2 id="staff-fit-heading" className="font-semibold">
                 {t("trips.prep.staffFitHeading")}
@@ -369,7 +375,7 @@ export default async function TripPrepPage({
                   {checklist.lines.map((line) => (
                     <li
                       key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
-                      className="rounded-lg border border-border bg-surface p-4"
+                      className={sectionCardClass()}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>

@@ -32,7 +32,8 @@ import {
 } from "@/lib/closeout";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { RecapNoteEditor } from "./_components/RecapNoteEditor";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -69,14 +70,8 @@ export default async function CloseOutPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ closed?: string; noted?: string; notice?: string }>;
 }) {
-  const [session, { shopSlug }, { closed, noted, notice }] = await Promise.all([
-    requireStaffSession(),
-    params,
-    searchParams,
-  ]);
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(`/shop/${shopSlug}`);
+  const [{ shopSlug }, { closed, noted, notice }] = await Promise.all([params, searchParams]);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const now = nowDate();
@@ -106,7 +101,7 @@ export default async function CloseOutPage({
     const staff = await requireStaffSession();
     const actionDb = await getDb();
     const actionShop = await getShopById(actionDb, staff.user.shopId);
-    if (!actionShop) redirect(`/shop/${staff.user.shopSlug}`);
+    if (!actionShop) redirect(shopPath(staff.user.shopSlug));
     const actionLocale = await requestLocale(actionShop.defaultLocale);
     // `Object.create(null)`: the keys are form-supplied action ids, and a
     // prototype-shaped key ("__proto__") must land nowhere.
@@ -126,7 +121,8 @@ export default async function CloseOutPage({
       locale: actionLocale,
       includeOpsAlerts: canViewShopReports(staff.user.roles),
     });
-    revalidateAndRedirect(`/shop/${staff.user.shopSlug}/close-out?closed=1`);
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    revalidateAndRedirect(`${closeOut}?closed=1`);
   }
 
   /**
@@ -141,10 +137,8 @@ export default async function CloseOutPage({
     const staff = await requireStaffSession();
     const note = String(formData.get("recapShoutout") ?? "").slice(0, 400);
     await setTripRecapShoutout(await getDb(), staff.user.shopId, tripId, note);
-    revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/close-out`,
-      `/shop/${staff.user.shopSlug}/close-out?noted=${encodeURIComponent(tripId)}`,
-    );
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    revalidateAndRedirect(closeOut, `${closeOut}?noted=${encodeURIComponent(tripId)}`);
   }
 
   const detailTime = (departure: CloseoutDeparture) =>
@@ -174,7 +168,7 @@ export default async function CloseOutPage({
       {/* Where the owner-only departure log lands everyone else. The link on
           each row is absent for them, so this is for a bookmark, a deep link,
           or a role that changed under them. */}
-      {notice === "log_not_authorized" ? (
+      {notice === "log-not-authorized" ? (
         <div className="mb-6">
           <ShopNotice tone="neutral" role="status">
             {t("incidentExport.ownerOnlyNotice")}

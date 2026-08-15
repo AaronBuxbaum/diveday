@@ -12,6 +12,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
@@ -72,11 +73,13 @@ const STATE_STYLE: Record<
   ChecklistState,
   { glyph: string; word: DiverMessageKey; box: string; text: string }
 > = {
+  // `-strong` on the success pair: the raw light-palette hue reads 4.39:1 on
+  // its own 10% fill, under AA (docs/design/forms-and-controls.md).
   done: {
     glyph: "✓",
     word: "ready.stateDone",
-    box: "bg-success/10 text-success",
-    text: "text-success",
+    box: "bg-success/10 text-success-strong",
+    text: "text-success-strong",
   },
   action: {
     glyph: "→",
@@ -412,7 +415,9 @@ function ShopCard({
   const mapQuery = shopMapQuery(name, address);
   if (lines.length === 0 && !contactPhone && !contactEmail) return null;
   return (
-    <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-surface">
+    // A shell: the map bleeds to the card's edge and the block under it pads
+    // itself, so the card contributes only its chrome.
+    <SectionCard padding="none" className="mt-10 overflow-hidden">
       {mapQuery ? (
         <iframe
           title={t("ready.shopMapTitle", { shop: name })}
@@ -451,7 +456,7 @@ function ShopCard({
           ) : null}
         </div>
       </div>
-    </section>
+    </SectionCard>
   );
 }
 
@@ -660,6 +665,10 @@ export default async function DiverReadinessPage({
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).
   const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
+  // ...and each leg of the run between them, same order: dock to the first
+  // site, then site to site (ADR 20260815-per-leg-travel-minutes). The morning
+  // of a dive is when a long second leg matters most.
+  const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const rescheduleBlockedKey =
@@ -746,8 +755,13 @@ export default async function DiverReadinessPage({
             "am I ready, and what's left?" answered in the first screenful.
             The greeting, the next step, the progress bar, and the rows were
             four same-weight blocks before; they are one object now. */}
+        {/* The card's chrome as a class string rather than `<SectionCard>`:
+            this section keeps its own `aria-labelledby` region name, and its
+            header carries a progress figure and a progress bar above a
+            full-bleed row list — anatomy the shared card does not model. The
+            shell still comes from one place, so it cannot drift again. */}
         <section
-          className="mt-8 rounded-2xl border border-border bg-surface"
+          className={sectionCardClass({ padding: "none", className: "mt-8 overflow-hidden" })}
           aria-labelledby="checklist-heading"
         >
           <div className="p-5 sm:p-6">
@@ -862,7 +876,11 @@ export default async function DiverReadinessPage({
 
         {/* Supporting, at visibly quieter weight than the spine: one heading
             grammar for every page-level section from here down (text-lg
-            semibold), never a second card competing with the checklist. */}
+            semibold), never a second card competing with the checklist. The
+            gear form below is a card now that the panel comes from the shared
+            component, so it carries `elevated={false}` to keep that promise
+            true — a rental fit reserves nothing, and it must not read as the
+            peer of a checklist row that can be a medical referral. */}
         <section className="mt-10" aria-labelledby="setup-heading">
           <h2 id="setup-heading" className="text-lg font-semibold">
             {t("ready.gearAndSetup")}
@@ -898,6 +916,7 @@ export default async function DiverReadinessPage({
               // where the whole itinerary is laid out.
               multiDay={false}
               siteBottomTimes={siteBottomTimes}
+              legTravelTimes={legTravelTimes}
               // This page renders no conditions card at all, so the suit line
               // has nowhere else to land — and the morning of a dive is exactly
               // when a diver is deciding what to put in the car.

@@ -205,15 +205,6 @@ export type IncidentTimelineEntry =
       recordedByName: string;
       note: string | null;
     }
-  | {
-      kind: "crew_count";
-      occurredAt: string;
-      checkpoint: string;
-      crewAboard: number;
-      crewAssigned: number;
-      recordedByName: string;
-      note: string | null;
-    }
   /**
    * One act on a buddy team (ADR 20260804-buddy-teams). Buddy was the only fact
    * on this document with no corresponding timeline entry: a pairing could be
@@ -295,16 +286,6 @@ export type IncidentTimelineEventInput = {
   createdAt: Date;
 };
 
-export type IncidentCrewCountInput = {
-  checkpoint: string;
-  crewAboard: number;
-  crewAssigned: number;
-  attestedByName: string;
-  note: string | null;
-  occurredAt: Date;
-  createdAt: Date;
-};
-
 export type IncidentDiverEvidenceInput = {
   bookingId: string;
   certifications: readonly Certification[];
@@ -321,7 +302,6 @@ export type IncidentExportInput = {
   /** Per-diver held evidence, keyed by booking id. A missing entry states absence. */
   diverEvidence: readonly IncidentDiverEvidenceInput[];
   events: readonly IncidentTimelineEventInput[];
-  crewCounts: readonly IncidentCrewCountInput[];
   /**
    * The teams standing on this departure, in pairing order
    * (`listTripBuddyTeams`). One entry per team, not per member: the roster
@@ -551,19 +531,6 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,
-    })),
-    ...input.crewCounts.map((count) => ({
-      entry: {
-        kind: "crew_count" as const,
-        occurredAt: count.occurredAt.toISOString(),
-        checkpoint: count.checkpoint,
-        crewAboard: count.crewAboard,
-        crewAssigned: count.crewAssigned,
-        recordedByName: count.attestedByName,
-        note: count.note,
-      } satisfies IncidentTimelineEntry,
-      occurredAt: count.occurredAt,
-      createdAt: count.createdAt,
     })),
     // The pairing trail, interleaved with the head count by time — a pairing
     // changed mid-day sits exactly where it happened relative to the boarding

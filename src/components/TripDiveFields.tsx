@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 
 type DiveOption = { id: string; name: string };
 type InitialDive = {
   title: string | null;
   diveSiteId: string | null;
   description: string | null;
+  travelMinutes: number | null;
 };
 
 export type TripDiveFieldsCopy = {
@@ -26,6 +28,9 @@ export type TripDiveFieldsCopy = {
   namePlaceholderOther: string;
   diveSiteLabel: string;
   noSiteChosen: string;
+  travelLabelFirst: string;
+  travelLabelOther: string;
+  travelHint: string;
   diverFacingDetailsLabel: string;
   detailsPlaceholder: string;
   footerNote: string;
@@ -143,6 +148,27 @@ export function TripDiveFields({
                       </option>
                     ))}
                   </select>
+                </Field>
+                {/* Per leg, not per trip: a departure is dock -> A -> B -> dock
+                    and the legs are order-dependent, so one number on the trip
+                    could never say "10 minutes out to the house reef, 25 across
+                    to the wall" (ADR 20260815-per-leg-travel-minutes). Left
+                    blank it stays on the shop's own ride-out figure, which is
+                    what every departure read before this box existed. */}
+                <Field
+                  label={number === 1 ? copy.travelLabelFirst : copy.travelLabelOther}
+                  hint={copy.travelHint}
+                >
+                  <input
+                    name={`dive-${number}-travelMinutes`}
+                    type="number"
+                    inputMode="numeric"
+                    min={DOCK_DAY_LIMITS.boatRideMinutes.min}
+                    max={DOCK_DAY_LIMITS.boatRideMinutes.max}
+                    step={5}
+                    defaultValue={initial?.travelMinutes ?? ""}
+                    className={`${controlClass} tabular-nums`}
+                  />
                 </Field>
                 <Field
                   label={copy.diverFacingDetailsLabel}

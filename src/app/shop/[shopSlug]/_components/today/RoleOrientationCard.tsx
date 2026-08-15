@@ -63,7 +63,6 @@ export function RoleOrientationCard({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "text-foreground",
             })}
           >
             {copy.dismiss}

@@ -75,11 +75,11 @@ this file is the checklist, not the argument.
     why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
     run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
              aws codebuild start-build --project-name diveday-database-dump
-    produces A weekly full-cluster pg_dump at s3://<backup bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days.
+    produces A weekly full-cluster pg_dump at s3://<dump bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days. The DatabaseDumpBucketName output names the bucket; it is not the export bundles' bucket (ADR 20260812-platform-database-dump, 2026-08-15).
     store    AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.
     verify   aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'
-             AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-backups/dumps/ --recursive
-    note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why its prefix expires after 35 days while the export bundles never do, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
+             AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
+    note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
 
 [8] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either

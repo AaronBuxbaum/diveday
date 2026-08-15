@@ -261,6 +261,11 @@ export default async function TripDetailPage({
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).
   const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
+  // ...and each leg of the run between them, in the same order: dock to the
+  // first site, then site to site. A departure that states none of them reads
+  // the shop's own ride out on every leg, exactly as it did before this existed
+  // (ADR 20260815-per-leg-travel-minutes).
+  const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
   // Pay-at-booking is offered only when the shop's own Stripe account can
   // take a charge, the trip carries a price, and a canonical origin exists
   // for the return links; otherwise the flow is book-now-pay-later as before.
@@ -588,6 +593,7 @@ export default async function TripDetailPage({
           day={meetingDays[0]}
           multiDay={meetingDays.length > 1}
           siteBottomTimes={siteBottomTimes}
+          legTravelTimes={legTravelTimes}
           // Exactly the condition under which the conditions card above renders
           // its water-temperature tile — and with it the suit line — rather
           // than an approximation of it, so a departure with a crew note but no

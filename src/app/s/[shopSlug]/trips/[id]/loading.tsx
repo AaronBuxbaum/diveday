@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a trip's public detail page (design principle 1).
@@ -25,7 +26,9 @@ export default function TripDetailLoading() {
             }
           />
         </div>
-        <div className="mt-10 h-72 rounded-2xl border border-border bg-surface shadow-sm" />
+        {/* The booking card's shell, from the same place `TripBookingSection`
+            takes it — this is the one raised card the page streams in. */}
+        <div className={sectionCardClass({ padding: "none", className: "mt-10 h-72" })} />
         <div className="mt-12 h-40 rounded-2xl bg-surface-sunken" />
       </div>
     </main>

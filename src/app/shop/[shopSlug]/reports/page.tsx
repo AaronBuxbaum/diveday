@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { getDb } from "@/db/client";
 import {
   canPersonViewShopReports,
   earliestReportedTripStart,
   getMonthlyReport,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -31,7 +28,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -97,32 +94,30 @@ export default async function ReportsPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ month?: string; page?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { month, page } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  // Checked against the database, not the JWT, so a revoked manager loses
+  // revenue access immediately (see canPersonViewShopReports).
+  //
+  // A refusal lands on Today — the nearest parent surface *with a notice code
+  // it handles*, because a refusal that teleports you saying nothing is
+  // indistinguishable from a dead link (task 82). The nav already hides this
+  // destination from non-owners/managers (ADR
+  // 20260724-role-gated-surfaces-hide-not-explain); this landing is for
+  // everyone who arrived by bookmark, deep link, or a role that changed under
+  // them.
+  const { db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonViewShopReports,
+    refusal: { notice: "reports-not-authorized" },
+  });
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
-  if (!shop) return null;
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // Revenue is this shop's own money — a Bali shop's month reads in rupiah
   // (docs ADR 20260731-shop-currency). Note the fill/waiver percentages below
   // are ratios, not money, and stay currency-free.
   const currency = toShopCurrency(shop.currency);
-
-  // Checked against the database, not the JWT, so a revoked manager loses
-  // revenue access immediately (see canPersonViewShopReports).
-  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
-    // The nearest parent surface *with a notice code it handles* — a refusal
-    // that teleports you to Today saying nothing is indistinguishable from a
-    // dead link (task 82). The nav already hides this destination from
-    // non-owners/managers (ADR 20260724-role-gated-surfaces-hide-not-explain);
-    // this landing is for everyone who arrived by bookmark, deep link, or a
-    // role that changed under them.
-    redirect(`/shop/${shopSlug}?notice=reports_not_authorized`);
-  }
 
   const tz = shop.timezone;
   const now = nowDate();
@@ -280,7 +275,6 @@ export default async function ReportsPage({
               className={buttonClass({
                 variant: "secondary",
                 size: "sm",
-                className: "text-foreground",
               })}
             >
               {t("reports.monthPicker.go")}

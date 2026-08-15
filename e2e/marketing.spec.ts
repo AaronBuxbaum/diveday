@@ -180,6 +180,15 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     productMain.locator('a[href="/onboard?from=product-mid"]'),
     "the mid-page trial link is tagged like its demo twin",
   ).toHaveCount(1);
+  // The closing band's door onto the switching surface carries its own tag too
+  // (2026-08-15). It was bare while the homepage's two were tagged, so the
+  // number that answers "does the spreadsheet audience need a direct door" was
+  // about to be read against a denominator missing this page — the one a reader
+  // reaches *after* the homepage convinced them.
+  await expect(productMain.getByRole("link", { name: /On a spreadsheet today\?/ })).toHaveAttribute(
+    "href",
+    "/switching/spreadsheet?from=product-spreadsheet",
+  );
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
@@ -351,6 +360,13 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     page.getByRole("heading", { name: "Who you're actually buying from." }),
   ).toBeVisible();
   await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
+  // …and the door out of that band is tagged, like every other in-page
+  // switching door (2026-08-15). The nav and footer ones stay bare on purpose:
+  // they render on every marketing page, so one tag across them answers
+  // nothing (src/lib/funnel.ts).
+  await expect(
+    page.getByRole("main").getByRole("link", { name: /How switching works, both directions/ }),
+  ).toHaveAttribute("href", "/switching?from=about-switching");
 
   // No fabricated proof anywhere on the page a buyer reads for credibility.
   const rendered = await page.locator("body").innerText();
@@ -516,6 +532,54 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // differing directive: a route with no dynamic-hole resolution step hits
   // the same not-found boundary and never duplicates it.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
+});
+
+test("the homepage's spreadsheet door survives, tagged, and lands on the columns it promises", async ({
+  page,
+}) => {
+  // **This test exists because nothing pinned that link.** It was deleted by a
+  // redesign on 2026-08-13 — three consecutive banded CTAs merged into one
+  // close and took the records band's direct door to the spreadsheet guide with
+  // them — and not one assertion in this suite failed. It was restored by hand
+  // on 2026-08-15; a second redesign would remove it exactly as quietly. The
+  // hub link is pinned in the same breath for the same reason.
+  await page.goto("/");
+
+  const spreadsheetDoor = page
+    .getByRole("main")
+    .getByRole("link", { name: "Your spreadsheet, column by column →" });
+  // The whole href, not just the path. The `?from=` tag is what makes the door
+  // measurable, and measurability is the entire reason it came back — an
+  // untagged link is a silent regression of the same size as a missing one,
+  // and it cannot be seen by eye on a rendered page. `#columns` is the other
+  // half: the link's words promise the column table, which is three blocks
+  // below where a bare path lands (src/lib/funnel.ts, switchingHref).
+  await expect(spreadsheetDoor).toHaveAttribute(
+    "href",
+    "/switching/spreadsheet?from=home-records-arriving#columns",
+  );
+  // The band's other door, to the hub that forks to every incumbent guide.
+  // Which of the two a spreadsheet shop takes is the question the pair was
+  // split to answer, so neither may quietly lose its tag.
+  await expect(
+    page.getByRole("main").getByRole("link", { name: /Read the guides →$/ }),
+  ).toHaveAttribute("href", "/switching?from=home-records");
+
+  await spreadsheetDoor.click();
+  await expect(page).toHaveURL(/\/switching\/spreadsheet\?from=home-records-arriving#columns$/);
+  // Wait for the guide's own body rather than the segment's skeleton, then ask
+  // where the reader is. Two assertions, in that order, because they fail for
+  // different reasons and the messages should say which: `toBeVisible` is "the
+  // streamed body landed", `toBeInViewport` is "the anchor took the reader
+  // there". Neither is a timing guess — both retry against what the destination
+  // page itself renders.
+  const columns = page.getByRole("heading", { name: "Does your sheet have these columns?" });
+  await expect(columns).toBeVisible();
+  // Landed on what the words promised — not merely on a page that contains it.
+  // This is the one an `id` on the phase can fail: drop the anchor and this
+  // heading is two to three screens below the fold, behind the hero, the wedge
+  // list and the mid-page CTA.
+  await expect(columns).toBeInViewport();
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {

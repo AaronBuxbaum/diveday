@@ -65,6 +65,55 @@ export async function POST(request: Request) {
  * also what the in-app "reset demo shop" action calls against real Postgres,
  * where autovacuum already does this and `VACUUM` needs privileges no request
  * should assume. This endpoint is e2e-only behind two independent guards.
+ *
+ * ---
+ *
+ * Asked again on 2026-08-15, about a different suspect, and answered no.
+ *
+ * Around a dozen specs go through `/onboard` and create a **real** trial shop
+ * (`isDemo: false`). Nothing clears those: `resetDemoSchedule` is scoped to
+ * blue-mantis and `purgeMintedDemoShops` takes only `isDemo` shops, so they
+ * accumulate for the life of the worker's server. The question was whether that
+ * accumulation is part of why a long combined run gets slower. It is not.
+ *
+ * Method, the same one as above: a full combined `pnpm exec playwright test`
+ * (599 tests, 5 workers, 11.7 minutes) with this route reporting its own
+ * timings, the shop/row counts in its database, and `os.loadavg()` on every
+ * call. 589 resets sampled. Three readings, in increasing order of how much
+ * they settle it:
+ *
+ *   1. The accumulation is trivial in the only terms the reset cares about. A
+ *      worker that reached 6 shops was carrying 148 people, 97 trips, 576
+ *      bookings and 12.2MB of heap, against 142 / 94 / 575 / 11.7MB at one
+ *      shop. Six extra `people` rows. A trial shop is a shop nobody dived at.
+ *   2. Held at one instant, more shops did not cost more. Comparing workers
+ *      inside the same 30-second window (same box, same contention, different
+ *      accumulation), the ones carrying 4-6 shops ran 104ms **faster** than the
+ *      ones carrying 1-2 — 95% CI [-445, +238] ms, so: no effect, and the point
+ *      estimate has the wrong sign.
+ *   3. The control worker slowed down exactly as much with nothing to
+ *      accumulate. One of the five servers never saw an onboarding spec and sat
+ *      at one shop for all 113 of its resets; its median went 882ms in its first
+ *      ten to 3,099ms in its last ten, matching the workers that reached six.
+ *
+ * What the cost does track is the machine. Bucketed by 1-minute load average on
+ * a contended 10-core box: 1,245ms below load 15, 2,589ms at 15-25, 3,402ms at
+ * 40-70. Dead tuples and heap stayed flat across the whole run (716 -> 16 dead,
+ * 10.8MB -> 12.2MB), which is this function still doing its job.
+ *
+ * So: do not widen this route into "delete every shop that is not blue-mantis"
+ * to fix a cost that is not there. That would put a delete-everything-else
+ * primitive behind a test route whose only protection is the `DIVEDAY_E2E`
+ * predicate and a bearer token, and it is the opposite of how every other
+ * delete path here is written — `purgeMintedDemoShops` and the TTL reaper both
+ * refuse anything but a minted demo, and `deleteDemoShopCascade`'s docblock
+ * says never to call it on a real shop.
+ *
+ * The one rule the onboarding specs do owe: **their slugs must be unique per
+ * run**. Nothing collects them, so a fixed slug collides with itself the moment
+ * the same database sees the spec twice — a local rerun against a
+ * `reuseExistingServer` fleet, for one. `demo.spec.ts` and `nitrox.spec.ts`
+ * were both fixed slugs until 2026-08-15; both carry `Date.now()` + pid now.
  */
 async function reclaimDeadTuples(db: Awaited<ReturnType<typeof getDb>>): Promise<void> {
   // Postgres refuses VACUUM inside a transaction block, so it is deliberately

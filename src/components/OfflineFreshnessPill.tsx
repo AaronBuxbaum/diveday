@@ -1,8 +1,9 @@
 import type { OfflineManifestFreshness } from "@/lib/offline-manifests";
 
-// text-success / text-warning alone on their own tinted fill measure just
-// under AA at pill text sizes (see src/components/ui/badge.tsx) — -strong is
-// the same hue, nudged dark enough to clear 4.5:1.
+// `-strong` on the two hues that need it: on their own 10% fill the raw light
+// tokens measure 4.39:1 / 4.38:1, under AA's 4.5, where `-strong` reads 4.84:1.
+// `danger` clears it plainly (5.46:1). The rule and the full table are in
+// docs/design/forms-and-controls.md.
 const freshnessToneClass: Record<OfflineManifestFreshness, string> = {
   current: "border-success/30 bg-success/10 text-success-strong",
   aging: "border-warning/40 bg-warning/10 text-warning-strong",

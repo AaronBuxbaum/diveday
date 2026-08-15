@@ -7,6 +7,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
@@ -191,11 +192,8 @@ export function ImportWizard({
   const hiddenRows = (prepared?.rows.length ?? 0) - previewRows.length;
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-6">
-      <h2 className="text-lg font-semibold">{copy.heading}</h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">{intro}</p>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+    <SectionCard padding="lg" title={copy.heading} description={intro}>
+      <div className="flex flex-wrap items-center gap-3">
         <label
           className={buttonClass({ variant: "secondary", size: "lg", className: "cursor-pointer" })}
         >
@@ -520,6 +518,6 @@ export function ImportWizard({
           </ShopNotice>
         </div>
       ) : null}
-    </section>
+    </SectionCard>
   );
 }

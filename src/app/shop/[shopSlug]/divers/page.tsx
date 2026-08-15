@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -20,7 +21,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { DiverList } from "./_components/DiverList";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -123,14 +124,16 @@ export default async function DiversPage({
     if (query) search.set("q", query);
     if (filter !== "all") search.set("filter", filter);
     if (target > 1) search.set("page", String(target));
-    return search.size ? `/shop/${shopSlug}/divers?${search}` : `/shop/${shopSlug}/divers`;
+    const roster = shopPath(shopSlug, "divers");
+    return search.size ? `${roster}?${search}` : roster;
   };
 
   async function addDiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     const parsed = diverSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/divers?notice=invalid`);
+    const roster = shopPath(staff.user.shopSlug, "divers");
+    if (!parsed.success) redirect(noticeUrl(roster, "invalid"));
     const diver = await createDiver(await getDb(), {
       shopId: staff.user.shopId,
       fullName: parsed.data.fullName,
@@ -138,15 +141,15 @@ export default async function DiversPage({
       phone: parsed.data.phone,
     });
     revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/divers`,
+      roster,
       diver
         ? // `?edit=1` opens the diver record's details form on arrival. This
           // form asks for three fields; date of birth, dive insurance, and the
           // emergency contact the manifest prints are all one collapsed
           // disclosure away, and the front desk had to know to go looking for
           // it while the diver is still standing there.
-          `/shop/${staff.user.shopSlug}/divers/${diver.id}?edit=1`
-        : `/shop/${staff.user.shopSlug}/divers?notice=duplicate`,
+          `${shopPath(staff.user.shopSlug, "divers", diver.id)}?edit=1`
+        : noticeUrl(roster, "duplicate"),
     );
   }
 
@@ -156,18 +159,13 @@ export default async function DiversPage({
     const db = await getDb();
     // Restoring is the inverse of the owner/manager-only deletion, so it takes
     // the same gate (H-14, ADR 20260724-role-authorization).
+    const roster = shopPath(staff.user.shopSlug, "divers");
     if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
-      revalidateAndRedirect(
-        `/shop/${staff.user.shopSlug}/divers`,
-        `/shop/${staff.user.shopSlug}/divers?notice=not-authorized`,
-      );
+      revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));
     }
     const personId = String(formData.get("personId") ?? "");
     const restored = personId && (await restoreDiver(db, staff.user.shopId, personId));
-    revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/divers`,
-      `/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "restore-refused"}`,
-    );
+    revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
   }
 
   /**
@@ -248,7 +246,7 @@ export default async function DiversPage({
             +
           </span>
         </summary>
-        <div className="mt-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+        <div className={sectionCardClass({ padding: "lg", className: "mt-3" })}>
           <p className="text-sm text-muted">{t("divers.page.addDiverBody")}</p>
           {/* The same name/email/phone trio every seat-a-diver door wears
             (src/components/seat-diver/). This one mints a person without a

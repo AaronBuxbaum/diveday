@@ -81,11 +81,17 @@ export const DIVER_CERTIFICATION_LEVEL_KEYS: Record<CertificationLevel, DiverMes
  * last-minute-deal recipient preview and the wait-list rows, where a staffer
  * decides who to mail.
  *
- * Three shapes, and the differences between them are the feature:
+ * Four shapes, and the differences between them are the feature:
  *
  * - Nothing on file → *"Level not said"*. Stated, never a blank: a gap on a row
  *   reads as a rendering bug, and "we don't know" is the honest and common
  *   answer on a marketing opt-in that asks optionally.
+ * - The diver said they hold no card → *"Not certified yet — diver's word"*.
+ *   The shape that was missing until 2026-08-15, and the reason it mattered:
+ *   an uncertified joiner had to pick "Rather not say", which rendered as the
+ *   line above and is what a certified regular who skipped the question gets —
+ *   so the shop read a clean list and mailed a Discover Scuba customer a
+ *   certified two-tank charter.
  * - A card the shop holds → the level, plainly.
  * - A claim nobody has checked → the level, **marked self-declared**. This is
  *   the string that stops the bad email (FU-20260813). It never gates anything;
@@ -95,10 +101,25 @@ export const DIVER_CERTIFICATION_LEVEL_KEYS: Record<CertificationLevel, DiverMes
  * Nitrox rides in the same phrase and carries its own mark, because the two can
  * differ — a diver whose level card the shop verified may still only have
  * *claimed* enriched air.
+ *
+ * **Not a "dive profile".** To a diver that phrase is the depth/time curve of a
+ * dive they made, and this is the opposite thing — what they may dive, before
+ * anybody gets wet. The type, the reader and both message namespaces were
+ * renamed off it on 2026-08-15 (ADR 20260814-self-declared-cards); nothing
+ * user-visible ever said it, which is why the fix is a rename and not a copy
+ * change.
  */
-export type DeclaredDiveProfileShape = {
+export type CertificationSummaryShape = {
   level: CertificationLevel | null;
   levelSelfDeclared: boolean;
+  /**
+   * The joiner said they hold no card at all — *"Not certified yet — diver's
+   * word"* rather than the identical-looking silence of somebody who skipped an
+   * optional question. It is a fourth shape and the reason the column exists: a
+   * shop reading "Level not said" mails a Discover Scuba customer a certified
+   * two-tank charter.
+   */
+  noCertificationDeclared: boolean;
   nitrox: boolean;
   nitroxSelfDeclared: boolean;
 };
@@ -114,40 +135,93 @@ export type DeclaredDiveProfileShape = {
  * warning-toned badge (`heldCardStatusTone`), and this is a weaker fact than
  * that one: nobody has seen anything at all.
  */
-export function declaredDiveProfileUnchecked(profile: DeclaredDiveProfileShape | null): boolean {
-  if (!profile) return false;
+export function certificationSummaryUnchecked(summary: CertificationSummaryShape | null): boolean {
+  if (!summary) return false;
   return (
-    (profile.level !== null && profile.levelSelfDeclared) ||
-    (profile.nitrox && profile.nitroxSelfDeclared)
+    (summary.level !== null && summary.levelSelfDeclared) ||
+    // "Not certified yet" is the diver's word too, and it is the row a staffer
+    // most needs to catch before a two-tank charter goes out to it. It only
+    // reads that way while no level has landed beside it — the phrase below
+    // draws the level instead once one has, and the tone must not contradict
+    // the words it is colouring.
+    (summary.level === null && summary.noCertificationDeclared) ||
+    (summary.nitrox && summary.nitroxSelfDeclared)
   );
 }
 
-export function declaredDiveProfileText(
+export function certificationSummaryText(
   t: StaffTranslator,
-  profile: DeclaredDiveProfileShape | null,
+  summary: CertificationSummaryShape | null,
   locale: string,
 ): string {
   const parts: string[] = [];
-  if (!profile?.level) {
-    parts.push(t("shared.declaredProfile.levelNotSaid"));
-  } else {
-    const level = t(CERTIFICATION_LEVEL_KEYS[profile.level]);
+  if (!summary?.level) {
+    // Three ways to have no level, and only two of them are the same thing. A
+    // stated "I hold no card" outranks the silence of a skipped question; a
+    // level of *either* provenance outranks the stamp, because it is the later
+    // and more specific statement (the stamp is ignored, never deleted — ADR
+    // 20260814-self-declared-cards).
     parts.push(
-      profile.levelSelfDeclared
-        ? t("shared.declaredProfile.selfDeclared", { value: level })
+      summary?.noCertificationDeclared
+        ? t("shared.certificationSummary.notCertified")
+        : t("shared.certificationSummary.levelNotSaid"),
+    );
+  } else {
+    const level = t(CERTIFICATION_LEVEL_KEYS[summary.level]);
+    parts.push(
+      summary.levelSelfDeclared
+        ? t("shared.certificationSummary.selfDeclared", { value: level })
         : level,
     );
   }
-  if (profile?.nitrox) {
-    const nitrox = t("shared.declaredProfile.nitrox");
+  if (summary?.nitrox) {
+    const nitrox = t("shared.certificationSummary.nitrox");
     parts.push(
-      profile.nitroxSelfDeclared
-        ? t("shared.declaredProfile.selfDeclared", { value: nitrox })
+      summary.nitroxSelfDeclared
+        ? t("shared.certificationSummary.selfDeclared", { value: nitrox })
         : nitrox,
     );
   }
   // A locale-appropriate "X and Y", never an English comma join.
   return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
+}
+
+/**
+ * **The same phrase, saying on the row that this diver ranks below what the
+ * departure asks for.**
+ *
+ * A sibling rather than a parameter on {@link certificationSummaryText}, and
+ * deliberately: only a caller that already holds a departure's effective
+ * minimum can honestly say this, so the shared phrase stays sayable by a caller
+ * that does not. Two callers hold one: the last-minute-deal recipient preview
+ * (via `reviewLastMinuteRecipients`) and, since 2026-08-15, the wait-list rows
+ * on the same page — a DiveDay wait list is per-trip, and an invite is a
+ * staffer offering one named person a seat on that exact departure, which is if
+ * anything the stronger act of the two. The deal list *reorders* to lift
+ * below-the-bar names; the wait list may not, because its order is who asked
+ * first (ADR 20260813-wait-list-is-a-lead-list). The mark travels without the
+ * ordering.
+ *
+ * **It is a word, not a colour.** The row's warning tone already means exactly
+ * one thing, "nobody has seen this card", and the whole argument for it (ADR
+ * 20260814-self-declared-cards, decision 4) collapses the moment a second
+ * reason can turn a row warm. So a verified Open Water diver on an Advanced
+ * departure — calm, muted, and previously the quietest thing on a screen full
+ * of warnings — now *says* he is under the bar, in the one place a scanner is
+ * already reading. That leaves tone answering "is this checked?" and words
+ * answering "can they board?", which are two different questions and were
+ * being carried by one mark (design/principles.md #6).
+ *
+ * Nothing here filters, reorders, or disables the send. Informing is the design.
+ */
+export function certificationSummaryBelowRequirementText(
+  t: StaffTranslator,
+  summary: CertificationSummaryShape | null,
+  locale: string,
+): string {
+  return t("shared.certificationSummary.belowRequirement", {
+    value: certificationSummaryText(t, summary, locale),
+  });
 }
 
 export const SPECIALTY_KEYS: Record<DiveSpecialty, StaffMessageKey> = {

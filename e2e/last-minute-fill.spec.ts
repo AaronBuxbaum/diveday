@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { seededTripId, signInAsOwner } from "./helpers";
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -189,6 +189,63 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   // And the send is still offered: informing, never gating. A filter here would
   // quietly stop the blast reaching everyone the shop has never carded, which
   // is most of a deal list.
+  await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
+});
+
+/**
+ * **The answer the list had no way to give until 2026-08-15**, and the one the
+ * whole column exists for: a joiner who holds no card at all — a Discover Scuba
+ * customer, a snorkeller, the non-diving half of a couple. Their only option
+ * used to be "Rather not say", which reads to a staffer exactly like a certified
+ * regular who skipped an optional question, so the shop mailed them a certified
+ * two-tank charter.
+ *
+ * Two things are under test that the declared-level spec above cannot reach.
+ * The first is the select's own behaviour: picking this answer takes the nitrox
+ * tick beside it away, because "I hold no card" and "I hold an enriched-air
+ * card" are two incompatible statements and the writer resolves that by
+ * recording the absence — a diver must not walk away believing they said
+ * something that was then discarded.
+ *
+ * The second is the **cap**. This departure is chosen for it: eleven people
+ * match its date and the panel draws ten. A cap that could hide the one
+ * recipient nobody should mail would be worse than the unbounded list it
+ * replaced, so being below the bar has to beat being late to the list.
+ */
+test("an uncertified joiner reaches the send list, above the ten-name cap", async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto("/s/blue-mantis");
+  const dealList = page.locator("#last-minute-list");
+  await dealList.getByLabel("Name").fill("Nell Byrne");
+  await dealList.getByLabel("Email").fill("nell.e2e@example.com");
+  await dealList.getByLabel("Certification level").selectOption("none_declared");
+  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toBeDisabled();
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+
+  await signInAsOwner(page);
+  // The night charter, not today's reef morning: the shop-wide list is the same
+  // everywhere, but only a departure the whole seeded list matches puts eleven
+  // people in front of a ten-name panel.
+  const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
+  await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+  await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
+
+  const recipient = page.locator("li").filter({ hasText: "Nell Byrne" }).filter({ visible: true });
+  await expect(recipient).toContainText(
+    "Not certified yet — diver's word · below this departure's minimum",
+  );
+  // Drawn, and the remainder stated rather than silently dropped.
+  await expect(page.getByText(/1 more isn.t shown/)).toBeVisible();
+  // Two of them now: this joiner, and the one the demo shop seeds
+  // (src/db/seed-self-declared.ts), which is what keeps the mark rendered
+  // somewhere without a test having to type it in first.
+  await expect(page.getByText("2 of 11 are below this departure's requirement.")).toBeVisible();
+  await expect(
+    page.locator("li").filter({ hasText: "Selah Mbeki" }).filter({ visible: true }),
+  ).toContainText("Not certified yet — diver's word");
+
+  // And the send is still offered. Informing, never gating.
   await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
 });
 

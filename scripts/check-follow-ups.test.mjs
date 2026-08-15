@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
 
-import { DIRECTORY, findEntryProblems } from "./check-follow-ups.mjs";
+import { DIRECTORY, findEntryProblems, WAITING_DIRECTORY } from "./check-follow-ups.mjs";
 
 const FILENAME = "FU-20260808-example-entry.md";
 
@@ -187,15 +187,94 @@ describe("the prompt", () => {
   });
 });
 
+describe("the waiting room", () => {
+  // An entry in `waiting/` is blocked on somebody outside this repo. It is not a
+  // triage state, so it swaps the status vocabulary rather than joining it — and
+  // it owes the reader a way to check whether the block has lifted, without which
+  // it is indistinguishable from an entry nobody got round to.
+  const waiting = valid
+    .replace("**Status:** Open", "**Status:** Waiting")
+    .replace(`${DIRECTORY}/${FILENAME}`, `${WAITING_DIRECTORY}/${FILENAME}`);
+  const waitingOn =
+    "- **Waiting on:** an upstream release that fixes the merge order; check that package's" +
+    ' CHANGELOG for "endpoint" whenever it is bumped\n';
+  const complete = waiting.replace("- **Kind:**", `${waitingOn}- **Kind:**`);
+  const waitingProblems = (contents) =>
+    findEntryProblems(FILENAME, contents, { waiting: true }).problems;
+
+  it("passes when it names the event and how to check it", () => {
+    expect(waitingProblems(complete)).toEqual([]);
+  });
+
+  it("requires a Waiting on line", () => {
+    expect(waitingProblems(waiting).join()).toMatch(/needs a \*\*Waiting on:\*\* line/);
+  });
+
+  it("refuses a Waiting on line too short to check cold", () => {
+    const vague = waiting.replace("- **Kind:**", "- **Waiting on:** upstream\n- **Kind:**");
+    expect(waitingProblems(vague).join()).toMatch(/too short to check cold/);
+  });
+
+  it("refuses an inbox status down here, and a Waiting status up there", () => {
+    expect(waitingProblems(valid).join()).toMatch(/must say \*\*Status:\*\* Waiting/);
+    expect(problemsFor(complete.replace(`${WAITING_DIRECTORY}/`, `${DIRECTORY}/`)).join()).toMatch(
+      /Status/,
+    );
+  });
+
+  it("expects the prompt to delete the file at its waiting-room path", () => {
+    // The prompt carries a literal path, so moving a file between rooms without
+    // fixing it points a cold reader at a file that is not there.
+    const stale = complete.replace(`${WAITING_DIRECTORY}/${FILENAME}`, `${DIRECTORY}/${FILENAME}`);
+    expect(waitingProblems(stale).join()).toMatch(/must tell the session to delete/);
+  });
+});
+
 describe("the register on disk", () => {
-  it("has no invalid entries", async () => {
-    const directory = path.join(process.cwd(), DIRECTORY);
-    const files = (await readdir(directory)).filter(
+  it.each([
+    [DIRECTORY, false],
+    [WAITING_DIRECTORY, true],
+  ])("has no invalid entries in %s", async (directory, waiting) => {
+    const files = (await readdir(path.join(process.cwd(), directory))).filter(
       (name) => name.startsWith("FU-") && name.endsWith(".md"),
     );
     for (const filename of files) {
-      const contents = await readFile(path.join(directory, filename), "utf8");
-      expect(findEntryProblems(filename, contents).problems).toEqual([]);
+      const contents = await readFile(path.join(process.cwd(), directory, filename), "utf8");
+      expect(findEntryProblems(filename, contents, { waiting }).problems).toEqual([]);
     }
+  });
+});
+
+describe("what counts as a touched path", () => {
+  const touches = (line) =>
+    valid.replace("- **Touches:** `src/lib`, `docs/product/follow-ups`", line);
+
+  it("accepts a path that names a line, and checks the file", () => {
+    // Pointing at `diver.json:2673` is *more* useful than pointing at a
+    // 3,000-line bundle, so the line number is dropped for the existence check
+    // rather than the entry being refused for carrying it.
+    const entry = touches("- **Touches:** `src/lib/clock.ts:42`, `src/db:10:3`");
+    expect(findEntryProblems(FILENAME, entry).touched).toEqual(["src/lib/clock.ts", "src/db"]);
+    expect(problemsFor(entry)).toEqual([]);
+  });
+
+  it("ignores a backticked token that is not a path", () => {
+    // An author naming the message key inside the bundle is giving the cold
+    // reader exactly what they need. Treating it as a filename failed the whole
+    // entry — the check teaching people to say less, which is backwards. Every
+    // guarded root is a directory, so a real path always carries a slash.
+    const entry = touches(
+      "- **Touches:** `src/i18n/locales/en-US/diver.json` (`marketing.product.notCovered.gearSerials`)",
+    );
+    expect(findEntryProblems(FILENAME, entry).touched).toEqual([
+      "src/i18n/locales/en-US/diver.json",
+    ]);
+    expect(problemsFor(entry)).toEqual([]);
+  });
+
+  it("still demands at least one real path", () => {
+    // A Touches line of nothing but bare keys names nowhere to start.
+    const entry = touches("- **Touches:** `importer.honesty.receiptsService`, `someOtherKey`");
+    expect(problemsFor(entry).join()).toMatch(/Touches/);
   });
 });

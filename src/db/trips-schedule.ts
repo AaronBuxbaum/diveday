@@ -4,7 +4,6 @@ import { type AppDb, type DbExecutor, queryAll } from "./client";
 import type { Trip } from "./schema";
 import {
   bookings,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -25,9 +24,9 @@ import { recordSeriesSkip } from "./trips-series";
  *
  * These three share one refusal vocabulary and one invariant: a trip anybody
  * has begun counting heads against has **sailed**, and its date is no longer a
- * schedule edit to make. `countRollCallEvidence` is the whole question — divers'
- * roll call, per-person crew roll call, and count-level crew attestation — and
- * both guards ask all of it (review 20260803, D3).
+ * schedule edit to make. `countRollCallEvidence` is the whole question — the
+ * divers' roll call and the crew roll call — and both guards ask all of it
+ * (review 20260803, D3).
  *
  * Driven by `src/app/shop/[shopSlug]/schedule/board/actions.ts`.
  */
@@ -59,10 +58,10 @@ export type MoveTripOutcome =
   | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
 
 /**
- * Every kind of head-count evidence a trip can carry — the divers' roll call,
- * the per-person crew roll call, and the count-level crew attestation. A trip
- * with any of it has **sailed**, and the two guards that turn on that fact
- * (`moveTrip`, `deleteTrip`) have to ask the whole question.
+ * Every kind of head-count evidence a trip can carry — the divers' roll call
+ * and the crew roll call. A trip with any of it has **sailed**, and the two
+ * guards that turn on that fact (`moveTrip`, `deleteTrip`) have to ask the
+ * whole question.
  *
  * Counting only `rollCallEvents` was the hole: a bookingless charter that
  * carried crew — a boat with a divemaster and no paying divers, or one whose
@@ -74,20 +73,15 @@ async function countRollCallEvidence(tx: DbExecutor, tripId: string): Promise<nu
   // `queryAll`, not `Promise.all`: every caller of this is a transaction --
   // one checked-out pg client, which queues a fan-out and warns that pg@9 will
   // refuse it (issue #517, the file's other reader below).
-  const [[divers], [crew], [attestations]] = await queryAll(tx, [
+  const [[divers], [crew]] = await queryAll(tx, [
     () => tx.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.tripId, tripId)),
     () =>
       tx
         .select({ n: count() })
         .from(rollCallCrewEvents)
         .where(eq(rollCallCrewEvents.tripId, tripId)),
-    () =>
-      tx
-        .select({ n: count() })
-        .from(rollCallCrewAttestations)
-        .where(eq(rollCallCrewAttestations.tripId, tripId)),
   ]);
-  return (divers?.n ?? 0) + (crew?.n ?? 0) + (attestations?.n ?? 0);
+  return (divers?.n ?? 0) + (crew?.n ?? 0);
 }
 
 /**
@@ -302,6 +296,9 @@ export async function duplicateTrip(
         title: dive.title,
         diveSiteId: dive.diveSiteId,
         description: dive.description,
+        // The same sites in the same order is the same run out and back, so a
+        // copied departure keeps its legs (ADR 20260815-per-leg-travel-minutes).
+        travelMinutes: dive.travelMinutes,
       })),
       scheduleDays: days.map((day) => ({
         dayNumber: day.dayNumber,

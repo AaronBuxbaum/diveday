@@ -37,7 +37,7 @@ import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { requireStaffSession } from "@/lib/session";
-import { noticeForForm } from "@/lib/staff-notices";
+import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -320,7 +320,7 @@ export default async function ManageTripPage({
       ? [
           {
             text: t("trips.pulse.blocked", { count: pulseBlocked }),
-            href: `/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#roster`,
+            href: `${shopPath(shopSlug, "trips", tripId, "guests")}?rf=blocked#roster`,
             tone: "danger" as const,
           },
         ]
@@ -351,7 +351,7 @@ export default async function ManageTripPage({
       ? [
           {
             text: t("trips.pulse.prepGaps", { count: pulsePrepGaps }),
-            href: `/shop/${shopSlug}/trips/${tripId}/prep`,
+            href: shopPath(shopSlug, "trips", tripId, "prep"),
           },
         ]
       : []),
@@ -365,7 +365,7 @@ export default async function ManageTripPage({
       ? [
           {
             text: t("trips.pulse.awaitingPayment", { count: pulseOpenOrders }),
-            href: `/shop/${shopSlug}/orders?tripId=${tripId}&status=open&range=all`,
+            href: `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`,
           },
         ]
       : []),
@@ -449,7 +449,7 @@ export default async function ManageTripPage({
                   title: trip.course.title,
                   course: (chunks) => (
                     <Link
-                      href={`/shop/${shopSlug}/courses/${trip.course?.slug}/edit`}
+                      href={shopPath(shopSlug, "courses", trip.course?.slug ?? "", "edit")}
                       className="hover:underline"
                     >
                       {chunks}
@@ -484,7 +484,7 @@ export default async function ManageTripPage({
                       <span key={site.id} className="flex items-center gap-x-2">
                         {index > 0 ? <span aria-hidden="true">·</span> : null}
                         <Link
-                          href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                          href={shopPath(shopSlug, "dive-sites", site.id)}
                           className="font-medium text-primary hover:underline"
                         >
                           {site.name}
@@ -750,7 +750,7 @@ export default async function ManageTripPage({
             )}
             {blowoutCalled ? (
               <Link
-                href={`/shop/${shopSlug}/schedule/blowout/${tripId}`}
+                href={shopPath(shopSlug, "schedule", "blowout", tripId)}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("trips.detail.viewBlowout")}
@@ -765,7 +765,7 @@ export default async function ManageTripPage({
           // for the cases with nobody to message. Reinstating is config work.
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={`/shop/${shopSlug}/schedule/blowout/${tripId}`}
+              href={shopPath(shopSlug, "schedule", "blowout", tripId)}
               className={buttonClass({ variant: "danger" })}
             >
               {t("trips.detail.weatherBlowout")}

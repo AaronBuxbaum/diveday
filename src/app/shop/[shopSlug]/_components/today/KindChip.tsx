@@ -14,10 +14,12 @@ import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
  */
 const CHIP_TONES = {
   // Toned text on the plain surface, not on a 10% tinted fill: the tint is the
-  // documented sub-AA combination (`--warning` on its own fill reads 4.39:1
-  // against AA's 4.5), and on `bg-surface` both tones clear the bar today
-  // (warning 5.02:1, danger 6.47:1, measured) — the border keeps the chip a
-  // chip.
+  // sub-AA combination (`--warning` on its own fill reads 4.38:1 against AA's
+  // 4.5), and on `bg-surface` both tones clear the bar (warning 5.02:1, danger
+  // 6.47:1) — the border keeps the chip a chip. The chip names `bg-surface`
+  // itself rather than inheriting, which is what keeps that 5.02 true when a
+  // row lands in a sunken panel, where the same hue would read 4.36:1. Full
+  // table: docs/design/forms-and-controls.md.
   danger: "rounded-full border border-danger/40 bg-surface px-2.5 py-0.5 text-danger",
   warning: "rounded-full border border-warning/40 bg-surface px-2.5 py-0.5 text-warning",
   // No box at all: a neutral kind is a category, not an alert, and when every

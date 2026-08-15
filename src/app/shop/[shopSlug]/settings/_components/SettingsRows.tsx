@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { SectionCard } from "@/components/ui/card";
 
 /**
  * The settings directory's row vocabulary — the same "summary first, form on
@@ -23,10 +24,14 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
  * reader has already asked for more.
  */
 export function SettingsRowList({ children }: { children: ReactNode }) {
+  // The card, as a shell: `padding="none"` because each row pads itself, and
+  // `overflow-hidden` so a row's hover fill is clipped by the corner radius
+  // rather than squaring it off. Elevation follows containment, the same rule
+  // `Table` and `ShopStat` keep — this list *is* the surface, so it is raised.
   return (
-    <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+    <SectionCard as="div" padding="none" className="divide-y divide-border overflow-hidden">
       {children}
-    </div>
+    </SectionCard>
   );
 }
 

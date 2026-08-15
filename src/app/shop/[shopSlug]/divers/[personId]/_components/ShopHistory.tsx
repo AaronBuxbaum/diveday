@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { sectionCardClass } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -166,12 +167,17 @@ export function ShopHistory({
         </p>
       ) : null}
       {history.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
+        <p className={sectionCardClass({ padding: "lg", className: "mt-4 text-sm text-muted" })}>
           {t("divers.history.noTripsYet")}
         </p>
       ) : (
         <>
-          <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-4 divide-y divide-border",
+            })}
+          >
             {visible.map((item) => (
               <HistoryRow
                 locale={locale}
@@ -191,7 +197,12 @@ export function ShopHistory({
               <summary className="cursor-pointer text-sm text-primary hover:underline">
                 {t("divers.history.showOlderEntries", { count: rest.length })}
               </summary>
-              <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+              <ul
+                className={sectionCardClass({
+                  padding: "none",
+                  className: "mt-3 divide-y divide-border",
+                })}
+              >
                 {rest.map((item) => (
                   <HistoryRow
                     locale={locale}
