@@ -59,7 +59,7 @@ export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); 
   behind "keep your existing retail POS, DiveDay runs the boat day" (see the vision non-goals) — it
   has real payload today (bookings, waivers, `rental_fit.csv`) and gains its most-asked-for one once
   §3's gear register ships. Scope the two as one ADR rather than sequencing them independently: an
-  API with nothing new to read, or a register with no way out, each only answer half the question a
+  API with nothing new to read, or a register with no way out, each only answers half the question a
   retail-heavy shop actually asks. **One-directional by design** — DiveDay emits, it never
   consumes another system's API; a direct competitor (DiveShop360) has no reason to build the
   receiving end itself, so the intended shape is DiveDay's webhooks feeding a no-code bridge (a
