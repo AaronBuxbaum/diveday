@@ -1,6 +1,7 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
 import { log } from "@/lib/log";
+import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
@@ -111,6 +112,16 @@ function sesErrorInfo(error: unknown): {
  * `notification_send_queue.idempotency_key` is the real safety net; this is a
  * narrower, accepted gap. See the ADR's Consequences.
  */
+/**
+ * The courtesy/commercial notification kinds carry `unsubscribeUrl` directly on the
+ * notification (ADR 20260814-checkout-recovery-is-commercial) — this just narrows to
+ * that subset so the header can be set without touching the every-kind `Notification`
+ * union.
+ */
+function unsubscribeUrlOf(notification: Notification): string | undefined {
+  return "unsubscribeUrl" in notification ? notification.unsubscribeUrl : undefined;
+}
+
 export function sesNotificationProvider(
   config: SesConfig,
   options: SesProviderOptions = {},
@@ -126,6 +137,7 @@ export function sesNotificationProvider(
       const invalidRecipient = reservedTestRecipientDelivery(notification.to);
       if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
+      const unsubscribeUrl = unsubscribeUrlOf(notification);
       try {
         const result = await client.send(
           new SendEmailCommand({
@@ -138,6 +150,15 @@ export function sesNotificationProvider(
                   Html: { Data: message.html, Charset: "UTF-8" },
                   Text: { Data: message.text, Charset: "UTF-8" },
                 },
+                // RFC 8058: lets Gmail/Yahoo/Outlook surface a native "Unsubscribe"
+                // control next to the sender, backed by the same confirmation page
+                // as the in-body link. Deliberately no `List-Unsubscribe-Post` — that
+                // promises a one-click POST with no confirmation, which this page
+                // doesn't do; adding it without matching behavior would make mail
+                // clients silently fail to unsubscribe recipients who click it.
+                ...(unsubscribeUrl && {
+                  Headers: [{ Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` }],
+                }),
               },
             },
           }),
