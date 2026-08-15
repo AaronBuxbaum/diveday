@@ -1,11 +1,13 @@
 # FU-20260814-vercel-analytics-url-override — Ask Vercel for a supported way to set a server event's page URL, then delete our shim
 
 - **Status:** Waiting
-- **Waiting on:** two things in order, and the first one is a person's, not an agent's — a human
-  sending the drafted request to `vercel/analytics` under their own account, and then a
-  `@vercel/analytics` release that adds a supported way for a caller to set a server event's page
-  URL (an override argument or a `beforeSend`). To check: the issue/PR thread once it exists, and
-  that package's CHANGELOG for "url" or "beforeSend" whenever it is bumped.
+- **Waiting on:** a `@vercel/analytics` release carrying server-side `beforeSend`. The request half
+  is **done** — https://github.com/vercel/analytics/pull/208, opened 2026-08-15 by a human under
+  their own account, as this entry required. To check: that PR's thread for a merge, and the
+  package's CHANGELOG for "beforeSend". Cheapest check of all is to do nothing —
+  `src/lib/analytics-request-context.test.ts` asserts the installed server bundle contains no
+  `beforeSend`, so bumping the dependency past the release turns this into a red test rather than
+  something anyone has to remember.
 - **Raised:** 2026-08-14 — fixing the capability-URL leak in `@vercel/analytics/server`
   (`src/lib/analytics-request-context.ts`). The leak is closed; this is the upstream half.
 - **Kind:** cleanup
@@ -63,8 +65,20 @@ should not hold. The draft below is written to be read, edited and sent by a per
 
 ## Proposed change
 
-1. Open the issue (or PR) against `vercel/analytics` using the draft below.
-2. Watch for a release that adds an override or a `beforeSend` to the server SDK.
+1. ~~Open the issue (or PR) against `vercel/analytics` using the draft below.~~ **Done 2026-08-15:
+   https://github.com/vercel/analytics/pull/208** — `feat(server): add \`beforeSend\` to server-side
+   \`track\``, opened by a human under their own account, as this entry required. It adds the
+   browser SDK's `beforeSend` contract to the server `track` as an option: the hook receives
+   `{ type: "event", url }` and returns the event or `null` to drop it, runs before the request body
+   is built, and is fail-closed (a throwing hook is caught rather than falling through to the
+   un-edited URL). That is the shape to adopt, and it is a strictly better fit than the
+   `options.url` override this entry originally proposed — it can withhold an event entirely, which
+   is what our own `trackEvent` already does when it cannot redact.
+2. Watch for a release that carries it. **`src/lib/analytics-request-context.test.ts` now fails the
+   moment one does** — it asserts the installed server bundle contains no `beforeSend`, so bumping
+   the dependency past that release turns this from something to remember into a red test. The
+   original assertion only matched an `options.url` override and would have stayed green through
+   exactly the API we asked for, leaving the shim to outlive its own replacement.
 3. When one lands: bump the dependency, switch `trackEvent` to the supported API, delete
    `src/lib/analytics-request-context.ts` and its test, and drop the "no way for a caller to supply
    that URL" assertion. `src/lib/capability-urls.ts` stays — it is the shared definition and the

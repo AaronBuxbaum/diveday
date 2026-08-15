@@ -146,16 +146,35 @@ describe("the @vercel/analytics contract this depends on", () => {
 
   it("still reads the page URL from the request-context global", () => {
     expect(sdk).toContain('Symbol.for("@vercel/request-context")');
-    // The line that composes the event's page URL, `o`. If this stops matching,
-    // read `track` in that file before assuming the redaction still holds.
-    expect(sdk).toMatch(/o:\s*\(?\s*requestContext[\s\S]{0,60}?\.url/);
+    // Where the event's page URL comes from. If this stops matching, read
+    // `track` in that file before assuming the redaction still holds.
+    //
+    // Matched loosely, on the *derivation* rather than on the `o:` property it
+    // used to be written inline against. vercel/analytics#208 hoists the same
+    // expression into a `pageUrl` local so a `beforeSend` hook can edit it
+    // before the body is built -- after which `o: pageUrl` no longer names
+    // `requestContext` at all, though the SDK reads it exactly as before and
+    // the shim keeps working. Pinned to the old shape this would have gone red
+    // on that release saying the redaction contract had broken, which is both
+    // false and the opposite of the actual news. The arrival of a supported
+    // API is the `beforeSend` assertion's job to report, and only its job.
+    expect(sdk).toMatch(/requestContext[\s\S]{0,40}?\.url/);
   });
 
   it("still offers no way for a caller to supply that URL itself", () => {
     // The reason the fix is a global wrapper rather than an argument. If a
-    // future release adds an override (or a `beforeSend`), prefer it and delete
-    // the shim -- see the upstream request in
+    // future release adds an override, prefer it and delete the shim -- see the
+    // upstream request in
     // docs/product/follow-ups/FU-20260814-vercel-analytics-url-override.md.
     expect(sdk).not.toMatch(/options\s*(\?\.)?\s*\.\s*url\b/);
+    // Name the proposed shape too, not just the generic one. The request went
+    // upstream as vercel/analytics#208, a `beforeSend` hook mirroring the
+    // browser SDK's -- whose source reads `options?.beforeSend` and `event.url`
+    // and so matches neither the regex above nor anything else here. This is a
+    // tripwire, and a tripwire that stays green through exactly the API we
+    // asked for is no tripwire at all: without this line the shim would have
+    // outlived its own replacement, silently, which is the failure mode this
+    // whole file exists to avoid.
+    expect(sdk).not.toContain("beforeSend");
   });
 });
