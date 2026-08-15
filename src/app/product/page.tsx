@@ -156,6 +156,10 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       detail: t("marketing.product.notCovered.pos.detail"),
     },
     {
+      title: t("marketing.product.notCovered.workOrders.title"),
+      detail: t("marketing.product.notCovered.workOrders.detail"),
+    },
+    {
       title: t("marketing.product.notCovered.gearSerials.title"),
       detail: t("marketing.product.notCovered.gearSerials.detail"),
     },

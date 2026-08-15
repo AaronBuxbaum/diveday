@@ -43,7 +43,15 @@ concretely here.
 ## Non-goals (for now)
 
 - Not a dive-agency LMS (we track certs, we don't issue them).
-- Not a general POS/retail system (gear *rental*, not merchandise sales).
+- Not a general POS/retail system — DiveDay manages gear *rental* only, never **selling** items
+  (retail/barcode inventory) or **repairing** them (work orders, parts, labor). A shop's existing
+  POS stays authoritative for both. DiveDay only ever emits data outward, never reads another
+  system's — the read API + webhooks
+  ([features/roadmap.md](features/roadmap.md#1-data-portability-follow-ons-the-wedge)) is how a
+  shop's own POS or accounting tool pulls DiveDay's booking, waiver, and (once built) gear-register
+  data instead of double entry; no incumbent is expected to build the other end of that pipe
+  themselves (see the roadmap item), so the realistic path is a no-code bridge (Zapier/Make) the
+  shop wires up, not a DiveDay-built connector per target system.
 - Not a dive-log social network.
 
 ## What kind of business this is

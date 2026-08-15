@@ -2669,6 +2669,10 @@
           "title": "A retail point of sale",
           "detail": "Keep the register you have. An order can carry a retail line, but there's no barcode scanner or stock count — DiveDay runs the water side of the shop."
         },
+        "workOrders": {
+          "title": "A repair shop",
+          "detail": "Keep whatever tracks your workshop today. DiveDay doesn't run repair tickets, parts, or labor — it tracks what a diver rents from you, not what you fix for them."
+        },
         "gearSerials": {
           "title": "Gear serial numbers",
           "detail": "DiveDay tracks every diver's sizes and builds the trip's packing list. It doesn't manage individual rigs or service history."
