@@ -49,6 +49,7 @@
 
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
@@ -72,7 +73,7 @@ const ORPHAN_PATTERNS = [
 ];
 
 /** `[[DD-]HH:]MM:SS` as ps prints it, in seconds. */
-function parseElapsedSeconds(etime) {
+export function parseElapsedSeconds(etime) {
   const match = /^(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)$/.exec(etime.trim());
   if (!match) return 0;
   const [, days, hours, minutes, seconds] = match;
@@ -81,7 +82,7 @@ function parseElapsedSeconds(etime) {
   );
 }
 
-function humanElapsed(seconds) {
+export function humanElapsed(seconds) {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -90,17 +91,15 @@ function humanElapsed(seconds) {
     : `${hours}h${String(minutes).padStart(2, "0")}m`;
 }
 
-/** Every process, as `{ pid, ppid, elapsedSeconds, rssMb, command }`. */
-function snapshotProcesses() {
-  // `-eo`, not the BSD `-axo`: this hook runs wherever the repo runs, and that
-  // includes Claude Cloud's Linux runners. `-e` and `-o` are POSIX and behave
-  // identically under macOS's BSD ps and Linux procps; `-axo` is BSD spelling
-  // that procps only tolerates by accident.
-  const raw = readBounded("ps", ["-eo", "pid=,ppid=,etime=,rss=,command="], {
-    encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
-    timeoutMs: SUBPROCESS_TIMEOUTS.processTable,
-  });
+/**
+ * One `ps` line per row, as `{ pid, ppid, elapsedSeconds, rssMb, command }`.
+ *
+ * Split from the `ps` call so it can be tested against real output from **both**
+ * platforms this runs on. macOS's BSD `ps` and Linux procps pad their columns
+ * differently and differ on kernel threads, and the Linux half is otherwise
+ * unprovable from a workstation -- see stray-processes.test.mjs.
+ */
+export function parseProcessTable(raw) {
   const rows = [];
   for (const line of raw.split("\n")) {
     const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\d+)\s+(.*)$/.exec(line);
@@ -114,6 +113,20 @@ function snapshotProcesses() {
     });
   }
   return rows;
+}
+
+/** Every process, read through the bounded wrapper. */
+function snapshotProcesses() {
+  // `-eo`, not the BSD `-axo`: this hook runs wherever the repo runs, and that
+  // includes Claude Cloud's Linux runners. `-e` and `-o` are POSIX and behave
+  // identically under macOS's BSD ps and Linux procps; `-axo` is BSD spelling
+  // that procps only tolerates by accident.
+  const raw = readBounded("ps", ["-eo", "pid=,ppid=,etime=,rss=,command="], {
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+    timeoutMs: SUBPROCESS_TIMEOUTS.processTable,
+  });
+  return parseProcessTable(raw);
 }
 
 /**
@@ -141,7 +154,7 @@ function selfAndAncestors(rows) {
  * what lets a finding be attributed to *this* session rather than merely to
  * some session, which the kill path depends on -- see {@link main}.
  */
-function currentSessionPid(rows, ancestors) {
+export function currentSessionPid(rows, ancestors) {
   const byPid = new Map(rows.map((row) => [row.pid, row]));
   for (const pid of ancestors) {
     if (byPid.get(pid)?.command.includes("--session-id")) return pid;
@@ -150,7 +163,7 @@ function currentSessionPid(rows, ancestors) {
 }
 
 /** Whether `row` descends from `sessionPid`. */
-function descendsFrom(row, sessionPid, byPid) {
+export function descendsFrom(row, sessionPid, byPid) {
   if (!sessionPid) return false;
   let cursor = row.ppid;
   const seen = new Set();
@@ -172,7 +185,7 @@ function descendsFrom(row, sessionPid, byPid) {
  * against a pull request it is waiting on looks exactly like a wedged one from
  * here. Reporting a neighbour's is useful; killing it is not ours to do.
  */
-function staleSessionShells(rows, exclude, sessionPid) {
+export function staleSessionShells(rows, exclude, sessionPid) {
   const byPid = new Map(rows.map((row) => [row.pid, row]));
   return (
     rows
@@ -203,7 +216,7 @@ function staleSessionShells(rows, exclude, sessionPid) {
  * reaping them, possibly days ago — so elapsed time is not the signal.
  * Being orphaned is.
  */
-function orphanedDevProcesses(rows, exclude) {
+export function orphanedDevProcesses(rows, exclude) {
   return rows
     .filter((row) => !exclude.includes(row.pid) && row.ppid === 1)
     .map((row) => ({
@@ -215,7 +228,7 @@ function orphanedDevProcesses(rows, exclude) {
 }
 
 /** The `eval '…'` a session shell was given, which is the actionable part. */
-function summarizeCommand(command) {
+export function summarizeCommand(command) {
   const evaluated = /&& eval '([\s\S]*?)'(?: <|$)/.exec(command);
   const text = (evaluated?.[1] ?? command).replace(/\s+/g, " ").trim();
   return text.length > 160 ? `${text.slice(0, 157)}...` : text;
@@ -335,5 +348,7 @@ async function readHookPayload() {
   ]);
 }
 
-const payload = await readHookPayload();
-process.exit(payload.stop_hook_active ? 0 : main());
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const payload = await readHookPayload();
+  process.exit(payload.stop_hook_active ? 0 : main());
+}

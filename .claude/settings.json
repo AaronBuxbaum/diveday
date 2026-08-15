@@ -70,6 +70,26 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/stray-processes.mjs\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DIVEDAY_STRAY_PROCESS_MINUTES=0 node \"$CLAUDE_PROJECT_DIR/scripts/stray-processes.mjs\" --kill"
+          }
+        ]
+      }
     ]
   },
   "enableAllProjectMcpServers": true
