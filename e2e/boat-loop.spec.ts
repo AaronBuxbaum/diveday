@@ -1,13 +1,21 @@
-import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
- * READ_ONLY holds here: both tests only walk the trip sub-nav and read the clipboard.
- * Nothing is submitted; "View booking page" and "Copy link" are a link and a copy.
+ * Not READ_ONLY, despite neither test submitting anything: both start by
+ * clicking "Board divers" off Today's queue, which only renders while
+ * blue-mantis has a departure scheduled today. That's a claim about seeded
+ * *state*, not about writes, and READ_ONLY only ever promises the latter — a
+ * read-only test skips its own reset and inherits whatever the previous
+ * same-worker test left behind, so a sibling spec that cancels or moves
+ * today's only departure leaves this one staring at "No boats out today"
+ * with nothing to click (observed on CI: run 31913664714, shard 1/4, the
+ * page snapshot at timeout showed exactly that empty state). Paying the
+ * reset restores the invariant these tests actually depend on.
  */
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all four surfaces", { tag: READ_ONLY }, async ({ page }) => {
+test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // Today's departure card drops staff straight onto the manifest's boarding pass.
@@ -42,9 +50,10 @@ test("the trip sub-nav reaches all four surfaces", { tag: READ_ONLY }, async ({ 
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
 });
 
-test("staff can view or copy a trip's public booking page from its overview", {
-  tag: READ_ONLY,
-}, async ({ page, context }) => {
+test("staff can view or copy a trip's public booking page from its overview", async ({
+  page,
+  context,
+}) => {
   await context.grantPermissions(["clipboard-write", "clipboard-read"]);
   await page.goto("/shop/blue-mantis");
   await page.getByRole("link", { name: "Board divers" }).first().click();

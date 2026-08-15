@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -202,7 +203,16 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.common.moveIntro")}
         </p>
-        <ol className="mt-12">{children}</ol>
+        <ol className="mt-12">
+          {/* Inside the list, so mounting proves the id-bearing phase exists.
+              A phase's `id` (see MovePhase below) is a link target reached by
+              client-side `<Link>` transition — this segment's own
+              `loading.tsx` skeleton has no such id, so Next's built-in hash
+              scroll finds nothing on the first commit and gives up rather
+              than retrying once the real phase streams in. */}
+          <ScrollToHash />
+          {children}
+        </ol>
       </div>
     </section>
   );
