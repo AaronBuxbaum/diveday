@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 
 // Real verify/reset links only ever exist inside a real email — there is no
@@ -86,11 +85,24 @@ test("a valid password-reset link sets a new password and signs the owner in", a
   ).toBeVisible();
 });
 
+/**
+ * Against a shop of this test's own (`privateShop`, ADR
+ * 20260815-per-test-private-shops) rather than the seeded demo owner: asking
+ * for a reset link mints a live `account_tokens` row against the account, and
+ * the per-test reset only clears tokens belonging to people it purges — so the
+ * four permanent staff keep theirs for the rest of the worker's run. Here the
+ * token dies with the shop.
+ *
+ * The fixture also signs `page` in, which this flow neither needs nor reads:
+ * `/forgot-password` looks at no session.
+ */
 test("forgot-password gives the same generic response whether or not the email is registered", async ({
   page,
+  privateShop,
 }) => {
+  test.setTimeout(60_000);
   await page.goto("/forgot-password");
-  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
+  await page.getByLabel("Email").fill(privateShop.ownerEmail);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page).toHaveURL(/\/forgot-password\?sent=1/);
   await expect(page.getByText("If that email has a DiveDay account")).toBeVisible();

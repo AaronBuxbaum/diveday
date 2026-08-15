@@ -79,12 +79,31 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
   });
+});
 
-  test("a shop can take its public pages out of search, and put them back", async ({ page }) => {
+/**
+ * The two rows that *change the shop* rather than open a door. Both write a
+ * `shops` column the per-test reset does not restore — it puts back three of
+ * them and no others — so each takes a shop of its own (`privateShop`, ADR
+ * 20260815-per-test-private-shops).
+ *
+ * They used to restore the setting in trailing steps, which is worse than it
+ * looks: not a `finally`, so any failure before them left the whole worker's
+ * shop sitting in `America/Cancun` and de-indexed from search, and every later
+ * spec read departure times in the wrong zone.
+ */
+test.describe("settings that change the shop", () => {
+  test("a shop can take its public pages out of search, and put them back", async ({
+    page,
+    privateShop,
+  }) => {
+    // The mint and the live sign-in the fixture pays for are inside this
+    // test's own budget.
+    test.setTimeout(60_000);
     // Being listed used to be a consequence of signing up, with nothing to
     // say so and nothing to undo it (ADR 20260813-search-listing-is-a-choice).
     // The row states which way it is set at rest, and the switch round-trips.
-    await page.goto(`/shop/${SHOP}/settings`);
+    await page.goto(`/shop/${privateShop.slug}/settings`);
     await openSettingsRow(page, "Search listing");
     const listed = page.getByLabel("List my public pages in search engines");
     await expect(listed).toBeChecked();
@@ -96,7 +115,7 @@ test.describe("as owner", () => {
     ).toBeVisible();
     await expect(page.getByLabel("List my public pages in search engines")).not.toBeChecked();
 
-    // Put it back, so the rest of this worker's run sees the seeded default.
+    // And back on again — the round trip is the claim, not the one-way switch.
     await page.getByLabel("List my public pages in search engines").check();
     await page.getByRole("button", { name: "Save" }).first().click();
     await expect(
@@ -104,11 +123,15 @@ test.describe("as owner", () => {
     ).toBeVisible();
   });
 
-  test("a shop can change the zone its whole schedule is read in", async ({ page }) => {
+  test("a shop can change the zone its whole schedule is read in", async ({
+    page,
+    privateShop,
+  }) => {
+    test.setTimeout(60_000);
     // Sign-up asked for a timezone once and nothing could change it
     // afterwards, so a shop that clicked past the picker read every departure
     // time, day header, and "sailing today" in US Eastern with no way out.
-    await page.goto(`/shop/${SHOP}/settings`);
+    await page.goto(`/shop/${privateShop.slug}/settings`);
     // The row states its current zone at rest; the picker waits behind it.
     await openSettingsRow(page, "Timezone");
     const zone = page.getByLabel("Timezone", { exact: true });
@@ -119,8 +142,8 @@ test.describe("as owner", () => {
     await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
     await expect(page.getByLabel("Timezone", { exact: true })).toHaveValue("America/Cancun");
 
-    // Put it back so the rest of this worker's run reads the seeded clock the
-    // way every other spec expects.
+    // And back, which is the other half of the claim: the picker is not a
+    // one-way door a shop can strand itself behind.
     await page.getByLabel("Timezone", { exact: true }).selectOption("America/New_York");
     await page.getByRole("button", { name: "Save timezone" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();

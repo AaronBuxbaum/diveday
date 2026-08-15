@@ -140,6 +140,33 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
 /** The canonical demo's addresses — `dev-credentials.ts` holds the sign-ins. */
 const canonicalStaffEmail = (local: string) => `${local}@demo.invalid`;
 
+/**
+ * The one 12-hour shift every member of the demo cast works today, so the
+ * rostering surface (`/shop/<slug>/staffing`) has a day to show.
+ *
+ * Shared by all three places staff arrive in a demo shop — the canonical seed,
+ * a shop minted by "Try the live demo", and `restoreMissingStableStaff`'s
+ * repair — because a shop that has a cast and no shifts renders an empty
+ * roster, which is what a minted demo did until 2026-08-15. Part of the
+ * **stable** half: a schedule reset never re-seeds these, so a person who
+ * already has one keeps it.
+ */
+async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string[]): Promise<void> {
+  if (personIds.length === 0) return;
+  const startsAt = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
+  const endsAt = new Date(startsAt.getTime() + 12 * 60 * 60 * 1000);
+  await db.insert(staffShifts).values(
+    personIds.map((personId) => ({
+      shopId,
+      personId,
+      startsAt,
+      endsAt,
+      note: "Demo schedule",
+      createdByPersonId: personId,
+    })),
+  );
+}
+
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
   if (existing.length > 0) return;
@@ -254,17 +281,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     ),
   );
 
-  const demoShiftStart = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
-  const demoShiftEnd = new Date(demoShiftStart.getTime() + 12 * 60 * 60 * 1000);
-  await db.insert(staffShifts).values(
-    staff.map((person) => ({
-      shopId: shop.id,
-      personId: person.id,
-      startsAt: demoShiftStart,
-      endsAt: demoShiftEnd,
-      note: "Demo schedule",
-      createdByPersonId: person.id,
-    })),
+  await seedStaffShifts(
+    db,
+    shop.id,
+    staff.map((person) => person.id),
   );
 
   await seedDemoSchedule(db, shop.id, opts);
@@ -423,6 +443,16 @@ export async function createDemoShop(
         hashedPassword: await hash(crypto.randomUUID(), 4),
       })),
     ),
+  );
+
+  // The same day on the roster the canonical demo gets. Without it a minted
+  // demo's rostering surface was empty — the cast was there, nobody was ever
+  // working — and an e2e spec could not take a shop of its own to write a
+  // shift into (ADR 20260815-per-test-private-shops).
+  await seedStaffShifts(
+    db,
+    shop.id,
+    staff.map((person) => person.id),
   );
 
   // No fabricated billing back-fill on a minted demo: `seedHistory` pins
@@ -1048,16 +1078,10 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     // is a different wrong answer from the one it just fixed — and the reset
     // never re-seeds shifts for staff who already have one, so this is the only
     // moment they can get theirs.
-    const shiftStart = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
-    await db.insert(staffShifts).values(
-      restored.map((person) => ({
-        shopId,
-        personId: person.id,
-        startsAt: shiftStart,
-        endsAt: new Date(shiftStart.getTime() + 12 * 60 * 60 * 1000),
-        note: "Demo schedule",
-        createdByPersonId: person.id,
-      })),
+    await seedStaffShifts(
+      db,
+      shopId,
+      restored.map((person) => person.id),
     );
   }
 

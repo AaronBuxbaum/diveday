@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the five `seed-*` test routes, one table for all of them
+ * The auth gate on the six `seed-*` test routes, one table for all of them
  * (`reset` has its own colocated route.test.ts, which also covers its success
  * path). Every case here is a *refusal*: the shared guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
@@ -27,6 +27,7 @@ const seedStripeAccount = await import("./seed-stripe-account/route");
 const seedLastMinute = await import("./seed-last-minute-unsubscribe-token/route");
 const seedCourtesyEmail = await import("./seed-courtesy-email-unsubscribe-token/route");
 const seedTroubleStates = await import("./seed-trouble-states/route");
+const seedPrivateShop = await import("./seed-private-shop/route");
 
 const secret = "e2e-test-secret";
 
@@ -77,6 +78,24 @@ const routes: SeedRoute[] = [
     // intent, an owed refund and two erasure obligations, so a route that
     // answered on a misconfigured deployment would be writing that into a real
     // shop's tables.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-private-shop",
+    // `getDb` is stubbed here and returns nothing, so this route's very next
+    // line (`db.transaction`) throws the moment the guard lets it through.
+    // Swallowed on purpose: what this file asserts is *whether* the request
+    // reached the database, never that the mint succeeded against a mock.
+    POST: async (request) =>
+      seedPrivateShop.POST(request).catch(() => new Response(null, { status: 500 })),
+    // Same shape as the two above: no body, so reaching the database is what
+    // proves the guard let it through. This one mints a whole `isDemo` tenant
+    // whose staff sign in with a published password (ADR
+    // 20260815-per-test-private-shops), so a route that answered on a
+    // misconfigured deployment would be handing anyone a shop and the
+    // credentials to it.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
@@ -145,3 +164,42 @@ describe.each(routes)(
     });
   },
 );
+
+/**
+ * `seed-private-shop` is the one of these with a second handler — the fixture's
+ * teardown drops the shop it minted (ADR 20260815-per-test-private-shops) — and
+ * a handler is guarded one at a time. This one takes a caller-supplied slug and
+ * hard-deletes a whole tenant, so an unguarded copy is the worst of the set.
+ */
+describe("DELETE /api/test/seed-private-shop", () => {
+  function dropRequest(slug: string, authorization?: string) {
+    const headers: Record<string, string> = {};
+    if (authorization !== undefined) headers.authorization = authorization;
+    return new Request(`http://localhost/api/test/seed-private-shop?slug=${slug}`, {
+      method: "DELETE",
+      headers,
+    });
+  }
+
+  it("404s without the bearer token, before any database work", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    const response = await seedPrivateShop.DELETE(dropRequest("some-shop"));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_available" });
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses the canonical demo shop by slug, past the guard", async () => {
+    const response = await seedPrivateShop.DELETE(dropRequest("blue-mantis", `Bearer ${secret}`));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_body" });
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request naming no shop at all", async () => {
+    const response = await seedPrivateShop.DELETE(dropRequest("", `Bearer ${secret}`));
+    expect(response.status).toBe(400);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+});
