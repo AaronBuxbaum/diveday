@@ -343,10 +343,18 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
-  it("keeps the refused sender identity in the failure detail but out of the log line", async () => {
+  // A 403 whose resource ARN names a personal mailbox is the SES *sandbox*, not a
+  // misconfigured sender: a pre-verified recipient is an identity too, and a send is
+  // authorized against every identity it touches. The sender user is granted
+  // `ses.dive.day` and the configuration set alone, so the recipient's own identity is
+  // what the denial names — reading it as a bad `SES_FROM_EMAIL` sends an operator after
+  // the wrong thing, which is why docs/engineering/ses-email-runbook.md's troubleshooting
+  // table gives the sender case and this one separate rows. Either way the address may
+  // never reach the log line.
+  it("keeps the refused identity in the failure detail but out of the log line", async () => {
     const error = Object.assign(
       new Error(
-        "User `arn:aws:iam::417160702652:user/diveday-ses-sender' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-east-1:417160702652:identity/owner@gmail.com'",
+        "User `arn:aws:iam::417160702652:user/diveday-ses-sender' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-east-1:417160702652:identity/diver@gmail.com'",
       ),
       { name: "AccessDeniedException", $metadata: { httpStatusCode: 403 } },
     );
@@ -361,11 +369,11 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       retryable: false,
       httpStatus: 403,
       errorCode: "AccessDeniedException",
-      detail: expect.stringContaining("identity/owner@gmail.com"),
+      detail: expect.stringContaining("identity/diver@gmail.com"),
     });
 
     const line = warn.mock.calls[0]?.[0] as string;
-    expect(line).not.toContain("owner@gmail.com");
+    expect(line).not.toContain("diver@gmail.com");
     expect(line).toContain("identity/<redacted>@gmail.com");
     expect(line).toContain("AccessDeniedException");
     warn.mockRestore();
