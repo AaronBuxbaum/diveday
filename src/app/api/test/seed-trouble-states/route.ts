@@ -12,6 +12,7 @@ import {
   mediaDeletionAttempts,
   paymentOperationIntents,
   people,
+  processorErasureObligations,
   tripReviews,
   trips,
 } from "@/db/schema";
@@ -136,18 +137,55 @@ export async function POST(request: Request) {
       .where(eq(mediaDeletionAttempts.id, attempt.id));
   }
 
+  const erasureExternalIds = ["cus_e2e_owed", "in_e2e_owed"];
   await recordProcessorErasureObligations(db, {
     shopId: shop.id,
     personId: actor.id,
     targets: [
-      { target: "stripe_customer", externalId: "cus_e2e_owed", stripeAccountId: "acct_e2e_test" },
+      {
+        target: "stripe_customer",
+        externalId: erasureExternalIds[0],
+        stripeAccountId: "acct_e2e_test",
+      },
       {
         target: "stripe_invoice_snapshot",
-        externalId: "in_e2e_owed",
+        externalId: erasureExternalIds[1],
         stripeAccountId: "acct_e2e_test",
       },
     ],
   });
+  // Pull `created_at` onto the frozen clock, exactly as the media-deletion
+  // attempt above does, and for a reason the panel makes visible: each of these
+  // rows renders "raised {date}", and `created_at` is `defaultNow()` — stamped
+  // by *Postgres*, which `DIVEDAY_CLOCK` does not reach (see `dbNow`'s docblock
+  // in src/test/db.ts). So this capture read the real calendar and changed on
+  // its own every midnight: the baseline said "raised Fri, Aug 14" and the next
+  // day's run said "raised Sat, Aug 15", failing visual regression on a PR that
+  // had touched nothing. Found on 2026-08-15 from a diff on an infrastructure
+  // change that cannot render a pixel.
+  //
+  // Written here rather than by teaching `recordProcessorErasureObligations` an
+  // optional timestamp: production genuinely wants the database's own clock on
+  // this column, and a test-only seam does not belong in the writer that the
+  // erasure path depends on.
+  //
+  // Matched on the external ids rather than on what the call above returned,
+  // and that is the whole correctness of it: `recordProcessorErasureObligations`
+  // is `onConflictDoNothing`, so against a database that already holds these
+  // rows it returns an EMPTY array. This route is idempotent by design and the
+  // e2e fleet re-posts it, so keying the update off the returned rows would
+  // silently do nothing on every run after the first and leave exactly the
+  // wall-clock date this exists to remove. Caught by fixing it the wrong way
+  // first and watching the capture still read "Sat, Aug 15".
+  await db
+    .update(processorErasureObligations)
+    .set({ createdAt: now })
+    .where(
+      and(
+        eq(processorErasureObligations.shopId, shop.id),
+        inArray(processorErasureObligations.externalId, erasureExternalIds),
+      ),
+    );
 
   // 5. The shop has hidden its way past the line where DiveDay stops publishing
   //    its rating. Through `setReviewPublished`, not a raw update, because a
