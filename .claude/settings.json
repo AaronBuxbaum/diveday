@@ -19,6 +19,7 @@
       "Bash(pnpm install)",
       "Bash(pnpm install --frozen-lockfile)",
       "Bash(node scripts/screenshot.mjs:*)",
+      "Bash(node scripts/stray-processes.mjs:*)",
       "Bash(npx playwright test:*)",
       "Bash(git status)",
       "Bash(git diff:*)",
@@ -57,6 +58,18 @@
       "mcp__github__subscribe_pr_activity",
       "mcp__github__unsubscribe_pr_activity",
       "mcp__github"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/stray-processes.mjs\""
+          }
+        ]
+      }
     ]
   },
   "enableAllProjectMcpServers": true
