@@ -230,6 +230,60 @@ describe("POST /api/offline-manifests/sync", () => {
   });
 
   /**
+   * The batch half of the equal-timestamp tie rule.
+   *
+   * The device breaks a tie by queue position (`latestQueuedAttempt` in
+   * src/lib/offline-manifests.ts), and it is only *allowed* to because this
+   * route applies a batch oldest-first with a **stable** sort — so two events
+   * sharing an `occurredAt` keep the order the device queued them in, the later
+   * tap is written last, and the read-back's `desc(occurredAt), desc(createdAt)`
+   * returns it first. Nothing else pins that: replace the sort with an unstable
+   * one, or sort the payload anywhere else, and the captain's screen and the
+   * server quietly stop agreeing about who came back from a dive.
+   *
+   * Asserted through the manifest rather than through the response, because
+   * every event in the batch reports `applied` either way — the ordering is
+   * only visible in what the manifest ends up saying.
+   */
+  it("applies a same-timestamp batch in queue order, so the last tap is what the manifest says", async () => {
+    const { db, shop, trip, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    // Crew rather than a diver deliberately: crew carry no readiness, so
+    // `boarded` cannot be refused for a reason that has nothing to do with the
+    // ordering under test. The diver half is pinned in src/db/manifests.test.ts,
+    // where a signed waiver makes boarding admissible.
+    const crew = (await getTripManifest(db, shop.id, trip.id))?.crew ?? [];
+    const member = crew[0];
+    if (!member) throw new Error("expected seeded trip to have crew");
+
+    const now = nowDate().toISOString();
+    const event = (status: "boarded" | "not_boarded") => ({
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      crewPersonId: member.id,
+      tripId: trip.id,
+      checkpoint: "departure" as const,
+      status,
+      note: null,
+      occurredAt: now,
+    });
+    // The mistake, then the correction, inside one millisecond-resolution
+    // timestamp — the shape the frozen-clock e2e fleet produces on every run.
+    const response = await POST(postRequest({ events: [event("not_boarded"), event("boarded")] }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { results: Array<{ status: string }> };
+    // Both applied: an equal timestamp is accepted, never `newer_event_exists`.
+    expect(body.results.map((result) => result.status)).toEqual(["applied", "applied"]);
+
+    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
+    expect(manifest?.crew.find((entry) => entry.id === member.id)?.rollCall).toMatchObject({
+      state: "boarded",
+    });
+  });
+
+  /**
    * H-46. The crew half of a head count arrives through this same route, and
    * the only thing that differs is which subject field the event names — the
    * gate above it, the ordering, and the offline contract underneath are all
