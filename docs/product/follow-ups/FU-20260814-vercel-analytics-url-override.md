@@ -34,6 +34,18 @@ delegating shim that redacts `url` on read. It works and it is tested. But it ho
 is exactly the class of silent failure it exists to prevent. A supported override would let us
 delete it.
 
+**Amended 2026-08-15 — the fragility is not hypothetical, and it has already cost us once.** The
+first version of the shim installed itself by assigning to the global. On Vercel that slot is
+defined non-writable, so the assignment threw `TypeError: Cannot assign to read only property
+'Symbol(@vercel/request-context)'` on every server-side event for roughly a day: an error out of
+each `after()` callback, an unhandled rejection out of `authorize()`, and one sign-in `POST /` that
+504'd. Nothing was watching, so it was found in the Vercel log drain rather than by a check. The
+shim now swaps the holder's own `get` instead, `trackEvent` fails closed and logs
+`analytics.capability_redaction_uninstallable` if it ever cannot install, and both shapes are
+regression-tested. That is a second undocumented detail — the *writability* of the slot, on top of
+the symbol and the `{ get(): { url } }` shape — which is worth stating in the upstream request as
+evidence that hooking this global is not a reasonable thing to ask callers to do.
+
 ## Why it isn't already done
 
 Because it is somebody else's repository, and because we needed the leak closed today rather than in
