@@ -7,9 +7,8 @@
   audit finding to revisit someday.
 - **Kind:** question
 - **Effort:** S
-- **Touches:** `src/i18n/locales/en-US/diver.json:2673` (`marketing.product.notCovered.gearSerials`),
-  `src/i18n/locales/es-ES/diver.json:2673` (same key), `src/i18n/locales/en-US/staff/settings.json:484`
-  (`importer.honesty.receiptsService`), `src/i18n/locales/es-ES/staff/settings.json:484` (same key)
+- **Touches:** `src/i18n/locales/en-US/diver.json`, `src/i18n/locales/es-ES/diver.json`,
+  `src/i18n/locales/en-US/staff/settings.json`, `src/i18n/locales/es-ES/staff/settings.json`
 
 ## What I noticed
 
