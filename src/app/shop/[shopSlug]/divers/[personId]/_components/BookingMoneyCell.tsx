@@ -1,7 +1,13 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { bookingMoney, bookingMoneyStatusKey, type DiverProfile } from "./shared";
+import {
+  bookingMoney,
+  bookingMoneyStatusKey,
+  bookingMoneyStatusTone,
+  type DiverProfile,
+} from "./shared";
 
 /**
  * A booking's money, on the booking's own row: what it stands at, and the one
@@ -34,9 +40,13 @@ export function BookingMoneyCell({
   const statusKey = bookingMoneyStatusKey(money);
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm whitespace-nowrap text-muted">
+      {/* The canonical `Badge`, tone and word read off the same row by the
+          same pair of helpers. This used to be a flat grey pill that gave
+          "Unpaid", "Paid" and "Refunded" one non-answer, sitting a few rows
+          from the real badges the same page renders. */}
+      <Badge tone={bookingMoneyStatusTone(money)} className="whitespace-nowrap">
         {statusKey ? t(statusKey) : t("divers.payments.noOrder")}
-      </span>
+      </Badge>
       {money.order ? (
         <Link
           href={`/shop/${shopSlug}/orders/${money.order.order.id}`}

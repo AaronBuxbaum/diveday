@@ -15,6 +15,8 @@ import {
   rollCallCheckpoints,
   rollCallCompleteness,
   rollCallLabel,
+  rollCallRecordedTone,
+  rollCallRowState,
   splitBuddyTeamIds,
 } from "./manifests";
 
@@ -989,5 +991,54 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
     });
     expect(teamed.completeness).toEqual(unteamed.completeness);
     expect(teamed.summary).toEqual(unteamed.summary);
+  });
+});
+
+describe("rollCallRecordedTone", () => {
+  const at = new Date("2026-08-15T12:00:00Z");
+  const record = (state: RollCallRecord["state"], implied?: boolean): RollCallRecord => ({
+    state,
+    occurredAt: at,
+    recordedByName: "Nora Quinn",
+    note: null,
+    ...(implied === undefined ? {} : { implied }),
+  });
+
+  it("has no tone until somebody has said something", () => {
+    // The caller owns what an untouched row looks like, because a diver's
+    // depends on readiness at the dock and a crew member's never does.
+    expect(rollCallRecordedTone(rollCallRowState("departure", undefined))).toBeNull();
+  });
+
+  it("tells a dock-side 'never left' apart from the aboard result", () => {
+    // The regression this pins: the offline manifest keyed its *boarded* fill
+    // off "any result exists", so a diver recorded **not boarded** at the dock
+    // rendered in the aboard colour — green, on the one screen a captain reads
+    // to decide who is on the boat.
+    expect(rollCallRecordedTone(rollCallRowState("departure", record("not_boarded")))).toBe(
+      "notBoarded",
+    );
+    expect(rollCallRecordedTone(rollCallRowState("departure", record("boarded")))).toBe("boarded");
+  });
+
+  it("never calls a dock-side absence a missing diver", () => {
+    // At departure `not_boarded` means "never left", which is benign — the
+    // loudest tone on the page is reserved for an after-dive non-return.
+    expect(rollCallRowState("departure", record("not_boarded")).notBackAboard).toBe(false);
+  });
+
+  it("promotes an after-dive non-return above every other result", () => {
+    const state = rollCallRowState("after_dive_1", record("not_boarded"));
+    expect(state.notBackAboard).toBe(true);
+    expect(rollCallRecordedTone(state)).toBe("notBackAboard");
+  });
+
+  it("separates a carried-forward absence from one stated here", () => {
+    // A diver who never left the dock is accounted for at every later
+    // checkpoint, not missing from it — and the quieter tone says so.
+    const carried = rollCallRowState("after_dive_1", record("not_boarded", true));
+    expect(carried.notBackAboard).toBe(false);
+    expect(carried.recordedHere).toBe(false);
+    expect(rollCallRecordedTone(carried)).toBe("notBoardedImplied");
   });
 });

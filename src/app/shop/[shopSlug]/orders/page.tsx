@@ -6,7 +6,7 @@ import { Pager } from "@/components/Pager";
 import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -21,6 +21,7 @@ import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
+import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -47,18 +48,6 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
   void: "orders.detail.status.void",
   uncollectible: "orders.detail.status.uncollectible",
   refunded: "orders.detail.status.refunded",
-};
-
-/**
- * Paid deliberately has no entry: on this index it is the expected state of
- * nearly every row, and a success pill repeated down the whole column is
- * noise pretending to be information (design principle 9). Paid renders as
- * an empty cell; a badge appears only on the statuses that need a
- * staffer's eye.
- */
-const STATUS_TONES: Record<string, BadgeTone> = {
-  open: "primary",
-  refunded: "warning",
 };
 
 /**
@@ -545,10 +534,14 @@ export default async function OrdersIndexPage({
           <TBody>
             {rows.map((row) => {
               // Paid is the expected state and renders as quiet muted text;
-              // only the exceptional statuses earn a badge (principle 9).
+              // only the exceptional statuses earn a badge (principle 9). That
+              // is this page's call, made here — `ORDER_STATUS_TONES` still
+              // knows paid is `success`, because the two surfaces that do show
+              // it need that, and a hole in the map would have made it grey
+              // there instead of absent here.
               const statusBadge =
                 row.order.status === "paid" ? null : (
-                  <Badge tone={STATUS_TONES[row.order.status] ?? "neutral"}>
+                  <Badge tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}>
                     {STATUS_KEYS[row.order.status]
                       ? t(STATUS_KEYS[row.order.status])
                       : row.order.status}

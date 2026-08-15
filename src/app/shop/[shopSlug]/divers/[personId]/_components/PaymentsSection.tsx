@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import { type DiverProfile, ORDER_STATUS_KEYS, type Shop } from "./shared";
+import type { DiverProfile, Shop } from "./shared";
 
 /**
  * Newest-first, then the rest behind a disclosure — same treatment as the
@@ -48,11 +50,12 @@ function RefundButton({
         disabled
         aria-disabled="true"
         title={t("divers.payments.demoRefundHint")}
-        className={buttonClass({
-          variant: "danger",
-          size: "sm",
-          className: "cursor-not-allowed opacity-50",
-        })}
+        // No hand-rolled `cursor-not-allowed opacity-50`: the button *is*
+        // `disabled`, and the wrapper's own `disabled:` pair says exactly
+        // this. Spelling it a second time both fought the wrapper's opacity
+        // (two utilities for one property resolve by stylesheet order) and
+        // dimmed the control even when it was not disabled.
+        className={buttonClass({ variant: "danger", size: "sm" })}
       >
         {t("divers.payments.refund")}
       </button>
@@ -61,9 +64,12 @@ function RefundButton({
   return (
     <form action={refundPaymentAction.bind(null, shopSlug, personId)}>
       <input type="hidden" name="orderId" value={orderId} />
+      {/* `busy`: this control disables itself for the duration of its own
+          refund, which is "this is happening", not "you cannot do this" — a
+          wait cursor rather than a not-allowed one. */}
       <SubmitButton
         pendingLabel={t("divers.payments.refunding")}
-        className={buttonClass({ variant: "danger", size: "sm" })}
+        className={buttonClass({ variant: "danger", size: "sm", busy: true })}
       >
         {t("divers.payments.refund")}
       </SubmitButton>
@@ -137,9 +143,13 @@ function OrderRow({
             t={t}
           />
         ) : null}
-        <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
+        {/* The canonical `Badge`, in the one tone this status wears app-wide
+            (`src/i18n/order-labels.ts`). It was a flat grey pill until now, so
+            a refunded order and a paid one read identically on the very list
+            a staffer opens to reconcile them. */}
+        <Badge tone={ORDER_STATUS_TONES[order.status] ?? "neutral"}>
           {statusLabel(t, ORDER_STATUS_KEYS, order.status)}
-        </span>
+        </Badge>
       </div>
     </li>
   );

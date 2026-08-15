@@ -1,3 +1,5 @@
+import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+
 /**
  * The staff subtree's page frame (design principle 1) — the shop home's own
  * skeleton, and the floor every `/shop/[shopSlug]` descendant falls back to.
@@ -19,9 +21,7 @@ export default function ShopSurfaceLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <div className="h-4 w-24 rounded bg-surface-sunken" />
-        <div className="mt-3 h-9 w-56 rounded bg-surface-sunken" />
-        <div className="mt-2 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-72 max-w-full" />
         <div className="mt-8 flex flex-col gap-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-20 rounded-xl border border-border bg-surface" />

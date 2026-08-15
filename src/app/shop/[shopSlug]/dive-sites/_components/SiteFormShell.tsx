@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState, useEffect, useLayoutEffect, useRef } from "react";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { useActionState, useLayoutEffect, useRef } from "react";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { FormStatus } from "@/components/ui/form";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
 
 /**
@@ -79,9 +80,21 @@ export function SiteFormShell({
   savedMessage?: string;
   children: ReactNode;
 }) {
-  const [state, formAction] = useActionState(action, IDLE_SITE_FORM_STATE);
+  // The attempt counter is what `FieldErrorFocus` is keyed on. Its effect is
+  // keyed on what it was told, so the *same* refusal twice in a row — a
+  // staffer who fixes the wrong coordinate and presses Save again — would
+  // otherwise leave the cursor where it was. `useActionState` hands back a
+  // fresh state object per attempt but no nonce, so wrapping the action is
+  // where one comes from; the shell's own state type carries it and the
+  // server action never sees it.
+  const [state, formAction] = useActionState<SiteFormState & { attempt?: number }, FormData>(
+    async (previous, formData) => ({
+      ...(await action(previous, formData)),
+      attempt: (previous.attempt ?? 0) + 1,
+    }),
+    IDLE_SITE_FORM_STATE,
+  );
   const formRef = useRef<HTMLFormElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const form = formRef.current;
@@ -89,37 +102,38 @@ export function SiteFormShell({
     for (const field of Array.from(form.elements)) restore(field, state.values);
   }, [state]);
 
-  // The refusal used to render *above* the form. On a twenty-field briefing
-  // that put it a full screen above the Save button the staffer had just
-  // pressed — they saw nothing happen, and scrolling back up was on them. It
-  // now renders at the end of the form, immediately after the submit button
-  // that is this form's last child, and the effect below moves focus to it so
-  // a keyboard or screen-reader user lands on the reason rather than hunting
-  // for it. See `FormStatus` (src/components/ui/form.tsx) for the rule.
-  useEffect(() => {
-    if (!state.errorCode) return;
-    const el = statusRef.current;
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.focus({ preventScroll: true });
-  }, [state]);
-
   return (
     <form ref={formRef} action={formAction} className="mt-8 flex flex-col gap-5">
       {children}
+      {/* The refusal used to render *above* the form. On a twenty-field
+          briefing that put it a full screen above the Save button the staffer
+          had just pressed — they saw nothing happen, and scrolling back up was
+          on them. It renders at the end of the form now, immediately after the
+          submit button that is this form's last child.
+
+          `FormStatus` is the shared shape for that (components/ui/form.tsx),
+          and it brings the ❌ glyph a danger banner carried but a bare
+          paragraph did not; `FieldErrorFocus` is the shared scroll-and-focus
+          that this file used to re-implement with its own effect, ref and
+          `tabIndex={-1}`. Between them the hand-rolled half of this component
+          is gone — and the focus target picks up the brief ring the rest of the
+          app's refusals already have. */}
       {state.errorCode ? (
-        // `tabIndex={-1}` so the effect above can put the cursor here; the
-        // alert role is what announces it to a screen reader either way.
-        <div ref={statusRef} tabIndex={-1} className="outline-none">
-          <ShopNotice tone="danger" role="alert">
+        <>
+          <FormStatus tone="danger" id={REFUSAL_ID}>
             {errorMessages[state.errorCode]}
-          </ShopNotice>
-        </div>
+          </FormStatus>
+          <FieldErrorFocus key={state.attempt} field={REFUSAL_ID} />
+        </>
       ) : savedMessage ? (
-        <ShopNotice tone="success" role="status">
-          {savedMessage}
-        </ShopNotice>
+        <FormStatus tone="success">{savedMessage}</FormStatus>
       ) : null}
     </form>
   );
 }
+
+/**
+ * The refusal line's own id, so `FieldErrorFocus` has something to name. The
+ * two site forms are never on one page together, so one constant is enough.
+ */
+const REFUSAL_ID = "site-form-refusal";

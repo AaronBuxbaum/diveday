@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
+import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RecapMap } from "@/components/RecapMap";
@@ -91,15 +92,17 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * A terminal outcome for this link — a dead token, or a booking that never
+ * sailed. `EntryDone` is the app's one warm terminal pattern
+ * (docs/design/principles.md #4) and the same shape `claim/[token]` already
+ * gives a dead bearer link; this page used to spell a left-aligned
+ * `rounded-xl` card of its own, one of three different boxes three token pages
+ * had grown for the same kind of message. `⏳` is the app-wide "this link has
+ * run out" mark, decorative — both branches here wear the same heading.
+ */
 function Notice({ title, text }: { title: string; text: string }) {
-  return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-2 text-muted">{text}</p>
-      </div>
-    </main>
-  );
+  return <EntryDone glyph="⏳" title={title} text={text} />;
 }
 
 /**

@@ -12,7 +12,7 @@
 // them down — which ships no bundle and is the change to make here. Until
 // then these three strings stay English; the ADR names this as the known
 // remainder rather than an unexamined tradeoff.
-import { buttonClass } from "@/components/ui/button";
+import { ErrorPage } from "@/components/ErrorPage";
 
 /**
  * The shop-wide backstop — catches a render error on Today and every other
@@ -23,19 +23,12 @@ import { buttonClass } from "@/components/ui/button";
  */
 export default function ShopError({ reset }: { error: Error; reset: () => void }) {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">That didn’t go through</h1>
-      <p className="mt-3 text-muted">
-        Something went wrong loading this screen. Your last change may not have saved — tap to try
-        again.
-      </p>
-      <button
-        type="button"
-        onClick={reset}
-        className={buttonClass({ size: "boat", className: "mt-6" })}
-      >
-        Try again
-      </button>
-    </main>
+    <ErrorPage
+      title="That didn’t go through"
+      body="Something went wrong loading this screen. Your last change may not have saved — tap to try again."
+      resetLabel="Try again"
+      onReset={reset}
+      size="boat"
+    />
   );
 }

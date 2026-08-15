@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import {
@@ -76,9 +77,11 @@ export function LandmarkEditor({
       <input type="hidden" name="landmarks" value={JSON.stringify(landmarks)} />
 
       {landmarks.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface-sunken p-3 text-sm text-muted">
-          {copy.empty}
-        </p>
+        // Nested inside the fieldset, so no icon — same shared panel the field
+        // guide and the route editor wear for the same state.
+        <EmptyState icon={false} className="mt-4">
+          <p className="text-sm text-muted">{copy.empty}</p>
+        </EmptyState>
       ) : (
         <ul className="mt-4 space-y-3">
           {landmarks.map((landmark, index) => (

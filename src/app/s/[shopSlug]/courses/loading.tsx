@@ -1,3 +1,5 @@
+import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+
 /**
  * Catalog-shaped skeleton for the diver-facing course list (design principle
  * 1): the header block, then the hairline ledger the catalog renders — rows
@@ -9,10 +11,8 @@
 export default function PublicCoursesLoading() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mb-8 animate-pulse">
-        <div className="h-3 w-20 rounded bg-surface-sunken" />
-        <div className="mt-2 h-9 w-48 rounded bg-surface-sunken" />
-        <div className="mt-2 h-4 w-full max-w-2xl rounded bg-surface-sunken" />
+      <div className="animate-pulse">
+        <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-full max-w-2xl" />
       </div>
       <div className="mt-8 animate-pulse divide-y divide-border border-y border-border">
         {[0, 1, 2, 3].map((i) => (

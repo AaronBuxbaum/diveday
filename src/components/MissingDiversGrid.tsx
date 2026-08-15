@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { firstNameOf } from "@/lib/person-name";
 
 type MissingDiver = {
   bookingId: string;
@@ -131,7 +132,15 @@ export function MissingDiversGrid({
                 className="mt-1 block w-full truncate text-xs font-bold text-foreground"
                 title={diver.fullName}
               >
-                {diver.fullName.split(" ")[0]}
+                {/* The shared helper, not `.split(" ")[0]`: a stored name with
+                    a leading space splits to an empty first token, and an
+                    empty tile under a face is the one thing this grid cannot
+                    show. The fallback is the diver's own stored name — the
+                    tile's `title` and its initials already come from it, and
+                    the alternative is inventing a word in a component that
+                    holds no translator (every other string here arrives as
+                    `copy`). */}
+                {firstNameOf(diver.fullName, diver.fullName)}
               </span>
               <span className="block w-full truncate text-xs text-muted">
                 {diver.rentsKit ? copy.rentsKitLabel : copy.ownKitLabel}
@@ -141,10 +150,19 @@ export function MissingDiversGrid({
                   from the same readiness vocabulary — and *below* the kit
                   line, so one blocked diver doesn't push their own tile's
                   labels a line out of step with the rest of the row. */}
+              {/* `toneMark={false}`: the canonical danger `Badge`, minus its
+                  ❌ — a tile is 80px wide and the mark would take a third of
+                  the chip from a word the red fill has already coloured. Same
+                  exemption the nav's blocked count takes. */}
               {diver.blocked ? (
-                <span className="mt-0.5 max-w-full truncate rounded-full bg-danger/10 px-2 text-xs font-semibold text-danger">
+                <Badge
+                  tone="danger"
+                  size="sm"
+                  toneMark={false}
+                  className="mt-0.5 max-w-full truncate font-semibold"
+                >
                   {copy.blockedLabel}
-                </span>
+                </Badge>
               ) : null}
             </button>
           );

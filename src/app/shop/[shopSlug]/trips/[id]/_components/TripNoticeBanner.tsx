@@ -1,5 +1,6 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -364,9 +365,24 @@ export function TripNoticeBanner({
           {undoBookingId && undoAction ? (
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
+              {/* The `link` variant is exactly what this hand-rolled string was
+                  reaching for — reads as inline text, still claims a full 44px
+                  target — so it goes through `buttonClass` like every other
+                  button-shaped thing (docs/design/forms-and-controls.md).
+                  `busy`, because a `SubmitButton` disables itself only while its
+                  own submit is in flight, and the default not-allowed cursor
+                  reads as a refusal at the moment the undo was accepted. The one
+                  thing that changes on screen: the label now takes the link
+                  colour rather than inheriting the notice's tone, which is how
+                  every other undo/inline action in the app already reads. */}
               <SubmitButton
                 pendingLabel={t("trips.notices.undoing")}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 font-semibold underline-offset-2 hover:underline"
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  busy: true,
+                  className: "font-semibold underline-offset-2",
+                })}
               >
                 {t("trips.notices.undo")}
               </SubmitButton>

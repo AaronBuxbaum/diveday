@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
-import { controlClass } from "@/components/ui/form";
+import { buttonClass } from "@/components/ui/button";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
@@ -210,7 +211,13 @@ export function CrewSection({
             // so a visible caption beside it said the same thing twice
             // (design/principles.md #9) — the aria-label keeps the accessible
             // name the specs and screen readers address it by.
-            <div>
+            // Sized by the wrapper, not by width classes appended to
+            // `controlClass` — that string already carries `w-full`, and two
+            // width utilities resolve by stylesheet order rather than class
+            // order (same trap as `min-h-*`, see components/ui/button.ts). Full
+            // width on a phone, shrink-to-content from `sm` up, which is what
+            // the hand-rolled `sm:w-auto` on the select used to buy.
+            <div className="sm:w-fit">
               <select
                 aria-label={copy.assignLabel}
                 defaultValue=""
@@ -220,7 +227,7 @@ export function CrewSection({
                   event.currentTarget.value = "";
                   void handleAssign(personId);
                 }}
-                className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground sm:w-auto"
+                className={`${controlClass} text-sm`}
               >
                 <option value="">{copy.assignOption}</option>
                 {availableStaff
@@ -235,7 +242,15 @@ export function CrewSection({
           ) : null}
 
           {localCrew.length === 0 ? (
-            <p className="text-sm text-muted">{copy.notAssignedYet}</p>
+            // The same empty-section grammar this file already uses for the
+            // no-staff-at-all case 30 lines up (design/principles.md, "Empty
+            // states follow one rule") — it was a bare `<p>`, so one component
+            // said "nothing here" two ways. `icon={false}`: this one sits under
+            // the assign picker rather than standing alone, so the bubbles
+            // would outweigh the line of text.
+            <EmptyState icon={false}>
+              <p className="text-sm text-muted">{copy.notAssignedYet}</p>
+            </EmptyState>
           ) : (
             <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
               {localCrew.map((entry) => (
@@ -292,13 +307,17 @@ export function CrewSection({
                         ))}
                       </select>
                     </span>
-                    {/* min-w-11 with a centered glyph: 44px tall but ~24px
-                        wide was a sliver of a target for a dockside tap that
-                        drops a crew member (design/principles.md #2). */}
+                    {/* A square 44px target holding one glyph: 44px tall but
+                        ~24px wide was a sliver of a target for a dockside tap
+                        that drops a crew member (design/principles.md #2). The
+                        box is `size: "icon"` rather than a hand-spelled
+                        `min-h-11 min-w-11` — that spelling was one of the four
+                        this app drifted into before the size existed (see
+                        components/ui/button.ts). */}
                     <button
                       type="button"
                       onClick={() => handleUnassign(entry.id)}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-sm font-semibold text-muted hover:bg-danger/10 hover:text-danger"
+                      className={buttonClass({ variant: "danger-ghost", size: "icon" })}
                       aria-label={fill(copy.unassignAria, { name: entry.fullName })}
                     >
                       ×
@@ -308,11 +327,15 @@ export function CrewSection({
               ))}
             </ul>
           )}
-          {assignError ? (
-            <p role="alert" className="text-xs font-semibold text-danger">
-              {copy.assignFailed}
-            </p>
-          ) : null}
+          {/* `FormStatus`, not a hand-rolled `role="alert"` paragraph: it is
+              the shared shape for "this control's own attempt was refused"
+              (docs/design/forms-and-controls.md), and it carries the ❌ glyph
+              this was missing — without one the refusal reached a colourblind
+              reader as ordinary small text (design/principles.md #6). It sits
+              at the foot of the block rather than beside one control because
+              any of the three writes here — assign, unassign, change the job —
+              can raise it. Renders nothing when there is nothing to say. */}
+          <FormStatus tone="danger">{assignError ? copy.assignFailed : null}</FormStatus>
         </div>
       )}
     </section>

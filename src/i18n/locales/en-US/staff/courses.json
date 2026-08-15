@@ -14,6 +14,9 @@
     "schedule": "Schedule",
     "editSrLabel": "Edit {title}",
     "viewPublicPage": "View public page",
+    "emptyTitle": "No courses to show",
+    "emptyBody": "Every course your shop can teach shows up here, ready to edit, hide, or put on the board.",
+    "emptyAction": "Open the schedule",
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
     }

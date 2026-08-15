@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -203,8 +204,22 @@ export default async function ReportsPage({
       ? t("reports.description.future")
       : t("reports.description.past");
 
-  const navClass =
-    "inline-flex size-11 items-center justify-center rounded-lg border border-border bg-surface text-foreground transition-colors duration-200 hover:bg-surface-sunken";
+  // A square 44px target holding one glyph, through the shared `size: "icon"`
+  // rather than a hand-spelled `size-11` — this pair was one of the four
+  // spellings that size exists to end (see components/ui/button.ts). Plain
+  // `secondary`, with no `text-foreground` override: two `text-<color>`
+  // utilities resolve by stylesheet order rather than by the order they are
+  // written, and `globals.css` declares `--color-primary` after
+  // `--color-foreground`, so an override there is inert. That makes these the
+  // same construction as the "Go" button between them, which is what the
+  // navigator wanted all along.
+  const navClass = buttonClass({ variant: "secondary", size: "icon" });
+  // The far edge of the range: decorative and `aria-hidden`, so it wears the
+  // same box and is made inert rather than merely restyled. `pointer-events-none`
+  // and not `cursor-default` — the shared base carries `cursor-pointer`, which
+  // wins by the same ordering rule, and this also stops the hover background
+  // lighting up an arrow that goes nowhere.
+  const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -243,7 +258,7 @@ export default async function ReportsPage({
             <span
               aria-hidden="true"
               title={t("reports.earliestMonthTitle")}
-              className={`${navClass} cursor-default text-muted opacity-40`}
+              className={navDisabledClass}
             >
               ←
             </span>
@@ -283,7 +298,7 @@ export default async function ReportsPage({
             <span
               aria-hidden="true"
               title={t("reports.currentMonthTitle")}
-              className={`${navClass} cursor-default text-muted opacity-40`}
+              className={navDisabledClass}
             >
               →
             </span>
@@ -292,9 +307,15 @@ export default async function ReportsPage({
       </div>
 
       {report.tripCount === 0 ? (
-        <ShopNotice tone="neutral" role="status">
-          {isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
-        </ShopNotice>
+        // A month with no departures is this page's rest state, not news about
+        // it: `ShopNotice` is the vocabulary for something that *happened*
+        // (a save, a refusal, a permission bounce), and wearing it here made an
+        // ordinary quiet January read as a warning.
+        <EmptyState>
+          <p className="mx-auto max-w-md text-sm text-muted">
+            {isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
+          </p>
+        </EmptyState>
       ) : (
         <>
           <section

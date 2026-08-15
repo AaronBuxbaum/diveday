@@ -6,6 +6,7 @@ import { BoardingBar } from "@/components/BoardingBar";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
 import { formatTime, formatTimeRange } from "@/lib/format";
@@ -235,10 +236,15 @@ function DepartureCard({
                   }`}
                 >
                   {c.fullName}
+                  {/* A square 44px target holding one glyph, through the shared
+                      `size: "icon"` rather than a hand-spelled `min-h-11
+                      min-w-11` — this button was one of the four spellings that
+                      size exists to end (see components/ui/button.ts), and the
+                      trip page's own crew chip already wears it. */}
                   <button
                     type="button"
                     onClick={() => handleUnassign(c.id)}
-                    className="ml-1 flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold text-muted hover:bg-danger/10 hover:text-danger"
+                    className={buttonClass({ variant: "danger-ghost", size: "icon" })}
                     aria-label={fill(copy.unassignAria, { name: c.fullName })}
                   >
                     ×
@@ -249,8 +255,17 @@ function DepartureCard({
           ) : null}
           {availableStaff.filter((staff) => !localCrew.some((crew) => crew.id === staff.id))
             .length > 0 ? (
-            <label className="flex flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
-              {copy.assignCrewLabel}
+            // `Field`, not a hand-stacked `<label>` wrapping its control: that
+            // shape is exactly what the wrapper exists to prevent
+            // (docs/design/forms-and-controls.md). Sized by the field wrapper
+            // rather than by a width class on the select — `controlClass`
+            // already carries `w-full`, and two width utilities resolve by
+            // stylesheet order rather than class order (same trap as `min-h-*`,
+            // see components/ui/button.ts). Full width on a phone, shrink to
+            // content from `sm` up, which is what the old `sm:w-auto` bought.
+            // The `aria-label` stays: several cards render this control, so each
+            // one needs an accessible name that names its own departure.
+            <Field label={copy.assignCrewLabel} className="sm:w-fit">
               <select
                 aria-label={fill(copy.assignCrewMemberAria, { title: departure.title })}
                 defaultValue=""
@@ -259,7 +274,7 @@ function DepartureCard({
                   event.currentTarget.value = "";
                   void handleAssign(staffId);
                 }}
-                className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground sm:w-auto"
+                className={`${controlClass} text-sm`}
               >
                 <option value="">{copy.assignCrewOption}</option>
                 {availableStaff
@@ -270,13 +285,13 @@ function DepartureCard({
                     </option>
                   ))}
               </select>
-            </label>
+            </Field>
           ) : null}
-          {assignError ? (
-            <p role="alert" className="text-xs font-semibold text-danger">
-              {copy.assignFailed}
-            </p>
-          ) : null}
+          {/* `FormStatus`, not a hand-rolled `role="alert"` paragraph: it is the
+              shared shape for "this control's own attempt was refused", and it
+              carries the ❌ glyph this was missing — without one the refusal
+              reached a colourblind reader as ordinary small text. */}
+          <FormStatus tone="danger">{assignError ? copy.assignFailed : undefined}</FormStatus>
         </div>
       </details>
     </li>

@@ -5,13 +5,14 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { getShopById } from "@/db/shops";
+import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
@@ -37,11 +38,6 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
   void: "orders.detail.status.void",
   uncollectible: "orders.detail.status.uncollectible",
   refunded: "orders.detail.status.refunded",
-};
-
-const STATUS_TONES: Record<string, BadgeTone> = {
-  paid: "success",
-  open: "primary",
 };
 
 const KIND_KEYS: Record<string, StaffMessageKey> = {
@@ -250,7 +246,10 @@ export default async function OrderDetailPage({
 
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex items-center justify-between gap-3">
-          <Badge tone={STATUS_TONES[order.order.status] ?? "neutral"}>
+          {/* This page is *about* one order, so every status earns its badge —
+              including `paid`, which the index deliberately leaves off a
+              column of 50 rows. Same map, opposite call, both stated. */}
+          <Badge tone={ORDER_STATUS_TONES[order.order.status] ?? "neutral"}>
             {STATUS_KEYS[order.order.status]
               ? t(STATUS_KEYS[order.order.status])
               : order.order.status}

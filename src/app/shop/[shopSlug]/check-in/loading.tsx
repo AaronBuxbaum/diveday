@@ -1,3 +1,5 @@
+import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+
 /**
  * Body-shaped skeleton for Check-in (design principle 1) — the readiness
  * lookup across today's departures has no loading state to show meanwhile,
@@ -9,9 +11,7 @@ export default function CheckInLoading() {
     // footer hugs the skeleton, then drops when the real page lands.
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <div className="h-4 w-24 rounded bg-surface-sunken" />
-        <div className="mt-3 h-9 w-64 rounded bg-surface-sunken" />
-        <div className="mt-2 h-5 w-80 max-w-full rounded bg-surface-sunken" />
+        <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
         <div className="mt-8 flex flex-col gap-6">
           {[0, 1].map((group) => (
             <div key={group} className="rounded-2xl border border-border bg-surface">

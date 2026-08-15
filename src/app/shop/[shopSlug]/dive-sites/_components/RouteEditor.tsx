@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { MapEmbed } from "@/components/MapEmbed";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -260,9 +261,11 @@ export function RouteEditor({
           </div>
         </>
       ) : (
-        <p className="mt-4 rounded-lg border border-border bg-surface-sunken p-3 text-sm text-muted">
-          {copy.needsCoordinates}
-        </p>
+        // Nested inside the fieldset, so no icon — same shared panel the field
+        // guide and the landmark editor wear for the same state.
+        <EmptyState icon={false} className="mt-4">
+          <p className="text-sm text-muted">{copy.needsCoordinates}</p>
+        </EmptyState>
       )}
 
       <FieldGrid columns={2} className="mt-4">

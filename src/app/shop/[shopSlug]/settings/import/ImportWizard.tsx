@@ -7,6 +7,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice, ShopStat } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
   type ImportField,
@@ -211,13 +212,14 @@ export function ImportWizard({
         {fileName ? <span className="text-sm text-muted">{fileName}</span> : null}
       </div>
 
-      {prepared?.fatal ? (
-        <div className="mt-4">
-          <ShopNotice tone="danger" role="alert">
-            {fill(copy.errors[prepared.fatal.code], prepared.fatal.params ?? {})}
-          </ShopNotice>
-        </div>
-      ) : null}
+      {/* A file this wizard cannot read is a refusal of the control just used,
+          not news about the page — so it renders in the chooser's own row
+          rather than as a banner (see `FormStatus`, components/ui/form.tsx). */}
+      <FormStatus tone="danger" className="mt-3">
+        {prepared?.fatal
+          ? fill(copy.errors[prepared.fatal.code], prepared.fatal.params ?? {})
+          : undefined}
+      </FormStatus>
 
       {prepared && !prepared.fatal ? (
         <div className="mt-6">
@@ -406,16 +408,13 @@ export function ImportWizard({
             </p>
           ) : null}
 
-          {state.status === "error" ? (
-            <div className="mt-4">
-              <ShopNotice tone="danger" role="alert">
-                {fill(copy.errors[state.code], state.params ?? {})}
-              </ShopNotice>
-            </div>
-          ) : null}
-
           {!showResult ? (
-            <form action={formAction} className="mt-5">
+            // The import's own refusal moved inside this form, into the action
+            // row beside the button that was pressed: a preview table of up to
+            // sixty rows sat between the two, so a banner above it answered a
+            // tap the staffer had made a screenful below (see `FormStatus`,
+            // components/ui/form.tsx).
+            <form action={formAction} className="mt-5 flex flex-wrap items-center gap-3">
               <input type="hidden" name="csv" value={csvText} />
               <SubmitButton
                 pendingLabel={copy.submitting}
@@ -424,6 +423,11 @@ export function ImportWizard({
               >
                 {fill(copy.submit, { count: prepared.totals.importable })}
               </SubmitButton>
+              <FormStatus tone="danger">
+                {state.status === "error"
+                  ? fill(copy.errors[state.code], state.params ?? {})
+                  : undefined}
+              </FormStatus>
             </form>
           ) : null}
         </div>

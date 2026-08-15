@@ -250,7 +250,20 @@ export default async function EditDiveSitePage({
                 </SubmitButton>
               </form>
               <details className="w-full sm:w-auto">
-                <summary className="flex min-h-11 cursor-pointer items-center rounded-lg border border-danger/30 px-4 py-2 text-center text-sm font-medium text-danger">
+                {/* The real `danger` variant, not a hand-copied approximation
+                    of it: this string had drifted to `border-danger/30` where
+                    the variant is `/40` and `py-2` where every other button on
+                    the page is `py-2.5`, so the one destructive control here
+                    read a shade lighter and a pixel shorter than the danger
+                    buttons it opens. `w-full sm:w-auto` keeps the phone
+                    behaviour the `<details>` around it already asks for, which
+                    the block `flex` used to give for free. */}
+                <summary
+                  className={buttonClass({
+                    variant: "danger",
+                    className: "w-full sm:w-auto",
+                  })}
+                >
                   {t("diveSites.edit.archiveSite")}
                 </summary>
                 <form

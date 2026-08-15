@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { DiveBriefingsSection } from "@/app/s/[shopSlug]/trips/[id]/_components/DiveBriefingsSection";
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
+import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
@@ -126,15 +127,20 @@ function ChecklistRow({
   );
 }
 
-function Notice({ title, text }: { title: string; text: string }) {
-  return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-2xl border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-3 text-muted">{text}</p>
-      </section>
-    </main>
-  );
+/**
+ * A terminal outcome for this link — a dead token, or a booking that was
+ * cancelled underneath the diver. `EntryDone` is the app's one warm terminal
+ * pattern (docs/design/principles.md #4) and the same shape `claim/[token]`
+ * already gives a dead bearer link; this page used to spell a `rounded-2xl`
+ * card of its own instead, which is how three token pages ended up with three
+ * different boxes saying the same kind of thing.
+ *
+ * The glyph is decorative. `⏳` is the app-wide "this link has run out" mark;
+ * a cancelled booking gets `🗓️` instead, because the link is fine and telling
+ * that diver to ask for a fresh one would send them the wrong way.
+ */
+function Notice({ title, text, glyph = "⏳" }: { title: string; text: string; glyph?: string }) {
+  return <EntryDone glyph={glyph} title={title} text={text} />;
 }
 
 /**
@@ -472,6 +478,7 @@ function cancelledNotice(
   const refundKey = verifiedCancelNotice(paymentStatus);
   return (
     <Notice
+      glyph="🗓️"
       title={t("ready.cancelledHeading")}
       text={
         refundKey

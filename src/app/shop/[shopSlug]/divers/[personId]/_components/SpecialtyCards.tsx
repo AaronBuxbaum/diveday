@@ -51,7 +51,12 @@ export function SpecialtyCards({
         </div>
         {/* Opened by its own outcome — see CertificationCards for why. */}
         <details open={Boolean(status)}>
-          <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
+          {/* Through the wrapper — see CertificationCards for why. */}
+          <summary
+            className={buttonClass({
+              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
+          >
             {t("divers.specialty.addSpecialty")}
           </summary>
           {/* No `encType`: a function `action` is a server action, not a

@@ -1,4 +1,5 @@
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type {
   DaySummary,
@@ -8,7 +9,6 @@ import type {
   TodaySeason,
   TodayUrgency,
 } from "@/lib/today";
-import { firstNameOf } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /** Every `TodayUrgency` the queue groups by, to its section-heading key. */
@@ -127,7 +127,10 @@ export function pointingLabelText(
   fullName: string,
 ): string {
   return target === "diver"
-    ? t("shared.today.pointingLabel.diver", { name: firstNameOf(fullName) })
+    ? // Falls back to the whole name rather than a word: this is a pointing
+      // label ("Open Priya's record"), so an unsplittable name is still the
+      // best thing to point at.
+      t("shared.today.pointingLabel.diver", { name: firstNameOf(fullName, fullName) })
     : t("shared.today.pointingLabel.trip");
 }
 

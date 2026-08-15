@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
@@ -481,20 +482,7 @@ async function TripGuestsBody({
               <details className="group mt-2">
                 <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden hover:underline">
                   {t("trips.guests.activityShowAll", { count: activity.length })}
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    className="size-4 transition-transform duration-200 group-open:rotate-180"
-                  >
-                    <path
-                      d="m6 8 4 4 4-4"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
                 </summary>
                 <ol className="mt-2 grid gap-2">
                   {olderActivity.map((event) => (
@@ -535,18 +523,7 @@ async function TripGuestsBody({
               {lastMinutePromos.length > 0
                 ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
                 : null}
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-4 transition-transform group-open:rotate-180"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
             </span>
           </summary>
           {/* `p-4`, not `px-4`: with horizontal padding alone the panel's last

@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/EmptyState";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
@@ -174,18 +176,28 @@ export function BuddyTeamsPanel({
                                     was a 28px hit area for wet fingers, and
                                     the act behind it removes a person from a
                                     buddy team. The chip's own padding grew to
-                                    hold it. */}
-                                  <button
-                                    type="submit"
-                                    className="flex size-11 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
+                                    hold it.
+
+                                    `SubmitButton`, not a raw `<button>`: a wet
+                                    deck is where a tap that seems not to have
+                                    registered gets tapped again, and without
+                                    `useFormStatus` this posted twice — the same
+                                    double-submit every other destructive control
+                                    in the app is already guarded against. The
+                                    pending label is the glyph again rather than
+                                    a word, because the label lives inside a
+                                    44px circle that a word would burst; the
+                                    disabled + `aria-busy` state is what says
+                                    the tap landed. */}
+                                  <SubmitButton
+                                    pendingLabel="×"
+                                    ariaLabel={t("manifest.buddyRemoveMember", {
+                                      name: member.fullName,
+                                    })}
+                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger/10 hover:text-danger"
                                   >
                                     <span aria-hidden="true">×</span>
-                                    <span className="sr-only">
-                                      {t("manifest.buddyRemoveMember", {
-                                        name: member.fullName,
-                                      })}
-                                    </span>
-                                  </button>
+                                  </SubmitButton>
                                 </form>
                               ) : null}
                             </li>
@@ -314,11 +326,26 @@ export function BuddyTeamsPanel({
         ) : unteamedDivers.length === 1 && unteamedDivers[0] ? (
           // An odd roster is normal, never an error — say so instead of
           // rendering a builder that can only fail.
+          //
+          // Deliberately a bare `<p>` where the sibling branch below is an
+          // `EmptyState`, and the difference is not an oversight: that one is a
+          // rest state (nobody is left to pair, the slot is finished), while
+          // this names a diver who is still on their own. A dashed placeholder
+          // card reads as "nothing here", which is the opposite of what this
+          // says — somebody is here, and unpaired.
           <p className="mt-3 text-sm text-muted">
             {t("manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
           </p>
         ) : unteamedDivers.length === 0 && buddyTeamsList.length > 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("manifest.buddyEveryoneTeamed")}</p>
+          // The shared empty-section grammar rather than a bare `<p>`
+          // (design/principles.md, "Empty states follow one rule"): nobody is
+          // left to team up, so the builder's slot has nothing in it.
+          // `icon={false}` — this sits nested under the teams list, where the
+          // bubbles read as a second, larger empty state than the one line of
+          // text warrants.
+          <EmptyState icon={false} className="mt-3">
+            <p className="text-sm text-muted">{t("manifest.buddyEveryoneTeamed")}</p>
+          </EmptyState>
         ) : null}
       </details>
     </section>

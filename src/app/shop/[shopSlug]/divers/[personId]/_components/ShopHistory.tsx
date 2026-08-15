@@ -95,10 +95,15 @@ function HistoryRow({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {/* The old file's own status word, verbatim — a neutral `Badge` and
+            not the hand-rolled pill this used to be, which sat directly
+            beside the real `Badge` below it: two differently-sized,
+            differently-bordered grey pills on one row, saying the same kind
+            of thing. `size="sm"` to match its neighbour. */}
         {visit.statusLabel ? (
-          <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
+          <Badge tone="neutral" size="sm">
             {visit.statusLabel}
-          </span>
+          </Badge>
         ) : null}
         <Badge tone="neutral" size="sm">
           {t("divers.history.imported")}

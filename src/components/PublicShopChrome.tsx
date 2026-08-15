@@ -3,6 +3,7 @@ import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import type { DiverTranslator } from "@/i18n/messages";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import { publicSchedulePath } from "@/lib/public-routes";
 
 /**
@@ -86,13 +87,13 @@ export function PublicShopFooter({
         <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {shop.contactPhone ? (
-            <a href={`tel:${shop.contactPhone}`} className="hover:text-foreground hover:underline">
+            <a href={telHref(shop.contactPhone)} className="hover:text-foreground hover:underline">
               {shop.contactPhone}
             </a>
           ) : null}
           {shop.contactEmail ? (
             <a
-              href={`mailto:${shop.contactEmail}`}
+              href={mailtoHref(shop.contactEmail)}
               className="hover:text-foreground hover:underline"
             >
               {shop.contactEmail}

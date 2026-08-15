@@ -8,6 +8,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
@@ -762,7 +763,11 @@ export function RosterSection({
                               reversible edit, not a real send (principle 7). */}
                           <SubmitButton
                             pendingLabel={t("trips.roster.deletingEllipsis")}
-                            className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-danger/10"
+                            className={buttonClass({
+                              variant: "danger-ghost",
+                              size: "sm",
+                              busy: true,
+                            })}
                           >
                             {t("trips.roster.delete")}
                           </SubmitButton>
@@ -776,17 +781,22 @@ export function RosterSection({
                         above it — inviting the same note twice. */}
                     <form key={notes.length} action={addNoteAction} className="grid gap-2">
                       <input type="hidden" name="bookingId" value={booking.id} />
-                      <label htmlFor={`note-${booking.id}`} className="text-sm font-medium">
-                        {t("trips.roster.addNoteLabel")}
-                      </label>
-                      <textarea
-                        id={`note-${booking.id}`}
-                        name="note"
-                        required
-                        maxLength={1000}
-                        rows={2}
-                        className={controlClass}
-                      />
+                      {/* `Field`, not a hand-written `<label htmlFor>` plus a
+                          control: it mints and wires the id itself, marks the
+                          required control with the visible `*`, and owns the
+                          caption/control two-row shape
+                          (docs/design/forms-and-controls.md). The pair this
+                          replaces had the label and the asterisk-less textarea
+                          spelled out by hand. */}
+                      <Field label={t("trips.roster.addNoteLabel")}>
+                        <textarea
+                          name="note"
+                          required
+                          maxLength={1000}
+                          rows={2}
+                          className={controlClass}
+                        />
+                      </Field>
                       <SubmitButton
                         pendingLabel={t("trips.roster.adding")}
                         className={buttonClass({
@@ -966,20 +976,7 @@ export function RosterSection({
                     className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
                   >
                     {t("trips.roster.detailsSummary")}
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                      className="size-4 transition-transform duration-200 group-open:rotate-180"
-                    >
-                      <path
-                        d="m6 8 4 4 4-4"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
                   </summary>
                   {reference}
                 </AutoOpenDetails>

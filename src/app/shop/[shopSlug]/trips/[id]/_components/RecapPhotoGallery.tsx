@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffRecapPhoto } from "@/db/recap";
@@ -81,9 +82,26 @@ export function RecapPhotoGallery({
               </div>
               <form action={removeAction}>
                 <input type="hidden" name="photoId" value={photo.id} />
+                {/* `buttonClass`, not a hand-written class string: this one had
+                    no `min-h-*` at all, so the moderation control — the seam a
+                    shop takes a diver's photo down through — was a ~24px tap
+                    target, well under the 44px floor (design/principles.md §2).
+                    The confirm half spells the same variant with `busy`,
+                    because it is a `SubmitButton` that disables itself while
+                    its own submit is in flight; the default not-allowed cursor
+                    there reads as "the tap was refused" (components/ui/button.ts). */}
                 <InlineConfirm
                   triggerLabel={t("trips.recapPhotos.remove")}
-                  triggerClassName="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+                  triggerClassName={buttonClass({
+                    variant: "danger-ghost",
+                    size: "sm",
+                    className: "shrink-0",
+                  })}
+                  confirmClassName={buttonClass({
+                    variant: "danger-ghost",
+                    size: "sm",
+                    busy: true,
+                  })}
                   message={t("trips.recapPhotos.confirmRemove")}
                   confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
                   cancelLabel={t("trips.recapPhotos.removeCancel")}

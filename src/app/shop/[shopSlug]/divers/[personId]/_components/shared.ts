@@ -1,8 +1,9 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
-import type { CertificationAgency } from "@/db/schema";
+import type { CertificationAgency, PaymentStatus } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { type CalendarDate, isCalendarDateExpired } from "@/lib/calendar-date";
 
@@ -35,12 +36,34 @@ export const AGENCY_KEYS: Record<CertificationAgency, StaffMessageKey> = {
   other: "divers.shared.agencies.other",
 };
 
-export const PAYMENT_STATUS_KEYS: Record<string, StaffMessageKey> = {
+export const PAYMENT_STATUS_KEYS: Record<PaymentStatus, StaffMessageKey> = {
   unpaid: "divers.shared.paymentStatus.unpaid",
   deposit_paid: "divers.shared.paymentStatus.depositPaid",
   paid: "divers.shared.paymentStatus.paid",
   waived: "divers.shared.paymentStatus.waived",
   refunded: "divers.shared.paymentStatus.refunded",
+};
+
+/**
+ * The booking-payment half of the same question `ORDER_STATUS_TONES` answers
+ * (`src/i18n/order-labels.ts`) — a booking with no order still shows a money
+ * word on its row, and it has to agree with the order vocabulary rather than
+ * quietly meaning something else in the same colour.
+ *
+ * `refunded` is `warning` here for exactly the reason it is there: one refund
+ * may not read as two different facts because two different tables recorded
+ * it. `unpaid` is the shop's chase list, so it earns the same caution;
+ * `deposit_paid` is money genuinely in flight, like an `open` order; `waived`
+ * is neutral rather than green, because nothing was collected — calling a
+ * written-off seat a success is the one reading of that word a shop's books
+ * cannot afford.
+ */
+export const PAYMENT_STATUS_TONES: Record<PaymentStatus, BadgeTone> = {
+  unpaid: "warning",
+  deposit_paid: "primary",
+  paid: "success",
+  waived: "neutral",
+  refunded: "warning",
 };
 
 /**
@@ -69,6 +92,19 @@ export function bookingMoneyStatusKey(
   if (money.order) return ORDER_STATUS_KEYS[money.order.order.status] ?? null;
   if (money.payment) return PAYMENT_STATUS_KEYS[money.payment.payment.status] ?? null;
   return null;
+}
+
+/**
+ * The tone that word wears — read from the same row, in the same order, so the
+ * badge on a booking can never be coloured by one record and labelled by the
+ * other. `neutral` when nothing has been raised at all: "No order" is the
+ * absence of a fact, not a bad one (see `unpaidBookingCount` — nothing is owed
+ * until something is raised).
+ */
+export function bookingMoneyStatusTone(money: ReturnType<typeof bookingMoney>): BadgeTone {
+  if (money.order) return ORDER_STATUS_TONES[money.order.order.status] ?? "neutral";
+  if (money.payment) return PAYMENT_STATUS_TONES[money.payment.payment.status] ?? "neutral";
+  return "neutral";
 }
 
 /**
@@ -113,14 +149,6 @@ export function cardsNeedingLookCount(diver: DiverProfile): number {
     ).length
   );
 }
-
-export const ORDER_STATUS_KEYS: Record<string, StaffMessageKey> = {
-  open: "divers.shared.orderStatus.open",
-  paid: "divers.shared.orderStatus.paid",
-  void: "divers.shared.orderStatus.void",
-  uncollectible: "divers.shared.orderStatus.uncollectible",
-  refunded: "divers.shared.orderStatus.refunded",
-};
 
 /** The stored card status. Staff either certify a card or delete a bad one; there
  * is no "needs correction" state — a card the desk can't stand behind is removed. */

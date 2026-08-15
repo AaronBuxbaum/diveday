@@ -20,6 +20,23 @@
  */
 
 /**
+ * The name to greet someone by — the first whitespace-separated token of their
+ * stored `fullName`, or `fallback` when there is nothing usable.
+ *
+ * `.trim()` and `/\s+/`, not `.split(" ")`, because a stored name with a
+ * leading space splits to an empty first token: `" Nora Quinn".split(" ")[0]`
+ * is `""`, and the `||` behind it then falls through to the *whole* name, so a
+ * greeting reads "Hi  Nora Quinn". Seven call sites spelled this by hand, in
+ * two versions that disagreed on exactly that, plus one that fell back to a
+ * hard-coded English "there" — which is why the fallback is a required
+ * parameter here: the caller has the reader's own language and this module
+ * does not (AGENTS.md: `src/lib` returns codes, the UI picks the words).
+ */
+export function firstNameOf(fullName: string | null | undefined, fallback: string): string {
+  return fullName?.trim().split(/\s+/)[0] || fallback;
+}
+
+/**
  * Fold a name to its comparison form: lower-cased, accent-stripped, with every
  * run of non-letter/non-number collapsed to a single space and trimmed. So
  * "  José  Q. Díaz " and "jose q diaz" fold to the same "jose q diaz".

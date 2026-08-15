@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import { shiftCalendarDate } from "@/lib/calendar-date";
 import {
   MAX_DECISION_HOURS,
   MAX_MINIMUM_BOOKINGS,
@@ -240,13 +241,6 @@ export type BuilderMoreOptions = {
   /** The per-dive cards' own words, shared with the trip editor. */
   diveFields: TripDiveFieldsCopy;
 };
-
-/** `YYYY-MM-DD`, `offsetDays` from the given ISO day, without touching the clock. */
-function shiftIsoDay(dateIso: string, offsetDays: number): string {
-  const shifted = new Date(`${dateIso}T00:00:00Z`);
-  shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
-  return shifted.toISOString().slice(0, 10);
-}
 
 /**
  * Moves focus into a panel's first field the moment it mounts. Every panel
@@ -1342,7 +1336,7 @@ export function ScheduleBuilder({
                             name="date"
                             type="date"
                             required
-                            defaultValue={shiftIsoDay(trip.dateIso, 7)}
+                            defaultValue={shiftCalendarDate(trip.dateIso, 7)}
                             className={controlClass}
                             ref={focusOnMount}
                           />
