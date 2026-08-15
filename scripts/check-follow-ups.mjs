@@ -64,6 +64,37 @@ const straight = (text) => text.replace(/[‘’]/g, "'");
 const words = (text) => text.split(/\s+/).filter(Boolean).length;
 
 /**
+ * Is this backticked token naming a file, or something else useful?
+ *
+ * A `**Touches:**` line is prose, and authors reach for backticks for anything
+ * code-shaped in it. `FU-20260815-gear-register-non-goal-copy-is-now-stale`
+ * (arriving with #556) wrote the four bundle files *and* the message keys inside
+ * them — `marketing.product.notCovered.gearSerials` — which is exactly the
+ * detail that makes an entry runnable cold, and this check rejected the whole
+ * entry for it. That is the check teaching authors to say less, which is
+ * backwards.
+ *
+ * A path here always carries a `/`: every guarded root (`src`, `docs`,
+ * `scripts`, `e2e`, `infra`, `drizzle`, `config`) is a directory, so a bare
+ * token cannot be one. That is enough to tell a file from a dotted key without
+ * guessing at extensions.
+ */
+function looksLikeAPath(token) {
+  return token.includes("/");
+}
+
+/**
+ * `src/i18n/locales/en-US/diver.json:2673` names a line, and pointing at one is
+ * *more* helpful than pointing at a 3,000-line bundle — so the line number is
+ * dropped for the existence check rather than the entry being refused. Handles
+ * `:line` and `:line:column`, and leaves a path that merely contains a colon
+ * alone.
+ */
+function withoutLineSuffix(token) {
+  return token.replace(/:\d+(?::\d+)?$/, "");
+}
+
+/**
  * One `- **Label:** …` line, **including its wrapped continuation lines** — the
  * indented lines under it, up to the next bullet or blank line, joined with a
  * space.
@@ -175,7 +206,8 @@ export function findEntryProblems(filename, contents, { waiting = false } = {}) 
   }
 
   const touches = metadata(contents, "Touches");
-  const touched = touches ? [...touches.matchAll(/`([^`]+)`/g)].map((match) => match[1]) : [];
+  const backticked = touches ? [...touches.matchAll(/`([^`]+)`/g)].map((match) => match[1]) : [];
+  const touched = backticked.filter(looksLikeAPath).map(withoutLineSuffix);
   if (!touches || touched.length === 0) {
     say("**Touches:** must list at least one backticked path this work would touch");
   }

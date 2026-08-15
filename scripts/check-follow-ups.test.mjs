@@ -244,3 +244,37 @@ describe("the register on disk", () => {
     }
   });
 });
+
+describe("what counts as a touched path", () => {
+  const touches = (line) =>
+    valid.replace("- **Touches:** `src/lib`, `docs/product/follow-ups`", line);
+
+  it("accepts a path that names a line, and checks the file", () => {
+    // Pointing at `diver.json:2673` is *more* useful than pointing at a
+    // 3,000-line bundle, so the line number is dropped for the existence check
+    // rather than the entry being refused for carrying it.
+    const entry = touches("- **Touches:** `src/lib/clock.ts:42`, `src/db:10:3`");
+    expect(findEntryProblems(FILENAME, entry).touched).toEqual(["src/lib/clock.ts", "src/db"]);
+    expect(problemsFor(entry)).toEqual([]);
+  });
+
+  it("ignores a backticked token that is not a path", () => {
+    // An author naming the message key inside the bundle is giving the cold
+    // reader exactly what they need. Treating it as a filename failed the whole
+    // entry — the check teaching people to say less, which is backwards. Every
+    // guarded root is a directory, so a real path always carries a slash.
+    const entry = touches(
+      "- **Touches:** `src/i18n/locales/en-US/diver.json` (`marketing.product.notCovered.gearSerials`)",
+    );
+    expect(findEntryProblems(FILENAME, entry).touched).toEqual([
+      "src/i18n/locales/en-US/diver.json",
+    ]);
+    expect(problemsFor(entry)).toEqual([]);
+  });
+
+  it("still demands at least one real path", () => {
+    // A Touches line of nothing but bare keys names nowhere to start.
+    const entry = touches("- **Touches:** `importer.honesty.receiptsService`, `someOtherKey`");
+    expect(problemsFor(entry).join()).toMatch(/Touches/);
+  });
+});
