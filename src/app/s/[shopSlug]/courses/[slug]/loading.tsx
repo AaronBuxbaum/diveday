@@ -1,3 +1,5 @@
+import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+
 /**
  * Body-shaped skeleton for a public course page (design principle 1): the
  * hero card with its photo, title block, and fact strip; the eligibility
@@ -10,10 +12,11 @@ export default function CoursePageLoading() {
         <div className="overflow-hidden rounded-3xl border border-border bg-surface">
           <div className="h-56 w-full bg-surface-sunken sm:h-80" />
           <div className="p-6 sm:p-8">
-            <div className="h-3 w-40 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-3 h-9 w-80 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-3 h-5 w-64 max-w-full rounded bg-surface-sunken" />
-            <div className="mt-6 h-8 w-44 max-w-full rounded bg-surface-sunken" />
+            <ShopPageHeaderSkeleton
+              titleWidth="w-80 max-w-full"
+              descriptionWidth="w-64 max-w-full"
+            />
+            <div className="h-8 w-44 max-w-full rounded bg-surface-sunken" />
           </div>
           <div className="border-t border-border px-6 py-4 sm:px-8">
             <div className="h-9 w-72 max-w-full rounded bg-surface-sunken" />

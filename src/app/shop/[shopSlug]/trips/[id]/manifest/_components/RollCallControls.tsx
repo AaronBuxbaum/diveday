@@ -4,16 +4,48 @@ import {
   type RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { isNotBackAboard, type RollCallCheckpoint, type RollCallRecord } from "@/lib/manifests";
+import { type RollCallCheckpoint, type RollCallRecord, rollCallRowState } from "@/lib/manifests";
 
-// Shared structure for every roll-call button below (design/forms-and-controls.md's
-// dock target, `buttonClass({ size: "boat" })`'s min-h-14, plus the boat-mode press
-// feedback) — kept as one constant here so the four state variants below can't
-// drift out of sync with each other the way two separate call sites once did.
-export const BOAT_TARGET_CLASS =
-  "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70";
+/**
+ * Shared structure for every roll-call button below: the dock target
+ * (design/forms-and-controls.md), coloured per row state at the call sites.
+ *
+ * It used to be a literal class string, and its own comment named the API it
+ * was bypassing — `buttonClass({ size: "boat" })`. Three other surfaces had
+ * copied that literal, and all four had drifted apart on padding, press
+ * scale, and disabled opacity; none of them carried the `cursor-pointer` that
+ * Tailwind v4's Preflight removed from `<button>`. `variant: "bare"` is the
+ * gap that made copying easier than importing: the shape and the touch target,
+ * with the fill left to the row.
+ */
+export const BOAT_TARGET_CLASS = buttonClass({
+  variant: "bare",
+  size: "boat",
+  // These disable themselves for the moment their own submit is in flight.
+  busy: true,
+  className: "w-full",
+});
 
+/**
+ * What one roll-call record means at one checkpoint, and the fill a recorded
+ * result wears — both re-exported from the domain layer, where they moved so
+ * the offline boat-mode manifest could stop keeping its own copy.
+ *
+ * `src/components/OfflineManifestView.tsx` is the fourth reader, and it may
+ * not import from `src/app` (`pnpm check:architecture`) — which is why it had
+ * a copy at all, and why that copy had drifted into painting an *awaiting*
+ * diver amber with a ring, the two marks reserved for "left ashore" and "did
+ * not come back". Re-exported here because this file is where every roll-call
+ * consumer on this page already looks.
+ */
+export {
+  type RollCallRecordedTone,
+  type RollCallRowState,
+  rollCallRecordedTone,
+  rollCallRowState,
+} from "@/lib/manifests";
 /**
  * The fills themselves live in the shared row-tone vocabulary
  * (`src/components/row-tones.ts`), beside the counter queue's quieter map —
@@ -22,37 +54,6 @@ export const BOAT_TARGET_CLASS =
  * is where every roll-call consumer already looks for them.
  */
 export { ROLL_CALL_ROW_TONE };
-
-/**
- * What one roll-call record means at one checkpoint, as the booleans every row
- * on this page asks for.
- *
- * **One derivation, three readers.** The diver list, the crew list, and the
- * button stack below each rebuilt these from `rollCall` by hand, and the four
- * lines were subtly different in each — which is precisely the shape of the
- * bug that once printed a green-checked "Not boarded ✓" beside a diver who had
- * not come back from dive one (DOM-H3). A row's *own* extras (a diver's
- * readiness fallback, the scroll-margin the missing row wears) stay at the call
- * site; what a roll-call record means does not.
- */
-export type RollCallRowState = {
-  /** A human recorded this person aboard here. */
-  boarded: boolean;
-  /**
-   * A result staff recorded at *this* checkpoint, either way round. An implied
-   * not-boarded is carried forward from the dock, so it is not one — nothing
-   * there is undoable and no note attaches to it.
-   */
-  recordedNotBoarded: boolean;
-  /** Recorded not-boarded, and it means "never left the dock", not "did not come back". */
-  explicitNotBoarded: boolean;
-  /** Carried forward from the dock rather than said here. */
-  impliedNotBoarded: boolean;
-  /** After a dive: a human said they did not return to the boat (DOM-H3). */
-  notBackAboard: boolean;
-  /** Whether a human has said anything about this person *at this checkpoint*. */
-  recordedHere: boolean;
-};
 
 /**
  * The scroll margin every roll-call row wears, diver and crew alike.
@@ -72,40 +73,6 @@ export type RollCallRowState = {
  */
 export function rollCallScrollMargin(isDeparture: boolean): string {
   return isDeparture ? "scroll-mt-64" : "scroll-mt-80";
-}
-
-export function rollCallRowState(
-  checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
-): RollCallRowState {
-  const rc = rollCall;
-  const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
-  const notBackAboard = isNotBackAboard(checkpoint, rc);
-  return {
-    boarded: rc?.state === "boarded",
-    recordedNotBoarded,
-    explicitNotBoarded: recordedNotBoarded && !notBackAboard,
-    impliedNotBoarded: rc?.state === "not_boarded" && rc.implied === true,
-    notBackAboard,
-    recordedHere: !!rc && !rc.implied,
-  };
-}
-
-/**
- * The fill a *recorded* result wears, in the one order both lists read it —
- * a stated "did not come back" outranks everything, then aboard, then the two
- * flavours of ashore. `null` means nothing has been recorded here, and the
- * caller decides what an untouched row looks like (a diver's depends on
- * readiness at the dock; a crew member's never does).
- */
-export function rollCallRecordedTone(
-  state: RollCallRowState,
-): keyof typeof ROLL_CALL_ROW_TONE | null {
-  if (state.notBackAboard) return "notBackAboard";
-  if (state.boarded) return "boarded";
-  if (state.explicitNotBoarded) return "notBoarded";
-  if (state.impliedNotBoarded) return "notBoardedImplied";
-  return null;
 }
 
 /**

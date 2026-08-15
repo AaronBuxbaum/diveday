@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { EntryDone } from "@/components/account/EntryShell";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
@@ -33,7 +34,7 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
-import { telHref } from "@/lib/course-inquiry";
+import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
@@ -286,8 +287,11 @@ export default async function WaiverPage({
       purpose: "readiness",
     });
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
+    // The `<main>` below wears the same gutter as the signing form this diver
+    // just came from: the outcome screen used to sit on a taller `py-16` on a
+    // phone than the flow that led to it.
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
+      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
         <EarnedMoment
           as="h1"
           eyebrow={shopName}
@@ -909,7 +913,7 @@ function ExpiredLink({
       {notice ? (
         <p
           role={noticeRole(notice.tone)}
-          className={`mt-4 rounded-lg px-4 py-3 text-sm font-medium ${NOTICE_TONE[notice.tone]}`}
+          className={`rounded-lg px-4 py-3 font-medium ${NOTICE_TONE[notice.tone]}`}
         >
           {t(notice.key)}
         </p>
@@ -917,7 +921,7 @@ function ExpiredLink({
       {/* A signature already on file is the one outcome with nothing left to
           send — offering the button again would only invite a pointless email. */}
       {sent === "signed" ? null : (
-        <form action={emailFreshWaiverLinkAction.bind(null, token)} className="mt-5">
+        <form action={emailFreshWaiverLinkAction.bind(null, token)}>
           <SubmitButton pendingLabel={t("waiver.sendingFreshLink")} className={buttonClass()}>
             {t("waiver.emailFreshLink")}
           </SubmitButton>
@@ -928,11 +932,24 @@ function ExpiredLink({
 }
 
 /**
- * The dead-link card (unavailable or expired). `shop`/`t` are only present
+ * The dead-link outcome (unavailable or expired). `shop`/`t` are only present
  * when the token resolved to a real record (task 45) — an "unavailable"
  * token that matched nothing at all has no shop to attribute it to, so that
  * branch still renders without contact links, by design. `children` is where
  * a card that can offer a way forward puts it, above the contact fallback.
+ *
+ * `EntryDone` is the app's one warm terminal pattern
+ * (docs/design/principles.md #4), already worn by the peer bearer-token dead
+ * link at `claim/[token]`; this page used to spell a `rounded-lg` card of its
+ * own, one of three different boxes three token pages had grown for the same
+ * kind of message. `⏳` is the app-wide "this link has run out" mark, and it
+ * is decorative — the heading carries the meaning.
+ *
+ * Everything below the text goes through `EntryDone`'s single action slot, in
+ * one gapped column rather than each piece carrying its own top margin: the
+ * resend form and the notice above it both come and go by branch, and
+ * per-item margins are how a stack ends up spaced differently depending on
+ * which of its pieces happen to be there.
  */
 function Unavailable({
   title,
@@ -947,34 +964,41 @@ function Unavailable({
   t?: DiverTranslator;
   children?: React.ReactNode;
 }) {
+  const contact =
+    shop && t ? (
+      <p className="text-muted">
+        {shop.contactEmail || shop.contactPhone
+          ? t.rich("waiver.needHelpContact", {
+              shop: shop.name,
+              link: (chunks) => (
+                <a
+                  href={
+                    shop.contactEmail
+                      ? `mailto:${shop.contactEmail}`
+                      : telHref(shop.contactPhone ?? "")
+                  }
+                  className="font-medium text-primary hover:underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })
+          : t("waiver.needHelpPlain", { shop: shop.name })}
+      </p>
+    ) : null;
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
-      <section className="rounded-lg border border-border bg-surface p-7 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-3 text-muted">{text}</p>
-        {children}
-        {shop && t ? (
-          <p className="mt-4 text-sm text-muted">
-            {shop.contactEmail || shop.contactPhone
-              ? t.rich("waiver.needHelpContact", {
-                  shop: shop.name,
-                  link: (chunks) => (
-                    <a
-                      href={
-                        shop.contactEmail
-                          ? `mailto:${shop.contactEmail}`
-                          : telHref(shop.contactPhone ?? "")
-                      }
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {chunks}
-                    </a>
-                  ),
-                })
-              : t("waiver.needHelpPlain", { shop: shop.name })}
-          </p>
-        ) : null}
-      </section>
-    </main>
+    <EntryDone
+      glyph="⏳"
+      title={title}
+      text={text}
+      action={
+        children || contact ? (
+          <div className="flex flex-col items-center gap-4">
+            {children}
+            {contact}
+          </div>
+        ) : undefined
+      }
+    />
   );
 }

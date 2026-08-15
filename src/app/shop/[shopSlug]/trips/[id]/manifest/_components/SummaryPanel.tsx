@@ -338,11 +338,20 @@ export function SummaryPanel({
             toned banner of its own under the panel, with a "Blocked divers"
             heading restating the count the panel already showed. The count is
             here in words — it is deliberately not an entry on the count row,
-            which sums to the boat (see `counts` above). `text-warning-strong`,
-            not `text-warning`: safety text on a plain surface has to clear AA
-            at this size. */}
+            which sums to the boat (see `counts` above).
+
+            `text-danger`, because blocked is danger everywhere else in the app
+            and this panel was contradicting itself: the chip above renders the
+            word "Blocked" in `readinessStatusTone`'s danger, while this
+            sentence — counting the very same people — rendered
+            `text-warning-strong`. One fact, two colours, twelve lines apart, on
+            the surface that decides who boards. `readiness-labels.ts` and
+            `staff-destinations.ts` (the nav's blocked badge) both already say
+            danger; this is the third caller falling in behind them. Danger also
+            clears AA at this size on a plain surface, which is what
+            `text-warning-strong` was reaching for. */}
         {summary.blocked > 0 ? (
-          <p className="mt-1 text-base font-semibold text-warning-strong">
+          <p className="mt-1 text-base font-semibold text-danger">
             {isDeparture
               ? t("manifest.blockedDeparture", { count: summary.blocked })
               : t("manifest.blockedAfterDive", { count: summary.blocked })}

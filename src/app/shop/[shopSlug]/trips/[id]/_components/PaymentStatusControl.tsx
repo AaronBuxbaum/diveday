@@ -3,6 +3,7 @@
 import { useOptimistic } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass } from "@/components/ui/form";
 
 export type PaymentStatus = "unpaid" | "deposit_paid" | "paid" | "waived" | "refunded";
 
@@ -56,17 +57,24 @@ export function PaymentStatusControl({
         {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
         {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
       </span>
-      <select
-        name="status"
-        defaultValue={status}
-        className="min-h-11 items-center rounded-lg border border-border-strong bg-surface px-2 text-sm"
-      >
-        {Object.entries(copy.statuses).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
+      {/* Sized by the wrapper, not by a width class on the control —
+          `controlClass` already carries `w-full`, and two width utilities
+          resolve by stylesheet order rather than class order (same trap as
+          `min-h-*`, see components/ui/button.ts). `w-fit` on the wrapper keeps
+          the shrink-to-content width this row has always had. The hand-rolled
+          class this replaces had dropped `py-2` and, more to the point,
+          `focus:border-primary` — the control had no focus indicator at all —
+          and carried a no-op `items-center` on an element that is not a flex
+          container. */}
+      <span className="w-fit">
+        <select name="status" defaultValue={status} className={`${controlClass} text-sm`}>
+          {Object.entries(copy.statuses).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </span>
       <SubmitButton
         pendingLabel={copy.updating}
         className={buttonClass({ variant: "secondary", size: "sm", className: "text-foreground" })}

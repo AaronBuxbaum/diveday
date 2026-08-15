@@ -7,6 +7,7 @@ import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
+import { firstNameOf } from "@/lib/person-name";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
 import { cachedListFormat } from "../intl-cache";
 
@@ -142,16 +143,6 @@ export type TripConditionsHoldEmailInput = {
   conditionsSummary?: string | null;
   tripUrl: string;
 };
-
-/**
- * Every `*Name` field notifications carry is Zod-validated non-empty
- * (`.trim().min(1)`), so `fallback` never actually renders — kept only as a
- * defensive, still-localized value rather than a bare English word, in case
- * that invariant is ever loosened.
- */
-function firstNameOf(fullName: string, fallback: string): string {
-  return fullName.trim().split(/\s+/)[0] || fallback;
-}
 
 /**
  * The light-mode `--primary` token, duplicated intentionally: an email

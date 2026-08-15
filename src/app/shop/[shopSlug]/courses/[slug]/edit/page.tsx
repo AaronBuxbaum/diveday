@@ -9,7 +9,14 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form";
+import {
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+  PriceField,
+} from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopById } from "@/db/shops";
@@ -125,11 +132,6 @@ export default async function EditCoursePage({
       </div>
 
       {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
-      {errorText ? (
-        <ShopNotice tone="danger" role="alert">
-          {errorText}
-        </ShopNotice>
-      ) : null}
       {/* Only when a save was refused — the shared component's no-`field`
           fallback (first aria-invalid control) must not fire on a clean load. */}
       {error ? <FieldErrorFocus field={field} /> : null}
@@ -488,12 +490,17 @@ export default async function EditCoursePage({
               at" link in the header already points at, and a second
               button-shaped thing beside Save competes with the only action
               this form has (design principles #8). */}
-          <SubmitButton
-            pendingLabel={t("courses.edit.saving")}
-            className={buttonClass({ className: "self-start" })}
-          >
-            {t("courses.edit.savePage")}
-          </SubmitButton>
+          {/* The refusal belongs beside the button that earned it, not in a
+              banner thirty lines above the first field: this editor runs to
+              five fieldsets, so a staffer who pressed Save at the bottom saw
+              nothing happen at all. `FieldErrorFocus` above still carries them
+              on to the offending box when the server named one. */}
+          <FieldActions>
+            <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+              {t("courses.edit.savePage")}
+            </SubmitButton>
+            <FormStatus tone="danger">{errorText}</FormStatus>
+          </FieldActions>
         </form>
       </UnsavedChangesGuard>
     </main>

@@ -54,7 +54,18 @@ export async function CertificationCards({
             worse than the page-top banner it replaces — invisible rather than
             merely far away. */}
         <details open={Boolean(status)}>
-          <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
+          {/* Through the wrapper, like every other button-shaped thing (see
+              divers/page.tsx and reviews/page.tsx): the hand-written string
+              this replaces was `buttonClass()`'s primary/md output copied out
+              by hand, so it drifted the moment either changed. `list-none` and
+              the WebKit marker rule are the `<summary>`-specific half the
+              wrapper does not own — a summary shows a disclosure triangle
+              otherwise. */}
+          <summary
+            className={buttonClass({
+              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
+          >
             {t("divers.certifications.addCard")}
           </summary>
           {/* No `encType`: a function `action` is a server action, not a

@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import { savePersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -49,10 +51,23 @@ export function DiverHeader({
           align="start"
           meta={
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+              {/* `mailtoHref`/`telHref` (src/lib/contact-links.ts), not a
+                  template string with the sanitizing regex copied in beside
+                  it: a shop stores a number the way it prints it, and a `tel:`
+                  URI carrying spaces and parentheses is refused outright by
+                  several diallers — which is the one tap on this page a
+                  staffer makes with a diver already on the phone. Both links
+                  are button-shaped and go through `buttonClass` for it, so the
+                  44px target is structural rather than a remembered
+                  `min-h-11`. */}
               {diver.person.email ? (
                 <a
-                  href={`mailto:${diver.person.email}`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+                  href={mailtoHref(diver.person.email)}
+                  className={buttonClass({
+                    variant: "link",
+                    size: "sm",
+                    className: "hover:bg-primary/10",
+                  })}
                 >
                   <span aria-hidden="true">📧</span>
                   {diver.person.email}
@@ -60,8 +75,12 @@ export function DiverHeader({
               ) : null}
               {diver.person.phone ? (
                 <a
-                  href={`tel:${diver.person.phone.replace(/[^\d+]/g, "")}`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 font-medium text-primary hover:bg-primary/10 hover:underline"
+                  href={telHref(diver.person.phone)}
+                  className={buttonClass({
+                    variant: "link",
+                    size: "sm",
+                    className: "hover:bg-primary/10",
+                  })}
                 >
                   <span aria-hidden="true">📞</span>
                   {diver.person.phone}
@@ -91,24 +110,20 @@ export function DiverHeader({
             form. */}
         <details open={editOpen} className="group mt-4">
           <summary
-            className={`${buttonClass({
+            className={buttonClass({
               variant: "secondary",
               size: "sm",
-            })} w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+              className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
           >
             {t("divers.header.editDetails")}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-3 transition-transform group-open:rotate-180"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
+            {/* The shared caret, in the `down` grammar this trigger already
+                used — a chevron trailing a label, flipped a half turn on open,
+                rather than the `right` one that leads a row. The inlined copy
+                this replaces had drifted to `strokeWidth={2}` against the
+                component's 2.5, which at 12px is the difference between a mark
+                and a hairline. */}
+            <DisclosureCaret direction="down" className="group-open:rotate-180" />
           </summary>
           <FieldGrid
             as="form"
@@ -210,7 +225,12 @@ export function DiverHeader({
               />
             </Field>
             <FieldActions>
-              <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
+              {/* `busy`: it disables itself for its own save, which is "this
+                  is happening", not "you cannot do this". */}
+              <SubmitButton
+                pendingLabel={t("divers.header.saving")}
+                className={buttonClass({ busy: true })}
+              >
                 {t("divers.header.saveDetails")}
               </SubmitButton>
               {/* A field-level refusal already renders on its own control, so

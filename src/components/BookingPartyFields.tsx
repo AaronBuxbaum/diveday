@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
 
@@ -124,7 +125,7 @@ export function BookingPartyFields({
                 contact: contactEmail,
                 a: (chunks) => (
                   <a
-                    href={`mailto:${contactEmail}`}
+                    href={mailtoHref(contactEmail)}
                     className="font-medium text-primary hover:underline"
                   >
                     {chunks}
@@ -137,7 +138,7 @@ export function BookingPartyFields({
                   contact: contactPhone,
                   a: (chunks) => (
                     <a
-                      href={`tel:${contactPhone}`}
+                      href={telHref(contactPhone)}
                       className="font-medium text-primary hover:underline"
                     >
                       {chunks}

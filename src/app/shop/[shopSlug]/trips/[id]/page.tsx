@@ -466,10 +466,15 @@ export default async function ManageTripPage({
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
                 {diveSites.sites.length > 0 ? (
                   <>
+                    {/* One key, pluralized by ICU — not two keys picked by a
+                        ternary. A `length === 1 ? a : b` in the component is
+                        English's plural rule hard-coded at the call site; every
+                        other count on this page goes through
+                        `{count, plural, …}` so a locale with a different rule
+                        (or a different word order) can express it in the
+                        bundle. */}
                     <span>
-                      {diveSites.sites.length === 1
-                        ? t("trips.detail.diveSiteLabel")
-                        : t("trips.detail.diveSitesLabel")}
+                      {t("trips.detail.diveSiteLabel", { count: diveSites.sites.length })}
                     </span>
                     {/* Each site keeps its own link into the library card, so a
                         two-site day is two destinations — which rules out an

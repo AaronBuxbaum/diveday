@@ -4,13 +4,13 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { telHref } from "@/lib/contact-links";
 import {
   COURSE_INQUIRY_EXPERIENCE,
   COURSE_INQUIRY_EXPERIENCE_KEYS,
   type CourseInquiryExperience,
   type DateRequestCopy,
   type InquiryFormState,
-  telHref,
 } from "@/lib/course-inquiry";
 
 /**

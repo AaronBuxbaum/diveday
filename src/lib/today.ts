@@ -338,16 +338,6 @@ export function isWaiverCode(code: ReadinessBlockerCode): boolean {
 }
 
 /**
- * The first token of a full name — used for a pointing label ("Open Priya’s
- * record"), never for anything shown as the diver's name of record. Exported
- * so `src/i18n/today-labels.ts` can build the same label without duplicating
- * the split rule.
- */
-export function firstNameOf(fullName: string): string {
-  return fullName.split(" ")[0] || fullName;
-}
-
-/**
  * Blocked divers are the reason this page exists, so each blocker resolves to
  * the one surface that actually fixes it. Card evidence lives on the person
  * record; waiver, payment, and requirement work lives on the trip roster. The

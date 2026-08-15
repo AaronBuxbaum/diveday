@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type ButtonSize, buttonClass } from "./button";
 
-const SIZES = ["sm", "md", "lg", "cta", "boat"] as const satisfies readonly ButtonSize[];
+const SIZES = ["sm", "md", "lg", "cta", "boat", "icon"] as const satisfies readonly ButtonSize[];
 
 /**
  * Every horizontal-padding utility in a class list, variant prefixes included —
@@ -39,6 +39,51 @@ describe("buttonClass", () => {
         );
       }
     }
+  });
+
+  describe("busy", () => {
+    // The two disabled meanings are one property spelled two ways, never both:
+    // two `disabled:cursor-*` utilities in one class list resolve by stylesheet
+    // order rather than by the order they were written, so a caller appending
+    // the wait cursor through `className` gets whichever Tailwind emitted last.
+    // That is the whole reason this is an option instead of a class string —
+    // four hand-rolled boat targets each carried their own copy.
+    it("says the disabled state is in-flight, not unavailable", () => {
+      const busy = buttonClass({ busy: true });
+      expect(busy).toContain("disabled:cursor-wait");
+      expect(busy).not.toContain("disabled:cursor-not-allowed");
+    });
+
+    it("defaults to unavailable", () => {
+      const idle = buttonClass();
+      expect(idle).toContain("disabled:cursor-not-allowed");
+      expect(idle).not.toContain("disabled:cursor-wait");
+    });
+
+    it("never emits both opacities", () => {
+      for (const busy of [false, true]) {
+        const classes = buttonClass({ busy });
+        const opacities = classes
+          .split(" ")
+          .filter((token) => token.startsWith("disabled:opacity-"));
+        expect(opacities, `busy=${busy}`).toHaveLength(1);
+      }
+    });
+  });
+
+  describe("icon", () => {
+    it("is a square target: a fixed width against the base's height floor", () => {
+      // `w-11` + `min-h-11` rather than `size-11` — a fixed height would clip a
+      // glyph whose line box is taller than 44px, where a floor grows with it.
+      const classes = buttonClass({ size: "icon", variant: "ghost" });
+      expect(classes).toContain("w-11");
+      expect(classes).toContain("min-h-11");
+      expect(classes).not.toContain("size-11");
+    });
+
+    it("carries no horizontal padding to fight the fixed width", () => {
+      expect(horizontalPadding(buttonClass({ size: "icon" }))).toEqual(["px-0"]);
+    });
   });
 
   describe("flush", () => {

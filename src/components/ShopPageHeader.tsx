@@ -89,6 +89,58 @@ export function ShopPageHeader({
 }
 
 /**
+ * {@link ShopPageHeader} drawn as bars — what a route's `loading.tsx` stands in
+ * with while the real header streams in.
+ *
+ * It exists because thirty-odd `loading.tsx` files each hand-rolled the same
+ * three bars, and every one of them was the wrong size: an `h-9` title bar
+ * under a `text-4xl` `<h1>` whose line box is 40px, `mt-3` where the header
+ * itself uses `mt-2`, and a description bar of `h-4` (or `h-5`, depending on
+ * the file) under a `<p>` that renders 24px. Every staff route therefore
+ * shifted a few pixels the instant its page landed — the exact jump a
+ * `loading.tsx` exists to prevent, repeated on every navigation staff make all
+ * day.
+ *
+ * The numbers are read off the header above and must move with it:
+ *   - `h-4`  — the eyebrow's `text-xs` line box (0.75rem text, 1rem leading)
+ *   - `h-10` — the `<h1>`'s `text-4xl` line box (2.25rem text, 2.5rem leading)
+ *   - `h-6`  — the description `<p>`'s unsized line box (1rem × 1.5)
+ *   - `mt-2` after the eyebrow and before the description, `mt-3` before meta,
+ *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
+ *
+ * Widths stay per-caller: a bar should be about as wide as the words it stands
+ * in for, and that is the page's business, not this component's.
+ */
+export function ShopPageHeaderSkeleton({
+  eyebrow = true,
+  titleWidth = "w-64",
+  description = true,
+  descriptionWidth = "w-80",
+  meta,
+}: {
+  /** Pass `false` for a header with no eyebrow — the `<h1>` then loses its `mt-2`, same as the real one. */
+  eyebrow?: boolean;
+  /** Tailwind width classes for the title bar (e.g. `"w-72 max-w-full"`). */
+  titleWidth?: string;
+  description?: boolean;
+  /** Tailwind width classes for the description bar. */
+  descriptionWidth?: string;
+  /** Bars for a header that carries `meta` — the trip tabs' seat badge and date line. */
+  meta?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-8">
+      {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
+      <div className={`h-10 ${titleWidth} rounded bg-surface-sunken${eyebrow ? " mt-2" : ""}`} />
+      {description ? (
+        <div className={`mt-2 h-6 ${descriptionWidth} rounded bg-surface-sunken`} />
+      ) : null}
+      {meta ? <div className="mt-3">{meta}</div> : null}
+    </div>
+  );
+}
+
+/**
  * The one stat tile: a quiet label, the figure at headline size, and an
  * optional plain-language line under it. This anatomy used to exist twice —
  * here as a label-plus-pill card, and on Reports as a local `Metric` with the

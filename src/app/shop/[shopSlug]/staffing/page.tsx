@@ -20,6 +20,7 @@ import {
   calendarDateInTimezone,
   formatCalendarDate,
   isValidCalendarDate,
+  shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatTimeRangeTz } from "@/lib/format";
@@ -65,12 +66,6 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  */
 const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff_not_found", "invalid"]);
 
-function addDays(value: string, days: number): string {
-  const date = new Date(`${value}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export default async function StaffingPage({
   params,
   searchParams,
@@ -96,9 +91,10 @@ export default async function StaffingPage({
   // production `nowDate()` is the native call, unchanged.
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const fromValue = query.from && isValidCalendarDate(query.from) ? query.from : today;
-  const toValue = query.to && isValidCalendarDate(query.to) ? query.to : addDays(fromValue, 6);
+  const toValue =
+    query.to && isValidCalendarDate(query.to) ? query.to : shiftCalendarDate(fromValue, 6);
   const fromWall = parseWallTime(fromValue, "00:00");
-  const toWall = parseWallTime(addDays(toValue, 1), "00:00");
+  const toWall = parseWallTime(shiftCalendarDate(toValue, 1), "00:00");
   if (!fromWall || !toWall) redirect(`/shop/${shopSlug}/staffing`);
   const view = await getStaffingView(
     db,

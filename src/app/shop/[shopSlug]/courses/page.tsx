@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { AgencyTabs } from "@/components/AgencyTabs";
+import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -53,6 +54,15 @@ export default async function CoursesPage({
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
+  // This page is the one staff surface that resolves its shop from the URL slug
+  // rather than from `session.user.shopId`, and it then hands that URL-supplied
+  // `shop.id` to a permission check joined against the *session's* personId. The
+  // cross-tenant refusal in this segment's `layout.tsx` already covers the case,
+  // but the outer wall is never allowed to be the only layer (ADR-0006, quoted
+  // atop src/lib/authz.ts) — a layout is one refactor away from not running
+  // before its page. For a staffer on their own shop the two ids are equal and
+  // nothing below changes.
+  if (shop.id !== session.user.shopId) notFound();
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
@@ -149,81 +159,101 @@ export default async function CoursesPage({
           toggle was removed for it). The per-row Preview icon moved onto the
           destination it duplicated: the editor's header names and links the
           course's live URL. */}
-      <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-        {courseList.map((course) => (
-          <li
-            key={course.id}
-            className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors duration-200 hover:bg-surface-sunken sm:px-5 ${
-              course.isActive ? "" : "text-muted"
-            }`}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-2">
-                {/* Stretched over the whole row (same grammar as the divers
+      {courseList.length === 0 ? (
+        // The roster's shell is a bordered, shadowed card, so rendering it
+        // around nothing gave a shop with no courses an empty box and no
+        // sentence — the one paged staff list with no empty branch. The door is
+        // the same act every row carries: a catalog exists to be taught, and a
+        // shop with nothing in it can still put a departure on the board.
+        <EmptyState className="mt-6">
+          <h2 className="font-medium">{st("courses.list.emptyTitle")}</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{st("courses.list.emptyBody")}</p>
+          {canSchedule ? (
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {st("courses.list.emptyAction")}
+            </Link>
+          ) : null}
+        </EmptyState>
+      ) : (
+        <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          {courseList.map((course) => (
+            <li
+              key={course.id}
+              className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors duration-200 hover:bg-surface-sunken sm:px-5 ${
+                course.isActive ? "" : "text-muted"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  {/* Stretched over the whole row (same grammar as the divers
                     table): the title is the visible name, the label says what
                     the tap does. */}
-                <Link
-                  href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
-                  aria-label={st("courses.list.editSrLabel", { title: course.title })}
-                  className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
-                >
-                  {course.title}
-                  {/* The arrow is CSS `content`, not a text node: specs locate
+                  <Link
+                    href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
+                    aria-label={st("courses.list.editSrLabel", { title: course.title })}
+                    className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                  >
+                    {course.title}
+                    {/* The arrow is CSS `content`, not a text node: specs locate
                       this row by the title's exact text, and a DOM arrow would
                       make the link read "Rescue Diver →" to them. */}
-                  <span
-                    aria-hidden="true"
-                    className="ml-1 opacity-0 transition-opacity before:content-['→'] group-hover:opacity-100"
-                  />
-                </Link>
-                {course.isActive ? null : (
-                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                    {st("courses.list.hidden")}
-                  </span>
-                )}
-              </span>
-              <p className="mt-1 text-sm text-muted">
-                {course.minimumCertificationLevel
-                  ? st("courses.list.orHigher", {
-                      level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
-                    })
-                  : st("courses.list.openToUncertified")}
-              </p>
-            </div>
-            {/* Above the stretched link, so the rail's own taps win. */}
-            <div className="relative z-10 flex items-center gap-1">
-              {/* The catalog's whole point is that a course gets taught. This
+                    <span
+                      aria-hidden="true"
+                      className="ml-1 opacity-0 transition-opacity before:content-['→'] group-hover:opacity-100"
+                    />
+                  </Link>
+                  {course.isActive ? null : (
+                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
+                      {st("courses.list.hidden")}
+                    </span>
+                  )}
+                </span>
+                <p className="mt-1 text-sm text-muted">
+                  {course.minimumCertificationLevel
+                    ? st("courses.list.orHigher", {
+                        level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
+                      })
+                    : st("courses.list.openToUncertified")}
+                </p>
+              </div>
+              {/* Above the stretched link, so the rail's own taps win. */}
+              <div className="relative z-10 flex items-center gap-1">
+                {/* The catalog's whole point is that a course gets taught. This
                   hands the board's add panel (`?course=` opens it with the
                   course preselected and shapes the title) the one fact staff
                   would otherwise re-pick from a dropdown — never a second
                   trip-creation path of its own. */}
-              {canSchedule ? (
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
-                  aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
-                  className={buttonClass({ variant: "ghost", size: "sm" })}
-                >
-                  {st("courses.list.schedule")}
-                </Link>
-              ) : null}
-              <form action={visibilityAction}>
-                <input type="hidden" name="courseId" value={course.id} />
-                <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
-                <SubmitButton
-                  pendingLabel="…"
-                  ariaLabel={st("courses.list.hideShowSrLabel", {
-                    action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
-                    title: course.title,
-                  })}
-                  className={buttonClass({ variant: "ghost", size: "sm" })}
-                >
-                  {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
-                </SubmitButton>
-              </form>
-            </div>
-          </li>
-        ))}
-      </ul>
+                {canSchedule ? (
+                  <Link
+                    href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
+                    aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
+                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                  >
+                    {st("courses.list.schedule")}
+                  </Link>
+                ) : null}
+                <form action={visibilityAction}>
+                  <input type="hidden" name="courseId" value={course.id} />
+                  <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
+                  <SubmitButton
+                    pendingLabel="…"
+                    ariaLabel={st("courses.list.hideShowSrLabel", {
+                      action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
+                      title: course.title,
+                    })}
+                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                  >
+                    {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
+                  </SubmitButton>
+                </form>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
       <Pager
         page={coursePage.page}
         pageCount={coursePage.pageCount}

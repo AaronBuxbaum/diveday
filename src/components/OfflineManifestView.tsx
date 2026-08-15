@@ -8,16 +8,18 @@ import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
-import { readinessStatusText } from "@/i18n/readiness-labels";
+import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -29,6 +31,8 @@ import {
   rollCallCheckpoints,
   rollCallCompleteness,
   rollCallLabel,
+  rollCallRecordedTone,
+  rollCallRowState,
 } from "@/lib/manifests";
 import {
   acknowledgeDiscardedOfflineRecords,
@@ -59,16 +63,23 @@ import {
  * the guard is for safety, not for a real server render.
  */
 /**
- * The live manifest's `BOAT_TARGET_CLASS`, minus its `w-full` (these buttons
- * go `w-full` on a phone and auto-width beside the row from `sm` up).
+ * The dock target, built from the same wrapper the live manifest's roll-call
+ * buttons use — `w-full` on a phone, auto-width beside the row from `sm` up.
  *
- * Copied rather than imported: that constant lives under
- * `src/app/shop/[shopSlug]/trips/[id]/manifest/`, and `src/components` may not
- * import from `src/app` (`pnpm check:architecture`). Kept literal and adjacent
- * to the class strings that use it so a drift is visible in one file.
+ * This was a copied literal, and the comment justifying the copy was wrong:
+ * it said the constant lived under `src/app`, which `src/components` may not
+ * import (`pnpm check:architecture`) — true of that constant, but the thing it
+ * was a copy *of* is `buttonClass`, which lives in `src/components/ui/` and
+ * was already imported into this file. The two literals had drifted apart on
+ * padding, press scale and disabled opacity, and neither carried the
+ * `cursor-pointer` that Tailwind v4's Preflight removed from `<button>`.
  */
-const OFFLINE_BOAT_TARGET_CLASS =
-  "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto";
+const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
+  variant: "bare",
+  size: "boat",
+  busy: true,
+  className: "w-full sm:w-auto",
+});
 
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
@@ -1117,36 +1128,20 @@ export function OfflineManifestView() {
                 // Hoisted so the guard below narrows it for both handlers: a
                 // crew member with no id has no subject to record against.
                 const crewPersonId = member.id;
-                const missingCrew = isNotBackAboard(checkpoint, member.state);
-                const crewRecordedNotBoarded =
-                  member.state?.state === "not_boarded" && member.state.implied !== true;
+                const crewRowState = rollCallRowState(checkpoint, member.state);
+                const missingCrew = crewRowState.notBackAboard;
+                const crewRecordedNotBoarded = crewRowState.recordedNotBoarded;
+                const crewTone = rollCallRecordedTone(crewRowState);
                 return (
                   <li
                     key={member.key}
-                    // One colour vocabulary with the live manifest's rows
-                    // (`ROLL_CALL_ROW_TONE`), because both are read on the same
-                    // deck and often on two devices at once: aboard green, left
-                    // ashore amber, nothing said yet slate, did-not-come-back
-                    // red and alone in carrying weight. This used to invert two
-                    // of them — amber for "still to call" and slate for "ashore"
-                    // — so the same crew member read as a warning on the phone
-                    // and as settled on the tablet (dive-domain review 20260804).
-                    className={
-                      missingCrew
-                        ? "rounded-xl bg-danger/15 px-3 py-2 text-sm font-bold text-danger"
-                        : member.state?.state === "boarded"
-                          ? "rounded-xl bg-success/20 px-3 py-2 text-sm"
-                          : member.state
-                            ? "rounded-xl bg-warning/15 px-3 py-2 text-sm"
-                            : // Raised, not sunken: these used to be small
-                              // chips, where `bg-surface-sunken` read as a
-                              // chip against the panel. As full-width rows
-                              // with controls on them the same fill is the
-                              // panel's own background, and an uncalled crew
-                              // member had no edge at all — the one row a
-                              // captain is looking for.
-                              "rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    }
+                    // One colour vocabulary with the live manifest's rows,
+                    // now by import rather than by copy — see
+                    // `OFFLINE_CREW_ROW_TONE` for why the shape differs and
+                    // the hues do not.
+                    className={`rounded-xl px-3 py-2 text-sm ${
+                      crewTone ? OFFLINE_CREW_ROW_TONE[crewTone] : OFFLINE_CREW_ROW_TONE.awaiting
+                    }`}
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p>
@@ -1258,11 +1253,26 @@ export function OfflineManifestView() {
               checkpoint,
             );
             const ready = diver.readiness.status === "ready";
+            // The live manifest's own derivation, not a second copy of it
+            // (`src/lib/manifests.ts`). The copy this replaces got two things
+            // wrong that only showed on the water: it keyed the *boarded* fill
+            // off "any result exists", so a diver recorded **not boarded** at
+            // the dock rendered in the aboard colour, and it painted a diver
+            // nobody had called yet amber with a ring — the two marks reserved
+            // for "left ashore" and "did not come back".
+            const rowState = rollCallRowState(checkpoint, state);
             // Recorded here at this checkpoint, either way round — a
             // carried-forward dock result is not undoable and gets the
             // "Mark…" wording, same as the live manifest.
-            const recordedNotBoarded = state?.state === "not_boarded" && state.implied !== true;
-            const missing = isNotBackAboard(checkpoint, state);
+            const recordedNotBoarded = rowState.recordedNotBoarded;
+            const missing = rowState.notBackAboard;
+            const recordedTone = rollCallRecordedTone(rowState);
+            // Untouched: the same rule the live page uses — at the dock a
+            // diver readiness has not cleared is blocked, and readiness is the
+            // thing to fix before boarding; everywhere else nothing has been
+            // said yet.
+            const untouchedTone =
+              ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
             // Same condition the live page passes as `showBoardControl`: divers
             // only board at departure once readiness clears them. Named, because
             // the exception control's weight now reads it too — it is what
@@ -1272,15 +1282,13 @@ export function OfflineManifestView() {
               <li
                 key={diver.bookingId}
                 id={`offline-roll-call-${diver.bookingId}`}
-                className={
-                  missing
-                    ? "scroll-mt-24 border-l-4 border-danger bg-danger/10 p-4 ring-1 ring-inset ring-danger/40 sm:p-5"
-                    : ready
-                      ? state
-                        ? "border-l-4 border-success p-4 sm:p-5"
-                        : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
-                      : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
-                }
+                // Every row is a jump target — the missing-divers grid links
+                // to any uncalled person — so every row carries the scroll
+                // margin that keeps its name clear of the sticky panel, not
+                // just the two states that used to.
+                className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${
+                  recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
+                }`}
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -1289,17 +1297,18 @@ export function OfflineManifestView() {
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
-                      <span
-                        className={
-                          ready
-                            ? "rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success"
-                            : "rounded-full bg-danger/10 px-3 py-1 text-sm font-semibold text-danger"
-                        }
-                      >
+                      {/* The shared pill, and the shared tone resolver. The
+                          hand-rolled one this replaces paired `text-success`
+                          with `bg-success/10`, the combination `Badge`
+                          documents as measuring under AA at pill sizes — on
+                          the surface read in direct sunlight. The words stay
+                          the offline ones ("Ready when saved"), because that
+                          distinction is real: this is a snapshot, not live. */}
+                      <Badge tone={readinessStatusTone(ready ? "ready" : "blocked")}>
                         {ready
                           ? t("shared.offlineManifest.single.readyBadge")
                           : t("shared.offlineManifest.single.blockedBadge")}
-                      </span>
+                      </Badge>
                       {/* Same resolver the live manifest renders (DOM-H3):
                           one word list, so a diver who has not come back from
                           dive one cannot read "Not boarded" here and "Not back

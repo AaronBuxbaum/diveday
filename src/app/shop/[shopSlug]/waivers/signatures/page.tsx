@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -234,7 +235,9 @@ export default async function WaiverSignaturesPage({
           {t("waiversStaff.signatures.heading")}
         </h2>
         {auditPage.total === 0 ? (
-          <p className="mt-4 text-sm text-muted">{t("waiversStaff.signatures.noSignedRecords")}</p>
+          <EmptyState className="mt-4">
+            <p className="text-sm text-muted">{t("waiversStaff.signatures.noSignedRecords")}</p>
+          </EmptyState>
         ) : (
           <>
             <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">

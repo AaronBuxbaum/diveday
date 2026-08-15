@@ -25,7 +25,27 @@
  * a disabled button — its variant selector carries the higher specificity.
  */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]";
+
+/**
+ * What a disabled state *means*, which is two different things this app renders
+ * identically until asked not to.
+ *
+ * The default is "you cannot do this" — a form that is not ready, an action
+ * this staffer lacks the role for. `busy` is "this is happening": the control
+ * disabled itself for the moment its own submit is in flight, which is every
+ * `SubmitButton` and every roll-call target. A wait cursor says that; a
+ * not-allowed cursor says the opposite, and on the boat surfaces it read as
+ * "the tap was refused" at precisely the moment it had been accepted.
+ *
+ * They are two spellings of one property rather than a `className` addition
+ * because two utilities for one property resolve by stylesheet order, not by
+ * the order you wrote them — the same reason `flush` exists (see below).
+ */
+const DISABLED = {
+  default: "disabled:cursor-not-allowed disabled:opacity-60",
+  busy: "disabled:cursor-wait disabled:opacity-70",
+} as const;
 
 const variants = {
   primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
@@ -41,6 +61,22 @@ const variants = {
   "danger-solid": "bg-danger text-primary-foreground hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
   link: "text-primary hover:underline",
+  /**
+   * Shape and touch target only — no colour of its own.
+   *
+   * For a control whose fill *is* the state of the row it sits in, so a
+   * variant's own hue would have to be overridden away at every call site:
+   * the roll-call targets, which are bordered danger when someone did not come
+   * back, sunken when the result is settled, and boxless while the routine
+   * choice is still on offer. Every other variant answers "what kind of button
+   * is this"; these rows answer it per person, per checkpoint.
+   *
+   * This is the gap that produced four hand-copied class strings — the live
+   * roll call, the offline manifest, the check-in queue, and a fourth — each
+   * re-deriving the dock target because the wrapper had no way to say "the
+   * shape, and I will bring the colour."
+   */
+  bare: "",
 } as const;
 
 /**
@@ -65,8 +101,32 @@ const sizes = {
   lg: { x: "px-5", rest: "py-2.5 text-sm font-medium" },
   /** Marketing calls to action: reads at 16px and carries more weight. */
   cta: { x: "px-5", rest: "py-3 text-base font-semibold" },
-  /** Dock target: a 56px, 16px-label action for wet-hands boat surfaces. */
-  boat: { x: "px-6", rest: "min-h-14 py-3.5 text-base font-semibold" },
+  /**
+   * Dock target: a 56px, 16px-label action for wet-hands boat surfaces.
+   *
+   * `touch-manipulation` is part of the size rather than something call sites
+   * remember: it drops the browser's ~300ms double-tap-to-zoom wait, and the
+   * surfaces that reach for this size are the ones where a tap that seems not
+   * to have registered gets tapped again — which on a roll call is how one
+   * person gets marked aboard twice.
+   */
+  boat: { x: "px-6", rest: "min-h-14 touch-manipulation py-3.5 text-base font-semibold" },
+  /**
+   * A square target holding one glyph and no label — a row's "remove", a
+   * month stepper's arrow.
+   *
+   * It exists because `buttonClass` could not express it, and four surfaces
+   * each answered that by hand: two spelled the box `min-h-11 min-w-11` and
+   * two `size-11`, two rounded it `lg` and two `full`, and the glyph inside
+   * came out `text-sm font-semibold`, `text-sm font-bold`, and `text-lg
+   * leading-none`. A wrapper gap is why a control drifts four ways, so the
+   * gap is what gets closed.
+   *
+   * The width is `w-11` against the base's `min-h-11` rather than `size-11`:
+   * a fixed height would clip a glyph whose line box is taller than 44px,
+   * where a floor grows with it.
+   */
+  icon: { x: "px-0", rest: "w-11 text-base" },
 } as const;
 
 export type ButtonVariant = keyof typeof variants;
@@ -94,14 +154,23 @@ export function buttonClass({
   variant = "primary",
   size = "md",
   flush = false,
+  busy = false,
   className = "",
 }: {
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Drop the size's horizontal padding so the label sits flush with adjacent text. */
   flush?: boolean;
+  /**
+   * This control's disabled state means "in flight", not "unavailable" — every
+   * `SubmitButton`, which disables itself for the duration of its own submit.
+   * Renders a wait cursor instead of a not-allowed one. See `DISABLED`.
+   */
+  busy?: boolean;
   className?: string;
 } = {}) {
   const { x, rest } = sizes[size];
-  return `${base} ${variants[variant]} ${rest} ${flush ? FLUSH : x} ${className}`.trim();
+  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${variants[variant]} ${rest} ${
+    flush ? FLUSH : x
+  } ${className}`.trim();
 }

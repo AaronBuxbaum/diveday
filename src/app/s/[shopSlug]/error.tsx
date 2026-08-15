@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { buttonClass } from "@/components/ui/button";
+import { ErrorPage } from "@/components/ErrorPage";
 
 /**
  * The diver-side backstop. These pages inherited `/shop/[shopSlug]/error.tsx`
@@ -18,16 +18,12 @@ import { buttonClass } from "@/components/ui/button";
 export default function PublicShopError({ reset }: { error: Error; reset: () => void }) {
   const t = useTranslations("errorBoundary");
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      <p className="mt-3 text-muted">{t("bodyBooked")}</p>
-      <button
-        type="button"
-        onClick={reset}
-        className={buttonClass({ size: "cta", className: "mt-6" })}
-      >
-        {t("tryAgain")}
-      </button>
-    </main>
+    <ErrorPage
+      title={t("title")}
+      body={t("bodyBooked")}
+      resetLabel={t("tryAgain")}
+      onReset={reset}
+      size="cta"
+    />
   );
 }

@@ -13,6 +13,8 @@
  * published neither — the sentence that introduces it stands alone rather than
  * trailing an empty separator.
  */
+import { mailtoHref, telHref } from "@/lib/contact-links";
+
 export function ShopContactLinks({
   phone,
   email,
@@ -30,13 +32,13 @@ export function ShopContactLinks({
         // A dialler takes digits and a leading `+`, never the spaces, dashes,
         // and parentheses a shop types into the settings box — the visible
         // text stays exactly what they wrote.
-        <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className={linkClass}>
+        <a href={telHref(phone)} className={linkClass}>
           {phone}
         </a>
       ) : null}
       {phone && email ? <span aria-hidden="true">·</span> : null}
       {email ? (
-        <a href={`mailto:${email}`} className={linkClass}>
+        <a href={mailtoHref(email)} className={linkClass}>
           {email}
         </a>
       ) : null}

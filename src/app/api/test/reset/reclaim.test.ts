@@ -66,5 +66,21 @@ describe("POST /api/test/reset — reclaiming what it deleted", () => {
     expect(await deadTuples(db)).toBeLessThan(2 * ROWS_TOUCHED_PER_RESET);
 
     vi.unstubAllEnvs();
-  });
+    // Its own budget, not the 20s default.
+    //
+    // This is the most expensive test in the suite by wall clock: it hydrates
+    // an embedded Postgres and then runs three *real* resets through it,
+    // ~5,000 rows deleted and re-inserted each, because the growth it guards
+    // against is not observable any other way. Measured at **17.6s** on a
+    // quiet machine (three runs: 17.60/17.61/17.86) — 88% of the default
+    // budget, so any parallel load at all tips it over, and it does: it is the
+    // first thing to fail when the full suite runs alongside anything else.
+    //
+    // This is not a timeout widened to hide a race, which the e2e-hygiene rule
+    // rightly refuses. The assertion is deterministic and was already de-flaked
+    // once on its own terms (714b1555, which fixed the *bound*); what is left
+    // is simply a test whose honest runtime does not fit. Same reasoning, and
+    // the same shape, as `src/test/postgres.ts` (30s) and
+    // `src/lib/usage/alert-ledger.test.ts` (60s).
+  }, 45_000);
 });

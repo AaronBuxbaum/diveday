@@ -1,12 +1,23 @@
+import type { RollCallRecordedTone } from "@/lib/manifests";
+
 /**
  * The person-row state tones — one vocabulary for every surface that renders
  * "a person's line wearing its state" as a `border-l-4` left rule plus a
- * tinted fill. Two surfaces speak it today: the manifest's roll call
- * (`trips/[id]/manifest/_components/`) and the counter check-in queue
- * (`check-in/page.tsx`). They are read minutes apart by the same staffer —
- * counter first, dock second — so a colour must mean the same thing on both,
- * and this module is what keeps a retune on one from silently leaving the
- * other behind (FU-20260811-row-tone-vocabulary).
+ * tinted fill. Three surfaces speak it: the manifest's roll call
+ * (`trips/[id]/manifest/_components/`), the counter check-in queue
+ * (`check-in/page.tsx`), and the offline boat-mode manifest
+ * (`src/components/OfflineManifestView.tsx`). They are read minutes apart by
+ * the same staffer — counter first, dock second, and the offline copy when the
+ * signal goes — so a colour must mean the same thing on all three, and this
+ * module is what keeps a retune on one from silently leaving the others
+ * behind (FU-20260811-row-tone-vocabulary).
+ *
+ * The offline surface was the one that got away: it could not import the
+ * live page's derivation (that lived under `src/app`, which `src/components`
+ * may not reach) so it kept a copy, and the copy drifted into painting an
+ * *awaiting* diver amber with a ring — the two marks this module reserves for
+ * "left ashore" and "did not come back". The derivation now lives in
+ * `src/lib/manifests.ts`, where every surface can reach it.
  *
  * The two maps deliberately differ in *strength*, not meaning: the manifest
  * is read across a wet deck in sunlight, so its fills run stronger
@@ -51,7 +62,11 @@ export const ROLL_CALL_ROW_TONE = {
   awaiting: "border-border-strong bg-surface-sunken",
   /** Awaiting *and* blocked: readiness is the thing to fix before boarding. */
   blocked: "border-danger bg-danger/5",
-} as const;
+  // Pinned against the domain type so the two halves cannot drift: a recorded
+  // tone named in `src/lib/manifests.ts` with no fill here, or a fill renamed
+  // here while a surface still asks for it, is a compile error rather than a
+  // roll-call row that silently renders unstyled.
+} as const satisfies Record<RollCallRecordedTone | "awaiting" | "blocked", string>;
 
 /**
  * The counter queue's fills — the same meanings at indoor strength. A settled
@@ -67,3 +82,29 @@ export const CHECK_IN_ROW_TONE = {
   awaiting: "border-transparent",
   blocked: ROLL_CALL_ROW_TONE.blocked,
 } as const;
+
+/**
+ * The offline manifest's **crew** rows — the same meanings again, on a card
+ * rather than a left rule.
+ *
+ * The shape differs because the offline crew list is a panel of full-width
+ * cards, not a ruled list: there is no column edge for a `border-l-4` to sit
+ * against. The *hues* are the roll call's, deliberately, because both lists
+ * are read on the same deck and often on two devices at once — a crew member
+ * must not read as a warning on the phone and as settled on the tablet
+ * (dive-domain review 20260804).
+ *
+ * `awaiting` is the one entry that is not a restatement of the roll call's:
+ * it is **raised, not sunken**. These used to be small chips, where
+ * `bg-surface-sunken` read as a chip against the panel; as full-width rows
+ * carrying controls, that same fill *is* the panel's own background, and an
+ * uncalled crew member would have no edge at all — the one row a captain is
+ * looking for.
+ */
+export const OFFLINE_CREW_ROW_TONE = {
+  notBackAboard: "bg-danger/15 font-bold text-danger",
+  boarded: "bg-success/20",
+  notBoarded: "bg-warning/15",
+  notBoardedImplied: "bg-warning/5",
+  awaiting: "border border-border bg-surface",
+} as const satisfies Record<RollCallRecordedTone | "awaiting", string>;

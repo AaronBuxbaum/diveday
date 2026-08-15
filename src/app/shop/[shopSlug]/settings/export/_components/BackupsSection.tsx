@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -245,7 +246,12 @@ export function BackupsSection({
       <div className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h3 className="font-medium">{t("backup.history.heading")}</h3>
         {deliveries.total === 0 ? (
-          <p className="mt-2 text-sm text-muted">{t("backup.history.empty")}</p>
+          // `icon={false}`: this sits inside the history card, under its own
+          // `<h3>` — the bubbles belong to a page-level rest state, not to a
+          // panel nested two boxes deep.
+          <EmptyState icon={false} className="mt-2">
+            <p className="text-sm text-muted">{t("backup.history.empty")}</p>
+          </EmptyState>
         ) : (
           <>
             {/* Five columns at `sm` and up; one stacked block below it.

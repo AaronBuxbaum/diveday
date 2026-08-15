@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePersonName, personNamesMatch } from "./person-name";
+import { firstNameOf, normalizePersonName, personNamesMatch } from "./person-name";
 
 describe("normalizePersonName", () => {
   it("lower-cases, strips accents and punctuation, and collapses whitespace", () => {
@@ -42,5 +42,32 @@ describe("personNamesMatch — a different person, flagged", () => {
     expect(personNamesMatch("J. D.", "A. B.")).toBe(false);
     expect(personNamesMatch("", "Jane Doe")).toBe(false);
     expect(personNamesMatch("   ", "   ")).toBe(false);
+  });
+});
+
+describe("firstNameOf", () => {
+  it("greets someone by the first of their names", () => {
+    expect(firstNameOf("Nora Quinn", "there")).toBe("Nora");
+  });
+
+  it("does not return the whole name for a stored leading space", () => {
+    // The regression: `" Nora Quinn".split(" ")[0]` is `""`, and the `||`
+    // behind the seven hand-rolled copies of this then fell through to the
+    // *whole* name — so the greeting read "Hi  Nora Quinn". Two of those
+    // copies trimmed and five did not.
+    expect(firstNameOf(" Nora Quinn", "there")).toBe("Nora");
+  });
+
+  it("collapses a run of whitespace rather than splitting on one space", () => {
+    expect(firstNameOf("Nora  Quinn", "there")).toBe("Nora");
+  });
+
+  it("falls back when there is nothing usable, including for a blank name", () => {
+    // The fallback is a required parameter because it has to arrive in the
+    // reader's own language — one call site had hard-coded English "there".
+    expect(firstNameOf("", "amigo")).toBe("amigo");
+    expect(firstNameOf("   ", "amigo")).toBe("amigo");
+    expect(firstNameOf(null, "amigo")).toBe("amigo");
+    expect(firstNameOf(undefined, "amigo")).toBe("amigo");
   });
 });

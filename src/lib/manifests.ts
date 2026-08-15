@@ -298,6 +298,87 @@ export function isRecordedAshore(
   return !isNotBackAboard(checkpoint, rollCall);
 }
 
+/**
+ * What a roll-call record means for the row that shows it.
+ *
+ * **One derivation, four readers.** The diver list, the crew list, the button
+ * stack, and the offline manifest each rebuilt these from `rollCall` by hand,
+ * and the lines were subtly different in each — which is the shape of the bug
+ * that once printed a green-checked "Not boarded ✓" beside a diver who had not
+ * come back from dive one (DOM-H3). A row's *own* extras (a diver's readiness
+ * fallback, the scroll margin the missing row wears) stay at the call site;
+ * what a roll-call record means does not.
+ *
+ * This lives in `src/lib` rather than beside the manifest components because
+ * the fourth reader is `src/components/OfflineManifestView.tsx`, and
+ * `src/components` may not import from `src/app` (`pnpm check:architecture`).
+ * That import boundary is the whole reason the offline surface had its own
+ * copy, and the copy had drifted: it painted an *awaiting* diver amber with a
+ * ring, where amber means "left ashore" and the ring is reserved for "did not
+ * come back" — so on the boat-mode screen every un-called diver wore the alarm
+ * that is supposed to distinguish the one who is still in the water.
+ */
+export type RollCallRowState = {
+  /** A human recorded this person aboard here. */
+  boarded: boolean;
+  /**
+   * A result staff recorded at *this* checkpoint, either way round. An implied
+   * not-boarded is carried forward from the dock, so it is not one — nothing
+   * there is undoable and no note attaches to it.
+   */
+  recordedNotBoarded: boolean;
+  /** Recorded not-boarded, and it means "never left the dock", not "did not come back". */
+  explicitNotBoarded: boolean;
+  /** Carried forward from the dock rather than said here. */
+  impliedNotBoarded: boolean;
+  /** After a dive: a human said they did not return to the boat (DOM-H3). */
+  notBackAboard: boolean;
+  /** Whether a human has said anything about this person *at this checkpoint*. */
+  recordedHere: boolean;
+};
+
+/**
+ * The row tones a *recorded* result can resolve to.
+ *
+ * Named here, in the layer every surface may import, so the fill map in
+ * `src/components/row-tones.ts` can be pinned against it — a tone added there
+ * without a meaning here, or dropped here while a surface still asks for it,
+ * is then a compile error rather than a row that silently renders unstyled.
+ */
+export type RollCallRecordedTone = "notBackAboard" | "boarded" | "notBoarded" | "notBoardedImplied";
+
+export function rollCallRowState(
+  checkpoint: RollCallCheckpoint,
+  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): RollCallRowState {
+  const rc = rollCall;
+  const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
+  const notBackAboard = isNotBackAboard(checkpoint, rc);
+  return {
+    boarded: rc?.state === "boarded",
+    recordedNotBoarded,
+    explicitNotBoarded: recordedNotBoarded && !notBackAboard,
+    impliedNotBoarded: rc?.state === "not_boarded" && rc.implied === true,
+    notBackAboard,
+    recordedHere: !!rc && !rc.implied,
+  };
+}
+
+/**
+ * The fill a *recorded* result wears, in the one order every list reads it —
+ * a stated "did not come back" outranks everything, then aboard, then the two
+ * flavours of ashore. `null` means nothing has been recorded here, and the
+ * caller decides what an untouched row looks like (a diver's depends on
+ * readiness at the dock; a crew member's never does).
+ */
+export function rollCallRecordedTone(state: RollCallRowState): RollCallRecordedTone | null {
+  if (state.notBackAboard) return "notBackAboard";
+  if (state.boarded) return "boarded";
+  if (state.explicitNotBoarded) return "notBoarded";
+  if (state.impliedNotBoarded) return "notBoardedImplied";
+  return null;
+}
+
 /** One teammate, as the manifest carries them — a seated diver, or crew. */
 export type BuddyTeammate =
   | { kind: "diver"; bookingId: string; fullName: string }

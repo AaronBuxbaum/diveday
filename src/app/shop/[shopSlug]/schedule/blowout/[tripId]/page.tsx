@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -144,7 +145,10 @@ export default async function BlowoutPage({
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
           {roster.length === 0 ? (
-            <p className="mt-5 text-sm text-muted">{t("blowout.confirm.noDivers")}</p>
+            // Nested inside the confirm card, so no icon.
+            <EmptyState icon={false} className="mt-5">
+              <p className="text-sm text-muted">{t("blowout.confirm.noDivers")}</p>
+            </EmptyState>
           ) : (
             <div className="mt-5">
               <h2 className="text-sm font-semibold">
@@ -227,7 +231,9 @@ export default async function BlowoutPage({
       </div>
 
       {divers.length === 0 ? (
-        <p className="mt-6 text-sm text-muted">{t("blowout.record.empty")}</p>
+        <EmptyState className="mt-6">
+          <p className="mx-auto max-w-md text-sm text-muted">{t("blowout.record.empty")}</p>
+        </EmptyState>
       ) : (
         <Table shellClassName="mt-6">
           <THead>

@@ -118,8 +118,3 @@ export type CourseInquiry = {
   /** Anything else they want to say. */
   message: string;
 };
-
-/** Digits only, so a printed number like "+1 (305) 555-0134" still dials. */
-export function telHref(phone: string): string {
-  return `tel:${phone.replace(/[^\d+]/g, "")}`;
-}

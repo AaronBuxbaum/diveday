@@ -20,6 +20,20 @@ import { OfflineManifestView } from "./OfflineManifestView";
 // reference or "in the past"/"in the future" assertions are meaningless.
 const FROZEN_MS = Date.parse(TEST_FROZEN_CLOCK);
 
+/**
+ * The border *utilities* in a class list — `border`, `border-danger`,
+ * `sm:border-2` — and nothing that merely contains the word.
+ *
+ * A substring check on `"border"` used to stand in for this, and it started
+ * matching the moment these buttons began going through `buttonClass`, whose
+ * base transitions `border-color`. The assertion it broke ("the exception
+ * control has no box") was still true; only the way of asking was wrong, so
+ * this asks per token instead.
+ */
+function borderUtilities(classes: string): string[] {
+  return classes.split(/\s+/).filter((token) => /^(?:[\w.-]+:)*border(?:-|$)/.test(token));
+}
+
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
@@ -1695,7 +1709,7 @@ describe("the row grammar the live manifest already reads", () => {
 
     const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
     if (!exception) throw new Error("no exception control");
-    expect(exception.className).not.toContain("border");
+    expect(borderUtilities(exception.className)).toEqual([]);
     // Demoted by losing its box, never its legibility: no `text-muted` on the
     // surface with the harshest viewing conditions.
     expect(exception.className).not.toContain("text-muted");
@@ -1716,6 +1730,6 @@ describe("the row grammar the live manifest already reads", () => {
     expect(screen.queryByRole("button", { name: "Mark boarded" })).not.toBeInTheDocument();
     const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
     if (!exception) throw new Error("no exception control");
-    expect(exception.className).toContain("border");
+    expect(borderUtilities(exception.className)).not.toEqual([]);
   });
 });

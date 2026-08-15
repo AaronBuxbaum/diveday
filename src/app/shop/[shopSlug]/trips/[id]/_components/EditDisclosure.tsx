@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
  * The Overview's summary-first shell for a section's form: the section states
@@ -24,15 +25,7 @@ export function EditDisclosure({
     <details open={open} className="group mt-2">
       <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-base font-semibold text-primary transition-colors [&::-webkit-details-marker]:hidden hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         {label}
-        <svg
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          aria-hidden="true"
-          className="size-4 transition-transform duration-200 group-open:rotate-180"
-        >
-          <path d="m6 8 4 4 4-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
       </summary>
       {children}
     </details>
