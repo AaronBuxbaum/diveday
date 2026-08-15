@@ -656,14 +656,26 @@ export function canRecordOfflineCrewStatus(
  */
 function latestQueuedAttempt(
   events: readonly OfflineRollCallEvent[],
-  matches: (event: OfflineRollCallEvent) => boolean,
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
 ): OfflineRollCallEvent | undefined {
   let latest: OfflineRollCallEvent | undefined;
   for (const event of events) {
-    if (!matches(event)) continue;
-    // `>= 0`, not `> 0`: reaching an equal timestamp later in append order means
-    // this is the newer tap, so it supersedes what is held.
-    if (!latest || event.occurredAt.localeCompare(latest.occurredAt) >= 0) latest = event;
+    if (event.checkpoint !== checkpoint) continue;
+    // Attributed through the one reader of the subject fields rather than by
+    // testing a field directly. A record already in IndexedDB is a cast, not a
+    // parse — `appendOfflineRollCall` and the sync route's schema both refuse a
+    // both-subjects event on the way in, but neither can vouch for what is
+    // already stored. Matching on `bookingId` alone would let one such event be
+    // counted by *both* readers: one tap, two people marked, on the one screen
+    // that says who came back from a dive.
+    const subject = offlineRollCallSubject(event);
+    if (!subject || !matches(subject)) continue;
+    // `>=`, not `>`: reaching an equal timestamp later in append order means
+    // this is the newer tap, so it supersedes what is held. Plain string
+    // comparison because these are fixed-width `toISOString()` values, where
+    // lexicographic order *is* chronological order — no collation involved.
+    if (!latest || event.occurredAt >= latest.occurredAt) latest = event;
   }
   return latest;
 }
@@ -687,7 +699,8 @@ export function latestOfflineRollCall(
   // test in offline-manifests.test.ts.
   const latestAttempt = latestQueuedAttempt(
     events,
-    (event) => event.bookingId === bookingId && event.checkpoint === checkpoint,
+    checkpoint,
+    (subject) => subject.kind === "diver" && subject.bookingId === bookingId,
   );
   if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
     // A result recorded on this device at this checkpoint is always explicit.
@@ -735,7 +748,8 @@ export function latestOfflineCrewRollCall(
   | undefined {
   const latestAttempt = latestQueuedAttempt(
     events,
-    (event) => event.crewPersonId === crewPersonId && event.checkpoint === checkpoint,
+    checkpoint,
+    (subject) => subject.kind === "crew" && subject.crewPersonId === crewPersonId,
   );
   if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
     return {

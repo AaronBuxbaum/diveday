@@ -519,6 +519,74 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
   });
 
+  /**
+   * The server half of the equal-timestamp tie rule, which the device's
+   * `latestQueuedAttempt` (src/lib/offline-manifests.ts) is written to match.
+   *
+   * The refusal above is `newest.occurredAt > occurredAt` — strictly newer — so
+   * an *equal* timestamp is deliberately accepted rather than refused as
+   * `newer_event_exists`, and the read-back's `desc(occurredAt), desc(createdAt)`
+   * then returns the later-applied row. That is what lets a captain who marked
+   * the wrong row and corrected it inside one millisecond keep the correction.
+   *
+   * Pinned here because nothing else does. Tighten this comparison to `>=` and
+   * the server starts refusing the correction: the device would show the fix,
+   * the sync would reject it, and the reader would fall through to the
+   * snapshot — leaving "awaiting" on a person somebody had just made a
+   * statement about, with every device-side test still green.
+   */
+  it("accepts an equal-timestamp offline correction, and reads back the later one", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    const now = nowMs();
+    // One instant, two taps. `occurredAt` is millisecond-resolution, and the
+    // e2e fleet's frozen clock makes this the normal case rather than the edge.
+    const occurredAt = new Date(now - 60 * 60 * 1000);
+    const base = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1" as const,
+      source: "offline" as const,
+      offlineSnapshotSavedAt: new Date(now - 2 * 60 * 60 * 1000),
+      occurredAt,
+    };
+
+    // The mistake.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "not_boarded",
+        clientEventId: "33333333-3333-4333-8333-333333333333",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    // The correction, one tap later and the same millisecond. Accepted, not
+    // refused as newer_event_exists — this is the assertion that matters.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "boarded",
+        clientEventId: "44444444-4444-4444-8444-444444444444",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(
+      manifest?.divers.find((diver) => diver.bookingId === booking.booking.id)?.rollCall,
+    ).toMatchObject({ state: "boarded" });
+  });
+
   it("raises the manifest-events push signal for a genuine write but not a duplicate replay", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, {

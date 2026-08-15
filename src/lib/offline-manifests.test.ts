@@ -792,6 +792,64 @@ describe("offline crew roll call", () => {
     ).toBe("not_boarded");
   });
 
+  it("keeps the last of three results that all share a timestamp", () => {
+    const saved = crewSnapshot();
+    const base = {
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      crewPersonId: "crew-dana",
+      checkpoint: "after_dive_1" as const,
+      note: null,
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "pending" as const,
+    };
+    // Three taps, not two: "later-queued wins" has to be transitively the LAST
+    // one, not whichever end of the list a comparison happens to favour.
+    const events = [
+      { ...base, clientEventId: "event-1", status: "not_boarded" as const },
+      { ...base, clientEventId: "event-2", status: "boarded" as const },
+      { ...base, clientEventId: "event-3", status: "not_boarded" as const },
+    ];
+
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")?.state).toBe(
+      "not_boarded",
+    );
+    expect(
+      latestOfflineCrewRollCall(saved, events.slice(0, 2), "crew-dana", "after_dive_1")?.state,
+    ).toBe("boarded");
+  });
+
+  /*
+   * A stored event naming BOTH a booking and a crew person is refused on the
+   * way in twice over — by `appendOfflineRollCall` and by the sync route's
+   * schema — but a record already in IndexedDB is a cast, not a parse, and
+   * neither of those can vouch for what is already on the device. Matching on
+   * one field alone would let a single such event be counted by both readers:
+   * one tap, two people marked.
+   */
+  it("counts an event naming both subjects for neither of them", () => {
+    const saved = crewSnapshot();
+    const confused = {
+      clientEventId: "event-both",
+      snapshotId: saved.snapshotId,
+      snapshotSavedAt: saved.savedAt,
+      tripId: "trip-1",
+      bookingId: "ready",
+      crewPersonId: "crew-dana",
+      checkpoint: "after_dive_1" as const,
+      status: "boarded" as const,
+      note: null,
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      syncStatus: "pending" as const,
+    };
+
+    expect(
+      latestOfflineCrewRollCall(saved, [confused], "crew-dana", "after_dive_1"),
+    ).toBeUndefined();
+    expect(latestOfflineRollCall(saved, [confused], "ready", "after_dive_1")).toBeUndefined();
+  });
+
   it("still prefers a genuinely newer timestamp over queue position", () => {
     const saved = crewSnapshot();
     const base = {

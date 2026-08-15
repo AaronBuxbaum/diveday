@@ -678,7 +678,12 @@ new domain concept, define it here in the same PR.
   error — the same way the live manifest route already falls back to its own trip's copy.
 - **Reconciliation** — applying a device roll-call event to the live append-only history after
   reconnecting. The server rechecks staff, tenant, booking, checkpoint, and current readiness;
-  duplicate events are idempotent and an older device event cannot replace newer live history.
+  duplicate events are idempotent and an older device event cannot replace newer live history. An
+  **equally**-timestamped one is applied rather than refused, and both the device and the server
+  then resolve the tie the same way: in the order the device queued the events, so the later tap
+  wins. That is what lets a crew member who marks the wrong row and corrects it within the same
+  millisecond keep the correction, on the screen and after the sync alike — and it is a rule with
+  two halves that have to agree, so changing either one alone is a bug.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the
