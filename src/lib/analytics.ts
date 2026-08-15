@@ -2,7 +2,17 @@ import { track as vercelTrack } from "@vercel/analytics/server";
 import { installCapabilityUrlRedaction } from "./analytics-request-context";
 import type { DemoRoleId } from "./demo-roles";
 import type { FunnelSource } from "./funnel";
+import { log } from "./log";
 import type { RollCallCheckpoint } from "./manifests";
+
+/**
+ * Whether the un-wrappable-context warning has already been written.
+ *
+ * Once per process, not once per event: the condition is a property of the
+ * runtime rather than of any one event, so logging it per call would bury the
+ * drain under a line for every tracked action.
+ */
+let warnedAboutRedaction = false;
 
 /**
  * Custom event instrumentation, one seam. Page-level analytics already ships via
@@ -188,18 +198,43 @@ export async function trackEvent(
   // tracker still exercises the seam in unit tests (mirrors marine-forecast.ts).
   if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && tracker === vercelTrack) return;
 
-  // Before anything reaches Vercel, not once at module load: the runtime
-  // installs its request-context global itself, and there is no ordering
-  // guarantee that it has done so by the time this module is first imported.
-  // The wrap is idempotent and O(1), so paying it per event is cheaper than
-  // reasoning about that ordering — and missing the install is the silent
-  // failure the whole thing exists to prevent. See
-  // `analytics-request-context.ts` for why the page URL cannot be redacted at
-  // this call site instead.
-  if (tracker === vercelTrack) installCapabilityUrlRedaction();
-
   const { name, ...properties } = event;
   try {
+    // Before anything reaches Vercel, not once at module load: the runtime
+    // installs its request-context global itself, and there is no ordering
+    // guarantee that it has done so by the time this module is first imported.
+    // The wrap is idempotent and O(1), so paying it per event is cheaper than
+    // reasoning about that ordering — and missing the install is the silent
+    // failure the whole thing exists to prevent. See
+    // `analytics-request-context.ts` for why the page URL cannot be redacted at
+    // this call site instead.
+    //
+    // Inside the try, not above it. Callers are entitled to treat this function
+    // as total — `authorize()` in `src/lib/auth.ts` calls it as a bare `void
+    // trackEvent(...)` precisely because it swallows its own errors — and when
+    // the install threw here instead, that became an unhandled rejection on the
+    // sign-in path and an error out of every `after()` callback.
+    if (tracker === vercelTrack) {
+      const { status } = installCapabilityUrlRedaction();
+      // Fail closed. `failed` means a request context is present but could not
+      // be wrapped, so the SDK would compose the event's page URL from the raw
+      // request — and on `/waivers/[token]` and friends that URL *is* the
+      // credential. Losing a count is cheaper than leaking one. `absent` (dev,
+      // tests, self-hosted: no context at all) has nothing to leak, so it sends.
+      //
+      // Say so once, rather than going quiet: dropping every server-side event
+      // is exactly as invisible as leaking one used to be, and the reason this
+      // shim's first version survived a day in production is that nothing was
+      // watching it. A runtime upgrade that defeats both install strategies
+      // should show up in the drain, not in a month-end dashboard gap.
+      if (status === "failed") {
+        if (!warnedAboutRedaction) {
+          warnedAboutRedaction = true;
+          log("analytics.capability_redaction_uninstallable", "warn");
+        }
+        return;
+      }
+    }
     await tracker(name, properties as EventProps);
   } catch {
     // Telemetry is observational, never load-bearing.

@@ -1,5 +1,5 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type AnalyticsEvent, type Tracker, trackEvent } from "./analytics";
 
 // The default tracker is the only path that touches the network; stubbing it
@@ -69,6 +69,58 @@ describe("trackEvent", () => {
     await trackEvent({ name: "demo_entered", source: "home-hero", role: "owner" }, tracker);
     expect(tracker).toHaveBeenCalledWith("demo_entered", { source: "home-hero", role: "owner" });
     vi.unstubAllEnvs();
+  });
+
+  /**
+   * The capability-URL redaction is installed from in here, and installing it
+   * used to throw on Vercel, where the request-context slot is read-only. That
+   * broke the contract every caller leans on: `authorize()` in `src/lib/auth.ts`
+   * calls this as a bare `void trackEvent(...)` *because* it swallows its own
+   * errors, so the TypeError surfaced as an unhandled rejection on the sign-in
+   * path and as an error out of every `after()` callback that tracks an event.
+   */
+  describe("with the request-context global Vercel actually provides", () => {
+    const REQUEST_CONTEXT_SYMBOL = Symbol.for("@vercel/request-context");
+
+    /** Read-only like the real one, but configurable so the test can clean up. */
+    function installReadOnlyContext(holder: unknown) {
+      Object.defineProperty(globalThis, REQUEST_CONTEXT_SYMBOL, {
+        value: holder,
+        writable: false,
+        configurable: true,
+        enumerable: false,
+      });
+    }
+
+    afterEach(() => {
+      delete (globalThis as Record<PropertyKey, unknown>)[REQUEST_CONTEXT_SYMBOL];
+    });
+
+    it("still sends the event instead of throwing out of telemetry", async () => {
+      installReadOnlyContext({ get: () => ({ url: "https://dive.day/waivers/tok" }) });
+      await expect(trackEvent({ name: "waiver_signed" })).resolves.toBeUndefined();
+      expect(vercelTrack).toHaveBeenCalledWith("waiver_signed", {});
+    });
+
+    it("redacts the capability URL the SDK will read for itself", async () => {
+      installReadOnlyContext({ get: () => ({ url: "https://dive.day/waivers/tok" }) });
+      await trackEvent({ name: "waiver_signed" });
+      const holder = (globalThis as Record<PropertyKey, unknown>)[REQUEST_CONTEXT_SYMBOL] as {
+        get: () => { url: string };
+      };
+      expect(holder.get().url).toBe("/waivers/[token]");
+    });
+
+    it("drops the event rather than send it unredacted when nothing can be wrapped", async () => {
+      // Fail closed. The SDK composes the page URL from this context itself and
+      // offers no override, so an un-wrappable context means the only way not to
+      // ship a live waiver token to Vercel Analytics is not to ship the event.
+      installReadOnlyContext(
+        Object.freeze({ get: () => ({ url: "https://dive.day/waivers/tok" }) }),
+      );
+      await expect(trackEvent({ name: "waiver_signed" })).resolves.toBeUndefined();
+      expect(vercelTrack).not.toHaveBeenCalled();
+    });
   });
 
   it("carries the funnel source on both halves of the marketing funnel", async () => {

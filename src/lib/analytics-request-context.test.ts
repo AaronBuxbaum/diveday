@@ -47,15 +47,85 @@ describe("capability-URL redaction for server analytics", () => {
     const scope: Record<PropertyKey, unknown> = {
       [REQUEST_CONTEXT_SYMBOL]: holderFor("https://dive.day/waivers/tok"),
     };
-    expect(installCapabilityUrlRedaction(scope).installed).toBe(true);
+    expect(installCapabilityUrlRedaction(scope).status).toBe("installed");
     const once = scope[REQUEST_CONTEXT_SYMBOL];
-    expect(installCapabilityUrlRedaction(scope).installed).toBe(true);
+    expect(installCapabilityUrlRedaction(scope).status).toBe("installed");
     expect(scope[REQUEST_CONTEXT_SYMBOL]).toBe(once);
+    const url = (scope[REQUEST_CONTEXT_SYMBOL] as { get: () => { url: string } }).get().url;
+    expect(url).toBe("/waivers/[token]");
   });
 
   it("reports nothing to install when the runtime has not set the global", () => {
     // Dev, tests, self-hosted: no context, and correspondingly nothing to leak.
-    expect(installCapabilityUrlRedaction({}).installed).toBe(false);
+    expect(installCapabilityUrlRedaction({}).status).toBe("absent");
+  });
+
+  /**
+   * The production shape, and the regression this file most needs to hold.
+   *
+   * Vercel's runtime does not merely *set* the global — it defines the slot
+   * non-writable, so the `scope[SYMBOL] = ...` this used to install with threw
+   * a TypeError on every server-side event: an error out of each `after()`
+   * callback, and an unhandled rejection out of `authorize()`'s fire-and-forget
+   * `trackEvent` that took a sign-in to a 504.
+   */
+  describe("when the runtime's global slot is read-only, as it is on Vercel", () => {
+    function vercelScope(url: string) {
+      const scope: Record<PropertyKey, unknown> = {};
+      Object.defineProperty(scope, REQUEST_CONTEXT_SYMBOL, {
+        value: holderFor(url),
+        writable: false,
+        configurable: false,
+        enumerable: false,
+      });
+      return scope;
+    }
+
+    it("installs without throwing", () => {
+      const scope = vercelScope("https://dive.day/waivers/tok");
+      expect(() => installCapabilityUrlRedaction(scope)).not.toThrow();
+      expect(installCapabilityUrlRedaction(scope).status).toBe("installed");
+    });
+
+    it("actually redacts, rather than merely surviving", () => {
+      // The half a swallowed error would have hidden: not throwing is worthless
+      // if the token still reaches the SDK.
+      const scope = vercelScope("https://dive.day/waivers/6f1e5d4c-3b2a-1908-7766-554433221100");
+      installCapabilityUrlRedaction(scope);
+      const holder = scope[REQUEST_CONTEXT_SYMBOL] as { get: () => { url: string } };
+      expect(holder.get().url).toBe("/waivers/[token]");
+    });
+
+    it("redacts for a reference captured before the install, too", () => {
+      // Swapping the holder's `get` in place rather than the slot is what makes
+      // this hold — anything the runtime handed out earlier reads the shim.
+      const scope = vercelScope("https://dive.day/ready/tok");
+      const captured = scope[REQUEST_CONTEXT_SYMBOL] as { get: () => { url: string } };
+      installCapabilityUrlRedaction(scope);
+      expect(captured.get().url).toBe("/ready/[token]");
+    });
+
+    it("does not recurse when read twice", () => {
+      // The shim's `get` is assigned back onto the holder it reads through, so
+      // a late (rather than bound) read of the original would be infinite.
+      const scope = vercelScope("https://dive.day/s/blue-mantis");
+      installCapabilityUrlRedaction(scope);
+      const holder = scope[REQUEST_CONTEXT_SYMBOL] as { get: () => { url: string } };
+      expect(holder.get().url).toBe("https://dive.day/s/blue-mantis");
+      expect(holder.get().url).toBe("https://dive.day/s/blue-mantis");
+    });
+  });
+
+  it("reports failure, without throwing, when nothing can be wrapped at all", () => {
+    // Frozen holder in a read-only slot: no way in. `trackEvent` turns this
+    // into a dropped event rather than an unredacted one.
+    const scope: Record<PropertyKey, unknown> = {};
+    Object.defineProperty(scope, REQUEST_CONTEXT_SYMBOL, {
+      value: Object.freeze(holderFor("https://dive.day/waivers/tok")),
+      writable: false,
+      configurable: false,
+    });
+    expect(installCapabilityUrlRedaction(scope).status).toBe("failed");
   });
 
   it("tolerates a context with no url rather than throwing inside telemetry", () => {

@@ -56,14 +56,30 @@
  * `waiver_signed` count with a redacted page URL is exactly as useful and gives
  * an ad platform or a dashboard reader nothing they can use to open a waiver.
  *
+ * ## Why the shim is installed onto the holder rather than over the global
+ *
+ * The obvious install is `globalThis[SYMBOL] = redactingHolder(holder)`. That is
+ * what shipped, and on Vercel it **throws**: the runtime defines that slot as a
+ * non-writable data property, so the assignment is a `TypeError` in strict mode
+ * ("Cannot assign to read only property 'Symbol(@vercel/request-context)'").
+ * Every server-side event died on it for a day — out of `after()` callbacks as a
+ * logged error, and out of `authorize()`'s `void trackEvent(...)` as an unhandled
+ * rejection that took a sign-in to a 504.
+ *
+ * The holder sitting *in* that read-only slot is an ordinary object, though, so
+ * its `get` can be swapped in place. That is now the first strategy, and it is
+ * the better one regardless: anything that captured the holder before this ran
+ * reads through the shim too, where replacing the slot would have left it
+ * looking at the raw context.
+ *
  * ## The contract this depends on
  *
  * `Symbol.for("@vercel/request-context")` and the `{ get(): { url } }` shape are
  * **internal** to Vercel's runtime — not a documented public API. If an upgrade
  * changes either, this silently stops redacting, which is the same silent
  * failure it exists to prevent. `analytics-request-context.test.ts` pins the
- * shape, and `installCapabilityUrlRedaction` reports whether it found anything
- * to wrap so a deploy check can assert it did.
+ * shape, and `installCapabilityUrlRedaction` reports which of the three things
+ * happened so its caller can fail closed on the one that matters.
  */
 import { redactCapabilityUrl } from "./capability-urls";
 
@@ -88,10 +104,14 @@ type Wrappable = VercelRequestContextHolder & { [WRAPPED]?: true };
 export function redactingHolder(holder: VercelRequestContextHolder): VercelRequestContextHolder {
   const wrappable = holder as Wrappable;
   if (wrappable[WRAPPED]) return holder;
+  // Bound *now*, not read through `holder.get` at call time: the install below
+  // assigns this shim's `get` back onto the same holder, and a late read would
+  // then find the shim and recurse forever.
+  const read = holder.get.bind(holder);
   const wrapped: Wrappable = {
     ...holder,
     get: () => {
-      const context = holder.get();
+      const context = read();
       if (!context || typeof context.url !== "string") return context;
       // Spread rather than mutate: the runtime hands the *same* context object
       // to everything else that reads it (`waitUntil` and friends live on it),
@@ -104,18 +124,54 @@ export function redactingHolder(holder: VercelRequestContextHolder): VercelReque
 }
 
 /**
- * Install the redaction, returning whether a holder was there to wrap.
+ * Whether `key` on `target` can be overwritten without throwing.
  *
- * `false` is not an error on its own — outside Vercel's runtime (dev, tests,
- * any self-hosted target) nothing sets the global, and there is correspondingly
- * nothing that could leak. It is only a problem in production, which is what
- * makes it worth returning rather than swallowing.
+ * Asked rather than attempted: this runs on the path that must never throw, and
+ * a descriptor check says the same thing as a `try`/`catch` without turning a
+ * genuine bug elsewhere into a swallowed one.
+ */
+function isOverwritable(target: object, key: PropertyKey): boolean {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  if (!descriptor) return Object.isExtensible(target);
+  return descriptor.writable === true;
+}
+
+/**
+ * How the install went.
+ *
+ * `absent` is the normal answer off Vercel — dev, tests, any self-hosted target
+ * never sets the global, and there is correspondingly nothing that could leak.
+ * `failed` means a real request context is there and could **not** be wrapped,
+ * which is the only one a caller must act on: see `trackEvent`, which drops the
+ * event rather than let the SDK compose a page URL out of a live capability
+ * token.
+ */
+export type RedactionInstall = "absent" | "installed" | "failed";
+
+/**
+ * Install the redaction. Never throws: this runs inside telemetry, which may
+ * not take down the flow it observes, and the assignment it used to do did
+ * exactly that on Vercel (see the note on the read-only slot above).
  */
 export function installCapabilityUrlRedaction(scope: Record<PropertyKey, unknown> = globalThis): {
-  installed: boolean;
+  status: RedactionInstall;
 } {
-  const holder = scope[REQUEST_CONTEXT_SYMBOL] as VercelRequestContextHolder | undefined;
-  if (!holder || typeof holder.get !== "function") return { installed: false };
-  scope[REQUEST_CONTEXT_SYMBOL] = redactingHolder(holder);
-  return { installed: true };
+  const holder = scope[REQUEST_CONTEXT_SYMBOL] as Wrappable | undefined;
+  if (!holder || typeof holder.get !== "function") return { status: "absent" };
+  if (holder[WRAPPED]) return { status: "installed" };
+  const wrapped = redactingHolder(holder) as Wrappable;
+
+  // Swap the holder's own `get`, which is what works on Vercel and what keeps
+  // an already-captured holder reference redacted.
+  if (isOverwritable(holder, "get") && Object.isExtensible(holder)) {
+    holder.get = wrapped.get;
+    holder[WRAPPED] = true;
+    return { status: "installed" };
+  }
+  // A frozen holder in a writable slot: swap the whole holder instead.
+  if (isOverwritable(scope, REQUEST_CONTEXT_SYMBOL)) {
+    scope[REQUEST_CONTEXT_SYMBOL] = wrapped;
+    return { status: "installed" };
+  }
+  return { status: "failed" };
 }
