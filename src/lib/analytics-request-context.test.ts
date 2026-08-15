@@ -153,9 +153,18 @@ describe("the @vercel/analytics contract this depends on", () => {
 
   it("still offers no way for a caller to supply that URL itself", () => {
     // The reason the fix is a global wrapper rather than an argument. If a
-    // future release adds an override (or a `beforeSend`), prefer it and delete
-    // the shim -- see the upstream request in
+    // future release adds an override, prefer it and delete the shim -- see the
+    // upstream request in
     // docs/product/follow-ups/FU-20260814-vercel-analytics-url-override.md.
     expect(sdk).not.toMatch(/options\s*(\?\.)?\s*\.\s*url\b/);
+    // Name the proposed shape too, not just the generic one. The request went
+    // upstream as vercel/analytics#208, a `beforeSend` hook mirroring the
+    // browser SDK's -- whose source reads `options?.beforeSend` and `event.url`
+    // and so matches neither the regex above nor anything else here. This is a
+    // tripwire, and a tripwire that stays green through exactly the API we
+    // asked for is no tripwire at all: without this line the shim would have
+    // outlived its own replacement, silently, which is the failure mode this
+    // whole file exists to avoid.
+    expect(sdk).not.toContain("beforeSend");
   });
 });
