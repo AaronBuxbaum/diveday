@@ -61,7 +61,7 @@ this file is the checklist, not the argument.
 
 [6] Mint a Vercel token and link the project for the CI deploy job
     when     once, before the first CI-run post-deploy wizard, and again if the token is revoked
-    why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
+    why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod --archive=tgz`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
     run      Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
              gh secret set VERCEL_TOKEN --env infra-deploy
              vercel link (once, on any workstation, against the same project) to read .vercel/project.json's orgId/projectId, then: gh secret set VERCEL_ORG_ID --env infra-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env infra-deploy --body <projectId>

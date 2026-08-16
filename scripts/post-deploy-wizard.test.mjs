@@ -40,7 +40,7 @@ describe("post-deploy wizard", () => {
         process.execPath,
         [expect.stringContaining("import-vercel-env.mjs"), ".env.vercel", "production"],
       ],
-      ["pnpm", ["exec", "vercel", "--prod"]],
+      ["pnpm", ["exec", "vercel", "--prod", "--archive=tgz"]],
       [process.execPath, [expect.stringContaining("sync-github-secrets.mjs"), ".env.github"]],
       [
         "aws",
@@ -149,8 +149,8 @@ describe("post-deploy wizard", () => {
       );
     };
 
-    expect((await vercelDeploy(true)).arguments_).toEqual(["exec", "vercel", "--prod", "--yes"]);
-    expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod"]);
+    expect((await vercelDeploy(true)).arguments_).toEqual(["exec", "vercel", "--prod", "--archive=tgz", "--yes"]);
+    expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod", "--archive=tgz"]);
   });
 
   it("syncs the infra-deploy environment only on a workstation, never in CI", async () => {
