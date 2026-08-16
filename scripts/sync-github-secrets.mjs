@@ -5,9 +5,11 @@ import { join } from "node:path";
 import { dotenvMap } from "./dotenv.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-const [inputPath] = process.argv.slice(2);
+const rawArguments = process.argv.slice(2);
+const checkOnly = rawArguments.includes("--check");
+const [inputPath] = rawArguments.filter((argument) => argument !== "--check");
 if (!inputPath) {
-  console.error("Usage: node scripts/sync-github-secrets.mjs <dotenv-file>");
+  console.error("Usage: node scripts/sync-github-secrets.mjs <dotenv-file> [--check]");
   process.exit(2);
 }
 
@@ -31,6 +33,14 @@ const previous = existsSync(checkpointPath)
   : new Map();
 
 const changed = [...entries].filter(([key, value]) => previous.get(key) !== value);
+
+if (checkOnly) {
+  // GitHub does not reveal secret values, so this is the same local
+  // checkpoint comparison the write path uses, without invoking `gh` or
+  // changing the checkpoint.
+  console.log(changed.length === 0 ? "CURRENT" : "UPDATE");
+  process.exit(0);
+}
 
 if (changed.length === 0) {
   console.log("No GitHub secrets changed since the last sync; nothing pushed.");

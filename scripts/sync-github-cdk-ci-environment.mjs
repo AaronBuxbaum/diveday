@@ -25,6 +25,7 @@
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ENVIRONMENT_NAME = "infra-deploy";
+const checkOnly = process.argv.includes("--check");
 
 function gh(arguments_, options = {}) {
   return readBounded("gh", arguments_, {
@@ -71,6 +72,11 @@ const alreadyIncluded = existingReviewers.some(
 const reviewers = alreadyIncluded
   ? existingReviewers
   : [...existingReviewers, { type: "User", id: reviewerId }];
+
+if (checkOnly) {
+  console.log(alreadyIncluded ? "CURRENT" : "UPDATE");
+  process.exit(0);
+}
 
 const body = JSON.stringify({
   wait_timer: existing?.wait_timer ?? 0,

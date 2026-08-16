@@ -43,6 +43,10 @@ the deployer key it just ran `cdk deploy` with cannot.
   silently. Any other read failure (permissions, network, a renamed parameter) warns and also falls
   back to pushing everything, matching the fallback discipline the original `vercel env pull`-based
   diff already used — an optimization is never allowed to block the sync itself.
+- The candidate dotenv document and its complete hashed state are validated before the first
+  Vercel upload. After the changed values succeed, the full current hashed state is written back
+  even when no value changed, so a variable removed from the generated document is pruned from the
+  checkpoint instead of remaining falsely current.
 - No CDK change. `diveday-admin` is a human operator's own administrator-equivalent login, not an
   IAM identity this stack issues or scopes — it is already the profile with authority to read
   `diveday/env`, which nothing less than administrator-equivalent access can do. A parameter this

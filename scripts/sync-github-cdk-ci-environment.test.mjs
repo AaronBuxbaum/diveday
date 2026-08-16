@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -60,10 +60,10 @@ esac
   chmodSync(join(binDirectory, "gh"), 0o755);
 }
 
-function run(binDirectory) {
+function run(binDirectory, arguments_ = []) {
   return execFileSync(
     "node",
-    [join(process.cwd(), "scripts", "sync-github-cdk-ci-environment.mjs")],
+    [join(process.cwd(), "scripts", "sync-github-cdk-ci-environment.mjs"), ...arguments_],
     { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
   );
 }
@@ -162,5 +162,25 @@ describe("sync-github-cdk-ci-environment", () => {
     const calls = readCalls(callLogPath);
 
     expect(calls[0].body.reviewers).toEqual([{ type: "User", id: 42 }]);
+  });
+
+  it("reports an existing current reviewer without updating the environment", () => {
+    const directory = temporaryDirectory("diveday-gh-cdk-env-");
+    const callLogPath = join(directory, "calls.log");
+    writeGhStub(
+      directory,
+      callLogPath,
+      JSON.stringify({
+        protection_rules: [
+          {
+            type: "required_reviewers",
+            reviewers: [{ type: "User", reviewer: { id: 42, login: "octocat" } }],
+          },
+        ],
+      }),
+    );
+
+    expect(run(directory, ["--check"]).trim()).toBe("CURRENT");
+    expect(existsSync(callLogPath)).toBe(false);
   });
 });

@@ -7,14 +7,44 @@
 // failed sts:AssumeRoleWithWebIdentity impossible to read from the workflow.
 import { readFileSync } from "node:fs";
 import { dotenvEntries } from "./dotenv.mjs";
-import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
+const checkOnly = process.argv.includes("--check");
 const document = readFileSync(0, "utf8");
 const entries = dotenvEntries(document);
 
 if (entries.length === 0) {
   console.error("sync-github-cdk-ci-vars: no KEY=VALUE lines on stdin; nothing to set.");
   process.exit(1);
+}
+
+if (checkOnly) {
+  let needsUpdate = false;
+  for (const [key, value] of entries) {
+    if (!value) {
+      needsUpdate = true;
+      continue;
+    }
+    try {
+      const current = readBounded(
+        "gh",
+        ["variable", "get", key, "--json", "value", "--jq", ".value"],
+        {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+          timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+        },
+      ).trim();
+      if (current !== value) needsUpdate = true;
+    } catch {
+      // An absent variable, stale authentication, or a transient API failure
+      // must leave the question visible. The write path remains the authority
+      // for the actual update and will report the actionable failure.
+      needsUpdate = true;
+    }
+  }
+  console.log(needsUpdate ? "UPDATE" : "CURRENT");
+  process.exit(0);
 }
 
 let failed = false;

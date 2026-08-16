@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,6 +30,10 @@ function fixture() {
   const bin = join(directory, "bin");
   mkdirSync(bin, { recursive: true });
   mkdirSync(join(directory, "aws-home"), { recursive: true });
+  writeFileSync(
+    join(directory, ".env.example"),
+    readFileSync(join(process.cwd(), ".env.example"), "utf8"),
+  );
 
   const secretCallLogPath = join(directory, "secret-calls.log");
   const ghCallLogPath = join(directory, "gh-calls.log");
@@ -115,6 +127,19 @@ function run(directory, bin, extraArguments, extraEnvironment) {
 }
 
 describe("infra-deploy in CI", () => {
+  it("refuses an invalid manual configuration before writing target files", () => {
+    const { directory, bin } = fixture();
+    writeFileSync(join(directory, ".env.manual"), "NOT_A_DIVEDAY_VARIABLE=value\n");
+
+    const result = run(directory, bin, ["--no-wizard"], {});
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("which nothing in DiveDay reads");
+    expect(existsSync(join(directory, ".env.local"))).toBe(false);
+    expect(existsSync(join(directory, ".env.vercel"))).toBe(false);
+    expect(existsSync(join(directory, ".env.github"))).toBe(false);
+  });
+
   it("runs the post-deploy wizard non-interactively, answering yes to every question", () => {
     const { directory, bin, ghCallLogPath } = fixture();
     const result = run(directory, bin, ["--ci-unattended"], {});
