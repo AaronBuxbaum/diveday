@@ -12,7 +12,6 @@ import { listDiveSites } from "@/db/dive-sites";
 import { listDepartureBoardedByTrip } from "@/db/manifests";
 import { countOpenTripOrders } from "@/db/orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
-import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
@@ -49,7 +48,6 @@ import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
-import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
@@ -61,7 +59,6 @@ import {
   cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
-  deleteRecapPhotoAction,
   reinstateTripAction,
   saveConditionsAction,
   saveDetails,
@@ -162,7 +159,6 @@ export default async function ManageTripPage({
     series,
     scheduleDays,
     canConfigure,
-    recapPhotos,
     blowoutCalled,
     pulseReadiness,
     pulsePrepDivers,
@@ -178,7 +174,6 @@ export default async function ManageTripPage({
     getTripSeriesSummary(db, shop.id, tripId),
     listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
-    listRecapPhotosForTrip(db, shop.id, tripId),
     // Whether this trip's cancellation was a called blow-out — the cascade
     // record is the surface a weather morning is worked from, so the trip page
     // must always offer the way back to it (ADR 20260804-blowout-cascade).
@@ -290,9 +285,6 @@ export default async function ManageTripPage({
     ...(canConfigure ? ["details", "requirements"] : []),
     "conditions",
     "recap-note",
-    // The gallery renders nothing at all once the last photo is gone, so the
-    // removal that emptied it has no section to land in and falls back.
-    ...(recapPhotos.length > 0 ? ["recap-photos"] : []),
     "lifecycle",
     ...(canConfigure && series ? ["series"] : []),
   ]);
@@ -375,9 +367,7 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice", "count", "form"]} />
       <TripPageHeader
-        title={trip.title}
-        startsAt={trip.startsAt}
-        endsAt={trip.endsAt}
+        trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={
@@ -687,16 +677,6 @@ export default async function ManageTripPage({
           locale={locale}
         />
       ) : null}
-
-      {/* Diver-shared recap photos sit beside the crew's own shout-out — both
-          are the post-trip recap's content, and moderating one moved off the
-          Guests tab to slim it (task 156, UX persona lens 17). */}
-      <RecapPhotoGallery
-        photos={recapPhotos}
-        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "recap-photos")}
-        locale={locale}
-      />
 
       {canConfigure && series ? (
         <SeriesSection

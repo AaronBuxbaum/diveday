@@ -247,9 +247,7 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
-        title={manifest.trip.title}
-        startsAt={manifest.trip.startsAt}
-        endsAt={manifest.trip.endsAt}
+        trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
         // One line about what this page *is*. What to do at each checkpoint is

@@ -12,7 +12,7 @@ import {
 } from "@/lib/closeout";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { bookings, dayCloseouts, people, trips } from "./schema";
+import { bookings, dayCloseouts, people, recapPhotos, trips } from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
 
 /**
@@ -68,21 +68,51 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       ),
     );
   if (rows.length === 0) return [];
-  const counts = await db
-    .select({ tripId: bookings.tripId, booked: count() })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(
-          bookings.tripId,
-          rows.map((row) => row.id),
+  const [counts, photos] = await Promise.all([
+    db
+      .select({ tripId: bookings.tripId, booked: count() })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.tripId,
+            rows.map((row) => row.id),
+          ),
+          ne(bookings.status, "cancelled"),
         ),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .groupBy(bookings.tripId);
+      )
+      .groupBy(bookings.tripId),
+    db
+      .select({
+        id: recapPhotos.id,
+        imageUrl: recapPhotos.imageUrl,
+        caption: recapPhotos.caption,
+        diverName: people.fullName,
+        bookingId: recapPhotos.bookingId,
+        tripId: recapPhotos.tripId,
+      })
+      .from(recapPhotos)
+      .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(recapPhotos.shopId, shopId),
+          inArray(
+            recapPhotos.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      )
+      .orderBy(desc(recapPhotos.createdAt)),
+  ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
+  const photosByTrip = new Map<string, typeof photos>();
+  for (const photo of photos) {
+    const list = photosByTrip.get(photo.tripId) ?? [];
+    list.push(photo);
+    photosByTrip.set(photo.tripId, list);
+  }
   return rows.map((row) => ({
     tripId: row.id,
     title: row.title,
@@ -90,6 +120,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
     recapShoutout: row.recapShoutout,
+    photos: photosByTrip.get(row.id) ?? [],
   }));
 }
 

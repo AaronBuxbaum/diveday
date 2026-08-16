@@ -309,9 +309,7 @@ async function TripGuestsBody({
     <>
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <TripPageHeader
-        title={trip.title}
-        startsAt={trip.startsAt}
-        endsAt={trip.endsAt}
+        trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={

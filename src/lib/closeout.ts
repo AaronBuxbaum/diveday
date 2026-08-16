@@ -128,6 +128,13 @@ export type CloseoutTripInput = {
    * still remembers it. Null when nothing is written yet.
    */
   recapShoutout: string | null;
+  photos?: {
+    id: string;
+    imageUrl: string;
+    caption: string | null;
+    diverName: string;
+    bookingId: string;
+  }[];
 };
 
 /**
@@ -164,6 +171,13 @@ export type CloseoutDeparture = {
    * left has none coming.
    */
   ended: boolean;
+  photos: {
+    id: string;
+    imageUrl: string;
+    caption: string | null;
+    diverName: string;
+    bookingId: string;
+  }[];
 };
 
 /** The one-line answer to "how did today end?", as a code. */
@@ -275,6 +289,7 @@ export function assembleDayCloseout(input: {
       booked: trip.booked,
       recapShoutout: trip.recapShoutout,
       ended: trip.endsAt <= now,
+      photos: trip.photos ?? [],
       ...departureStatus(trip, worstGapByTrip.get(trip.tripId), now),
     }))
     .sort(

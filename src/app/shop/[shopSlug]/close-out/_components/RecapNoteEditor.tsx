@@ -1,7 +1,10 @@
+import Image from "next/image";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
@@ -29,12 +32,22 @@ export function RecapNoteEditor({
   shoutout,
   saved,
   t,
+  photos = [],
+  deletePhotoAction,
 }: {
   action: (formData: FormData) => void;
   shoutout: string | null;
   /** True right after this row's own save, which is also what holds it open. */
   saved: boolean;
   t: StaffTranslator;
+  photos?: {
+    id: string;
+    imageUrl: string;
+    caption: string | null;
+    diverName: string;
+    bookingId: string;
+  }[];
+  deletePhotoAction?: (formData: FormData) => void;
 }) {
   return (
     <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
@@ -81,6 +94,65 @@ export function RecapNoteEditor({
           </FormStatus>
         </div>
       </form>
+
+      {photos.length > 0 && deletePhotoAction ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
+            {t("trips.recapPhotos.heading")}{" "}
+            <span className="font-normal text-muted tabular-nums">{photos.length}</span>
+          </h4>
+          <p className="mt-1 text-sm text-muted">{t("trips.recapPhotos.description")}</p>
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {photos.map((photo) => (
+              <li
+                key={photo.id}
+                className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
+              >
+                <div className="relative aspect-square w-full">
+                  <Image
+                    src={photo.imageUrl}
+                    alt={
+                      photo.caption ??
+                      t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
+                    }
+                    fill
+                    sizes="288px"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium">{photo.diverName}</p>
+                    {photo.caption ? (
+                      <p className="truncate text-xs text-muted">{photo.caption}</p>
+                    ) : null}
+                  </div>
+                  <form action={deletePhotoAction}>
+                    <input type="hidden" name="photoId" value={photo.id} />
+                    <InlineConfirm
+                      triggerLabel={t("trips.recapPhotos.remove")}
+                      triggerClassName={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        className: "shrink-0",
+                      })}
+                      confirmClassName={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        busy: true,
+                      })}
+                      message={t("trips.recapPhotos.confirmRemove")}
+                      confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
+                      cancelLabel={t("trips.recapPhotos.removeCancel")}
+                      pendingLabel={t("trips.recapPhotos.removing")}
+                    />
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </details>
   );
 }
