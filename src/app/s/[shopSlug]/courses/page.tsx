@@ -73,7 +73,9 @@ export default async function PublicCoursesPage({
   // page, and a catalog that silently shows nothing is indistinguishable from
   // a shop that teaches nothing. Null only when the shop publishes no courses
   // at all; there is no unfiltered view (see `AgencyTabs`).
-  const selectedAgency = agency && agencies.includes(agency) ? agency : (agencies[0] ?? null);
+  const requestedAgency = agency?.trim().toLowerCase();
+  const selectedAgency =
+    requestedAgency && agencies.includes(requestedAgency) ? requestedAgency : (agencies[0] ?? null);
   // `{depth18}` markers in the shop's own prose resolve into the shop's unit
   // before anything on this page reads a field — the same one-shot pass the
   // course page itself makes (src/lib/courses.ts).

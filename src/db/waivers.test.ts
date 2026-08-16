@@ -30,7 +30,8 @@ const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, respons
 
 async function waiverContext() {
   const { db, shop } = await seededShopContext();
-  const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("demo trip missing");
   const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
   if (!rosterEntry) throw new Error("demo booking missing");

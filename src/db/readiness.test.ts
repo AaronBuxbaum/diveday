@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -83,7 +84,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     if (!email) throw new Error("demo diver has no email to rebook under");
 
     // The same diver grabs a spot on a second, non-course trip.
-    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, nowDate());
     const other = upcoming.find(
       (trip) => trip.id !== reef.id && !trip.course && trip.booked < trip.capacity,
     );

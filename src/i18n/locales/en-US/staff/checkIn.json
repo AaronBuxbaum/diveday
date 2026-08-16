@@ -46,10 +46,10 @@
     "walkinFull": "That boat is full — try the wait list from its trip page instead.",
     "walkinAlready": "That diver is already on this boat.",
     "walkinCourseUnstaffed": "That's a course session with no instructor assigned yet — assign one from its trip page first.",
-    "walkinCoursePrerequisite": "That course needs a verified prerequisite card this diver doesn't have on file.",
+    "walkinCoursePrerequisite": "That course needs verified prerequisite certification this diver doesn't have on file.",
     "walkinCourseRatioFull": "That session is at its instructor-to-student ratio — another instructor, or the wait list.",
     "walkinCourseMinAge": "That diver is under the course's minimum age on the day it runs, going by the date of birth on file.",
-    "walkinTripPrerequisite": "That diver's cards don't reach what this boat and its dive sites require.",
+    "walkinTripPrerequisite": "That diver's certifications don't reach what this boat and its dive sites require.",
     "walkinUnavailable": "That diver can’t take a seat on this boat right now.",
     "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
   },

@@ -33,11 +33,11 @@
   "colCrewMember": "Crew member",
   "colRoles": "Roles",
   "evidenceHeading": "Certification evidence and waiver status",
-  "evidenceDescription": "Cards as held when this document was generated, with review dates. Waiver status only — medical answers are never part of this document.",
+  "evidenceDescription": "Certification records as held when this document was generated, with review dates. Waiver status only — medical answers are never part of this document.",
   "certNone": "No certification evidence on file.",
-  "certLevelLine": "{agency} · {level} · card no. {identifier}",
-  "certSpecialtyLine": "{agency} · {specialty} · card no. {identifier}",
-  "certNitroxLine": "{agency} · Enriched air (nitrox) · card no. {identifier}",
+  "certLevelLine": "{agency} · {level} · certification no. {identifier}",
+  "certSpecialtyLine": "{agency} · {specialty} · certification no. {identifier}",
+  "certNitroxLine": "{agency} · Enriched air (nitrox) · certification no. {identifier}",
   "certStatusVerified": "Certified — reviewed {date}",
   "certStatusVerifiedNoDate": "Certified",
   "certStatusPending": "Pending review — not certified",
@@ -65,6 +65,6 @@
   "noteLine": "Note: {note}",
   "footerHashLabel": "Integrity code (SHA-256)",
   "footerHashExplainer": "Computed from this document's recorded facts. Re-generating from unchanged records reproduces the same code, so two copies can be checked against each other.",
-  "certNoNumber": "no card number on file",
-  "certSelfDeclaredTag": "self-declared by the diver, never sighted"
+  "certNoNumber": "no certification number on file",
+  "certSelfDeclaredTag": "self-declared by the diver, never verified"
 }

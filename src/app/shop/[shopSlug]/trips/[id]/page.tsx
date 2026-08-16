@@ -47,6 +47,7 @@ import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
+import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
@@ -59,6 +60,7 @@ import {
   cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
+  recordTripPrintPdfAction,
   reinstateTripAction,
   saveConditionsAction,
   saveDetails,
@@ -400,6 +402,12 @@ export default async function ManageTripPage({
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
+            />
+            <PrintTripBundleButton
+              href={shopPath(shopSlug, "trips", tripId, "print")}
+              label={t("shared.printButton.label")}
+              popupBlockedLabel={t("shared.printButton.popupBlocked")}
+              recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
             />
           </>
         }

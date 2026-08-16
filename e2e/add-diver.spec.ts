@@ -22,6 +22,7 @@ async function openPrivateNotes(page: Page) {
   // rather than moving to helpers.ts because the spec seats exactly one diver
   // and reads the notes box without first locating a row.
   if (!isOpen) await details.locator("> summary").click();
+  return details;
 }
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
@@ -77,12 +78,19 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // unrelated "full" elsewhere on the page.
   await expect(page.getByText("✅Full")).toBeVisible();
 
-  await openPrivateNotes(page);
+  const privateNotes = await openPrivateNotes(page);
+  await privateNotes.scrollIntoViewIfNeeded();
+  const notesScroll = await page.evaluate(() => window.scrollY);
+  const guestsUrl = page.url();
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
   // No banner: adding a note lands in place now (`addInternalNoteAction`), so
   // the note appearing in the list above the box *is* the confirmation — the
   // page does not navigate, which is the whole point of the change.
+  await expect(page).toHaveURL(guestsUrl);
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - notesScroll))
+    .toBeLessThan(100);
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();

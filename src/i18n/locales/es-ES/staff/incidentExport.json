@@ -33,11 +33,11 @@
   "colCrewMember": "Miembro de la tripulación",
   "colRoles": "Funciones",
   "evidenceHeading": "Evidencia de certificación y estado de la exención",
-  "evidenceDescription": "Tarjetas tal como constaban al generar este documento, con sus fechas de revisión. Solo el estado de la exención: las respuestas médicas nunca forman parte de este documento.",
+  "evidenceDescription": "Registros de certificación tal como constaban al generar este documento, con sus fechas de revisión. Solo el estado de la exención: las respuestas médicas nunca forman parte de este documento.",
   "certNone": "Sin evidencia de certificación registrada.",
-  "certLevelLine": "{agency} · {level} · tarjeta n.º {identifier}",
-  "certSpecialtyLine": "{agency} · {specialty} · tarjeta n.º {identifier}",
-  "certNitroxLine": "{agency} · Aire enriquecido (nitrox) · tarjeta n.º {identifier}",
+  "certLevelLine": "{agency} · {level} · certificación n.º {identifier}",
+  "certSpecialtyLine": "{agency} · {specialty} · certificación n.º {identifier}",
+  "certNitroxLine": "{agency} · Aire enriquecido (nitrox) · certificación n.º {identifier}",
   "certStatusVerified": "Certificada — revisada el {date}",
   "certStatusVerifiedNoDate": "Certificada",
   "certStatusPending": "Revisión pendiente — sin certificar",
@@ -65,6 +65,6 @@
   "noteLine": "Nota: {note}",
   "footerHashLabel": "Código de integridad (SHA-256)",
   "footerHashExplainer": "Calculado a partir de los datos registrados en este documento. Regenerarlo con los mismos registros reproduce el mismo código, así que dos copias pueden compararse entre sí.",
-  "certNoNumber": "sin número de tarjeta registrado",
-  "certSelfDeclaredTag": "autodeclarado por el buzo, nunca verificado con la tarjeta"
+  "certNoNumber": "sin número de certificación registrado",
+  "certSelfDeclaredTag": "autodeclarado por el buzo, nunca verificado"
 }

@@ -11,7 +11,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
@@ -36,7 +36,8 @@ import {
   ReviewSelectCheckbox,
   ReviewSelectionProvider,
 } from "./_components/ReviewBulkPublish";
-import { setReviewPublishedAction } from "./actions";
+import { ReviewHideForm } from "./_components/ReviewHideForm";
+import { setReviewPublishedAction, setReviewStandoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -72,6 +73,9 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   "none-selected": { tone: "danger", key: "reviews.notice.noneSelected" },
   "reason-required": { tone: "danger", key: "reviews.notice.reasonRequired" },
   "note-required": { tone: "danger", key: "reviews.notice.noteRequired" },
+  "note-too-long": { tone: "danger", key: "reviews.notice.noteTooLong" },
+  standout: { tone: "success", key: "reviews.notice.standout" },
+  "standout-removed": { tone: "success", key: "reviews.notice.standoutRemoved" },
   error: { tone: "danger", key: "reviews.notice.error" },
 };
 
@@ -339,12 +343,7 @@ export default async function ReviewsPage({
         ) : (
           <ul className="flex flex-col gap-3">
             {reviews.map((review) => {
-              // A published 5★ review is the shop's best news on this page —
-              // the one place besides `EarnedMoment` itself that borrows its
-              // coral accent, matching its classes rather than reusing the
-              // section component (this is a repeatable list row, not a
-              // page-level hero — see the component's own "rationed" note).
-              const standout = review.isPublished && review.rating === 5;
+              const standout = review.isStandout;
               return (
                 <li
                   key={review.id}
@@ -426,48 +425,20 @@ export default async function ReviewsPage({
                       >
                         {t("reviews.hide")}
                       </summary>
-                      <form action={setReviewPublishedAction} className="mt-3 flex flex-col gap-2">
-                        <input type="hidden" name="reviewId" value={review.id} />
-                        <input type="hidden" name="publish" value="false" />
-                        <label
-                          className="text-xs font-medium text-muted"
-                          htmlFor={`reason-${review.id}`}
-                        >
-                          {t("reviews.hideReasonLabel")}
-                        </label>
-                        <select
-                          id={`reason-${review.id}`}
-                          name="reason"
-                          required
-                          defaultValue=""
-                          className={controlClass}
-                        >
-                          <option value="" disabled>
-                            {t("reviews.hideReasonPlaceholder")}
-                          </option>
-                          {REVIEW_MODERATION_REASONS.map((reason) => (
-                            <option key={reason} value={reason}>
-                              {t(REVIEW_REASON_KEYS[reason])}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          name="reasonNote"
-                          type="text"
-                          maxLength={200}
-                          placeholder={t("reviews.hideNotePlaceholder")}
-                          aria-label={t("reviews.hideNoteLabel")}
-                          className={controlClass}
-                        />
-                        <SubmitButton
-                          pendingLabel={t("reviews.saving")}
-                          className={buttonClass({
-                            variant: "secondary",
-                          })}
-                        >
-                          {t("reviews.hideConfirm")}
-                        </SubmitButton>
-                      </form>
+                      <ReviewHideForm
+                        reviewId={review.id}
+                        action={setReviewPublishedAction}
+                        reasons={REVIEW_MODERATION_REASONS.map((reason) => ({
+                          value: reason,
+                          label: t(REVIEW_REASON_KEYS[reason]),
+                        }))}
+                        reasonLabel={t("reviews.hideReasonLabel")}
+                        reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
+                        noteLabel={t("reviews.hideNoteLabel")}
+                        notePlaceholder={t("reviews.hideNotePlaceholder")}
+                        hideLabel={t("reviews.hideConfirm")}
+                        savingLabel={t("reviews.saving")}
+                      />
                     </details>
                   ) : (
                     <form action={setReviewPublishedAction} className="shrink-0">
@@ -478,6 +449,24 @@ export default async function ReviewsPage({
                       </SubmitButton>
                     </form>
                   )}
+                  {review.isPublished && review.comment ? (
+                    <form action={setReviewStandoutAction} className="shrink-0">
+                      <input type="hidden" name="reviewId" value={review.id} />
+                      <input
+                        type="hidden"
+                        name="standout"
+                        value={review.isStandout ? "false" : "true"}
+                      />
+                      <SubmitButton
+                        pendingLabel={t("reviews.saving")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {review.isStandout
+                          ? t("reviews.removeStandout")
+                          : t("reviews.markStandout")}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
                 </li>
               );
             })}

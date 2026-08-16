@@ -198,6 +198,7 @@ export function ShopNav({
         gates={navGates}
         counts={navCounts}
         labels={destinationLabels}
+        closeOutLabel={t("shared.shopNavLinks.closeOutShort")}
         navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
         badgeLabels={badgeLabels}
         moreLabel={t("shared.shopNavLinks.more")}

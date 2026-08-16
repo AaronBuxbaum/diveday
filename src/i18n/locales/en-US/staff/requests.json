@@ -1,11 +1,10 @@
 {
   "eyebrow": "Requests",
-  "title": "Dates divers asked for",
-  "description": "Divers who couldn’t find a day that worked, grouped by the day they asked for. Someone shows up under every date they said they could make, so a count here is people who could be on that boat — not people who have booked one. Nothing is held.",
+  "title": "Requested dates",
+  "description": "Date requests grouped by the day they named. A request can appear in more than one group when the diver gave an alternate date or can move a few days. Nothing is held.",
   "emptyHeading": "No requests yet",
   "emptyDetail": "Divers ask from your schedule page and from any course page — “Nothing on a date that works?”. What they send lands here.",
-  "couldMake": "{count, plural, one {# diver could make this day} other {# divers could make this day}}",
-  "askedForThisDay": "{count, plural, one {# asked for it first} other {# asked for it first}}",
+  "groupCount": "{count, plural, one {# group could make this day} other {# groups could make this day}}",
   "addDeparture": "Put a departure on this day",
   "flexible": "Flexible",
   "flexibleAround": "Asked for {date}, and can move a few days",
@@ -22,7 +21,7 @@
   "experience": {
     "never": "Never dived",
     "tried": "Tried scuba, not certified",
-    "certified": "Certified, card in hand",
+    "certified": "Certified, can share certification record",
     "lapsed": "Certified, out of the water a while"
   },
   "pagination": {

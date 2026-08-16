@@ -66,7 +66,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Move your dive shop off spreadsheets — DiveDay",
   description:
-    "Running your dive shop from a spreadsheet? DiveDay reads the sheet you already keep — your divers, their cards, and their sizes — and adds the things a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+    "Running your dive shop from a spreadsheet? DiveDay reads the sheet you already keep — your divers, their certification records, and their sizes — and adds the things a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
   alternates: { canonical: "/switching/spreadsheet" },
   // This page shipped without the Open Graph block every sibling guide carries,
   // so the guide aimed at the largest under-served pool in the market was the
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     ...sharedLinkCard,
     title: "Move your dive shop off spreadsheets — DiveDay",
     description:
-      "Bring the sheet you already keep — divers, cards, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+      "Bring the sheet you already keep — divers, certification records, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
     url: "/switching/spreadsheet",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Move your dive shop off spreadsheets — DiveDay",
     description:
-      "Bring the sheet you already keep — divers, cards, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+      "Bring the sheet you already keep — divers, certification records, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
   },
 };
 

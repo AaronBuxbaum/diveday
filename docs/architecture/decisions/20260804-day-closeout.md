@@ -100,6 +100,21 @@ would have cost another destination its place) and retiring the surface, which i
 justify than when it shipped: the post-trip recap note is written here, so the page owns work rather
 than only mirroring it.
 
+## Amendment (2026-08-16) — returned dives and administrative follow-up are visible
+
+Close-out continues to read scheduled departures whose `startsAt` falls in the current shop-local
+day, including boats that have already returned. The demo now includes a first-light departure on
+that local day with completed departure and after-dive roll-call checkpoints, so a fresh demo shows
+the returned-boat path without borrowing a UTC "yesterday" or fabricating a clean head count.
+
+Returned boats also expose administrative follow-up as a small, derived task list. The first task
+is post-dive reports: active bookings on ended departures are compared with the existing
+`notification_deliveries` rows for `trip_recap`. Missing rows are pending, failed/provider-failed
+rows need attention, and successful rows count as sent. The task is display-only and does not gate
+closing; sending and retrying remain owned by the notification/recap flow. No close-out-specific
+table or migration is needed, and the append-only close record remains a snapshot of roll-call and
+leftover decisions rather than a second copy of delivery state.
+
 ## Alternatives considered
 
 - **A third `?view=` on the shop home** — the not-ready precedent cuts the other way: that ADR

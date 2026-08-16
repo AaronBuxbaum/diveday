@@ -97,6 +97,10 @@
       "statusAll": "Todos los estados",
       "diverLabel": "Buceador",
       "diverPlaceholder": "Buscar por nombre",
+      "rangeLabel": "Rango de fechas",
+      "rangeRecent": "Últimos {days} días",
+      "rangeAll": "Todos los pedidos",
+      "rangeCustom": "Fechas personalizadas",
       "fromLabel": "Desde",
       "toLabel": "Hasta",
       "apply": "Aplicar filtros",
@@ -117,12 +121,6 @@
     },
     "pagination": {
       "total": "{count, plural, one {# pedido} other {# pedidos}}"
-    },
-    "range": {
-      "recentNote": "Mostrando los últimos {days} días. Los pedidos anteriores siguen aquí.",
-      "showAll": "Mostrar todos los pedidos",
-      "allNote": "Mostrando todos los pedidos que ha emitido el centro.",
-      "showRecent": "Volver a los últimos {days} días"
     },
     "paymentOps": {
       "sectionLabel": "Pagos que necesitan revisión",

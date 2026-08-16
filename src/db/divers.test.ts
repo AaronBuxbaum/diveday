@@ -828,7 +828,7 @@ describe("diver erasure", () => {
       agency: "padi",
       specialty: "deep",
       identifier: "PADI-ELENA-1",
-      reviewNote: "Elena brought the physical card",
+      reviewNote: "Elena shared her digital certification record",
       status: "verified",
     });
     await db.insert(nitroxCertifications).values({

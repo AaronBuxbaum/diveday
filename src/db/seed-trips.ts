@@ -123,7 +123,8 @@ export async function seedTrips(
         shopId,
         courseId: discoverCourse.id,
         title: "Discover Scuba — Pool & Reef",
-        description: "A small, instructor-led first breath underwater. No C-card required.",
+        description:
+          "A small, instructor-led first breath underwater. No prior certification required.",
         startsAt: at(4, 14, 0),
         endsAt: at(4, 17, 0),
         capacity: 4,

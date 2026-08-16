@@ -200,18 +200,13 @@ describe("the trip filter", () => {
     expect(listedOrders(await renderWith({ tripId, status: "open", range: "all" }))).toBe(1);
   });
 
-  it("keeps the departure on the page's own links and in the filter form", async () => {
+  it("keeps the departure in the filter form", async () => {
     const { tripId } = await shopWithAnInvoicedSeat();
     const element = await renderWith({ tripId, status: "open", range: "all" });
 
-    // The range toggle and the pager rebuild this URL; either one dropping the
-    // departure would silently widen the list back out to the whole shop.
-    const selfLinks = hrefsIn(element).filter((href) => href.includes("/orders?"));
-    expect(selfLinks.length).toBeGreaterThan(0);
-    for (const href of selfLinks) expect(href).toContain(`tripId=${tripId}`);
-
-    // And the filter form rides it as a hidden field, so applying a status does
-    // not throw the staffer back to every departure.
+    // The date range is now a filter control rather than a prose toggle. The
+    // departure remains a hidden form field, so applying any filter does not
+    // silently widen the list back out to the whole shop.
     expect(hiddenInputNamesIn(element)).toContain("tripId");
   });
 

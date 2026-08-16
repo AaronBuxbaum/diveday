@@ -97,6 +97,10 @@
       "statusAll": "All statuses",
       "diverLabel": "Diver",
       "diverPlaceholder": "Search by name",
+      "rangeLabel": "Date range",
+      "rangeRecent": "Last {days} days",
+      "rangeAll": "All orders",
+      "rangeCustom": "Custom dates",
       "fromLabel": "From",
       "toLabel": "To",
       "apply": "Apply filters",
@@ -117,12 +121,6 @@
     },
     "pagination": {
       "total": "{count, plural, one {# order} other {# orders}}"
-    },
-    "range": {
-      "recentNote": "Showing the last {days} days. Older orders are still here.",
-      "showAll": "Show every order",
-      "allNote": "Showing every order the shop has ever raised.",
-      "showRecent": "Back to the last {days} days"
     },
     "paymentOps": {
       "sectionLabel": "Payments that need a check",

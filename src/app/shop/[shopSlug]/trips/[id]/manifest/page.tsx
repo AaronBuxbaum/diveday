@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import {
   OfflineManifestManager,
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
-import { PrintButton } from "@/components/PrintButton";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
@@ -41,6 +41,7 @@ import { type DeskNote, type DiverNote, DiverRollCall } from "./_components/Dive
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
+  addManifestPrivateNoteAction,
   crewRollCallAction,
   dissolveBuddyTeamAction,
   formBuddyTeamAction,
@@ -49,7 +50,6 @@ import {
   type ManifestActionContext,
   removeBuddyTeamMemberAction,
   rollCallAction,
-  saveRollCallNoteAction,
   subscribePushAction,
   unsubscribePushAction,
 } from "./actions";
@@ -144,7 +144,7 @@ export default async function TripManifestPage({
   const boundCrewRollCallAction = crewRollCallAction.bind(null, actionContext);
   // The note carries its own checkpoint and the action re-proves it, so this
   // one takes the narrower context that has none.
-  const boundSaveRollCallNoteAction = saveRollCallNoteAction.bind(null, { shopSlug, tripId });
+  const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
 
   // Who can still join a *new* team: any active roster entry not already on
   // one — including a member of a team whose other seat was cancelled, which
@@ -245,7 +245,8 @@ export default async function TripManifestPage({
   }
 
   return (
-    <div>
+    <div className="boat-mode">
+      <AmbientGlareDetector />
       <SkipLink href="#roll-call-list" label={t("manifest.skipToRollCall")} />
       {/* The same header the other three tabs wear (`TripPageHeader`). This
           page used to hand-roll its own — a smaller `<h1>`, a rule underneath,
@@ -264,11 +265,9 @@ export default async function TripManifestPage({
         // both of which name the current one; saying it a third time up here
         // was the page explaining itself before it showed itself.
         description={t("manifest.description")}
-        // Just the printer. "Generate log" used to stand here too, which put
-        // a hand-to-authorities document one tap from "Mark boarded" on the
-        // page a crew works at the rail — writing the day up is an evening
-        // act, and its door is now the close-out page.
-        actions={<PrintButton label={t("shared.printButton.label")} />}
+        // Printing is an Overall-tab action. The manifest is the live dock
+        // surface; keeping a second current-page printer here made it unclear
+        // whether staff were getting the full packet or only this tab.
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
@@ -344,7 +343,7 @@ export default async function TripManifestPage({
         deskNotesByBooking={deskNotesByBooking}
         diverNotesByBooking={diverNotesByBooking}
         rollCallAction={boundRollCallAction}
-        saveRollCallNoteAction={boundSaveRollCallNoteAction}
+        addPrivateNoteAction={boundAddPrivateNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}
         buddyTeamLabel={buddyTeamLabel}
         t={t}
@@ -551,6 +550,16 @@ export default async function TripManifestPage({
           message: t("shared.subSurfaceRipple.message"),
         }}
       />
+      <div className="mt-8 flex justify-end print:hidden">
+        <AmbientContrastControl
+          copy={{
+            modeLabel: t("shared.boatMode.modeLabel"),
+            labelAuto: t("shared.boatMode.labelAuto"),
+            labelLand: t("shared.boatMode.labelLand"),
+            labelBoat: t("shared.boatMode.labelBoat"),
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,18 @@
 import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import {
+  type CourseTemplateDiff,
+  type CourseTemplateSnapshot,
+  type CourseTemplateUpdateMode,
+  courseTemplateDatabaseFields,
+  courseTemplateDiff,
+  courseTemplateSnapshotFromCourse,
+  mergedCourseTemplateSnapshot,
+  parseCourseTemplateSnapshot,
+} from "@/lib/course-template-sync";
 import type { CourseContent } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
+import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import { offsetPage } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";
@@ -69,6 +80,13 @@ const progressionOrder = [
   asc(courses.title),
 ];
 
+/** Course agency is imported shop data; tabs use one stable key per company. */
+const canonicalAgencyExpression = sql<string>`lower(trim(${courses.agency}))`;
+
+function agencyScope(agency: string) {
+  return sql`lower(trim(${courses.agency})) = ${agency.trim().toLowerCase()}`;
+}
+
 /**
  * Active catalog entries — what a staff member picks from when scheduling a
  * session, and what the diver-facing catalog lists.
@@ -87,7 +105,7 @@ export async function listActiveCourses(
   const scope = and(
     eq(courses.shopId, shopId),
     eq(courses.isActive, true),
-    ...(options.agency ? [eq(courses.agency, options.agency)] : []),
+    ...(options.agency ? [agencyScope(options.agency)] : []),
   );
   return db
     .select()
@@ -150,10 +168,10 @@ export async function listActiveCoursesForSitemap(
  */
 export async function courseAgencies(db: AppDb, shopId: string): Promise<string[]> {
   const rows = await db
-    .selectDistinct({ agency: courses.agency })
+    .selectDistinct({ agency: canonicalAgencyExpression })
     .from(courses)
     .where(eq(courses.shopId, shopId))
-    .orderBy(asc(courses.agency));
+    .orderBy(asc(canonicalAgencyExpression));
   return rows.map((row) => row.agency);
 }
 
@@ -168,10 +186,10 @@ export async function courseAgencies(db: AppDb, shopId: string): Promise<string[
  */
 export async function activeCourseAgencies(db: AppDb, shopId: string): Promise<string[]> {
   const rows = await db
-    .selectDistinct({ agency: courses.agency })
+    .selectDistinct({ agency: canonicalAgencyExpression })
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
-    .orderBy(asc(courses.agency));
+    .orderBy(asc(canonicalAgencyExpression));
   return rows.map((row) => row.agency);
 }
 
@@ -209,7 +227,7 @@ export async function pagedCourses(
   options: { page?: number; limit?: number; agency?: string } = {},
 ): Promise<CoursePage> {
   const scope = options.agency
-    ? and(eq(courses.shopId, shopId), eq(courses.agency, options.agency))
+    ? and(eq(courses.shopId, shopId), agencyScope(options.agency))
     : eq(courses.shopId, shopId);
 
   const paged = await offsetPage({
@@ -258,6 +276,118 @@ export async function updateCourse(
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
   return course ?? null;
+}
+
+export type CourseTemplateUpdate = {
+  course: Course;
+  baseline: CourseTemplateSnapshot | null;
+  current: CourseTemplateSnapshot;
+  latest: CourseTemplateSnapshot;
+  diff: CourseTemplateDiff[];
+  latestVersion: number;
+  currentVersion: number;
+  legacyBaseline: boolean;
+  sourceTemplateSlug: string;
+};
+
+function courseTemplateUpdateFromCourse(course: Course): CourseTemplateUpdate | null {
+  // Before source tracking existed, the seeded PADI rows still carried the
+  // stable template slug in their course slug. Treat that as a legacy link
+  // only when the agency and title agree; the missing snapshot means the safe
+  // merge must preserve all editable prose rather than guessing ownership.
+  const legacyTemplate = course.sourceTemplateSlug ? null : getCourseTemplate(course.slug);
+  const sourceTemplateSlug = course.sourceTemplateSlug ?? legacyTemplate?.slug;
+  if (!sourceTemplateSlug) return null;
+
+  const template = getCourseTemplate(sourceTemplateSlug);
+  if (
+    !template ||
+    (course.sourceTemplateSlug === null &&
+      (course.agency.trim().toLowerCase() !== template.agency || course.title !== template.title))
+  ) {
+    return null;
+  }
+  const currentVersion = course.sourceTemplateVersion ?? 1;
+  const baseline = parseCourseTemplateSnapshot(course.sourceTemplateSnapshot);
+  if (template.version <= currentVersion) return null;
+
+  const current = courseTemplateSnapshotFromCourse(course);
+  const latest = courseTemplateSnapshot(template);
+  return {
+    course,
+    baseline,
+    current,
+    latest,
+    diff: courseTemplateDiff(current, baseline, latest),
+    latestVersion: template.version,
+    currentVersion,
+    legacyBaseline: baseline === null,
+    sourceTemplateSlug: template.slug,
+  };
+}
+
+/**
+ * Return a template revision only when a course has a valid source baseline and
+ * the code-owned template has moved forward. A missing or malformed baseline
+ * is intentionally not guessed at: the safe UI simply offers no merge.
+ */
+export async function getCourseTemplateUpdate(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+): Promise<CourseTemplateUpdate | null> {
+  const [course] = await db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .limit(1);
+  if (!course) return null;
+  return courseTemplateUpdateFromCourse(course);
+}
+
+/**
+ * Apply a reviewed template revision. The update is tenant-scoped and writes
+ * the new baseline in the same statement as the merged fields, so a later
+ * revision can distinguish a shop edit from an already-applied template word.
+ */
+export async function pullCourseTemplateUpdates(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  mode: CourseTemplateUpdateMode,
+) {
+  // The merge reads the shop's current prose and then writes a derived row.
+  // Lock that row for the whole read/merge/write so an editor save cannot land
+  // between those steps and be overwritten by an older template view.
+  return db.transaction(async (tx) => {
+    const [currentCourse] = await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+      .for("update");
+    if (!currentCourse) return { status: "unavailable" as const };
+    const update = courseTemplateUpdateFromCourse(currentCourse);
+    if (!update) return { status: "unavailable" as const };
+
+    const merged = mergedCourseTemplateSnapshot(
+      update.current,
+      update.baseline,
+      update.latest,
+      mode,
+    );
+    const [course] = await tx
+      .update(courses)
+      .set({
+        ...courseTemplateDatabaseFields(merged),
+        sourceTemplateSlug: update.sourceTemplateSlug,
+        sourceTemplateVersion: update.latestVersion,
+        sourceTemplateSnapshot: update.latest,
+      })
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+      .returning();
+    if (!course) return { status: "unavailable" as const };
+    return { status: "updated" as const, course, mode, diff: update.diff };
+  });
 }
 
 export async function setCourseVisibility(

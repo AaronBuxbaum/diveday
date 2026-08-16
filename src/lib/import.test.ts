@@ -834,7 +834,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
 
   it("marks certifications and nitrox as coming across verified and flagged imported", () => {
     const cert = row("certificationCard");
-    expect(cert.what).toBe("Certification card");
+    expect(cert.what).toBe("Certification record");
     expect(cert.scope).toBe("included");
     expect(cert.detail).toMatch(/verified/i);
     expect(cert.detail).toMatch(/imported/i);
@@ -853,7 +853,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
 
   it("brings specialty cards across, and says the dive waits on the staff confirm", () => {
     const specialty = row("specialtyCards");
-    expect(specialty.what).toMatch(/^Specialty cards/);
+    expect(specialty.what).toMatch(/^Specialty certifications/);
     expect(specialty.scope).toBe("included");
     expect(specialty.detail).toMatch(/verified/i);
     // The gate rule is the whole reason this row can be honest — it must be

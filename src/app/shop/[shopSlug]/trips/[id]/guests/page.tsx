@@ -13,7 +13,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
-import { listBookingNotes, listTripActivity } from "@/db/operations";
+import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "@/db/operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
@@ -172,6 +172,7 @@ async function TripGuestsBody({
     lastMinuteList,
     lastMinutePromos,
     bookingNotes,
+    diverNotes,
     activity,
     stripeAccount,
   ] = await Promise.all([
@@ -184,6 +185,7 @@ async function TripGuestsBody({
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
+    listDiverNotesForTrip(db, shop.id, tripId),
     listTripActivity(db, shop.id, tripId),
     getShopStripeAccount(db, shop.id),
   ]);
@@ -195,12 +197,27 @@ async function TripGuestsBody({
     booked: trip.booked,
     waitlisted: waitlist.length,
   });
-  const notesByBooking = new Map<string, typeof bookingNotes>();
+  const notesByBooking = new Map<
+    string,
+    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
+  >();
   for (const row of bookingNotes) {
     if (!row.note.bookingId) continue;
     const rows = notesByBooking.get(row.note.bookingId) ?? [];
-    rows.push(row);
+    rows.push({ ...row, deletable: true });
     notesByBooking.set(row.note.bookingId, rows);
+  }
+  // Keep the three staff-note entry points one system: a diver-record note is
+  // visible on Guests for the same booking, just as it is on Manifest. It is
+  // edited on the diver record, the canonical scope, so this roster does not
+  // offer a delete action that would silently do nothing.
+  for (const row of diverNotes) {
+    const rows = notesByBooking.get(row.bookingId) ?? [];
+    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
+    notesByBooking.set(row.bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
   }
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
   // The same set, in the same order, that `sendLastMinuteDealBlast` would mail:
@@ -306,7 +323,7 @@ async function TripGuestsBody({
   );
 
   return (
-    <>
+    <div data-trip-guests-ready className="contents">
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <TripPageHeader
         trip={trip}
@@ -563,6 +580,6 @@ async function TripGuestsBody({
           </div>
         </AutoOpenDetails>
       ) : null}
-    </>
+    </div>
   );
 }

@@ -836,6 +836,7 @@ async function ScheduleReviewsSection({
       <ShopReviews
         aggregate={reviewAggregate}
         reviews={reviews}
+        shopSlug={shop.slug}
         locale={locale}
         timezone={tz}
         t={t}

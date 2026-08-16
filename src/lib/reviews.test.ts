@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  comparePublicReviews,
   EMPTY_REVIEW_AGGREGATE,
   MAX_REVIEW_COMMENT_LENGTH,
   normalizeReviewComment,
@@ -93,6 +94,47 @@ describe("reviewerDisplayName", () => {
 
   it("reports an absent name as absence, never words — the surface picks the byline", () => {
     expect(reviewerDisplayName("   ")).toBe("");
+  });
+});
+
+describe("comparePublicReviews", () => {
+  const review = (
+    input: Partial<{ isStandout: boolean; rating: number; publishedAt: string }> = {},
+  ) => ({
+    isStandout: false,
+    rating: 4,
+    ...input,
+    publishedAt: new Date(input.publishedAt ?? "2026-01-01T00:00:00.000Z"),
+  });
+
+  it("puts standouts first and newest within the standout bucket", () => {
+    expect(
+      comparePublicReviews(
+        review({ isStandout: true, rating: 3, publishedAt: "2026-01-01T00:00:00.000Z" }),
+        review({ isStandout: false, rating: 5, publishedAt: "2026-01-04T00:00:00.000Z" }),
+      ),
+    ).toBeLessThan(0);
+    expect(
+      comparePublicReviews(
+        review({ isStandout: true, rating: 3, publishedAt: "2026-01-02T00:00:00.000Z" }),
+        review({ isStandout: true, rating: 5, publishedAt: "2026-01-01T00:00:00.000Z" }),
+      ),
+    ).toBeLessThan(0);
+  });
+
+  it("uses rating buckets, then newest, for non-standouts", () => {
+    expect(
+      comparePublicReviews(
+        review({ rating: 5, publishedAt: "2026-01-01T00:00:00.000Z" }),
+        review({ rating: 4, publishedAt: "2026-01-04T00:00:00.000Z" }),
+      ),
+    ).toBeLessThan(0);
+    expect(
+      comparePublicReviews(
+        review({ rating: 4, publishedAt: "2026-01-04T00:00:00.000Z" }),
+        review({ rating: 4, publishedAt: "2026-01-01T00:00:00.000Z" }),
+      ),
+    ).toBeLessThan(0);
   });
 });
 

@@ -42,6 +42,7 @@ describe("seeded desk trail", () => {
     for (const row of notes) {
       expect(row.note.bookingId).not.toBeNull();
       expect(row.authorName.length).toBeGreaterThan(0);
+      expect(row.note.body.toLowerCase()).not.toContain("surgery");
     }
   });
 

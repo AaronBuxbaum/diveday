@@ -413,6 +413,16 @@ summary {
   thead {
     break-inside: avoid;
   }
+
+  /* The packet is four screen tabs in one document. Give each tab a clean
+     start without forcing a page break inside a long roster or manifest. */
+  .trip-print-bundle .print-bundle-page {
+    break-before: page;
+  }
+
+  .trip-print-bundle .print-bundle-page:first-of-type {
+    break-before: auto;
+  }
 }
 
 /* Earned-moment entrance (confirmation panels). Reduced-motion kill-switch below covers it. */

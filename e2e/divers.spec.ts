@@ -74,9 +74,9 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeAttached();
 
   // And back up, so the bar is a spine rather than a one-way trip.
-  await subNav.getByRole("link", { name: "Cards" }).click();
+  await subNav.getByRole("link", { name: "Certifications" }).click();
   await expect(page).toHaveURL(/#cards$/);
-  await expect(page.getByRole("heading", { name: "Certification cards" })).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "Certification records" })).toBeInViewport();
 
   // The destructive tail is deliberately not a sub-nav target: archiving a
   // diver and erasing their personal data cost a scroll, on purpose.
@@ -281,7 +281,7 @@ test.describe("on a phone", () => {
     // carrying the column, not about which card this seeded diver holds.
     await expect(
       card.getByText(
-        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current card/,
+        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current certification/,
       ),
     ).toBeVisible();
     await expect(page.getByRole("table")).toBeHidden();

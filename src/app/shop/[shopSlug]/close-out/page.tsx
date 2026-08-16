@@ -11,11 +11,12 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { closeDay, getDayCloseout } from "@/db/closeout";
+import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "@/db/closeout";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import {
+  CLOSEOUT_ADMIN_STATUS_KEYS,
   CLOSEOUT_DECISION_KEYS,
   CLOSEOUT_HEADLINE_KEYS,
   CLOSEOUT_STATUS_KEYS,
@@ -29,6 +30,7 @@ import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
   CLOSEOUT_STATUS_TONES,
+  type CloseoutAdminTaskStatus,
   type CloseoutDeparture,
   type LeftoverDecision,
 } from "@/lib/closeout";
@@ -55,6 +57,12 @@ const STATUS_BADGE_TONES: Record<"danger" | "warning" | "neutral" | "positive", 
   warning: "warning",
   neutral: "neutral",
   positive: "success",
+};
+
+const ADMIN_STATUS_BADGE_TONES: Record<CloseoutAdminTaskStatus, BadgeTone> = {
+  complete: "success",
+  pending: "warning",
+  attention: "danger",
 };
 
 /**
@@ -113,17 +121,25 @@ export default async function CloseOutPage({
         decisions[key.slice("decision:".length)] = value;
       }
     }
-    await closeDay(actionDb, {
-      shopId: actionShop.id,
-      shopSlug: staff.user.shopSlug,
-      timeZone: actionShop.timezone,
-      actorPersonId: staff.user.personId,
-      decisions,
-      t: staffTranslator(actionLocale),
-      locale: actionLocale,
-      includeOpsAlerts: canViewShopReports(staff.user.roles),
-    });
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    try {
+      await closeDay(actionDb, {
+        shopId: actionShop.id,
+        shopSlug: staff.user.shopSlug,
+        timeZone: actionShop.timezone,
+        actorPersonId: staff.user.personId,
+        decisions,
+        acknowledged: formData.get("acknowledge") === "on",
+        t: staffTranslator(actionLocale),
+        locale: actionLocale,
+        includeOpsAlerts: canViewShopReports(staff.user.roles),
+      });
+    } catch (error) {
+      if (error instanceof CloseoutAcknowledgementRequired) {
+        revalidateAndRedirect(closeOut, `${closeOut}?notice=acknowledge-required`);
+      }
+      throw error;
+    }
     revalidateAndRedirect(`${closeOut}?closed=1`);
   }
 
@@ -170,6 +186,11 @@ export default async function CloseOutPage({
       locale,
       shop.timezone,
     );
+  const latestHasOutstanding = latest
+    ? latest.outstanding.departures.length > 0 ||
+      latest.outstanding.leftovers.length > 0 ||
+      latest.outstanding.adminTasks.length > 0
+    : false;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -207,6 +228,14 @@ export default async function CloseOutPage({
         </div>
       ) : null}
 
+      {notice === "acknowledge-required" ? (
+        <div className="mb-6">
+          <ShopNotice tone="warning" role="alert">
+            {t("closeout.notice.acknowledgeRequired")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
       {latest ? (
         <section
           aria-labelledby="closeout-record-heading"
@@ -214,9 +243,7 @@ export default async function CloseOutPage({
           // a green box listing an unreconciled head count would be the card
           // contradicting its own contents.
           className={`mb-8 rounded-2xl border p-5 sm:p-6 ${
-            latest.outstanding.departures.length === 0 && latest.outstanding.leftovers.length === 0
-              ? "border-success/40 bg-success/5"
-              : "border-border bg-surface"
+            latestHasOutstanding ? "border-border bg-surface" : "border-success/40 bg-success/5"
           }`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -235,8 +262,7 @@ export default async function CloseOutPage({
               time: formatTime(latest.closedAt, locale, shop.timezone),
             })}
           </p>
-          {latest.outstanding.departures.length === 0 &&
-          latest.outstanding.leftovers.length === 0 ? (
+          {!latestHasOutstanding ? (
             <p className="mt-3 text-sm text-muted">{t("closeout.record.nothingOutstanding")}</p>
           ) : (
             <div className="mt-3">
@@ -257,6 +283,14 @@ export default async function CloseOutPage({
                     <span className="font-medium">{leftover.subject}</span>{" "}
                     <span className="text-muted">
                       — {t(CLOSEOUT_DECISION_KEYS[leftover.decision])}
+                    </span>
+                  </li>
+                ))}
+                {latest.outstanding.adminTasks.map((task) => (
+                  <li key={`admin-${task.id}`}>
+                    <span className="font-medium">{t("closeout.admin.postDiveReports.label")}</span>{" "}
+                    <span className="text-muted">
+                      — {t(CLOSEOUT_ADMIN_STATUS_KEYS[task.status])}
                     </span>
                   </li>
                 ))}
@@ -359,6 +393,50 @@ export default async function CloseOutPage({
           </ul>
         )}
       </section>
+
+      {state.adminTasks.length > 0 ? (
+        <section aria-labelledby="closeout-admin-heading" className="mb-10">
+          <h2 id="closeout-admin-heading" className="text-lg font-semibold">
+            {t("closeout.admin.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{t("closeout.admin.subtitle")}</p>
+          <ul className="mt-4 flex flex-col gap-3">
+            {state.adminTasks.map((task) => (
+              <SectionCard as="li" key={task.id}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="font-semibold">{t("closeout.admin.postDiveReports.label")}</p>
+                      <Badge tone={ADMIN_STATUS_BADGE_TONES[task.status]}>
+                        {t(CLOSEOUT_ADMIN_STATUS_KEYS[task.status])}
+                      </Badge>
+                    </div>
+                    <p className="mt-1.5 text-muted">
+                      {t("closeout.admin.postDiveReports.description")}
+                    </p>
+                    <p className="mt-2 text-sm font-medium">
+                      {t("closeout.admin.postDiveReports.progress", {
+                        completed: task.completed,
+                        total: task.total,
+                      })}
+                    </p>
+                    {task.pending > 0 ? (
+                      <p className="mt-1 text-sm text-muted">
+                        {t("closeout.admin.postDiveReports.pending", { count: task.pending })}
+                      </p>
+                    ) : null}
+                    {task.failed > 0 ? (
+                      <p className="mt-1 text-sm text-danger">
+                        {t("closeout.admin.postDiveReports.failed", { count: task.failed })}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </SectionCard>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <form action={closeDayAction}>
         <section aria-labelledby="closeout-leftovers-heading" className="mb-10">

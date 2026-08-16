@@ -1,7 +1,8 @@
+import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions } from "@/components/ui/form";
+import { FieldActions } from "@/components/ui/form";
 import type { listDiverNotes } from "@/db/operations";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -67,31 +68,21 @@ export function DiverNotesSection({
         <p className="text-base text-muted">{t("divers.notes.empty")}</p>
       )}
 
-      <form
-        key={notes.length}
-        action={addDiverNoteAction.bind(null, shopSlug, personId)}
-        className="mt-5 grid gap-3 border-t border-border pt-5"
-      >
-        <Field label={t("divers.notes.addLabel")}>
-          <textarea
-            name="note"
-            required
-            maxLength={1000}
-            rows={3}
-            placeholder={t("divers.notes.placeholder")}
-            className={controlClass}
-          />
-        </Field>
+      <div className="mt-5 border-t border-border pt-5">
+        <PrivateNoteForm
+          action={addDiverNoteAction.bind(null, shopSlug, personId)}
+          resetKey={notes.length}
+          copy={{
+            label: t("divers.notes.addLabel"),
+            placeholder: t("divers.notes.placeholder"),
+            add: t("divers.notes.add"),
+            adding: t("divers.notes.adding"),
+          }}
+        />
         <FieldActions>
-          <SubmitButton
-            pendingLabel={t("divers.notes.adding")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("divers.notes.add")}
-          </SubmitButton>
           <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
         </FieldActions>
-      </form>
+      </div>
     </SectionCard>
   );
 }

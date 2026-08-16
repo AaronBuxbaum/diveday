@@ -4,13 +4,12 @@ import { signInAsOwner } from "./helpers";
 /**
  * Asking for a day that is not on the board, end to end: a diver sends the
  * request from the shop's own schedule page, and staff read it on
- * /shop/<shop>/requests grouped under the day they asked for.
+ * /shop/<shop>/requests grouped under the date they named.
  *
  * The dates are the point of the flow. A request that names one lands in that
  * day's group; the second diver here names the same day as their *alternate*,
- * which is what makes the group's headline count "people who could make this"
- * rather than "people who asked for this" — the distinction the staff page
- * renders as a firm count beside it.
+ * which keeps both requests in the group while the individual cards retain
+ * their preferred/alternate explanation.
  */
 
 /** Two dates well clear of the frozen clock, so the grouping is only ours. */
@@ -53,28 +52,24 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
-  await expect(page.getByRole("heading", { name: "Dates divers asked for" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Requested dates" })).toBeVisible();
 
-  // Both days carry both divers — everyone who could make them — and each says
-  // how many of those asked for it first.
+  // Both date groups carry both requests, while each card retains the
+  // preferred/alternate detail that explains why it is present.
   // Scoped by each group's own heading, never by the date *text*: a fallback
   // badge inside one group names the other group's date, so a hasText filter
   // matches both sections.
   const dayGroup = (heading: string) =>
     page.locator("section").filter({ has: page.getByRole("heading", { level: 2, name: heading }) });
   const firstDay = dayGroup("Mar 6, 2027");
-  await expect(
-    firstDay.getByText("2 divers could make this day · 1 asked for it first"),
-  ).toBeVisible();
+  await expect(firstDay.getByText("2 groups could make this day")).toBeVisible();
   await expect(firstDay.getByText("Wants to dive: Two dives on the Duane")).toBeVisible();
-  // The one who named the 13th first is here as a fallback, and says so.
+  // The group that named the 13th first is here as a fallback, and says so.
   await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
   await expect(firstDay.getByText("First choice Mar 13, 2027")).toBeVisible();
 
   const secondDay = dayGroup("Mar 13, 2027");
-  await expect(
-    secondDay.getByText("2 divers could make this day · 1 asked for it first"),
-  ).toBeVisible();
+  await expect(secondDay.getByText("2 groups could make this day")).toBeVisible();
 
   // The act the count exists for: the schedule builder, opened on that day.
   await expect(firstDay.getByRole("link", { name: "Put a departure on this day" })).toHaveAttribute(

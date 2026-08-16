@@ -2,8 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { closeDay, getDayCloseout } from "./closeout";
+import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "./closeout";
 import { bookings as bookingsTable, people, rollCallEvents, trips as tripsTable } from "./schema";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { listStaff } from "./trips";
 
 const HOUR = 60 * 60 * 1000;
@@ -34,6 +35,33 @@ describe("day close-out (in-memory PGlite)", () => {
     expect(after.closeCount).toBe(1);
     expect(after.latest?.id).toBe(record.id);
     expect(after.latest?.actorName).toBe(staff.person.fullName);
+  });
+
+  it("seeds a completed local-day dive and its post-dive report progress", async () => {
+    const { db, shop } = await seededShopContext();
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const completed = state.departures.find(
+      (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+    );
+
+    expect(completed).toMatchObject({
+      status: "all_home",
+      ended: true,
+      booked: 8,
+    });
+    expect(state.adminTasks).toEqual([
+      {
+        id: "post_dive_reports",
+        status: "pending",
+        total: 8,
+        completed: 6,
+        pending: 2,
+        failed: 0,
+      },
+    ]);
+    // The report task is part of the close-out's headline shape, not an
+    // invisible side channel below an "Everyone is home" message.
+    expect(state.shape).toBe("outstanding");
   });
 
   it("records exactly the unreconciled head count that was open at the moment of closing", async () => {
@@ -98,6 +126,7 @@ describe("day close-out (in-memory PGlite)", () => {
       timeZone: shop.timezone,
       actorPersonId: staff.person.id,
       decisions: {},
+      acknowledged: true,
     });
     // The recorded act carries the outstanding count, recomputed server-side.
     const recorded = record.outstanding.departures.find((d) => d.tripId === trip.id);
@@ -108,6 +137,15 @@ describe("day close-out (in-memory PGlite)", () => {
       gapReason: "after_dive_uncounted",
       uncounted: 1,
     });
+    await expect(
+      closeDay(db, {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        timeZone: shop.timezone,
+        actorPersonId: staff.person.id,
+        decisions: {},
+      }),
+    ).rejects.toBeInstanceOf(CloseoutAcknowledgementRequired);
   });
 
   it("keeps leftover decisions in the record and treats re-closing as another act, not an edit", async () => {

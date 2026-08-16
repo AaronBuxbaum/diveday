@@ -47,8 +47,7 @@ const NOTE_PLANS: {
     rosterIndex: 2,
     daysAgo: 3,
     hour: 16,
-    body: (diver) =>
-      `${diver} rang ahead — first dive back after ear surgery, wants a slow descent.`,
+    body: (diver) => `${diver} rang ahead — first boat dive in a while, wants a slow descent.`,
   },
   {
     rosterIndex: 4,

@@ -447,7 +447,9 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
   await expect(page.getByText("Stays behind").first()).toBeVisible();
   // Specialty cards moved into the green column and say what waits on staff.
-  await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
+  await expect(
+    page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
+  ).toBeVisible();
 
   // Nothing on a published page may cite how *we* talk about a decision. The
   // honesty table and the guides render verbatim, so a note written for the next

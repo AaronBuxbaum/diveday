@@ -2,27 +2,36 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
 import {
   countReviewsAwaitingModeration,
   getReviewForBooking,
   getShopReviewAggregate,
   listPublishedShopReviews,
+  listPublishedShopReviewsPage,
   listShopReviewsForStaff,
   STAFF_REVIEW_PAGE_SIZE,
   setReviewPublished,
+  setReviewStandout,
   setReviewsPublished,
   submitTripReview,
 } from "./reviews";
 import { bookings, people, reviewModerationEvents } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
 async function reviewContext(divers = ["Reviewing Diver"]) {
   const { db, shop } = await seededShopContext();
-  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
+  const trips = await upcomingTripsWithCounts(db, shop.id);
+  const bookableCharters = trips.filter((trip) => !trip.course);
+  const reef =
+    bookableCharters.find(
+      (trip) =>
+        trip.title.startsWith("Two-Tank Reef — Molasses") &&
+        trip.capacity - trip.booked >= divers.length,
+    ) ?? bookableCharters.find((trip) => trip.capacity - trip.booked >= divers.length);
   if (!reef) throw new Error("demo reef trip missing");
   const party = await createBookingParty(
     db,
@@ -168,7 +177,7 @@ describe("public review reads", () => {
     });
   });
 
-  it("counts a bare rating in the average but leaves it off the list — an empty card says nothing", async () => {
+  it("keeps the schedule preview curated while the archive includes bare ratings", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext(["Silent Diver", "Chatty Diver"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Choppy day" });
@@ -185,6 +194,75 @@ describe("public review reads", () => {
     expect((await listPublishedShopReviews(db, shop.id)).map((r) => r.comment)).toEqual([
       "Choppy day",
     ]);
+    const archive = await listPublishedShopReviewsPage(db, shop.id);
+    expect(archive.total).toBe(2);
+    expect(archive.reviews.map((r) => [r.rating, r.comment])).toEqual([
+      [5, null],
+      [3, "Choppy day"],
+    ]);
+  });
+
+  it("puts standouts first, newest within that bucket, then rating fallbacks", async () => {
+    const {
+      db,
+      shop,
+      ownerId,
+      bookingIds: firstBookingIds,
+    } = await reviewContext(["Standout Older", "Fallback Best", "Standout Newer"]);
+    const additionalTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Review sorting support trip",
+      startsAt: new Date("2099-01-01T13:00:00.000Z"),
+      endsAt: new Date("2099-01-01T17:00:00.000Z"),
+      capacity: 1,
+      plannedDives: 1,
+    });
+    if (!additionalTrip) throw new Error("demo trip with a free review seat missing");
+    const extraParty = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: additionalTrip.id,
+        fullName: "Fallback Good",
+        email: "review-diver-fallback-good@example.com",
+      },
+    ]);
+    if (!extraParty.ok) throw new Error(`booking failed: ${extraParty.reason}`);
+    const extraBooking = extraParty.bookings[0];
+    if (!extraBooking) throw new Error("fallback booking missing");
+    const bookingIds = [...firstBookingIds, extraBooking.bookingId];
+    const comments = [
+      [bookingIds[0], 3, "Standout older", "2026-01-01T00:00:00.000Z"],
+      [bookingIds[1], 5, "Fallback best", "2026-01-04T00:00:00.000Z"],
+      [bookingIds[2], 4, "Standout newer", "2026-01-03T00:00:00.000Z"],
+      [bookingIds[3], 4, "Fallback good", "2026-01-05T00:00:00.000Z"],
+    ] as const;
+    for (const [bookingId, rating, comment] of comments) {
+      await submitTripReview(db, { bookingId, rating, comment });
+    }
+    const queued = await listShopReviewsForStaff(db, shop.id);
+    for (const [index, [, , , publishedAt]] of comments.entries()) {
+      const byBooking = queued.reviews.find((row) => row.comment === comments[index][2]);
+      if (!byBooking) throw new Error(`missing review ${comments[index][2]}`);
+      await setReviewPublished(db, shop.id, byBooking.id, true, {
+        recordedByPersonId: ownerId,
+        now: new Date(publishedAt),
+      });
+    }
+    const published = await listShopReviewsForStaff(db, shop.id);
+    const older = published.reviews.find((row) => row.comment === "Standout older");
+    const newer = published.reviews.find((row) => row.comment === "Standout newer");
+    if (!older || !newer) throw new Error("standout seed reviews missing");
+    expect(await setReviewStandout(db, shop.id, older.id, true)).toBe(true);
+    expect(await setReviewStandout(db, shop.id, newer.id, true)).toBe(true);
+
+    expect((await listPublishedShopReviews(db, shop.id)).map((row) => row.comment)).toEqual([
+      "Standout newer",
+      "Standout older",
+      "Fallback best",
+      "Fallback good",
+    ]);
+    expect((await listPublishedShopReviewsPage(db, shop.id)).total).toBe(4);
   });
 
   it("keeps every read shop-scoped", async () => {
@@ -267,6 +345,20 @@ describe("listShopReviewsForStaff pagination", () => {
 });
 
 describe("setReviewPublished", () => {
+  it("cannot hide a review that has not been published first", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Still waiting" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+
+    expect(
+      await setReviewPublished(db, shop.id, review.id, false, {
+        recordedByPersonId: ownerId,
+        reason: "spam",
+      }),
+    ).toBe("not_published");
+    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+  });
+
   it("refuses to moderate another shop's review", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Nice day out" });
@@ -290,6 +382,29 @@ describe("setReviewPublished", () => {
       average: 4,
       suppressedCount: 0,
     });
+  });
+
+  it("cannot publish a review after its diver has been anonymized", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      comment: "Please remove my name from this review.",
+    });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    if (!review) throw new Error("expected a held review");
+
+    await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: review.personId,
+      actorPersonId: ownerId,
+    });
+
+    expect(
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId }),
+    ).toBe("not_found");
+    expect(await setReviewsPublished(db, shop.id, [review.id], ownerId)).toBe(0);
+    expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
   });
 
   it("takes a review back down, dropping it from the list and the average", async () => {
@@ -543,7 +658,7 @@ describe("review moderation is recorded", () => {
     // hard-coded trip, so a change to the seed's booked counts cannot silently
     // turn this into a `trip_full` failure.
     const bookingIds: string[] = [];
-    for (const trip of await upcomingTripsWithCounts(db, shop.id, new Date(0))) {
+    for (const trip of await upcomingTripsWithCounts(db, shop.id)) {
       const free = Math.min(trip.capacity - trip.booked, 10 - bookingIds.length);
       if (free <= 0) continue;
       const party = await createBookingParty(

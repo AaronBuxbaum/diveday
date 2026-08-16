@@ -19,6 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CloseoutSnapshot } from "@/lib/closeout";
+import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { Notification } from "@/lib/notifications";
@@ -620,6 +621,14 @@ export const courses = pgTable(
     agency: text("agency").notNull().default("padi"),
     /** Short internal blurb shown in staff lists and pickers; not the marketing copy. */
     description: text("description"),
+    /**
+     * Provenance for the code-owned DiveDay template this course started from.
+     * These are nullable because courses created before template syncing, or
+     * made entirely by a shop, have no safe baseline for a three-way merge.
+     */
+    sourceTemplateSlug: text("source_template_slug"),
+    sourceTemplateVersion: integer("source_template_version"),
+    sourceTemplateSnapshot: jsonb("source_template_snapshot").$type<CourseTemplateSnapshot>(),
     /**
      * URL segment for the public course page. Shop-scoped rather than global so
      * two shops can both publish /courses/open-water-diver.
@@ -4108,6 +4117,8 @@ export const tripReviews = pgTable(
       .references(() => people.id),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    /** Staff curation flag for the public review selection. */
+    isStandout: boolean("is_standout").notNull().default(false),
     isPublished: boolean("is_published").notNull().default(false),
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),

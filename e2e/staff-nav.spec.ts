@@ -21,28 +21,38 @@ test.describe("owner", () => {
     // (header strip and phone dock), one visible per breakpoint.
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // "Board", not "Schedule": the public schedule is a different page at a
-    // different URL, and staff call this one the board.
+    // different URL, and staff call this one the board. Close-out takes the
+    // fifth top-level slot; Orders remains reachable from More.
     await expect(nav.getByRole("link")).toHaveText([
       /Today/,
       "Check-in",
       "Divers",
       "Board",
-      "Orders",
+      "Close-out",
     ]);
 
+    // Close-out is a primary tab, so it is reachable without opening More.
+    await nav.getByRole("link", { name: "Close-out" }).click();
+    await expect(page).toHaveURL(/\/close-out$/);
+    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await page.goto("/shop/blue-mantis");
     // The More menu holds every other *place*, in two named groups — the
     // operational cadence, then configuration, with Settings closing the menu.
     const more = page.locator("header summary").filter({ hasText: "More" });
     await more.click();
     const menu = page.locator("header details[open]");
     await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
-      "Close-out",
       "Staffing",
       "Courses",
       "Dive sites",
       "Waivers",
       "Reviews",
       "Requests",
+      "Orders",
       "Reports",
     ]);
     await expect(menu.getByRole("list", { name: "Set up" }).getByRole("link")).toHaveText([
@@ -52,9 +62,9 @@ test.describe("owner", () => {
       "Settings",
     ]);
 
-    // A row navigates and the menu closes behind it.
-    await menu.getByRole("link", { name: "Close-out" }).click();
-    await expect(page).toHaveURL(/\/close-out$/);
+    // A More row navigates and the menu closes behind it.
+    await menu.getByRole("link", { name: "Orders" }).click();
+    await expect(page).toHaveURL(/\/orders$/);
     await expect(page.locator("header details[open]")).toHaveCount(0);
     // …and the door that leads here is what reads as current: the More
     // button, not a borrowed Today tab — in color and in the tree, so a
@@ -63,7 +73,7 @@ test.describe("owner", () => {
     await expect(more).toHaveAttribute("aria-current", "true");
     await more.click();
     await expect(
-      page.locator("header details[open]").getByRole("link", { name: "Close-out" }),
+      page.locator("header details[open]").getByRole("link", { name: "Orders" }),
     ).toHaveAttribute("aria-current", "page");
   });
 
@@ -116,8 +126,10 @@ test.describe("captain", () => {
     await page.goto("/shop/blue-mantis");
 
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
-    // Ungated daily surfaces are all still tabs.
-    await expect(nav.getByRole("link", { name: "Orders" })).toBeVisible();
+    // Close-out is the ungated primary destination; Orders is still visible,
+    // but it now lives in More with the other daily work.
+    await expect(nav.getByRole("link", { name: "Close-out" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Orders" })).toHaveCount(0);
 
     // The More menu shows a captain only what their role can open: the
     // ungated cadence rows, and their own calendar feed — never a disabled
@@ -125,11 +137,11 @@ test.describe("captain", () => {
     await page.locator("header summary").filter({ hasText: "More" }).click();
     const menu = page.locator("header details[open]");
     await expect(menu.getByRole("list", { name: "Run the shop" }).getByRole("link")).toHaveText([
-      "Close-out",
       "Staffing",
       "Courses",
       "Dive sites",
       "Reviews",
+      "Orders",
     ]);
     // "Set up" collapses to the one personal row — a visible heading over a
     // single row would be noise, but the group keeps its accessible name.
@@ -161,7 +173,7 @@ test.describe("phone dock", () => {
       "Check-in",
       "Divers",
       "Board",
-      "Orders",
+      "Close-out",
     ]);
 
     // The header's own copy of the strip is gone from view on a phone.
@@ -191,15 +203,15 @@ test.describe("phone dock", () => {
     // The sheet rises from the dock with the same two groups the desktop
     // menu holds, rendered by the same components.
     const sheet = page.locator("nav").getByRole("list", { name: "Run the shop" });
-    await expect(sheet.getByRole("link", { name: "Close-out" })).toBeVisible();
+    await expect(sheet.getByRole("link", { name: "Staffing" })).toBeVisible();
 
     // The sheet follows its trigger in the DOM, so the keyboard walks into
     // what it just disclosed: Tab from the More button lands on the first row.
     await page.keyboard.press("Tab");
-    await expect(sheet.getByRole("link", { name: "Close-out" })).toBeFocused();
+    await expect(sheet.getByRole("link", { name: "Staffing" })).toBeFocused();
 
     // Every row is a real touch target (dock test: >= 44px).
-    const rowBox = await sheet.getByRole("link", { name: "Close-out" }).boundingBox();
+    const rowBox = await sheet.getByRole("link", { name: "Staffing" }).boundingBox();
     if (!rowBox) throw new Error("sheet row has no box");
     expect(rowBox.height).toBeGreaterThanOrEqual(44);
 

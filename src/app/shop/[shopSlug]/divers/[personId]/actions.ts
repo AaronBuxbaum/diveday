@@ -244,6 +244,7 @@ export async function deleteDiverNoteAction(
   const { base, db, staff } = context;
   const result = await deleteDiverNote(db, {
     shopId: staff.user.shopId,
+    personId,
     actorPersonId: staff.user.personId,
     noteId: String(formData.get("noteId") ?? ""),
   });

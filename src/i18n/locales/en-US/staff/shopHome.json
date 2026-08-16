@@ -55,8 +55,8 @@
       },
       "instructor": {
         "title": "Teaching and certifying divers",
-        "desc": "Divers holds every diver's certification cards and specialty history.",
-        "tryThis": "Open Divers to check a certification card before class."
+        "desc": "Divers holds every diver's certification records and specialty history.",
+        "tryThis": "Open Divers to check a certification record before class."
       },
       "divemaster": {
         "title": "Getting divers ready to board",

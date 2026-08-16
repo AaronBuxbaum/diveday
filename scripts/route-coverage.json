@@ -1,9 +1,9 @@
 {
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
   },
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/about": {
     "e2e": ["seo.spec.ts"],
     "visual": ["about"]
@@ -99,6 +99,10 @@
     ],
     "visual": ["schedule", "schedule-embed"]
   },
+  "/s/[shopSlug]/reviews": {
+    "e2e": ["reviews.spec.ts"],
+    "visual": ["public-reviews"]
+  },
   "/s/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
     "visual": ["public-courses"]
@@ -148,13 +152,13 @@
       "tenant-isolation.spec.ts"
     ],
     "visual": [
+      "blockers",
+      "nav-more-menu",
+      "nav-more-sheet",
       "today",
       "today-empty",
       "today-first-bookable",
-      "today-orientation-line",
-      "blockers",
-      "nav-more-menu",
-      "nav-more-sheet"
+      "today-orientation-line"
     ]
   },
   "/shop/[shopSlug]/bookings/new": {
@@ -226,9 +230,9 @@
     ],
     "visual": [
       "diver-profile",
-      "diver-profile-not-certified",
       "diver-profile-expired",
       "diver-profile-imported",
+      "diver-profile-not-certified",
       "diver-profile-payments"
     ]
   },
@@ -426,6 +430,10 @@
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
     "visual": ["prep", "prep-no-nitrox"]
+  },
+  "/shop/[shopSlug]/trips/[id]/print": {
+    "e2e": ["trips.spec.ts"],
+    "visual": ["trip-packet"]
   },
   "/shop/[shopSlug]/waivers": {
     "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],

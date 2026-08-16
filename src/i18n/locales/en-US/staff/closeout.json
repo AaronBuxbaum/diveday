@@ -1,7 +1,8 @@
 {
   "title": "Close-out",
   "notice": {
-    "closed": "Day closed. The record is below — see you tomorrow."
+    "closed": "Day closed. The record is below — see you tomorrow.",
+    "acknowledgeRequired": "Acknowledge the open boat or head count before closing the day."
   },
   "headline": {
     "allClear": "Everyone is home",
@@ -35,6 +36,22 @@
       "crewUncounted": "{count, plural, one {# crew member has no result after dive {dive}.} other {# crew members have no result after dive {dive}.}} The count was never closed.",
       "departureUncounted": "{count, plural, one {The dock count never finished — # diver has no result at departure.} other {The dock count never finished — # divers have no result at departure.}}",
       "noRollCall": "No roll call was recorded on this trip."
+    }
+  },
+  "admin": {
+    "heading": "Administrative close-out",
+    "subtitle": "Follow-up work for the boats that are already back.",
+    "status": {
+      "complete": "Complete",
+      "pending": "In progress",
+      "attention": "Needs attention"
+    },
+    "postDiveReports": {
+      "label": "Post-dive reports",
+      "description": "Send each diver the recap from a completed departure.",
+      "progress": "{completed} of {total} sent.",
+      "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
+      "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}"
     }
   },
   "leftovers": {

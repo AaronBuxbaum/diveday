@@ -74,8 +74,9 @@ const COPY: BuilderCopy = {
   priceDescription: "Divers see this on the public page.",
   course: "Course",
   optional: "(optional)",
+  courseAgencyLabels: { padi: "PADI", ssi: "SSI", other: "Other agency" },
   diveSite: "Dive site",
-  ordinaryTrip: "Ordinary trip",
+  ordinaryTrip: "Fun dive",
   decideLater: "Decide later",
   optionsLoading: "Loading…",
   adding: "Adding…",
@@ -192,7 +193,7 @@ const PRICE: BuilderPriceInput = { step: "0.01", max: 100_000, placeholder: "$0.
  * stub, and the one that cares asserts it is not called until then.
  */
 const loadOptions = vi.fn(async () => ({
-  courses: [{ id: "course-1", title: "Open Water Diver" }],
+  courses: [{ id: "course-1", title: "Open Water Diver", agency: "padi" }],
   diveSites: [{ id: "site-1", title: "Molasses Reef" }],
 }));
 
@@ -387,12 +388,40 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     expect(loadOptions).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Fun dive" })).toBeInTheDocument();
 
     // Reopening reuses what it already has — the catalogue does not change
     // while somebody schedules a week.
     await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("groups course choices by agency while keeping each agency's order", async () => {
+    loadOptions.mockResolvedValueOnce({
+      courses: [
+        { id: "padi-ow", title: "Open Water Diver", agency: "padi" },
+        { id: "ssi-ow", title: "SSI Open Water Diver", agency: "ssi" },
+        { id: "other", title: "Custom Course", agency: "naui" },
+      ],
+      diveSites: [],
+    });
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+
+    const courseSelect = await vi.waitFor(() => {
+      const select = container.querySelector('select[name="courseId"]');
+      if (!select) throw new Error("course selector is not mounted yet");
+      return select;
+    });
+    expect(courseSelect.querySelectorAll("optgroup")).toHaveLength(3);
+    expect(courseSelect.querySelector('optgroup[label="PADI"]')).toHaveTextContent(
+      "Open Water Diver",
+    );
+    expect(courseSelect.querySelector('optgroup[label="SSI"]')).toHaveTextContent(
+      "SSI Open Water Diver",
+    );
+    expect(courseSelect.querySelector('optgroup[label="NAUI"]')).toHaveTextContent("Custom Course");
   });
 });
 

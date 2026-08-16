@@ -47,7 +47,9 @@ test.describe("contact import", () => {
     // medical column called out as deliberately dropped, and the waiver claim
     // called out as trusted.
     await expect(page.getByText("Divers in file")).toBeVisible();
-    await expect(page.getByText(/Card imported as verified from your records/)).toBeVisible();
+    await expect(
+      page.getByText(/Certification imported as verified from your records/),
+    ).toBeVisible();
     await expect(page.getByText(/Left behind on purpose/)).toBeVisible();
     await expect(page.getByText(/Medical Notes/)).toBeVisible();
     await expect(
@@ -79,8 +81,8 @@ test.describe("contact import", () => {
     // that card already satisfied readiness on arrival (H-24 scopes the
     // attestation to the confirms that open something).
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
-    await levelCard.getByRole("button", { name: "Confirm card" }).click();
-    await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
+    await levelCard.getByRole("button", { name: "Confirm certification" }).click();
+    await expect(levelCard.getByRole("button", { name: "Confirm certification" })).toHaveCount(0);
     // Provenance survives the confirm — that is the contract, and it now reads
     // on the card's own small-print line beside the card number rather than as
     // a pill in the button row (`CardStatusMark`), so this matches the source
@@ -123,7 +125,9 @@ test.describe("contact import — specialty cards", () => {
     test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/settings/import");
     // The honesty table now says specialty cards come across.
-    await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
+    await expect(
+      page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
+    ).toBeVisible();
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
       "data-hydrated",
       "true",
@@ -134,13 +138,13 @@ test.describe("contact import — specialty cards", () => {
       mimeType: "text/csv",
       buffer: Buffer.from(SPECIALTY_CSV, "utf-8"),
     });
-    await expect(page.getByText(/Specialty card imported as verified/)).toBeVisible();
+    await expect(page.getByText(/Specialty certification imported as verified/)).toBeVisible();
     // Row 2 is the same diver, and says so rather than reading "skipped".
     await expect(page.getByText(/same diver as row 1/)).toBeVisible();
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
-    await expect(page.getByText(/1 specialty card/)).toBeVisible();
-    await expect(page.getByText(/1 row\(s\) added cards to a diver/)).toBeVisible();
+    await expect(page.getByText(/1 specialty certification/)).toBeVisible();
+    await expect(page.getByText(/1 row\(s\) added certifications to a diver/)).toBeVisible();
     await expect(
       page.getByText(/A dive that requires one of those specialties waits/),
     ).toBeVisible();
@@ -199,7 +203,7 @@ test.describe("contact import — specialty cards", () => {
     // (ADR 20260814-one-tap-imported-card-confirm). The gate is still per-card:
     // nothing about this diver's Deep card counts until a staffer confirms it.
     const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
-    await deepCard.getByRole("button", { name: "Confirm card" }).click();
+    await deepCard.getByRole("button", { name: "Confirm certification" }).click();
 
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);

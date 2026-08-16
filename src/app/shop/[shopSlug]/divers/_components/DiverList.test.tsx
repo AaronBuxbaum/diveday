@@ -405,9 +405,9 @@ describe("DiverList level cell", () => {
     expect(screen.queryByText("1 card")).toBeNull();
   });
 
-  it("says so in words when no card speaks for this diver", () => {
+  it("says so in words when no certification record speaks for this diver", () => {
     renderList({ page: rosterPage({ certificationLevel: null }) });
-    expect(screen.getAllByText("No current card").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No current certification").length).toBeGreaterThan(0);
   });
 
   it("keeps the pending and to-confirm badges beside the level", () => {

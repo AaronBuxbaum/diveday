@@ -180,6 +180,30 @@ export type CloseoutDeparture = {
   }[];
 };
 
+/** Administrative work attached to the returned boats, expressed as counts. */
+export type CloseoutAdminTaskStatus = "complete" | "pending" | "attention";
+
+export type CloseoutAdminTask = {
+  id: "post_dive_reports";
+  status: CloseoutAdminTaskStatus;
+  total: number;
+  completed: number;
+  pending: number;
+  failed: number;
+};
+
+/** Keep the task tone derived from its counts, so the page cannot call a partial run complete. */
+export function closeoutAdminTaskStatus(input: {
+  total: number;
+  completed: number;
+  pending: number;
+  failed: number;
+}): CloseoutAdminTaskStatus {
+  if (input.failed > 0) return "attention";
+  if (input.pending > 0) return "pending";
+  return input.completed === input.total ? "complete" : "pending";
+}
+
 /** The one-line answer to "how did today end?", as a code. */
 export type CloseoutShape = "no_departures" | "all_clear" | "outstanding";
 
@@ -207,6 +231,8 @@ export type DayCloseoutState = {
   shape: CloseoutShape;
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
+  /** Administrative work for the departures that have already returned. */
+  adminTasks: CloseoutAdminTask[];
   /**
    * Today's unresolved queue rows — everything `getTodayWork` still raises
    * that is dated today (or undated), minus the roll-call kinds: a head count
@@ -262,6 +288,7 @@ export function assembleDayCloseout(input: {
   trips: readonly CloseoutTripInput[];
   gaps: readonly CloseoutRollCallGap[];
   actions: readonly TodayAction[];
+  adminTasks?: readonly CloseoutAdminTask[];
   timeZone: string;
   now?: Date;
 }): DayCloseoutState {
@@ -316,17 +343,21 @@ export function assembleDayCloseout(input: {
     (departure) => departure.status === "unreconciled" || departure.status === "still_out",
   );
 
+  const adminTasks = [...(input.adminTasks ?? [])];
+  const hasOpenDeparture = departures.some((departure) => departure.status !== "all_home");
+  const hasOpenAdminTask = adminTasks.some((task) => task.status !== "complete");
   const shape: CloseoutShape =
-    departures.length === 0
-      ? "no_departures"
-      : departures.every((departure) => departure.status === "all_home") && leftovers.length === 0
-        ? "all_clear"
-        : "outstanding";
+    hasOpenDeparture || leftovers.length > 0 || hasOpenAdminTask
+      ? "outstanding"
+      : departures.length === 0
+        ? "no_departures"
+        : "all_clear";
 
   return {
     shopDay,
     shape,
     departures,
+    adminTasks,
     leftovers,
     tomorrow: countByKind(tomorrowAll),
     mustAcknowledge,
@@ -379,6 +410,11 @@ export type CloseoutSnapshotLeftover = {
   decision: LeftoverDecision;
 };
 
+export type CloseoutSnapshotAdminTask = Pick<
+  CloseoutAdminTask,
+  "id" | "status" | "total" | "completed" | "pending" | "failed"
+>;
+
 /**
  * What the recorded act remembers: the not-yet-settled departures and every
  * leftover with the choice made about it. Subjects and details are stored as
@@ -388,6 +424,8 @@ export type CloseoutSnapshotLeftover = {
 export type CloseoutSnapshot = {
   departures: CloseoutSnapshotDeparture[];
   leftovers: CloseoutSnapshotLeftover[];
+  /** Administrative work still open when the close was recorded. */
+  adminTasks: CloseoutSnapshotAdminTask[];
 };
 
 /**
@@ -397,7 +435,8 @@ export type CloseoutSnapshot = {
  * the choice that loses nothing.
  */
 export function buildCloseoutSnapshot(
-  state: Pick<DayCloseoutState, "departures" | "leftovers">,
+  state: Pick<DayCloseoutState, "departures" | "leftovers"> &
+    Partial<Pick<DayCloseoutState, "adminTasks">>,
   decisions: Readonly<Record<string, LeftoverDecision>>,
 ): CloseoutSnapshot {
   return {
@@ -425,6 +464,14 @@ export function buildCloseoutSnapshot(
           ? "dismiss"
           : "carry",
     })),
+    adminTasks: (state.adminTasks ?? []).map((task) => ({
+      id: task.id,
+      status: task.status,
+      total: task.total,
+      completed: task.completed,
+      pending: task.pending,
+      failed: task.failed,
+    })),
   };
 }
 
@@ -438,9 +485,9 @@ const GAP_REASONS = new Set<string>(Object.keys(GAP_REASON_RANK));
  * Malformed entries are dropped, never guessed at.
  */
 export function parseCloseoutSnapshot(value: unknown): CloseoutSnapshot {
-  const empty: CloseoutSnapshot = { departures: [], leftovers: [] };
+  const empty: CloseoutSnapshot = { departures: [], leftovers: [], adminTasks: [] };
   if (typeof value !== "object" || value === null) return empty;
-  const raw = value as { departures?: unknown; leftovers?: unknown };
+  const raw = value as { departures?: unknown; leftovers?: unknown; adminTasks?: unknown };
   const departures = Array.isArray(raw.departures)
     ? raw.departures.flatMap((entry): CloseoutSnapshotDeparture[] => {
         if (typeof entry !== "object" || entry === null) return [];
@@ -491,5 +538,35 @@ export function parseCloseoutSnapshot(value: unknown): CloseoutSnapshot {
         ];
       })
     : [];
-  return { departures, leftovers };
+  const adminTasks = Array.isArray(raw.adminTasks)
+    ? raw.adminTasks.flatMap((entry): CloseoutSnapshotAdminTask[] => {
+        if (typeof entry !== "object" || entry === null) return [];
+        const row = entry as Record<string, unknown>;
+        if (
+          row.id !== "post_dive_reports" ||
+          (row.status !== "complete" && row.status !== "pending" && row.status !== "attention") ||
+          !Number.isInteger(row.total) ||
+          !Number.isInteger(row.completed) ||
+          !Number.isInteger(row.pending) ||
+          !Number.isInteger(row.failed) ||
+          (row.total as number) < 0 ||
+          (row.completed as number) < 0 ||
+          (row.pending as number) < 0 ||
+          (row.failed as number) < 0
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: "post_dive_reports",
+            status: row.status as CloseoutAdminTaskStatus,
+            total: row.total as number,
+            completed: row.completed as number,
+            pending: row.pending as number,
+            failed: row.failed as number,
+          },
+        ];
+      })
+    : [];
+  return { departures, leftovers, adminTasks };
 }

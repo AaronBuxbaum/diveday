@@ -117,8 +117,8 @@ describe("permission gating", () => {
 
   it("never renders an empty More surface for any role: each group keeps ungated rows", () => {
     // The dock's sixth slot and the header menu render only when they have
-    // rows. Close-out and Staffing (daily) and the calendar feed (setup) are
-    // deliberately ungated, so even the barest crew role gets both groups.
+    // rows. Staffing (daily) and the calendar feed (setup) are deliberately
+    // ungated, so even the barest crew role gets both groups.
     expect(staffNavDestinations("daily", crew).length).toBeGreaterThan(0);
     expect(staffNavDestinations("setup", crew).length).toBeGreaterThan(0);
   });
@@ -136,16 +136,16 @@ describe("what each consumer derives", () => {
       "checkIn",
       "divers",
       "board",
-      "orders",
+      "closeOut",
     ]);
     expect(staffNavDestinations("daily", owner).map((d) => d.id)).toEqual([
-      "closeOut",
       "staffing",
       "courses",
       "diveSites",
       "waivers",
       "reviews",
       "requests",
+      "orders",
       "reports",
     ]);
     expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual([
@@ -172,9 +172,11 @@ describe("what each consumer derives", () => {
     expect(staffNavDestinations("setup", owner).at(-1)?.id).toBe("settings");
   });
 
-  it("puts Orders in the header, where a daily money surface belongs", () => {
+  it("puts Close-out in the header and Orders in More", () => {
+    const closeOut = STAFF_DESTINATIONS.find((destination) => destination.id === "closeOut");
     const orders = STAFF_DESTINATIONS.find((destination) => destination.id === "orders");
-    expect(orders?.navGroup).toBe("primary");
+    expect(closeOut?.navGroup).toBe("primary");
+    expect(orders?.navGroup).toBe("daily");
     expect(orders?.inPalette).toBe(true);
   });
 

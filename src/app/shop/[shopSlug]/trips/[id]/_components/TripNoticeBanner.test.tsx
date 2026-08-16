@@ -50,16 +50,16 @@ describe("TripNoticeBanner", () => {
       );
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent("This charter requires Advanced Open Water.");
-      expect(banner).toHaveTextContent("highest card on file is Open Water");
+      expect(banner).toHaveTextContent("highest certification on file is Open Water");
     });
 
     it("falls back to the generic sentence on a hand-written gate", () => {
       renderBanner("diver-trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
-        "That diver's cards on file don't reach what this trip and its dive sites require",
+        "That diver's certifications on file don't reach what this trip and its dive sites require",
       );
-      expect(banner).not.toHaveTextContent("Deep card");
+      expect(banner).not.toHaveTextContent("Deep certification");
     });
 
     it("falls back to the generic sentence on another departure's genuine gate", () => {
@@ -76,7 +76,7 @@ describe("TripNoticeBanner", () => {
       expect(() =>
         renderBanner("diver-trip-prerequisite", ["~~deep~0", "~~wreck~0"]),
       ).not.toThrow();
-      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
+      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });
   });
 });

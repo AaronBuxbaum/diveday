@@ -8,14 +8,17 @@ import { seededShopContext } from "@/test/db";
 import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createTestDb } from "./client";
+import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import {
   courseAgencies,
   getCourseBySlug,
+  getCourseTemplateUpdate,
   hasActiveCourses,
   listActiveCourses,
   listActiveCoursesForSitemap,
   type NewCourse,
   pagedCourses,
+  pullCourseTemplateUpdates,
   setCourseVisibility,
   updateCourse,
   updateCourseContent,
@@ -1176,6 +1179,32 @@ describe("agency tabs (in-memory PGlite)", () => {
     });
     expect(await courseAgencies(db, shop.id)).toContain("bsac");
   });
+
+  it("groups agency values case-insensitively and trims imported whitespace", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.insert(courses).values([
+      {
+        shopId: shop.id,
+        title: "Imported Uppercase PADI",
+        slug: "imported-uppercase-padi",
+        agency: " PADI ",
+      },
+      {
+        shopId: shop.id,
+        title: "Imported Uppercase SSI",
+        slug: "imported-uppercase-ssi",
+        agency: "SSI",
+      },
+    ]);
+
+    const agencies = await courseAgencies(db, shop.id);
+    expect(agencies).toContain("padi");
+    expect(agencies).toContain("ssi");
+    expect(agencies.filter((agency) => agency === "padi")).toHaveLength(1);
+    expect((await pagedCourses(db, shop.id, { agency: "padi" })).courses).toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: "Imported Uppercase PADI" })]),
+    );
+  });
 });
 
 describe("course content and public pages (in-memory PGlite)", () => {
@@ -1440,5 +1469,63 @@ describe("hasActiveCourses", () => {
     expect(await hasActiveCourses(db, shop.id)).toBe(false);
     await setCourseVisibility(db, shop.id, course.id, true);
     expect(await hasActiveCourses(db, shop.id)).toBe(true);
+  });
+});
+
+describe("course template updates", () => {
+  it("merges a newer template while preserving shop prose and operational fields", async () => {
+    const { db, shop } = await seededShopContext();
+    const course = await getCourseBySlug(db, shop.id, "open-water-diver");
+    const template = getCourseTemplate("open-water-diver");
+    if (!course || !template) throw new Error("seeded course template fixture missing");
+
+    const latest = courseTemplateSnapshot(template);
+    const baseline = {
+      ...latest,
+      summary: "How to become a certified PADI Open Water Diver",
+    };
+    await db
+      .update(courses)
+      .set({
+        summary: baseline.summary,
+        overview: "The shop's own welcome and arrival details.",
+        sourceTemplateVersion: 1,
+        sourceTemplateSnapshot: baseline,
+      })
+      .where(and(eq(courses.id, course.id), eq(courses.shopId, shop.id)));
+
+    const pending = await getCourseTemplateUpdate(db, shop.id, course.id);
+    expect(pending?.latestVersion).toBe(template.version);
+    expect(pending?.diff).toEqual([
+      expect.objectContaining({ field: "summary", shopChanged: false }),
+      expect.objectContaining({ field: "overview", shopChanged: true }),
+    ]);
+
+    const result = await pullCourseTemplateUpdates(db, shop.id, course.id, "preserve-shop-edits");
+    expect(result.status).toBe("updated");
+    const [updated] = await db.select().from(courses).where(eq(courses.id, course.id));
+    expect(updated).toMatchObject({
+      summary: latest.summary,
+      overview: "The shop's own welcome and arrival details.",
+      sourceTemplateVersion: template.version,
+      priceCents: course.priceCents,
+      heroImageUrl: course.heroImageUrl,
+    });
+  });
+
+  it("cannot pull a course through another shop's tenant scope", async () => {
+    const { db, shop } = await seededShopContext();
+    const course = await getCourseBySlug(db, shop.id, "open-water-diver");
+    if (!course) throw new Error("seeded course missing");
+    expect(
+      await pullCourseTemplateUpdates(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        course.id,
+        "replace-template-copy",
+      ),
+    ).toEqual({
+      status: "unavailable",
+    });
   });
 });

@@ -20,15 +20,15 @@ function specialtyForm(page: Page) {
     .filter({ visible: true });
 }
 
-test("staff captures and verifies level and specialty cards before either can be trusted", async ({
+test("staff captures and verifies level and specialty certifications before either can be trusted", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
 
-  // Level card: capture lands as pending, only an explicit verify trusts it.
-  await page.getByText("Add card", { exact: true }).click(); // open the collapsed capture form
+  // Level certification: capture lands as pending, only an explicit verify trusts it.
+  await page.getByText("Add certification", { exact: true }).click(); // open the collapsed capture form
   const form = levelForm(page);
   // No photo picker on either capture form: a card is trusted because a
   // staffer looked its number up with the issuing agency ("Mark certified"),
@@ -36,7 +36,7 @@ test("staff captures and verifies level and specialty cards before either can be
   await expect(form.locator('input[name="cardImage"]')).toHaveCount(0);
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
-  await form.getByLabel("Card number").fill(`PADI-AOW-${e2eNow().getTime()}`);
+  await form.getByLabel("Certification number").fill(`PADI-AOW-${e2eNow().getTime()}`);
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("pending");
 
@@ -48,13 +48,13 @@ test("staff captures and verifies level and specialty cards before either can be
   await pendingRow.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("certified");
 
-  // Specialty card: gated exactly the same way, on the same record.
+  // Specialty certification: gated exactly the same way, on the same record.
   await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
   const cardNo = `PADI-WRECK-${e2eNow().getTime()}`;
   const specialty = specialtyForm(page);
   await specialty.locator('select[name="agency"]').selectOption("padi");
   await specialty.locator('select[name="specialty"]').selectOption("wreck");
-  await specialty.getByLabel("Card number").fill(cardNo);
+  await specialty.getByLabel("Certification number").fill(cardNo);
   await specialty.getByRole("button", { name: "Capture specialty for review" }).click();
   await expect(page.getByRole("status")).toContainText("pending");
 
@@ -68,7 +68,7 @@ test("staff captures and verifies level and specialty cards before either can be
   await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("certified");
 
-  // The specialty card can be deleted outright (replaces the old "needs
+  // The specialty certification can be deleted outright (replaces the old "needs
   // correction" flow). No confirm dialog: the delete lands and a toast offers a
   // one-tap undo (delight backlog — land-then-undo over "are you sure?").
   await page
@@ -80,7 +80,7 @@ test("staff captures and verifies level and specialty cards before either can be
       name: "Delete",
     })
     .click();
-  await expect(page.getByRole("status")).toContainText("Card removed");
+  await expect(page.getByRole("status")).toContainText("Certification removed");
   await expect(
     page.locator("li").filter({ hasText: cardNo }).filter({ visible: true }),
   ).toHaveCount(0);
@@ -102,16 +102,16 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await expect(page.getByRole("heading", { level: 1, name: "Rowan Feld" })).toBeVisible();
   const cards = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Certification cards" }) })
+    .filter({ has: page.getByRole("heading", { name: "Certification records" }) })
     .filter({ visible: true });
-  await cards.getByText("Certify from card", { exact: true }).click();
+  await cards.getByText("Verify certification record", { exact: true }).click();
 
   const sightingNumber = page.locator('input[name="sightedIdentifier"]').filter({ visible: true });
   await sightingNumber.fill("xx");
   await page.getByRole("button", { name: "Mark certified" }).click();
   await expect(
     page.getByText(
-      "That doesn't look like a card number. Type the number printed on the card, digits included.",
+      "That doesn't look like a certification number. Type the number exactly as shown in the certification record, digits included.",
       {
         exact: true,
       },
@@ -123,7 +123,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
 
   await sightingNumber.fill("PADI-ROWAN-2026");
   await page.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("Card marked certified.");
+  await expect(page.getByRole("status")).toContainText("Certification marked verified.");
   await expect(page.getByText("PADI-ROWAN-2026", { exact: true })).toBeVisible();
 
   // Nadia is the test-only uncarded state. Clearing it removes the warning
@@ -135,7 +135,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await expect(page.getByText("Not certified yet — diver's word", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "They didn't tell us that" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Cleared. This diver's record no longer says anything about a card",
+    "Cleared. This diver's record no longer says anything about certification",
   );
   await expect(page.getByText("Not certified yet — diver's word", { exact: true })).toHaveCount(0);
 });
@@ -172,11 +172,11 @@ test("a certification past its refresher-due date reads as refresher due, not ce
 /**
  * The diver's own half of the same evidence loop.
  *
- * A diver whose readiness says "we still need your certification card" had
+ * A diver whose readiness says "we still need your certification details" had
  * nowhere to put it: the checklist named the blocker and offered no action, so
  * the card arrived as a photo in a reply-to email or not until the dock
  * (2026-08-06 review). What they type lands `pending` like any other captured
- * card — the whole point is that it reaches the staff review that already
+ * record — the whole point is that it reaches the staff review that already
  * existed, not that it clears anything.
  */
 test("a diver types their card in from the readiness page, and staff verify it there", async ({
@@ -218,16 +218,16 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await expect(page).toHaveURL(/\/ready\//);
 
   // The blocker now carries the form that answers it.
-  await expect(page.getByRole("heading", { name: "Add your certification card" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add your certification" })).toBeVisible();
   await page.getByLabel("Training agency").selectOption({ label: "PADI" });
   await page.getByLabel("Level", { exact: true }).selectOption({ label: "Advanced Open Water" });
-  await page.getByLabel("Card number").fill(cardNumber);
-  await page.getByRole("button", { name: "Add my card" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Card added" })).toBeVisible();
+  await page.getByLabel("Certification number").fill(cardNumber);
+  await page.getByRole("button", { name: "Add my certification" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Certification added" })).toBeVisible();
 
   // Capture, never clearance: the row must not report itself as cleared, and
   // the same number typed again is recognised rather than refused.
-  await expect(page.getByRole("heading", { name: "Add your certification card" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Add your certification" })).toHaveCount(0);
 
   // Staff find it waiting for review on the diver's own record, and verify it.
   await signInAsOwner(page);

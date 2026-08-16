@@ -16,6 +16,7 @@ test.describe("end-of-day close-out", () => {
     // The three parts of the ritual are all on one page: how the boats ended,
     // what is left over, and tomorrow's first look.
     await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Administrative close-out" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Today's leftovers" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tomorrow, at a glance" })).toBeVisible();
 
@@ -37,13 +38,13 @@ test.describe("end-of-day close-out", () => {
     // never empty on the demo shop.
     await expect(page.getByText("No departures today.")).toHaveCount(0);
 
-    // …and every one of them is still out at the fleet's frozen 09:30, so no
-    // row offers the post-trip recap note. Only this negative is reachable
-    // here, for the same process-wide-clock reason the handoff test below
-    // records; the positive is covered in
-    // src/app/shop/[shopSlug]/close-out/_components/RecapNoteEditor.test.tsx
-    // and src/lib/closeout.test.ts's `ended` assertions.
-    await expect(page.getByText("Post-trip recap note")).toHaveCount(0);
+    // The demo includes a first-light departure that is already home at the
+    // fleet's frozen 09:30. Its recap editor and the partially completed report
+    // task make both the returned-boat work and the administrative follow-up
+    // visible in the real page, not only in unit fixtures.
+    await expect(page.getByText("Post-trip recap note")).toBeVisible();
+    await expect(page.getByText("6 of 8 sent.")).toBeVisible();
+    await expect(page.getByText("2 reports are still queued.")).toBeVisible();
 
     // Make an explicit decision about the first leftover: dismiss it. Every
     // other row keeps its carry default.

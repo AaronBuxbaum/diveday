@@ -44,11 +44,11 @@ describe("bookingConfirmationEmail", () => {
   it("includes the shop's configured packing list as a pre-trip checklist", () => {
     const email = bookingConfirmationEmail({
       ...base,
-      packingList: ["Reef-safe sunscreen", "Your certification card (physical or digital)"],
+      packingList: ["Reef-safe sunscreen", "Your digital certification record or other evidence"],
     });
     expect(email.text).toContain("Pre-Trip Checklist Reminder:");
     expect(email.text).toContain("Reef-safe sunscreen");
-    expect(email.text).toContain("certification card");
+    expect(email.text).toContain("digital certification record");
     expect(email.html).toContain("Pre-Trip Checklist Reminder:");
     expect(email.html).toContain("Reef-safe sunscreen");
   });

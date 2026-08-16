@@ -56,9 +56,8 @@ function RequestCard({
   shopSlug: string;
   t: StaffTranslator;
 }) {
-  // A second choice and a flexible neighbour are both "could come", not "asked
-  // for this day", and the whole reason the group's count is safe to read: a
-  // group of three with two of these in it is not three firm asks.
+  // A second choice and a flexible neighbour remain visible on the request
+  // card, while the group header reports requests rather than diver capacity.
   const soft = match === "alternate" || match === "nearby";
   // What this request *did* name, for the badges that explain why it is in a
   // group it did not ask for. A request can carry an alternate and no first
@@ -135,7 +134,7 @@ function RequestCard({
  * group it could make, flexible requests travelling to nearby days, and the
  * ones that named no date at all at the foot. What the page contributes is the
  * act at the end of it — each group's own link into the schedule builder,
- * pre-dated, so "four people could make the 12th" ends in a departure on the
+ * pre-dated, so "four groups could make the 12th" ends in a departure on the
  * 12th rather than a note somewhere.
  */
 export default async function RequestsPage({
@@ -195,11 +194,10 @@ export default async function RequestsPage({
                     {formatCalendarDate(group.date, locale)}
                   </h2>
                   <p className="mt-1 text-sm text-muted">
-                    {t("requests.couldMake", { count: group.count })}
-                    {` · ${t("requests.askedForThisDay", { count: group.firmCount })}`}
+                    {t("requests.groupCount", { count: group.groupCount })}
                   </p>
                 </div>
-                {/* The whole point of counting people against a day: the
+                {/* The whole point of counting groups against a day: the
                     builder opens on that date with the full form already
                     disclosed (ADR 20260806-one-trip-create-form). */}
                 <Link

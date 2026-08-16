@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { getCourseBySlug, updateCourse, updateCourseContent } from "@/db/courses";
+import {
+  getCourseBySlug,
+  pullCourseTemplateUpdates,
+  updateCourse,
+  updateCourseContent,
+} from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import {
@@ -17,6 +22,7 @@ import {
 } from "@/lib/courses";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { publicCoursePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
@@ -219,6 +225,39 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
 
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
-  revalidatePath(`/shop/${shopSlug}/courses/${slug}`);
+  revalidatePath(base);
   revalidateAndRedirect(base, noticeUrl(base, saved ? "saved" : "invalid"));
+}
+
+/**
+ * Pull a newer code-owned template revision into one shop course. The mode is
+ * bound into the form action, so a browser cannot turn the safe button into a
+ * replace without submitting a different, visibly labelled form.
+ */
+export async function pullCourseTemplateUpdatesAction(
+  shopSlug: string,
+  slug: string,
+  mode: "preserve-shop-edits" | "replace-template-copy",
+  _formData: FormData,
+) {
+  const base = shopPath(shopSlug, "courses", slug, "edit");
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  const course = await getCourseBySlug(db, staff.user.shopId, slug);
+  if (!course) redirect(noticeUrl(shopPath(shopSlug, "courses"), "invalid"));
+
+  const parsedMode = z.enum(["preserve-shop-edits", "replace-template-copy"]).safeParse(mode);
+  if (!parsedMode.success) redirect(noticeUrl(base, "template-update-unavailable"));
+  const result = await pullCourseTemplateUpdates(db, staff.user.shopId, course.id, parsedMode.data);
+  if (result.status !== "updated") redirect(noticeUrl(base, "template-update-unavailable"));
+
+  revalidatePath(`/shop/${shopSlug}/courses/${slug}`);
+  revalidatePath(publicCoursePath(shopSlug, course.slug));
+  revalidateAndRedirect(
+    base,
+    noticeUrl(
+      base,
+      parsedMode.data === "preserve-shop-edits" ? "template-updated" : "template-replaced",
+    ),
+  );
 }

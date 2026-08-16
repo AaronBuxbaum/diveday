@@ -92,7 +92,7 @@ export async function loadBuilderOptionsAction() {
   }
   const [courses, diveSites] = await Promise.all([
     listActiveCourses(db, shopId).then((rows) =>
-      rows.map((row) => ({ id: row.id, title: row.title })),
+      rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
     ),
     listDiveSites(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
   ]);

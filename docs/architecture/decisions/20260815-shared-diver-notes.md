@@ -25,12 +25,15 @@ Keep one `internal_notes` source of truth and use its existing nullable booking 
   activity event;
 - the Diver record can add, list, delete, and undo person-scoped notes;
 - the live boat manifest resolves person-scoped notes onto the diver's booking and renders them
-  beside the row, separately from booking-scoped notes and checkpoint roll-call notes.
+  beside the row, alongside booking-scoped notes. It may add a booking-scoped note immediately,
+  without waiting for a roll-call result. The Guests roster and Manifest use the same private-note
+  form and action shape for those booking-scoped notes. A note attached to a roll-call event
+  remains that event's historical result note; it is not rewritten as private staff context.
 
-The manifest display is screen-only. Notes are not added to the printed departure document or the
-minimized offline snapshot: a free-form staff note may contain private context, and spreading every
-note to a paper copy or a crew device needs an explicit audience decision. The current shared
-surface is the authenticated Diver record and live manifest.
+The private-note display and form are screen-only. Notes are not added to the printed departure
+document or the minimized offline snapshot: a free-form staff note may contain private context, and
+spreading every note to a paper copy or a crew device needs an explicit audience decision. The
+authenticated Diver record, Guests roster, and live manifest are the shared private-note surfaces.
 
 There is one general operational note kind today. We will not add speculative kinds until a real
 audience, retention period, and display policy exists; adding a kind later is a deliberate policy
@@ -52,7 +55,10 @@ unstructured human reminder, not verified certification, waiver evidence, or a h
 ## Consequences
 
 - A staffer writes a diver fact once and the crew can read it on the live manifest.
-- Booking-specific notes remain available and retain their existing Guests-tab behavior.
+- Booking-specific notes are one audited `internal_notes` scope shared by Guests and Manifest;
+  person-scoped notes remain available across departures, preserving the existing Diver behavior.
+- Historical roll-call event notes remain attached to their append-only checkpoint events and keep
+  their existing history semantics.
 - No database migration is needed because the existing `internal_notes.booking_id` nullable column
   already supports person-scoped rows.
 - Printed and offline manifests intentionally remain minimized; a future crew-visible note kind must

@@ -86,9 +86,7 @@ export function RepeatFields({
   const [repeats, setRepeats] = useState(editing);
   const [endsOnDate, setEndsOnDate] = useState(initial?.endsOn != null);
   const startWeekday = isValidCalendarDate(startDate) ? calendarDateWeekday(startDate) : null;
-  const [weekdays, setWeekdays] = useState<number[]>(
-    initial?.weekdays ?? (startWeekday === null ? [] : [startWeekday]),
-  );
+  const [weekdays, setWeekdays] = useState<number[]>(initial?.weekdays ?? []);
   const groupId = useId();
 
   // The picker follows the date field while it is still only a default: a shop
@@ -98,9 +96,9 @@ export function RepeatFields({
   // real answer, so it is touched from the start.
   const [touched, setTouched] = useState(editing);
   useEffect(() => {
-    if (touched || startWeekday === null) return;
+    if (touched || !repeats || startWeekday === null) return;
     setWeekdays([startWeekday]);
-  }, [touched, startWeekday]);
+  }, [repeats, touched, startWeekday]);
 
   const everyDay = weekdays.length === WEEKDAYS.length;
   const toggleWeekday = (day: number) => {
@@ -118,7 +116,15 @@ export function RepeatFields({
             name="repeatIntervalWeeks"
             defaultValue={String(initial?.intervalWeeks ?? 0)}
             disabled={disabled}
-            onChange={(event) => setRepeats(event.currentTarget.value !== "0")}
+            onChange={(event) => {
+              const nextRepeats = event.currentTarget.value !== "0";
+              setRepeats(nextRepeats);
+              if (!nextRepeats) {
+                setTouched(false);
+                setWeekdays([]);
+                setEndsOnDate(false);
+              }
+            }}
             className={controlClass}
           >
             {/* Absent while editing: "stop repeating" is its own control on the
@@ -133,7 +139,7 @@ export function RepeatFields({
         </Field>
         <Field label={copy.endsLabel}>
           <select
-            defaultValue={initial?.endsOn == null ? "never" : "on"}
+            value={endsOnDate ? "on" : "never"}
             disabled={disabled || !repeats}
             onChange={(event) => setEndsOnDate(event.currentTarget.value === "on")}
             className={`${controlClass} disabled:cursor-not-allowed disabled:opacity-60`}

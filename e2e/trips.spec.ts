@@ -240,6 +240,35 @@ test.describe("trip pulse", () => {
   });
 });
 
+test.describe("trip print packet", () => {
+  signedInAsOwner();
+
+  test("the Overview opens a complete printable trip packet", async ({ page }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Print / save PDF" }).click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
+    await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
+    await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
+    await popup.close();
+
+    // Printing is intentionally owned by Overall. The packet is the one
+    // document door; the other tabs must not quietly print only themselves.
+    for (const tab of ["guests", "manifest", "prep"]) {
+      await page.goto(`/shop/blue-mantis/trips/${tripId}/${tab}`);
+      await expect(page.getByRole("button", { name: "Print / save PDF" })).toHaveCount(0);
+    }
+  });
+});
+
 /**
  * The undo of a roster removal is a *stale* affordance by construction: the
  * banner is server-rendered from `?notice=booking-removed&bid=…` and then

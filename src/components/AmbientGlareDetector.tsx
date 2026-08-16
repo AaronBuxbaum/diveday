@@ -219,7 +219,7 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
       <legend className="text-xs font-bold tracking-wide text-muted uppercase">
         {copy.modeLabel}
       </legend>
-      <div className="mt-1.5 inline-flex rounded-full border border-border bg-surface-sunken p-1">
+      <div className="mt-1.5 flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
           const active = value === mode;
           return (

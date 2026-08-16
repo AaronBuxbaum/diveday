@@ -14,7 +14,7 @@ import {
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 describe("staff-only operational context", () => {
-  it("adds a private booking note and a plain-language activity event", async () => {
+  it("saves a private booking note before boarding and records a plain-language activity event", async () => {
     const { db, shop } = await seededShopContext();
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
@@ -25,6 +25,7 @@ describe("staff-only operational context", () => {
     await expect(
       addInternalNote(db, {
         shopId: shop.id,
+        tripId: trip.id,
         bookingId: rosterEntry.booking.id,
         actorPersonId: actor.person.id,
         body: "  Prefers the shaded bench during setup.  ",
@@ -53,6 +54,7 @@ describe("staff-only operational context", () => {
 
     const note = await addInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       bookingId: rosterEntry.booking.id,
       actorPersonId: actor.person.id,
       body: "Bring the spare mask strap.",
@@ -60,6 +62,7 @@ describe("staff-only operational context", () => {
     if (!note) throw new Error("expected the note to be created");
     await deleteInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       noteId: note.id,
       actorPersonId: actor.person.id,
     });
@@ -85,6 +88,7 @@ describe("staff-only operational context", () => {
     await expect(
       addInternalNote(db, {
         shopId: shop.id,
+        tripId: "00000000-0000-4000-8000-000000000099",
         bookingId: "00000000-0000-4000-8000-000000000099",
         actorPersonId: actor.person.id,
         body: "note",
@@ -93,6 +97,16 @@ describe("staff-only operational context", () => {
     await expect(
       addInternalNote(db, {
         shopId: shop.id,
+        tripId: "not-a-uuid",
+        bookingId: "not-a-uuid",
+        actorPersonId: actor.person.id,
+        body: "note",
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      addInternalNote(db, {
+        shopId: shop.id,
+        tripId: "00000000-0000-4000-8000-000000000099",
         bookingId: "00000000-0000-4000-8000-000000000099",
         actorPersonId: actor.person.id,
         body: "   ",
@@ -147,7 +161,12 @@ describe("staff-only operational context", () => {
     if (!note) throw new Error("expected note to be created");
 
     await expect(
-      deleteDiverNote(db, { shopId: shop.id, noteId: note.id, actorPersonId: actor.person.id }),
+      deleteDiverNote(db, {
+        shopId: shop.id,
+        personId: rosterEntry.person.id,
+        noteId: note.id,
+        actorPersonId: actor.person.id,
+      }),
     ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
     expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
     expect(
@@ -165,6 +184,7 @@ describe("staff-only operational context", () => {
 
     const note = await addInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       bookingId: rosterEntry.booking.id,
       actorPersonId: actor.person.id,
       body: "Needs a size-large wetsuit.",
@@ -172,7 +192,12 @@ describe("staff-only operational context", () => {
     if (!note) throw new Error("expected note to be created");
 
     await expect(
-      deleteInternalNote(db, { shopId: shop.id, noteId: note.id, actorPersonId: actor.person.id }),
+      deleteInternalNote(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        noteId: note.id,
+        actorPersonId: actor.person.id,
+      }),
     ).resolves.toEqual({
       deleted: true,
       bookingId: rosterEntry.booking.id,
@@ -198,6 +223,7 @@ describe("staff-only operational context", () => {
 
     const note = await addInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       bookingId: rosterEntry.booking.id,
       actorPersonId: actor.person.id,
       body: "Bring a spare mask for their kid.",
@@ -206,6 +232,7 @@ describe("staff-only operational context", () => {
 
     const result = await deleteInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       noteId: note.id,
       actorPersonId: actor.person.id,
     });
@@ -216,6 +243,7 @@ describe("staff-only operational context", () => {
     // old row's id is gone and isn't needed for that.
     const restored = await addInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       bookingId: result.bookingId,
       actorPersonId: actor.person.id,
       body: result.body,
@@ -236,7 +264,16 @@ describe("staff-only operational context", () => {
     await expect(
       deleteInternalNote(db, {
         shopId: shop.id,
+        tripId: "00000000-0000-4000-8000-000000000099",
         noteId: "00000000-0000-4000-8000-000000000099",
+        actorPersonId: actor.person.id,
+      }),
+    ).resolves.toEqual({ deleted: false });
+    await expect(
+      deleteInternalNote(db, {
+        shopId: shop.id,
+        tripId: "not-a-uuid",
+        noteId: "not-a-uuid",
         actorPersonId: actor.person.id,
       }),
     ).resolves.toEqual({ deleted: false });
@@ -247,6 +284,7 @@ describe("staff-only operational context", () => {
     if (!rosterEntry) throw new Error("expected a seeded booking");
     const note = await addInternalNote(db, {
       shopId: shop.id,
+      tripId: trip.id,
       bookingId: rosterEntry.booking.id,
       actorPersonId: actor.person.id,
       body: "Cross-shop deletion attempt target.",
@@ -256,6 +294,7 @@ describe("staff-only operational context", () => {
     await expect(
       deleteInternalNote(db, {
         shopId: otherShopId,
+        tripId: trip.id,
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),

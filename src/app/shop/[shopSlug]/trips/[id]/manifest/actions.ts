@@ -11,17 +11,17 @@ import {
   formBuddyTeam,
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
-import { type AppDb, getDb } from "@/db/client";
-import { recordCrewRollCall, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
+import { getDb } from "@/db/client";
+import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import { addInternalNote } from "@/db/operations";
 import {
   deletePushSubscription,
   isDeviceSubscribed,
   isDeviceSubscribedAnywhere,
   savePushSubscription,
 } from "@/db/push-subscriptions";
-import { getTripWithBooked } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
-import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
+import type { RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
@@ -37,10 +37,9 @@ import { UUID_SOURCE } from "@/lib/uuid";
  * argument** instead (the page binds it once and hands the bound action to the
  * section that renders it), which is the same channel a closure used — Next
  * serializes and seals what an action carries either way — and re-prove
- * anything the client can still reach: the note action re-derives this trip's
- * planned-dive count from the trip row rather than believing a posted
- * checkpoint, and the two roll-call writers re-prove the checkpoint inside
- * their own transaction (see `provenCheckpoint`).
+ * anything the client can still reach: a private note is scoped to the bound
+ * trip and booking by the database operation, and the two roll-call writers
+ * re-prove the checkpoint inside their own transaction.
  *
  * The context is a **named object, not three positional strings**. `shopSlug`
  * and `tripId` are both opaque ids of the same shape, and at a `.bind` call
@@ -62,9 +61,9 @@ export type ManifestActionContext = {
 };
 
 /**
- * The note action needs no checkpoint of its own: the one it annotates arrives
- * with the note and is re-proved against the trip row (`provenCheckpoint`), so
- * it takes the narrower context rather than pretending to use a bound one.
+ * Private notes need no checkpoint of their own. They are booking-scoped staff
+ * context, so they can be written before boarding and remain available on the
+ * Guests roster and the live manifest.
  */
 export type ManifestTripContext = Omit<ManifestActionContext, "checkpoint">;
 
@@ -97,32 +96,6 @@ function manifestBack(ctx: ManifestActionContext): string {
   return `${manifestPath(ctx)}?checkpoint=${encodeURIComponent(ctx.checkpoint)}&buddies=open`;
 }
 
-/**
- * Re-prove a checkpoint the *client* handed us against this trip's own planned
- * dive count, read from the trip row inside the request.
- *
- * The page used to hold `plannedDives` in scope and check against it. A
- * module-scope action has no such scope, and a `plannedDives` posted alongside
- * the checkpoint would be the client vouching for itself — so the count comes
- * from the trip, scoped to the staffer's own shop, every time.
- *
- * `recordRollCall` and `recordCrewRollCall` already run exactly this proof
- * inside their transaction and refuse with `invalid_checkpoint`, which is why
- * the two tap-path actions below don't pay for a second read of the same row
- * on a boat's flaky connection; this is here for the note action, whose writer
- * annotates whatever checkpoint it is handed.
- */
-async function provenCheckpoint(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  value: string,
-): Promise<RollCallCheckpoint | null> {
-  const trip = await getTripWithBooked(db, shopId, tripId);
-  if (!trip) return null;
-  return isRollCallCheckpoint(value, trip.plannedDives) ? value : null;
-}
-
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
@@ -142,10 +115,9 @@ const pushSubscriptionSchema = z.object({
   auth: z.string().min(1).max(256),
 });
 
-const noteSchema = z.object({
+const privateNoteSchema = z.object({
   bookingId: z.string().uuid(),
-  checkpoint: z.string(),
-  note: z.string().max(300),
+  note: z.string().trim().min(1).max(1_000),
 });
 
 // The crew subject is a `people.id`, never a booking. The server re-proves the
@@ -298,7 +270,7 @@ export async function rollCallAction(
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
       // Re-proved against this trip's own `plannedDives` inside the write's
-      // transaction (`invalid_checkpoint`) — see `provenCheckpoint` above.
+      // transaction (`invalid_checkpoint`).
       checkpoint,
       note: parsed.data.note,
     });
@@ -317,30 +289,27 @@ export async function rollCallAction(
   return { ok: true };
 }
 
-export async function saveRollCallNoteAction(
+/**
+ * Add the same booking-scoped private note used by the Guests roster. This is
+ * intentionally independent of roll-call state: a staffer can record context
+ * for a diver before anybody has been marked boarded, and the note lands in
+ * the existing audited `internal_notes` history immediately.
+ */
+export async function addManifestPrivateNoteAction(
   ctx: ManifestTripContext,
-  bookingId: string,
-  checkpointValue: string,
-  note: string,
-): Promise<{ ok: boolean; saved: boolean }> {
+  formData: FormData,
+): Promise<void> {
   const staff = await requireStaffSession();
-  const parsed = noteSchema.safeParse({ bookingId, checkpoint: checkpointValue, note });
-  if (!parsed.success) return { ok: false, saved: false };
-  const { tripId } = ctx;
-  const db = await getDb();
-  const checkpoint = await provenCheckpoint(db, staff.user.shopId, tripId, parsed.data.checkpoint);
-  if (!checkpoint) {
-    return { ok: false, saved: false };
-  }
-  const saved = await updateLatestRollCallNote(db, {
+  const parsed = privateNoteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const saved = await addInternalNote(await getDb(), {
     shopId: staff.user.shopId,
-    tripId,
+    tripId: ctx.tripId,
     bookingId: parsed.data.bookingId,
-    checkpoint,
-    note: parsed.data.note,
+    actorPersonId: staff.user.personId,
+    body: parsed.data.note,
   });
   if (saved) revalidatePath(manifestPath(ctx));
-  return { ok: true, saved };
 }
 
 /**

@@ -128,13 +128,15 @@ export function AddDiverSection({
         </>
       )}
 
-      {/* Open when there is nothing else to act on: no search yet, a full boat
+      {/* Open only when the hand-entry form is the next action: a full boat
           (wait-listing is the only path), or a search that found nobody — the
-          case the empty state above sends a staffer straight here for. */}
+          case the empty state above sends a staffer straight here for. With no
+          search yet, the returning-diver picker is the normal first step, so
+          "New to the shop?" stays collapsed until someone asks for it. */}
       <details
         id="hand-entry"
         className="group mt-4 scroll-mt-24"
-        open={full || !searched || candidates.length === 0}
+        open={full || (searched && candidates.length === 0)}
       >
         {!full ? (
           <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-primary hover:underline [&::-webkit-details-marker]:hidden">

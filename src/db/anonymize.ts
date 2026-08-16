@@ -808,7 +808,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // cost of erasure, not something to fudge by keeping the star.
   await tx
     .update(tripReviews)
-    .set({ comment: null, isPublished: false, publishedAt: null })
+    .set({ comment: null, isPublished: false, publishedAt: null, isStandout: false })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
 
   // --- imported history ----------------------------------------------------

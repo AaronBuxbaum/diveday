@@ -53,13 +53,13 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * Where a destination sits in the header.
  *
  * - `primary` — the tabs always on screen (Today, Check-in, Divers, Board,
- *   Orders). Every one is a place a shop lives in *during a dive day*.
+ *   Close-out). Every one is a place a shop lives in *during a dive day*.
  * - `daily`/`setup` — inside "More": the header menu from `lg` up
  *   (ShopNavLinks) and the bottom sheet rising from the phone dock's sixth
  *   slot below it (StaffTabBar). `daily` ("Run the shop") is the operational
- *   cadence a shop returns to on its own rhythm — the evening close-out, the
- *   week's staffing, the course roster, the site library, the waiver log,
- *   reviews, the monthly report. `setup` ("Set up") is what a shop configures
+ *   cadence a shop returns to on its own rhythm — the week's staffing, the
+ *   course roster, the site library, the waiver log, reviews, Orders, and the
+ *   monthly report. `setup` ("Set up") is what a shop configures
  *   rather than works — team, promo codes, a staffer's own calendar feed, and
  *   Settings itself, always last. The groups were empty for a while (the old
  *   "More" menu was the IA admitting it hadn't decided, and it was removed
@@ -146,8 +146,8 @@ export type StaffDestination = {
 export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // Carries the blocked-diver badge because Today is now where blocked divers
   // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view).
-  // No claim on `/close-out` any more: Close-out has its own "Run the shop"
-  // row, so its page lights More rather than borrowing Today's tab.
+  // Close-out has its own primary row, so its page is never borrowed by Today
+  // or represented only by the More menu.
   {
     id: "today",
     suffix: "",
@@ -183,6 +183,10 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     // too — it has its own "Run the shop" row now, and lights that instead.)
     alsoMatch: ["/trips"],
   },
+  // The end-of-day ritual (ADR 20260804-day-closeout) is a top-level working
+  // surface: it is the one place staff return to after the boat is home, so it
+  // earns the fifth destination tab and the sixth-slot ceiling remains intact.
+  { id: "closeOut", suffix: "/close-out", navGroup: "primary", inPalette: true },
   // The global "seat a diver" door. It is an action rather than a place, so it
   // stays out of the header — the board hosts its own button and the palette
   // answers for it everywhere else. It is *here* because the registry is the
@@ -192,15 +196,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // A way into Check-in rather than a destination of its own, so it stays out
   // of the header and lives where someone types what they want.
   { id: "walkIn", suffix: "/check-in/walk-in", navGroup: null, inPalette: true },
-  // The end-of-day ritual (ADR 20260804-day-closeout) — Today's evening
-  // mirror. Every staff role may close the day: whoever is last out of the
-  // shop owns the ritual, and the recorded act carries their name, so the
-  // accountability is in the trail rather than a gate. It leads the "Run the
-  // shop" group because it is the one destination there that is part of every
-  // single working day — its contextual door (Today's evening handoff card,
-  // once the last boat is in) is the fast path, this row is the door that is
-  // *always* there.
-  { id: "closeOut", suffix: "/close-out", navGroup: "daily", inPalette: true },
   { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
   { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
   { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },
@@ -236,14 +231,10 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // is the desk's. Absent for them, never shown and refused (ADR
   // 20260724-role-gated-surfaces-hide-not-explain).
   { id: "requests", suffix: "/requests", navGroup: "daily", inPalette: true, gate: "reports" },
-  // Money the shop reads daily — a primary tab. The monthly report keeps its
-  // door on this page's header; the report's own row is in "Run the shop".
-  {
-    id: "orders",
-    suffix: "/orders",
-    navGroup: "primary",
-    inPalette: true,
-  },
+  // Money the shop reads daily — a "Run the shop" destination, not one of the
+  // five all-day tabs. Orders remains ungated and palette-visible, and the
+  // page's own links keep the money workflow reachable from its context.
+  { id: "orders", suffix: "/orders", navGroup: "daily", inPalette: true },
   // The monthly read of the money Orders tracks daily — the last beat of the
   // "Run the shop" cadence, not configuration, so it files under `daily`
   // rather than `setup`. Its page lights its own row now instead of borrowing

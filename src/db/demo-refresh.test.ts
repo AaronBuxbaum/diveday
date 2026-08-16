@@ -22,6 +22,7 @@ import {
 } from "./schema";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -61,6 +62,17 @@ async function pushTheBoardLater(db: AppDb, shopId: string, days: number): Promi
       endsAt: sql`${trips.endsAt} + ${shift}`,
     })
     .where(and(eq(trips.shopId, shopId), gte(trips.startsAt, nowDate())));
+
+  // The close-out fixture is an ended departure on today's calendar day. Move
+  // it out of the way for tests whose premise is an empty day; production
+  // refresh still treats an ended same-day trip as a real boat.
+  await db
+    .update(trips)
+    .set({
+      startsAt: sql`${trips.startsAt} - interval '1 day'`,
+      endsAt: sql`${trips.endsAt} - interval '1 day'`,
+    })
+    .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
 }
 
 /** Every scheduled departure, oldest first — ids and times, to prove what moved. */

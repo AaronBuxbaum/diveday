@@ -10,6 +10,7 @@ import {
   specialtyCertifications,
   tripRequirements,
 } from "./schema";
+import { birthDateTurning } from "./seed-clock";
 
 describe("seeded imported-card states", () => {
   // The two states H-23/H-24 exist for are only visible on a diver who holds an
@@ -52,6 +53,27 @@ describe("seeded imported-card states", () => {
     expect(nitrox[0].importedAt).toBeInstanceOf(Date);
     // And the fill really is still held — this is the behaviour, not just the row.
     expect([...(await verifiedNitroxPersonIds(db, shop.id))]).not.toContain(hana.id);
+  });
+
+  it("keeps the minor's guardian relationship believable without losing the safety fixture", async () => {
+    const { db, shop } = await seededShopContext();
+    const [lena] = await db
+      .select({
+        dateOfBirth: people.dateOfBirth,
+        emergencyContactName: people.emergencyContactName,
+        emergencyContactPhone: people.emergencyContactPhone,
+      })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Lena Fischer")))
+      .limit(1);
+
+    expect(lena).toMatchObject({
+      // Keep the age/depth fixture that the manifest and roster safety tests use.
+      dateOfBirth: birthDateTurning(14, 2),
+      emergencyContactName: "Jonas Fischer (father)",
+      emergencyContactPhone: "+49-30-555-0233",
+    });
+    expect(lena?.emergencyContactName).not.toMatch(/husband|wife|partner/i);
   });
 
   it("cards that diver without disturbing the readiness any other spec asserts", async () => {

@@ -18,11 +18,12 @@ import {
   PriceField,
 } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { getCourseBySlug } from "@/db/courses";
+import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CourseTemplateField } from "@/lib/course-template-sync";
 import { formatFaqs } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
@@ -31,7 +32,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
-import { saveCourseContentAction } from "./actions";
+import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -66,11 +67,28 @@ export default async function EditCoursePage({
   const t = staffTranslator(locale);
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
+  const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
+  const preserveTemplateAction = pullCourseTemplateUpdatesAction.bind(
+    null,
+    shopSlug,
+    slug,
+    "preserve-shop-edits",
+  );
+  const replaceTemplateAction = pullCourseTemplateUpdatesAction.bind(
+    null,
+    shopSlug,
+    slug,
+    "replace-template-copy",
+  );
 
   // Only "saved" now: the editor's own Hide/Show button is gone (the roster's
   // eye toggle is the one place visibility changes), so `?notice=shown|hidden`
   // has nothing left that can send it.
-  const messages: Record<string, string> = { saved: t("courses.edit.noticeSaved") };
+  const messages: Record<string, string> = {
+    saved: t("courses.edit.noticeSaved"),
+    "template-updated": t("courses.edit.templateUpdates.updated"),
+    "template-replaced": t("courses.edit.templateUpdates.replaced"),
+  };
   const errors: Record<string, string> = {
     invalid: t("courses.edit.errorInvalid"),
     images: t("courses.edit.errorImages"),
@@ -81,6 +99,7 @@ export default async function EditCoursePage({
     // A half-edited depth marker. Refused at save rather than left to render
     // its own braces to a diver — see saveCourseContentAction.
     "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
+    "template-update-unavailable": t("courses.edit.templateUpdates.unavailable"),
   };
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
@@ -96,6 +115,24 @@ export default async function EditCoursePage({
         })
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");
+
+  const templateFieldLabels: Record<CourseTemplateField, string> = {
+    title: t("courses.edit.templateUpdates.fields.title"),
+    agency: t("courses.edit.templateUpdates.fields.agency"),
+    description: t("courses.edit.templateUpdates.fields.description"),
+    minimumCertificationLevel: t("courses.edit.templateUpdates.fields.minimumCertificationLevel"),
+    minimumAge: t("courses.edit.templateUpdates.fields.minimumAge"),
+    isIntroCourse: t("courses.edit.templateUpdates.fields.isIntroCourse"),
+    summary: t("courses.edit.templateUpdates.fields.summary"),
+    overview: t("courses.edit.templateUpdates.fields.overview"),
+    durationText: t("courses.edit.templateUpdates.fields.durationText"),
+    groupSizeText: t("courses.edit.templateUpdates.fields.groupSizeText"),
+    prerequisiteNote: t("courses.edit.templateUpdates.fields.prerequisiteNote"),
+    includes: t("courses.edit.templateUpdates.fields.includes"),
+    excludes: t("courses.edit.templateUpdates.fields.excludes"),
+    scheduleDays: t("courses.edit.templateUpdates.fields.scheduleDays"),
+    faqs: t("courses.edit.templateUpdates.fields.faqs"),
+  };
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -132,6 +169,61 @@ export default async function EditCoursePage({
       </div>
 
       {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
+      {templateUpdate ? (
+        <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
+          <h2 className="text-base font-semibold">{t("courses.edit.templateUpdates.title")}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {templateUpdate.legacyBaseline
+              ? t("courses.edit.templateUpdates.legacyDescription")
+              : t("courses.edit.templateUpdates.description", {
+                  current: templateUpdate.currentVersion,
+                  latest: templateUpdate.latestVersion,
+                })}
+          </p>
+          <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            {templateUpdate.diff.map((change) => (
+              <li
+                key={change.field}
+                className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+              >
+                <span>{templateFieldLabels[change.field]}</span>
+                <span className="shrink-0 text-xs font-medium text-muted">
+                  {change.shopChanged
+                    ? t("courses.edit.templateUpdates.shopEdit")
+                    : t("courses.edit.templateUpdates.templateChange")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm text-muted">
+            {templateUpdate.legacyBaseline
+              ? t("courses.edit.templateUpdates.legacyKeepEditsDescription")
+              : t("courses.edit.templateUpdates.keepEditsDescription")}
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <form action={preserveTemplateAction} className="flex flex-col gap-1">
+              <SubmitButton pendingLabel={t("courses.edit.templateUpdates.applying")}>
+                {t("courses.edit.templateUpdates.keepEdits")}
+              </SubmitButton>
+              <span className="text-xs text-muted">
+                {t("courses.edit.templateUpdates.keepEditsHint")}
+              </span>
+            </form>
+            <form action={replaceTemplateAction} className="flex flex-col gap-1">
+              <SubmitButton
+                pendingLabel={t("courses.edit.templateUpdates.replacing")}
+                className={buttonClass({ variant: "secondary" })}
+                confirmMessage={t("courses.edit.templateUpdates.replaceConfirm")}
+              >
+                {t("courses.edit.templateUpdates.replaceCopy")}
+              </SubmitButton>
+              <span className="text-xs text-muted">
+                {t("courses.edit.templateUpdates.replaceCopyHint")}
+              </span>
+            </form>
+          </div>
+        </section>
+      ) : null}
       {/* Only when a save was refused — the shared component's no-`field`
           fallback (first aria-invalid control) must not fire on a clean load. */}
       {error ? <FieldErrorFocus field={field} /> : null}

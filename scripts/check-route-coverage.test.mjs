@@ -100,6 +100,12 @@ describe("parseCaptureNames", () => {
     expect(parseCaptureNames(source).has("not-a-baseline")).toBe(false);
     expect(parseCaptureNames(source).size).toBe(0);
   });
+
+  it("reads print-only captures too", () => {
+    expect([...parseCaptureNames('await capturePrint(page, "trip-packet");')]).toEqual([
+      "trip-packet",
+    ]);
+  });
 });
 
 describe("auditLedger", () => {

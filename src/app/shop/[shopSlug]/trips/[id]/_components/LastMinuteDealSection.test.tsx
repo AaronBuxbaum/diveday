@@ -123,7 +123,9 @@ describe("LastMinuteDealSection recipient review", () => {
       requiresNitrox: true,
     });
 
-    expect(container.textContent).toContain("this list can't tell you who holds those cards");
+    expect(container.textContent).toContain(
+      "this list can't tell you who has those certifications",
+    );
     // And it no longer claims nobody is below, which was the all-clear half of
     // the same sentence — a claim this fold can now contradict on its own, as
     // soon as one recipient says they hold no card at all.
@@ -152,7 +154,9 @@ describe("LastMinuteDealSection recipient review", () => {
     // Both sentences, in that order: the name it can place, then the honest
     // limit of what it can say about everybody else.
     expect(container.textContent).toContain("1 of 12 is below this departure's requirement.");
-    expect(container.textContent).toContain("this list can't tell you who holds those cards");
+    expect(container.textContent).toContain(
+      "this list can't tell you who has those certifications",
+    );
   });
 
   it("summarizes who is below the bar and who said nothing", () => {
@@ -253,7 +257,7 @@ describe("LastMinuteDealSection recipient review", () => {
     // The claim keeps its own mark and gains the second one; the two facts are
     // separate and both are words.
     expect(rows[1]?.textContent).toContain(
-      "Open Water — diver's word, no card · below this departure's minimum",
+      "Open Water — diver's word, no certification record · below this departure's minimum",
     );
     // Nobody who clears the bar is marked.
     expect(rows[2]?.textContent).not.toContain("below this departure's minimum");

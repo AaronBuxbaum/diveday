@@ -42,7 +42,7 @@ describe("the diver record's jump row", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Cards", "Notes", "Fit", "Payments", "Trips", "History"]);
+    ).toEqual(["Certifications", "Notes", "Fit", "Payments", "Trips", "History"]);
   });
 
   /**

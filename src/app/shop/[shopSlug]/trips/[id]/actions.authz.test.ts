@@ -64,6 +64,7 @@ async function seededTripId(db: AppDb, shopId: string): Promise<string> {
     .select({ id: trips.id })
     .from(trips)
     .innerJoin(tripRequirements, eq(tripRequirements.tripId, trips.id))
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
     .where(
       and(
         eq(trips.shopId, shopId),

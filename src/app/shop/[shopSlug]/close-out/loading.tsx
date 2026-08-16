@@ -3,8 +3,9 @@ import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the close-out (design principle 1) — header, the
- * departure end-state cards, the leftovers list, and the close panel have no
- * loading state of their own to show meanwhile.
+ * departure end-state cards, the leftovers list, administrative follow-up,
+ * tomorrow glance, and the close panel have no loading state of their own to
+ * show meanwhile.
  */
 export default function CloseOutLoading() {
   return (
@@ -33,6 +34,12 @@ export default function CloseOutLoading() {
         </div>
 
         <div className={sectionCardClass({ padding: "none", className: "mt-10 h-36" })} />
+
+        <div className="mt-10 h-5 w-64 rounded bg-surface-sunken" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-4 h-28" })} />
+
+        <div className="mt-10 h-5 w-56 rounded bg-surface-sunken" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-4 h-24" })} />
       </div>
     </main>
   );

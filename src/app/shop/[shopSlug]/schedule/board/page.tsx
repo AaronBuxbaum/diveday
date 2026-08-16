@@ -233,6 +233,11 @@ export default async function ScheduleBoardPage({
     priceDescription: st("schedule.builder.priceDescription"),
     course: st("schedule.builder.course"),
     optional: st("schedule.builder.optional"),
+    courseAgencyLabels: {
+      padi: st("schedule.builder.courseAgencies.padi"),
+      ssi: st("schedule.builder.courseAgencies.ssi"),
+      other: st("schedule.builder.courseAgencies.other"),
+    },
     diveSite: st("schedule.builder.diveSite"),
     ordinaryTrip: st("schedule.builder.ordinaryTrip"),
     decideLater: st("schedule.builder.decideLater"),

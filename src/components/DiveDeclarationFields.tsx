@@ -3,12 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InfoHint } from "@/components/ui/InfoHint";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 
 /**
  * **"What can you dive?", asked once, on both of the lists that ask a diver to
- * wait for something.**
+ * wait for something.** The shared level question informs staff; the optional
+ * nitrox declaration is available only on a trip-specific wait list.
  *
  * The shop-wide last-minute-deal list and a full trip's wait list both used to
  * collect a name, an email, and nothing about diving — so a discount blast
@@ -18,21 +20,22 @@ import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
  * shown to the staffer doing the sending, marked self-declared. It never
  * filters a blast. See src/db/self-declared-cards.ts.
  *
- * **Both fields are optional, deliberately.** This is a marketing opt-in, and a
- * required question on one costs more sign-ups than it saves mistakes. A joiner
- * who skips shows to staff as "not said", which is honest and is also the
- * common case.
+ * **The level field is optional, deliberately.** This is a marketing opt-in, and
+ * a required question on one costs more sign-ups than it saves mistakes. A
+ * joiner who skips shows to staff as "not said", which is honest and is also the
+ * common case. The trip-specific wait list may additionally ask for a nitrox
+ * declaration; the broad deal list does not.
  *
  * One component rather than two copies because the two forms must ask the
- * identical question in the identical words — a staffer reading one panel and
- * then the other is reading the same claim, and two drifting selects would be
- * two different claims.
+ * identical level question in the identical words — a staffer reading one
+ * panel and then the other is reading the same claim, and two drifting selects
+ * would be two different claims.
  *
  * Needs `DiverIntlProvider` above it carrying the `common` and `course`
  * namespaces (`course` is where the diver-facing level words live, shared with
  * the public course pages through `DIVER_CERTIFICATION_LEVEL_KEYS`).
  */
-export function DiveDeclarationFields() {
+export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: boolean } = {}) {
   const t = useTranslations();
   // **What the diver picked, only so the form can stop contradicting itself.**
   // A joiner who says "I'm not certified yet" and also ticks "I'm certified for
@@ -64,11 +67,13 @@ export function DiveDeclarationFields() {
              carried the same mapping on the capture form since it shipped
              (`divers.certifications.levelMapping`) — here there is no staffer,
              so the diver needs it. */
-          description={
-            <>
-              {t("common.certification.levelDescription")} {t("common.certification.levelHint")}
-            </>
+          aside={
+            <InfoHint
+              label={t("common.certification.levelInfoLabel")}
+              detail={t("common.certification.levelDescription")}
+            />
           }
+          description={t("common.certification.levelHint")}
         >
           <select
             name="certificationLevel"
@@ -100,22 +105,24 @@ export function DiveDeclarationFields() {
           </select>
         </Field>
       </FieldGrid>
-      {/* Disabled rather than hidden when the diver says they hold no card: the
-          question stays where it was so nothing appears to vanish under them,
-          and a disabled control posts nothing — which is exactly what the
-          writer would have done with it anyway. */}
-      <label className={`flex items-start gap-2 text-sm${uncertified ? " text-muted" : ""}`}>
-        <input
-          type="checkbox"
-          name="nitroxCertified"
-          value="on"
-          disabled={uncertified}
-          checked={nitrox && !uncertified}
-          onChange={(event) => setNitrox(event.target.checked)}
-          className="mt-0.5 size-4 shrink-0 rounded border-border-strong disabled:opacity-50"
-        />
-        <span>{t("common.certification.nitrox")}</span>
-      </label>
+      {/* Nitrox stays on the trip-specific wait list, where a diver is naming
+          what they want from that departure. The shop-wide deal list does not
+          collect it: that list is a broad interest signal, and a public tick
+          must never look like certification evidence. */}
+      {showNitrox ? (
+        <label className={`flex items-start gap-2 text-sm${uncertified ? " text-muted" : ""}`}>
+          <input
+            type="checkbox"
+            name="nitroxCertified"
+            value="on"
+            disabled={uncertified}
+            checked={nitrox && !uncertified}
+            onChange={(event) => setNitrox(event.target.checked)}
+            className="mt-0.5 size-4 shrink-0 rounded border-border-strong disabled:opacity-50"
+          />
+          <span>{t("common.certification.nitrox")}</span>
+        </label>
+      ) : null}
     </div>
   );
 }

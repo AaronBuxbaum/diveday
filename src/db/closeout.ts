@@ -4,7 +4,9 @@ import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
   buildCloseoutSnapshot,
+  type CloseoutAdminTask,
   type CloseoutSnapshot,
+  closeoutAdminTaskStatus,
   type DayCloseoutState,
   type LeftoverDecision,
   parseCloseoutSnapshot,
@@ -12,7 +14,14 @@ import {
 } from "@/lib/closeout";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { bookings, dayCloseouts, people, recapPhotos, trips } from "./schema";
+import {
+  bookings,
+  dayCloseouts,
+  notificationDeliveries,
+  people,
+  recapPhotos,
+  trips,
+} from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
 
 /**
@@ -41,6 +50,14 @@ export type DayCloseout = {
   /** How many times this day has been closed (re-closing appends, never edits). */
   closeCount: number;
 };
+
+/** The only close-out refusal: an open person-safety state needs an explicit acknowledgement. */
+export class CloseoutAcknowledgementRequired extends Error {
+  constructor() {
+    super("close-out acknowledgement required");
+    this.name = "CloseoutAcknowledgementRequired";
+  }
+}
 
 /**
  * Today's departures in the shop's own calendar day — backwards-looking on
@@ -124,6 +141,75 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
   }));
 }
 
+/**
+ * Post-dive reports are a task over existing notification state, not a second
+ * delivery system. A missing `trip_recap` row is pending; a send or provider
+ * failure needs attention; every successful send is complete. Only returned
+ * trips in today's shop-local day participate in the ritual.
+ */
+async function postDiveReportTask(
+  db: AppDb,
+  shopId: string,
+  tripsToday: Awaited<ReturnType<typeof todaysTrips>>,
+  now: Date,
+): Promise<CloseoutAdminTask | null> {
+  const endedTripIds = tripsToday.filter((trip) => trip.endsAt <= now).map((trip) => trip.tripId);
+  if (endedTripIds.length === 0) return null;
+
+  const rows = await db
+    .select({
+      deliveryStatus: notificationDeliveries.status,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(bookings)
+    .leftJoin(
+      notificationDeliveries,
+      and(
+        eq(notificationDeliveries.bookingId, bookings.id),
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.kind, "trip_recap"),
+      ),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.tripId, endedTripIds),
+        ne(bookings.status, "cancelled"),
+        ne(bookings.status, "no_show"),
+      ),
+    );
+  if (rows.length === 0) return null;
+
+  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
+  let completed = 0;
+  let failed = 0;
+  for (const row of rows) {
+    if (
+      row.deliveryStatus === "failed" ||
+      row.deliveryStatus === "not_configured" ||
+      (row.providerStatus !== null && failedProviderStatuses.has(row.providerStatus))
+    ) {
+      failed++;
+    } else if (row.deliveryStatus === "sent") {
+      completed++;
+    }
+  }
+  const pending = rows.length - completed - failed;
+  return {
+    id: "post_dive_reports",
+    total: rows.length,
+    completed,
+    pending,
+    failed,
+    status: closeoutAdminTaskStatus({
+      total: rows.length,
+      completed,
+      pending,
+      failed,
+    }),
+  };
+}
+
 async function assembleState(
   db: AppDb,
   shopId: string,
@@ -139,10 +225,12 @@ async function assembleState(
     listRollCallGaps(db, shopId, now),
     getTodayWork(db, shopId, shopSlug, timeZone, now, undefined, t, locale, includeOpsAlerts),
   ]);
+  const adminTask = await postDiveReportTask(db, shopId, tripsToday, now);
   return assembleDayCloseout({
     trips: tripsToday,
     gaps,
     actions: work.actions,
+    adminTasks: adminTask ? [adminTask] : [],
     timeZone,
     now,
   });
@@ -235,6 +323,7 @@ export async function closeDay(
     t?: StaffTranslator;
     locale?: string;
     includeOpsAlerts?: boolean;
+    acknowledged?: boolean;
   },
 ): Promise<DayCloseoutRecord> {
   const now = input.now ?? nowDate();
@@ -257,6 +346,9 @@ export async function closeDay(
     input.locale ?? "en-US",
     input.includeOpsAlerts ?? false,
   );
+  if (state.mustAcknowledge.length > 0 && !input.acknowledged) {
+    throw new CloseoutAcknowledgementRequired();
+  }
   const outstanding = buildCloseoutSnapshot(state, input.decisions);
   const [row] = await db
     .insert(dayCloseouts)

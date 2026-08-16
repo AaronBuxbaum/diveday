@@ -828,6 +828,7 @@ export async function seedHistory(
         personId: plan.personId,
         rating: i % 3 === 0 ? 5 : 4,
         comment,
+        isStandout: Boolean(comment && isPublished && commentedTrips.size <= 2),
         isPublished,
         publishedAt: isPublished ? createdAt : null,
         createdAt,

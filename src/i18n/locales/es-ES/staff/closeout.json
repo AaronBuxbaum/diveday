@@ -1,7 +1,8 @@
 {
   "title": "Cierre del día",
   "notice": {
-    "closed": "Día cerrado. El registro está abajo — hasta mañana."
+    "closed": "Día cerrado. El registro está abajo — hasta mañana.",
+    "acknowledgeRequired": "Confirma el barco abierto o el recuento pendiente antes de cerrar el día."
   },
   "headline": {
     "allClear": "Todos de vuelta",
@@ -35,6 +36,22 @@
       "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
       "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
       "noRollCall": "No se registró pase de lista en esta salida."
+    }
+  },
+  "admin": {
+    "heading": "Cierre administrativo",
+    "subtitle": "Seguimiento de los barcos que ya están de vuelta.",
+    "status": {
+      "complete": "Completo",
+      "pending": "En curso",
+      "attention": "Requiere atención"
+    },
+    "postDiveReports": {
+      "label": "Informes posteriores a la inmersión",
+      "description": "Envía a cada buceador el resumen de una salida completada.",
+      "progress": "{completed} de {total} enviados.",
+      "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
+      "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}"
     }
   },
   "leftovers": {

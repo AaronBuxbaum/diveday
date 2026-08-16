@@ -358,7 +358,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
     // no locale parameter for a caller to pass one into. Booking a walk-in from
     // a staff surface must leave the column null.
     const { db, shop } = await seededShopContext();
-    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("seeded shop has no upcoming trip");
     const email = `walkup-${crypto.randomUUID()}@example.com`;

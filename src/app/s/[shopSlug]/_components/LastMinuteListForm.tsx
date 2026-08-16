@@ -92,7 +92,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
         {/* What the diver can dive, so the shop never mails them a deal on a
             boat they could not board (FU-20260813). Optional, and the answer
             informs a staffer rather than filtering anything. */}
-        <DiveDeclarationFields />
+        <DiveDeclarationFields showNitrox={false} />
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
             pendingLabel={t("lastMinute.submitting")}

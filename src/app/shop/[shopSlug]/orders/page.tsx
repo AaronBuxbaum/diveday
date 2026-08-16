@@ -187,9 +187,16 @@ export default async function OrdersIndexPage({
   // every invoice a shop has ever raised. `?range=all` is the stated way out,
   // and an explicit `?from=`/`?to=` replaces the window rather than nesting
   // inside it — a staffer who asked for last March means last March.
-  const showAll = range === "all";
-  const explicitRange = Boolean(fromBoundary || toBoundary);
-  const windowed = !showAll && !explicitRange;
+  const hasDateBounds = Boolean(fromBoundary || toBoundary);
+  // `range` is authoritative when present. Date inputs remain in the form so
+  // a staffer can switch back to Custom without retyping them, but an old
+  // custom `from`/`to` pair must never keep constraining an explicit All or
+  // Recent selection.
+  const selectedRange =
+    range === "all" ? "all" : range === "recent" ? "recent" : hasDateBounds ? "custom" : "recent";
+  const showAll = selectedRange === "all";
+  const customRange = selectedRange === "custom";
+  const windowed = selectedRange === "recent";
   const defaultFrom = windowed
     ? new Date(nowDate().getTime() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000)
     : undefined;
@@ -209,8 +216,8 @@ export default async function OrdersIndexPage({
       // order's booking and counts with the same joins, so the pager cannot
       // promise pages this filter renders nothing on.
       tripId: tripFilter,
-      from: fromBoundary ?? defaultFrom,
-      to: toBoundary,
+      from: customRange ? fromBoundary : defaultFrom,
+      to: customRange ? toBoundary : undefined,
     },
     // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
     // `listShopOrders` clamps it into range either way.
@@ -227,7 +234,14 @@ export default async function OrdersIndexPage({
     if (tripFilter) query.set("tripId", tripFilter);
     if (from) query.set("from", from);
     if (to) query.set("to", to);
-    const nextRange = overrides.range === undefined ? (showAll ? "all" : null) : overrides.range;
+    const nextRange =
+      overrides.range === undefined
+        ? range === "all"
+          ? "all"
+          : range === "recent"
+            ? "recent"
+            : null
+        : overrides.range;
     if (nextRange) query.set("range", nextRange);
     if (overrides.page !== undefined && overrides.page > 1) {
       query.set("page", String(overrides.page));
@@ -247,7 +261,14 @@ export default async function OrdersIndexPage({
   // which departure the empty screen is about.
   const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
   const hasFilters = Boolean(
-    statusFilter || personFilter || trimmedQuery || tripFilter || from || to || showAll,
+    statusFilter ||
+      personFilter ||
+      trimmedQuery ||
+      tripFilter ||
+      from ||
+      to ||
+      showAll ||
+      range === "recent",
   );
 
   return (
@@ -411,7 +432,17 @@ export default async function OrdersIndexPage({
               pulse's link, and applying a status or a date here must not
               silently throw the staffer back to every departure. */}
           {tripFilter ? <input type="hidden" name="tripId" value={tripFilter} /> : null}
-          {showAll ? <input type="hidden" name="range" value="all" /> : null}
+          <Field label={t("orders.index.filters.rangeLabel")}>
+            <select name="range" defaultValue={selectedRange} className={controlClass}>
+              <option value="recent">
+                {t("orders.index.filters.rangeRecent", { days: ORDER_DEFAULT_RANGE_DAYS })}
+              </option>
+              <option value="all">{t("orders.index.filters.rangeAll")}</option>
+              {hasDateBounds ? (
+                <option value="custom">{t("orders.index.filters.rangeCustom")}</option>
+              ) : null}
+            </select>
+          </Field>
           <Field label={t("orders.index.filters.fromLabel")}>
             <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
           </Field>
@@ -458,27 +489,6 @@ export default async function OrdersIndexPage({
             className="font-medium text-primary hover:underline"
           >
             {t("orders.index.openFilteredTrip")}
-          </Link>
-        </p>
-      ) : null}
-
-      {/* The window is stated, never silent, and the way out of it is right
-          here. An explicit `?from=`/`?to=` says its own range in the fields
-          above, so it gets no line of its own. */}
-      {windowed || showAll ? (
-        <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-          <span>
-            {windowed
-              ? t("orders.index.range.recentNote", { days: ORDER_DEFAULT_RANGE_DAYS })
-              : t("orders.index.range.allNote")}
-          </span>
-          <Link
-            href={hrefWith({ range: windowed ? "all" : null })}
-            className="font-medium text-primary hover:underline"
-          >
-            {windowed
-              ? t("orders.index.range.showAll")
-              : t("orders.index.range.showRecent", { days: ORDER_DEFAULT_RANGE_DAYS })}
           </Link>
         </p>
       ) : null}
@@ -565,7 +575,9 @@ export default async function OrdersIndexPage({
                   {/* Settled rows leave the cell empty — "Paid" on 45 of 50
                       rows is the expected state formatted as information, so
                       a marker appears only where a staffer is needed. */}
-                  <Td hideBelow="sm">{statusBadge}</Td>
+                  <Td hideBelow="sm" className="align-middle">
+                    {statusBadge}
+                  </Td>
                   <Td muted className="whitespace-nowrap tabular-nums">
                     {formatShortDate(row.order.createdAt, locale, shop.timezone)}
                   </Td>

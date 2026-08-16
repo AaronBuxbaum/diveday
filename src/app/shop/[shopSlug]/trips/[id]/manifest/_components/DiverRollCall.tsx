@@ -3,7 +3,7 @@ import type {
   RollCallAction,
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { RollCallNote } from "@/components/RollCallNote";
+import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -161,9 +161,9 @@ const ROW_DISCLOSURE_PANEL_CLASS =
  * written before a booking existed or for one particular departure. Both are
  * context, and both read here, on the row they are about.
  *
- * Read-only, and deliberately so: writing one is a desk act with an author, an
- * activity-trail entry and an undo, and duplicating that at the rail would be
- * a second door onto one thing. The crew's own note field is right beside this.
+ * The notes list is read-only here, while the collapsed form below writes the
+ * same booking-scoped record used by Guests. Historical roll-call notes remain
+ * on their append-only roll-call event and are still rendered with the result.
  *
  * `print:hidden`, unlike every other fact on this row. The printed manifest is
  * the sheet that goes ashore with the dock and into a coastguard's hands; a
@@ -187,7 +187,7 @@ function StaffNotes({
       <h4 className="text-xs font-semibold tracking-widest text-muted uppercase">{heading}</h4>
       <ul className="mt-1 flex flex-col gap-1.5">
         {notes.map((entry) => (
-          <li key={entry.id} className="text-base">
+          <li key={entry.id} className="break-words text-base whitespace-pre-wrap">
             {entry.body}
             <span className="ms-1 text-sm text-muted">
               — {entry.authorName} · {formatDateTimeTz(entry.createdAt, locale, timezone)}
@@ -225,7 +225,7 @@ export function DiverRollCall({
   deskNotesByBooking,
   diverNotesByBooking,
   rollCallAction,
-  saveRollCallNoteAction,
+  addPrivateNoteAction,
   rollCallButtonCopy,
   buddyTeamLabel,
   t,
@@ -242,11 +242,7 @@ export function DiverRollCall({
   /** Notes written on the Diver record, resolved onto this booking. */
   diverNotesByBooking: ReadonlyMap<string, ReadonlyArray<DiverNote>>;
   rollCallAction: RollCallAction;
-  saveRollCallNoteAction: (
-    bookingId: string,
-    checkpoint: string,
-    note: string,
-  ) => Promise<{ ok: boolean; saved: boolean }>;
+  addPrivateNoteAction: PrivateNoteAction;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page
@@ -521,40 +517,32 @@ export function DiverRollCall({
                       </div>
                     </details>
                     {/* Closed, this is one quiet line — the same grammar as the
-                        facts disclosure beside it. The box only exists around
-                        an open note: rendered shut on every diver, the bordered
-                        sunken card read as an empty *input* repeated the length
-                        of the boat, which is nine boxes of chrome for an action
-                        most roll calls never take (design principles 8 and 10 —
-                        collapse the rare path; hierarchy before boxes). */}
+                        facts disclosure beside it. The private note is a desk
+                        context write, not a boarding control, so it is available
+                        before any roll-call result exists and stays collapsed
+                        at rest. */}
                     <details className="group/note">
                       <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
                         <DisclosureCaret className="group-open/note:rotate-90" />
                         <span className="group-hover/summary:underline">
-                          {t("manifest.addNoteSummary")}
+                          {(deskNotesByBooking.get(diver.bookingId)?.length ?? 0) > 0
+                            ? t("trips.roster.privateStaffNotes", {
+                                count: deskNotesByBooking.get(diver.bookingId)?.length ?? 0,
+                              })
+                            : t("trips.roster.addFirstNoteSummary")}
                         </span>
                       </summary>
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        <RollCallNote
-                          bookingId={diver.bookingId}
-                          checkpoint={checkpoint}
-                          initialNote={rc && !rc.implied ? (rc.note ?? "") : ""}
-                          saveNote={saveRollCallNoteAction}
+                        <PrivateNoteForm
+                          action={addPrivateNoteAction}
+                          hiddenFields={{ bookingId: diver.bookingId }}
+                          resetKey={deskNotesByBooking.get(diver.bookingId)?.length ?? 0}
+                          rows={2}
                           copy={{
-                            // The summary this sits under already reads "Add a
-                            // note", so the field's own label is the same word
-                            // twice, one line apart — it stays for the screen
-                            // reader and comes off the screen.
-                            optionalNote: t("shared.rollCallNote.optionalNote"),
-                            message: {
-                              saving: t("shared.rollCallNote.message.saving"),
-                              waiting: t("shared.rollCallNote.message.waiting"),
-                              saved: t("shared.rollCallNote.message.saved"),
-                              queued: t("shared.rollCallNote.message.queued"),
-                              error: t("shared.rollCallNote.message.error"),
-                              idle: t("shared.rollCallNote.message.idle"),
-                            },
-                            notePlaceholder: t("shared.rollCallNote.notePlaceholder"),
+                            label: t("trips.roster.addNoteLabel"),
+                            placeholder: t("shared.rollCallNote.notePlaceholder"),
+                            add: t("trips.roster.addPrivateNote"),
+                            adding: t("trips.roster.adding"),
                           }}
                         />
                       </div>

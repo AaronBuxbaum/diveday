@@ -2182,7 +2182,7 @@ for (const scheme of ["light", "dark"] as const) {
         await dealList.getByLabel("Name").fill("Tess Alvarez");
         await dealList.getByLabel("Email").fill("tess.visual@example.com");
         await dealList.getByLabel("Certification level").selectOption("open_water");
-        await dealList.getByLabel("I'm certified for nitrox (enriched air)").check();
+        await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
         await page
           .locator('input[name="availableFrom"]')
           .filter({ visible: true })
@@ -2196,7 +2196,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText("Open Water — diver's word, no card").waitFor();
+        await page.getByText("Open Water — diver's word, no certification record").waitFor();
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
 
@@ -2348,6 +2348,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Waiting for it keeps the capture from racing that resolution and
         // banking a baseline with the section half-present.
         await page.getByRole("heading", { name: "Wake this phone" }).waitFor();
+        // Boat Mode is manifest-only and lives at the foot of the page, so wait
+        // for its client control before capturing the new manifest composition.
+        await page.getByRole("group", { name: "Boat mode" }).waitFor();
         await capture(page, "manifest", scheme);
       });
 
@@ -2848,6 +2851,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-reviews", scheme);
       });
 
+      test(`the public reviews archive renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/reviews");
+        await page.getByRole("heading", { level: 1, name: "All reviews" }).waitFor();
+        await capture(page, "public-reviews", scheme);
+      });
+
       /**
        * The same queue for a shop that has hidden its way past the line where
        * DiveDay stops publishing its rating to search engines — the warning
@@ -3184,7 +3195,7 @@ for (const scheme of ["light", "dark"] as const) {
         // no specialty card at all, so nothing about her level can explain it.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Odile+Marchand`);
         await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
-        await page.getByText("This charter requires a Deep card.").waitFor();
+        await page.getByText("This charter requires a Deep certification.").waitFor();
         await capture(page, "trip-guests-refusal-card", scheme);
       });
 
@@ -3391,8 +3402,8 @@ test.describe("capture harness", () => {
 });
 
 /**
- * Print / Save-as-PDF surfaces. The manifest and the prep list are the two
- * pages staff physically print for the dock, and print gets a dedicated
+ * Print / Save-as-PDF surfaces. The complete trip packet, manifest, prep list,
+ * and departure log are the documents staff physically print for the dock, and print gets a dedicated
  * rendering (globals.css `@media print`): monochrome, so a shop's black-and-
  * white printer isn't asked for muddy color, and padded, so content doesn't
  * slam into the paper edge. The interactive baselines above never exercise
@@ -3423,6 +3434,17 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/prep`);
     await page.getByRole("heading", { name: "Tanks" }).waitFor();
     await capturePrint(page, "prep");
+  });
+
+  test("the complete trip packet prints every staff tab", async ({ page }) => {
+    await openReefTrip(page);
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/print`);
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.emulateMedia({ media: "print" });
+    await expect(page.locator('nav[aria-label="Trip"]')).not.toBeVisible();
+    await page.emulateMedia({ media: "screen" });
+    await capturePrint(page, "trip-packet");
   });
 
   // The departure log exists to be printed and handed over, so the print

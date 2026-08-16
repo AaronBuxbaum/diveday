@@ -1,8 +1,12 @@
+import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
 import {
   bookingPayments,
   bookings,
   type DiveSpecialty,
+  notificationDeliveries,
+  notificationDeliveryAttempts,
+  rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
   tripDives,
@@ -14,6 +18,9 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+
+/** The returned demo departure that gives Close-Out a finished local-day dive. */
+export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
 
 /**
  * A fuller month: charters and course sessions beyond the four headline
@@ -94,6 +101,7 @@ export async function seedMoreTrips(
     status?: "scheduled" | "cancelled";
     conditionsHold?: boolean;
     conditionsSummary?: string;
+    completedDemo?: boolean;
     roster: number[];
   };
 
@@ -102,6 +110,19 @@ export async function seedMoreTrips(
   // wreck charter's alone), or "6 spots left" (reserved for a spec's own
   // throwaway trip) — see the comment above `laterRosters`.
   const tripDefs: ExtraTripDef[] = [
+    {
+      title: DEMO_COMPLETED_TRIP_TITLE,
+      description: "A first-light boat, back at the dock before the regular morning run.",
+      // This is deliberately on the shop's local day, not yesterday in UTC: the
+      // close-out should show a real completed departure while the demo clock is
+      // at its stable 09:30 local baseline.
+      startsAt: at(0, 5, 30),
+      endsAt: at(0, 9, 0),
+      capacity: 12,
+      siteName: "Molasses Reef",
+      completedDemo: true,
+      roster: draw(8),
+    },
     {
       title: "Morning Two-Tank — Molasses Reef",
       description: "An early boat on the outer reef, back at the dock before the wind picks up.",
@@ -177,7 +198,8 @@ export async function seedMoreTrips(
     },
     {
       title: "Discover Scuba Diving — afternoon",
-      description: "A small, instructor-led first breath underwater. No C-card required.",
+      description:
+        "A small, instructor-led first breath underwater. No prior certification required.",
       startsAt: at(12, 13, 0),
       endsAt: at(12, 16, 0),
       capacity: 4,
@@ -553,12 +575,62 @@ export async function seedMoreTrips(
             shopId,
             tripId: trip.id,
             personId: person.id,
-            status: "booked" as const,
+            status: tripDefs[i].completedDemo ? ("checked_in" as const) : ("booked" as const),
             createdAt: nextCreatedAt(),
           })),
       ),
     )
     .returning();
+
+  const completedTrip = insertedTrips.find((trip) => trip.title === DEMO_COMPLETED_TRIP_TITLE);
+  const completedBookingIds = new Set(
+    insertedBookings
+      .filter((booking) => booking.tripId === completedTrip?.id)
+      .map((booking) => booking.id),
+  );
+  if (completedTrip) {
+    const completedBookings = insertedBookings.filter(
+      (booking) => booking.tripId === completedTrip.id,
+    );
+    const rollCallRecorderId = captainId ?? instructorId;
+    const completedRollCallRows = completedBookings.flatMap((booking) =>
+      rollCallCheckpoints(completedTrip.plannedDives).map((checkpoint, index) => ({
+        shopId,
+        tripId: completedTrip.id,
+        bookingId: booking.id,
+        recordedByPersonId: rollCallRecorderId,
+        status: "boarded" as const,
+        checkpoint,
+        source: "live" as const,
+        occurredAt: new Date(completedTrip.startsAt.getTime() + index * 90 * 60 * 1000),
+      })),
+    );
+    if (completedRollCallRows.length > 0)
+      await db.insert(rollCallEvents).values(completedRollCallRows);
+
+    // A partially completed report run is more useful demo state than an empty
+    // queue: six reports have gone out and two remain for the staffer to notice.
+    // The existing delivery tables are the source of truth for this task; no
+    // close-out-specific status row is invented here.
+    const sentReportBookings = completedBookings.slice(
+      0,
+      Math.max(0, completedBookings.length - 2),
+    );
+    const recapDeliveries = sentReportBookings.map((booking, index) => ({
+      shopId,
+      bookingId: booking.id,
+      kind: "trip_recap" as const,
+      status: "sent" as const,
+      providerMessageId: `demo-recap-${shopId}-${index}`,
+      attemptedAt: new Date(at(0, 9, 15).getTime() + index * 1000),
+    }));
+    if (recapDeliveries.length > 0) {
+      await db.insert(notificationDeliveries).values(recapDeliveries);
+      await db
+        .insert(notificationDeliveryAttempts)
+        .values(recapDeliveries.map((delivery) => ({ ...delivery, isRetry: false })));
+    }
+  }
 
   // Most divers fill out their waiver before the boat leaves — roughly 6 in
   // 7 here, the same "most people sign" norm as today's reef trip — leaving
@@ -568,7 +640,10 @@ export async function seedMoreTrips(
   const extraWaiverRows = insertedBookings.map((booking) => {
     extraWaiverToken++;
     const createdAt = nextCreatedAt();
-    const signed = extraWaiverToken % 7 !== 0;
+    // A boarded/completed demo booking must never carry the contradictory
+    // state "everyone came home, but the waiver is still unsigned". Keep the
+    // unsigned examples on future trips where they are useful roster work.
+    const signed = completedBookingIds.has(booking.id) || extraWaiverToken % 7 !== 0;
     return {
       shopId,
       bookingId: booking.id,

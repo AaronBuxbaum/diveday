@@ -181,3 +181,19 @@ export function reviewerDisplayName(fullName: string): string {
   const last = rest[rest.length - 1];
   return last ? `${first} ${last[0].toUpperCase()}.` : first;
 }
+
+/**
+ * Public review selection policy: staff-curated standouts come first; the
+ * remainder is the strongest available rating, with the newest review first
+ * inside each bucket. Keeping the comparison framework-free makes the policy
+ * directly testable and keeps the database ordering and any future export
+ * ordering aligned.
+ */
+export function comparePublicReviews(
+  a: { isStandout: boolean; rating: number; publishedAt: Date },
+  b: { isStandout: boolean; rating: number; publishedAt: Date },
+): number {
+  if (a.isStandout !== b.isStandout) return a.isStandout ? -1 : 1;
+  if (!a.isStandout && a.rating !== b.rating) return b.rating - a.rating;
+  return b.publishedAt.getTime() - a.publishedAt.getTime();
+}

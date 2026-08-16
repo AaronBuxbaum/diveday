@@ -1,12 +1,21 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 
 export async function addInternalNote(
   db: AppDb,
-  input: { shopId: string; bookingId: string; actorPersonId: string; body: string },
+  input: {
+    shopId: string;
+    tripId: string;
+    bookingId: string;
+    actorPersonId: string;
+    body: string;
+  },
 ) {
+  if (![input.shopId, input.tripId, input.bookingId, input.actorPersonId].every(isUuid))
+    return null;
   const body = input.body.trim();
   if (!body || body.length > 1_000) return null;
   return db.transaction(async (tx) => {
@@ -18,6 +27,7 @@ export async function addInternalNote(
       .where(
         and(
           eq(bookings.id, input.bookingId),
+          eq(bookings.tripId, input.tripId),
           eq(bookings.shopId, input.shopId),
           eq(trips.shopId, input.shopId),
         ),
@@ -62,6 +72,7 @@ export async function addDiverNote(
   db: AppDb,
   input: { shopId: string; personId: string; actorPersonId: string; body: string },
 ) {
+  if (![input.shopId, input.personId, input.actorPersonId].every(isUuid)) return null;
   const body = input.body.trim();
   if (!body || body.length > 1_000) return null;
   return db.transaction(async (tx) => {
@@ -111,8 +122,11 @@ export type DeleteInternalNoteResult =
 
 export async function deleteInternalNote(
   db: AppDb,
-  input: { shopId: string; noteId: string; actorPersonId: string },
+  input: { shopId: string; tripId: string; noteId: string; actorPersonId: string },
 ): Promise<DeleteInternalNoteResult> {
+  if (![input.shopId, input.tripId, input.noteId, input.actorPersonId].every(isUuid)) {
+    return { deleted: false };
+  }
   return db.transaction(async (tx) => {
     const [note] = await tx
       .select({
@@ -127,7 +141,13 @@ export async function deleteInternalNote(
       .from(internalNotes)
       .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
       .innerJoin(people, eq(people.id, internalNotes.personId))
-      .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)))
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+        ),
+      )
       .limit(1);
     if (!note) return { deleted: false };
     const [actor] = await tx
@@ -156,8 +176,11 @@ export type DeleteDiverNoteResult = { deleted: true; body: string } | { deleted:
 /** Delete a person-scoped note; the caller can offer a one-tap undo. */
 export async function deleteDiverNote(
   db: AppDb,
-  input: { shopId: string; noteId: string; actorPersonId: string },
+  input: { shopId: string; personId: string; noteId: string; actorPersonId: string },
 ): Promise<DeleteDiverNoteResult> {
+  if (![input.shopId, input.personId, input.noteId, input.actorPersonId].every(isUuid)) {
+    return { deleted: false };
+  }
   return db.transaction(async (tx) => {
     const [note] = await tx
       .select({ body: internalNotes.body, diverName: people.fullName })
@@ -167,6 +190,7 @@ export async function deleteDiverNote(
         and(
           eq(internalNotes.id, input.noteId),
           eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
           isNull(internalNotes.bookingId),
         ),
       )
@@ -184,6 +208,7 @@ export async function deleteDiverNote(
         and(
           eq(internalNotes.id, input.noteId),
           eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
           isNull(internalNotes.bookingId),
         ),
       );

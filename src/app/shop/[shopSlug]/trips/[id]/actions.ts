@@ -69,6 +69,7 @@ import {
 } from "@/lib/temperature-units";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import { uuidParam } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
@@ -180,6 +181,21 @@ function parseAddDiver(formData: FormData) {
 const backPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
 const guestsPath = (shopSlug: string, tripId: string) =>
   shopPath(shopSlug, "trips", tripId, "guests");
+
+/**
+ * Record the Overview tab's complete trip-packet action. The printable route
+ * is opened by the browser in the same click, while this server action keeps
+ * the event behind the same shop/session boundary as every other trip action.
+ * It carries no trip id or diver data: the useful question is whether the
+ * button is used, not which departure was printed.
+ */
+export async function recordTripPrintPdfAction(shopSlug: string, tripId: string) {
+  if (!uuidParam(tripId)) return;
+  const { session } = await requireShopSurface(shopSlug);
+  const trip = await getTripWithBooked(await getDb(), session.user.shopId, tripId);
+  if (!trip) return;
+  await trackEvent({ name: "trip_print_pdf_clicked", surface: "trip_overview" });
+}
 
 /**
  * Trip *definition* — what the dive is and who it admits (details, admission
@@ -597,6 +613,7 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
   const body = String(formData.get("note") ?? "");
   const saved = await addInternalNote(await getDb(), {
     shopId: s.user.shopId,
+    tripId,
     actorPersonId: s.user.personId,
     bookingId,
     body,
@@ -622,6 +639,7 @@ export async function deleteInternalNoteAction(
   const noteId = String(formData.get("noteId") ?? "");
   const result = await deleteInternalNote(await getDb(), {
     shopId: s.user.shopId,
+    tripId,
     actorPersonId: s.user.personId,
     noteId,
   });
@@ -657,6 +675,7 @@ export async function restoreInternalNoteAction(
   const restored = bookingId
     ? await addInternalNote(await getDb(), {
         shopId: s.user.shopId,
+        tripId,
         actorPersonId: s.user.personId,
         bookingId,
         body,

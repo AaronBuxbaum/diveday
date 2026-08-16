@@ -432,7 +432,9 @@ describe("POST /api/offline-manifests/sync", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ source: "offline", clientEventId, status: "boarded" });
     // And nothing landed on the diver table, which has its own subject column.
-    expect(await db.select().from(rollCallEvents)).toHaveLength(0);
+    expect(
+      await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, trip.id)),
+    ).toHaveLength(0);
   });
 
   /**
@@ -472,8 +474,12 @@ describe("POST /api/offline-manifests/sync", () => {
       ).status,
     ).toBe(400);
 
-    expect(await db.select().from(rollCallEvents)).toHaveLength(0);
-    expect(await db.select().from(rollCallCrewEvents)).toHaveLength(0);
+    expect(
+      await db.select().from(rollCallEvents).where(eq(rollCallEvents.tripId, trip.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, trip.id)),
+    ).toHaveLength(0);
   });
 
   it("rejects boarding a diver who isn't ready instead of silently applying it", async () => {

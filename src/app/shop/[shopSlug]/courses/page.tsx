@@ -86,7 +86,9 @@ export default async function CoursesPage({
   // silently shows nothing is indistinguishable from a shop that has no
   // courses. Null only when the shop has no courses at all — there is no
   // unfiltered view any more (see `AgencyTabs`).
-  const selectedAgency = agency && agencies.includes(agency) ? agency : (agencies[0] ?? null);
+  const requestedAgency = agency?.trim().toLowerCase();
+  const selectedAgency =
+    requestedAgency && agencies.includes(requestedAgency) ? requestedAgency : (agencies[0] ?? null);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one.

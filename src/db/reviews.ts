@@ -1,7 +1,20 @@
-import { and, count, desc, eq, exists, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
+  MAX_REVIEW_RATING,
   normalizeReviewComment,
   publishesImmediately,
   type ReviewAggregate,
@@ -46,6 +59,7 @@ export async function submitTripReview(
   db: AppDb,
   input: { bookingId: string; rating: number; comment?: string | null },
 ): Promise<SubmitReviewResult> {
+  if (!isUuid(input.bookingId)) return { ok: false, reason: "not_found" };
   const comment = normalizeReviewComment(input.comment);
   const publish = publishesImmediately(comment);
   const now = nowDate();
@@ -86,11 +100,17 @@ export async function submitTripReview(
       updatedAt: now,
     };
 
-    if (existing) {
-      await tx.update(tripReviews).set(values).where(eq(tripReviews.id, existing.id));
-    } else {
-      await tx.insert(tripReviews).values(values);
-    }
+    // The read above is only for the user-facing `updated` flag. The write is
+    // an actual database upsert so two recap submits racing on the unique
+    // booking index converge on one review instead of one of them surfacing a
+    // unique-constraint error.
+    await tx
+      .insert(tripReviews)
+      .values(values)
+      .onConflictDoUpdate({
+        target: tripReviews.bookingId,
+        set: { ...values, isStandout: false },
+      });
     return { ok: true, published: publish, updated: Boolean(existing) };
   });
 }
@@ -116,8 +136,8 @@ export async function getReviewForBooking(
 
 /**
  * The shop's published rating, counted in the database. Published rows only —
- * the same set the public list renders, so the number and the reviews under it
- * can never describe different things. Pass `since` to scope it to reviews
+ * the same set the public archive renders, so the number and the reviews under
+ * it can never describe different things. Pass `since` to scope it to reviews
  * published on or after an instant (the moderation page's "this month" line);
  * omitted, it is the shop's all-time rating.
  */
@@ -134,8 +154,7 @@ export async function getShopReviewAggregate(
     .from(tripReviews)
     .where(
       and(
-        eq(tripReviews.shopId, shopId),
-        eq(tripReviews.isPublished, true),
+        publishedReviewScope(shopId),
         options.since ? gte(tripReviews.publishedAt, options.since) : undefined,
       ),
     );
@@ -186,6 +205,7 @@ export type PublicReview = {
   id: string;
   rating: number;
   comment: string | null;
+  isStandout: boolean;
   /** First name and last initial — the most a public page should say (`reviewerDisplayName`). */
   reviewer: string;
   tripTitle: string;
@@ -193,25 +213,77 @@ export type PublicReview = {
   publishedAt: Date;
 };
 
-/** How many reviews the public page shows at once — a taste, not an archive. */
-export const PUBLIC_REVIEW_PAGE_SIZE = 6;
+/** How many reviews the schedule shows at once — a curated 2x2 on wide screens. */
+export const PUBLIC_REVIEW_PAGE_SIZE = 4;
+
+/** Every review the shop has released, including a rating with no comment. */
+function publishedReviewScope(shopId: string) {
+  return and(
+    eq(tripReviews.shopId, shopId),
+    eq(tripReviews.isPublished, true),
+    isNotNull(tripReviews.publishedAt),
+  );
+}
+
+/** The schedule preview stays editorial: an empty card says nothing. */
+function publicWrittenReviewScope(shopId: string) {
+  return and(publishedReviewScope(shopId), isNotNull(tripReviews.comment));
+}
 
 /**
- * The shop's published reviews, newest first. Only rows carrying words are
- * listed: a bare 5-star rating counts toward the average but renders as an
- * empty card, so showing it would pad the list without telling a visitor
- * anything.
+ * Standouts are one bucket and are newest first. The fallback buckets are
+ * rating 5 through rating 1, each newest first. This is deliberately explicit
+ * rather than a plain `rating DESC` sort, because an older standout should
+ * still outrank an uncurated five-star fallback.
  */
-export async function listPublishedShopReviews(
+function publicReviewOrder() {
+  return [
+    asc(sql<number>`case when ${tripReviews.isStandout} then 0 else 1 end`),
+    asc(
+      sql<number>`case when ${tripReviews.isStandout} then 0 else ${MAX_REVIEW_RATING} - ${tripReviews.rating} end`,
+    ),
+    desc(tripReviews.publishedAt),
+    desc(tripReviews.id),
+  ] as const;
+}
+
+function publicReviewFromRow(row: {
+  id: string;
+  rating: number;
+  comment: string | null;
+  isStandout: boolean;
+  fullName: string;
+  tripTitle: string;
+  divedAt: Date;
+  publishedAt: Date | null;
+}): PublicReview | null {
+  if (!row.publishedAt) return null;
+  return {
+    id: row.id,
+    rating: row.rating,
+    comment: row.comment,
+    isStandout: row.isStandout,
+    reviewer: reviewerDisplayName(row.fullName),
+    tripTitle: row.tripTitle,
+    divedAt: row.divedAt,
+    publishedAt: row.publishedAt,
+  };
+}
+
+async function fetchPublicReviewRows(
   db: DbExecutor,
   shopId: string,
-  limit = PUBLIC_REVIEW_PAGE_SIZE,
-): Promise<PublicReview[]> {
-  const rows = await db
+  options: { limit?: number; offset?: number; includeBareRatings?: boolean } = {},
+) {
+  const scope = options.includeBareRatings
+    ? publishedReviewScope(shopId)
+    : publicWrittenReviewScope(shopId);
+  return db
     .select({
       id: tripReviews.id,
       rating: tripReviews.rating,
       comment: tripReviews.comment,
+      isStandout: tripReviews.isStandout,
       fullName: people.fullName,
       tripTitle: trips.title,
       divedAt: trips.startsAt,
@@ -220,38 +292,76 @@ export async function listPublishedShopReviews(
     .from(tripReviews)
     .innerJoin(people, eq(people.id, tripReviews.personId))
     .innerJoin(trips, eq(trips.id, tripReviews.tripId))
-    .where(
-      and(
-        eq(tripReviews.shopId, shopId),
-        eq(tripReviews.isPublished, true),
-        isNotNull(tripReviews.comment),
-        isNotNull(tripReviews.publishedAt),
-      ),
-    )
-    .orderBy(desc(tripReviews.publishedAt))
-    .limit(limit);
+    .where(scope)
+    .orderBy(...publicReviewOrder())
+    .limit(options.limit ?? Number.MAX_SAFE_INTEGER)
+    .offset(options.offset ?? 0);
+}
 
-  return rows.flatMap((row) =>
-    row.publishedAt
-      ? [
-          {
-            id: row.id,
-            rating: row.rating,
-            comment: row.comment,
-            reviewer: reviewerDisplayName(row.fullName),
-            tripTitle: row.tripTitle,
-            divedAt: row.divedAt,
-            publishedAt: row.publishedAt,
-          },
-        ]
-      : [],
-  );
+/**
+ * The schedule's curated preview, newest first. Only rows carrying words are
+ * listed there: a bare rating counts toward the average, but the archive still
+ * gives customers a complete view of every released rating.
+ */
+export async function listPublishedShopReviews(
+  db: DbExecutor,
+  shopId: string,
+  limit = PUBLIC_REVIEW_PAGE_SIZE,
+): Promise<PublicReview[]> {
+  const rows = await fetchPublicReviewRows(db, shopId, { limit });
+  return rows.flatMap((row) => {
+    const review = publicReviewFromRow(row);
+    return review ? [review] : [];
+  });
+}
+
+export type PublicReviewPage = {
+  reviews: PublicReview[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+};
+
+/** Every public review, paged so the archive cannot make a page unbounded. */
+export async function listPublishedShopReviewsPage(
+  db: DbExecutor,
+  shopId: string,
+  options: { page?: number; limit?: number } = {},
+): Promise<PublicReviewPage> {
+  const pageSize = options.limit ?? PUBLIC_REVIEW_PAGE_SIZE;
+  const scope = publishedReviewScope(shopId);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize,
+    countRows: async () => {
+      const [row] = await db.select({ total: count() }).from(tripReviews).where(scope);
+      return row?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      fetchPublicReviewRows(db, shopId, {
+        limit,
+        offset,
+        includeBareRatings: true,
+      }),
+  });
+  return {
+    reviews: paged.rows.flatMap((row) => {
+      const review = publicReviewFromRow(row);
+      return review ? [review] : [];
+    }),
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
+  };
 }
 
 export type StaffReview = {
   id: string;
   rating: number;
   comment: string | null;
+  isStandout: boolean;
   isPublished: boolean;
   /** Staff see who actually wrote it — the abbreviation is a public-page rule, not an internal one. */
   diverName: string;
@@ -311,6 +421,7 @@ export async function listShopReviewsForStaff(
           id: tripReviews.id,
           rating: tripReviews.rating,
           comment: tripReviews.comment,
+          isStandout: tripReviews.isStandout,
           isPublished: tripReviews.isPublished,
           diverName: people.fullName,
           personId: tripReviews.personId,
@@ -342,7 +453,13 @@ export const REVIEW_MODERATION_REASONS = reviewModerationReason.enumValues;
 
 export type ReviewModerationReason = (typeof reviewModerationReason.enumValues)[number];
 
-export type SetReviewPublishedResult = true | "not_found" | "reason_required" | "note_required";
+export type SetReviewPublishedResult =
+  | true
+  | "not_found"
+  | "not_published"
+  | "reason_required"
+  | "note_required"
+  | "note_too_long";
 
 /**
  * Publish or hide one review, shop-scoped, recording the act either way.
@@ -374,20 +491,50 @@ export async function setReviewPublished(
     now?: Date;
   },
 ): Promise<SetReviewPublishedResult> {
-  const note = moderation.reasonNote?.trim() || null;
+  if (!isUuid(reviewId)) return "not_found";
+  const note = moderation.reason === "other" ? moderation.reasonNote?.trim() || null : null;
   if (!isPublished) {
     if (!moderation.reason) return "reason_required";
     if (moderation.reason === "other" && !note) return "note_required";
+    if (note && note.length > 200) return "note_too_long";
   }
   const now = moderation.now ?? nowDate();
 
   return db.transaction(async (tx) => {
+    // The state predicate makes the transition compare-and-swap. A repeated
+    // publish/hide or two staffers acting at once cannot append duplicate
+    // moderation events or silently re-date a review that already won the
+    // race. The live-person predicate also makes erasure terminal for public
+    // review publication.
     const [updated] = await tx
       .update(tripReviews)
       .set({ isPublished, publishedAt: isPublished ? now : null, updatedAt: now })
-      .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
+      .where(
+        and(
+          eq(tripReviews.id, reviewId),
+          eq(tripReviews.shopId, shopId),
+          eq(tripReviews.isPublished, !isPublished),
+          exists(
+            tx
+              .select({ one: people.id })
+              .from(people)
+              .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
+          ),
+        ),
+      )
       .returning({ id: tripReviews.id });
-    if (!updated) return "not_found";
+    if (!updated) {
+      const [current] = await tx
+        .select({ isPublished: tripReviews.isPublished, anonymizedAt: people.anonymizedAt })
+        .from(tripReviews)
+        .innerJoin(people, eq(people.id, tripReviews.personId))
+        .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
+        .limit(1);
+      if (!current || current.anonymizedAt) return "not_found";
+      // Publishing is idempotent. Hiding is intentionally not: a second hide
+      // is a stale form submission, not a new recorded moderation act.
+      return isPublished && current.isPublished ? true : "not_published";
+    }
 
     await tx.insert(reviewModerationEvents).values({
       shopId,
@@ -402,6 +549,48 @@ export async function setReviewPublished(
     });
     return true;
   });
+}
+
+export type SetReviewStandoutResult = true | "not_found" | "not_published";
+
+/** Mark or unmark a published review for the public curated set. */
+export async function setReviewStandout(
+  db: AppDb,
+  shopId: string,
+  reviewId: string,
+  isStandout: boolean,
+): Promise<SetReviewStandoutResult> {
+  if (!isUuid(reviewId)) return "not_found";
+  const [updated] = await db
+    .update(tripReviews)
+    .set({ isStandout, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(tripReviews.id, reviewId),
+        eq(tripReviews.shopId, shopId),
+        eq(tripReviews.isPublished, true),
+        isNotNull(tripReviews.comment),
+        exists(
+          db
+            .select({ one: people.id })
+            .from(people)
+            .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
+        ),
+      ),
+    )
+    .returning({ id: tripReviews.id });
+  if (updated) return true;
+  const [review] = await db
+    .select({
+      isPublished: tripReviews.isPublished,
+      comment: tripReviews.comment,
+      anonymizedAt: people.anonymizedAt,
+    })
+    .from(tripReviews)
+    .innerJoin(people, eq(people.id, tripReviews.personId))
+    .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
+    .limit(1);
+  return review && !review.anonymizedAt && review.isPublished ? "not_published" : "not_found";
 }
 
 /**
@@ -453,6 +642,12 @@ export async function setReviewsPublished(
           eq(tripReviews.shopId, shopId),
           inArray(tripReviews.id, ids),
           eq(tripReviews.isPublished, false),
+          exists(
+            tx
+              .select({ one: people.id })
+              .from(people)
+              .where(and(eq(people.id, tripReviews.personId), isNull(people.anonymizedAt))),
+          ),
         ),
       )
       .returning({ id: tripReviews.id });

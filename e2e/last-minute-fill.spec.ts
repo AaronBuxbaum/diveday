@@ -162,7 +162,9 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await dealList.getByLabel("Name").fill("Tess Alvarez");
   await dealList.getByLabel("Email").fill("tess.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("open_water");
-  await dealList.getByLabel("I'm certified for nitrox (enriched air)").check();
+  // The shop-wide deal list records only a broad level signal. Nitrox remains
+  // a trip-specific declaration on the wait list, not a deal-list checkbox.
+  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
@@ -176,15 +178,13 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await nudge.getByRole("link", { name: "Open trip" }).click();
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
 
-  // The row a staffer reads before deciding. Both halves carry the mark
-  // independently, because a shop can hold a real level card for someone who
-  // has only *claimed* enriched air.
+  // The row a staffer reads before deciding carries the level claim as
+  // self-declared; the deal list does not collect a separate nitrox claim.
   const recipient = page
     .locator("li")
     .filter({ hasText: "Tess Alvarez" })
     .filter({ visible: true });
-  await expect(recipient).toContainText("Open Water — diver's word, no card");
-  await expect(recipient).toContainText("Nitrox — diver's word, no card");
+  await expect(recipient).toContainText("Open Water — diver's word, no certification record");
 
   // And the send is still offered: informing, never gating. A filter here would
   // quietly stop the blast reaching everyone the shop has never carded, which
@@ -200,14 +200,11 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
  * regular who skipped an optional question, so the shop mailed them a certified
  * two-tank charter.
  *
- * Two things are under test that the declared-level spec above cannot reach.
- * The first is the select's own behaviour: picking this answer takes the nitrox
- * tick beside it away, because "I hold no card" and "I hold an enriched-air
- * card" are two incompatible statements and the writer resolves that by
- * recording the absence — a diver must not walk away believing they said
- * something that was then discarded.
+ * The form no longer asks the broad deal-list joiner for a nitrox claim. The
+ * separate wait-list declaration keeps that safety-sensitive question on the
+ * trip-specific surface.
  *
- * The second is the **cap**. This departure is chosen for it: eleven people
+ * The interesting behaviour here is the **cap**. This departure is chosen for it: eleven people
  * match its date and the panel draws ten. A cap that could hide the one
  * recipient nobody should mail would be worse than the unbounded list it
  * replaced, so being below the bar has to beat being late to the list.
@@ -219,7 +216,7 @@ test("an uncertified joiner reaches the send list, above the ten-name cap", asyn
   await dealList.getByLabel("Name").fill("Nell Byrne");
   await dealList.getByLabel("Email").fill("nell.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("none_declared");
-  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toBeDisabled();
+  await expect(dealList.getByLabel("I'm certified for nitrox (enriched air)")).toHaveCount(0);
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
@@ -252,14 +249,14 @@ test("an uncertified joiner reaches the send list, above the ten-name cap", asyn
 /**
  * The other half of the same promise: the claim never becomes a shortcut. A
  * self-declared card cannot be certified on the one tap every other pending
- * card gets — the staffer has to enter the agency, number **and level** off the
- * card in their hand, which is the same act as capturing one.
+ * card gets — the staffer has to enter the agency, number **and level** from
+ * the certification evidence being verified, which is the same act as capturing one.
  *
  * The level is the half worth exercising end to end: this diver claimed Rescue
- * and the card the staffer is actually holding says Open Water. Without the
+ * and the certification evidence the staffer is verifying says Open Water. Without the
  * select, transcribing the number would have certified Rescue.
  */
-test("a self-declared card cannot be certified without the card in hand", async ({ page }) => {
+test("a self-declared card cannot be certified without verified evidence", async ({ page }) => {
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
   const dealList = page.locator("#last-minute-list");
@@ -275,16 +272,16 @@ test("a self-declared card cannot be certified without the card in hand", async 
   await page.goto("/shop/blue-mantis/divers?q=Milo+Vance");
   await page.getByRole("link", { name: "Milo Vance" }).click();
   const card = page.locator("li").filter({ hasText: "Rescue" }).filter({ visible: true }).first();
-  await expect(card).toContainText("Self-declared — no card number yet");
+  await expect(card).toContainText("Self-declared — no certification number yet");
   // The one-tap control every staff-captured pending card wears is absent here.
   await expect(card.getByRole("button", { name: "Mark certified" })).toBeHidden();
 
-  await card.getByText("Certify from card").click();
+  await card.getByText("Verify certification record").click();
   // Prefilled with the claim, so leaving it alone is still one glance — but the
-  // card in hand says Open Water, and this is where that gets corrected.
-  await expect(card.getByLabel("Level on the card")).toHaveValue("rescue");
-  await card.getByLabel("Level on the card").selectOption("open_water");
-  await card.getByLabel("Card number").fill("RES-8080");
+  // certification evidence says Open Water, and this is where that gets corrected.
+  await expect(card.getByLabel("Level on the certification record")).toHaveValue("rescue");
+  await card.getByLabel("Level on the certification record").selectOption("open_water");
+  await card.getByLabel("Certification number").fill("RES-8080");
   await card.getByRole("button", { name: "Mark certified" }).click();
 
   // Sighted: it now reads as an ordinary certified card carrying the number the
@@ -293,5 +290,5 @@ test("a self-declared card cannot be certified without the card in hand", async 
   await expect(certified).toContainText("certified");
   await expect(certified).toContainText("Open Water");
   await expect(certified).not.toContainText("Rescue");
-  await expect(certified).not.toContainText("Self-declared — no card number yet");
+  await expect(certified).not.toContainText("Self-declared — no certification number yet");
 });

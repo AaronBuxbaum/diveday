@@ -115,7 +115,7 @@
     "depthRangePlaceholder": "20–45 ft",
     "maxDepthMetersLabel": "Maximum depth (metres)",
     "maxDepthFeetLabel": "Maximum depth (feet)",
-    "maxDepthHint": "(optional · warns when a diver's card doesn't reach it)",
+    "maxDepthHint": "(optional · warns when a diver's certification doesn't reach it)",
     "expectedBottomTimeLabel": "Time in the water here (minutes)",
     "expectedBottomTimeHint": "(optional · overrides your shop's usual bottom time)",
     "expectedBottomTimePlaceholder": "45",

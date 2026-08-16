@@ -73,6 +73,7 @@ export type BuilderDay = {
 };
 
 export type BuilderOption = { id: string; title: string };
+export type BuilderCourseOption = BuilderOption & { agency: string };
 
 /**
  * What the add-a-departure panel's two selects offer. Fetched when the panel
@@ -80,7 +81,7 @@ export type BuilderOption = { id: string; title: string };
  * props on every board render: a shop's whole course catalogue and every dive
  * site it dives, shipped to a browser for two controls behind a closed panel.
  */
-export type BuilderOptions = { courses: BuilderOption[]; diveSites: BuilderOption[] };
+export type BuilderOptions = { courses: BuilderCourseOption[]; diveSites: BuilderOption[] };
 
 /**
  * Everything the price box needs that is neither copy nor a value — all of it
@@ -153,6 +154,7 @@ export type BuilderCopy = {
   priceDescription: string;
   course: string;
   optional: string;
+  courseAgencyLabels: { padi: string; ssi: string; other: string };
   diveSite: string;
   ordinaryTrip: string;
   decideLater: string;
@@ -588,10 +590,28 @@ function AddPanel({
                 </option>
               </>
             ) : (
-              options.courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
+              Object.entries(
+                options.courses.reduce<Record<string, BuilderCourseOption[]>>((groups, course) => {
+                  const key = course.agency.trim().toLowerCase() || "other";
+                  const group = groups[key] ?? [];
+                  group.push(course);
+                  groups[key] = group;
+                  return groups;
+                }, {}),
+              ).map(([agency, courses]) => (
+                <optgroup
+                  key={agency}
+                  label={
+                    copy.courseAgencyLabels[agency as keyof typeof copy.courseAgencyLabels] ??
+                    (agency === "other" ? copy.courseAgencyLabels.other : agency.toUpperCase())
+                  }
+                >
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </optgroup>
               ))
             )}
           </select>
